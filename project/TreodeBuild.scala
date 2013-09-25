@@ -12,7 +12,7 @@ object TreodeBuild extends Build {
     version := "0.1",
     scalaVersion := "2.10.2",
 
-    scalacOptions ++= Seq ("-deprecation", "-feature"),
+    scalacOptions ++= Seq ("-deprecation", "-feature", "-unchecked"),
 
     testOptions in Test ++= Seq (Tests.Argument ("-oDF")),
 
