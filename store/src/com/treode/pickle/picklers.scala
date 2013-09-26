@@ -26,33 +26,29 @@ trait Picklers {
 
   val int: Pickler [Int] =
     new Pickler [Int] {
-      def p (v: Int, ctx: PickleContext) = long.p (v.toLong, ctx)
-      def u (ctx: UnpickleContext) = long.u (ctx).toInt
+      def p (v: Int, ctx: PickleContext) = ctx.writeVariableLengthInt (v)
+      def u (ctx: UnpickleContext) = ctx.readVariableLengthInt()
       override def toString = "int"
     }
 
   val long: Pickler [Long] =
     new Pickler [Long] {
-      def p (v: Long, ctx: PickleContext) = {
-        var u = (v << 1) ^ (v >> 63)
-        while ((u & 0xFFFFFF80) != 0) {
-          byte.p ((u & 0x7F | 0x80).toByte, ctx)
-          u = u >>> 7
-        }
-        byte.p ((u & 0x7F).toByte, ctx)
-      }
-      def u (ctx: UnpickleContext) = {
-        val b1 = byte.u (ctx) .toLong
-        var b = b1
-        var v = b & 0x7F
-        var shift = 7
-        while ((b & 0x80) != 0) {
-          b = byte.u (ctx)
-          v = v | ((b & 0x7F) << shift)
-          shift += 7
-        }
-        (if ((b1 & 1) == 0) 0 else -1) ^ (v >>> 1)
-      }
+      def p (v: Long, ctx: PickleContext) = ctx.writeVariableLengthLong (v)
+      def u (ctx: UnpickleContext) = ctx.readVariableLengthLong()
+      override def toString = "long"
+    }
+
+  val unsignedInt: Pickler [Int] =
+    new Pickler [Int] {
+      def p (v: Int, ctx: PickleContext) = ctx.writeVariableLengthUnsignedInt (v)
+      def u (ctx: UnpickleContext) = ctx.readVariableLengthUnsignedInt()
+      override def toString = "int"
+    }
+
+  val unsignedLong: Pickler [Long] =
+    new Pickler [Long] {
+      def p (v: Long, ctx: PickleContext) = ctx.writeVariableLengthUnsignedLong (v)
+      def u (ctx: UnpickleContext) = ctx.readVariableLengthUnsignedLong()
       override def toString = "long"
     }
 

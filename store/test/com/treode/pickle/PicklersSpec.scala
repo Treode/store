@@ -93,6 +93,14 @@ private object PicklersProperties extends PropSpec with PropertyChecks with Pick
     forAll ("x") ((x: Long) => check (Picklers.fixedLong, x))
   }
 
+  property ("A Pickler reads and writes unsigned ints") {
+    forAll ("x") ((x: Int) => check (Picklers.unsignedInt, x))
+  }
+
+  property ("A Pickler reads and writes unsigned longs") {
+    forAll ("x") ((x: Long) => check (Picklers.unsignedLong, x))
+  }
+
   property ("A Pickler reads and writes floats") {
     forAll ("x") ((x: Float) => check (float, x))
   }
