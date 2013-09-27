@@ -91,11 +91,11 @@ trait Picklers {
     new Pickler [String] {
       def p (v: String, ctx: PickleContext) = {
         val bb = cs.encode (v)
-        int.p (bb.limit, ctx)
+        unsignedInt.p (bb.limit, ctx)
         ctx.writeBytes (bb)
       }
       def u (ctx: UnpickleContext) = {
-        val l = int.u (ctx)
+        val l = unsignedInt.u (ctx)
         val bb = ByteBuffer.allocate (l)
         ctx.readBytes (bb)
         bb.flip()
@@ -511,7 +511,7 @@ trait Picklers {
     new Pickler [Array [A]] {
 
       def p (v: Array [A], ctx: PickleContext): Unit = {
-        int.p (v.length, ctx)
+        unsignedInt.p (v.length, ctx)
         var i = 0
         while (i < v.length) {
           pa.p (v (i), ctx)
@@ -519,7 +519,7 @@ trait Picklers {
         }}
 
       def u (ctx: UnpickleContext) = {
-        val n = int.u (ctx)
+        val n = unsignedInt.u (ctx)
         val a = new Array [A] (n)
         var i = 0
         while (i < n) {
@@ -535,11 +535,11 @@ trait Picklers {
   def arrayByte: Pickler [Array [Byte]] =
     new Pickler [Array [Byte]] {
       def p (v: Array [Byte], ctx: PickleContext) = {
-        int.p (v.length, ctx)
+        unsignedInt.p (v.length, ctx)
         ctx.writeBytes (v)
       }
       def u (ctx: UnpickleContext) = {
-        val l = int.u (ctx)
+        val l = unsignedInt.u (ctx)
         val v = new Array [Byte] (l)
         ctx.readBytes (v)
         v
@@ -580,12 +580,12 @@ trait Picklers {
     new Pickler [C [A]] {
 
       def p (v: C [A], ctx: PickleContext): Unit = {
-        int.p (v.size, ctx)
+        unsignedInt.p (v.size, ctx)
         v foreach (pa.p (_, ctx))
       }
 
       def u (ctx: UnpickleContext) = {
-        val n = int.u (ctx)
+        val n = unsignedInt.u (ctx)
         val b = c.newBuilder [A]
         b.sizeHint (n)
         (1 to n) foreach (_ => b += pa.u (ctx))
@@ -618,14 +618,14 @@ trait Picklers {
 
       def p (v: Option [A], ctx: PickleContext): Unit = {
         if (v.isEmpty) {
-          int.p (0, ctx)
+          unsignedInt.p (0, ctx)
         } else {
-          int.p (1, ctx)
+          unsignedInt.p (1, ctx)
           pa.p (v.get, ctx)
         }}
 
       def u (ctx: UnpickleContext) = {
-        val i = int.u (ctx)
+        val i = unsignedInt.u (ctx)
         if (i == 0)
           None
         else
@@ -643,15 +643,15 @@ trait Picklers {
 
       def p (v: Either [A, B], ctx: PickleContext): Unit = {
         if (v.isLeft) {
-          int.p (0, ctx)
+          unsignedInt.p (0, ctx)
           pa.p (v.left.get, ctx)
         } else {
-          int.p (1, ctx)
+          unsignedInt.p (1, ctx)
           pb.p (v.right.get, ctx)
         }}
 
       def u (ctx: UnpickleContext) = {
-        val i = int.u (ctx)
+        val i = unsignedInt.u (ctx)
         if (i == 0)
           Left (pa.u (ctx))
         else
@@ -676,18 +676,18 @@ trait Picklers {
     new Pickler [A] {
       def p (v: A, ctx: PickleContext) {
         if (ctx contains v) {
-          int.p (0, ctx)
-          int.p (ctx get v, ctx)
+          unsignedInt.p (0, ctx)
+          unsignedInt.p (ctx get v, ctx)
         } else {
-          int.p (1, ctx)
+          unsignedInt.p (1, ctx)
           pa.p (v, ctx)
           ctx.put (v)
         }}
 
       def u (ctx: UnpickleContext) = {
-        val x = int.u (ctx)
+        val x = unsignedInt.u (ctx)
         if (x == 0) {
-          ctx.get [A] (int.u (ctx))
+          ctx.get [A] (unsignedInt.u (ctx))
         } else {
           val v = pa.u (ctx)
           ctx.put (v)
@@ -718,7 +718,7 @@ trait Picklers {
   val stackTrace = {
     val elem =
       wrap [(String, String, String, Int), StackTraceElement] (
-        pickle = tuple (string, string, string, int),
+        pickle = tuple (string, string, string, unsignedInt),
 
         build = ((clazz, method, file, line) =>
           new StackTraceElement(clazz, method, file, line)).tupled,
@@ -734,14 +734,14 @@ trait Picklers {
       addr match {
         case inet: InetSocketAddress =>
           string.p (inet.getHostName, ctx)
-          int.p (inet.getPort, ctx)
+          unsignedInt.p (inet.getPort, ctx)
         case _ =>
           throw new IllegalArgumentException ("Cannot pickle socket address " + addr)
       }}
 
     def u (ctx: UnpickleContext): SocketAddress = {
       val host = string.u (ctx)
-      val port = int.u (ctx)
+      val port = unsignedInt.u (ctx)
       new InetSocketAddress (host, port)
     }}}
 
