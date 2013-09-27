@@ -20,22 +20,20 @@ object TreodeBuild extends Build {
 
     scalacOptions ++= Seq ("-deprecation", "-feature", "-unchecked"),
 
-    testOptions in Test ++= Seq (Tests.Argument ("-oDF")),
-
-    testOptions in Test ++= (
-      if (System.getProperty ("large", "false") == "true")
-        Seq (Tests.Argument ("-n"), Tests.Argument ("LargeTest"))
-      else
-        Seq (Tests.Argument ("-l"), Tests.Argument ("LargeTest"))),
+    testFrameworks += new TestFramework ("org.scalameter.ScalaMeterFramework"),
 
     libraryDependencies ++= Seq (
       "com.google.code.findbugs" % "jsr305" % "1.3.9",
       "com.google.guava" % "guava" % "14.0.1",
       "com.yammer.metrics" % "metrics-core" % "3.0.0-BETA1",
-      "org.scalatest" %% "scalatest" % "2.0.M5b" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
+      "io.netty" % "netty-buffer" % "4.0.9.Final",
       "org.slf4j" % "slf4j-api" % "1.7.2",
-      "org.slf4j" % "slf4j-simple" % "1.7.2"))
+      "org.slf4j" % "slf4j-simple" % "1.7.2"),
+
+    libraryDependencies ++= Seq (
+      "com.github.axel22" %% "scalameter" % "0.3" % "test",
+      "org.scalatest" %% "scalatest" % "2.0.M5b" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.10.1" % "test"))
 
   /*
    * Separated to allow focused development.

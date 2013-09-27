@@ -1,6 +1,7 @@
 package com.treode.pickle
 
 import org.scalatest.FlatSpec
+import io.netty.buffer.ByteBuf
 
 import Picklers._
 
@@ -8,7 +9,7 @@ class HashSpec extends FlatSpec {
 
   trait Hash [T] {
     def apply [A] (p: Pickler [A], v: A): T
-    def apply (bytes: Array [Byte]): T
+    def apply (b: ByteBuf): T
   }
 
   def aHash [T] (hash: Hash [T]) = {
@@ -64,23 +65,23 @@ class HashSpec extends FlatSpec {
     it should "agree when pickling and when handling bytes" in {
       val p1 = tuple (long, long)
       val v1 = (0x1CA946467D8L, 0xF3D0671A814L)
-      expectResult (hash (p1, v1)) (hash (toByteArray (p1, v1)))
+      expectResult (hash (p1, v1)) (hash (toByteBuf (p1, v1)))
 
       val p2 = tuple (long, long)
       val v2 = (0xC40ED102015L, 0x2C96D9C0FBBL)
       val p3 = tuple (p1, p2)
-      expectResult (hash (p3, (v1, v2))) (hash (toByteArray (p1, v1, toByteArray (p2, v2))))
+      expectResult (hash (p3, (v1, v2))) (hash (toByteBuf (p1, v1, toByteBuf (p2, v2))))
     }}
 
   "Hash32" should behave like aHash (
       new Hash [Int] {
         def apply [A] (p: Pickler [A], v: A): Int = Hash32.hash (p, 0, v)
-        def apply (bytes: Array [Byte]): Int = Hash32.hash (0, bytes)
+        def apply (b: ByteBuf): Int = Hash32.hash (0, b)
       })
 
   "Hash128" should behave like aHash (
       new Hash [(Long, Long)] {
         def apply [A] (p: Pickler [A], v: A): (Long, Long) = Hash128.hash (p, 0, v)
-        def apply (bytes: Array [Byte]): (Long, Long) = Hash128.hash (0, bytes)
+        def apply (b: ByteBuf): (Long, Long) = Hash128.hash (0, b)
       })
 }

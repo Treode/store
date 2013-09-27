@@ -1,8 +1,10 @@
 package com.treode.pickle
 
+import java.lang.{Double => JDouble, Float => JFloat}
 import java.lang.Integer.{rotateLeft => rotl32}
 import java.lang.Long.{rotateLeft => rotl64}
-import com.treode.io.buffer.WritableStream
+
+import io.netty.buffer.ByteBuf
 
 // The constants come from MurmurHash3 as of Oct 5, 2011, which was published under the MIT license.
 class Murmur32 (seed: Int) {
@@ -24,7 +26,7 @@ class Murmur32 (seed: Int) {
     h1
   }}
 
-class HashOutput32 (seed: Int) extends WritableStream {
+class HashContext32 (seed: Int) extends PickleContext {
 
   private[this] var k = 0
   private[this] var len = 0
@@ -40,7 +42,19 @@ class HashOutput32 (seed: Int) extends WritableStream {
     len += 1
   }
 
-  override def writeInt (v: Int) {
+  def writeBytes (v: Array[Byte], offset: Int, length: Int) {
+    var i = offset
+    while (i < offset + length) {
+      writeByte (v (i))
+      i += 1
+    }}
+
+  def writeShort (v: Short) {
+    writeByte ((v >> 8).toByte)
+    writeByte (v.toByte)
+  }
+
+  def writeInt (v: Int) {
     len & 0x3 match {
       case 0 => hash.mix (v)
       case 1 => k = (k << 24) | ((v >> 8) & 0xFFFFFF); hash.mix (k); k = v & 0xFF
@@ -50,10 +64,16 @@ class HashOutput32 (seed: Int) extends WritableStream {
     len += 4
   }
 
-  override def writeLong (v: Long) {
+  def writeLong (v: Long) {
     writeInt ((v >> 32).toInt)
     writeInt (v.toInt)
   }
+
+  def writeFloat (v: Float): Unit =
+    writeInt (JFloat.floatToRawIntBits (v))
+
+  def writeDouble (v: Double): Unit =
+    writeLong (JDouble.doubleToLongBits (v))
 
   def finish (): Int = {
     // Fill the tail with zeros.
@@ -69,14 +89,14 @@ class HashOutput32 (seed: Int) extends WritableStream {
 object Hash32 {
 
   def hash [T] (p: Pickler [T], seed: Int, v: T): Int = {
-    val h = new HashOutput32 (seed)
-    p.p (v, new PickleContext (h))
+    val h = new HashContext32 (seed)
+    p.p (v, h)
     h.finish()
   }
 
-  def hash (seed: Int, bytes: Array [Byte]): Int = {
-    val h = new HashOutput32 (seed)
-    h.writeBytes (bytes)
+  def hash (seed: Int, buffer: ByteBuf): Int = {
+    val h = new HashContext32 (seed)
+    h.writeBytes (buffer.array, buffer.readerIndex, buffer.readableBytes)
     h.finish()
   }}
 
@@ -117,7 +137,7 @@ class Murmur128 (seed: Long) {
     (h1, h2)
   }}
 
-class HashOutput128 (seed: Long) extends WritableStream {
+class HashOutput128 (seed: Long) extends PickleContext {
 
   private[this] var k1 = 0L
   private[this] var k2 = 0L
@@ -137,7 +157,19 @@ class HashOutput128 (seed: Long) extends WritableStream {
     len += 1
   }
 
-  override def writeInt (_v: Int) {
+  def writeBytes (v: Array[Byte], offset: Int, length: Int) {
+    var i = offset
+    while (i < offset + length) {
+      writeByte (v (i))
+      i += 1
+    }}
+
+  def writeShort (v: Short) {
+    writeByte ((v >> 8).toByte)
+    writeByte (v.toByte)
+  }
+
+  def writeInt (_v: Int) {
     val v = _v.toLong
     // If there is space in the current part of the key then great.  If this int crosses long
     // boundaries, then we need to break it up.  If we are at <8, we break it up over k1 and k2 and
@@ -179,7 +211,7 @@ class HashOutput128 (seed: Long) extends WritableStream {
     len += 4
   }
 
-  override def writeLong (v: Long) {
+  def writeLong (v: Long) {
     // If we are on a long boundary then great.  Otherwise this long crosses boundaries, and we need
     // to break it up.  If we are at <8, we break it up over k1 and k2 and are done.  If we are >=8,
     // then we break it up over k2, mix and then k1.
@@ -242,6 +274,12 @@ class HashOutput128 (seed: Long) extends WritableStream {
     len += 8
   }
 
+  def writeFloat (v: Float): Unit =
+    writeInt (JFloat.floatToRawIntBits (v))
+
+  def writeDouble (v: Double): Unit =
+    writeLong (JDouble.doubleToLongBits (v))
+
   def finish (): (Long, Long) = {
     // Fill the tail with zeros.
     len & 0xF match {
@@ -265,12 +303,12 @@ object Hash128 {
 
   def hash [T] (p: Pickler [T], seed: Long, v: T): (Long, Long) = {
     val h = new HashOutput128 (seed)
-    p.p (v, new PickleContext (h))
+    p.p (v, h)
     h.finish()
   }
 
-  def hash (seed: Long, bytes: Array [Byte]): (Long, Long) = {
+  def hash (seed: Long, buffer: ByteBuf): (Long, Long) = {
     val h = new HashOutput128 (seed)
-    h.writeBytes (bytes)
+    h.writeBytes (buffer.array, buffer.readerIndex, buffer.readableBytes)
     h.finish()
   }}

@@ -1,11 +1,12 @@
 package com.treode.pickle
 
 import java.nio.charset.StandardCharsets.UTF_16
+import scala.util.Random
+
+import io.netty.buffer.Unpooled
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.{FlatSpec, PropSpec, Specs}
-import scala.util.Random
-import com.treode.io.buffer.Buffer
 
 class PicklersSpec extends Specs (PicklersBehaviors, PicklersProperties)
 
@@ -38,9 +39,12 @@ private trait PicklersSpecCommon extends ShouldMatchers {
       inspect = { x: Folder => (x.name, x.bookmarks) })
 
   def check [A] (pa: Pickler [A], x: A) {
-    expectResult (x) (fromByteArray (pa, toByteArray (pa, x)))
+    //expectResult (x) (fromByteBuf (pa, toByteBuf (pa, x)))
+    val a = toByteBuf (pa, x)
+    val b = fromByteBuf (pa, a)
+    expectResult (x) (b)
     expectResult (x) {
-      val b = Buffer()
+      val b = Unpooled.buffer()
       pickle (pa, x, b)
       unpickle (pa, b)
     }}}

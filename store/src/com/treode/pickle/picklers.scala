@@ -90,16 +90,15 @@ trait Picklers {
   def string (cs: Charset): Pickler [String] =
     new Pickler [String] {
       def p (v: String, ctx: PickleContext) = {
-        val bb = cs.encode (v)
-        unsignedInt.p (bb.limit, ctx)
-        ctx.writeBytes (bb)
+        val b = cs.encode (v)
+        unsignedInt.p (b.limit, ctx)
+        ctx.writeBytes (b.array, 0, b.limit)
       }
       def u (ctx: UnpickleContext) = {
         val l = unsignedInt.u (ctx)
-        val bb = ByteBuffer.allocate (l)
-        ctx.readBytes (bb)
-        bb.flip()
-        cs.decode (bb).toString
+        val b = ByteBuffer.allocate (l)
+        ctx.readBytes (b.array, 0, l)
+        cs.decode (b).toString
       }
       override def toString = "string"
     }
@@ -531,21 +530,6 @@ trait Picklers {
 
       override def toString = "array (" + pa + ")"
     }}
-
-  def arrayByte: Pickler [Array [Byte]] =
-    new Pickler [Array [Byte]] {
-      def p (v: Array [Byte], ctx: PickleContext) = {
-        unsignedInt.p (v.length, ctx)
-        ctx.writeBytes (v)
-      }
-      def u (ctx: UnpickleContext) = {
-        val l = unsignedInt.u (ctx)
-        val v = new Array [Byte] (l)
-        ctx.readBytes (v)
-        v
-      }
-      override def toString = "arrayByte"
-    }
 
   def cast [A, B <: A] (pb: Pickler [B]) (implicit mb: ClassTag [B]): Pickler [A] = {
     require (pb != null)
