@@ -39,14 +39,12 @@ private trait PicklersSpecCommon extends ShouldMatchers {
       inspect = { x: Folder => (x.name, x.bookmarks) })
 
   def check [A] (pa: Pickler [A], x: A) {
-    //expectResult (x) (fromByteBuf (pa, toByteBuf (pa, x)))
-    val a = toByteBuf (pa, x)
-    val b = fromByteBuf (pa, a)
-    expectResult (x) (b)
     expectResult (x) {
       val b = Unpooled.buffer()
       pickle (pa, x, b)
-      unpickle (pa, b)
+      val y = unpickle (pa, b)
+      b.release()
+      y
     }}}
 
 private object PicklersBehaviors extends FlatSpec with PicklersSpecCommon {

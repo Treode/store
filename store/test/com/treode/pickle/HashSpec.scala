@@ -1,7 +1,7 @@
 package com.treode.pickle
 
+import io.netty.buffer.{Unpooled, ByteBuf}
 import org.scalatest.FlatSpec
-import io.netty.buffer.ByteBuf
 
 import Picklers._
 
@@ -40,7 +40,7 @@ class HashSpec extends FlatSpec {
 
       expectResult (expected) {
         hash (
-            (tuple (fixedLong, fixedLong, tuple (byte, byte))),
+            tuple (fixedLong, fixedLong, tuple (byte, byte)),
             (0x38E5A953316709EAL, 0x2E211892C666CFDAL, (0x0E.toByte, 0x6B.toByte)))
       }
 
@@ -55,7 +55,7 @@ class HashSpec extends FlatSpec {
 
       expectResult (expected) {
         hash (
-            (tuple (byte, fixedLong, fixedLong, byte)),
+            tuple (byte, fixedLong, fixedLong, byte),
             (0x38.toByte, 0xE5A953316709EA2EL, 0x211892C666CFDA0EL, 0x6B.toByte))
       }}
 
@@ -65,12 +65,19 @@ class HashSpec extends FlatSpec {
     it should "agree when pickling and when handling bytes" in {
       val p1 = tuple (long, long)
       val v1 = (0x1CA946467D8L, 0xF3D0671A814L)
-      expectResult (hash (p1, v1)) (hash (toByteBuf (p1, v1)))
+      val b1 = Unpooled.buffer()
+      pickle (p1, v1, b1)
+      expectResult (hash (p1, v1)) (hash (b1))
+      b1.release()
 
       val p2 = tuple (long, long)
       val v2 = (0xC40ED102015L, 0x2C96D9C0FBBL)
       val p3 = tuple (p1, p2)
-      expectResult (hash (p3, (v1, v2))) (hash (toByteBuf (p1, v1, toByteBuf (p2, v2))))
+      val b2 = Unpooled.buffer()
+      pickle (p1, v1, b2)
+      pickle (p2, v2, b2)
+      expectResult (hash (p3, (v1, v2))) (hash (b2))
+      b2.release()
     }}
 
   "Hash32" should behave like aHash (

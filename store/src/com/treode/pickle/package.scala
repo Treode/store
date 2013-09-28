@@ -180,17 +180,4 @@ package object pickle {
 
   def unpickle [A] (p: Pickler [A], b: ByteBuf): A =
     p.u (new ByteBufUnpickleContext (b))
-
-  def toByteBuf [A] (p: Pickler [A], v: A, extra: ByteBuf = Unpooled.EMPTY_BUFFER): ByteBuf = {
-    val b = Unpooled.buffer ()
-    pickle (p, v, b)
-    b.writeBytes (extra)
-    b
-  }
-
-  def fromByteBuf [A] (p: Pickler [A], b: ByteBuf, extra: Boolean = false): A = {
-    val v = unpickle (p, b)
-    if (b.readableBytes > 0 && !extra)
-      throw new BytesRemainException (p.toString)
-    v
-  }}
+}
