@@ -9,6 +9,7 @@ import scala.language.{existentials, higherKinds, implicitConversions}
 import scala.reflect.ClassTag
 
 trait Picklers {
+  import Picklers.Tag
 
   val byte: Pickler [Byte] =
     new Pickler [Byte] {
@@ -467,15 +468,6 @@ trait Picklers {
       override def toString = mb.runtimeClass.getSimpleName + " (" + pickle + ")"
     }}
 
-  final case class Tag [A] (tag: Long, clazz: Class [_], pickle: Pickler [A]) {
-
-    private [pickle] def read (in: UnpickleContext) = pickle.u (in)
-
-    private [pickle] def write (v: Any, ctx: PickleContext) {
-      long.p (tag, ctx)
-      pickle.p (clazz.cast (v).asInstanceOf [A], ctx)
-    }}
-
   implicit def intFormatToTag [A] (tf: (Int, Pickler [A])) (implicit mf: ClassTag [A]): Tag [A] =
     Tag [A] (tf._1.toLong, mf.runtimeClass, tf._2)
 
@@ -729,4 +721,13 @@ trait Picklers {
       new InetSocketAddress (host, port)
     }}}
 
-object Picklers extends Picklers
+object Picklers extends Picklers {
+
+  final case class Tag [A] (tag: Long, clazz: Class [_], pickle: Pickler [A]) {
+
+    private [pickle] def read (in: UnpickleContext) = pickle.u (in)
+
+    private [pickle] def write (v: Any, ctx: PickleContext) {
+      long.p (tag, ctx)
+      pickle.p (clazz.cast (v).asInstanceOf [A], ctx)
+    }}}

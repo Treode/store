@@ -159,12 +159,6 @@ trait Pickler [A] {
   def u (ctx: UnpickleContext): A
 }
 
-trait Tagged {
-  def tag: Long
-
-  def get: Any
-}
-
 }
 
 package object pickle {
