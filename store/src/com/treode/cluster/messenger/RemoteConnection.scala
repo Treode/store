@@ -7,8 +7,8 @@ import scala.language.postfixOps
 import scala.util.Random
 
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
+import com.treode.cluster.concurrent.Fiber
 import com.treode.cluster.events.Events
-import com.treode.cluster.fiber.Fiber
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.pickle.{Pickler, pickle, unpickle}
 import io.netty.buffer.ByteBuf

@@ -1,4 +1,4 @@
-package com.treode.cluster.fiber
+package com.treode.cluster.concurrent
 
 import java.util.ArrayDeque
 

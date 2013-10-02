@@ -2,9 +2,6 @@ package com.treode.cluster
 
 import java.nio.channels.{AsynchronousSocketChannel => Socket}
 
-import com.treode.cluster.events.Events
-import com.treode.cluster.fiber.{Fiber, Scheduler}
-import com.treode.cluster.messenger.{LocalConnection, MailboxRegistry, RemoteConnection}
 import com.treode.pickle.Pickler
 import java.net.SocketAddress
 import io.netty.buffer.ByteBuf

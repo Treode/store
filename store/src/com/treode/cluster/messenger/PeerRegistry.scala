@@ -6,8 +6,8 @@ import scala.collection.JavaConversions._
 import scala.util.Random
 
 import com.treode.cluster.{HostId, Peer}
+import com.treode.cluster.concurrent.{Fiber, Scheduler}
 import com.treode.cluster.events.Events
-import com.treode.cluster.fiber.{Fiber, Scheduler}
 
 class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit random: Random) {
 

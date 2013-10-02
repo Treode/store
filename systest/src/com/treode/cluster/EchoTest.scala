@@ -6,7 +6,7 @@ import java.util.concurrent._
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.util.Random
 
-import com.treode.cluster.fiber.Scheduler
+import com.treode.cluster.concurrent.Scheduler
 import com.treode.cluster.events.Events
 import com.treode.cluster.messenger.{MailboxRegistry, Listener, PeerRegistry}
 import com.treode.cluster.misc.{RichBoolean, RichOption, parseInetSocketAddress, parseInt}

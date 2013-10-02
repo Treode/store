@@ -9,8 +9,8 @@ import java.nio.channels.{
   CompletionHandler}
 
 import com.treode.cluster.{ClusterEvents, HostId, messenger}
+import com.treode.cluster.concurrent.Scheduler
 import com.treode.cluster.events.Events
-import com.treode.cluster.fiber.Scheduler
 import com.treode.pickle._
 import io.netty.buffer.ByteBuf
 

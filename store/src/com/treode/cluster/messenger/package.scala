@@ -5,7 +5,6 @@ import java.lang.{Long => JavaLong}
 import java.util.concurrent.TimeUnit._
 
 import io.netty.buffer.{PooledByteBufAllocator, ByteBuf}
-import com.treode.cluster.fiber.Scheduler
 
 package object messenger {
 
