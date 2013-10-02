@@ -21,4 +21,7 @@ object MessageSender {
 
       def apply (to: Iterable [HostId]) (implicit h: Host): Unit =
         to foreach (apply _)
+
+      def apply (acks: Acknowledgements) (implicit h: Host): Unit =
+        apply (acks.awaiting)
     }}

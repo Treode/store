@@ -2,7 +2,7 @@ package com.treode.cluster.concurrent
 
 import java.util
 
-class Fiber (implicit scheduler: Scheduler) extends Scheduler {
+class Fiber (scheduler: Scheduler) extends Scheduler {
 
   private[this] val tasks = new util.ArrayDeque [Runnable]
   private[this] var engaged: Boolean = false

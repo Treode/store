@@ -100,6 +100,7 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
     implicit val host = new Host {
       val localId = EchoTest.this.localId
+      val scheduler = _scheduler
       val mailboxes = _mailboxes
       val peers = _peers
     }
@@ -114,12 +115,14 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
 object EchoTest {
 
-  private val usage = "usage: EchoTest id p0 p1"
+  private val usage = "usage: EchoTest id p0 p1 p2"
 
   def main (args: Array[String] ) {
-    (args.length == 3) orDie usage
-    val id = parseInt (args (0)) getOrDie usage
-    val p0 = parseInetSocketAddress (args (1)) getOrDie usage
-    val p1 = parseInetSocketAddress (args (2)) getOrDie usage
-    new EchoTest (id, Seq (p0, p1))
+    (args.length == 4) orDie usage
+    new EchoTest (
+      parseInt (args (0)) getOrDie usage,
+      Seq (
+        parseInetSocketAddress (args (1)) getOrDie usage,
+        parseInetSocketAddress (args (2)) getOrDie usage,
+        parseInetSocketAddress (args (3)) getOrDie usage))
   }}

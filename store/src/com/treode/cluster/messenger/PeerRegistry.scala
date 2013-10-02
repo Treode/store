@@ -52,7 +52,7 @@ object PeerRegistry {
       if (remoteId == localId)
         new LocalConnection (localId, mailboxes)
       else
-        new RemoteConnection (remoteId, localId, new Fiber, group, mailboxes)
+        new RemoteConnection (remoteId, localId, new Fiber (scheduler), group, mailboxes)
 
     new PeerRegistry (localId, newPeer)
   }}

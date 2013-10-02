@@ -9,6 +9,7 @@ trait RequestSender [Rsp] {
   def apply (to: Peer, mbx: Mailbox)
   def apply (to: HostId, mbx: Mailbox) (implicit h: Host)
   def apply (to: Iterable [HostId], mbx: Mailbox) (implicit h: Host)
+  def apply (acks: Acknowledgements, mbx: Mailbox) (implicit h: Host)
 }
 
 object RequestSender {
@@ -27,4 +28,7 @@ object RequestSender {
 
       def apply (to: Iterable [HostId], mbx: Mailbox) (implicit h: Host): Unit =
         sender (mbx.id) (to)
+
+      def apply (acks: Acknowledgements, mbx: Mailbox) (implicit h: Host): Unit =
+        sender (mbx.id) (acks.awaiting)
     }}
