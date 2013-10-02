@@ -18,7 +18,7 @@ object TreodeBuild extends Build {
     unmanagedSourceDirectories in Test <<=
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
-    scalacOptions ++= Seq ("-deprecation", "-feature", "-unchecked"),
+    scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked"),
 
     testFrameworks += new TestFramework ("org.scalameter.ScalaMeterFramework"),
 
