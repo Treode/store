@@ -6,7 +6,7 @@ import com.treode.cluster.{HostId, MailboxId, Peer}
 import com.treode.pickle.{Pickler, pickle}
 import io.netty.buffer.{UnpooledByteBufAllocator, ByteBuf}
 
-private [cluster] class LocalConnection (val id: HostId, mbxs: MailboxRegistry) extends Peer {
+private class LocalConnection (val id: HostId, mbxs: MailboxRegistry) extends Peer {
 
   def connect (socket: Socket, input: ByteBuf, clientId: HostId) =
     throw new IllegalArgumentException

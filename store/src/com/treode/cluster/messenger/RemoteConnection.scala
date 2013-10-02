@@ -13,7 +13,7 @@ import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.pickle.{Pickler, pickle, unpickle}
 import io.netty.buffer.ByteBuf
 
-private [cluster] class RemoteConnection (
+private class RemoteConnection (
   val id: HostId,
   localId: HostId,
   fiber: Fiber,

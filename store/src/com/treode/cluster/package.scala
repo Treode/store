@@ -7,23 +7,23 @@ package object cluster {
   private [cluster] implicit class ClusterEvents (events: Events) {
 
     def errorWhileGreeting (expected: HostId, found: HostId): Unit =
-      events.warning ("Error while greeting: expected remote host %016X but found %016X" format (expected, found))
+      events.warning (s"Error while greeting: expected remote host $expected but found $found")
 
     def exceptionWhileGreeting (e: Throwable): Unit =
-      events.warning ("Error while greeting: " + e.toString)
+      events.warning (s"Error while greeting: $e")
 
     def exceptionFromMessageHandler (e: Throwable): Unit =
       events.warning ("A message handler threw an exception.", e)
 
     def exceptionReadingMessage (e: Throwable): Unit =
-      events.warning ("Exception reading message: " + e.toString)
+      events.warning (s"Exception reading message: $e")
 
     def exceptionWritingMessage (e: Throwable): Unit =
-      events.warning ("Exception writing message: " + e.toString)
+      events.warning (s"Exception writing message: $e")
 
     def mailboxNotRecognized (id: MailboxId, length: Int): Unit =
-      events.warning ("Mailbox not recognized: " + id)
+      events.warning (s"Mailbox not recognized: $id")
 
     def recyclingMessengerSocket (e: Throwable): Unit =
-      events.warning ("Recycling messenger socket: " + e.getMessage)
+      events.warning (s"Recycling messenger socket: ${e.getMessage}")
   }}

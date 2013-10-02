@@ -4,13 +4,13 @@ import com.treode.cluster.MailboxId
 import com.treode.pickle.{Pickler, pickle}
 import io.netty.buffer.ByteBuf
 
-private [cluster] trait PickledMessage {
+private trait PickledMessage {
 
   def mbx: MailboxId
   def write (b: ByteBuf)
 }
 
-private [cluster] object PickledMessage {
+private object PickledMessage {
 
   def apply [A] (p: Pickler [A], _mbx: MailboxId, msg: A): PickledMessage =
     new PickledMessage {
