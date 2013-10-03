@@ -11,6 +11,8 @@ trait Scheduler {
   def delay (millis: Long) (task: => Any)
 
   def at (millis: Long) (task: => Any)
+
+  def spawn (task: => Any)
 }
 
 object Scheduler {
@@ -38,4 +40,8 @@ object Scheduler {
           executor.execute (toRunnable (task))
         else
           executor.schedule (toRunnable (task), millis - t, TimeUnit.MILLISECONDS)
-      }}}
+      }
+
+      def spawn (task: => Any): Unit =
+        executor.execute (toRunnable (task))
+    }}

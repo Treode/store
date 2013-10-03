@@ -9,7 +9,7 @@ import com.treode.cluster.concurrent.{Mailbox, Scheduler}
 import com.treode.cluster.events.Events
 import io.netty.buffer.ByteBuf
 
-class MailboxRegistry (implicit scheduler: Scheduler, events: Events) {
+class MailboxRegistry (implicit events: Events) {
 
   // Visible for testing.
   private [messenger] val mbxs = new ConcurrentHashMap [Long, PickledFunction]
@@ -37,7 +37,7 @@ class MailboxRegistry (implicit scheduler: Scheduler, events: Events) {
     require (mbxs.putIfAbsent (id.id, pf) == null, "Mailbox already registered: " + id)
   }
 
-  private class EphemeralImpl [M] (val id: MailboxId, p: Pickler [M])
+  private class EphemeralImpl [M] (val id: MailboxId, p: Pickler [M], scheduler: Scheduler)
       extends EphemeralMailbox [M] with PickledFunction {
 
     private val mbx = new Mailbox [(M, Peer)] (scheduler)
@@ -54,9 +54,9 @@ class MailboxRegistry (implicit scheduler: Scheduler, events: Events) {
       mbx.send (message, from)
     }}
 
-  def open [M] (p: Pickler [M]): EphemeralMailbox [M] = {
-    var mbx = new EphemeralImpl (Random.nextLong, p)
+  def open [M] (p: Pickler [M], scheduler: Scheduler): EphemeralMailbox [M] = {
+    var mbx = new EphemeralImpl (Random.nextLong, p, scheduler)
     while (mbx.id.isFixed || mbxs.putIfAbsent (mbx.id.id, mbx) != null)
-      mbx = new EphemeralImpl (Random.nextLong, p)
+      mbx = new EphemeralImpl (Random.nextLong, p, scheduler)
     mbx
   }}

@@ -87,7 +87,7 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
     _executor = Executors.newScheduledThreadPool (nt)
     _scheduler = Scheduler (_executor)
 
-    _mailboxes = new MailboxRegistry () (_scheduler, Events.live)
+    _mailboxes = new MailboxRegistry () (Events.live)
 
     _group = AsynchronousChannelGroup.withFixedThreadPool (1, Executors.defaultThreadFactory)
 
@@ -100,6 +100,7 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
     implicit val host = new Host {
       val localId = EchoTest.this.localId
+      val random = _random
       val scheduler = _scheduler
       val mailboxes = _mailboxes
       val peers = _peers
