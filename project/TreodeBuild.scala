@@ -32,6 +32,7 @@ object TreodeBuild extends Build {
 
     libraryDependencies ++= Seq (
       "com.github.axel22" %% "scalameter" % "0.3" % "test",
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.0.1" % "test",
       "org.scalatest" %% "scalatest" % "2.0.M5b" % "test",
       "org.scalacheck" %% "scalacheck" % "1.10.1" % "test"))
 

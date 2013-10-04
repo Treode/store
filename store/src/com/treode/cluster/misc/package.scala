@@ -72,4 +72,9 @@ package object misc {
       Some (java.lang.Double.parseDouble (s))
     } catch {
       case _: NumberFormatException => None
-    }}}
+    }}
+
+  def toRunnable (task: => Any): Runnable =
+    new Runnable {
+      def run() = task
+    }}

@@ -14,10 +14,6 @@ class InvalidTagException (name: String, found: Long) extends PickleException {
   override def getMessage = "Invalid tag for " + name + ", found " + found
 }
 
-class BytesRemainException (p: String) extends PickleException {
-  override def getMessage = "Bytes remain after unpickling " + p
-}
-
 abstract class PickleContext private [pickle] {
 
   private [this] val m = mutable.Map [Any, Int]()

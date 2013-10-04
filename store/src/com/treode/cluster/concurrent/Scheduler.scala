@@ -2,6 +2,8 @@ package com.treode.cluster.concurrent
 
 import java.util.concurrent.{TimeUnit, ScheduledExecutorService}
 
+import com.treode.cluster.misc.toRunnable
+
 trait Scheduler {
 
   def execute (task: Runnable)
@@ -16,11 +18,6 @@ trait Scheduler {
 }
 
 object Scheduler {
-
-  private def toRunnable (task: => Any): Runnable =
-    new Runnable {
-      def run() = task
-    }
 
   def apply (executor: ScheduledExecutorService): Scheduler =
     new Scheduler {
