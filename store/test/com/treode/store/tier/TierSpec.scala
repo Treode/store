@@ -4,11 +4,11 @@ import scala.collection.JavaConversions._
 
 import com.treode.cluster.concurrent.Callback
 import com.treode.pickle.Picklers
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{Bytes, Cell, TxClock}
 import org.scalatest.WordSpec
 
 class TierSpec extends WordSpec {
-  import Fruits.{AllFruits}
+  import Fruits.{AllFruits, Apple, Orange, Watermelon}
 
   private val One = Bytes (Picklers.string, "One")
 
@@ -110,4 +110,57 @@ class TierSpec extends WordSpec {
       "the blocks are limited to 64K" in {
         checkIterator (1 << 16)
       }}}
+
+  "The Tier" should {
+    "find the key" when {
+
+      def checkFind (maxBlockSize: Int) {
+        val disk = new DiskStub (maxBlockSize)
+        val pos = buildTier (disk)
+        val tier = new Tier (disk, pos)
+        tier.read (Apple, 8, Callback.unary { cell: Option [Cell] =>
+          expectResult (Some (One)) (cell.get.value)
+        })
+        tier.read (Apple, 7, Callback.unary { cell: Option [Cell] =>
+          expectResult (Some (One)) (cell.get.value)
+        })
+        tier.read (Apple, 6, Callback.unary { cell: Option [Cell] =>
+          expectResult (None) (cell)
+        })
+        tier.read (Orange, 8, Callback.unary { cell: Option [Cell] =>
+          expectResult (Some (One)) (cell.get.value)
+        })
+        tier.read (Orange, 7, Callback.unary { cell: Option [Cell] =>
+          expectResult (Some (One)) (cell.get.value)
+        })
+        tier.read (Orange, 6, Callback.unary { cell: Option [Cell] =>
+          expectResult (None) (cell)
+        })
+        tier.read (Watermelon, 8, Callback.unary { cell: Option [Cell] =>
+          expectResult (Some (One)) (cell.get.value)
+        })
+        tier.read (Watermelon, 7, Callback.unary { cell: Option [Cell] =>
+          expectResult (Some (One)) (cell.get.value)
+        })
+        tier.read (Watermelon, 6, Callback.unary { cell: Option [Cell] =>
+          expectResult (None) (cell)
+        })
+      }
+
+      "the blocks are limited to one byte" in {
+        try {
+        checkFind (1)
+        } catch {
+          case e: Throwable => e.printStackTrace()
+          throw e
+        }
+      }
+      "the blocks are limited to 256 bytes" in {
+        checkFind (1 << 6)
+      }
+      "the blocks are limited to 64K" in {
+        checkFind (1 << 16)
+      }
+    }
+  }
 }
