@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-import java.util.Arrays
+import java.util.{Arrays, ArrayList}
 
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 import com.treode.store.{Bytes, TxClock}
@@ -16,9 +16,21 @@ private class IndexBlock (val entries: Array [IndexEntry]) extends Block {
   }
 
   def size: Int = entries.size
+
+  def isEmpty: Boolean = entries.size == 0
+
+  def last: IndexEntry = entries (entries.size - 1)
 }
 
 private object IndexBlock {
+
+  val empty = new IndexBlock (new Array (0))
+
+  def apply (entries: Array [IndexEntry]): IndexBlock =
+    new IndexBlock (entries)
+
+  def apply (entries: ArrayList [IndexEntry]): IndexBlock =
+    new IndexBlock (entries.toArray (empty.entries))
 
   private val _pickle: Pickler [IndexBlock] =
     new Pickler [IndexBlock] {

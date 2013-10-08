@@ -2,9 +2,12 @@ package com.treode.store
 
 import scala.language.implicitConversions
 
+import com.google.common.primitives.Longs
 import com.treode.pickle.Picklers
 
 class TxClock private (val time: Long) extends AnyVal with Ordered [TxClock] {
+
+  def byteSize: Int = Longs.BYTES
 
   def compare (that: TxClock): Int =
     this.time compare that.time
@@ -15,7 +18,7 @@ class TxClock private (val time: Long) extends AnyVal with Ordered [TxClock] {
 object TxClock extends Ordering [TxClock] {
 
   // Supports testing only.
-  private [store] implicit def apply (time: Long): TxClock =
+  private [store] implicit def apply (time: Int): TxClock =
     new TxClock (time)
 
   val Zero = new TxClock (0)
@@ -29,5 +32,5 @@ object TxClock extends Ordering [TxClock] {
 
   val pickle = {
     import Picklers._
-    wrap [Long, TxClock] (unsignedLong, TxClock (_), _.time)
+    wrap [Long, TxClock] (unsignedLong, new TxClock (_), _.time)
   }}

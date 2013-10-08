@@ -6,12 +6,9 @@ import org.scalatest.WordSpec
 import io.netty.buffer.Unpooled
 
 class ValueBlockSpec extends WordSpec {
+  import Fruits.{Apple, Kiwi, Orange}
 
   val MaxTime = TxClock.MaxValue
-
-  val Apple = Bytes ("apple")
-  val Kiwi = Bytes ("kiwi")
-  val Orange = Bytes ("orange")
 
   private def entry (key: Bytes, time: Int): ValueEntry =
     new ValueEntry (key, time, None)

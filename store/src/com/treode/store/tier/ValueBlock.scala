@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-import java.util.Arrays
+import java.util.{Arrays, ArrayList}
 
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 import com.treode.store.{Bytes, TxClock}
@@ -16,11 +16,21 @@ private class ValueBlock (val entries: Array [ValueEntry]) extends Block {
   }
 
   def size: Int = entries.size
+
+  def isEmpty: Boolean = entries.size == 0
+
+  def last: ValueEntry = entries (entries.size - 1)
 }
 
 private object ValueBlock {
 
   val empty = new ValueBlock (new Array (0))
+
+  def apply (entries: Array [ValueEntry]): ValueBlock =
+    new ValueBlock (entries)
+
+  def apply (entries: ArrayList [ValueEntry]): ValueBlock =
+    new ValueBlock (entries.toArray (empty.entries))
 
   private val _pickle: Pickler [ValueBlock] =
     new Pickler [ValueBlock] {

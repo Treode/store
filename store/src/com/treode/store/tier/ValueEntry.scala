@@ -5,6 +5,13 @@ import com.treode.store.{Bytes, TxClock}
 private class ValueEntry (val key: Bytes, val time: TxClock, val value: Option [Bytes])
 extends Entry with Ordered [ValueEntry] {
 
+  def byteSize: Int = {
+    val n = key.byteSize + time.byteSize
+    value match {
+      case Some (v) => n + v.byteSize
+      case None     => n
+    }}
+
   def compare (that: ValueEntry): Int = {
     val rk = key compare that.key
     if (rk != 0)

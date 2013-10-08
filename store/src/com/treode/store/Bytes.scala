@@ -10,6 +10,8 @@ import io.netty.buffer.{Unpooled, ByteBuf}
 
 class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
 
+  def byteSize: Int = bytes.length
+
   def unpickle [A] (p: Pickler [A]): A = {
     val buf = Unpooled.wrappedBuffer (bytes)
     val v = com.treode.pickle.unpickle (p, buf)

@@ -1,16 +1,31 @@
 package com.treode.store
 
+import com.treode.cluster.concurrent.Callback
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 
 package tier {
 
-  private trait Entry
+  private trait Entry {
+    def key: Bytes
+    def time: TxClock
+    def byteSize: Int
+  }
 
   private trait Block {
-
     def get (i: Int): Entry
     def find (key: Bytes, time: TxClock): Int
     def size: Int
+    def isEmpty: Boolean
+    def last: Entry
+  }
+
+  private trait BlockCache {
+    def get (pos: Long, cb: Callback [Block])
+  }
+
+  private trait BlockWriter {
+    def maxBlockSize: Int
+    def write (block: Block, cb: Callback [Long])
   }}
 
 package object tier {
