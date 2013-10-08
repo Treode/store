@@ -1,6 +1,7 @@
 package com.treode.store.tier
 
 import java.util.ArrayList
+import scala.collection.mutable.Builder
 
 import com.treode.cluster.concurrent.Callback
 
@@ -14,12 +15,6 @@ private class DiskStub (val maxBlockSize: Int) extends BlockWriter with BlockCac
     cb (pos)
   }
 
-  def write2 (block: Block): Long = {
-    val pos = blocks.size
-    blocks.add (block)
-    pos
-  }
-
   def get (pos: Long, cb: Callback [Block]): Unit = {
     require (pos < Int.MaxValue)
     cb (blocks.get (pos.toInt))
@@ -30,9 +25,20 @@ private class DiskStub (val maxBlockSize: Int) extends BlockWriter with BlockCac
     blocks.get (pos.toInt)
   }
 
+  private def toSeq (builder: Builder [ValueEntry, _], pos: Long) {
+    get (pos) match {
+      case block: IndexBlock =>
+        block.entries foreach (e => toSeq (builder, e.pos))
+      case block: ValueBlock =>
+        block.entries foreach (builder += _)
+    }}
+
   /** Iterate the values of the tier rooted at `pos`. */
-  def iterator (pos: Long): Iterator [ValueEntry] =
-    new TierIteratorStub (this, pos)
+  def toSeq (pos: Long): Seq [ValueEntry] = {
+    val builder = Seq.newBuilder [ValueEntry]
+    toSeq (builder, pos)
+    builder.result
+  }
 
   private def spaces (builder: StringBuilder, indent: Int) {
     for (i <- 0 until indent*4)

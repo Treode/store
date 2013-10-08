@@ -1,7 +1,6 @@
 package com.treode.store.tier
 
 import scala.collection.JavaConversions._
-import scala.language.postfixOps
 
 import com.treode.cluster.concurrent.Callback
 import com.treode.pickle.Picklers
@@ -11,14 +10,14 @@ import org.scalatest.WordSpec
 class TierSpec extends WordSpec {
   import Fruits.{AllFruits}
 
-  val One = Bytes (Picklers.string, "One")
+  private val One = Bytes (Picklers.string, "One")
 
   /** Get the depths of ValueBlocks reached from the index entries. */
-  def getDepths (disk: DiskStub, entries: Iterable [IndexEntry], depth: Int): Set [Int] =
+  private def getDepths (disk: DiskStub, entries: Iterable [IndexEntry], depth: Int): Set [Int] =
     entries.map (e => getDepths (disk, e.pos, depth+1)) .fold (Set.empty) (_ ++ _)
 
   /** Get the depths of ValueBlocks for the tree root at `pos`. */
-  def getDepths (disk: DiskStub, pos: Long, depth: Int): Set [Int] = {
+  private def getDepths (disk: DiskStub, pos: Long, depth: Int): Set [Int] = {
     disk.get (pos) match {
       case b: IndexBlock => getDepths (disk, b.entries, depth+1)
       case b: ValueBlock => Set (depth)
@@ -27,7 +26,7 @@ class TierSpec extends WordSpec {
   /** Check that tree rooted at `pos` has all ValueBlocks at the same depth, expect those under
     * the final index entry.
     */
-  def expectBalanced (disk: DiskStub, pos: Long) {
+  private def expectBalanced (disk: DiskStub, pos: Long) {
     disk.get (pos) match {
       case b: IndexBlock =>
         val ds1 = getDepths (disk, b.entries.take (b.size-1), 1)
@@ -39,7 +38,8 @@ class TierSpec extends WordSpec {
         ()
     }}
 
-  def buildTier (disk: DiskStub): Long = {
+  /** Build a tier from fruit. */
+  private def buildTier (disk: DiskStub): Long = {
     val builder = new TierBuilder (disk)
     val iter = AllFruits.iterator
     val loop = new Callback [Unit] {
@@ -54,6 +54,24 @@ class TierSpec extends WordSpec {
     pos
   }
 
+  /** Build a sequence of the values in the tier by using the TierIterator. */
+  private def iterateTier (disk: DiskStub, pos: Long): Seq [ValueEntry] = {
+    val builder = Seq.newBuilder [ValueEntry]
+    TierIterator (disk, pos, Callback.unary { iter: TierIterator =>
+      val loop = new Callback [ValueEntry] {
+        def apply (e: ValueEntry) {
+          builder += e
+          if (iter.hasNext)
+            iter.next (this)
+        }
+        def fail (t: Throwable) = throw t
+      }
+      if (iter.hasNext)
+        iter.next (loop)
+    })
+    builder.result
+  }
+
   "The TierBuilder" should {
     "build a blanced tree with all keys" when {
 
@@ -61,7 +79,7 @@ class TierSpec extends WordSpec {
         val disk = new DiskStub (maxBlockSize)
         val pos = buildTier (disk)
         expectBalanced (disk, pos)
-        expectResult (AllFruits.toSeq) (disk.iterator (pos) map (_.key) toSeq)
+        expectResult (AllFruits.toSeq) (disk.toSeq (pos) .map (_.key))
       }
 
       "the blocks are limited to one byte" in {
@@ -74,4 +92,22 @@ class TierSpec extends WordSpec {
         checkBuild (1 << 16)
       }}}
 
+  "The TierIterator" should {
+    "iterate all keys" when {
+
+      def checkIterator (maxBlockSize: Int) {
+        val disk = new DiskStub (maxBlockSize)
+        val pos = buildTier (disk)
+        expectResult (AllFruits.toSeq) (iterateTier (disk, pos) map (_.key))
+      }
+
+      "the blocks are limited to one byte" in {
+        checkIterator (1)
+      }
+      "the blocks are limited to 256 bytes" in {
+        checkIterator (1 << 6)
+      }
+      "the blocks are limited to 64K" in {
+        checkIterator (1 << 16)
+      }}}
 }
