@@ -85,6 +85,9 @@ private class TierBuilder (writer: BlockWriter) {
     val entry = Cell (key, time, value)
     val entryByteSize = entry.byteSize
 
+    // Require that user adds entries in sorted order.
+    require (entries.isEmpty || entries.get (entries.size-1) < entry)
+
     // Ensure that a value block has at least one entry.
     if (byteSize + entryByteSize < writer.maxBlockSize || entries.size < 1) {
       entries.add (entry)

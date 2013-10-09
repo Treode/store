@@ -73,6 +73,39 @@ class TierSpec extends WordSpec {
   }
 
   "The TierBuilder" should {
+
+    "require that added entries are not duplicated" in {
+      val disk = new DiskStub (1 << 16)
+      val builder = new TierBuilder (disk)
+      builder.add (Apple, 1, None, Callback.unit (()))
+      intercept [IllegalArgumentException] {
+        builder.add (Apple, 1, None, Callback.unit (()))
+      }}
+
+    "require that added entries are sorted by key" in {
+      val disk = new DiskStub (1 << 16)
+      val builder = new TierBuilder (disk)
+      builder.add (Orange, 1, None, Callback.unit (()))
+      intercept [IllegalArgumentException] {
+        builder.add (Apple, 1, None, Callback.unit (()))
+      }}
+
+    "require that added entries are reverse sorted by time" in {
+      val disk = new DiskStub (1 << 16)
+      val builder = new TierBuilder (disk)
+      builder.add (Apple, 1, None, Callback.unit (()))
+      intercept [IllegalArgumentException] {
+        builder.add (Apple, 2, None, Callback.unit (()))
+      }}
+
+    "allow properly sorted entries" in {
+      val disk = new DiskStub (1 << 16)
+      val builder = new TierBuilder (disk)
+      builder.add (Apple, 2, None, Callback.unit (()))
+      builder.add (Apple, 1, None, Callback.unit (()))
+      builder.add (Orange, 1, None, Callback.unit (()))
+    }
+
     "build a blanced tree with all keys" when {
 
       def checkBuild (maxBlockSize: Int) {
@@ -93,6 +126,7 @@ class TierSpec extends WordSpec {
       }}}
 
   "The TierIterator" should {
+
     "iterate all keys" when {
 
       def checkIterator (maxBlockSize: Int) {
@@ -112,37 +146,37 @@ class TierSpec extends WordSpec {
       }}}
 
   "The Tier" should {
+
     "find the key" when {
 
       def checkFind (maxBlockSize: Int) {
         val disk = new DiskStub (maxBlockSize)
         val pos = buildTier (disk)
-        val tier = new Tier (disk, pos)
-        tier.read (Apple, 8, Callback.unary { cell: Option [Cell] =>
+        Tier.read (disk, pos, Apple, 8, Callback.unary { cell: Option [Cell] =>
           expectResult (Some (One)) (cell.get.value)
         })
-        tier.read (Apple, 7, Callback.unary { cell: Option [Cell] =>
+        Tier.read (disk, pos, Apple, 7, Callback.unary { cell: Option [Cell] =>
           expectResult (Some (One)) (cell.get.value)
         })
-        tier.read (Apple, 6, Callback.unary { cell: Option [Cell] =>
+        Tier.read (disk, pos, Apple, 6, Callback.unary { cell: Option [Cell] =>
           expectResult (None) (cell)
         })
-        tier.read (Orange, 8, Callback.unary { cell: Option [Cell] =>
+        Tier.read (disk, pos, Orange, 8, Callback.unary { cell: Option [Cell] =>
           expectResult (Some (One)) (cell.get.value)
         })
-        tier.read (Orange, 7, Callback.unary { cell: Option [Cell] =>
+        Tier.read (disk, pos, Orange, 7, Callback.unary { cell: Option [Cell] =>
           expectResult (Some (One)) (cell.get.value)
         })
-        tier.read (Orange, 6, Callback.unary { cell: Option [Cell] =>
+        Tier.read (disk, pos, Orange, 6, Callback.unary { cell: Option [Cell] =>
           expectResult (None) (cell)
         })
-        tier.read (Watermelon, 8, Callback.unary { cell: Option [Cell] =>
+        Tier.read (disk, pos, Watermelon, 8, Callback.unary { cell: Option [Cell] =>
           expectResult (Some (One)) (cell.get.value)
         })
-        tier.read (Watermelon, 7, Callback.unary { cell: Option [Cell] =>
+        Tier.read (disk, pos, Watermelon, 7, Callback.unary { cell: Option [Cell] =>
           expectResult (Some (One)) (cell.get.value)
         })
-        tier.read (Watermelon, 6, Callback.unary { cell: Option [Cell] =>
+        Tier.read (disk, pos, Watermelon, 6, Callback.unary { cell: Option [Cell] =>
           expectResult (None) (cell)
         })
       }
@@ -160,7 +194,4 @@ class TierSpec extends WordSpec {
       }
       "the blocks are limited to 64K" in {
         checkFind (1 << 16)
-      }
-    }
-  }
-}
+      }}}}

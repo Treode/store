@@ -7,11 +7,13 @@ package tier {
 
   private trait Block
 
-  private trait BlockCache {
-    def get (pos: Long, cb: Callback [Block])
+  private [store] trait BlockCache {
+
+    private [tier] def get (pos: Long, cb: Callback [Block])
   }
 
   private trait BlockWriter {
+
     def maxBlockSize: Int
     def write (block: Block, cb: Callback [Long])
   }}

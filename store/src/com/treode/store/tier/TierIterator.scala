@@ -10,14 +10,15 @@ private class TierIterator (cache: BlockCache) {
   private var index = 0
 
   private def find (pos: Long, cb: Callback [Unit]) {
-    cache.get (pos, new Callback [Block] {
+
+    val loop = new Callback [Block] {
 
       def apply (b: Block) {
         b match {
           case b: IndexBlock =>
             val e = b.get (0)
             stack ::= (b, 0)
-            find (e.pos, cb)
+            cache.get (e.pos, this)
           case b: CellBlock =>
             block = b
             index = 0
@@ -25,7 +26,9 @@ private class TierIterator (cache: BlockCache) {
         }}
 
       def fail (t: Throwable) = cb.fail (t)
-    })
+    }
+
+    cache.get (pos, loop)
   }
 
   def hasNext: Boolean =
