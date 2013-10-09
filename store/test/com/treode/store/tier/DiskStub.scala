@@ -4,6 +4,7 @@ import java.util.ArrayList
 import scala.collection.mutable.Builder
 
 import com.treode.cluster.concurrent.Callback
+import com.treode.store.Cell
 
 private class DiskStub (val maxBlockSize: Int) extends BlockWriter with BlockCache {
 
@@ -25,17 +26,17 @@ private class DiskStub (val maxBlockSize: Int) extends BlockWriter with BlockCac
     blocks.get (pos.toInt)
   }
 
-  private def toSeq (builder: Builder [ValueEntry, _], pos: Long) {
+  private def toSeq (builder: Builder [Cell, _], pos: Long) {
     get (pos) match {
       case block: IndexBlock =>
         block.entries foreach (e => toSeq (builder, e.pos))
-      case block: ValueBlock =>
+      case block: CellBlock =>
         block.entries foreach (builder += _)
     }}
 
   /** Iterate the values of the tier rooted at `pos`. */
-  def toSeq (pos: Long): Seq [ValueEntry] = {
-    val builder = Seq.newBuilder [ValueEntry]
+  def toSeq (pos: Long): Seq [Cell] = {
+    val builder = Seq.newBuilder [Cell]
     toSeq (builder, pos)
     builder.result
   }
@@ -47,7 +48,7 @@ private class DiskStub (val maxBlockSize: Int) extends BlockWriter with BlockCac
 
   private def toTreeString (builder: StringBuilder, pos: Long, indent: Int) {
     blocks.get (pos.toInt) match {
-      case block: ValueBlock =>
+      case block: CellBlock =>
         spaces (builder, indent)
         builder.append ("ValueBlock(\n")
         val i = block.entries.iterator

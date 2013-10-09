@@ -4,7 +4,7 @@ import com.google.common.primitives.Longs
 import com.treode.store.{Bytes, TxClock}
 
 private class IndexEntry (val key: Bytes, val time: TxClock, val pos: Long)
-extends Entry with Ordered [IndexEntry] {
+extends Ordered [IndexEntry] {
 
   def byteSize = key.byteSize + time.byteSize + Longs.BYTES
 

@@ -3,15 +3,15 @@ package com.treode.store.tier
 import java.util.{Arrays, ArrayList}
 
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{Bytes, Cell, TxClock}
 
-private class ValueBlock (val entries: Array [ValueEntry]) extends Block {
+private class CellBlock (val entries: Array [Cell]) extends Block {
 
-  def get (i: Int): ValueEntry =
+  def get (i: Int): Cell =
     entries (i)
 
   def find (key: Bytes, time: TxClock): Int = {
-    val i = Arrays.binarySearch (entries, ValueEntry (key, time, None), ValueEntry)
+    val i = Arrays.binarySearch (entries, Cell (key, time, None), Cell)
     if (i < 0) -i-1 else i
   }
 
@@ -19,49 +19,49 @@ private class ValueBlock (val entries: Array [ValueEntry]) extends Block {
 
   def isEmpty: Boolean = entries.size == 0
 
-  def last: ValueEntry = entries (entries.size - 1)
+  def last: Cell = entries (entries.size - 1)
 }
 
-private object ValueBlock {
+private object CellBlock {
 
-  val empty = new ValueBlock (new Array (0))
+  val empty = new CellBlock (new Array (0))
 
-  def apply (entries: Array [ValueEntry]): ValueBlock =
-    new ValueBlock (entries)
+  def apply (entries: Array [Cell]): CellBlock =
+    new CellBlock (entries)
 
-  def apply (entries: ArrayList [ValueEntry]): ValueBlock =
-    new ValueBlock (entries.toArray (empty.entries))
+  def apply (entries: ArrayList [Cell]): CellBlock =
+    new CellBlock (entries.toArray (empty.entries))
 
-  private val _pickle: Pickler [ValueBlock] =
-    new Pickler [ValueBlock] {
+  private val _pickle: Pickler [CellBlock] =
+    new Pickler [CellBlock] {
 
       private [this] val blockSize = Picklers.unsignedInt
       private [this] val value = Picklers.option (Bytes.pickle)
       private [this] val txClock = TxClock.pickle
 
       // Write first entry; write full key.
-      private [this] def writeEntry (entry: ValueEntry, ctx: PickleContext) {
+      private [this] def writeEntry (entry: Cell, ctx: PickleContext) {
         writeKey (entry.key, ctx)
         txClock.p (entry.time, ctx)
         value.p (entry.value, ctx)
       }
 
       // Read first entry; read full byte array.
-      private [this] def readEntry (ctx: UnpickleContext): ValueEntry =
-        ValueEntry (readKey (ctx), txClock.u (ctx), value.u (ctx))
+      private [this] def readEntry (ctx: UnpickleContext): Cell =
+        Cell (readKey (ctx), txClock.u (ctx), value.u (ctx))
 
       // Write subsequent entry; skip common prefix of previous key.
-      private [this] def writeEntry (prev: ValueEntry, entry: ValueEntry, ctx: PickleContext) {
+      private [this] def writeEntry (prev: Cell, entry: Cell, ctx: PickleContext) {
         writeKey (prev.key, entry.key, ctx)
         txClock.p (entry.time, ctx)
         value.p (entry.value, ctx)
       }
 
       // Read subsequent entry, use common prefix from previous key.
-      private [this] def readEntry (prev: ValueEntry, ctx: UnpickleContext): ValueEntry =
-        ValueEntry (readKey (prev.key, ctx), txClock.u (ctx), value.u (ctx))
+      private [this] def readEntry (prev: Cell, ctx: UnpickleContext): Cell =
+        Cell (readKey (prev.key, ctx), txClock.u (ctx), value.u (ctx))
 
-      def p (block: ValueBlock, ctx: PickleContext) {
+      def p (block: CellBlock, ctx: PickleContext) {
         blockSize.p (block.size, ctx)
         if (block.size > 0) {
           var prev = block.get (0)
@@ -74,9 +74,9 @@ private object ValueBlock {
             i += 1
           }}}
 
-      def u (ctx: UnpickleContext): ValueBlock = {
+      def u (ctx: UnpickleContext): CellBlock = {
         val size = blockSize.u (ctx)
-        val entries = new Array [ValueEntry] (size)
+        val entries = new Array [Cell] (size)
         if (size > 0) {
           var prev = readEntry (ctx)
           entries (0) = prev
@@ -86,10 +86,10 @@ private object ValueBlock {
             entries (i) = prev
             i += 1
           }}
-        new ValueBlock (entries)
+        new CellBlock (entries)
       }}
 
   val pickle = {
     import Picklers._
-    tagged [ValueBlock] (0x1 -> _pickle)
+    tagged [CellBlock] (0x1 -> _pickle)
   }}

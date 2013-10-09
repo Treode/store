@@ -4,7 +4,7 @@ import scala.collection.JavaConversions._
 
 import com.treode.cluster.concurrent.Callback
 import com.treode.pickle.Picklers
-import com.treode.store.{Bytes, Cell, TxClock}
+import com.treode.store.{Bytes, Cell, Fruits, TxClock}
 import org.scalatest.WordSpec
 
 class TierSpec extends WordSpec {
@@ -20,7 +20,7 @@ class TierSpec extends WordSpec {
   private def getDepths (disk: DiskStub, pos: Long, depth: Int): Set [Int] = {
     disk.get (pos) match {
       case b: IndexBlock => getDepths (disk, b.entries, depth+1)
-      case b: ValueBlock => Set (depth)
+      case b: CellBlock => Set (depth)
     }}
 
   /** Check that tree rooted at `pos` has all ValueBlocks at the same depth, expect those under
@@ -34,7 +34,7 @@ class TierSpec extends WordSpec {
         val d = ds1.head
         val ds2 = getDepths (disk, b.last.pos, 1)
         expectResult (true, "Expected final ValueBlocks at depth < $d") (ds2 forall (_ < d))
-      case b: ValueBlock =>
+      case b: CellBlock =>
         ()
     }}
 
@@ -54,12 +54,12 @@ class TierSpec extends WordSpec {
     pos
   }
 
-  /** Build a sequence of the values in the tier by using the TierIterator. */
-  private def iterateTier (disk: DiskStub, pos: Long): Seq [ValueEntry] = {
-    val builder = Seq.newBuilder [ValueEntry]
+  /** Build a sequence of the cells in the tier by using the TierIterator. */
+  private def iterateTier (disk: DiskStub, pos: Long): Seq [Cell] = {
+    val builder = Seq.newBuilder [Cell]
     TierIterator (disk, pos, Callback.unary { iter: TierIterator =>
-      val loop = new Callback [ValueEntry] {
-        def apply (e: ValueEntry) {
+      val loop = new Callback [Cell] {
+        def apply (e: Cell) {
           builder += e
           if (iter.hasNext)
             iter.next (this)

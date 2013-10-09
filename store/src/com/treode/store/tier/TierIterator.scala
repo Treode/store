@@ -1,11 +1,12 @@
 package com.treode.store.tier
 
 import com.treode.cluster.concurrent.Callback
+import com.treode.store.Cell
 
 private class TierIterator (cache: BlockCache) {
 
   private var stack = List.empty [(IndexBlock, Int)]
-  private var block: ValueBlock = null
+  private var block: CellBlock = null
   private var index = 0
 
   private def find (pos: Long, cb: Callback [Unit]) {
@@ -17,7 +18,7 @@ private class TierIterator (cache: BlockCache) {
             val e = b.get (0)
             stack ::= (b, 0)
             find (e.pos, cb)
-          case b: ValueBlock =>
+          case b: CellBlock =>
             block = b
             index = 0
             cb()
@@ -30,7 +31,7 @@ private class TierIterator (cache: BlockCache) {
   def hasNext: Boolean =
     index < block.size
 
-  def next (cb: Callback [ValueEntry]) {
+  def next (cb: Callback [Cell]) {
     val entry = block.get (index)
     index += 1
     if (index == block.size && !stack.isEmpty) {

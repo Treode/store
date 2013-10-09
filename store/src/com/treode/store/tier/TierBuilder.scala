@@ -3,12 +3,12 @@ package com.treode.store.tier
 import java.util.{ArrayDeque, ArrayList}
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{Bytes, Cell, TxClock}
 
 private class TierBuilder (writer: BlockWriter) {
 
   private def newIndexEntries = new ArrayList [IndexEntry] (1024)
-  private def newValueEntries = new ArrayList [ValueEntry] (256)
+  private def newCellEntries = new ArrayList [Cell] (256)
 
   private class IndexNode (val height: Int) {
 
@@ -25,7 +25,7 @@ private class TierBuilder (writer: BlockWriter) {
 
   private val stack = new ArrayDeque [IndexNode]
   private val rstack = new ArrayDeque [IndexNode]
-  private var entries = newValueEntries
+  private var entries = newCellEntries
   private var byteSize = 0
 
   private def push (key: Bytes, time: TxClock, pos: Long, height: Int) {
@@ -82,7 +82,7 @@ private class TierBuilder (writer: BlockWriter) {
 
   def add (key: Bytes, time: TxClock, value: Option [Bytes], cb: Callback [Unit]) {
 
-    val entry = ValueEntry (key, time, value)
+    val entry = Cell (key, time, value)
     val entryByteSize = entry.byteSize
 
     // Ensure that a value block has at least one entry.
@@ -92,8 +92,8 @@ private class TierBuilder (writer: BlockWriter) {
       cb()
 
     } else {
-      val block = ValueBlock (entries)
-      entries = newValueEntries
+      val block = CellBlock (entries)
+      entries = newCellEntries
       entries.add (entry)
       byteSize = entryByteSize
       val last = block.last
@@ -105,7 +105,7 @@ private class TierBuilder (writer: BlockWriter) {
 
   def result (cb: Callback [Long]) {
 
-    val block = ValueBlock (entries)
+    val block = CellBlock (entries)
     val last = block.last
     writer.write (block, new Callback [Long] {
 

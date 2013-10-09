@@ -1,38 +1,39 @@
 package com.treode.store.tier
 
 import com.treode.pickle.{Picklers, pickle, unpickle}
-import com.treode.store.{Bytes, TxClock}
-import org.scalatest.WordSpec
+import com.treode.store.{Bytes, Cell, Fruits, TxClock}
 import io.netty.buffer.Unpooled
+import org.scalatest.WordSpec
 
 class ValueBlockSpec extends WordSpec {
   import Fruits.{Apple, Kiwi, Orange}
 
   val MaxTime = TxClock.MaxValue
 
-  private def entry (key: Bytes, time: Int): ValueEntry =
-    new ValueEntry (key, time, None)
+  private def entry (key: Bytes, time: Int): Cell =
+    new Cell (key, time, None)
 
-  private def newBlock (entries: ValueEntry*): ValueBlock =
-    new ValueBlock (Array (entries: _*))
+  private def newBlock (entries: Cell*): CellBlock =
+    new CellBlock (Array (entries: _*))
 
-  private def entriesEqual (expected: ValueEntry, actual: ValueEntry) {
+  private def entriesEqual (expected: Cell, actual: Cell) {
     expectResult (expected.key) (actual.key)
     expectResult (expected.time) (actual.time)
     expectResult (expected.value) (actual.value)
   }
 
-  private def blocksEqual (expected: ValueBlock, actual: ValueBlock) {
+  private def blocksEqual (expected: CellBlock, actual: CellBlock) {
     expectResult (expected.entries.length) (actual.entries.length)
     for (i <- 0 until expected.entries.length)
       entriesEqual (expected.entries (i), actual.entries (i))
   }
 
-  private def checkPickle (block: ValueBlock) {
+  private def checkPickle (block: CellBlock) {
     val buffer = Unpooled.buffer()
-    pickle (ValueBlock.pickle, block, buffer)
-    val result = unpickle (ValueBlock.pickle, buffer)
+    pickle (CellBlock.pickle, block, buffer)
+    val result = unpickle (CellBlock.pickle, buffer)
     blocksEqual (block, result)
+    buffer.release()
   }
 
   "A ValueBlock" when {

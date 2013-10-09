@@ -19,14 +19,14 @@ class Tier (cache: BlockCache, root: Long) {
               val e = b.get (i)
               cache.get (e.pos, this)
             }
-          case b: ValueBlock =>
+          case b: CellBlock =>
             val i = b.find (key, time)
             if (i == b.size) {
               cb (None)
             } else {
               val e = b.get (i)
               if (e.key == key && e.time <= time)
-                cb (Some (Cell (e.time, e.value)))
+                cb (Some (e))
               else
                 cb (None)
             }}}

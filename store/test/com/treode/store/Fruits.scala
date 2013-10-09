@@ -1,7 +1,6 @@
-package com.treode.store.tier
+package com.treode.store
 
 import com.treode.pickle.Picklers
-import com.treode.store.Bytes
 
 object Fruits {
 
@@ -51,7 +50,7 @@ object Fruits {
   val Lychee = Bytes ("lychee")
   val Mandarine = Bytes ("mandarine")
   val Mango = Bytes ("mango")
-  val Mangosteen = Bytes ("Mangosteen")
+  val Mangosteen = Bytes ("mangosteen")
   val Melon = Bytes ("melon")
   val Nectarine = Bytes ("nectarine")
   val Nut = Bytes ("nut")
