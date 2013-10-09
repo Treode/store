@@ -11,26 +11,26 @@ import com.treode.store.TxClock
 // as the reader's timestamp is less than the one at which the writer will commit.
 private class Lock {
 
-  private val NoReaders = new util.ArrayList [ReadAcquisition] (0)
+  private val NoReaders = new util.ArrayList [Reader] (0)
 
   // The forecasted minimum version timestamp.  All future writers shall commit a value with a
-  // version timestamp above this.  Any current reader as of a timestamp below this may proceed
-  // immediately since it is assured that no future writer will invalidate its read.  A reader as
-  // of a timestamp greater than this must wait for the current writer to release the lock since
-  // that writer could commit the value with timestamp forecast+1, and then the reader must then
+  // version timestamp above this.  Any current reader as of a timestamp at or below this may
+  // proceed immediately since it is assured that no future writer will invalidate its read.  A
+  // reader as of a timestamp greater than this must wait for the current writer to release the
+  // lock since that writer could commit the value with timestamp forecast+1; then the reader must
   // raise the forecasted value to prevent later writers from invalidating its read.
   private var forecast = TxClock.Zero
 
-  // Does a writer hold the lock?  If true, a writer holds the lock.  If it commits values, they
-  // will be timestamped greater than the forecasted timestamp.
-  private var engaged = false
+  // Does a writer hold the lock?  If non-null, a writer holds the lock.  If it commits values,
+  // they will be timestamped greater than the forecasted timestamp.
+  private var engaged: Writer = null
 
   // These readers want to acquire the lock at a timestamp greater than the forecasted timestamp
   // of the writer that currently holds the lock.
-  private var readers = new util.ArrayList [ReadAcquisition]
+  private var readers = new util.ArrayList [Reader]
 
   // These writers want to acquire the lock, but a writer already holds the lock.
-  private val writers = new util.ArrayDeque [WriteAcquisition]
+  private val writers = new util.ArrayDeque [Writer]
 
   // A reader wants to acquire the lock; this means the reader ensures that no writer will commit
   // a value with a timestamp at or below the reader's timestamp.
@@ -44,10 +44,10 @@ private class Lock {
   //
   // If the reader may proceed immediately, this returns true.  Otherwise, it returns false and
   // queues the reader to be called back later.
-  def read (r: ReadAcquisition): Boolean = synchronized {
-    if (r.rt < forecast) {
+  def read (r: Reader): Boolean = synchronized {
+    if (r.rt <= forecast) {
       true
-    } else if (!engaged) {
+    } else if (engaged == null) {
       forecast = r.rt
       true
     } else {
@@ -59,13 +59,13 @@ private class Lock {
   // any past reader.  No past reader has read a value as of a timestamp greater than forecast,
   // so the writer must commit its values at a timestamp greater than forecast.
   //
-  // If the writer proceeds immediately, returns Some (forecast).  Otherwise, it queues the writer
-  // to be called back later.
-  def write (w: WriteAcquisition): Option [TxClock] = synchronized {
-    if (!engaged) {
+  // If the writer may proceed immediately, returns Some (forecast).  Otherwise, it queues the
+  // writer to be called back later.
+  def write (w: Writer): Option [TxClock] = synchronized {
+    if (engaged == null) {
       if (forecast < w.ft)
         forecast = w.ft
-      engaged = true
+      engaged = w
       Some (forecast)
     } else {
       writers.add (w)
@@ -75,9 +75,10 @@ private class Lock {
   // A writer is finished with the lock.  If there are any waiting readers, raise the forecast to
   // the maximum of all of them and then let all of them proceed.  If there is a waiting writer,
   // next let it proceed with that forecast.
-  def release(): Unit = {
+  def release (w0: Writer): Unit = {
+    require (engaged == w0, "The writer releasing the lock does not hold it.")
     var rs = NoReaders
-    var w = Option.empty [WriteAcquisition]
+    var w = Option.empty [Writer]
     var ft = TxClock.Zero
     synchronized {
       var rt = TxClock.Zero
@@ -98,8 +99,9 @@ private class Lock {
         w = Some (_w)
         if (forecast < _w.ft)
           forecast = _w.ft
+        engaged = _w
       } else {
-        engaged = false
+        engaged = null
       }
       ft = forecast
     }
