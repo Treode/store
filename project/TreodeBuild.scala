@@ -40,7 +40,15 @@ object TreodeBuild extends Build {
    * Separated to allow focused development.
    */
 
+  lazy val pickle = Project ("pickle", file ("pickle"))
+    .settings (standardSettings: _*)
+
+  lazy val cluster = Project ("cluster", file ("cluster"))
+    .dependsOn (pickle)
+    .settings (standardSettings: _*)
+
   lazy val store = Project ("store", file ("store"))
+    .dependsOn (pickle, cluster)
     .settings (standardSettings: _*)
 
   /*
