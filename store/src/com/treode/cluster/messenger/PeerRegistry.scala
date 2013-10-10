@@ -11,13 +11,13 @@ import com.treode.cluster.events.Events
 
 class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit random: Random) {
 
-  private val peers = new ConcurrentHashMap [HostId, Peer]
+  private val peers = new ConcurrentHashMap [Long, Peer]
 
   def get (id: HostId): Peer = {
     val p0 = peers.get (id)
     if (p0 == null) {
       val p1 = newPeer (id)
-      val p2 = peers.putIfAbsent (id, p1)
+      val p2 = peers.putIfAbsent (id.id, p1)
       if (p2 == null) p1 else p2
     } else {
       p0

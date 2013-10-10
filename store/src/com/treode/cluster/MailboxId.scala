@@ -4,18 +4,10 @@ import scala.language.implicitConversions
 
 import com.treode.pickle.Picklers
 
-class MailboxId (val id: Long) {
+class MailboxId (val id: Long) extends AnyVal {
   import MailboxId.fixed
 
   def isFixed = (id & fixed) == fixed
-
-  override def hashCode = id.hashCode
-
-  override def equals (other: Any) =
-    other match {
-      case that: MailboxId => this.id == that.id
-      case _ => false
-    }
 
   override def toString = "Mailbox:%08X" format id
 }

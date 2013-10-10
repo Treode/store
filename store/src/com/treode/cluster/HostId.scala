@@ -4,18 +4,10 @@ import scala.language.implicitConversions
 
 import com.treode.pickle.Picklers
 
-class HostId private (val id: Long) extends Ordered [HostId] {
+class HostId private (val id: Long) extends AnyVal with Ordered [HostId] {
 
   def compare (that: HostId): Int =
     this.id compare that.id
-
-  override def hashCode = id.hashCode
-
-  override def equals (other: Any) =
-    other match {
-      case that: HostId => this.id == that.id
-      case _ => false
-    }
 
   override def toString = "Host:%08X" format id
 }
