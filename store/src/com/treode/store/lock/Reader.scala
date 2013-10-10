@@ -11,6 +11,10 @@ private class Reader (_rt: TxClock, cb: Runnable) {
 
   private var needed = 0
 
+  private def finish() {
+    cb.run()
+  }
+
   // Attempt to acquire the locks.  Some of them will be granted immediately.  For others, we
   // will receive a callback via grant().
   def init (space: LockSpace, ids: Set [Int]) {
@@ -21,7 +25,7 @@ private class Reader (_rt: TxClock, cb: Runnable) {
       needed == 0
     }
     if (ready)
-      cb.run()
+      finish()
   }
 
   def rt = _rt
@@ -32,5 +36,5 @@ private class Reader (_rt: TxClock, cb: Runnable) {
       needed == 0
     }
     if (ready)
-      cb.run()
+      finish()
   }}

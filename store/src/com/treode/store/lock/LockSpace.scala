@@ -1,5 +1,6 @@
 package com.treode.store.lock
 
+import scala.collection.SortedSet
 import scala.language.postfixOps
 
 import com.treode.cluster.misc.toRunnable
@@ -29,5 +30,5 @@ private [store] class LockSpace (bits: Int) {
     new Reader (rt, toRunnable (cb)) .init (this, ids map (_ & mask) toSet)
 
   def write (ft: TxClock, ids: Seq [Int]) (cb: LockSet => Any): Unit =
-    new Writer (this, ids map (_ & mask) toSet, ft, cb) .init()
+    new Writer (this, SortedSet (ids map (_ & mask): _*), ft, cb) .init()
 }

@@ -19,6 +19,12 @@ object Callback {
       def fail (t: Throwable): Unit = cb.fail (t)
     }
 
+  def ignore [A]: Callback [A] =
+    new Callback [A] {
+      def apply (v: A): Unit = ()
+      def fail (t: Throwable): Unit = throw t
+    }
+
   def unit (f: => Any): Callback [Unit] =
     new Callback [Unit] {
       def apply (v: Unit): Unit = f
@@ -29,4 +35,11 @@ object Callback {
     new Callback [Unit] {
       def apply (v: Unit): Unit = f
       def fail (t: Throwable): Unit = cb.fail (t)
-    }}
+    }
+
+  def noop: Callback [Unit] =
+    new Callback [Unit] {
+      def apply (v: Unit): Unit = ()
+      def fail (t: Throwable): Unit = throw t
+    }
+}

@@ -138,7 +138,7 @@ class LockSpec extends WordSpec with MockFactory {
     val Orange = "orange"
 
     "acquire all locks before proceeding" in {
-      val locks = new LockSpace (4)
+      val locks = new LockSpace (8)
       var w1: LockSet = null
       locks.write (1, Apple, Banana) (w1 = _)
       assert (w1 != null)

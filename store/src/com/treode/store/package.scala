@@ -2,6 +2,7 @@ package com.treode
 
 import com.treode.cluster.concurrent.Callback
 import com.treode.cluster.events.Events
+import com.treode.pickle.Pickler
 
 package store {
 
@@ -9,7 +10,17 @@ package store {
 
   case class ReadBatch (rt: TxClock, ops: Seq [ReadOp])
 
-  case class Value (time: TxClock, value: Option [Bytes])
+  object ReadBatch {
+
+    def apply (rt: TxClock, op: ReadOp, ops: ReadOp*): ReadBatch =
+      ReadBatch (rt, op +: ops)
+  }
+
+  case class Value (time: TxClock, value: Option [Bytes]) {
+
+    def value [V] (p: Pickler [V]): Option [V] =
+      value map (_.unpickle (p))
+  }
 
   trait ReadCallback extends Callback [Seq [Value]]
 
@@ -27,6 +38,12 @@ package store {
 
   case class WriteBatch (xid: TxId, ct: TxClock, ft: TxClock, ops: Seq [WriteOp]) {
     require (ct <= ft)
+  }
+
+  object WriteBatch {
+
+    def apply (xid: TxId, ct: TxClock, ft: TxClock, op: WriteOp, ops: WriteOp*): WriteBatch =
+      WriteBatch (xid, ct, ft, op +: ops)
   }
 
   trait Transaction {

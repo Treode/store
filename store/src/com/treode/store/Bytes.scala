@@ -20,13 +20,21 @@ class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
     v
   }
 
+  /** Only applies if this was created using `Bytes (String, Charset)`. */
   def string (cs: Charset): String = {
     val b = ByteBuffer.wrap (bytes)
     cs.decode (b) .toString
   }
 
+  /** Only applies if this was created using `Bytes (String)`. */
   def string: String =
     string (StandardCharsets.UTF_8)
+
+  /** Only applies if this was created using `Bytes (Int)`. */
+  def int: Int = unpickle (Picklers.fixedInt)
+
+  /** Only applies if this was created using `Bytes (Long)`. */
+  def long: Long = unpickle (Picklers.fixedLong)
 
   def compare (that: Bytes): Int =
     UnsignedBytes.lexicographicalComparator.compare (this.bytes, that.bytes)
@@ -61,8 +69,13 @@ object Bytes extends Ordering [Bytes] {
   def apply (s: String, cs: Charset = StandardCharsets.UTF_8): Bytes =
     new Bytes (s.getBytes (cs))
 
+  /** Yield a Bytes object that will sort identically to the int. */
   def apply (n: Int): Bytes =
     Bytes (Picklers.fixedInt, n)
+
+  /** Yield a Bytes object that will sort identically to the long. */
+  def apply (n: Long): Bytes =
+    Bytes (Picklers.fixedLong, n)
 
   def compare (x: Bytes, y: Bytes): Int =
     x compare y
