@@ -1,9 +1,9 @@
 package com.treode.store.tier
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.Cell
+import com.treode.store.{Cell, CellIterator}
 
-private class TierIterator (cache: BlockCache) {
+private class TierIterator (cache: BlockCache) extends CellIterator {
 
   private var stack = List.empty [(IndexBlock, Int)]
   private var block: CellBlock = null

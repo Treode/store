@@ -13,20 +13,10 @@ class TempTableSpec extends WordSpec {
   private val One = Bytes ("one")
   private val Two = Bytes ("two")
 
-  implicit class RichBytes (v: Bytes) {
-    def ## (time: Int) = Cell (v, time, None)
-    def :: (cell: Cell): Cell = Cell (cell.key, cell.time, Some (v))
-    def :: (time: Int): Value = Value (time, Some (v))
-  }
-
-  implicit class RichOption (v: Option [Bytes]) {
-    def :: (time: Int): Value = Value (time, v)
-  }
-
-  def Get (id: Int, key: Bytes): ReadOp =
+  private def Get (id: Int, key: Bytes): ReadOp =
     ReadOp (id, key)
 
-  def expectCells [T] (cs: Cell*) (actual: TestableTempTable) =
+  private def expectCells (cs: Cell*) (actual: TestableTempTable) =
     expectResult (cs) (actual.toSeq)
 
   "The TempTable" when {

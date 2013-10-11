@@ -1,6 +1,6 @@
 package com.treode.store
 
-class Cell private [store] (val key: Bytes, val time: TxClock, val value: Option [Bytes])
+private class Cell (val key: Bytes, val time: TxClock, val value: Option [Bytes])
 extends Ordered [Cell] {
 
   def byteSize: Int = {
@@ -31,7 +31,7 @@ extends Ordered [Cell] {
   override def toString = "Cell" + (key, time, value)
 }
 
-object Cell extends Ordering [Cell] {
+private object Cell extends Ordering [Cell] {
 
   def apply (key: Bytes, vt: TxClock, value: Option [Bytes]): Cell =
     new Cell (key, vt, value)
