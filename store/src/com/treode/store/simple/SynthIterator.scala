@@ -19,7 +19,7 @@ private class SynthIterator extends CellIterator {
 
       val loop = new Callback [Cell] {
         def apply (cell: Cell) {
-          pq.enqueue (Element (cell, iter))
+          pq.enqueue (Element (cell, pq.size, iter))
           if (iters.hasNext) {
             iter = iters.next
             while (!iter.hasNext && iters.hasNext)
@@ -43,13 +43,13 @@ private class SynthIterator extends CellIterator {
 
   def next (cb: Callback [Cell]) {
 
-    val Element (next, iter) = pq.dequeue()
+    val Element (next, tier, iter) = pq.dequeue()
 
     if (iter.hasNext) {
 
       iter.next (new Callback [Cell] {
         def apply (cell: Cell) {
-          pq.enqueue (Element (cell, iter))
+          pq.enqueue (Element (cell, tier, iter))
           cb (next)
         }
         def fail (t: Throwable) = cb.fail (t)
@@ -61,12 +61,15 @@ private class SynthIterator extends CellIterator {
 
 private object SynthIterator {
 
-  case class Element (next: Cell, iter: CellIterator) extends Ordered [Element] {
+  case class Element (next: Cell, tier: Int, iter: CellIterator) extends Ordered [Element] {
 
     // Reverse the sort for the PriorityQueue.
-    def compare (that: Element): Int =
-      that.next compare (next)
-  }
+    def compare (that: Element): Int = {
+      val r = that.next compare (next)
+      if (r != 0)
+        return r
+      that.tier compare tier
+    }}
 
   object Element extends Ordering [Element] {
 

@@ -7,6 +7,7 @@ import org.scalatest.FlatSpec
 class SimpleSynthIteratorSpec extends FlatSpec with TestTools {
 
   private val Apple = Fruits.Apple::1
+  private val Apple2 = Fruits.Apple::2
   private val Banana = Fruits.Banana::1
   private val Orange = Fruits.Orange::1
 
@@ -94,11 +95,18 @@ class SimpleSynthIteratorSpec extends FlatSpec with TestTools {
     expectCells (Apple, Banana) (iter)
   }
 
-  it should "preserve duplicates with [[Apple][Apple]]" in {
+  it should "preserve duplicates in tier order with [[Apple][Apple2]]" in {
     val iter = new SynthIterator
     iter.add (Apple)
+    iter.add (Apple2)
+    expectCells (Apple, Apple2) (iter)
+  }
+
+  it should "preserve duplicates in tier order with [[Apple2][Apple]]" in {
+    val iter = new SynthIterator
+    iter.add (Apple2)
     iter.add (Apple)
-    expectCells (Apple, Apple) (iter)
+    expectCells (Apple2, Apple) (iter)
   }
 
   it should "yield things sorted for [[Apple][Banana][Orange]]" in {
