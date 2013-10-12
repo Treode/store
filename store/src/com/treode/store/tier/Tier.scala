@@ -2,6 +2,7 @@ package com.treode.store.tier
 
 import com.treode.cluster.concurrent.Callback
 import com.treode.store.{Bytes, TxClock}
+import com.treode.store.log.{Block, BlockCache}
 
 object Tier {
 

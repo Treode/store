@@ -1,10 +1,11 @@
 package com.treode.store.tier
 
-import scala.collection.JavaConversions._
+import scala.collection.mutable.Builder
 
 import com.treode.cluster.concurrent.Callback
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, Fruits, TxClock}
+import com.treode.store.log.DiskStub
 import org.scalatest.WordSpec
 
 class TierSpec extends WordSpec {
@@ -72,6 +73,21 @@ class TierSpec extends WordSpec {
     builder.result
   }
 
+  private def toSeq (disk: DiskStub, builder: Builder [Cell, _], pos: Long) {
+    disk.get (pos) match {
+      case block: IndexBlock =>
+        block.entries foreach (e => toSeq (disk, builder, e.pos))
+      case block: CellBlock =>
+        block.entries foreach (builder += _)
+    }}
+
+  /** Build a sequence of the cells in the tier using old-fashioned recursion. */
+  def toSeq (disk: DiskStub, pos: Long): Seq [Cell] = {
+    val builder = Seq.newBuilder [Cell]
+    toSeq (disk, builder, pos)
+    builder.result
+  }
+
   "The TierBuilder" should {
 
     "require that added entries are not duplicated" in {
@@ -112,7 +128,7 @@ class TierSpec extends WordSpec {
         val disk = new DiskStub (maxBlockSize)
         val pos = buildTier (disk)
         expectBalanced (disk, pos)
-        expectResult (AllFruits.toSeq) (disk.toSeq (pos) .map (_.key))
+        expectResult (AllFruits.toSeq) (toSeq (disk, pos) .map (_.key))
       }
 
       "the blocks are limited to one byte" in {

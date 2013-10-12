@@ -3,22 +3,22 @@ package com.treode.store
 import com.treode.cluster.concurrent.Callback
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 
-package tier {
+package log {
 
-  private trait Block
+  private [store] trait Block
 
   private [store] trait BlockCache {
 
-    private [tier] def get (pos: Long, cb: Callback [Block])
+    def get (pos: Long, cb: Callback [Block])
   }
 
-  private trait BlockWriter {
+  private [store] trait BlockWriter {
 
     def maxBlockSize: Int
     def write (block: Block, cb: Callback [Long])
   }}
 
-package object tier {
+package object log {
   import Picklers.unsignedInt
 
   // Determine length of common prefix.
@@ -30,14 +30,14 @@ package object tier {
   }
 
   // Write first key; write full byte array.
-  private [tier] def writeKey (key: Bytes, ctx: PickleContext) {
+  private [store] def writeKey (key: Bytes, ctx: PickleContext) {
     val _key = key.bytes
     unsignedInt.p (_key.length, ctx)
     ctx.writeBytes (_key, 0, _key.size)
   }
 
   // Read first key; read full byte array.
-  private [tier] def readKey (ctx: UnpickleContext): Bytes = {
+  private [store] def readKey (ctx: UnpickleContext): Bytes = {
     val length = unsignedInt.u (ctx)
     val bytes = new Array [Byte] (length)
     ctx.readBytes (bytes, 0, length)
@@ -45,7 +45,7 @@ package object tier {
   }
 
   // Write subsequent key; skip common prefix.
-  private [tier] def writeKey (prev: Bytes, key: Bytes, ctx: PickleContext) {
+  private [store] def writeKey (prev: Bytes, key: Bytes, ctx: PickleContext) {
     val _prev = prev.bytes
     val _key = key.bytes
     val prefix = common (_prev, _key)
@@ -57,7 +57,7 @@ package object tier {
   }
 
   // Read subsequent key; use common prefix from previous key.
-  private [tier] def readKey (prev: Bytes, ctx: UnpickleContext): Bytes = {
+  private [store] def readKey (prev: Bytes, ctx: UnpickleContext): Bytes = {
     val _prev = prev.bytes
     val length = unsignedInt.u (ctx)
     val prefix = unsignedInt.u (ctx)

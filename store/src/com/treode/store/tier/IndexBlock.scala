@@ -1,9 +1,9 @@
 package com.treode.store.tier
 
 import java.util.{Arrays, ArrayList}
-
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 import com.treode.store.{Bytes, TxClock}
+import com.treode.store.log.{Block, readKey, writeKey}
 
 private class IndexBlock (val entries: Array [IndexEntry]) extends Block {
 

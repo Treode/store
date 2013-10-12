@@ -1,9 +1,9 @@
 package com.treode.store.tier
 
 import java.util.{ArrayDeque, ArrayList}
-
 import com.treode.cluster.concurrent.Callback
 import com.treode.store.{Bytes, TxClock}
+import com.treode.store.log.BlockWriter
 
 private class TierBuilder (writer: BlockWriter) {
 

@@ -1,6 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.cluster.concurrent.Callback
+import com.treode.store.log.{Block, BlockCache}
 
 private class TierIterator (cache: BlockCache) extends CellIterator {
 
