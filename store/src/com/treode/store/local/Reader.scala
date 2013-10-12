@@ -1,10 +1,10 @@
 package com.treode.store.local
 
 import java.util.ArrayList
-import scala.collection.JavaConversions._
+import scala.collection.JavaConversions.asScalaBuffer
 
-import com.treode.cluster.events.Events
-import com.treode.store._
+import com.treode.store.{MultiException, ReadBatch, ReadCallback, Value}
+import com.treode.store.tier.Cell
 
 private class Reader (batch: ReadBatch, cb: ReadCallback) {
 

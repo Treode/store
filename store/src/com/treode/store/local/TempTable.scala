@@ -3,8 +3,8 @@ package com.treode.store.local
 import java.util.concurrent.ConcurrentSkipListSet
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.{Bytes, Cell, TxClock}
-import com.treode.store.tier.{BlockCache, Tier}
+import com.treode.store.{Bytes, TxClock}
+import com.treode.store.tier.{BlockCache, Cell, Tier}
 
 private class TempTable extends Table {
 

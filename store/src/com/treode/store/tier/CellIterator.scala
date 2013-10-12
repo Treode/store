@@ -1,14 +1,14 @@
-package com.treode.store
+package com.treode.store.tier
 
 import com.treode.cluster.concurrent.Callback
 
-trait CellIterator {
+private [store] trait CellIterator {
 
   def hasNext: Boolean
   def next (cb: Callback [Cell])
 }
 
-object CellIterator {
+private [store] object CellIterator {
 
   def adapt (iter: Iterator [Cell]): CellIterator =
     new CellIterator {

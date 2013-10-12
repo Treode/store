@@ -1,7 +1,7 @@
 package com.treode.store.local
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.{Cell, CellIterator}
+import com.treode.store.tier.{Cell, CellIterator}
 
 /** If the oldest cell for a key is a delete, then remove that cell; assumes the wrapped iterator
   * is sorted by cell.

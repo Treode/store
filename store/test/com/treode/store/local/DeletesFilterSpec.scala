@@ -1,17 +1,18 @@
 package com.treode.store.local
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.{Bytes, Cell, CellIterator, Fruits}
+import com.treode.store.{Bytes, Fruits}
+import com.treode.store.tier.{Cell, CellIterator, TestTools}
 import org.scalatest.FlatSpec
 
 import Fruits.{Apple, Banana}
 
-class DeletesFilterSpec extends FlatSpec {
+class DeletesFilterSpec extends FlatSpec with TestTools {
 
   private val One = Bytes ("one")
 
   private def expectCells (cs: Cell*) (actual: CellIterator) =
-    expectResult (cs) (toSeq (actual))
+    expectResult (cs) (actual.toSeq)
 
   private def newFilter (cs: Cell*) = {
     var iter: CellIterator = null

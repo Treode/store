@@ -4,7 +4,6 @@ import java.util.ArrayList
 import scala.collection.mutable.Builder
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.Cell
 
 private class DiskStub (val maxBlockSize: Int) extends BlockWriter with BlockCache {
 

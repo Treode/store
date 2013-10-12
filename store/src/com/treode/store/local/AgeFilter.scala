@@ -1,7 +1,8 @@
 package com.treode.store.local
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.{Cell, CellIterator, TxClock}
+import com.treode.store.TxClock
+import com.treode.store.tier.{Cell, CellIterator}
 
 /** Remove cells older than a limit. */
 class AgeFilter (iter: CellIterator, limit: TxClock) extends CellIterator {

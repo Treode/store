@@ -4,7 +4,7 @@ import scala.collection.JavaConversions._
 
 import com.treode.cluster.concurrent.Callback
 import com.treode.pickle.Picklers
-import com.treode.store.{Bytes, Cell, Fruits, TxClock}
+import com.treode.store.{Bytes, Fruits, TxClock}
 import org.scalatest.WordSpec
 
 class TierSpec extends WordSpec {

@@ -1,9 +1,8 @@
-package com.treode.store.local
+package com.treode.store.tier
 
 import scala.collection.mutable.PriorityQueue
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.{Cell, CellIterator}
 
 private class SynthIterator extends CellIterator {
   import SynthIterator.Element

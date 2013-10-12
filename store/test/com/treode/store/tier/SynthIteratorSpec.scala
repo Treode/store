@@ -1,16 +1,16 @@
-package com.treode.store.local
+package com.treode.store.tier
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.{Bytes, Cell, CellIterator, Fruits}
+import com.treode.store.{Bytes, Fruits}
 import org.scalatest.FlatSpec
 
-class SynthIteratorSpec extends FlatSpec {
+class SynthIteratorSpec extends FlatSpec with TestTools {
 
   private val One = Bytes ("one")
 
-  private val Apple = Fruits.Apple ## 1 :: One
-  private val Banana = Fruits.Banana ## 1 :: One
-  private val Orange = Fruits.Orange ## 1 :: One
+  private val Apple = Cell (Fruits.Apple, 1, Some (One))
+  private val Banana = Cell (Fruits.Banana, 1, Some (One))
+  private val Orange = Cell (Fruits.Orange, 1, Some (One))
 
   private implicit class RichSynthIterator (iter: SynthIterator) {
 
@@ -19,7 +19,7 @@ class SynthIteratorSpec extends FlatSpec {
     }}
 
   private def expectCells (cs: Cell*) (actual: CellIterator) =
-    expectResult (cs) (toSeq (actual))
+    expectResult (cs) (actual.toSeq)
 
   "The SynthIterator" should "yield nothing for []" in {
     val iter = new SynthIterator

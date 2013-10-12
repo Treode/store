@@ -1,6 +1,7 @@
-package com.treode.store
+package com.treode.store.tier
 
 import org.scalatest.FlatSpec
+import com.treode.store.Fruits
 
 class CellSpec extends FlatSpec {
   import Fruits.{Apple, Orange}

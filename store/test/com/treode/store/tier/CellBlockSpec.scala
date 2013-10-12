@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.pickle.{Picklers, pickle, unpickle}
-import com.treode.store.{Bytes, Cell, Fruits, TxClock}
+import com.treode.store.{Bytes, Fruits, TxClock}
 import io.netty.buffer.Unpooled
 import org.scalatest.WordSpec
 

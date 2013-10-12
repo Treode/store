@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.{Bytes, Cell, TxClock}
+import com.treode.store.{Bytes, TxClock}
 
 object Tier {
 

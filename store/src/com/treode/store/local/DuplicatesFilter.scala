@@ -1,7 +1,7 @@
 package com.treode.store.local
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.{Cell, CellIterator}
+import com.treode.store.tier.{Cell, CellIterator}
 
 /** Remove cells that duplicate (key, time); assumes the wrapped iterator is sorted by cell. */
 private class DuplicatesFilter private (iter: CellIterator) extends CellIterator {

@@ -2,13 +2,14 @@ package com.treode.store.local
 
 import com.treode.pickle.Picklers
 import com.treode.store._
+import com.treode.store.tier.{Cell, TestTools}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.WordSpec
 
 import Fruits.Apple
 import WriteOp._
 
-class TempTableSpec extends WordSpec {
+class TempTableSpec extends WordSpec with TestTools {
 
   private val One = Bytes ("one")
   private val Two = Bytes ("two")

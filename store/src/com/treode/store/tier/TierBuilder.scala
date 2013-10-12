@@ -3,7 +3,7 @@ package com.treode.store.tier
 import java.util.{ArrayDeque, ArrayList}
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.{Bytes, Cell, TxClock}
+import com.treode.store.{Bytes, TxClock}
 
 private class TierBuilder (writer: BlockWriter) {
 
