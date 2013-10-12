@@ -198,12 +198,7 @@ class TierSpec extends WordSpec {
       }
 
       "the blocks are limited to one byte" in {
-        try {
         checkFind (1)
-        } catch {
-          case e: Throwable => e.printStackTrace()
-          throw e
-        }
       }
       "the blocks are limited to 256 bytes" in {
         checkFind (1 << 6)

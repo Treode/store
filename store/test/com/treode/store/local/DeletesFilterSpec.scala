@@ -9,8 +9,6 @@ import Fruits.{Apple, Banana}
 
 class DeletesFilterSpec extends FlatSpec with TestTools {
 
-  private val One = Bytes ("one")
-
   private def expectCells (cs: Cell*) (actual: CellIterator) =
     expectResult (cs) (actual.toSeq)
 
@@ -32,86 +30,86 @@ class DeletesFilterSpec extends FlatSpec with TestTools {
     expectCells () (newFilter (Apple##2))
   }
 
-  it should "handle [Apple##2::One]" in {
-    expectCells (Apple##2::One) (newFilter (Apple##2::One))
+  it should "handle [Apple##2::1]" in {
+    expectCells (Apple##2::1) (newFilter (Apple##2::1))
   }
 
-  it should "handle [Apple##2::One, Apple##1]" in {
-    expectCells (Apple##2::One) (newFilter (Apple##2::One, Apple##1))
+  it should "handle [Apple##2::1, Apple##1]" in {
+    expectCells (Apple##2::1) (newFilter (Apple##2::1, Apple##1))
   }
 
-  it should "handle [Apple##2, Apple##1::One]" in {
-    expectCells (Apple##2, Apple##1::One) (newFilter (Apple##2, Apple##1::One))
+  it should "handle [Apple##2, Apple##1::1]" in {
+    expectCells (Apple##2, Apple##1::1) (newFilter (Apple##2, Apple##1::1))
   }
 
-  it should "handle [Apple##2::One, Apple##1::One]" in {
-    expectCells (Apple##2::One, Apple##1::One) (newFilter (Apple##2::One, Apple##1::One))
+  it should "handle [Apple##2::1, Apple##1::1]" in {
+    expectCells (Apple##2::1, Apple##1::1) (newFilter (Apple##2::1, Apple##1::1))
   }
 
   it should "handle [Apple##2, Banana##2]" in {
     expectCells () (newFilter (Apple##2, Banana##2))
   }
 
-  it should "handle [Apple##2::One, Banana##2]" in {
-    expectCells (Apple##2::One) (newFilter (Apple##2::One, Banana##2))
+  it should "handle [Apple##2::1, Banana##2]" in {
+    expectCells (Apple##2::1) (newFilter (Apple##2::1, Banana##2))
   }
 
-  it should "handle [Apple##2::One, Apple##1, Banana##2]" in {
-    expectCells (Apple##2::One) (newFilter (Apple##2::One, Apple##1, Banana##2))
+  it should "handle [Apple##2::1, Apple##1, Banana##2]" in {
+    expectCells (Apple##2::1) (newFilter (Apple##2::1, Apple##1, Banana##2))
   }
 
-  it should "handle [Apple##2, Apple##1::One, Banana##2]" in {
-    expectCells (Apple##2, Apple##1::One) (newFilter (Apple##2, Apple##1::One, Banana##2))
+  it should "handle [Apple##2, Apple##1::1, Banana##2]" in {
+    expectCells (Apple##2, Apple##1::1) (newFilter (Apple##2, Apple##1::1, Banana##2))
   }
 
-  it should "handle [Apple##2::One, Apple##1::One, Banana##2]" in {
-    expectCells (Apple##2::One, Apple##1::One) (
-        newFilter (Apple##2::One, Apple##1::One, Banana##2))
+  it should "handle [Apple##2::1, Apple##1::1, Banana##2]" in {
+    expectCells (Apple##2::1, Apple##1::1) (
+        newFilter (Apple##2::1, Apple##1::1, Banana##2))
   }
 
-  it should "handle [Apple##2, Banana##2::One]" in {
-    expectCells (Banana##2::One) (newFilter (Apple##2, Banana##2::One))
+  it should "handle [Apple##2, Banana##2::1]" in {
+    expectCells (Banana##2::1) (newFilter (Apple##2, Banana##2::1))
   }
 
-  it should "handle [Apple##2::One, Banana##2::One]" in {
-    expectCells (Apple##2::One, Banana##2::One) (newFilter (Apple##2::One, Banana##2::One))
+  it should "handle [Apple##2::1, Banana##2::1]" in {
+    expectCells (Apple##2::1, Banana##2::1) (newFilter (Apple##2::1, Banana##2::1))
   }
 
-  it should "handle [Apple##2::One, Apple##1, Banana##2::One]" in {
-    expectCells (Apple##2::One, Banana##2::One) (
-        newFilter (Apple##2::One, Apple##1, Banana##2::One))
+  it should "handle [Apple##2::1, Apple##1, Banana##2::1]" in {
+    expectCells (Apple##2::1, Banana##2::1) (
+        newFilter (Apple##2::1, Apple##1, Banana##2::1))
   }
 
-  it should "handle [Apple##2, Apple##1::One, Banana##2::One]" in {
-    expectCells (Apple##2, Apple##1::One, Banana##2::One) (
-        newFilter (Apple##2, Apple##1::One, Banana##2::One))
+  it should "handle [Apple##2, Apple##1::1, Banana##2::1]" in {
+    expectCells (Apple##2, Apple##1::1, Banana##2::1) (
+        newFilter (Apple##2, Apple##1::1, Banana##2::1))
   }
 
-  it should "handle [Apple##2::One, Apple##1::One, Banana##2::One]" in {
-    expectCells (Apple##2::One, Apple##1::One, Banana##2::One) (
-        newFilter (Apple##2::One, Apple##1::One, Banana##2::One))
+  it should "handle [Apple##2::1, Apple##1::1, Banana##2::1]" in {
+    expectCells (Apple##2::1, Apple##1::1, Banana##2::1) (
+        newFilter (Apple##2::1, Apple##1::1, Banana##2::1))
   }
 
-  it should "handle [Apple##2, Banana##2::One, Banana##1]" in {
-    expectCells (Banana##2::One) (newFilter (Apple##2, Banana##2::One, Banana##1))
+  it should "handle [Apple##2, Banana##2::1, Banana##1]" in {
+    expectCells (Banana##2::1) (newFilter (Apple##2, Banana##2::1, Banana##1))
   }
 
-  it should "handle [Apple##2::One, Banana##2::One, Banana##1]" in {
-    expectCells (Apple##2::One, Banana##2::One) (
-        newFilter (Apple##2::One, Banana##2::One, Banana##1))
+  it should "handle [Apple##2::1, Banana##2::1, Banana##1]" in {
+    expectCells (Apple##2::1, Banana##2::1) (
+        newFilter (Apple##2::1, Banana##2::1, Banana##1))
   }
 
-  it should "handle [Apple##2::One, Apple##1, Banana##2::One, Banana##1]" in {
-    expectCells (Apple##2::One, Banana##2::One) (
-        newFilter (Apple##2::One, Apple##1, Banana##2::One, Banana##1))
+  it should "handle [Apple##2::1, Apple##1, Banana##2::1, Banana##1]" in {
+    expectCells (Apple##2::1, Banana##2::1) (
+        newFilter (Apple##2::1, Apple##1, Banana##2::1, Banana##1))
   }
 
-  it should "handle [Apple##2, Apple##1::One, Banana##2::One, Banana##1]" in {
-    expectCells (Apple##2, Apple##1::One, Banana##2::One) (
-        newFilter (Apple##2, Apple##1::One, Banana##2::One, Banana##1))
+  it should "handle [Apple##2, Apple##1::1, Banana##2::1, Banana##1]" in {
+    expectCells (Apple##2, Apple##1::1, Banana##2::1) (
+        newFilter (Apple##2, Apple##1::1, Banana##2::1, Banana##1))
   }
 
-  it should "handle [Apple##2::One, Apple##1::One, Banana##2::One, Banana##1]" in {
-    expectCells (Apple##2::One, Apple##1::One, Banana##2::One) (
-        newFilter (Apple##2::One, Apple##1::One, Banana##2::One, Banana##1))
+  it should "handle [Apple##2::1, Apple##1::1, Banana##2::1, Banana##1]" in {
+    expectCells (Apple##2::1, Apple##1::1, Banana##2::1) (
+        newFilter (Apple##2::1, Apple##1::1, Banana##2::1, Banana##1))
   }}

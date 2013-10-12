@@ -7,8 +7,11 @@ trait TestTools {
 
   implicit class RichBytes (v: Bytes) {
     def ## (time: Int) = Cell (v, TxClock (time), None)
-    def :: (cell: Cell): Cell = Cell (cell.key, cell.time, Some (v))
-    def :: (time: Int): Value = Value (time, Some (v))
+  }
+
+  implicit class RichInt (v: Int) {
+    def :: (cell: Cell): Cell = Cell (cell.key, cell.time, Some (Bytes (v)))
+    def :: (time: Int): Value = Value (time, Some (Bytes (v)))
   }
 
   implicit class RichOption (v: Option [Bytes]) {

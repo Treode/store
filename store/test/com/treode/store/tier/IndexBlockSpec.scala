@@ -36,7 +36,7 @@ class IndexBlockSpec extends WordSpec {
     blocksEqual (block, result)
   }
 
-  "A ValueBlock" when {
+  "An IndexBlock" when {
 
     "empty" should {
 

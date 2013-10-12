@@ -5,7 +5,7 @@ import com.treode.store.{Bytes, Fruits, TxClock}
 import io.netty.buffer.Unpooled
 import org.scalatest.WordSpec
 
-class ValueBlockSpec extends WordSpec {
+class CellBlockSpec extends WordSpec {
   import Fruits.{Apple, Kiwi, Orange}
 
   val MaxTime = TxClock.MaxValue
@@ -36,7 +36,7 @@ class ValueBlockSpec extends WordSpec {
     buffer.release()
   }
 
-  "A ValueBlock" when {
+  "A CellBlock" when {
 
     "empty" should {
 

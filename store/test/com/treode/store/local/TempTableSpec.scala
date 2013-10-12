@@ -11,8 +11,8 @@ import WriteOp._
 
 class TempTableSpec extends WordSpec with TestTools {
 
-  private val One = Bytes ("one")
-  private val Two = Bytes ("two")
+  private val One = Bytes (1)
+  private val Two = Bytes (2)
 
   private def Get (id: Int, key: Bytes): ReadOp =
     ReadOp (id, key)
@@ -35,10 +35,10 @@ class TempTableSpec extends WordSpec with TestTools {
 
       "commited" should {
 
-        "allow and perform create Apple::One at t=0" in {
+        "allow and perform create Apple::1 at t=0" in {
           val s = newStore
           s.writeExpectApply (0, Create (1, Apple, One)) (_.commit (1))
-          expectCells (Apple##1::One) (s.table (1))
+          expectCells (Apple##1::1) (s.table (1))
         }
 
         "allow and ignore hold Apple at t=0" in {
@@ -47,10 +47,10 @@ class TempTableSpec extends WordSpec with TestTools {
           expectCells () (s.table (1))
         }
 
-        "allow and perform update Apple::One at t=0" in {
+        "allow and perform update Apple::1 at t=0" in {
           val s = newStore
           s.writeExpectApply (0, Update (1, Apple, One)) (_.commit (1))
-          expectCells (Apple##1::One) (s.table (1))
+          expectCells (Apple##1::1) (s.table (1))
         }
 
         "allow and ignore delete Apple at t=0" in {
@@ -61,7 +61,7 @@ class TempTableSpec extends WordSpec with TestTools {
 
       "aborted" should {
 
-        "allow and ignore create Apple::One at t=0" in {
+        "allow and ignore create Apple::1 at t=0" in {
           val s = newStore
           s.writeExpectApply (0, Create (1, Apple, One)) (_.abort())
           expectCells () (s.table (1))
@@ -73,7 +73,7 @@ class TempTableSpec extends WordSpec with TestTools {
           expectCells () (s.table (1))
         }
 
-        "allow and ignore update Apple::One at t=0" in {
+        "allow and ignore update Apple::1 at t=0" in {
           val s = newStore
           s.writeExpectApply (0, Update (1, Apple, One)) (_.abort())
           expectCells () (s.table (1))
@@ -85,7 +85,7 @@ class TempTableSpec extends WordSpec with TestTools {
           expectCells () (s.table (1))
         }}}
 
-    "having Apple##7::One and the transaction" when {
+    "having Apple##7::1 and the transaction" when {
 
       def newStore = {
         val s = new TestableTempStore
@@ -95,14 +95,14 @@ class TempTableSpec extends WordSpec with TestTools {
 
       "not relevant" should {
 
-        "find 7::One for Apple##8" in {
+        "find 7::1 for Apple##8" in {
           val s = newStore
-          s.readAndExpect (8, Get (1, Apple)) (7::One)
+          s.readAndExpect (8, Get (1, Apple)) (7::1)
         }
 
-        "find 7::One for Apple##7" in {
+        "find 7::1 for Apple##7" in {
           val s = newStore
-          s.readAndExpect (7, Get (1, Apple)) (7::One)
+          s.readAndExpect (7, Get (1, Apple)) (7::1)
         }
 
         "find 0::None for Apple##6" in {
@@ -135,89 +135,89 @@ class TempTableSpec extends WordSpec with TestTools {
         "allow and ignore hold Apple at t=8" in {
           val s = newStore
           s.writeExpectApply (8, Hold (1, Apple)) (_.commit (14))
-          expectCells (Apple##7::One) (s.table (1))
+          expectCells (Apple##7::1) (s.table (1))
         }
 
         "allow and ignore hold Apple at t=7" in {
           val s = newStore
           s.writeExpectApply (7, Hold (1, Apple)) (_.commit (14))
-          expectCells (Apple##7::One) (s.table (1))
+          expectCells (Apple##7::1) (s.table (1))
         }
 
-        "allow and perform update Apple::Two at t=8" in {
+        "allow and perform update Apple::2 at t=8" in {
           val s = newStore
           s.writeExpectApply (8, Update (1, Apple, Two)) (_.commit (14))
-          expectCells (Apple##14::Two, Apple##7::One) (s.table (1))
+          expectCells (Apple##14::2, Apple##7::1) (s.table (1))
         }
 
-        "allow and perform update Apple::Two at t=7" in {
+        "allow and perform update Apple::2 at t=7" in {
           val s = newStore
           s.writeExpectApply (7, Update (1, Apple, Two)) (_.commit (14))
-          expectCells (Apple##14::Two, Apple##7::One) (s.table (1))
+          expectCells (Apple##14::2, Apple##7::1) (s.table (1))
         }
 
-        "allow and ignore update Apple::One at t=8" in {
+        "allow and ignore update Apple::1 at t=8" in {
           val s = newStore
           s.writeExpectApply (8, Update (1, Apple, One)) (_.commit (14))
-          expectCells (Apple##7::One) (s.table (1))
+          expectCells (Apple##7::1) (s.table (1))
         }
 
-        "allow and ignore update Apple::One at t=7" in {
+        "allow and ignore update Apple::1 at t=7" in {
           val s = newStore
           s.writeExpectApply (7, Update (1, Apple, One)) (_.commit (14))
-          expectCells (Apple##7::One) (s.table (1))
+          expectCells (Apple##7::1) (s.table (1))
         }
 
         "allow and perform delete Apple at t=8" in {
           val s = newStore
           s.writeExpectApply (8, Delete (1, Apple)) (_.commit (14))
-          expectCells (Apple##14, Apple##7::One) (s.table (1))
+          expectCells (Apple##14, Apple##7::1) (s.table (1))
         }
 
         "allow and perform delete Apple at t=7" in {
           val s = newStore
           s.writeExpectApply (7, Delete (1, Apple)) (_.commit (14))
-          expectCells (Apple##14, Apple##7::One) (s.table (1))
+          expectCells (Apple##14, Apple##7::1) (s.table (1))
         }}
 
       "aborted" should {
 
-        "allow and ignore update Apple::Two at t=8" in {
+        "allow and ignore update Apple::2 at t=8" in {
           val s = newStore
           s.writeExpectApply (8, Update (1, Apple, Two)) (_.commit (14))
-          expectCells (Apple##14::Two, Apple##7::One) (s.table (1))
+          expectCells (Apple##14::2, Apple##7::1) (s.table (1))
         }
 
         "allow and perform delete Apple at t=8" in {
           val s = newStore
           s.writeExpectApply (8, Delete (1, Apple)) (_.commit (14))
-          expectCells (Apple##14, Apple##7::One) (s.table (1))
+          expectCells (Apple##14, Apple##7::1) (s.table (1))
         }}}
 
-    "having Apple##14::Two and Apple##7::One" should {
+    "having Apple##14::2 and Apple##7::1" should {
 
       val s = new TestableTempStore
       s.writeExpectApply (0, Create (1, Apple, One)) (_.commit (7))
       s.writeExpectApply (7, Update (1, Apple, Two)) (_.commit (14))
 
-      "find 14::Two for Apple##15" in {
-        s.readAndExpect (15, Get (1, Apple)) (14::Two)
+      "find 14::2 for Apple##15" in {
+        s.readAndExpect (15, Get (1, Apple)) (14::2)
       }
 
-      "find 14::Two for Apple##14" in {
-        s.readAndExpect (14, Get (1, Apple)) (14::Two)
+      "find 14::2 for Apple##14" in {
+        s.readAndExpect (14, Get (1, Apple)) (14::2)
       }
 
-      "find 7::One for Apple##13" in {
-        s.readAndExpect (13, Get (1, Apple)) (7::One)
+      "find 7::1 for Apple##13" in {
+        s.readAndExpect (13, Get (1, Apple)) (7::1)
       }
 
-      "find 7::One for Apple##8" in {
-        s.readAndExpect (8, Get (1, Apple)) (7::One)
+      "find 7::1 for Apple##8" in {
+        s.readAndExpect (8, Get (1, Apple)) (7::1)
       }
 
-      "find 7::One for Apple##7" in {
-        s.readAndExpect (7, Get (1, Apple)) (7::One)
+      "find 7::1 for Apple##7" in {
+        s.readAndExpect (7, Get (1, Apple)) (7::1)
       }
 
       "find 0::None for Apple##6" in {
