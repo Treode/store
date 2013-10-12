@@ -3,7 +3,7 @@ package com.treode.store.tier
 import java.util.{Arrays, ArrayList}
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 import com.treode.store.{Bytes, TxClock}
-import com.treode.store.log.{Block, readKey, writeKey}
+import com.treode.store.log.{AbstractBlockPickler, Block}
 
 private class CellBlock (val entries: Array [Cell]) extends Block {
 
@@ -33,61 +33,35 @@ private object CellBlock {
     new CellBlock (entries.toArray (empty.entries))
 
   private val _pickle: Pickler [CellBlock] =
-    new Pickler [CellBlock] {
+    new AbstractBlockPickler [CellBlock, Cell] {
 
-      private [this] val blockSize = Picklers.unsignedInt
       private [this] val value = Picklers.option (Bytes.pickle)
       private [this] val txClock = TxClock.pickle
 
-      // Write first entry; write full key.
-      private [this] def writeEntry (entry: Cell, ctx: PickleContext) {
+      protected def writeEntry (entry: Cell, ctx: PickleContext) {
         writeKey (entry.key, ctx)
         txClock.p (entry.time, ctx)
         value.p (entry.value, ctx)
       }
 
-      // Read first entry; read full byte array.
-      private [this] def readEntry (ctx: UnpickleContext): Cell =
+      protected def readEntry (ctx: UnpickleContext): Cell =
         Cell (readKey (ctx), txClock.u (ctx), value.u (ctx))
 
-      // Write subsequent entry; skip common prefix of previous key.
-      private [this] def writeEntry (prev: Cell, entry: Cell, ctx: PickleContext) {
+      protected def writeEntry (prev: Cell, entry: Cell, ctx: PickleContext) {
         writeKey (prev.key, entry.key, ctx)
         txClock.p (entry.time, ctx)
         value.p (entry.value, ctx)
       }
 
-      // Read subsequent entry, use common prefix from previous key.
-      private [this] def readEntry (prev: Cell, ctx: UnpickleContext): Cell =
+      protected def readEntry (prev: Cell, ctx: UnpickleContext): Cell =
         Cell (readKey (prev.key, ctx), txClock.u (ctx), value.u (ctx))
 
-      def p (block: CellBlock, ctx: PickleContext) {
-        blockSize.p (block.size, ctx)
-        if (block.size > 0) {
-          var prev = block.get (0)
-          writeEntry (prev, ctx)
-          var i = 1
-          while (i < block.size) {
-            val next = block.get (i)
-            writeEntry (prev, next, ctx)
-            prev = next
-            i += 1
-          }}}
+      def p (block: CellBlock, ctx: PickleContext): Unit =
+        _p (block.entries, ctx)
 
-      def u (ctx: UnpickleContext): CellBlock = {
-        val size = blockSize.u (ctx)
-        val entries = new Array [Cell] (size)
-        if (size > 0) {
-          var prev = readEntry (ctx)
-          entries (0) = prev
-          var i = 1
-          while (i < size) {
-            prev = readEntry (prev, ctx)
-            entries (i) = prev
-            i += 1
-          }}
-        new CellBlock (entries)
-      }}
+      def u (ctx: UnpickleContext): CellBlock =
+        new CellBlock (_u (ctx))
+    }
 
   val pickle = {
     import Picklers._
