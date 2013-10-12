@@ -1,0 +1,22 @@
+package com.treode.store.simple
+
+import com.google.common.primitives.Longs
+import com.treode.store.{Bytes, TxClock}
+
+private class IndexEntry (val key: Bytes, val pos: Long) extends Ordered [IndexEntry] {
+
+  def byteSize = key.byteSize + Longs.BYTES
+
+  def compare (that: IndexEntry): Int = key compare that.key
+
+  override def toString = "IndexEntry" + (key, pos)
+}
+
+private object IndexEntry extends Ordering [IndexEntry] {
+
+  def apply (key: Bytes, pos: Long): IndexEntry =
+    new IndexEntry (key, pos)
+
+  def compare (x: IndexEntry, y: IndexEntry): Int =
+    x compare y
+}
