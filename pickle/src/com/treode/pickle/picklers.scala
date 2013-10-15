@@ -673,24 +673,6 @@ trait Picklers {
       override def toString = "share (" + pa + ")"
     }}
 
-  def hash32 [A] (pa: Pickler [A]) =
-    wrap (
-      pickle = tuple (pa, fixedInt),
-      build = { v: (A, Int) => if (v._2 == Hash32.hash (pa, 0, v._1)) Some (v._1) else None },
-      inspect = { v: Option [A] => (v.get, Hash32.hash (pa, 0, v.get)) })
-
-  def hash64 [A] (pa: Pickler [A]) =
-    wrap (
-      pickle = tuple (pa, fixedLong),
-      build = { v: (A, Long) => if (v._2 == Hash128.hash (pa, 0, v._1) ._1) Some (v._1) else None },
-      inspect = { v: Option [A] => (v.get, Hash128.hash (pa, 0, v.get) ._1) })
-
-  def hash128 [A] (pa: Pickler [A]) =
-    wrap (
-      pickle = tuple (pa, tuple (fixedLong, fixedLong)),
-      build = { v: (A, (Long, Long)) => if (v._2 == Hash128.hash (pa, 0, v._1)) Some (v._1) else None },
-      inspect = { v: Option [A] => (v.get, Hash128.hash (pa, 0, v.get)) })
-
   val stackTrace = {
     val elem =
       wrap [(String, String, String, Int), StackTraceElement] (

@@ -159,18 +159,6 @@ trait Pickler [A] {
 
 package object pickle {
 
-  def hash32 [A] (p: Pickler [A], seed: Int, v: A) = Hash32.hash (p, seed, v)
-
-  def hash64 [A] (p: Pickler [A], seed: Long, v: A) = Hash128.hash (p, seed, v)._2
-
-  def hash128 [A] (p: Pickler [A], seed: Long, v: A) = Hash128.hash (p, seed, v)
-
-  def hash32 (seed: Int, b: ByteBuf) = Hash32.hash (seed, b)
-
-  def hash64 (seed: Long, b: ByteBuf) = Hash128.hash (seed, b)._2
-
-  def hash128 (seed: Long, b: ByteBuf) = Hash128.hash (seed, b)
-
   def pickle [A] (p: Pickler [A], v: A, b: ByteBuf) =
     p.p (v, new ByteBufPickleContext (b))
 
