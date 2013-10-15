@@ -84,12 +84,12 @@ object Bytes extends Ordering [Bytes] {
     new Pickler [Bytes] {
 
       def p (v: Bytes, ctx: PickleContext) {
-        ctx.writeVariableLengthUnsignedInt (v.bytes.length)
+        ctx.writeVarUInt (v.bytes.length)
         ctx.writeBytes (v.bytes, 0, v.bytes.length)
       }
 
       def u (ctx: UnpickleContext): Bytes = {
-        val length = ctx.readVariableLengthUnsignedInt()
+        val length = ctx.readVarUInt()
         val bytes = new Array [Byte] (length)
         ctx.readBytes (bytes, 0, length)
         new Bytes (bytes)

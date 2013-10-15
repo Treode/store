@@ -34,5 +34,5 @@ object TxClock extends Ordering [TxClock] {
 
   val pickle = {
     import Picklers._
-    wrap [Long, TxClock] (unsignedLong, new TxClock (_), _.time)
+    wrap (ulong) (new TxClock (_)) (_.time)
   }}

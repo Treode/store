@@ -18,5 +18,5 @@ object TxId {
 
   val pickle = {
     import StorePicklers._
-    wrap [Bytes, TxId] (bytes, TxId (_), _.id)
+    wrap (bytes) (apply _) (_.id)
   }}

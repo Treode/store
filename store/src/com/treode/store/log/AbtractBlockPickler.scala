@@ -5,7 +5,7 @@ import com.treode.store.Bytes
 
 abstract class AbstractBlockPickler [T, E] extends Pickler [T] {
 
-  private [this] val count = Picklers.unsignedInt
+  private [this] val count = Picklers.uint
 
   /** Determine length of common prefix. */
   private def common (x: Array [Byte], y: Array [Byte]): Int = {

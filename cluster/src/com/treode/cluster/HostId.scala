@@ -19,7 +19,7 @@ object HostId extends Ordering [HostId] {
 
   val pickle = {
     import Picklers._
-    wrap [Long, HostId] (fixedLong, HostId (_), _.id)
+    wrap (fixedLong) (apply _) (_.id)
   }
 
   def compare (x: HostId, y: HostId): Int =

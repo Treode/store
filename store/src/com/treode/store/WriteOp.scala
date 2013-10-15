@@ -18,20 +18,8 @@ object WriteOp {
   val pickle = {
     import StorePicklers._
     tagged [WriteOp] (
-        0x1 -> wrap [(TableId, Bytes, Bytes), Create] (
-            tuple (tableId, bytes, bytes),
-            (v => Create (v._1, v._2, v._3)),
-            (v => (v.table, v.key, v.value))),
-        0x2 -> wrap [(TableId, Bytes), Hold] (
-            tuple (tableId, bytes),
-            (v => Hold (v._1, v._2)),
-            (v => (v.table, v.key))),
-        0x3 -> wrap [(TableId, Bytes, Bytes), Update] (
-            tuple (tableId, bytes, bytes),
-            (v => Update (v._1, v._2, v._3)),
-            (v => (v.table, v.key, v.value))),
-        0x4 -> wrap [(TableId, Bytes), Delete] (
-            tuple (tableId, bytes),
-            (v => Delete (v._1, v._2)),
-            (v => (v.table, v.key))))
+        0x1 -> wrap (tableId, bytes, bytes) (Create.apply _) (v => (v.table, v.key, v.value)),
+        0x2 -> wrap (tableId, bytes) (Hold.apply _) (v => (v.table, v.key)),
+        0x3 -> wrap (tableId, bytes, bytes) (Update.apply _) (v => (v.table, v.key, v.value)),
+        0x4 -> wrap (tableId, bytes) (Delete.apply _) (v => (v.table, v.key)))
   }}

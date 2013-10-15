@@ -11,8 +11,5 @@ object WriteBatch {
 
   val pickle = {
     import StorePicklers._
-    wrap [(TxId, TxClock, TxClock, Seq [WriteOp]), WriteBatch] (
-        tuple (txId, txClock, txClock, seq (writeOp)),
-        (v => WriteBatch (v._1, v._2, v._3, v._4)),
-        (v => (v.xid, v.ct, v.ft, v.ops)))
+    wrap (txId, txClock, txClock, seq (writeOp)) (apply _) (v => (v.xid, v.ct, v.ft, v.ops))
   }}

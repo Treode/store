@@ -35,7 +35,7 @@ private object IndexBlock {
   private val _pickle: Pickler [IndexBlock] =
     new AbstractBlockPickler [IndexBlock, IndexEntry] {
 
-      private [this] val blockPos = Picklers.unsignedLong
+      private [this] val blockPos = Picklers.ulong
 
       protected def writeEntry (entry: IndexEntry, ctx: PickleContext) {
         writeKey (entry.key, ctx)

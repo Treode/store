@@ -19,24 +19,27 @@ private trait PicklersSpecCommon extends ShouldMatchers {
   case class Link (name: String, link: Url) extends Bookmark
   case class Folder (name: String, bookmarks: List [Bookmark]) extends Bookmark
 
-  val url = wrap (
-    pickle = tuple (string, int, string),
-    build = (Url.apply _).tupled,
-    inspect = { x: Url => (x.host, x.port, x.path) })
+  val url = wrap (string, int, string) {
+    Url.apply _
+  } {
+    x => (x.host, x.port, x.path)
+  }
 
   val bookmark = laze (tagged [Bookmark] (
       0x1 -> link,
       0x2 -> folder))
 
-  val link = wrap (
-      pickle = tuple (string, url),
-      build = (Link.apply _).tupled,
-      inspect = { x: Link => (x.name, x.link) })
+  val link = wrap (string, url) {
+    Link.apply _
+  } {
+    x => (x.name, x.link)
+  }
 
-  val folder: Pickler [Folder] = wrap (
-      pickle = tuple (string, list (bookmark)),
-      build = (Folder.apply _).tupled,
-      inspect = { x: Folder => (x.name, x.bookmarks) })
+  val folder: Pickler [Folder] = wrap (string, list (bookmark)) {
+    Folder.apply _
+  } {
+    x => (x.name, x.bookmarks)
+  }
 
   def check [A] (pa: Pickler [A], x: A) {
     expectResult (x) {
@@ -96,11 +99,11 @@ private object PicklersProperties extends PropSpec with PropertyChecks with Pick
   }
 
   property ("A Pickler reads and writes unsigned ints") {
-    forAll ("x") ((x: Int) => check (Picklers.unsignedInt, x))
+    forAll ("x") ((x: Int) => check (Picklers.uint, x))
   }
 
   property ("A Pickler reads and writes unsigned longs") {
-    forAll ("x") ((x: Long) => check (Picklers.unsignedLong, x))
+    forAll ("x") ((x: Long) => check (Picklers.ulong, x))
   }
 
   property ("A Pickler reads and writes floats") {
@@ -112,7 +115,7 @@ private object PicklersProperties extends PropSpec with PropertyChecks with Pick
   }
 
   property ("A Pickler reads and writes strings") {
-    forAll ("x") ((x: String) => check (string (UTF_16), x))
+    forAll ("x") ((x: String) => check (string, x))
   }
 
   property ("A Pickler reads and writes lists") {

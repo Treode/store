@@ -1,5 +1,6 @@
 package com.treode.pickle
 
+import java.nio.charset.StandardCharsets.UTF_8
 import scala.collection.mutable
 
 abstract class PickleContext private [pickle] {
@@ -12,7 +13,7 @@ abstract class PickleContext private [pickle] {
 
   private [pickle] def put (v: Any) = m.put (v, m.size)
 
-  def writeVariableLengthUnsignedInt (v: Int) {
+  def writeVarUInt (v: Int) {
     var u = v
     while ((u & 0xFFFFFF80) != 0) {
       writeByte ((u & 0x7F | 0x80).toByte)
@@ -21,10 +22,10 @@ abstract class PickleContext private [pickle] {
     writeByte ((u & 0x7F).toByte)
   }
 
-  def writeVariableLengthInt (v: Int): Unit =
-    writeVariableLengthUnsignedInt ((v << 1) ^ (v >> 31))
+  def writeVarInt (v: Int): Unit =
+    writeVarUInt ((v << 1) ^ (v >> 31))
 
-  def writeVariableLengthUnsignedLong (v: Long) {
+  def writeVarULong (v: Long) {
     var u = v
     while ((u & 0xFFFFFF80) != 0) {
       writeByte ((u & 0x7F | 0x80).toByte)
@@ -33,8 +34,14 @@ abstract class PickleContext private [pickle] {
     writeByte ((u & 0x7F).toByte)
   }
 
-  def writeVariableLengthLong (v: Long): Unit =
-    writeVariableLengthUnsignedLong ((v << 1) ^ (v >> 63))
+  def writeVarLong (v: Long): Unit =
+    writeVarULong ((v << 1) ^ (v >> 63))
+
+  def writeString (v: String) {
+    val b = UTF_8.encode (v)
+    writeVarUInt (b.limit)
+    writeBytes (b.array, 0, b.limit)
+  }
 
   def writeByte (v: Byte)
   def writeShort (v: Short)

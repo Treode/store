@@ -21,5 +21,5 @@ object MailboxId {
 
   val pickle = {
     import Picklers._
-    wrap [Long, MailboxId] (fixedLong, MailboxId (_), _.id)
+    wrap (fixedLong) (apply _) (_.id)
   }}

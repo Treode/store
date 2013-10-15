@@ -1,5 +1,7 @@
 package com.treode.pickle
 
+import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets.UTF_8
 import scala.collection.mutable
 
 abstract class UnpickleContext private [pickle] {
@@ -10,7 +12,7 @@ abstract class UnpickleContext private [pickle] {
 
   private [pickle] def put [A] (v: A) = m.put (m.size, v)
 
-  def readVariableLengthInt(): Int = {
+  def readVarInt(): Int = {
     val b1 = readByte().toInt
     var b = b1
     var v = b & 0x7F
@@ -23,7 +25,7 @@ abstract class UnpickleContext private [pickle] {
     (if ((b1 & 1) == 0) 0 else -1) ^ (v >>> 1)
   }
 
-  def readVariableLengthUnsignedInt(): Int = {
+  def readVarUInt(): Int = {
     val b1 = readByte().toInt
     var b = b1
     var v = b & 0x7F
@@ -36,7 +38,7 @@ abstract class UnpickleContext private [pickle] {
     v
   }
 
-  def readVariableLengthLong(): Long = {
+  def readVarLong(): Long = {
     val b1 = readByte().toLong
     var b = b1
     var v = b & 0x7F
@@ -49,7 +51,7 @@ abstract class UnpickleContext private [pickle] {
     (if ((b1 & 1) == 0) 0 else -1) ^ (v >>> 1)
   }
 
-  def readVariableLengthUnsignedLong(): Long = {
+  def readVarULong(): Long = {
     val b1 = readByte().toLong
     var b = b1
     var v = b & 0x7F
@@ -60,6 +62,13 @@ abstract class UnpickleContext private [pickle] {
       shift += 7
     }
     v
+  }
+
+  def readString(): String = {
+    val l = readVarUInt()
+    val b = ByteBuffer.allocate (l)
+    readBytes (b.array, 0, l)
+    UTF_8.decode (b).toString
   }
 
   def readByte(): Byte
