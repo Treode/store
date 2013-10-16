@@ -9,7 +9,7 @@ import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
 import com.treode.cluster.concurrent.{Callback, Fiber}
 import com.treode.cluster.events.Events
-import com.treode.cluster.misc.{BackoffTimer, RichInt}
+import com.treode.cluster.misc.{BackoffTimer, KryoPool, RichInt}
 import com.treode.pickle.{Pickler, pickle, unpickle}
 import com.treode.cluster.Socket
 
@@ -24,6 +24,8 @@ private class RemoteConnection (
 
   require (id != localId)
 
+  type Queue = util.ArrayList [PickledMessage]
+
   abstract class State {
 
     def disconnect (socket: Socket) = ()
@@ -34,7 +36,7 @@ private class RemoteConnection (
 
     def connect (socket: Socket, input: Input, clientId: HostId) {
       Loop (socket, input)
-      state = Connected (socket, clientId)
+      state = Connected (socket, clientId, KryoPool.output)
     }
 
     def close() {
@@ -48,34 +50,35 @@ private class RemoteConnection (
 
     def socket: Socket
     def clientId: HostId
+    def buffer: Output
     def backoff: Iterator [Int]
-
-    val queue = new util.ArrayList [PickledMessage] ()
 
     object Flushed extends Callback [Unit] {
 
       def apply (v: Unit) {
+        KryoPool.release (buffer)
         RemoteConnection.this.sent ()
       }
 
       def fail (t: Throwable) {
+        KryoPool.release (buffer)
         events.exceptionWritingMessage (t)
         RemoteConnection.this.disconnect (socket)
       }}
 
-    def flush (messages: util.ArrayList [PickledMessage]): Unit = fiber.spawn {
-      val buffer = new Output (256)
-      for (m <- messages) {
-        buffer.writeLong (m.mbx.id)
-        buffer.writeInt (0)
-        val start = buffer.position
-        m.write (buffer)
-        val end = buffer.position
-        buffer.setPosition (start - 4)
-        buffer.writeInt (end - start)
-        buffer.setPosition (end)
-      }
+    def flush(): Unit = fiber.spawn {
       messenger.flush (socket, buffer, Flushed)
+    }
+
+    def enque (message: PickledMessage) {
+      buffer.writeLong (message.mbx.id)
+      buffer.writeInt (0)
+      val start = buffer.position
+      message.write (buffer)
+      val end = buffer.position
+      buffer.setPosition (start - 4)
+      buffer.writeInt (end - start)
+      buffer.setPosition (end)
     }
 
     override def disconnect (socket: Socket) {
@@ -85,10 +88,10 @@ private class RemoteConnection (
       }}
 
     override def sent() {
-      if (queue.isEmpty) {
-        state = Connected (socket, clientId)
+      if (buffer.position == 0) {
+        state = Connected (socket, clientId, buffer)
       } else {
-        flush (queue)
+        flush()
         state = Sending (socket, clientId)
       }}
 
@@ -99,10 +102,10 @@ private class RemoteConnection (
         if (socket != this.socket)
           this.socket.close()
         Loop (socket, input)
-        if (queue.isEmpty) {
-          state = Connected (socket, clientId)
+        if (buffer.position == 0) {
+          state = Connected (socket, clientId, buffer)
         } else {
-          flush (queue)
+          flush()
           state = Sending (socket, clientId)
         }}}
 
@@ -111,9 +114,9 @@ private class RemoteConnection (
       state = Closed
     }
 
-    override def send (message: PickledMessage) {
-      queue.add (message)
-    }}
+    override def send (message: PickledMessage): Unit =
+      enque (message)
+  }
 
   case class Disconnected (backoff: Iterator [Int]) extends State {
 
@@ -126,7 +129,10 @@ private class RemoteConnection (
       state.send (message)
     }}
 
-  case class Connecting (socket: Socket,  clientId: HostId, time: Long, backoff: Iterator [Int]) extends HaveSocket {
+  case class Connecting (socket: Socket,  clientId: HostId, time: Long, backoff: Iterator [Int])
+  extends HaveSocket {
+
+    val buffer = KryoPool.output
 
     override def disconnect (socket: Socket) {
       if (socket == this.socket) {
@@ -134,17 +140,19 @@ private class RemoteConnection (
         state = Block (time, backoff)
       }}}
 
-  case class Connected (socket: Socket, clientId: HostId) extends HaveSocket {
+  case class Connected (socket: Socket, clientId: HostId, buffer: Output) extends HaveSocket {
 
     def backoff = BlockedTimer.iterator
 
     override def send (message: PickledMessage) {
-      queue.add (message)
-      flush (queue)
+      enque (message)
+      flush()
       state = Sending (socket, clientId)
     }}
 
   case class Sending (socket: Socket, clientId: HostId) extends HaveSocket {
+
+    val buffer = KryoPool.output
 
     def backoff = BlockedTimer.iterator
   }
