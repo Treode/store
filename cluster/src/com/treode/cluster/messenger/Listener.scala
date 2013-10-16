@@ -3,16 +3,16 @@ package com.treode.cluster.messenger
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.channels.{
   AsynchronousServerSocketChannel => ServerSocket,
-  AsynchronousSocketChannel => Socket,
+  AsynchronousSocketChannel => JavaSocket,
   AsynchronousChannelGroup,
   AsynchronousCloseException,
   CompletionHandler}
-
+import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, messenger}
-import com.treode.cluster.concurrent.Scheduler
+import com.treode.cluster.concurrent.{Callback, Scheduler}
 import com.treode.cluster.events.Events
 import com.treode.pickle._
-import io.netty.buffer.ByteBuf
+import com.treode.cluster.Socket
 
 class Listener (
   localId: HostId,
@@ -24,41 +24,40 @@ class Listener (
 
   private var server: ServerSocket = null
 
-  private def sayHello (socket: Socket, input: ByteBuf, remoteId: HostId) {
-    val buffer = ByteBufPool.buffer (16)
+  private def sayHello (socket: Socket, input: Input, remoteId: HostId) {
+    val buffer = new Output (256)
     pickle (Hello.pickle, Hello (localId), buffer)
-    messenger.flush (socket, buffer, new CompletionHandler [Void, Void] {
-      def completed (result: Void, attachment: Void) {
+    messenger.flush (socket, buffer, new Callback [Unit] {
+      def apply (v: Unit) {
         peers.get (remoteId) connect (socket, input, remoteId)
       }
-      def failed (exc: Throwable, attachment: Void) {
-        events.exceptionWhileGreeting (exc)
+      def fail (t: Throwable) {
+        events.exceptionWhileGreeting (t)
         socket.close()
       }})
   }
 
   private def hearHello (socket: Socket) {
-    val buffer = ByteBufPool.buffer()
-    messenger.ensure (socket, buffer, 9, new CompletionHandler [Void, Void] {
-      def completed (result: Void, attachment: Void) {
+    val buffer = new Input (256)
+    messenger.fill (socket, buffer, 9, new Callback [Unit] {
+      def apply (v: Unit) {
         val Hello (remoteId) = unpickle (Hello.pickle, buffer)
         sayHello (socket, buffer, remoteId)
       }
-      def failed (exc: Throwable, attachment: Void) {
-        events.exceptionWhileGreeting (exc)
-        buffer.release()
+      def fail (t: Throwable) {
+        events.exceptionWhileGreeting (t)
         socket.close()
       }})
   }
 
   private def loop() {
-    server.accept (null, new CompletionHandler [Socket, Void] {
-      def completed (socket: Socket, attachment: Void) {
-        scheduler.execute (hearHello (socket))
+    server.accept (null, new CompletionHandler [JavaSocket, Void] {
+      def completed (socket: JavaSocket, attachment: Void) {
+        scheduler.execute (hearHello (new Socket (socket)))
         loop()
       }
-      def failed (exc: Throwable, attachment: Void) {
-        exc match {
+      def failed (t: Throwable, attachment: Void) {
+        t match {
           case e: AsynchronousCloseException =>
             server.close()
           case e: Throwable =>

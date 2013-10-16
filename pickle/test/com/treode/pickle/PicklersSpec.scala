@@ -1,9 +1,8 @@
 package com.treode.pickle
 
-import java.nio.charset.StandardCharsets.UTF_16
 import scala.util.Random
 
-import io.netty.buffer.Unpooled
+import com.esotericsoftware.kryo.io.{Input, Output}
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.{FlatSpec, PropSpec, Specs}
@@ -43,10 +42,11 @@ private trait PicklersSpecCommon extends ShouldMatchers {
 
   def check [A] (pa: Pickler [A], x: A) {
     expectResult (x) {
-      val b = Unpooled.buffer()
-      pickle (pa, x, b)
-      val y = unpickle (pa, b)
-      b.release()
+      val array = new Array [Byte] (1024)
+      val output = new Output (array)
+      pickle (pa, x, output)
+      val input = new Input (array)
+      val y = unpickle (pa, input)
       y
     }}}
 

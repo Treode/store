@@ -1,20 +1,19 @@
 package com.treode.cluster.messenger
 
+import com.esotericsoftware.kryo.io.Input
 import com.treode.cluster.Peer
 import com.treode.pickle.{Pickler, unpickle}
-import io.netty.buffer.ByteBuf
 
 private trait PickledFunction {
 
-  def apply (buffer: ByteBuf, from: Peer)
+  def apply (from: Peer, input: Input)
 }
 
 private object PickledFunction {
 
   def apply [A] (p: Pickler [A], f: (A, Peer) => Any): PickledFunction =
     new PickledFunction {
-      def apply (buffer: ByteBuf, from: Peer) = {
-        val message = unpickle (p, buffer)
-        require (buffer.readableBytes() == 0, "Bytes remain after unpickling message")
+      def apply (from: Peer, input: Input) = {
+        val message = unpickle (p, input)
         f (message, from)
       }}}

@@ -9,6 +9,9 @@ package object cluster {
     def errorWhileGreeting (expected: HostId, found: HostId): Unit =
       events.warning (s"Error while greeting: expected remote host $expected but found $found")
 
+    def unpicklingMessageConsumedWrongNumberOfBytes (id: MailboxId): Unit =
+      events.warning (s"Unpickling a message consumed the wrong number of bytes: $id")
+
     def exceptionWhileGreeting (e: Throwable): Unit =
       events.warning (s"Error while greeting: $e")
 

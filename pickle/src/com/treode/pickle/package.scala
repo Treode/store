@@ -1,6 +1,6 @@
 package com.treode
 
-import io.netty.buffer.ByteBuf
+import com.esotericsoftware.kryo.io.{Input, Output}
 
 package pickle {
 
@@ -20,9 +20,9 @@ package pickle {
 
 package object pickle {
 
-  def pickle [A] (p: Pickler [A], v: A, b: ByteBuf) =
-    p.p (v, new ByteBufPickleContext (b))
+  def pickle [A] (p: Pickler [A], v: A, o: Output) =
+    p.p (v, new KryoPickleContext (o))
 
-  def unpickle [A] (p: Pickler [A], b: ByteBuf): A =
-    p.u (new ByteBufUnpickleContext (b))
+  def unpickle [A] (p: Pickler [A], i: Input): A =
+    p.u (new KryoUnpickleContext (i))
 }

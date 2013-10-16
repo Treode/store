@@ -4,19 +4,18 @@ import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.util.Arrays
 
+import com.esotericsoftware.kryo.io.{Input, Output}
 import com.google.common.primitives.UnsignedBytes
 import com.treode.pickle._
-import io.netty.buffer.{Unpooled, ByteBuf}
 
 class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
 
   def byteSize: Int = bytes.length
 
   def unpickle [A] (p: Pickler [A]): A = {
-    val buf = Unpooled.wrappedBuffer (bytes)
+    val buf = new Input (bytes)
     val v = com.treode.pickle.unpickle (p, buf)
-    buf.release()
-    require (buf.readableBytes == 0, "Bytes remain after unpickling.")
+    require (buf.position == buf.limit, "Bytes remain after unpickling.")
     v
   }
 
@@ -56,16 +55,12 @@ object Bytes extends Ordering [Bytes] {
     new Bytes (bytes)
 
   def apply [A] (pk: Pickler [A], v: A): Bytes = {
-    val buf = Unpooled.buffer()
+    val buf = new Output (256)
     com.treode.pickle.pickle (pk, v, buf)
-    val bytes = new Bytes (Arrays.copyOf (buf.array, buf.readableBytes))
-    buf.release()
-    bytes
+    new Bytes (buf.toBytes)
   }
 
-  /** Yield a Bytes object that will sort identically to the string; using the string pickler will
-    * yield a Bytes object that sorts first by string length.
-    */
+  /** Yield a Bytes object directly from the string. */
   def apply (s: String, cs: Charset = StandardCharsets.UTF_8): Bytes =
     new Bytes (s.getBytes (cs))
 

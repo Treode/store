@@ -3,27 +3,40 @@ package com.treode.cluster.messenger
 import java.util.concurrent.ConcurrentHashMap
 import scala.util.Random
 
+import com.esotericsoftware.kryo.io.Input
 import com.treode.pickle._
 import com.treode.cluster.{EphemeralMailbox, ClusterEvents, MailboxId, Peer}
 import com.treode.cluster.concurrent.{Mailbox, Scheduler}
 import com.treode.cluster.events.Events
-import io.netty.buffer.ByteBuf
 
 class MailboxRegistry (implicit events: Events) {
 
   // Visible for testing.
   private [messenger] val mbxs = new ConcurrentHashMap [Long, PickledFunction]
 
-  private [messenger] def deliver (id: MailboxId, from: Peer, buf: ByteBuf) {
+  private [messenger] def deliver (id: MailboxId, from: Peer, input: Input, length: Int) {
+    if (length == 0)
+      return
+
+    val end = input.position + length
     val f = mbxs.get (id.id)
-    if (f != null) {
-      try {
-        f (buf, from)
-      } catch {
-        case e: Throwable => events.exceptionFromMessageHandler (e)
+    if (f == null) {
+      if (id.isFixed)
+        events.mailboxNotRecognized (id, length)
+      input.setPosition (end)
+      return
+    }
+
+    try {
+      f (from, input)
+      if (input.position != end) {
+        events.unpicklingMessageConsumedWrongNumberOfBytes (id)
+        input.setPosition (end)
       }
-    } else if (id.isFixed) {
-      events.mailboxNotRecognized (id, buf.readableBytes)
+    } catch {
+      case e: Throwable =>
+        events.exceptionFromMessageHandler (e)
+        input.setPosition (end)
     }}
 
   private [messenger] def close (id: MailboxId, pf: PickledFunction) {
@@ -48,11 +61,9 @@ class MailboxRegistry (implicit events: Events) {
     def receive (receiver: (M, Peer) => Any): Unit =
       mbx.receive {case (msg, from) => receiver (msg, from)}
 
-    def apply (buffer: ByteBuf, from: Peer) = {
-      val message = unpickle (p, buffer)
-      require (buffer.readableBytes() == 0, "Bytes remain after unpickling message")
-      mbx.send (message, from)
-    }}
+    def apply (from: Peer, input: Input): Unit =
+      mbx.send (unpickle (p, input), from)
+  }
 
   def open [M] (p: Pickler [M], scheduler: Scheduler): EphemeralMailbox [M] = {
     var mbx = new EphemeralImpl (Random.nextLong, p, scheduler)

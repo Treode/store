@@ -1,8 +1,8 @@
 package com.treode.store.simple
 
+import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.pickle.{Picklers, pickle, unpickle}
 import com.treode.store.{Bytes, Fruits}
-import io.netty.buffer.Unpooled
 import org.scalatest.WordSpec
 
 class SimpleCellBlockSpec extends WordSpec with TestTools {
@@ -23,11 +23,11 @@ class SimpleCellBlockSpec extends WordSpec with TestTools {
   }
 
   private def checkPickle (block: CellBlock) {
-    val buffer = Unpooled.buffer()
-    pickle (CellBlock.pickle, block, buffer)
-    val result = unpickle (CellBlock.pickle, buffer)
+    val output = new Output (1024)
+    pickle (CellBlock.pickle, block, output)
+    val input = new Input (output.getBuffer)
+    val result = unpickle (CellBlock.pickle, input)
     blocksEqual (block, result)
-    buffer.release()
   }
 
   "A simple CellBlock" when {

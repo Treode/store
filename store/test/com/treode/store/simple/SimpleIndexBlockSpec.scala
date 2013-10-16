@@ -1,9 +1,9 @@
 package com.treode.store.simple
 
+import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.pickle.{Picklers, pickle, unpickle}
 import com.treode.store.{Bytes, Fruits, TxClock}
 import org.scalatest.WordSpec
-import io.netty.buffer.Unpooled
 
 class SimpleIndexBlockSpec extends WordSpec {
   import Fruits.{Apple, Banana, Kiwi, Kumquat, Orange}
@@ -26,9 +26,10 @@ class SimpleIndexBlockSpec extends WordSpec {
   }
 
   private def checkPickle (block: IndexBlock) {
-    val buffer = Unpooled.buffer()
-    pickle (IndexBlock.pickle, block, buffer)
-    val result = unpickle (IndexBlock.pickle, buffer)
+    val output = new Output (1024)
+    pickle (IndexBlock.pickle, block, output)
+    val input = new Input (output.getBuffer)
+    val result = unpickle (IndexBlock.pickle, input)
     blocksEqual (block, result)
   }
 

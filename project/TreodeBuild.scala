@@ -23,10 +23,10 @@ object TreodeBuild extends Build {
     testFrameworks += new TestFramework ("org.scalameter.ScalaMeterFramework"),
 
     libraryDependencies ++= Seq (
+      "com.esotericsoftware.kryo" % "kryo" % "2.22",
       "com.google.code.findbugs" % "jsr305" % "1.3.9",
       "com.google.guava" % "guava" % "14.0.1",
       "com.yammer.metrics" % "metrics-core" % "3.0.0-BETA1",
-      "io.netty" % "netty-buffer" % "4.0.9.Final",
       "org.slf4j" % "slf4j-api" % "1.7.2",
       "org.slf4j" % "slf4j-simple" % "1.7.2"),
 

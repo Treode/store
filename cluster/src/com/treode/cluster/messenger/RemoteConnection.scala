@@ -1,17 +1,17 @@
 package com.treode.cluster.messenger
 
-import java.nio.channels.{AsynchronousSocketChannel => Socket, AsynchronousChannelGroup, CompletionHandler}
+import java.nio.channels.AsynchronousChannelGroup
 import java.util
 import scala.collection.JavaConversions._
 import scala.language.postfixOps
 import scala.util.Random
-
+import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
-import com.treode.cluster.concurrent.Fiber
+import com.treode.cluster.concurrent.{Callback, Fiber}
 import com.treode.cluster.events.Events
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.pickle.{Pickler, pickle, unpickle}
-import io.netty.buffer.ByteBuf
+import com.treode.cluster.Socket
 
 private class RemoteConnection (
   val id: HostId,
@@ -32,7 +32,7 @@ private class RemoteConnection (
 
     def sent() = ()
 
-    def connect (socket: Socket, input: ByteBuf, clientId: HostId) {
+    def connect (socket: Socket, input: Input, clientId: HostId) {
       Loop (socket, input)
       state = Connected (socket, clientId)
     }
@@ -52,26 +52,28 @@ private class RemoteConnection (
 
     val queue = new util.ArrayList [PickledMessage] ()
 
-    object Flushed extends CompletionHandler [Void, Void] {
+    object Flushed extends Callback [Unit] {
 
-      def completed (result: Void, attachment: Void) {
+      def apply (v: Unit) {
         RemoteConnection.this.sent ()
       }
 
-      def failed (exc: Throwable, attachment: Void) {
-        events.exceptionWritingMessage (exc)
+      def fail (t: Throwable) {
+        events.exceptionWritingMessage (t)
         RemoteConnection.this.disconnect (socket)
       }}
 
     def flush (messages: util.ArrayList [PickledMessage]): Unit = fiber.spawn {
-      val buffer = ByteBufPool.buffer()
+      val buffer = new Output (256)
       for (m <- messages) {
         buffer.writeLong (m.mbx.id)
-        buffer.writerIndex (buffer.writerIndex + 4)
-        val start = buffer.writerIndex
+        buffer.writeInt (0)
+        val start = buffer.position
         m.write (buffer)
-        val end = buffer.writerIndex
-        buffer.setInt (start - 4, end - start)
+        val end = buffer.position
+        buffer.setPosition (start - 4)
+        buffer.writeInt (end - start)
+        buffer.setPosition (end)
       }
       messenger.flush (socket, buffer, Flushed)
     }
@@ -90,7 +92,7 @@ private class RemoteConnection (
         state = Sending (socket, clientId)
       }}
 
-    override def connect (socket: Socket, input: ByteBuf, clientId: HostId) {
+    override def connect (socket: Socket, input: Input, clientId: HostId) {
       if (clientId < this.clientId) {
         socket.close()
       } else {
@@ -162,86 +164,80 @@ private class RemoteConnection (
   // Visible for testing.
   private [messenger] var state: State = new Disconnected (BlockedTimer.iterator)
 
-  case class Loop (socket: Socket, input: ByteBuf) {
+  case class Loop (socket: Socket, input: Input) {
 
-    case class MessageRead (mbx: MailboxId, length: Int) extends CompletionHandler [Void, Void] {
+    case class MessageRead (mbx: MailboxId, length: Int) extends Callback [Unit] {
 
-      def completed (result: Void, attachment: Void) {
-        if (length > 0)
-          mailboxes.deliver (mbx, RemoteConnection.this, input.readSlice (length))
-        input.discardSomeReadBytes()
+      def apply (v: Unit) {
+        mailboxes.deliver (mbx, RemoteConnection.this, input, length)
         readHeader()
       }
 
-      def failed (exc: Throwable, attachment: Void) {
-        events.exceptionReadingMessage (exc)
-        input.release()
+      def fail (t: Throwable) {
+        events.exceptionReadingMessage (t)
         disconnect (socket)
       }}
 
     def readMessage (mbx: MailboxId, length: Int): Unit =
-      messenger.ensure (socket, input, length, MessageRead (mbx, length))
+      messenger.fill (socket, input, length, MessageRead (mbx, length))
 
-    object HeaderRead extends CompletionHandler [Void, Void] {
+    object HeaderRead extends Callback [Unit] {
 
-      def completed (result: Void, attachment: Void) {
+      def apply (v: Unit) {
         val mbx = input.readLong()
         val length = input.readInt()
         readMessage (mbx, length)
       }
 
-      def failed (exc: Throwable, attachment: Void) {
-        events.exceptionReadingMessage (exc)
-        input.release()
+      def fail (t: Throwable) {
+        events.exceptionReadingMessage (t)
         disconnect (socket)
       }}
 
     def readHeader(): Unit =
-      messenger.ensure (socket, input, 12, HeaderRead)
+      messenger.fill (socket, input, 12, HeaderRead)
 
     fiber.spawn (readHeader())
   }
 
   private def hearHello (socket: Socket) {
-    val buffer = ByteBufPool.buffer()
-    messenger.ensure (socket, buffer, 9, new CompletionHandler [Void, Void] {
-      def completed (result: Void, attachment: Void) {
+    val buffer = new Input (256)
+    messenger.fill (socket, buffer, 9, new Callback [Unit] {
+      def apply (v: Unit) {
         val Hello (clientId) = unpickle (Hello.pickle, buffer)
         if (clientId == id) {
           Loop (socket, buffer)
           connect (socket, buffer, localId)
         } else {
           events.errorWhileGreeting (id, clientId)
-          buffer.release()
           disconnect (socket)
         }}
-      def failed (exc: Throwable, attachment: Void) {
-        events.exceptionWhileGreeting (exc)
-        buffer.release()
+      def fail (t: Throwable) {
+        events.exceptionWhileGreeting (t)
         disconnect (socket)
       }})
   }
 
   private def sayHello (socket: Socket) {
-    val buffer = ByteBufPool.buffer (16)
+    val buffer = new Output (256)
     pickle (Hello.pickle, Hello (localId), buffer)
-    messenger.flush (socket, buffer, new CompletionHandler [Void, Void] {
-      def completed (result: Void, attachment: Void) {
+    messenger.flush (socket, buffer, new Callback [Unit] {
+      def apply (v: Unit) {
         hearHello (socket)
       }
-      def failed (exc: Throwable, attachment: Void) {
-        events.exceptionWhileGreeting (exc)
+      def fail (t: Throwable) {
+        events.exceptionWhileGreeting (t)
         disconnect (socket)
       }})
   }
 
   private def greet (socket: Socket) {
-    socket.connect (address, null, new CompletionHandler [Void, Void] {
-      def completed (result: Void, attachment: Void) {
+    socket.connect (address, new Callback [Unit] {
+      def apply (v: Unit) {
         sayHello (socket)
       }
-      def failed (exc: Throwable, attachment: Void) {
-        events.exceptionWhileGreeting (exc)
+      def fail (t: Throwable) {
+        events.exceptionWhileGreeting (t)
         disconnect (socket)
       }})
   }
@@ -258,7 +254,7 @@ private class RemoteConnection (
     state.sent()
   }
 
-  def connect (socket: Socket, input: ByteBuf, clientId: HostId): Unit = fiber.execute {
+  def connect (socket: Socket, input: Input, clientId: HostId): Unit = fiber.execute {
     state.connect (socket, input, clientId)
   }
 
