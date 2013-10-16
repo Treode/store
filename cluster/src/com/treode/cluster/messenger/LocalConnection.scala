@@ -2,8 +2,8 @@ package com.treode.cluster.messenger
 
 import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{HostId, MailboxId, Peer}
+import com.treode.cluster.io.Socket
 import com.treode.pickle.{Pickler, pickle}
-import com.treode.cluster.Socket
 
 private class LocalConnection (val id: HostId, mbxs: MailboxRegistry) extends Peer {
 

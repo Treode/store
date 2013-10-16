@@ -4,6 +4,7 @@ import scala.language.reflectiveCalls
 
 import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.concurrent.Callback
+import com.treode.cluster.io.Socket
 import com.treode.cluster.misc.KryoPool
 
 package object messenger {

@@ -3,6 +3,7 @@ package com.treode.cluster
 import java.net.SocketAddress
 
 import com.esotericsoftware.kryo.io.Input
+import com.treode.cluster.io.Socket
 import com.treode.pickle.Pickler
 
 trait Peer {

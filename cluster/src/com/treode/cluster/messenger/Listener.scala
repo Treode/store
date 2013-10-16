@@ -1,18 +1,13 @@
 package com.treode.cluster.messenger
 
 import java.net.{InetSocketAddress, SocketAddress}
-import java.nio.channels.{
-  AsynchronousServerSocketChannel => ServerSocket,
-  AsynchronousSocketChannel => JavaSocket,
-  AsynchronousChannelGroup,
-  AsynchronousCloseException,
-  CompletionHandler}
+import java.nio.channels.{AsynchronousChannelGroup, AsynchronousCloseException}
 import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, messenger}
 import com.treode.cluster.concurrent.{Callback, Scheduler}
 import com.treode.cluster.events.Events
+import com.treode.cluster.io.{Socket, ServerSocket}
 import com.treode.pickle._
-import com.treode.cluster.Socket
 
 class Listener (
   localId: HostId,
@@ -51,12 +46,12 @@ class Listener (
   }
 
   private def loop() {
-    server.accept (null, new CompletionHandler [JavaSocket, Void] {
-      def completed (socket: JavaSocket, attachment: Void) {
-        scheduler.execute (hearHello (new Socket (socket)))
+    server.accept (new Callback [Socket] {
+      def apply (socket: Socket) {
+        scheduler.execute (hearHello (socket))
         loop()
       }
-      def failed (t: Throwable, attachment: Void) {
+      def fail (t: Throwable) {
         t match {
           case e: AsynchronousCloseException =>
             server.close()

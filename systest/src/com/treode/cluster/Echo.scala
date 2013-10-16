@@ -28,7 +28,7 @@ object Echo {
         process (_ => ())
 
         def quorum() {
-          if ((i + 1) % period == 0) {
+          if (i % period == 0) {
             val end = System.currentTimeMillis
             val ms = (end - start) .toDouble / period.toDouble
             val qps = period.toDouble / (end - start) .toDouble * 1000.0

@@ -9,9 +9,9 @@ import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
 import com.treode.cluster.concurrent.{Callback, Fiber}
 import com.treode.cluster.events.Events
+import com.treode.cluster.io.Socket
 import com.treode.cluster.misc.{BackoffTimer, KryoPool, RichInt}
 import com.treode.pickle.{Pickler, pickle, unpickle}
-import com.treode.cluster.Socket
 
 private class RemoteConnection (
   val id: HostId,
