@@ -6,11 +6,11 @@ import com.treode.store._
 import com.treode.store.lock.LockSpace
 import org.scalatest.Assertions
 
-private class TestableTempStore extends LocalStore with Assertions {
+private class TestableTempStore (bits: Int) extends LocalStore with Assertions {
 
   private val Xid = TxId (Bytes (Picklers.int, 1))
 
-  protected val space = new LockSpace (4)
+  protected val space = new LockSpace (bits)
 
   private var _tables = Map.empty [TableId, TestableTempTable]
 

@@ -24,7 +24,7 @@ class TempTableSpec extends WordSpec with TestTools {
 
     "empty and the transaction" when {
 
-      def newStore = new TestableTempStore
+      def newStore = new TestableTempStore (4)
 
       "not relevant" should {
 
@@ -88,7 +88,7 @@ class TempTableSpec extends WordSpec with TestTools {
     "having Apple##7::1 and the transaction" when {
 
       def newStore = {
-        val s = new TestableTempStore
+        val s = new TestableTempStore (4)
         s.writeExpectApply (0, Create (1, Apple, One)) (_.commit (7))
         s
       }
@@ -196,7 +196,7 @@ class TempTableSpec extends WordSpec with TestTools {
 
     "having Apple##14::2 and Apple##7::1" should {
 
-      val s = new TestableTempStore
+      val s = new TestableTempStore (4)
       s.writeExpectApply (0, Create (1, Apple, One)) (_.commit (7))
       s.writeExpectApply (7, Update (1, Apple, Two)) (_.commit (14))
 

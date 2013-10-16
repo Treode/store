@@ -31,7 +31,7 @@ class LocalStoreSpec extends WordSpec {
 
       val size = 1 << bits
       val supply = size * opening
-      val store = new TestableTempStore
+      val store = new TestableTempStore (bits)
       val create =
         for (i <- 0 until size) yield Accounts.create (i, opening)
       store.writeExpectApply (0, create: _*) (tx => tx.commit (tx.ft+1))
