@@ -1,4 +1,4 @@
-package com.treode.cluster.misc
+package com.treode.cluster.io
 
 import java.util.ArrayDeque
 import java.nio.ByteBuffer

@@ -5,12 +5,14 @@ import java.util
 import scala.collection.JavaConversions._
 import scala.language.postfixOps
 import scala.util.Random
+
 import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
 import com.treode.cluster.concurrent.{Callback, Fiber}
 import com.treode.cluster.events.Events
-import com.treode.cluster.io.Socket
-import com.treode.cluster.misc.{BackoffTimer, KryoPool, RichInt}
+import com.treode.cluster.io
+import com.treode.cluster.io.{KryoPool, Socket}
+import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.pickle.{Pickler, pickle, unpickle}
 
 private class RemoteConnection (
@@ -67,7 +69,7 @@ private class RemoteConnection (
       }}
 
     def flush(): Unit = fiber.spawn {
-      messenger.flush (socket, buffer, Flushed)
+      io.flush (socket, buffer, Flushed)
     }
 
     def enque (message: PickledMessage) {
@@ -187,7 +189,7 @@ private class RemoteConnection (
       }}
 
     def readMessage (mbx: MailboxId, length: Int): Unit =
-      messenger.fill (socket, input, length, MessageRead (mbx, length))
+      io.fill (socket, input, length, MessageRead (mbx, length))
 
     object HeaderRead extends Callback [Unit] {
 
@@ -203,14 +205,14 @@ private class RemoteConnection (
       }}
 
     def readHeader(): Unit =
-      messenger.fill (socket, input, 12, HeaderRead)
+      io.fill (socket, input, 12, HeaderRead)
 
     fiber.spawn (readHeader())
   }
 
   private def hearHello (socket: Socket) {
     val buffer = new Input (256)
-    messenger.fill (socket, buffer, 9, new Callback [Unit] {
+    io.fill (socket, buffer, 9, new Callback [Unit] {
       def apply (v: Unit) {
         val Hello (clientId) = unpickle (Hello.pickle, buffer)
         if (clientId == id) {
@@ -229,7 +231,7 @@ private class RemoteConnection (
   private def sayHello (socket: Socket) {
     val buffer = new Output (256)
     pickle (Hello.pickle, Hello (localId), buffer)
-    messenger.flush (socket, buffer, new Callback [Unit] {
+    io.flush (socket, buffer, new Callback [Unit] {
       def apply (v: Unit) {
         hearHello (socket)
       }
