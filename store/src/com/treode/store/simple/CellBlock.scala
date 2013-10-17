@@ -3,7 +3,7 @@ package com.treode.store.simple
 import java.util.{Arrays, ArrayList}
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 import com.treode.store.{Bytes, TxClock}
-import com.treode.store.log.{AbstractBlockPickler, Block}
+import com.treode.store.disk.{AbstractBlockPickler, Block}
 
 private class CellBlock (val entries: Array [Cell]) extends Block {
 

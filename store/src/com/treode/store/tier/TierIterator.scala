@@ -1,9 +1,9 @@
 package com.treode.store.tier
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.log.{Block, BlockCache}
+import com.treode.store.disk.{Block, Disk}
 
-private class TierIterator (cache: BlockCache) extends CellIterator {
+private class TierIterator (disk: Disk) extends CellIterator {
 
   private var stack = List.empty [(IndexBlock, Int)]
   private var block: CellBlock = null
@@ -18,7 +18,7 @@ private class TierIterator (cache: BlockCache) extends CellIterator {
           case b: IndexBlock =>
             val e = b.get (0)
             stack ::= (b, 0)
-            cache.get (e.pos, this)
+            disk.read (e.pos, this)
           case b: CellBlock =>
             block = b
             index = 0
@@ -28,7 +28,7 @@ private class TierIterator (cache: BlockCache) extends CellIterator {
       def fail (t: Throwable) = cb.fail (t)
     }
 
-    cache.get (pos, loop)
+    disk.read (pos, loop)
   }
 
   def hasNext: Boolean =
@@ -61,8 +61,8 @@ private class TierIterator (cache: BlockCache) extends CellIterator {
 
 private object TierIterator {
 
-  def apply (cache: BlockCache, pos: Long, cb: Callback [TierIterator]) {
-    val iter = new TierIterator (cache)
+  def apply (disk: Disk, pos: Long, cb: Callback [TierIterator]) {
+    val iter = new TierIterator (disk)
     iter.find (pos, new Callback [Unit] {
       def apply (v: Unit): Unit = cb (iter)
       def fail (t: Throwable) = cb.fail (t)

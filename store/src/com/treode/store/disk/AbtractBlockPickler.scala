@@ -1,4 +1,4 @@
-package com.treode.store.log
+package com.treode.store.disk
 
 import com.treode.pickle.{PickleContext, Pickler, Picklers, UnpickleContext}
 import com.treode.store.Bytes

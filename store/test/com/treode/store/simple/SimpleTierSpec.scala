@@ -5,7 +5,7 @@ import scala.collection.mutable.Builder
 import com.treode.cluster.concurrent.Callback
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, Fruits, TxClock}
-import com.treode.store.log.DiskStub
+import com.treode.store.disk.DiskStub
 import org.scalatest.WordSpec
 
 import Fruits.{AllFruits, Apple, Orange, Watermelon}
@@ -20,7 +20,7 @@ class SimpleTierSpec extends WordSpec {
 
   /** Get the depths of ValueBlocks for the tree root at `pos`. */
   private def getDepths (disk: DiskStub, pos: Long, depth: Int): Set [Int] = {
-    disk.get (pos) match {
+    disk.read (pos) match {
       case b: IndexBlock => getDepths (disk, b.entries, depth+1)
       case b: CellBlock => Set (depth)
     }}
@@ -29,7 +29,7 @@ class SimpleTierSpec extends WordSpec {
     * the final index entry.
     */
   private def expectBalanced (disk: DiskStub, pos: Long) {
-    disk.get (pos) match {
+    disk.read (pos) match {
       case b: IndexBlock =>
         val ds1 = getDepths (disk, b.entries.take (b.size-1), 1)
         expectResult (1, "Expected lead ValueBlocks at the same depth.") (ds1.size)
@@ -75,7 +75,7 @@ class SimpleTierSpec extends WordSpec {
   }
 
   private def toSeq (disk: DiskStub, builder: Builder [Cell, _], pos: Long) {
-    disk.get (pos) match {
+    disk.read (pos) match {
       case block: IndexBlock =>
         block.entries foreach (e => toSeq (disk, builder, e.pos))
       case block: CellBlock =>

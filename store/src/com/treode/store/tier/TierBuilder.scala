@@ -3,9 +3,9 @@ package com.treode.store.tier
 import java.util.{ArrayDeque, ArrayList}
 import com.treode.cluster.concurrent.Callback
 import com.treode.store.{Bytes, TxClock}
-import com.treode.store.log.BlockWriter
+import com.treode.store.disk.Disk
 
-private class TierBuilder (writer: BlockWriter) {
+private class TierBuilder (disk: Disk) {
 
   private def newIndexEntries = new ArrayList [IndexEntry] (1024)
   private def newCellEntries = new ArrayList [Cell] (256)
@@ -62,7 +62,7 @@ private class TierBuilder (writer: BlockWriter) {
       val entryByteSize = entry.byteSize
 
       // Ensure that an index block has at least two entries.
-      if (node.byteSize + entryByteSize < writer.maxBlockSize || node.size < 2) {
+      if (node.byteSize + entryByteSize < disk.maxBlockSize || node.size < 2) {
         node.add (entry, entryByteSize)
         rpop()
         cb()
@@ -71,7 +71,7 @@ private class TierBuilder (writer: BlockWriter) {
         stack.pop()
         val block = IndexBlock (node.entries)
         val last = block.last
-        val pos2 = writer.write (block, new Callback [Long] {
+        val pos2 = disk.write (block, new Callback [Long] {
           def apply (pos2: Long) {
             rpush (key, time, pos, height)
             add (last.key, last.time, pos2, height+1, cb)
@@ -89,7 +89,7 @@ private class TierBuilder (writer: BlockWriter) {
     require (entries.isEmpty || entries.get (entries.size-1) < entry)
 
     // Ensure that a value block has at least one entry.
-    if (byteSize + entryByteSize < writer.maxBlockSize || entries.size < 1) {
+    if (byteSize + entryByteSize < disk.maxBlockSize || entries.size < 1) {
       entries.add (entry)
       byteSize += entryByteSize
       cb()
@@ -100,7 +100,7 @@ private class TierBuilder (writer: BlockWriter) {
       entries.add (entry)
       byteSize = entryByteSize
       val last = block.last
-      writer.write (block, new Callback [Long] {
+      disk.write (block, new Callback [Long] {
         def apply (pos: Long): Unit = add (last.key, last.time, pos, 0, cb)
         def fail (t: Throwable) = cb.fail (t)
       })
@@ -110,7 +110,7 @@ private class TierBuilder (writer: BlockWriter) {
 
     val block = CellBlock (entries)
     val last = block.last
-    writer.write (block, new Callback [Long] {
+    disk.write (block, new Callback [Long] {
 
       def apply (_pos: Long) {
 
@@ -133,7 +133,7 @@ private class TierBuilder (writer: BlockWriter) {
             def apply (v: Unit) {
               val node = stack.pop()
               if (node.size > 1)
-                writer.write (IndexBlock (node.entries), new Callback [Long] {
+                disk.write (IndexBlock (node.entries), new Callback [Long] {
                   def apply (_pos: Long) {
                     pos = _pos
                     next (node)
