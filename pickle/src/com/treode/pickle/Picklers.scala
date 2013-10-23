@@ -121,10 +121,10 @@ trait Picklers {
           case None => throw new Exception ("No tag type for " + v.getClass.getName)
         }}
 
-      def u (in: UnpickleContext): A = {
-        val n = long.u (in)
+      def u (ctx: UnpickleContext): A = {
+        val n = ctx.readVarULong()
         ps.get (n) match {
-          case Some (tag) => tag.read (in)
+          case Some (tag) => tag.read (ctx)
           case None => throw new InvalidTagException (ct.runtimeClass.getSimpleName, n)
         }}
 
@@ -2281,9 +2281,9 @@ object Picklers extends Picklers {
 
   final case class Tag [A] (tag: Long, clazz: Class [A], pa: Pickler [A]) {
 
-    private [pickle] def read (in: UnpickleContext) = pa.u (in)
+    private [pickle] def read (ctx: UnpickleContext) = pa.u (ctx)
 
     private [pickle] def write (v: Any, ctx: PickleContext) {
-      long.p (tag, ctx)
+      ctx.writeVarULong (tag)
       pa.p (clazz.cast (v).asInstanceOf [A], ctx)
     }}}
