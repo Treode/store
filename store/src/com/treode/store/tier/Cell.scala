@@ -1,16 +1,12 @@
 package com.treode.store.tier
 
-import com.treode.store.{Bytes, TxClock}
+import com.treode.pickle.size
+import com.treode.store.{Bytes, StorePicklers, TxClock}
 
 private [store] class Cell (val key: Bytes, val time: TxClock, val value: Option [Bytes])
 extends Ordered [Cell] {
 
-  def byteSize: Int = {
-    val n = key.byteSize + time.byteSize
-    value match {
-      case Some (v) => n + v.byteSize
-      case None     => n
-    }}
+  def byteSize = size (Cell.pickle, this)
 
   def compare (that: Cell): Int = {
     val rk = key compare that.key
@@ -40,4 +36,8 @@ private [store] object Cell extends Ordering [Cell] {
 
   def compare (x: Cell, y: Cell): Int =
     x compare y
-}
+
+  val pickle = {
+    import StorePicklers._
+    wrap3 (bytes, txClock, option (bytes)) (Cell.apply _) (v => (v.key, v.time, v.value))
+  }}

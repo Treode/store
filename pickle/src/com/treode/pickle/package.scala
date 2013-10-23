@@ -25,4 +25,9 @@ package object pickle {
 
   def unpickle [A] (p: Pickler [A], i: Input): A =
     p.u (new KryoUnpickleContext (i))
-}
+
+  def size [A] (p: Pickler [A], v: A): Int = {
+    val sizer = new SizingPickleContext
+    p.p (v, sizer)
+    sizer.result
+  }}

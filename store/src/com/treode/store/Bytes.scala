@@ -10,8 +10,6 @@ import com.treode.pickle._
 
 class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
 
-  def byteSize: Int = bytes.length
-
   def unpickle [A] (p: Pickler [A]): A = {
     val buf = new Input (bytes)
     val v = com.treode.pickle.unpickle (p, buf)
