@@ -5,7 +5,7 @@ import scala.collection.mutable.Builder
 
 import com.treode.cluster.concurrent.Callback
 
-private [store] class DiskStub (val maxBlockSize: Int) extends Disk {
+private [store] class DiskSystemStub (val maxBlockSize: Int) extends DiskSystem {
 
   private val blocks = new ArrayList [Block] ()
 

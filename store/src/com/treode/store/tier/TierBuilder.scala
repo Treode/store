@@ -3,9 +3,9 @@ package com.treode.store.tier
 import java.util.{ArrayDeque, ArrayList}
 import com.treode.cluster.concurrent.Callback
 import com.treode.store.{Bytes, TxClock}
-import com.treode.store.disk.Disk
+import com.treode.store.disk.DiskSystem
 
-private class TierBuilder (disk: Disk) {
+private class TierBuilder (disk: DiskSystem) {
 
   private def newIndexEntries = new ArrayList [IndexEntry] (1024)
   private def newCellEntries = new ArrayList [Cell] (256)

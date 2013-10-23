@@ -6,7 +6,7 @@ package disk {
 
   private [store] trait Block
 
-  private [store] trait Disk {
+  private [store] trait DiskSystem {
 
     def maxBlockSize: Int
 

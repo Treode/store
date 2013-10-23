@@ -2,11 +2,11 @@ package com.treode.store.tier
 
 import com.treode.cluster.concurrent.Callback
 import com.treode.store.{Bytes, TxClock}
-import com.treode.store.disk.{Block, Disk}
+import com.treode.store.disk.{Block, DiskSystem}
 
 object Tier {
 
-  def read (disk: Disk, root: Long, key: Bytes, time: TxClock, cb: Callback [Option [Cell]]) {
+  def read (disk: DiskSystem, root: Long, key: Bytes, time: TxClock, cb: Callback [Option [Cell]]) {
 
     val loop = new Callback [Block] {
 

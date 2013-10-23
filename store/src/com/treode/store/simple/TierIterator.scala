@@ -1,9 +1,9 @@
 package com.treode.store.simple
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.disk.{Block, Disk}
+import com.treode.store.disk.{Block, DiskSystem}
 
-private class TierIterator (disk: Disk) extends CellIterator {
+private class TierIterator (disk: DiskSystem) extends CellIterator {
 
   private var stack = List.empty [(IndexBlock, Int)]
   private var block: CellBlock = null
@@ -61,7 +61,7 @@ private class TierIterator (disk: Disk) extends CellIterator {
 
 private object TierIterator {
 
-  def apply (disk: Disk, pos: Long, cb: Callback [TierIterator]) {
+  def apply (disk: DiskSystem, pos: Long, cb: Callback [TierIterator]) {
     val iter = new TierIterator (disk)
     iter.find (pos, new Callback [Unit] {
       def apply (v: Unit): Unit = cb (iter)

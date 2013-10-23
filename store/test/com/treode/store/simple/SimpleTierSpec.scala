@@ -5,7 +5,7 @@ import scala.collection.mutable.Builder
 import com.treode.cluster.concurrent.Callback
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, Fruits, TxClock}
-import com.treode.store.disk.DiskStub
+import com.treode.store.disk.DiskSystemStub
 import org.scalatest.WordSpec
 
 import Fruits.{AllFruits, Apple, Orange, Watermelon}
@@ -15,11 +15,11 @@ class SimpleTierSpec extends WordSpec {
   private val One = Bytes ("One")
 
   /** Get the depths of ValueBlocks reached from the index entries. */
-  private def getDepths (disk: DiskStub, entries: Iterable [IndexEntry], depth: Int): Set [Int] =
+  private def getDepths (disk: DiskSystemStub, entries: Iterable [IndexEntry], depth: Int): Set [Int] =
     entries.map (e => getDepths (disk, e.pos, depth+1)) .fold (Set.empty) (_ ++ _)
 
   /** Get the depths of ValueBlocks for the tree root at `pos`. */
-  private def getDepths (disk: DiskStub, pos: Long, depth: Int): Set [Int] = {
+  private def getDepths (disk: DiskSystemStub, pos: Long, depth: Int): Set [Int] = {
     disk.read (pos) match {
       case b: IndexBlock => getDepths (disk, b.entries, depth+1)
       case b: CellBlock => Set (depth)
@@ -28,7 +28,7 @@ class SimpleTierSpec extends WordSpec {
   /** Check that tree rooted at `pos` has all ValueBlocks at the same depth, expect those under
     * the final index entry.
     */
-  private def expectBalanced (disk: DiskStub, pos: Long) {
+  private def expectBalanced (disk: DiskSystemStub, pos: Long) {
     disk.read (pos) match {
       case b: IndexBlock =>
         val ds1 = getDepths (disk, b.entries.take (b.size-1), 1)
@@ -41,7 +41,7 @@ class SimpleTierSpec extends WordSpec {
     }}
 
   /** Build a tier from fruit. */
-  private def buildTier (disk: DiskStub): Long = {
+  private def buildTier (disk: DiskSystemStub): Long = {
     val builder = new TierBuilder (disk)
     val iter = AllFruits.iterator
     val loop = new Callback [Unit] {
@@ -57,7 +57,7 @@ class SimpleTierSpec extends WordSpec {
   }
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
-  private def iterateTier (disk: DiskStub, pos: Long): Seq [Cell] = {
+  private def iterateTier (disk: DiskSystemStub, pos: Long): Seq [Cell] = {
     val builder = Seq.newBuilder [Cell]
     TierIterator (disk, pos, Callback.unary { iter: TierIterator =>
       val loop = new Callback [Cell] {
@@ -74,7 +74,7 @@ class SimpleTierSpec extends WordSpec {
     builder.result
   }
 
-  private def toSeq (disk: DiskStub, builder: Builder [Cell, _], pos: Long) {
+  private def toSeq (disk: DiskSystemStub, builder: Builder [Cell, _], pos: Long) {
     disk.read (pos) match {
       case block: IndexBlock =>
         block.entries foreach (e => toSeq (disk, builder, e.pos))
@@ -83,7 +83,7 @@ class SimpleTierSpec extends WordSpec {
     }}
 
   /** Build a sequence of the cells in the tier using old-fashioned recursion. */
-  def toSeq (disk: DiskStub, pos: Long): Seq [Cell] = {
+  def toSeq (disk: DiskSystemStub, pos: Long): Seq [Cell] = {
     val builder = Seq.newBuilder [Cell]
     toSeq (disk, builder, pos)
     builder.result
@@ -92,7 +92,7 @@ class SimpleTierSpec extends WordSpec {
   "The simple TierBuilder" should {
 
     "require that added entries are not duplicated" in {
-      val disk = new DiskStub (1 << 16)
+      val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
       builder.add (Apple, None, Callback.unit (()))
       intercept [IllegalArgumentException] {
@@ -100,7 +100,7 @@ class SimpleTierSpec extends WordSpec {
       }}
 
     "require that added entries are sorted by key" in {
-      val disk = new DiskStub (1 << 16)
+      val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
       builder.add (Orange, None, Callback.unit (()))
       intercept [IllegalArgumentException] {
@@ -108,7 +108,7 @@ class SimpleTierSpec extends WordSpec {
       }}
 
     "require that added entries are reverse sorted by time" in {
-      val disk = new DiskStub (1 << 16)
+      val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
       builder.add (Apple, None, Callback.unit (()))
       intercept [IllegalArgumentException] {
@@ -116,7 +116,7 @@ class SimpleTierSpec extends WordSpec {
       }}
 
     "allow properly sorted entries" in {
-      val disk = new DiskStub (1 << 16)
+      val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
       builder.add (Apple, None, Callback.unit (()))
       builder.add (Orange, None, Callback.unit (()))
@@ -126,7 +126,7 @@ class SimpleTierSpec extends WordSpec {
     "build a blanced tree with all keys" when {
 
       def checkBuild (maxBlockSize: Int) {
-        val disk = new DiskStub (maxBlockSize)
+        val disk = new DiskSystemStub (maxBlockSize)
         val pos = buildTier (disk)
         expectBalanced (disk, pos)
         expectResult (AllFruits.toSeq) (toSeq (disk, pos) .map (_.key))
@@ -147,7 +147,7 @@ class SimpleTierSpec extends WordSpec {
     "iterate all keys" when {
 
       def checkIterator (maxBlockSize: Int) {
-        val disk = new DiskStub (maxBlockSize)
+        val disk = new DiskSystemStub (maxBlockSize)
         val pos = buildTier (disk)
         expectResult (AllFruits.toSeq) (iterateTier (disk, pos) map (_.key))
       }
@@ -167,7 +167,7 @@ class SimpleTierSpec extends WordSpec {
     "find the key" when {
 
       def checkFind (maxBlockSize: Int) {
-        val disk = new DiskStub (maxBlockSize)
+        val disk = new DiskSystemStub (maxBlockSize)
         val pos = buildTier (disk)
         Tier.read (disk, pos, Apple, Callback.unary { cell: Option [Cell] =>
           expectResult (Some (One)) (cell.get.value)
