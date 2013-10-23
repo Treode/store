@@ -2,30 +2,30 @@ package com.treode.store.simple
 
 import com.treode.cluster.concurrent.Callback
 import com.treode.store.{Bytes, TxClock}
-import com.treode.store.disk.{Block, DiskSystem}
+import com.treode.store.disk.{DiskSystem, Page}
 
 object Tier {
 
   def read (disk: DiskSystem, root: Long, key: Bytes, cb: Callback [Option [Cell]]) {
 
-    val loop = new Callback [Block] {
+    val loop = new Callback [Page] {
 
-      def apply (b: Block) {
-        b match {
-          case b: IndexBlock =>
-            val i = b.find (key)
-            if (i == b.size) {
+      def apply (p: Page) {
+        p match {
+          case p: IndexPage =>
+            val i = p.find (key)
+            if (i == p.size) {
               cb (None)
             } else {
-              val e = b.get (i)
+              val e = p.get (i)
               disk.read (e.pos, this)
             }
-          case b: CellBlock =>
-            val i = b.find (key)
-            if (i == b.size) {
+          case p: CellPage =>
+            val i = p.find (key)
+            if (i == p.size) {
               cb (None)
             } else {
-              val e = b.get (i)
+              val e = p.get (i)
               if (e.key == key)
                 cb (Some (e))
               else

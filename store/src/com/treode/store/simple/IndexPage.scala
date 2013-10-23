@@ -3,9 +3,9 @@ package com.treode.store.simple
 import java.util.{Arrays, ArrayList}
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 import com.treode.store.{Bytes, TxClock}
-import com.treode.store.disk.{AbstractBlockPickler, Block}
+import com.treode.store.disk.{AbstractPagePickler, Page}
 
-private class IndexBlock (val entries: Array [IndexEntry]) extends Block {
+private class IndexPage (val entries: Array [IndexEntry]) extends Page {
 
   def get (i: Int): IndexEntry =
     entries (i)
@@ -22,18 +22,18 @@ private class IndexBlock (val entries: Array [IndexEntry]) extends Block {
   def last: IndexEntry = entries (entries.size - 1)
 }
 
-private object IndexBlock {
+private object IndexPage {
 
-  val empty = new IndexBlock (new Array (0))
+  val empty = new IndexPage (new Array (0))
 
-  def apply (entries: Array [IndexEntry]): IndexBlock =
-    new IndexBlock (entries)
+  def apply (entries: Array [IndexEntry]): IndexPage =
+    new IndexPage (entries)
 
-  def apply (entries: ArrayList [IndexEntry]): IndexBlock =
-    new IndexBlock (entries.toArray (empty.entries))
+  def apply (entries: ArrayList [IndexEntry]): IndexPage =
+    new IndexPage (entries.toArray (empty.entries))
 
-  private val _pickle: Pickler [IndexBlock] =
-    new AbstractBlockPickler [IndexBlock, IndexEntry] {
+  private val _pickle: Pickler [IndexPage] =
+    new AbstractPagePickler [IndexPage, IndexEntry] {
 
       private [this] val blockPos = Picklers.ulong
 
@@ -59,14 +59,14 @@ private object IndexBlock {
         IndexEntry (key, pos)
       }
 
-      def p (block: IndexBlock, ctx: PickleContext): Unit =
-        _p (block.entries, ctx)
+      def p (page: IndexPage, ctx: PickleContext): Unit =
+        _p (page.entries, ctx)
 
-      def u (ctx: UnpickleContext): IndexBlock =
-        new IndexBlock (_u (ctx))
+      def u (ctx: UnpickleContext): IndexPage =
+        new IndexPage (_u (ctx))
   }
 
   val pickle = {
     import Picklers._
-    tagged [IndexBlock] (0x1 -> _pickle)
+    tagged [IndexPage] (0x1 -> _pickle)
   }}

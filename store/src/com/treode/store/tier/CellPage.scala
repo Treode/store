@@ -3,9 +3,9 @@ package com.treode.store.tier
 import java.util.{Arrays, ArrayList}
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 import com.treode.store.{Bytes, TxClock}
-import com.treode.store.disk.{AbstractBlockPickler, Block}
+import com.treode.store.disk.{AbstractPagePickler, Page}
 
-private class CellBlock (val entries: Array [Cell]) extends Block {
+private class CellPage (val entries: Array [Cell]) extends Page {
 
   def get (i: Int): Cell =
     entries (i)
@@ -22,18 +22,18 @@ private class CellBlock (val entries: Array [Cell]) extends Block {
   def last: Cell = entries (entries.size - 1)
 }
 
-private object CellBlock {
+private object CellPage {
 
-  val empty = new CellBlock (new Array (0))
+  val empty = new CellPage (new Array (0))
 
-  def apply (entries: Array [Cell]): CellBlock =
-    new CellBlock (entries)
+  def apply (entries: Array [Cell]): CellPage =
+    new CellPage (entries)
 
-  def apply (entries: ArrayList [Cell]): CellBlock =
-    new CellBlock (entries.toArray (empty.entries))
+  def apply (entries: ArrayList [Cell]): CellPage =
+    new CellPage (entries.toArray (empty.entries))
 
-  private val _pickle: Pickler [CellBlock] =
-    new AbstractBlockPickler [CellBlock, Cell] {
+  private val _pickle: Pickler [CellPage] =
+    new AbstractPagePickler [CellPage, Cell] {
 
       private [this] val value = Picklers.option (Bytes.pickle)
       private [this] val txClock = TxClock.pickle
@@ -56,14 +56,14 @@ private object CellBlock {
       protected def readEntry (prev: Cell, ctx: UnpickleContext): Cell =
         Cell (readKey (prev.key, ctx), txClock.u (ctx), value.u (ctx))
 
-      def p (block: CellBlock, ctx: PickleContext): Unit =
-        _p (block.entries, ctx)
+      def p (page: CellPage, ctx: PickleContext): Unit =
+        _p (page.entries, ctx)
 
-      def u (ctx: UnpickleContext): CellBlock =
-        new CellBlock (_u (ctx))
+      def u (ctx: UnpickleContext): CellPage =
+        new CellPage (_u (ctx))
     }
 
   val pickle = {
     import Picklers._
-    tagged [CellBlock] (0x1 -> _pickle)
+    tagged [CellPage] (0x1 -> _pickle)
   }}

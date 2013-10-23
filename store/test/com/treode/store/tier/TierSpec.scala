@@ -20,8 +20,8 @@ class TierSpec extends WordSpec {
   /** Get the depths of ValueBlocks for the tree root at `pos`. */
   private def getDepths (disk: DiskSystemStub, pos: Long, depth: Int): Set [Int] = {
     disk.read (pos) match {
-      case b: IndexBlock => getDepths (disk, b.entries, depth+1)
-      case b: CellBlock => Set (depth)
+      case b: IndexPage => getDepths (disk, b.entries, depth+1)
+      case b: CellPage => Set (depth)
     }}
 
   /** Check that tree rooted at `pos` has all ValueBlocks at the same depth, expect those under
@@ -29,13 +29,13 @@ class TierSpec extends WordSpec {
     */
   private def expectBalanced (disk: DiskSystemStub, pos: Long) {
     disk.read (pos) match {
-      case b: IndexBlock =>
+      case b: IndexPage =>
         val ds1 = getDepths (disk, b.entries.take (b.size-1), 1)
         expectResult (1, "Expected lead ValueBlocks at the same depth.") (ds1.size)
         val d = ds1.head
         val ds2 = getDepths (disk, b.last.pos, 1)
         expectResult (true, "Expected final ValueBlocks at depth < $d") (ds2 forall (_ < d))
-      case b: CellBlock =>
+      case b: CellPage =>
         ()
     }}
 
@@ -75,10 +75,10 @@ class TierSpec extends WordSpec {
 
   private def toSeq (disk: DiskSystemStub, builder: Builder [Cell, _], pos: Long) {
     disk.read (pos) match {
-      case block: IndexBlock =>
-        block.entries foreach (e => toSeq (disk, builder, e.pos))
-      case block: CellBlock =>
-        block.entries foreach (builder += _)
+      case page: IndexPage =>
+        page.entries foreach (e => toSeq (disk, builder, e.pos))
+      case page: CellPage =>
+        page.entries foreach (builder += _)
     }}
 
   /** Build a sequence of the cells in the tier using old-fashioned recursion. */
@@ -124,8 +124,8 @@ class TierSpec extends WordSpec {
 
     "build a blanced tree with all keys" when {
 
-      def checkBuild (maxBlockSize: Int) {
-        val disk = new DiskSystemStub (maxBlockSize)
+      def checkBuild (maxPageSize: Int) {
+        val disk = new DiskSystemStub (maxPageSize)
         val pos = buildTier (disk)
         expectBalanced (disk, pos)
         expectResult (AllFruits.toSeq) (toSeq (disk, pos) .map (_.key))
@@ -145,8 +145,8 @@ class TierSpec extends WordSpec {
 
     "iterate all keys" when {
 
-      def checkIterator (maxBlockSize: Int) {
-        val disk = new DiskSystemStub (maxBlockSize)
+      def checkIterator (maxPageSize: Int) {
+        val disk = new DiskSystemStub (maxPageSize)
         val pos = buildTier (disk)
         expectResult (AllFruits.toSeq) (iterateTier (disk, pos) map (_.key))
       }
@@ -165,8 +165,8 @@ class TierSpec extends WordSpec {
 
     "find the key" when {
 
-      def checkFind (maxBlockSize: Int) {
-        val disk = new DiskSystemStub (maxBlockSize)
+      def checkFind (maxPageSize: Int) {
+        val disk = new DiskSystemStub (maxPageSize)
         val pos = buildTier (disk)
         Tier.read (disk, pos, Apple, 8, Callback.unary { cell: Option [Cell] =>
           expectResult (Some (One)) (cell.get.value)

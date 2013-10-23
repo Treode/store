@@ -61,17 +61,17 @@ private class TierBuilder (disk: DiskSystem) {
       val entry = IndexEntry (key, pos)
       val entryByteSize = entry.byteSize
 
-      // Ensure that an index block has at least two entries.
-      if (node.byteSize + entryByteSize < disk.maxBlockSize || node.size < 2) {
+      // Ensure that an index page has at least two entries.
+      if (node.byteSize + entryByteSize < disk.maxPageSize || node.size < 2) {
         node.add (entry, entryByteSize)
         rpop()
         cb()
 
       } else {
         stack.pop()
-        val block = IndexBlock (node.entries)
-        val last = block.last
-        val pos2 = disk.write (block, new Callback [Long] {
+        val page = IndexPage (node.entries)
+        val last = page.last
+        val pos2 = disk.write (page, new Callback [Long] {
           def apply (pos2: Long) {
             rpush (key, pos, height)
             add (last.key, pos2, height+1, cb)
@@ -88,19 +88,19 @@ private class TierBuilder (disk: DiskSystem) {
     // Require that user adds entries in sorted order.
     require (entries.isEmpty || entries.get (entries.size-1) < entry)
 
-    // Ensure that a value block has at least one entry.
-    if (byteSize + entryByteSize < disk.maxBlockSize || entries.size < 1) {
+    // Ensure that a value page has at least one entry.
+    if (byteSize + entryByteSize < disk.maxPageSize || entries.size < 1) {
       entries.add (entry)
       byteSize += entryByteSize
       cb()
 
     } else {
-      val block = CellBlock (entries)
+      val page = CellPage (entries)
       entries = newCellEntries
       entries.add (entry)
       byteSize = entryByteSize
-      val last = block.last
-      disk.write (block, new Callback [Long] {
+      val last = page.last
+      disk.write (page, new Callback [Long] {
         def apply (pos: Long): Unit = add (last.key, pos, 0, cb)
         def fail (t: Throwable) = cb.fail (t)
       })
@@ -108,9 +108,9 @@ private class TierBuilder (disk: DiskSystem) {
 
   def result (cb: Callback [Long]) {
 
-    val block = CellBlock (entries)
-    val last = block.last
-    disk.write (block, new Callback [Long] {
+    val page = CellPage (entries)
+    val last = page.last
+    disk.write (page, new Callback [Long] {
 
       def apply (_pos: Long) {
 
@@ -133,7 +133,7 @@ private class TierBuilder (disk: DiskSystem) {
             def apply (v: Unit) {
               val node = stack.pop()
               if (node.size > 1)
-                disk.write (IndexBlock (node.entries), new Callback [Long] {
+                disk.write (IndexPage (node.entries), new Callback [Long] {
                   def apply (_pos: Long) {
                     pos = _pos
                     next (node)

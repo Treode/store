@@ -1,26 +1,26 @@
 package com.treode.store.tier
 
 import com.treode.cluster.concurrent.Callback
-import com.treode.store.disk.{Block, DiskSystem}
+import com.treode.store.disk.{DiskSystem, Page}
 
 private class TierIterator (disk: DiskSystem) extends CellIterator {
 
-  private var stack = List.empty [(IndexBlock, Int)]
-  private var block: CellBlock = null
+  private var stack = List.empty [(IndexPage, Int)]
+  private var page: CellPage = null
   private var index = 0
 
   private def find (pos: Long, cb: Callback [Unit]) {
 
-    val loop = new Callback [Block] {
+    val loop = new Callback [Page] {
 
-      def apply (b: Block) {
-        b match {
-          case b: IndexBlock =>
-            val e = b.get (0)
-            stack ::= (b, 0)
+      def apply (p: Page) {
+        p match {
+          case p: IndexPage =>
+            val e = p.get (0)
+            stack ::= (p, 0)
             disk.read (e.pos, this)
-          case b: CellBlock =>
-            block = b
+          case p: CellPage =>
+            page = p
             index = 0
             cb()
         }}
@@ -32,12 +32,12 @@ private class TierIterator (disk: DiskSystem) extends CellIterator {
   }
 
   def hasNext: Boolean =
-    index < block.size
+    index < page.size
 
   def next (cb: Callback [Cell]) {
-    val entry = block.get (index)
+    val entry = page.get (index)
     index += 1
-    if (index == block.size && !stack.isEmpty) {
+    if (index == page.size && !stack.isEmpty) {
       var b = stack.head._1
       var i = stack.head._2 + 1
       stack = stack.tail

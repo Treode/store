@@ -4,13 +4,13 @@ import com.treode.cluster.concurrent.Callback
 
 package disk {
 
-  private [store] trait Block
+  private [store] trait Page
 
   private [store] trait DiskSystem {
 
-    def maxBlockSize: Int
+    def maxPageSize: Int
 
-    def read (pos: Long, cb: Callback [Block])
+    def read (pos: Long, cb: Callback [Page])
 
-    def write (block: Block, cb: Callback [Long])
+    def write (page: Page, cb: Callback [Long])
   }}

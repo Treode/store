@@ -5,22 +5,22 @@ import scala.collection.mutable.Builder
 
 import com.treode.cluster.concurrent.Callback
 
-private [store] class DiskSystemStub (val maxBlockSize: Int) extends DiskSystem {
+private [store] class DiskSystemStub (val maxPageSize: Int) extends DiskSystem {
 
-  private val blocks = new ArrayList [Block] ()
+  private val pages = new ArrayList [Page] ()
 
-  def write (block: Block, cb: Callback [Long]) {
-    val pos = blocks.size
-    blocks.add (block)
+  def write (page: Page, cb: Callback [Long]) {
+    val pos = pages.size
+    pages.add (page)
     cb (pos)
   }
 
-  def read (pos: Long, cb: Callback [Block]): Unit = {
+  def read (pos: Long, cb: Callback [Page]): Unit = {
     require (pos < Int.MaxValue)
-    cb (blocks.get (pos.toInt))
+    cb (pages.get (pos.toInt))
   }
 
-  def read (pos: Long): Block = {
+  def read (pos: Long): Page = {
     require (pos < Int.MaxValue)
-    blocks.get (pos.toInt)
+    pages.get (pos.toInt)
   }}

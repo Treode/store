@@ -3,7 +3,7 @@ package com.treode.store.disk
 import com.treode.pickle.{PickleContext, Pickler, Picklers, UnpickleContext}
 import com.treode.store.Bytes
 
-abstract class AbstractBlockPickler [T, E] extends Pickler [T] {
+abstract class AbstractPagePickler [T, E] extends Pickler [T] {
 
   private [this] val count = Picklers.uint
 
