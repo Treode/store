@@ -160,8 +160,7 @@ trait Picklers {
 
   private [this] def useBuilder [A, C [A] <: Iterable [A]]
       (c: GenericCompanion [C], s: String)
-      (pa: Pickler [A])
-      (implicit ct: ClassTag [A]): Pickler [C [A]] = {
+      (pa: Pickler [A]): Pickler [C [A]] = {
     require (pa != null)
 
     new Pickler [C [A]] {
@@ -182,11 +181,11 @@ trait Picklers {
       override def toString = s + " (" + pa + ")"
     }}
 
-  def list [A] (pa: Pickler [A]) (implicit ct: ClassTag [A]) = useBuilder (List, "list") (pa)
+  def list [A] (pa: Pickler [A]) = useBuilder (List, "list") (pa)
 
-  def seq [A] (pa: Pickler [A]) (implicit ct: ClassTag [A]) = useBuilder (Seq, "seq") (pa)
+  def seq [A] (pa: Pickler [A]) = useBuilder (Seq, "seq") (pa)
 
-  def set [A] (pa: Pickler [A]) (implicit ct: ClassTag [A]) = useBuilder (Set, "set") (pa)
+  def set [A] (pa: Pickler [A]) = useBuilder (Set, "set") (pa)
 
   def map [K, V] (pk: Pickler [K], pv: Pickler [V]) = {
     require (pk != null)
@@ -242,6 +241,15 @@ trait Picklers {
       }
 
       override def toString = "either " + (pa, pb)
+    }}
+
+  object immutable {
+    import _root_.scala.collection.immutable.SortedMap
+
+    def sortedMap [K, V] (pk: Pickler [K], pv: Pickler [V]) (implicit ordk: Ordering [K]) = {
+      require (pk != null)
+      require (pv != null)
+      wrap1 (list (tuple (pk, pv))) (kvs => SortedMap (kvs: _*)) (m => m.toList)
     }}
 
   object java {
