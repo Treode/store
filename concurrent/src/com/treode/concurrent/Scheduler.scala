@@ -1,8 +1,6 @@
-package com.treode.cluster.concurrent
+package com.treode.concurrent
 
 import java.util.concurrent.{TimeUnit, ScheduledExecutorService}
-
-import com.treode.cluster.misc.toRunnable
 
 trait Scheduler {
 

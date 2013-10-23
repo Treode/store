@@ -6,8 +6,8 @@ import scala.util.Random
 import com.esotericsoftware.kryo.io.Input
 import com.treode.pickle._
 import com.treode.cluster.{EphemeralMailbox, ClusterEvents, MailboxId, Peer}
-import com.treode.cluster.concurrent.{Mailbox, Scheduler}
 import com.treode.cluster.events.Events
+import com.treode.concurrent.{Mailbox, Scheduler}
 
 class MailboxRegistry (implicit events: Events) {
 

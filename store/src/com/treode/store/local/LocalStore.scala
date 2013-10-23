@@ -1,7 +1,7 @@
 package com.treode.store.local
 
-import com.treode.cluster.concurrent.Callback
 import com.treode.cluster.events.Events
+import com.treode.concurrent.Callback
 import com.treode.store._
 import com.treode.store.lock.{LockSet, LockSpace}
 

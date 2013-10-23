@@ -1,7 +1,7 @@
 package com.treode.store.simple
 
 import java.util.{ArrayDeque, ArrayList}
-import com.treode.cluster.concurrent.Callback
+import com.treode.concurrent.Callback
 import com.treode.store.{Bytes, TxClock}
 import com.treode.store.disk.DiskSystem
 

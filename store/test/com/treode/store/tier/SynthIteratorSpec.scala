@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-import com.treode.cluster.concurrent.Callback
+import com.treode.concurrent.Callback
 import com.treode.store.{Bytes, Fruits}
 import org.scalatest.FlatSpec
 

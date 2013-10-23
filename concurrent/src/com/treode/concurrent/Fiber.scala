@@ -1,4 +1,4 @@
-package com.treode.cluster.concurrent
+package com.treode.concurrent
 
 import java.util
 

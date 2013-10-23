@@ -1,6 +1,6 @@
 package com.treode.store
 
-import com.treode.cluster.concurrent.Callback
+import com.treode.concurrent.Callback
 
 package disk {
 

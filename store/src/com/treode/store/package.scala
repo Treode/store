@@ -1,6 +1,6 @@
 package com.treode
 
-import com.treode.cluster.concurrent.Callback
+import com.treode.concurrent.Callback
 import com.treode.cluster.events.Events
 import com.treode.pickle.Pickler
 

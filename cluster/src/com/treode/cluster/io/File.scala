@@ -1,8 +1,9 @@
 package com.treode.cluster.io
 
 import java.nio.channels.AsynchronousFileChannel
-import com.treode.cluster.concurrent.Callback
 import java.nio.ByteBuffer
+
+import com.treode.concurrent.Callback
 
 /** Something that can be mocked in tests. */
 class File (file: AsynchronousFileChannel) {

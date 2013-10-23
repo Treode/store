@@ -8,11 +8,11 @@ import scala.util.Random
 
 import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
-import com.treode.cluster.concurrent.{Callback, Fiber}
 import com.treode.cluster.events.Events
 import com.treode.cluster.io
 import com.treode.cluster.io.{KryoPool, Socket}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
+import com.treode.concurrent.{Callback, Fiber}
 import com.treode.pickle.{Pickler, pickle, unpickle}
 
 private class RemoteConnection (

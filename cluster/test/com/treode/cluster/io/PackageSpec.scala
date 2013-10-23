@@ -1,7 +1,7 @@
 package com.treode.cluster.io
 
 import com.esotericsoftware.kryo.io.{Input, Output}
-import com.treode.cluster.concurrent.Callback
+import com.treode.concurrent.Callback
 import org.scalatest.FlatSpec
 
 class PackageSpec extends FlatSpec with IoMockFactory {

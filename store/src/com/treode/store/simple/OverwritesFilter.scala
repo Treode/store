@@ -1,6 +1,6 @@
 package com.treode.store.simple
 
-import com.treode.cluster.concurrent.Callback
+import com.treode.concurrent.Callback
 
 /** Preserves first cell for key and eliminates subsequent ones. */
 private class OverwritesFilter private (iter: CellIterator) extends CellIterator {

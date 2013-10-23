@@ -2,7 +2,7 @@ package com.treode.store.simple
 
 import scala.collection.mutable.Builder
 
-import com.treode.cluster.concurrent.Callback
+import com.treode.concurrent.Callback
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, Fruits, TxClock}
 import com.treode.store.disk.DiskSystemStub

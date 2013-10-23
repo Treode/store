@@ -1,6 +1,6 @@
 package com.treode.store.simple
 
-import com.treode.cluster.concurrent.Callback
+import com.treode.concurrent.Callback
 import com.treode.store.{Bytes, Value}
 
 trait TestTools {

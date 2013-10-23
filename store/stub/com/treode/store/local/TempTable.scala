@@ -2,7 +2,7 @@ package com.treode.store.local
 
 import java.util.concurrent.ConcurrentSkipListSet
 
-import com.treode.cluster.concurrent.Callback
+import com.treode.concurrent.Callback
 import com.treode.store.{Bytes, TxClock}
 import com.treode.store.tier.{Cell, Tier}
 

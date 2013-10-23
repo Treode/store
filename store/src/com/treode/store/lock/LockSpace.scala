@@ -3,7 +3,7 @@ package com.treode.store.lock
 import scala.collection.SortedSet
 import scala.language.postfixOps
 
-import com.treode.cluster.misc.toRunnable
+import com.treode.concurrent.toRunnable
 import com.treode.store.TxClock
 
 private [store] class LockSpace (bits: Int) {

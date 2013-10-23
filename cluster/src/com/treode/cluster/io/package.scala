@@ -1,7 +1,7 @@
 package com.treode.cluster
 
 import com.esotericsoftware.kryo.io.{Input, Output}
-import com.treode.cluster.concurrent.Callback
+import com.treode.concurrent.Callback
 
 package object io {
 

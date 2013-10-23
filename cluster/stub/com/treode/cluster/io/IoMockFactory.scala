@@ -3,7 +3,7 @@ package com.treode.cluster.io
 import java.nio.ByteBuffer
 
 import com.esotericsoftware.kryo.io.Input
-import com.treode.cluster.concurrent.Callback
+import com.treode.concurrent.Callback
 import org.scalamock.CallHandler2
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Suite

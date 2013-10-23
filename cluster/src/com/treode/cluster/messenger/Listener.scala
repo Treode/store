@@ -4,10 +4,10 @@ import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.channels.{AsynchronousChannelGroup, AsynchronousCloseException}
 import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, messenger}
-import com.treode.cluster.concurrent.{Callback, Scheduler}
 import com.treode.cluster.events.Events
 import com.treode.cluster.io
 import com.treode.cluster.io.{Socket, ServerSocket}
+import com.treode.concurrent.{Callback, Scheduler}
 import com.treode.pickle._
 
 class Listener (
