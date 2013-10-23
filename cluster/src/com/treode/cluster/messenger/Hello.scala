@@ -10,5 +10,5 @@ private object Hello {
   val pickle = {
     import Picklers._
     tagged [Hello] (
-      0x1 -> wrap (HostId.pickle) (apply _) (_.id))
+      0x1 -> wrap1 (HostId.pickle) (apply _) (_.id))
   }}

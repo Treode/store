@@ -9,5 +9,5 @@ object ReadBatch {
 
   val pickle = {
     import StorePicklers._
-    wrap (txClock, seq (readOp)) (apply _) (v => (v.rt, v.ops))
+    wrap2 (txClock, seq (readOp)) (apply _) (v => (v.rt, v.ops))
   }}

@@ -191,7 +191,7 @@ trait Picklers {
   def map [K, V] (pk: Pickler [K], pv: Pickler [V]) = {
     require (pk != null)
     require (pv != null)
-    wrap (list (tuple (pk, pv))) (kvs => Map (kvs: _*)) (m => m.toList)
+    wrap1 (list (tuple (pk, pv))) (kvs => Map (kvs: _*)) (m => m.toList)
   }
 
   def option [A] (pa: Pickler [A]): Pickler [Option [A]] = {
@@ -1248,25 +1248,25 @@ trait Picklers {
         "tuple " + (pa, pb, pc, pd, pe, pf, pg, ph, pi, pj, pk, pl, pm, pn, po, pp, pq, pr)
     }}
 
-  def wrap [A, V] (pickler: Pickler [A]) (build: A => V) (inspect: V => A) (implicit ct: ClassTag [V]):
+  def wrap1 [A, V] (pa: Pickler [A]) (build: A => V) (inspect: V => A) (implicit ct: ClassTag [V]):
       Pickler [V] = {
 
-    require (pickler != null)
+    require (pa != null)
 
     new Pickler [V] {
 
       def p (v: V, ctx: PickleContext) {
-        pickler.p (inspect (v), ctx)
+        pa.p (inspect (v), ctx)
       }
 
       def u (ctx: UnpickleContext) = {
-        build (pickler.u (ctx))
+        build (pa.u (ctx))
       }
 
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, V] (
+  def wrap2 [A, B, V] (
       pa: Pickler [A],
       pb: Pickler [B])
       (build: (A, B) => V)
@@ -1293,7 +1293,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, V] (
+  def wrap3 [A, B, C, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C])
@@ -1324,7 +1324,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, V] (
+  def wrap4 [A, B, C, D, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1359,7 +1359,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, V] (
+  def wrap5 [A, B, C, D, E, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1398,7 +1398,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, V] (
+  def wrap6 [A, B, C, D, E, F, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1441,7 +1441,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, V] (
+  def wrap7 [A, B, C, D, E, F, G, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1488,7 +1488,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, H, V] (
+  def wrap8 [A, B, C, D, E, F, G, H, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1539,7 +1539,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, H, I, V] (
+  def wrap9 [A, B, C, D, E, F, G, H, I, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1594,7 +1594,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, H, I, J, V] (
+  def wrap10 [A, B, C, D, E, F, G, H, I, J, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1653,7 +1653,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, H, I, J, K, V] (
+  def wrap11 [A, B, C, D, E, F, G, H, I, J, K, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1716,7 +1716,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, V] (
+  def wrap12 [A, B, C, D, E, F, G, H, I, J, K, L, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1783,7 +1783,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M, V] (
+  def wrap13 [A, B, C, D, E, F, G, H, I, J, K, L, M, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1854,7 +1854,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M, N, V] (
+  def wrap14 [A, B, C, D, E, F, G, H, I, J, K, L, M, N, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1929,7 +1929,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, V] (
+  def wrap15 [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -2008,7 +2008,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, V] (
+  def wrap16 [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -2091,7 +2091,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, V] (
+  def wrap17 [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -2178,7 +2178,7 @@ trait Picklers {
       override def toString = ct.runtimeClass.getSimpleName
     }}
 
-  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, V] (
+  def wrap18 [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, V] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
