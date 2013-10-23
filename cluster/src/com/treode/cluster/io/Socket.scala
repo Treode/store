@@ -13,13 +13,13 @@ class Socket (socket: AsynchronousSocketChannel) {
   def this() = this (null)
 
   def connect (addr: SocketAddress, cb: Callback [Unit]): Unit =
-    socket.connect (addr, cb, Callback.UnitHandler)
+    Callback.guard (cb) (socket.connect (addr, cb, Callback.UnitHandler))
 
   def read (dst: ByteBuffer, cb: Callback [Int]): Unit =
-    socket.read (dst, cb, Callback.IntHandler)
+    Callback.guard (cb) (socket.read (dst, cb, Callback.IntHandler))
 
   def write (src: ByteBuffer, cb: Callback [Int]): Unit =
-    socket.write (src, cb, Callback.IntHandler)
+    Callback.guard (cb) (socket.write (src, cb, Callback.IntHandler))
 
   def close(): Unit =
     socket.close()

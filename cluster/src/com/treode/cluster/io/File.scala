@@ -12,8 +12,8 @@ class File (file: AsynchronousFileChannel) {
   def this() = this (null)
 
   def write (buf: ByteBuffer, pos: Long, cb: Callback [Int]): Unit =
-    file.write (buf, pos, cb, Callback.IntHandler)
+    Callback.guard (cb) (file.write (buf, pos, cb, Callback.IntHandler))
 
   def read (buf: ByteBuffer, pos: Long, cb: Callback [Int]): Unit =
-    file.read (buf, pos, cb, Callback.IntHandler)
+    Callback.guard (cb) (file.read (buf, pos, cb, Callback.IntHandler))
 }

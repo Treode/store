@@ -28,13 +28,14 @@ package object io {
     def fail (t: Throwable) = cb.fail (t)
   }
 
-  def fill (socket: Socket, input: Input, length: Int, cb: Callback [Unit]) {
-    if (length <= input.limit - input.position) {
-      cb()
-    } else {
-      KryoPool.ensure (input, length)
-      new SocketFiller (socket, input, length, cb) .fill()
-    }}
+  def fill (socket: Socket, input: Input, length: Int, cb: Callback [Unit]): Unit =
+    Callback.guard (cb) {
+      if (length <= input.limit - input.position) {
+        cb()
+      } else {
+        KryoPool.ensure (input, length)
+        new SocketFiller (socket, input, length, cb) .fill()
+      }}
 
   private class SocketFlusher (socket: Socket, output: Output, cb: Callback [Unit])
   extends Callback [Int] {
@@ -60,7 +61,7 @@ package object io {
   }
 
   def flush (socket: Socket, output: Output, cb: Callback [Unit]): Unit =
-    new SocketFlusher (socket, output, cb) .flush()
+    Callback.guard (cb) (new SocketFlusher (socket, output, cb) .flush())
 
   private class FileFiller (file: File, pos: Long, input: Input, length: Int, cb: Callback [Unit])
   extends Callback [Int] {
@@ -87,13 +88,14 @@ package object io {
     def fail (t: Throwable) = cb.fail (t)
   }
 
-  def fill (file: File, pos: Long, input: Input, length: Int, cb: Callback [Unit]) {
-    if (length <= input.limit - input.position) {
-      cb()
-    } else {
-      KryoPool.ensure (input, length)
-      new FileFiller (file, pos, input, length, cb) .fill()
-    }}
+  def fill (file: File, pos: Long, input: Input, length: Int, cb: Callback [Unit]): Unit =
+    Callback.guard (cb) {
+      if (length <= input.limit - input.position) {
+        cb()
+      } else {
+        KryoPool.ensure (input, length)
+        new FileFiller (file, pos, input, length, cb) .fill()
+      }}
 
   private class FileFlusher (file: File, output: Output, pos: Long, cb: Callback [Unit])
   extends Callback [Int] {
@@ -121,5 +123,5 @@ package object io {
 
 
   def flush (file: File, output: Output, pos: Long, cb: Callback [Unit]): Unit =
-    new FileFlusher (file, output, pos, cb) .flush()
+    Callback.guard (cb) (new FileFlusher (file, output, pos, cb) .flush())
 }

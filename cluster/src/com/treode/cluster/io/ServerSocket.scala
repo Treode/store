@@ -15,7 +15,7 @@ class ServerSocket (socket: AsynchronousServerSocketChannel) {
     socket.bind (addr)
 
   def accept (cb: Callback [Socket]): Unit =
-    socket.accept (cb, ServerSocket.SocketHandler)
+    Callback.guard (cb) (socket.accept (cb, ServerSocket.SocketHandler))
 
   def close(): Unit =
     socket.close()

@@ -34,6 +34,8 @@ object TreodeBuild extends Build {
 
     testFrameworks += new TestFramework ("org.scalameter.ScalaMeterFramework"),
 
+    libraryDependencies <+= (scalaVersion) ("org.scala-lang" % "scala-reflect" % _),
+
     libraryDependencies ++= Seq (
       "com.esotericsoftware.kryo" % "kryo" % "2.22",
       "com.google.code.findbugs" % "jsr305" % "1.3.9",

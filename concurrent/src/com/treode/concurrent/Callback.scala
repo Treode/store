@@ -2,6 +2,8 @@ package com.treode.concurrent
 
 import java.lang.{Integer => JavaInt}
 import java.nio.channels.CompletionHandler
+import scala.language.experimental.macros
+import scala.reflect.macros.Context
 
 trait Callback [-T] extends (T => Unit) {
 
@@ -29,6 +31,18 @@ object Callback {
     def completed (v: Void, cb: Callback [Unit]) = cb()
     def failed (t: Throwable, cb: Callback [Unit]) = cb.fail (t)
   }
+
+  def _guard [A: c.WeakTypeTag]
+      (c: Context) (cb: c.Expr [Callback [A]]) (f: c.Expr [Any]): c.Expr [Unit] = {
+    import c.universe._
+    reify {
+      try {
+        f.splice
+      } catch {
+        case t: Throwable => cb.splice.fail (t)
+      }}}
+
+  def guard [A] (cb: Callback [A]) (f: Any): Unit = macro _guard [A]
 
   def unary [A] (f: A => Any): Callback [A] =
     new Callback [A] {
