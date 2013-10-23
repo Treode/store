@@ -18,7 +18,7 @@ private class SynthIterator extends CellIterator {
         iter = iters.next
 
       val loop = new Callback [Cell] {
-        def apply (cell: Cell) {
+        def pass (cell: Cell) {
           pq.enqueue (Element (cell, iter))
           if (iters.hasNext) {
             iter = iters.next
@@ -48,7 +48,7 @@ private class SynthIterator extends CellIterator {
     if (iter.hasNext) {
 
       iter.next (new Callback [Cell] {
-        def apply (cell: Cell) {
+        def pass (cell: Cell) {
           pq.enqueue (Element (cell, iter))
           cb (next)
         }

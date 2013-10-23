@@ -72,7 +72,7 @@ private class TierBuilder (disk: DiskSystem) {
         val page = IndexPage (node.entries)
         val last = page.last
         val pos2 = disk.write (page, new Callback [Long] {
-          def apply (pos2: Long) {
+          def pass (pos2: Long) {
             rpush (key, pos, height)
             add (last.key, pos2, height+1, cb)
           }
@@ -101,7 +101,7 @@ private class TierBuilder (disk: DiskSystem) {
       byteSize = entryByteSize
       val last = page.last
       disk.write (page, new Callback [Long] {
-        def apply (pos: Long): Unit = add (last.key, pos, 0, cb)
+        def pass (pos: Long): Unit = add (last.key, pos, 0, cb)
         def fail (t: Throwable) = cb.fail (t)
       })
     }}
@@ -112,7 +112,7 @@ private class TierBuilder (disk: DiskSystem) {
     val last = page.last
     disk.write (page, new Callback [Long] {
 
-      def apply (_pos: Long) {
+      def pass (_pos: Long) {
 
         var pos = _pos
 
@@ -130,11 +130,11 @@ private class TierBuilder (disk: DiskSystem) {
                 cb (pos)
             }
 
-            def apply (v: Unit) {
+            def pass (v: Unit) {
               val node = stack.pop()
               if (node.size > 1)
                 disk.write (IndexPage (node.entries), new Callback [Long] {
-                  def apply (_pos: Long) {
+                  def pass (_pos: Long) {
                     pos = _pos
                     next (node)
                   }

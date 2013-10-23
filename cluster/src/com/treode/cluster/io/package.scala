@@ -17,7 +17,7 @@ package object io {
         socket.read (buffer, this)
     }
 
-    def apply (result: Int) {
+    def pass (result: Int) {
       if (result < 0) {
         socket.close()
       } else {
@@ -49,7 +49,7 @@ package object io {
         socket.write (buffer, this)
       }}
 
-    def apply (result: Int) {
+    def pass (result: Int) {
       if (result < 0)
         socket.close()
       else
@@ -75,7 +75,7 @@ package object io {
         file.read (buffer, _pos, this)
     }
 
-    def apply (result: Int) {
+    def pass (result: Int) {
       if (result < 0) {
         cb.fail (new Exception ("End of file reached."))
       } else {
@@ -108,7 +108,7 @@ package object io {
         file.write (buffer, _pos, this)
       }}
 
-    def apply (result: Int) {
+    def pass (result: Int) {
       if (result < 0) {
         cb.fail (new Exception ("File write failed."))
       } else {

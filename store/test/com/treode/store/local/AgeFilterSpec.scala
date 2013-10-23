@@ -15,7 +15,7 @@ class AgeFilterSpec extends FlatSpec with TestTools {
   private def newFilter (cs: Cell*) = {
     var iter: CellIterator = null
     AgeFilter (CellIterator.adapt (cs.iterator), 14, new Callback [CellIterator] {
-      def apply (_iter: CellIterator) = iter = _iter
+      def pass (_iter: CellIterator) = iter = _iter
       def fail (t: Throwable) = throw t
     })
     assert (iter != null)

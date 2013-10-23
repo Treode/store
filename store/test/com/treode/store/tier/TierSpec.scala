@@ -44,7 +44,7 @@ class TierSpec extends WordSpec {
     val builder = new TierBuilder (disk)
     val iter = AllFruits.iterator
     val loop = new Callback [Unit] {
-      def apply (v: Unit): Unit =
+      def pass (v: Unit): Unit =
         if (iter.hasNext)
           builder.add (iter.next, 7, Some (One), this)
       def fail (t: Throwable) = throw t
@@ -60,7 +60,7 @@ class TierSpec extends WordSpec {
     val builder = Seq.newBuilder [Cell]
     TierIterator (disk, pos, Callback.unary { iter: TierIterator =>
       val loop = new Callback [Cell] {
-        def apply (e: Cell) {
+        def pass (e: Cell) {
           builder += e
           if (iter.hasNext)
             iter.next (this)

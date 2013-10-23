@@ -18,7 +18,7 @@ trait TestTools {
     def toSeq: Seq [Cell] = {
       val builder = Seq.newBuilder [Cell]
       val loop = new Callback [Cell] {
-        def apply (cell: Cell) {
+        def pass (cell: Cell) {
           builder += cell
           if (iter.hasNext)
             iter.next (this)

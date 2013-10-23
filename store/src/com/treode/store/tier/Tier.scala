@@ -10,7 +10,7 @@ object Tier {
 
     val loop = new Callback [Page] {
 
-      def apply (p: Page) {
+      def pass (p: Page) {
         p match {
           case p: IndexPage =>
             val i = p.find (key, time)

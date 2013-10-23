@@ -15,7 +15,7 @@ class AgeFilter (iter: CellIterator, limit: TxClock) extends CellIterator {
 
       val loop = new Callback [Cell] {
 
-        def apply (cell: Cell) {
+        def pass (cell: Cell) {
           if (cell.time >= limit) {
             next = cell
             cb()
@@ -38,7 +38,7 @@ class AgeFilter (iter: CellIterator, limit: TxClock) extends CellIterator {
 
   private def init (cb: Callback [CellIterator]) {
     loop (new Callback [Unit] {
-      def apply (v: Unit): Unit = cb (AgeFilter.this)
+      def pass (v: Unit): Unit = cb (AgeFilter.this)
       def fail (t: Throwable) = cb.fail (t)
     })
   }
@@ -48,7 +48,7 @@ class AgeFilter (iter: CellIterator, limit: TxClock) extends CellIterator {
   def next (cb: Callback [Cell]) {
     val t = next
     loop (new Callback [Unit] {
-      def apply (v: Unit): Unit = cb (t)
+      def pass (v: Unit): Unit = cb (t)
       def fail (t: Throwable) = cb.fail (t)
     })
   }}

@@ -5,8 +5,16 @@ import java.nio.channels.CompletionHandler
 
 trait Callback [-T] extends (T => Unit) {
 
+  protected def pass (v: T)
+
   def fail (t: Throwable)
-}
+
+  def apply (v: T): Unit =
+    try {
+      pass (v)
+    } catch {
+      case t: Throwable => fail (t)
+    }}
 
 object Callback {
 
@@ -24,36 +32,36 @@ object Callback {
 
   def unary [A] (f: A => Any): Callback [A] =
     new Callback [A] {
-      def apply (v: A): Unit = f (v)
+      def pass (v: A): Unit = f (v)
       def fail (t: Throwable): Unit = throw t
     }
 
   def unary [A] (cb: Callback [_]) (f: A => Any): Callback [A] =
     new Callback [A] {
-      def apply (v: A): Unit = f (v)
+      def pass (v: A): Unit = f (v)
       def fail (t: Throwable): Unit = cb.fail (t)
     }
 
   def ignore [A]: Callback [A] =
     new Callback [A] {
-      def apply (v: A): Unit = ()
+      def pass (v: A): Unit = ()
       def fail (t: Throwable): Unit = throw t
     }
 
   def unit (f: => Any): Callback [Unit] =
     new Callback [Unit] {
-      def apply (v: Unit): Unit = f
+      def pass (v: Unit): Unit = f
       def fail (t: Throwable): Unit = throw t
     }
 
   def unit (cb: Callback [_]) (f: => Any): Callback [Unit] =
     new Callback [Unit] {
-      def apply (v: Unit): Unit = f
+      def pass (v: Unit): Unit = f
       def fail (t: Throwable): Unit = cb.fail (t)
     }
 
   def noop: Callback [Unit] =
     new Callback [Unit] {
-      def apply (v: Unit): Unit = ()
+      def pass (v: Unit): Unit = ()
       def fail (t: Throwable): Unit = throw t
     }}

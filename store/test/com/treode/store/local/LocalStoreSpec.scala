@@ -47,7 +47,7 @@ class LocalStoreSpec extends WordSpec {
             TxClock.now,
             for (i <- 0 until size) yield Accounts.read (i))
         store.read (batch, new StubReadCallback {
-          override def apply (vs: Seq [Value]): Unit = scheduler.execute {
+          override def pass (vs: Seq [Value]): Unit = scheduler.execute {
             val total = vs .map (Accounts.value (_) .get) .sum
             expectResult (supply) (total)
             cb()
@@ -62,14 +62,14 @@ class LocalStoreSpec extends WordSpec {
           y = Random.nextInt (size)
         val rbatch = ReadBatch (TxClock.now, Accounts.read (x), Accounts.read (y))
         store.read (rbatch, new StubReadCallback {
-          override def apply (vs: Seq [Value]): Unit = scheduler.execute {
+          override def pass (vs: Seq [Value]): Unit = scheduler.execute {
             val ct = vs map (_.time) max
             val Seq (b1, b2) = vs map (Accounts.value (_) .get)
             val n = Random.nextInt (b1)
             val wbatch = WriteBatch (Xid, ct, ct,
                 Accounts.update (x, b1-n), Accounts.update (y, b2+n))
             store.write (wbatch, new StubWriteCallback {
-              override def apply (tx: Transaction): Unit = scheduler.execute {
+              override def pass (tx: Transaction): Unit = scheduler.execute {
                 tx.commit (tx.ft+1)
                 cb()
               }
@@ -82,7 +82,7 @@ class LocalStoreSpec extends WordSpec {
       def broker (num: Int) {
         var i = 0
         val loop = new Callback [Unit] {
-          def apply (v: Unit): Unit = {
+          def pass (v: Unit): Unit = {
             if (i < transfers) {
               i += 1
               transfer (num, this)
@@ -97,7 +97,7 @@ class LocalStoreSpec extends WordSpec {
       // Conduct many audits.
       def auditor() {
         val loop = new Callback [Unit] {
-          def apply (v: Unit) {
+          def pass (v: Unit) {
             if (latch.getCount > 0)
               audit (this)
           }

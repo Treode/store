@@ -27,14 +27,14 @@ private class TestableTempStore (bits: Int) extends LocalStore with Assertions {
   def readAndExpect (rt: Int, ops: ReadOp*) (expected: Value*) {
     val batch = ReadBatch (rt, ops)
     super.read (batch, new StubReadCallback {
-      override def apply (actual: Seq [Value]) = expectResult (expected) (actual)
+      override def pass (actual: Seq [Value]) = expectResult (expected) (actual)
     })
   }
 
   def writeExpectApply (ct: Int, ops: WriteOp*) (cb: Transaction => Any) = {
     val batch = WriteBatch (Xid, ct, ct, ops)
     super.write (batch, new StubWriteCallback {
-      override def apply (tx: Transaction) = cb (tx)
+      override def pass (tx: Transaction) = cb (tx)
     })
   }
 

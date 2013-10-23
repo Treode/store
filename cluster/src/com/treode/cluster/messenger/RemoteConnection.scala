@@ -57,7 +57,7 @@ private class RemoteConnection (
 
     object Flushed extends Callback [Unit] {
 
-      def apply (v: Unit) {
+      def pass (v: Unit) {
         KryoPool.release (buffer)
         RemoteConnection.this.sent ()
       }
@@ -178,7 +178,7 @@ private class RemoteConnection (
 
     case class MessageRead (mbx: MailboxId, length: Int) extends Callback [Unit] {
 
-      def apply (v: Unit) {
+      def pass (v: Unit) {
         mailboxes.deliver (mbx, RemoteConnection.this, input, length)
         readHeader()
       }
@@ -193,7 +193,7 @@ private class RemoteConnection (
 
     object HeaderRead extends Callback [Unit] {
 
-      def apply (v: Unit) {
+      def pass (v: Unit) {
         val mbx = input.readLong()
         val length = input.readInt()
         readMessage (mbx, length)
@@ -213,7 +213,7 @@ private class RemoteConnection (
   private def hearHello (socket: Socket) {
     val buffer = new Input (256)
     io.fill (socket, buffer, 9, new Callback [Unit] {
-      def apply (v: Unit) {
+      def pass (v: Unit) {
         val Hello (clientId) = unpickle (Hello.pickle, buffer)
         if (clientId == id) {
           Loop (socket, buffer)
@@ -232,7 +232,7 @@ private class RemoteConnection (
     val buffer = new Output (256)
     pickle (Hello.pickle, Hello (localId), buffer)
     io.flush (socket, buffer, new Callback [Unit] {
-      def apply (v: Unit) {
+      def pass (v: Unit) {
         hearHello (socket)
       }
       def fail (t: Throwable) {
@@ -243,7 +243,7 @@ private class RemoteConnection (
 
   private def greet (socket: Socket) {
     socket.connect (address, new Callback [Unit] {
-      def apply (v: Unit) {
+      def pass (v: Unit) {
         sayHello (socket)
       }
       def fail (t: Throwable) {

@@ -13,7 +13,7 @@ private class TierIterator (disk: DiskSystem) extends CellIterator {
 
     val loop = new Callback [Page] {
 
-      def apply (p: Page) {
+      def pass (p: Page) {
         p match {
           case p: IndexPage =>
             val e = p.get (0)
@@ -49,7 +49,7 @@ private class TierIterator (disk: DiskSystem) extends CellIterator {
       if (i < b.size) {
         stack ::= (b, i)
         find (b.get (i) .pos, new Callback [Unit] {
-          def apply (v: Unit): Unit = cb (entry)
+          def pass (v: Unit): Unit = cb (entry)
           def fail (t: Throwable) = cb.fail (t)
         })
       } else {
@@ -64,7 +64,7 @@ private object TierIterator {
   def apply (disk: DiskSystem, pos: Long, cb: Callback [TierIterator]) {
     val iter = new TierIterator (disk)
     iter.find (pos, new Callback [Unit] {
-      def apply (v: Unit): Unit = cb (iter)
+      def pass (v: Unit): Unit = cb (iter)
       def fail (t: Throwable) = cb.fail (t)
     })
   }}

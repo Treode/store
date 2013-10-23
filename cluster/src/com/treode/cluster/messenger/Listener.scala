@@ -24,7 +24,7 @@ class Listener (
     val buffer = new Output (256)
     pickle (Hello.pickle, Hello (localId), buffer)
     io.flush (socket, buffer, new Callback [Unit] {
-      def apply (v: Unit) {
+      def pass (v: Unit) {
         peers.get (remoteId) connect (socket, input, remoteId)
       }
       def fail (t: Throwable) {
@@ -36,7 +36,7 @@ class Listener (
   private def hearHello (socket: Socket) {
     val buffer = new Input (256)
     io.fill (socket, buffer, 9, new Callback [Unit] {
-      def apply (v: Unit) {
+      def pass (v: Unit) {
         val Hello (remoteId) = unpickle (Hello.pickle, buffer)
         sayHello (socket, buffer, remoteId)
       }
@@ -48,7 +48,7 @@ class Listener (
 
   private def loop() {
     server.accept (new Callback [Socket] {
-      def apply (socket: Socket) {
+      def pass (socket: Socket) {
         scheduler.execute (hearHello (socket))
         loop()
       }

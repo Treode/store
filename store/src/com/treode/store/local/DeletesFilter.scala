@@ -25,7 +25,7 @@ private class DeletesFilter (iter: CellIterator) extends CellIterator {
 
       val loop = new Callback [Cell] {
 
-        def apply (cell: Cell) {
+        def pass (cell: Cell) {
 
           if (candidate == null || candidate.key != cell.key) {
 
@@ -59,7 +59,7 @@ private class DeletesFilter (iter: CellIterator) extends CellIterator {
 
   private def init (cb: Callback [CellIterator]) {
     loop (new Callback [Unit] {
-      def apply (v: Unit): Unit = cb.apply (DeletesFilter.this)
+      def pass (v: Unit): Unit = cb.apply (DeletesFilter.this)
       def fail (t: Throwable) = cb.fail (t)
     })
   }
@@ -74,7 +74,7 @@ private class DeletesFilter (iter: CellIterator) extends CellIterator {
       cb (t)
     } else {
       loop (new Callback [Unit] {
-        def apply (v: Unit): Unit = cb.apply (t)
+        def pass (v: Unit): Unit = cb.apply (t)
         def fail (t: Throwable) = cb.fail (t)
       })
     }}}

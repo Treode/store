@@ -10,7 +10,7 @@ private class OverwritesFilter private (iter: CellIterator) extends CellIterator
   private def init (cb: Callback [CellIterator]) {
     if (iter.hasNext) {
       iter.next (new Callback [Cell] {
-        def apply (cell: Cell) {
+        def pass (cell: Cell) {
           next = cell
           cb (OverwritesFilter.this)
         }
@@ -28,7 +28,7 @@ private class OverwritesFilter private (iter: CellIterator) extends CellIterator
 
       val loop = new Callback [Cell] {
 
-        def apply (cell: Cell) {
+        def pass (cell: Cell) {
           if (next != cell) {
             val t = next
             next = cell

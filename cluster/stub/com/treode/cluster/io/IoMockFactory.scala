@@ -19,7 +19,7 @@ trait IoMockFactory extends MockFactory {
 
     private def wrap (buf: ByteBuffer, cb: Callback [Int]) {
       callback = new Callback [Int] {
-        def apply (v: Int) {
+        def pass (v: Int) {
           if (v > 0)
             buf.position (buf.position + v)
           cb (v)
@@ -54,7 +54,7 @@ trait IoMockFactory extends MockFactory {
 
     private def wrap (buf: ByteBuffer, cb: Callback [Int]) {
       callback = new Callback [Int] {
-        def apply (v: Int) {
+        def pass (v: Int) {
           if (v > 0)
             buf.position (buf.position + v)
           cb (v)

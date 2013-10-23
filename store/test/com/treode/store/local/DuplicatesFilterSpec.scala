@@ -19,7 +19,7 @@ class DuplicatesFilterSpec extends FlatSpec with TestTools {
   private def newFilter (cs: Cell*) = {
     var iter: CellIterator = null
     DuplicatesFilter (CellIterator.adapt (cs.iterator), new Callback [CellIterator] {
-      def apply (_iter: CellIterator) = iter = _iter
+      def pass (_iter: CellIterator) = iter = _iter
       def fail (t: Throwable) = throw t
     })
     assert (iter != null)
