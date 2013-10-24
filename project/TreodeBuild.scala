@@ -37,12 +37,12 @@ object TreodeBuild extends Build {
     libraryDependencies <+= (scalaVersion) ("org.scala-lang" % "scala-reflect" % _),
 
     libraryDependencies ++= Seq (
+      "com.codahale.metrics" % "metrics-core" % "3.0.1",
       "com.esotericsoftware.kryo" % "kryo" % "2.22",
-      "com.google.code.findbugs" % "jsr305" % "1.3.9",
-      "com.google.guava" % "guava" % "14.0.1",
-      "com.yammer.metrics" % "metrics-core" % "3.0.0-BETA1",
-      "org.slf4j" % "slf4j-api" % "1.7.2",
-      "org.slf4j" % "slf4j-simple" % "1.7.2"))
+      "com.google.code.findbugs" % "jsr305" % "2.0.2",
+      "com.google.guava" % "guava" % "15.0",
+      "org.slf4j" % "slf4j-api" % "1.7.5",
+      "org.slf4j" % "slf4j-simple" % "1.7.5"))
 
   lazy val standardSettings =
     commonSettings ++

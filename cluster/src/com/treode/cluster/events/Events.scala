@@ -1,7 +1,8 @@
 package com.treode.cluster.events
 
 import java.util.logging.{Level, Logger}
-import com.yammer.metrics.{Gauge, JmxReporter, MetricRegistry, Timer}
+
+import com.codahale.metrics.{Gauge, JmxReporter, MetricRegistry, Timer}
 
 trait Events {
 
@@ -18,7 +19,7 @@ object Events {
 
     private val log = Logger.getLogger ("com.treode")
 
-    private val registry = new MetricRegistry ("com.treode")
+    private val registry = new MetricRegistry()
     JmxReporter.forRegistry (registry) .build().start()
 
     def newGauge [A] (n1: String, n2: String) (v: => A): Unit =
