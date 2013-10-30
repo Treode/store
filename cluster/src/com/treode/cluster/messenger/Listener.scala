@@ -5,7 +5,6 @@ import java.nio.channels.{AsynchronousChannelGroup, AsynchronousCloseException}
 import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, messenger}
 import com.treode.cluster.events.Events
-import com.treode.cluster.io
 import com.treode.cluster.io.{Socket, ServerSocket}
 import com.treode.concurrent.{Callback, Scheduler}
 import com.treode.pickle._
@@ -23,7 +22,7 @@ class Listener (
   private def sayHello (socket: Socket, input: Input, remoteId: HostId) {
     val buffer = new Output (256)
     pickle (Hello.pickle, Hello (localId), buffer)
-    io.flush (socket, buffer, new Callback [Unit] {
+    socket.flush (buffer, new Callback [Unit] {
       def pass (v: Unit) {
         peers.get (remoteId) connect (socket, input, remoteId)
       }
@@ -35,7 +34,7 @@ class Listener (
 
   private def hearHello (socket: Socket) {
     val buffer = new Input (256)
-    io.fill (socket, buffer, 9, new Callback [Unit] {
+    socket.fill (buffer, 9, new Callback [Unit] {
       def pass (v: Unit) {
         val Hello (remoteId) = unpickle (Hello.pickle, buffer)
         sayHello (socket, buffer, remoteId)

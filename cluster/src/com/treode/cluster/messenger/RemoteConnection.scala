@@ -9,7 +9,6 @@ import scala.util.Random
 import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
 import com.treode.cluster.events.Events
-import com.treode.cluster.io
 import com.treode.cluster.io.{KryoPool, Socket}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.concurrent.{Callback, Fiber}
@@ -69,7 +68,7 @@ private class RemoteConnection (
       }}
 
     def flush(): Unit = fiber.spawn {
-      io.flush (socket, buffer, Flushed)
+      socket.flush (buffer, Flushed)
     }
 
     def enque (message: PickledMessage) {
@@ -189,7 +188,7 @@ private class RemoteConnection (
       }}
 
     def readMessage (mbx: MailboxId, length: Int): Unit =
-      io.fill (socket, input, length, MessageRead (mbx, length))
+      socket.fill (input, length, MessageRead (mbx, length))
 
     object HeaderRead extends Callback [Unit] {
 
@@ -205,14 +204,14 @@ private class RemoteConnection (
       }}
 
     def readHeader(): Unit =
-      io.fill (socket, input, 12, HeaderRead)
+      socket.fill (input, 12, HeaderRead)
 
     fiber.spawn (readHeader())
   }
 
   private def hearHello (socket: Socket) {
     val buffer = new Input (256)
-    io.fill (socket, buffer, 9, new Callback [Unit] {
+    socket.fill (buffer, 9, new Callback [Unit] {
       def pass (v: Unit) {
         val Hello (clientId) = unpickle (Hello.pickle, buffer)
         if (clientId == id) {
@@ -231,7 +230,7 @@ private class RemoteConnection (
   private def sayHello (socket: Socket) {
     val buffer = new Output (256)
     pickle (Hello.pickle, Hello (localId), buffer)
-    io.flush (socket, buffer, new Callback [Unit] {
+    socket.flush (buffer, new Callback [Unit] {
       def pass (v: Unit) {
         hearHello (socket)
       }
