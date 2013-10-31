@@ -80,18 +80,46 @@ private object BufferBehaviors extends FlatSpec {
   discard (71, 2)
   discard (96, 3)
 
-  def buffers (sbyte: Int, nbytes: Int, spage: Int, nbufs: Int, first: Int, last: Int) {
-    it should (s"yield the right range for sbyte=$sbyte, nbytes=$nbytes, spage=$spage") in {
+  def buffer (sbyte: Int, nbytes: Int, page: Int, first: Int, last: Int) {
+    it should (s"yield the right range for sbyte=$sbyte, nbytes=$nbytes") in {
       val buffer = Buffer (pageBits)
       buffer.writePos = 128
-      val bufs = buffer.buffers (sbyte, nbytes)
-      expectResult (nbufs) (bufs.length)
+      val bytebuf = buffer.buffer (sbyte, nbytes)
+      expectResult (first) (bytebuf.position)
+      expectResult (last) (bytebuf.limit)
+      assert (buffer.pages (page) == bytebuf.array)
+    }}
+
+  behavior of "Buffer.buffer"
+  buffer (0, 0, 0, 0, 0)
+  buffer (0, 1, 0, 0, 1)
+  buffer (0, 31, 0, 0, 31)
+  buffer (0, 32, 0, 0, 32)
+  buffer (7, 24, 0, 7, 31)
+  buffer (7, 25, 0, 7, 32)
+  buffer (32, 0, 1, 0, 0)
+  buffer (32, 1, 1, 0, 1)
+  buffer (32, 31, 1, 0, 31)
+  buffer (32, 32, 1, 0, 32)
+  buffer (39, 24, 1, 7, 31)
+  buffer (39, 25, 1, 7, 32)
+  buffer (0, 57, 0, 0, 32)
+  buffer (7, 50, 0, 7, 32)
+  buffer (32, 57, 1, 0, 32)
+  buffer (39, 50, 1, 7, 32)
+
+  def buffers (sbyte: Int, nbytes: Int, spage: Int, nbufs: Int, first: Int, last: Int) {
+    it should (s"yield the right range for sbyte=$sbyte, nbytes=$nbytes") in {
+      val buffer = Buffer (pageBits)
+      buffer.writePos = 128
+      val bytebufs = buffer.buffers (sbyte, nbytes)
+      expectResult (nbufs) (bytebufs.length)
       if (nbufs > 0) {
-        expectResult (first) (bufs (0) .position)
-        expectResult (last) (bufs (nbufs - 1) .limit)
+        expectResult (first) (bytebufs (0) .position)
+        expectResult (last) (bytebufs (nbufs - 1) .limit)
       }
       for (i <- 0 until nbufs)
-        assert (buffer.pages (i + spage) == bufs (i) .array)
+        assert (buffer.pages (i + spage) == bytebufs (i) .array)
     }}
 
   behavior of "Buffer.buffers"

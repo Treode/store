@@ -1,6 +1,6 @@
 package com.treode.pickle
 
-class BufferPickleContext (buffer: Buffer) extends PickleContext {
+private class BufferPickleContext (buffer: Buffer) extends PickleContext {
 
   def writeBytes (v: Array [Byte], offset: Int, length: Int) =
     buffer.writeBytes (v, offset, length)

@@ -27,6 +27,7 @@ class Buffer (pageBits: Int) {
     if (pages.length != InitPages)
       pages = new Array [Array [Byte]] (InitPages)
     pages (0) = tmp
+    limit = 1
     wpage = pages (0)
     woff = 0
     wpos = 0
@@ -67,6 +68,12 @@ class Buffer (pageBits: Int) {
       i += 1
     }
     limit = npages
+  }
+
+  def buffer (start: Int, length: Int): ByteBuffer = {
+    val pos = start & pageMask
+    val end = math.min (pageSize - pos, length)
+    ByteBuffer.wrap (pages (start >> pageBits), pos, end)
   }
 
   def buffers (start: Int, length: Int): Array [ByteBuffer] = {
@@ -797,7 +804,7 @@ class Buffer (pageBits: Int) {
     new String (chars, 0, len)
   }
 
-  override def toString = "Buffer" + (readPos, writePos, capacity)
+  override def toString = "Buffer" + (pages mkString ", ", readPos, writePos, capacity)
 }
 
 object Buffer {
