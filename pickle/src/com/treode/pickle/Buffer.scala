@@ -294,7 +294,7 @@ class Buffer (pageBits: Int) {
       v
     }}
 
-  def writeVarInt (v: Int) {
+  def writeVarUInt (v: Int) {
     if (pageSize - wpos < 5) {
       requireWritable (5)
       if (v >>> 7 == 0) {
@@ -346,7 +346,7 @@ class Buffer (pageBits: Int) {
         wpos += 5
     }}}
 
-  def readVarInt(): Int = {
+  def readVarUInt(): Int = {
     if (pageSize - rpos < 5) {
       requireReadable (1)
       var b = read().toInt
@@ -399,11 +399,11 @@ class Buffer (pageBits: Int) {
       return v
     }}
 
-  def writeVarUInt (v: Int): Unit =
-    writeVarInt ((v << 1) ^ (v >> 31))
+  def writeVarInt (v: Int): Unit =
+    writeVarUInt ((v << 1) ^ (v >> 31))
 
-  def readVarUInt(): Int = {
-    val v = readVarInt()
+  def readVarInt(): Int = {
+    val v = readVarUInt()
     ((v >>> 1) ^ -(v & 1))
   }
 
@@ -457,7 +457,7 @@ class Buffer (pageBits: Int) {
       v
     }}
 
-  def writeVarLong (v: Long) {
+  def writeVarULong (v: Long) {
     if (pageSize - wpos < 9) {
       requireWritable (9)
       if (v >>> 7 == 0) {
@@ -581,7 +581,7 @@ class Buffer (pageBits: Int) {
         wpos += 9
       }}}
 
-  def readVarLong(): Long = {
+  def readVarULong(): Long = {
     if (pageSize - rpos < 9) {
       requireReadable (1)
       var b = read().toLong
@@ -674,11 +674,11 @@ class Buffer (pageBits: Int) {
       return v
     }}
 
-  def writeVarULong (v: Long): Unit =
-    writeVarLong ((v << 1) ^ (v >> 63))
+  def writeVarLong (v: Long): Unit =
+    writeVarULong ((v << 1) ^ (v >> 63))
 
-  def readVarULong(): Long = {
-    val v = readVarLong()
+  def readVarLong(): Long = {
+    val v = readVarULong()
     ((v >>> 1) ^ -(v & 1L))
   }
 
