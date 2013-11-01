@@ -804,7 +804,7 @@ class Buffer (pageBits: Int) {
     new String (chars, 0, len)
   }
 
-  override def toString = "Buffer" + (pages mkString ", ", readPos, writePos, capacity)
+  override def toString = "Buffer" + (readPos, writePos, capacity)
 }
 
 object Buffer {

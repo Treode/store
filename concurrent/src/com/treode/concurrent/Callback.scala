@@ -1,6 +1,6 @@
 package com.treode.concurrent
 
-import java.lang.{Integer => JavaInt}
+import java.lang.{Integer => JavaInt, Long => JavaLong}
 import java.nio.channels.CompletionHandler
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
@@ -24,6 +24,12 @@ object Callback {
   object IntHandler extends CompletionHandler [JavaInt, Callback [Int]] {
     def completed (v: JavaInt, cb: Callback [Int]) = cb (v)
     def failed (t: Throwable, cb: Callback [Int]) = cb.fail (t)
+  }
+
+  /** Adapts Callback to Java's NIO CompletionHandler. */
+  object LongHandler extends CompletionHandler [JavaLong, Callback [Long]] {
+    def completed (v: JavaLong, cb: Callback [Long]) = cb (v)
+    def failed (t: Throwable, cb: Callback [Long]) = cb.fail (t)
   }
 
   /** Adapts Callback to Java's NIO CompletionHandler. */

@@ -4,125 +4,97 @@ import java.lang.{Integer => JavaInt, Long => JavaLong}
 import java.net.{SocketAddress, SocketOption}
 import java.nio.ByteBuffer
 import java.nio.channels._
-import java.util.{Set => JavaSet, ArrayDeque}
+import java.util.{Arrays, Set => JavaSet}
 import java.util.concurrent.{Future, TimeUnit}
-import scala.collection.JavaConversions._
+import scala.util.Random
 
 import com.treode.concurrent.Callback
-import org.scalatest.Assertions.assert
 
-/** ScalaMock refuses to mock AsynchronousSocketChannel. */
-class AsyncSocketStub extends AsynchronousSocketChannel (null) {
+class AsyncSocketStub (random: Random) extends AsynchronousSocketChannel (null) {
 
-  private class Expectation {
-    def read (dst: ByteBuffer) {
-      Thread.dumpStack()
-      assert (false, "Unexpected socket read: " + AsyncSocketStub.this)
+  private var data = new Array [Byte] (0)
+
+  def read [A] (dst: ByteBuffer, timeout: Long, unit: TimeUnit, attachment: A,
+      handler: CompletionHandler [JavaInt, _ >: A]) {
+    require (data.length > 0)
+    val length = random.nextInt (math.min (dst.remaining, data.length)) + 1
+    val remaining = data.length - length
+    System.arraycopy (data, 0, dst.array, dst.position, length)
+    dst.position (dst.position + length)
+    val tmp = new Array [Byte] (remaining)
+    System.arraycopy (data, length, tmp, 0, remaining)
+    data = tmp
+    handler.completed (length, attachment)
+  }
+
+  def read [A] (dsts: Array [ByteBuffer], offset: Int, length: Int, timeout: Long, unit: TimeUnit,
+      attachment: A, handler: CompletionHandler [JavaLong, _ >: A]) {
+    require (data.length > 0)
+    val total = dsts .map (_.remaining) .sum
+    require (total > 0)
+    val length = random.nextInt (math.min (total, data.length)) + 1
+    var remaining = length
+    var position = 0
+    val iter = dsts.iterator
+    while (iter.hasNext && remaining > 0) {
+      val dst = iter.next
+      val partial = math.min (dst.remaining, remaining)
+      System.arraycopy (data, position, dst.array, dst.position, partial)
+      dst.position (dst.position + partial)
+      remaining -= partial
+      position += partial
     }
-    def write (src: ByteBuffer) {
-      Thread.dumpStack()
-      assert (false, "Unexpected socket write: " + AsyncSocketStub.this)
+    remaining = data.length - length
+    val tmp = new Array [Byte] (remaining)
+    System.arraycopy (data, position, tmp, 0, remaining)
+    data = tmp
+    handler.completed (length, attachment)
+  }
+
+  def write [A] (src: ByteBuffer, timeout: Long, unit: TimeUnit, attachment: A,
+      handler: CompletionHandler [JavaInt, _ >: A]) {
+    val position = data.length
+    val length = random.nextInt (src.remaining) + 1
+    data = Arrays.copyOf (data, position + length)
+    System.arraycopy (src.array, src.position, data, position, length)
+    src.position (src.position + length)
+    handler.completed (length, attachment)
+  }
+
+  def write [A] (srcs: Array [ByteBuffer], offset: Int, length: Int, timeout: Long, unit: TimeUnit,
+      attachment: A, handler: CompletionHandler [JavaLong, _ >: A]) {
+    val total = srcs .map (_.remaining) .sum
+    require (total > 0)
+    val length = random.nextInt (total) + 1
+    var remaining = length
+    var position = data.length
+    data = Arrays.copyOf (data, position + length)
+    val iter = srcs.iterator
+    while (iter.hasNext && remaining > 0) {
+      val src = iter.next
+      val partial = math.min (src.remaining, remaining)
+      System.arraycopy (src.array, src.position, data, position, partial)
+      src.position (src.position + partial)
+      remaining -= partial
+      position += partial
     }
-    def close() {
-      Thread.dumpStack()
-      assert (false, "Unexpected socket close: " + AsyncSocketStub.this)
-    }
-    override def toString = "Expecting nothing."
-  }
-
-  private var expectations = new ArrayDeque [Expectation] ()
-
-  private var callback: Callback [Int] = null
-
-  def completeLast (v: Int) = callback (v)
-
-  def failLast (t: Throwable) = callback.fail (t)
-
-  def expectRead (bufPos: Int, bufLimit: Int) {
-    expectations.add (new Expectation {
-      override def read (dst: ByteBuffer) {
-        assert (dst.position == bufPos, s"Expected buffer position $bufPos but got ${dst.position}")
-        assert (dst.limit == bufLimit, s"Expected buffer limit $bufLimit but got ${dst.limit}")
-      }
-      override def toString = "Expecting read" + (bufPos, bufLimit)
-    })
-  }
-
-  def read [A] (dst: ByteBuffer, timeout: Long, unit: TimeUnit, attachment: A, handler: CompletionHandler [JavaInt, _ >: A]) {
-    require (callback == null, "Pending callback on socket.")
-    require (!expectations.isEmpty, "No expectations.")
-    expectations.remove().read (dst)
-    callback = new Callback [Int] {
-      def pass (result: Int) = {
-        callback = null;
-        if (result > 0)
-          dst.position (dst.position + result)
-        handler.completed (result, attachment)
-      }
-      def fail (thrown: Throwable) = {
-        callback = null
-        handler.failed (thrown, attachment)
-      }
-      override def toString = s"Pending read($dst)"
-    }}
-
-  def expectWrite (bufPos: Int, bufLimit: Int) {
-    expectations.add (new Expectation {
-      override def write (src: ByteBuffer) {
-        assert (src.position == bufPos, s"Expected buffer position $bufPos but got ${src.position}")
-        assert (src.limit == bufLimit, s"Expected buffer limit $bufLimit but got ${src.limit}")
-      }
-      override def toString = "Expecting write" + (bufPos, bufLimit)
-    })
-  }
-
-  def write [A] (src: ByteBuffer, x$2: Long, x$3: TimeUnit, attachment: A, handler: CompletionHandler [JavaInt, _ >: A]) {
-    require (callback == null, "Pending callback on socket.")
-    require (!expectations.isEmpty, "No expectations.")
-    expectations.remove().write (src)
-    callback = new Callback [Int] {
-      def pass (result: Int) = {
-        callback = null
-        if (result > 0)
-          src.position (src.position + result)
-        handler.completed (result, attachment)
-      }
-      def fail (thrown: Throwable) {
-        callback = null
-        handler.failed (thrown, attachment)
-      }
-      override def toString = s"Pending write($src)"
-    }}
-
-  def expectClose() {
-    expectations.add (new Expectation {
-      override def close() = ()
-      override def toString = "Expecting close()"
-    })
-  }
-
-  def close() {
-    if (callback != null)
-      callback.fail (new AsynchronousCloseException)
-    require (!expectations.isEmpty, "No expectations.")
-    expectations.remove().close()
+    handler.completed (length, attachment)
   }
 
   def bind (local: SocketAddress): AsynchronousSocketChannel = ???
+  def close(): Unit = ???
   def connect (remote: SocketAddress): Future [Void] = ???
   def connect [A] (remote: SocketAddress, attachment: A, handler: CompletionHandler [Void, _ >: A]): Unit = ???
   def getRemoteAddress(): SocketAddress = ???
-  def read [A] (dsts: Array [ByteBuffer], offset: Int, length: Int, timeout: Long, unit: TimeUnit, attachment: A, handler: CompletionHandler [JavaLong, _ >: A]): Unit = ???
   def read (dst: ByteBuffer): java.util.concurrent.Future[Integer] = ???
   def setOption [T] (name: java.net.SocketOption[T], value: T): AsynchronousSocketChannel = ???
   def shutdownInput(): AsynchronousSocketChannel = ???
   def shutdownOutput(): AsynchronousSocketChannel = ???
-  def write [A] (src: Array [ByteBuffer], offset: Int, length: Int, timeout: Long, unit: TimeUnit, attachment: A, handler: CompletionHandler [JavaLong, _ >: A]): Unit = ???
   def write (src: ByteBuffer): Future [Integer] = ???
   def isOpen(): Boolean = ???
   def getLocalAddress(): SocketAddress = ???
   def getOption [T] (name: SocketOption [T]): T = ???
   def supportedOptions(): JavaSet [SocketOption[_]] = ???
 
-  override def toString = "AsyncSocketStub" + (expectations mkString ("[", ",", "]"), callback)
+  override def toString = "AsyncFileStub"
 }

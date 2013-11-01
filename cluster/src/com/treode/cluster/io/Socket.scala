@@ -7,8 +7,9 @@ import java.util.concurrent.TimeUnit.MILLISECONDS
 
 import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.concurrent.Callback
+import com.treode.pickle.Buffer
 
-/** Something that can be mocked in tests. */
+/** A socket that has useful behavior (flush/fill) and that can be mocked. */
 class Socket (socket: AsynchronousSocketChannel) {
 
   /** For testing mocks only. */
@@ -20,7 +21,7 @@ class Socket (socket: AsynchronousSocketChannel) {
   def close(): Unit =
     socket.close()
 
-  private class SocketFiller (input: Input, length: Int, cb: Callback [Unit])
+  private class SocketFiller0 (input: Input, length: Int, cb: Callback [Unit])
   extends Callback [Int] {
 
     private [this] val buffer = KryoPool.wrap (input)
@@ -49,10 +50,10 @@ class Socket (socket: AsynchronousSocketChannel) {
         cb()
       } else {
         KryoPool.ensure (input, length)
-        new SocketFiller (input, length, cb) .fill()
+        new SocketFiller0 (input, length, cb) .fill()
       }}
 
-  private class SocketFlusher (output: Output, cb: Callback [Unit])
+  private class SocketFlusher0 (output: Output, cb: Callback [Unit])
   extends Callback [Int] {
 
     private [this] val buffer = KryoPool.wrap (output)
@@ -76,7 +77,67 @@ class Socket (socket: AsynchronousSocketChannel) {
   }
 
   def flush (output: Output, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) (new SocketFlusher (output, cb) .flush())
+    Callback.guard (cb) (new SocketFlusher0 (output, cb) .flush())
+
+  private class Filler (input: Buffer, length: Int, cb: Callback [Unit])
+  extends Callback [Long] {
+
+    def fill() {
+      if (length <= input.readableBytes)
+        cb()
+      else {
+        val bytebufs = input.buffers (input.writePos, input.writeableBytes)
+        socket.read (bytebufs, 0, bytebufs.length, -1, MILLISECONDS, this, Callback.LongHandler)
+      }}
+
+    def pass (result: Long) {
+      require (result <= Int.MaxValue)
+      if (result < 0) {
+        cb.fail (new Exception ("End of file reached."))
+      } else {
+        input.writePos = input.writePos + result.toInt
+        fill()
+      }}
+
+    def fail (t: Throwable) = cb.fail (t)
+  }
+
+  def fill (input: Buffer, length: Int, cb: Callback [Unit]): Unit =
+    Callback.guard (cb) {
+      if (length <= input.readableBytes) {
+        cb()
+      } else {
+        input.capacity (input.readPos + length)
+        new Filler (input, length, cb) .fill()
+      }}
+
+  private class Flusher (output: Buffer, cb: Callback [Unit])
+  extends Callback [Long] {
+
+    def flush() {
+      if (output.readableBytes == 0) {
+        //buffer.release()
+        cb()
+      } else {
+        val bytebufs = output.buffers (output.readPos, output.readableBytes)
+        socket.write (bytebufs, 0, bytebufs.length, -1, MILLISECONDS, this, Callback.LongHandler)
+      }}
+
+    def pass (result: Long) {
+      require (result <= Int.MaxValue)
+      if (result < 0) {
+        cb.fail (new Exception ("File write failed."))
+      } else {
+        output.readPos = output.readPos + result.toInt
+        flush()
+      }}
+
+    def fail (t: Throwable) = cb.fail (t)
+  }
+
+
+  def flush (output: Buffer, cb: Callback [Unit]): Unit =
+    Callback.guard (cb) (new Flusher (output, cb) .flush())
 }
 
 object Socket {
