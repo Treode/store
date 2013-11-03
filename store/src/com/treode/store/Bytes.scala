@@ -4,7 +4,6 @@ import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.util.Arrays
 
-import com.esotericsoftware.kryo.io.{Input, Output}
 import com.google.common.primitives.UnsignedBytes
 import com.treode.pickle._
 

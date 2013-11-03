@@ -2,7 +2,6 @@ package com.treode.cluster.messenger
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.channels.{AsynchronousChannelGroup, AsynchronousCloseException}
-import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, messenger}
 import com.treode.cluster.events.Events
 import com.treode.cluster.io.{Socket, ServerSocket}
@@ -19,8 +18,8 @@ class Listener (
 
   private var server: ServerSocket = null
 
-  private def sayHello (socket: Socket, input: Input, remoteId: HostId) {
-    val buffer = new Output (256)
+  private def sayHello (socket: Socket, input: Buffer, remoteId: HostId) {
+    val buffer = Buffer (12)
     pickle (Hello.pickle, Hello (localId), buffer)
     socket.flush (buffer, new Callback [Unit] {
       def pass (v: Unit) {
@@ -33,7 +32,7 @@ class Listener (
   }
 
   private def hearHello (socket: Socket) {
-    val buffer = new Input (256)
+    val buffer = Buffer (12)
     socket.fill (buffer, 9, new Callback [Unit] {
       def pass (v: Unit) {
         val Hello (remoteId) = unpickle (Hello.pickle, buffer)

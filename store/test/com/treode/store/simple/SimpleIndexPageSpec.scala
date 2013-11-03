@@ -1,7 +1,6 @@
 package com.treode.store.simple
 
-import com.esotericsoftware.kryo.io.{Input, Output}
-import com.treode.pickle.{Picklers, pickle, unpickle}
+import com.treode.pickle.{Buffer, Picklers, pickle, unpickle}
 import com.treode.store.{Bytes, Fruits, TxClock}
 import org.scalatest.WordSpec
 
@@ -26,10 +25,9 @@ class SimpleIndexPageSpec extends WordSpec {
   }
 
   private def checkPickle (page: IndexPage) {
-    val output = new Output (1024)
-    pickle (IndexPage.pickle, page, output)
-    val input = new Input (output.getBuffer)
-    val result = unpickle (IndexPage.pickle, input)
+    val buffer = Buffer (12)
+    pickle (IndexPage.pickle, page, buffer)
+    val result = unpickle (IndexPage.pickle, buffer)
     pagesEqual (page, result)
   }
 

@@ -3,7 +3,6 @@ package com.treode.cluster.messenger
 import java.util.concurrent.ConcurrentHashMap
 import scala.util.Random
 
-import com.esotericsoftware.kryo.io.Input
 import com.treode.pickle._
 import com.treode.cluster.{EphemeralMailbox, ClusterEvents, MailboxId, Peer}
 import com.treode.cluster.events.Events
@@ -14,29 +13,33 @@ class MailboxRegistry (implicit events: Events) {
   // Visible for testing.
   private [messenger] val mbxs = new ConcurrentHashMap [Long, PickledFunction]
 
-  private [messenger] def deliver (id: MailboxId, from: Peer, input: Input, length: Int) {
+  private [messenger] def deliver (id: MailboxId, from: Peer, buffer: Buffer, length: Int) {
     if (length == 0)
       return
 
-    val end = input.position + length
+    val end = buffer.readPos + length
     val f = mbxs.get (id.id)
     if (f == null) {
       if (id.isFixed)
         events.mailboxNotRecognized (id, length)
-      input.setPosition (end)
+      buffer.readPos = end
+      buffer.discard (end)
       return
     }
 
     try {
-      f (from, input)
-      if (input.position != end) {
+      f (from, buffer)
+      if (buffer.readPos != end) {
+        println ((buffer.readPos, end))
         events.unpicklingMessageConsumedWrongNumberOfBytes (id)
-        input.setPosition (end)
+        buffer.readPos = end
+        buffer.discard (end)
       }
     } catch {
       case e: Throwable =>
         events.exceptionFromMessageHandler (e)
-        input.setPosition (end)
+        buffer.readPos = end
+        buffer.discard (end)
     }}
 
   private [messenger] def close (id: MailboxId, pf: PickledFunction) {
@@ -61,8 +64,8 @@ class MailboxRegistry (implicit events: Events) {
     def receive (receiver: (M, Peer) => Any): Unit =
       mbx.receive {case (msg, from) => receiver (msg, from)}
 
-    def apply (from: Peer, input: Input): Unit =
-      mbx.send (unpickle (p, input), from)
+    def apply (from: Peer, buffer: Buffer): Unit =
+      mbx.send (unpickle (p, buffer), from)
   }
 
   def open [M] (p: Pickler [M], scheduler: Scheduler): EphemeralMailbox [M] = {

@@ -2,7 +2,6 @@ package com.treode.pickle
 
 import scala.util.Random
 
-import com.esotericsoftware.kryo.io.{Input, Output}
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.{FlatSpec, PropSpec, Specs}
@@ -42,11 +41,9 @@ private trait PicklersSpecCommon extends ShouldMatchers {
 
   def check [A] (pa: Pickler [A], x: A) {
     expectResult (x) {
-      val array = new Array [Byte] (1024)
-      val output = new Output (array)
-      pickle (pa, x, output)
-      val input = new Input (array)
-      val y = unpickle (pa, input)
+      val buffer = Buffer (10)
+      pickle (pa, x, buffer)
+      val y = unpickle (pa, buffer)
       y
     }}}
 

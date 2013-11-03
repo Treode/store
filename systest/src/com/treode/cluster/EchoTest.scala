@@ -116,14 +116,14 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
 object EchoTest {
 
-  private val usage = "usage: EchoTest id p0 p1 p2"
+  private val usage = "usage: EchoTest p0 p1 p2 id"
 
   def main (args: Array[String] ) {
     (args.length == 4) orDie usage
     new EchoTest (
-      parseInt (args (0)) getOrDie usage,
+      parseInt (args (3)) getOrDie usage,
       Seq (
+        parseInetSocketAddress (args (0)) getOrDie usage,
         parseInetSocketAddress (args (1)) getOrDie usage,
-        parseInetSocketAddress (args (2)) getOrDie usage,
-        parseInetSocketAddress (args (3)) getOrDie usage))
+        parseInetSocketAddress (args (2)) getOrDie usage))
   }}

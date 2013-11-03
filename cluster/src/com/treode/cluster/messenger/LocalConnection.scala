@@ -1,22 +1,20 @@
 package com.treode.cluster.messenger
 
-import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{HostId, MailboxId, Peer}
 import com.treode.cluster.io.Socket
-import com.treode.pickle.{Pickler, pickle}
+import com.treode.pickle.{Buffer, Pickler, pickle}
 
 private class LocalConnection (val id: HostId, mbxs: MailboxRegistry) extends Peer {
 
-  def connect (socket: Socket, input: Input, clientId: HostId) =
+  def connect (socket: Socket, input: Buffer, clientId: HostId) =
     throw new IllegalArgumentException
 
   def close() = ()
 
   def send [A] (p: Pickler [A], mbx: MailboxId, msg: A) {
-    val output = new Output (256)
-    pickle (p, msg, output)
-    val input = new Input (output.getBuffer)
-    mbxs.deliver (mbx, this, input, output.position)
+    val buffer = Buffer (12)
+    pickle (p, msg, buffer)
+    mbxs.deliver (mbx, this, buffer, buffer.writePos)
   }
 
   override def hashCode = id.id.hashCode

@@ -6,13 +6,12 @@ import scala.collection.JavaConversions._
 import scala.language.postfixOps
 import scala.util.Random
 
-import com.esotericsoftware.kryo.io.{Input, Output}
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
 import com.treode.cluster.events.Events
-import com.treode.cluster.io.{KryoPool, Socket}
+import com.treode.cluster.io.Socket
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.concurrent.{Callback, Fiber}
-import com.treode.pickle.{Pickler, pickle, unpickle}
+import com.treode.pickle.{Buffer, Pickler, pickle, unpickle}
 
 private class RemoteConnection (
   val id: HostId,
@@ -35,9 +34,9 @@ private class RemoteConnection (
 
     def sent() = ()
 
-    def connect (socket: Socket, input: Input, clientId: HostId) {
+    def connect (socket: Socket, input: Buffer, clientId: HostId) {
       Loop (socket, input)
-      state = Connected (socket, clientId, KryoPool.output)
+      state = Connected (socket, clientId, Buffer (12))
     }
 
     def close() {
@@ -51,18 +50,18 @@ private class RemoteConnection (
 
     def socket: Socket
     def clientId: HostId
-    def buffer: Output
+    def buffer: Buffer
     def backoff: Iterator [Int]
 
     object Flushed extends Callback [Unit] {
 
       def pass (v: Unit) {
-        KryoPool.release (buffer)
+        //buffer.release()
         RemoteConnection.this.sent ()
       }
 
       def fail (t: Throwable) {
-        KryoPool.release (buffer)
+        //buffer.release()
         events.exceptionWritingMessage (t)
         RemoteConnection.this.disconnect (socket)
       }}
@@ -74,12 +73,12 @@ private class RemoteConnection (
     def enque (message: PickledMessage) {
       buffer.writeLong (message.mbx.id)
       buffer.writeInt (0)
-      val start = buffer.position
+      val start = buffer.writePos
       message.write (buffer)
-      val end = buffer.position
-      buffer.setPosition (start - 4)
+      val end = buffer.writePos
+      buffer.writePos = start - 4
       buffer.writeInt (end - start)
-      buffer.setPosition (end)
+      buffer.writePos = end
     }
 
     override def disconnect (socket: Socket) {
@@ -89,21 +88,21 @@ private class RemoteConnection (
       }}
 
     override def sent() {
-      if (buffer.position == 0) {
+      if (buffer.readableBytes == 0) {
         state = Connected (socket, clientId, buffer)
       } else {
         flush()
         state = Sending (socket, clientId)
       }}
 
-    override def connect (socket: Socket, input: Input, clientId: HostId) {
+    override def connect (socket: Socket, input: Buffer, clientId: HostId) {
       if (clientId < this.clientId) {
         socket.close()
       } else {
         if (socket != this.socket)
           this.socket.close()
         Loop (socket, input)
-        if (buffer.position == 0) {
+        if (buffer.readableBytes == 0) {
           state = Connected (socket, clientId, buffer)
         } else {
           flush()
@@ -133,7 +132,7 @@ private class RemoteConnection (
   case class Connecting (socket: Socket,  clientId: HostId, time: Long, backoff: Iterator [Int])
   extends HaveSocket {
 
-    val buffer = KryoPool.output
+    val buffer = Buffer (12)
 
     override def disconnect (socket: Socket) {
       if (socket == this.socket) {
@@ -141,7 +140,7 @@ private class RemoteConnection (
         state = Block (time, backoff)
       }}}
 
-  case class Connected (socket: Socket, clientId: HostId, buffer: Output) extends HaveSocket {
+  case class Connected (socket: Socket, clientId: HostId, buffer: Buffer) extends HaveSocket {
 
     def backoff = BlockedTimer.iterator
 
@@ -153,7 +152,7 @@ private class RemoteConnection (
 
   case class Sending (socket: Socket, clientId: HostId) extends HaveSocket {
 
-    val buffer = KryoPool.output
+    val buffer = Buffer (12)
 
     def backoff = BlockedTimer.iterator
   }
@@ -173,7 +172,7 @@ private class RemoteConnection (
   // Visible for testing.
   private [messenger] var state: State = new Disconnected (BlockedTimer.iterator)
 
-  case class Loop (socket: Socket, input: Input) {
+  case class Loop (socket: Socket, input: Buffer) {
 
     case class MessageRead (mbx: MailboxId, length: Int) extends Callback [Unit] {
 
@@ -210,13 +209,12 @@ private class RemoteConnection (
   }
 
   private def hearHello (socket: Socket) {
-    val buffer = new Input (256)
-    socket.fill (buffer, 9, new Callback [Unit] {
+    val input = Buffer (12)
+    socket.fill (input, 9, new Callback [Unit] {
       def pass (v: Unit) {
-        val Hello (clientId) = unpickle (Hello.pickle, buffer)
+        val Hello (clientId) = unpickle (Hello.pickle, input)
         if (clientId == id) {
-          Loop (socket, buffer)
-          connect (socket, buffer, localId)
+          connect (socket, input, localId)
         } else {
           events.errorWhileGreeting (id, clientId)
           disconnect (socket)
@@ -228,7 +226,7 @@ private class RemoteConnection (
   }
 
   private def sayHello (socket: Socket) {
-    val buffer = new Output (256)
+    val buffer = Buffer (12)
     pickle (Hello.pickle, Hello (localId), buffer)
     socket.flush (buffer, new Callback [Unit] {
       def pass (v: Unit) {
@@ -263,7 +261,7 @@ private class RemoteConnection (
     state.sent()
   }
 
-  def connect (socket: Socket, input: Input, clientId: HostId): Unit = fiber.execute {
+  def connect (socket: Socket, input: Buffer, clientId: HostId): Unit = fiber.execute {
     state.connect (socket, input, clientId)
   }
 

@@ -2,15 +2,14 @@ package com.treode.cluster
 
 import java.net.SocketAddress
 
-import com.esotericsoftware.kryo.io.Input
 import com.treode.cluster.io.Socket
-import com.treode.pickle.Pickler
+import com.treode.pickle.{Buffer, Pickler}
 
 trait Peer {
 
   var address: SocketAddress = null
 
-  private [cluster] def connect (socket: Socket, input: Input, clientId: HostId)
+  private [cluster] def connect (socket: Socket, input: Buffer, clientId: HostId)
   private [cluster] def close()
 
   def id: HostId
