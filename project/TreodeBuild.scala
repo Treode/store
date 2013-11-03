@@ -38,7 +38,6 @@ object TreodeBuild extends Build {
 
     libraryDependencies ++= Seq (
       "com.codahale.metrics" % "metrics-core" % "3.0.1",
-      "com.esotericsoftware.kryo" % "kryo" % "2.22",
       "com.google.code.findbugs" % "jsr305" % "2.0.2",
       "com.google.guava" % "guava" % "15.0",
       "org.slf4j" % "slf4j-api" % "1.7.5",

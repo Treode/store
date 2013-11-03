@@ -1,7 +1,5 @@
 package com.treode
 
-import com.esotericsoftware.kryo.io.{Input, Output}
-
 package pickle {
 
   /** Superclass of all pickling and unpickling exceptions. */
@@ -24,14 +22,8 @@ package pickle {
 
 package object pickle {
 
-  def pickle [A] (p: Pickler [A], v: A, o: Output) =
-    p.p (v, new KryoPickleContext (o))
-
   def pickle [A] (p: Pickler [A], v: A, b: Buffer) =
     p.p (v, new BufferPickleContext (b))
-
-  def unpickle [A] (p: Pickler [A], i: Input): A =
-    p.u (new KryoUnpickleContext (i))
 
   def unpickle [A] (p: Pickler [A], b: Buffer): A =
     p.u (new BufferUnpickleContext (b))
