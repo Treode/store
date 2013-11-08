@@ -3,12 +3,12 @@ package com.treode.store.local
 import com.treode.pickle.Picklers
 import com.treode.store._
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.WordSpec
+import org.scalatest.FreeSpec
 
 import Fruits.Apple
 import WriteOp._
 
-class TempTimedTableSpec extends WordSpec with TimedTestTools {
+class TempTimedTableSpec extends FreeSpec with TimedTestTools {
 
   private val One = Bytes (1)
   private val Two = Bytes (2)
@@ -19,20 +19,20 @@ class TempTimedTableSpec extends WordSpec with TimedTestTools {
   private def expectCells (cs: TimedCell*) (actual: TestableTempTimedTable) =
     expectResult (cs) (actual.toSeq)
 
-  "The TempTable" when {
+  "The TempTable" - {
 
-    "empty and the transaction" when {
+    "when empty" - {
 
       def newStore = new TestableTempLocalStore (4)
 
-      "not relevant" should {
+      "and reading" - {
 
         "find 0::None for Apple##1" in {
           val s = newStore
           s.readAndExpect (1, Get (1, Apple)) (0::None)
         }}
 
-      "commited" should {
+      "and a write commits should" - {
 
         "allow and perform create Apple::1 at t=0" in {
           val s = newStore
@@ -58,7 +58,7 @@ class TempTimedTableSpec extends WordSpec with TimedTestTools {
           expectCells () (s.table (1))
         }}
 
-      "aborted" should {
+      "and a write aborts should" - {
 
         "allow and ignore create Apple::1 at t=0" in {
           val s = newStore
@@ -84,7 +84,7 @@ class TempTimedTableSpec extends WordSpec with TimedTestTools {
           expectCells () (s.table (1))
         }}}
 
-    "having Apple##7::1 and the transaction" when {
+    "when having Apple##7::1" - {
 
       def newStore = {
         val s = new TestableTempLocalStore (4)
@@ -92,7 +92,7 @@ class TempTimedTableSpec extends WordSpec with TimedTestTools {
         s
       }
 
-      "not relevant" should {
+      "and reading" -  {
 
         "find 7::1 for Apple##8" in {
           val s = newStore
@@ -129,7 +129,7 @@ class TempTimedTableSpec extends WordSpec with TimedTestTools {
           s.writeExpectAdvance (6, Delete (1, Apple))
         }}
 
-      "commited" should {
+      "and a write commits should" -  {
 
         "allow and ignore hold Apple at t=8" in {
           val s = newStore
@@ -179,7 +179,7 @@ class TempTimedTableSpec extends WordSpec with TimedTestTools {
           expectCells (Apple##14, Apple##7::1) (s.table (1))
         }}
 
-      "aborted" should {
+      "and a write aborts should" -  {
 
         "allow and ignore update Apple::2 at t=8" in {
           val s = newStore
@@ -193,7 +193,7 @@ class TempTimedTableSpec extends WordSpec with TimedTestTools {
           expectCells (Apple##14, Apple##7::1) (s.table (1))
         }}}
 
-    "having Apple##14::2 and Apple##7::1" should {
+    "when having Apple##14::2 and Apple##7::1 should" -  {
 
       val s = new TestableTempLocalStore (4)
       s.writeExpectApply (0, Create (1, Apple, One)) (_.commit (7))
