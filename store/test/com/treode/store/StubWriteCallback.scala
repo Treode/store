@@ -1,6 +1,4 @@
-package com.treode.store.local
-
-import com.treode.store.{Transaction, WriteCallback}
+package com.treode.store
 
 class StubWriteCallback extends WriteCallback {
 

@@ -6,9 +6,7 @@ import scala.util.Random
 
 import com.treode.concurrent.{Callback, Scheduler}
 import com.treode.pickle.Picklers
-import com.treode.store.{Bytes, ReadBatch}
-import com.treode.store.{Accessor, Transaction, TxClock, TxId, Value, WriteBatch}
-import com.treode.store.TableId.apply
+import com.treode.store._
 import org.scalatest.WordSpec
 
 class LocalStoreSpec extends WordSpec {

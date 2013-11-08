@@ -1,6 +1,4 @@
-package com.treode.store.local
-
-import com.treode.store.{ReadCallback, Value}
+package com.treode.store
 
 class StubReadCallback extends ReadCallback {
 
