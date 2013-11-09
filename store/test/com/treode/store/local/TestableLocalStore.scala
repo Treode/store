@@ -10,28 +10,39 @@ trait TestableLocalStore extends LocalStore with Assertions {
 
   def table (id: TableId): TestableTimedTable
 
-  def readAndExpect (rt: Int, ops: ReadOp*) (expected: Value*) {
+  def readAndExpect (rt: TxClock, ops: ReadOp*) (expected: Value*) {
     val batch = ReadBatch (rt, ops)
     read (batch, new StubReadCallback {
       override def pass (actual: Seq [Value]) = expectResult (expected) (actual)
     })
   }
 
-  def writeExpectApply (ct: Int, ops: WriteOp*) (cb: Transaction => Any) = {
+  def writeAndCommit (ct: TxClock, ops: WriteOp*): TxClock = {
+    val batch = WriteBatch (Xid, ct, ct, ops)
+    var ts = TxClock.Zero
+    write (batch, new StubWriteCallback {
+      override def pass (tx: Transaction) {
+        ts = tx.ft + 7 // Leave gaps in the timestamps
+        tx.commit (ts)
+      }})
+    ts
+  }
+
+  def writeAndAbort (ct: TxClock, ops: WriteOp*) {
     val batch = WriteBatch (Xid, ct, ct, ops)
     write (batch, new StubWriteCallback {
-      override def pass (tx: Transaction) = cb (tx)
+      override def pass (tx: Transaction) = tx.abort()
     })
   }
 
-  def writeExpectAdvance (ct: Int, ops: WriteOp*) = {
+  def writeExpectAdvance (ct: TxClock, ops: WriteOp*) = {
     val batch = WriteBatch (Xid, ct, ct, ops)
     write (batch, new StubWriteCallback {
       override def advance() = ()
     })
   }
 
-  def writeExpectConflicts (ct: Int, ops: WriteOp*) (expected: Int*) = {
+  def writeExpectConflicts (ct: TxClock, ops: WriteOp*) (expected: Int*) = {
     val batch = WriteBatch (Xid, ct, ct, ops)
     write (batch, new StubWriteCallback {
       override def conflicts (actual: Set [Int]) = expectResult (expected.toSet) (actual)

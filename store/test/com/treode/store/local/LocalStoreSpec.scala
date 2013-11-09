@@ -30,7 +30,7 @@ class LocalStoreSpec extends WordSpec {
       val store = new TestableTempLocalStore (bits)
       val create =
         for (i <- 0 until size) yield Accounts.create (i, opening)
-      store.writeExpectApply (0, create: _*) (tx => tx.commit (tx.ft+1))
+      store.writeAndCommit (0, create: _*)
 
       val executor = Executors.newScheduledThreadPool (threads)
       val scheduler = Scheduler (executor)

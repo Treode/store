@@ -19,8 +19,7 @@ class TxClock private (val time: Long) extends AnyVal with Ordered [TxClock] {
 
 object TxClock extends Ordering [TxClock] {
 
-  // Supports testing only.
-  private [store] implicit def apply (time: Int): TxClock =
+  implicit def apply (time: Long): TxClock =
     new TxClock (time)
 
   val Zero = new TxClock (0)
