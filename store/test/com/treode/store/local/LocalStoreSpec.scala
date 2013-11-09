@@ -7,6 +7,7 @@ import scala.util.Random
 import com.treode.concurrent.{Callback, Scheduler}
 import com.treode.pickle.Picklers
 import com.treode.store._
+import com.treode.store.local.temp.TestableTempStore
 import org.scalatest.WordSpec
 
 class LocalStoreSpec extends WordSpec {
@@ -27,7 +28,7 @@ class LocalStoreSpec extends WordSpec {
 
       val size = 1 << bits
       val supply = size * opening
-      val store = new TestableTempLocalStore (bits)
+      val store = new TestableTempStore (bits)
       val create =
         for (i <- 0 until size) yield Accounts.create (i, opening)
       store.writeAndCommit (0, create: _*)

@@ -28,6 +28,22 @@ package object pickle {
   def unpickle [A] (p: Pickler [A], b: Buffer): A =
     p.u (new BufferUnpickleContext (b))
 
+  def toByteArray [A] (p: Pickler [A], v: A): Array [Byte] = {
+    val buf = Buffer (12)
+    com.treode.pickle.pickle (p, v, buf)
+    val bytes = new Array [Byte] (buf.readableBytes)
+    buf.readBytes (bytes, 0, bytes.length)
+    bytes
+  }
+
+  def fromByteArray [A] (p: Pickler [A], bytes: Array [Byte]): A = {
+    val buf = Buffer (12)
+    buf.writeBytes (bytes, 0, bytes.length)
+    val v = com.treode.pickle.unpickle (p, buf)
+    require (buf.readableBytes == 0, "Bytes remain after unpickling.")
+    v
+  }
+
   def size [A] (p: Pickler [A], v: A): Int = {
     val sizer = new SizingPickleContext
     p.p (v, sizer)

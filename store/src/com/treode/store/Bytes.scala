@@ -9,13 +9,8 @@ import com.treode.pickle._
 
 class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
 
-  def unpickle [A] (p: Pickler [A]): A = {
-    val buf = Buffer (12)
-    buf.writeBytes (bytes, 0, bytes.length)
-    val v = com.treode.pickle.unpickle (p, buf)
-    require (buf.readableBytes == 0, "Bytes remain after unpickling.")
-    v
-  }
+  def unpickle [A] (p: Pickler [A]): A =
+    fromByteArray (p, bytes)
 
   /** Only applies if this was created using `Bytes (String, Charset)`. */
   def string (cs: Charset): String = {
@@ -52,13 +47,8 @@ object Bytes extends Ordering [Bytes] {
   def apply (bytes: Array [Byte]): Bytes =
     new Bytes (bytes)
 
-  def apply [A] (pk: Pickler [A], v: A): Bytes = {
-    val buf = Buffer (12)
-    com.treode.pickle.pickle (pk, v, buf)
-    val bytes = new Array [Byte] (buf.readableBytes)
-    buf.readBytes (bytes, 0, bytes.length)
-    new Bytes (bytes)
-  }
+  def apply [A] (pk: Pickler [A], v: A): Bytes =
+    new Bytes (toByteArray (pk, v))
 
   /** Yield a Bytes object directly from the string. */
   def apply (s: String, cs: Charset = StandardCharsets.UTF_8): Bytes =

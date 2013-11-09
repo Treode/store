@@ -1,9 +1,10 @@
-package com.treode.store.local
+package com.treode.store.local.temp
 
 import java.util.concurrent.ConcurrentSkipListSet
 
 import com.treode.concurrent.Callback
 import com.treode.store.{Bytes, TxClock}
+import com.treode.store.local.{TimedCell, TimedReader, TimedTable, TimedWriter}
 
 private class TempTimedTable extends TimedTable {
 
