@@ -12,7 +12,7 @@ private class Writer (
     private var cb: LockSet => Any) extends LockSet {
 
   // For testing mocks.
-  def this() = this (null, SortedSet.empty, TxClock.Zero, _ => ())
+  def this() = this (null, SortedSet.empty, TxClock.zero, _ => ())
 
   private var iter = ids.iterator
   private var max = _ft

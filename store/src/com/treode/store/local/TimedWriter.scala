@@ -15,14 +15,14 @@ private class TimedWriter (
 
   private var _ops = new ArrayList [TxClock => Any]
   private var _awaiting = batch.ops.size
-  private var _advance = TxClock.Zero
+  private var _advance = TxClock.zero
   private var _conflicts = Set.empty [Int]
   private var _failures = new ArrayList [Throwable]
 
   private def finish() {
     val cb = this.cb
     this.cb = null
-    if (!(_advance == TxClock.Zero)) {
+    if (!(_advance == TxClock.zero)) {
       locks.release()
       cb.advance()
     } else if (!_conflicts.isEmpty) {

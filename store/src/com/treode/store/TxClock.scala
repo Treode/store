@@ -22,9 +22,9 @@ object TxClock extends Ordering [TxClock] {
   implicit def apply (time: Long): TxClock =
     new TxClock (time)
 
-  val Zero = new TxClock (0)
+  val zero = new TxClock (0)
 
-  val MaxValue = new TxClock (Long.MaxValue)
+  val max = new TxClock (Long.MaxValue)
 
   def now = new TxClock (System.currentTimeMillis * 1000)
 

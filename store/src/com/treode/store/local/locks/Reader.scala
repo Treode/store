@@ -7,7 +7,7 @@ import com.treode.store.TxClock
 private class Reader (_rt: TxClock, cb: Runnable) {
 
   // For testing mocks.
-  def this() = this (TxClock.Zero, toRunnable(()))
+  def this() = this (TxClock.zero, toRunnable(()))
 
   private var needed = 0
 

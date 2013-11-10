@@ -8,7 +8,7 @@ import org.scalatest.WordSpec
 class CellPageSpec extends WordSpec {
   import Fruits.{Apple, Kiwi, Orange}
 
-  val MaxTime = TxClock.MaxValue
+  val MaxTime = TxClock.max
 
   private def entry (key: Bytes, time: Int): TimedCell =
     new TimedCell (key, time, None)

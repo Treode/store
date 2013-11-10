@@ -19,7 +19,7 @@ trait TestableLocalStore extends LocalStore with Assertions {
 
   def writeAndCommit (ct: TxClock, ops: WriteOp*): TxClock = {
     val batch = WriteBatch (Xid, ct, ct, ops)
-    var ts = TxClock.Zero
+    var ts = TxClock.zero
     write (batch, new StubWriteCallback {
       override def pass (tx: Transaction) {
         ts = tx.ft + 7 // Leave gaps in the timestamps

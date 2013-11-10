@@ -14,7 +14,7 @@ private class TempTimedTable extends TimedTable {
   def read (key: Bytes, n: Int, reader: TimedReader) {
     val c = memtable.ceiling (TimedCell (key, reader.rt, None))
     if (c == null)
-      reader.got (n, TimedCell (key, TxClock.Zero, None))
+      reader.got (n, TimedCell (key, TxClock.zero, None))
     else
       reader.got (n, c)
   }
@@ -24,7 +24,7 @@ private class TempTimedTable extends TimedTable {
   }
 
   def create (key: Bytes, value: Bytes, n: Int, writer: TimedWriter) {
-    val c = memtable.ceiling (TimedCell (key, TxClock.MaxValue, None))
+    val c = memtable.ceiling (TimedCell (key, TxClock.max, None))
     if (c == null || c.value.isEmpty)
       writer.prepare (commit (_, key, Some (value)))
     else
@@ -32,7 +32,7 @@ private class TempTimedTable extends TimedTable {
   }
 
   def hold (key: Bytes, writer: TimedWriter) {
-    val c = memtable.ceiling (TimedCell (key, TxClock.MaxValue, None))
+    val c = memtable.ceiling (TimedCell (key, TxClock.max, None))
     if (c == null || c.time <= writer.ct)
       writer.prepare()
     else
@@ -40,7 +40,7 @@ private class TempTimedTable extends TimedTable {
   }
 
   def update (key: Bytes, value: Bytes, writer: TimedWriter) {
-    val c = memtable.ceiling (TimedCell (key, TxClock.MaxValue, None))
+    val c = memtable.ceiling (TimedCell (key, TxClock.max, None))
     if (c != null && writer.ct < c.time)
       writer.advance (c.time)
     else if (c != null && Some (value) == c.value)
@@ -50,7 +50,7 @@ private class TempTimedTable extends TimedTable {
   }
 
   def delete (key: Bytes, writer: TimedWriter) {
-    val c = memtable.ceiling (TimedCell (key, TxClock.MaxValue, None))
+    val c = memtable.ceiling (TimedCell (key, TxClock.max, None))
     if (c != null && writer.ct < c.time)
       writer.advance (c.time)
     else if (c == null || c.value.isEmpty)

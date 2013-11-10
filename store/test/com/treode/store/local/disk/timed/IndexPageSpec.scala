@@ -7,7 +7,7 @@ import org.scalatest.WordSpec
 class IndexPageSpec extends WordSpec {
   import Fruits.{Apple, Kiwi, Orange}
 
-  val MaxTime = TxClock.MaxValue
+  val MaxTime = TxClock.max
   val One = Bytes ("one")
 
   private def entry (key: Bytes, time: Int): IndexEntry =
