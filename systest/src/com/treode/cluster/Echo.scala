@@ -23,7 +23,7 @@ object Echo {
     }
 
     def loop (i: Int) {
-      new _echo.QuorumCollector ("Hello World") (Acknowledgements.settled (0, 1, 2), backoff) {
+      new _echo.QuorumCollector ("Hello World") (host.locate (0), backoff) {
 
         process (_ => ())
 

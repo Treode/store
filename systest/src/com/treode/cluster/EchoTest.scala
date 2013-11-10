@@ -104,6 +104,7 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
       val scheduler = _scheduler
       val mailboxes = _mailboxes
       val peers = _peers
+      def locate (id: Int) = Acknowledgements.settled (0, 1, 2)
     }
 
     Echo.attach()

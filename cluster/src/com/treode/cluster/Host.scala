@@ -4,6 +4,7 @@ import scala.util.Random
 
 import com.treode.cluster.messenger.{PeerRegistry, MailboxRegistry}
 import com.treode.concurrent.Scheduler
+import com.treode.pickle.Pickler
 
 trait Host {
 
@@ -12,4 +13,9 @@ trait Host {
   val scheduler: Scheduler
   val mailboxes: MailboxRegistry
   val peers: PeerRegistry
+
+  def locate (id: Int): Acknowledgements
+
+  def locate [K] (p: Pickler [K], seed: Long, key: K): Acknowledgements =
+    locate (0)
 }
