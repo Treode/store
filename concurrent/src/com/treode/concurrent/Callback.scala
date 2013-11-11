@@ -16,7 +16,15 @@ trait Callback [-T] extends (T => Unit) {
       pass (v)
     } catch {
       case t: Throwable => fail (t)
-    }}
+    }
+
+    def before [S] (f: S => T): Callback [S] = {
+      val outer = this
+      new Callback [S] {
+        def pass (v: S) = outer (f (v))
+        def fail (t: Throwable) = outer.fail (t)
+      }}
+}
 
 object Callback {
 
@@ -50,18 +58,6 @@ object Callback {
 
   def guard [A] (cb: Callback [A]) (f: Any): Unit = macro _guard [A]
 
-  def unary [A] (f: A => Any): Callback [A] =
-    new Callback [A] {
-      def pass (v: A): Unit = f (v)
-      def fail (t: Throwable): Unit = throw t
-    }
-
-  def unary [A] (cb: Callback [_]) (f: A => Any): Callback [A] =
-    new Callback [A] {
-      def pass (v: A): Unit = f (v)
-      def fail (t: Throwable): Unit = cb.fail (t)
-    }
-
   def ignore [A]: Callback [A] =
     new Callback [A] {
       def pass (v: A): Unit = ()
@@ -74,14 +70,8 @@ object Callback {
       def fail (t: Throwable): Unit = throw t
     }
 
-  def unit (cb: Callback [_]) (f: => Any): Callback [Unit] =
-    new Callback [Unit] {
-      def pass (v: Unit): Unit = f
-      def fail (t: Throwable): Unit = cb.fail (t)
-    }
-
-  def noop: Callback [Unit] =
-    new Callback [Unit] {
-      def pass (v: Unit): Unit = ()
+  def unary [A] (f: A => Any): Callback [A] =
+    new Callback [A] {
+      def pass (v: A): Unit = f (v)
       def fail (t: Throwable): Unit = throw t
     }}
