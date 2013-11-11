@@ -1,9 +1,11 @@
 package com.treode.store.local
 
 import com.treode.concurrent.Callback
-import com.treode.store.{Bytes, Value}
+import com.treode.store.{Bytes, SimpleTable, Value}
+import org.scalatest.Suite
 
 trait SimpleTestTools {
+  this: Suite =>
 
   implicit class RichInt (v: Int) {
     def :: (k: Bytes): SimpleCell = SimpleCell (k, Some (Bytes (v)))
@@ -28,5 +30,14 @@ trait SimpleTestTools {
       if (iter.hasNext)
         iter.next (loop)
       builder.result
+    }}
+
+  implicit class RichSimpleTable (t: SimpleTable) {
+
+    def getAndExpect (key: Bytes, expected: Option [Bytes]) {
+      t.get (key, new Callback [Option [Bytes]] {
+        def pass (value: Option [Bytes]) = expectResult (expected) (value)
+        def fail (t: Throwable) = throw t
+      })
     }}
 }
