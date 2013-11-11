@@ -1,8 +1,10 @@
 package com.treode.store.local
 
+import java.io.Closeable
+
 import com.treode.store.Bytes
 
-trait TimedTable {
+trait TimedTable extends Closeable {
 
   def read (key: Bytes, n: Int, reader: TimedReader)
 

@@ -1,13 +1,12 @@
 package com.treode.store.local
 
-import com.treode.cluster.events.Events
 import com.treode.concurrent.Callback
 import com.treode.store._
-import com.treode.store.local.locks.{LockSet, LockSpace}
+import com.treode.store.local.locks.LockSpace
 
-abstract class LocalStore extends Store {
+private abstract class LocalStore (bits: Int) extends Store {
 
-  protected def space: LockSpace
+  private val space = new LockSpace (bits)
 
   protected def table (id: TableId): TimedTable
 

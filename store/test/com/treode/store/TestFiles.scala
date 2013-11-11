@@ -6,7 +6,7 @@ import java.nio.file.attribute.{BasicFileAttributes, FileAttribute}
 
 object TestFiles {
 
-  def createDirectories (path: Path, attrs: FileAttribute [_]*): Path =
+  def createDirectory (path: Path, attrs: FileAttribute [_]*): Path =
     Files.createDirectories (path, attrs: _*)
 
   def createTempDirectory (path: String, attrs: FileAttribute [_]*): Path =

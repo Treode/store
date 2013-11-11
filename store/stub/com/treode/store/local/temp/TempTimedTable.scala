@@ -57,4 +57,7 @@ private class TempTimedTable extends TimedTable {
       writer.prepare()
     else
       writer.prepare (commit (_, key, None))
-  }}
+  }
+
+  def close() = ()
+}
