@@ -1,21 +1,20 @@
 package com.treode.concurrent
 
-import java.util.ArrayDeque
-import scala.collection.mutable.PriorityQueue
+import scala.collection.mutable.{ArrayBuffer, PriorityQueue}
+import scala.util.Random
 
-class StubScheduler extends Scheduler {
-  import StubScheduler.Timer
+class StubScheduler private (random: Random) extends Scheduler {
 
-  private val tasks = new ArrayDeque [Runnable]
+  private val tasks = new ArrayBuffer [Runnable]
   private val timers = new PriorityQueue [Timer]
 
-  var time = 0
+  private var time = 0
 
   def execute (task: Runnable): Unit =
-    tasks.add (task)
+    tasks.append (task)
 
   def execute (task: => Any): Unit =
-    tasks.add (toRunnable (task))
+    tasks.append (toRunnable (task))
 
   def delay (millis: Long) (task: => Any): Unit =
     timers.enqueue (Timer (time + millis, toRunnable (task)))
@@ -24,13 +23,18 @@ class StubScheduler extends Scheduler {
     timers.enqueue (Timer (millis, toRunnable (task)))
 
   def spawn (task: => Any): Unit =
-    tasks.add (toRunnable (task))
+    tasks.append (toRunnable (task))
 
   def isTasksEmpty: Boolean =
     tasks.isEmpty
 
-  def nextTask(): Unit =
-    tasks.remove().run()
+  def nextTask(): Unit = {
+    val i = random.nextInt (tasks.size)
+    val t = tasks (i)
+    tasks (i) = tasks (tasks.size-1)
+    tasks.reduceToSize (tasks.size-1)
+    t.run()
+  }
 
   def runTasks(): Unit =
     while (!isTasksEmpty)
@@ -42,12 +46,9 @@ class StubScheduler extends Scheduler {
 
 object StubScheduler {
 
-  private [concurrent] case class Timer (time: Long, task: Runnable) extends Ordered [Timer] {
+  def apply(): StubScheduler =
+    new StubScheduler (new Random (0))
 
-    def compare (that: Timer) = this.time compare that.time
-  }
-
-  private [concurrent] object Timer extends Ordering [Timer] {
-
-    def compare (x: Timer, y: Timer) = x compare y
-  }}
+  def apply (random: Random): StubScheduler =
+    new StubScheduler (random)
+}

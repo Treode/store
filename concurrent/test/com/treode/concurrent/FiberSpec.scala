@@ -12,7 +12,7 @@ class FiberSpec extends FlatSpec {
     }
 
   "A Fiber" should "run one task" in {
-    val s = new StubScheduler
+    val s = StubScheduler()
     val f = new Fiber (s)
     var a = false
     f.execute (a = true)
@@ -22,7 +22,7 @@ class FiberSpec extends FlatSpec {
   }
 
   it should "run two queued tasks" in {
-    val s = new StubScheduler
+    val s = StubScheduler()
     val f = new Fiber (s)
     var a = false
     var b = false
@@ -30,15 +30,13 @@ class FiberSpec extends FlatSpec {
     f.execute (b = true)
     expectResult (false) (a)
     expectResult (false) (b)
-    s.nextTask()
+    s.runTasks()
     expectResult (true) (a)
-    expectResult (false) (b)
-    s.nextTask()
     expectResult (true) (b)
   }
 
   it should "run two tasks one after the other" in {
-    val s = new StubScheduler
+    val s = StubScheduler()
     val f = new Fiber (s)
     var a = false
     var b = false
@@ -53,20 +51,19 @@ class FiberSpec extends FlatSpec {
   }
 
   it should "report an exception thrown from a task and continue" in {
-    val s = new StubScheduler
+    val s = StubScheduler()
     val f = new Fiber (s)
     var a = false
     f.execute (throwDistinguishedException)
     f.execute (a = true)
     expectResult (false) (a)
-    intercept [DistinguishedException] (s.nextTask())
-    expectResult (false) (a)
-    s.nextTask()
+    intercept [DistinguishedException] (s.runTasks())
+    s.runTasks()
     expectResult (true) (a)
   }
 
   it should "run a suspendable task" in {
-    val s = new StubScheduler
+    val s = StubScheduler()
     val f = new Fiber (s)
     var a = false
     f.begin {cb => a = true; cb()}
@@ -76,27 +73,25 @@ class FiberSpec extends FlatSpec {
   }
 
   it should "report an exception thrown from a suspendable task and continue" in {
-    val s = new StubScheduler
+    val s = StubScheduler()
     val f = new Fiber (s)
     var a = false
     f.begin {cb => throw new DistinguishedException}
     f.execute (a = true)
     expectResult (false) (a)
-    intercept [DistinguishedException] (s.nextTask())
-    expectResult (false) (a)
-    s.nextTask()
+    intercept [DistinguishedException] (s.runTasks())
+    s.runTasks()
     expectResult (true) (a)
   }
 
   it should "report an exception passed from a suspendable task and continue" in {
-    val s = new StubScheduler
+    val s = StubScheduler()
     val f = new Fiber (s)
     var a = false
     f.begin {cb => cb.fail (new DistinguishedException)}
     f.execute (a = true)
     expectResult (false) (a)
-    intercept [DistinguishedException] (s.nextTask())
-    expectResult (false) (a)
-    s.nextTask()
+    intercept [DistinguishedException] (s.runTasks())
+    s.runTasks()
     expectResult (true) (a)
   }}
