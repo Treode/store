@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentSkipListMap
 import com.treode.concurrent.Callback
 import com.treode.store.{Bytes, SimpleTable}
 
-private class TempSimpleTable extends SimpleTable {
+private [store] class TempSimpleTable extends SimpleTable {
 
   protected val memtable = new ConcurrentSkipListMap [Bytes, Bytes]
 

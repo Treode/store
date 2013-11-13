@@ -8,6 +8,7 @@ private trait SimpleAccessor [K, V] {
   def get (k: K, cb: Callback [Option [V]])
   def put (k: K, v: V, cb: Callback [Unit])
   def del (k: K, cb: Callback [Unit])
+  def close()
 
   def put (k: K, v: V): Unit = put (k, v, Callback.ignore)
   def del (k: K): Unit = del (k, Callback.ignore)
@@ -26,6 +27,8 @@ private object SimpleAccessor {
 
       def del (k: Bytes, cb: Callback [Unit]): Unit =
         t.del (k, cb)
+
+      def close(): Unit = t.close()
     }
 
   def apply [K, V] (s: SimpleStore, t: TableId): SimpleAccessor [Bytes, Bytes] =
@@ -50,7 +53,10 @@ private object SimpleAccessor {
       def del (k: K, cb: Callback [Unit]): Unit =
         Callback.guard (cb) {
           t.del (Bytes (pk, k), cb)
-        }}
+        }
+
+      def close(): Unit = t.close()
+    }
 
   def apply [K, V] (s: SimpleStore, t: TableId, pk: Pickler [K], pv: Pickler [V]): SimpleAccessor [K, V] =
     apply (s.table (t), pk, pv)
@@ -71,7 +77,10 @@ private object SimpleAccessor {
       def del (k: K, cb: Callback [Unit]): Unit =
         Callback.guard (cb) {
           t.del (Bytes (pk, k), cb)
-        }}
+        }
+
+      def close(): Unit = t.close()
+    }
 
   def key [K] (s: SimpleStore, t: TableId, pk: Pickler [K]): SimpleAccessor [K, Bytes] =
     key (s.table (t), pk)
@@ -94,6 +103,8 @@ private object SimpleAccessor {
 
       def del (k: Bytes, cb: Callback [Unit]): Unit =
         t.del (k, cb)
+
+      def close(): Unit = t.close()
     }
 
   def value [V] (s: SimpleStore, t: TableId, pv: Pickler [V]): SimpleAccessor [Bytes, V] =

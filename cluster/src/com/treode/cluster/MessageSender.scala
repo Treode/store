@@ -6,6 +6,7 @@ trait MessageSender {
   def apply (to: Peer)
   def apply (to: HostId) (implicit h: Host)
   def apply (to: Iterable [HostId]) (implicit h: Host)
+  def apply (acks: Acknowledgements) (implicit h: Host)
 }
 
 object MessageSender {
