@@ -13,7 +13,7 @@ class MailboxRegistry (implicit events: Events) {
   // Visible for testing.
   private [messenger] val mbxs = new ConcurrentHashMap [Long, PickledFunction]
 
-  private [messenger] def deliver (id: MailboxId, from: Peer, buffer: Buffer, length: Int) {
+  private [cluster] def deliver (id: MailboxId, from: Peer, buffer: Buffer, length: Int) {
     if (length == 0)
       return
 

@@ -8,7 +8,7 @@ class StubScheduler private (random: Random) extends Scheduler {
   private val tasks = new ArrayBuffer [Runnable]
   private val timers = new PriorityQueue [Timer]
 
-  private var time = 0
+  private var time = 0L
 
   def execute (task: Runnable): Unit =
     tasks.append (task)
@@ -25,8 +25,6 @@ class StubScheduler private (random: Random) extends Scheduler {
   def spawn (task: => Any): Unit =
     tasks.append (toRunnable (task))
 
-  def isTasksEmpty: Boolean =
-    tasks.isEmpty
 
   def nextTask(): Unit = {
     val i = random.nextInt (tasks.size)
@@ -36,13 +34,19 @@ class StubScheduler private (random: Random) extends Scheduler {
     t.run()
   }
 
-  def runTasks(): Unit =
-    while (!isTasksEmpty)
-      nextTask()
+  def nextTimer() {
+    val t = timers.dequeue()
+    time = t.time
+    t.task.run()
+  }
 
-  def nextTimer(): Unit =
-    timers.dequeue().task.run()
-}
+  def runTasks (withTimers: Boolean = false) {
+    while (!tasks.isEmpty || withTimers && !timers.isEmpty) {
+      if (tasks.isEmpty)
+        nextTimer()
+      else
+        nextTask()
+    }}}
 
 object StubScheduler {
 
