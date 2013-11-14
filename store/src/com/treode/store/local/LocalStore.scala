@@ -4,7 +4,7 @@ import com.treode.concurrent.Callback
 import com.treode.store._
 import com.treode.store.local.locks.LockSpace
 
-private abstract class LocalStore (bits: Int) extends Store {
+private abstract class LocalStore (bits: Int) extends PreparableStore {
 
   private val space = new LockSpace (bits)
 
@@ -20,7 +20,7 @@ private abstract class LocalStore (bits: Int) extends Store {
           table (op.table) .read (op.key, i, r)
       }}
 
-  def write (batch: WriteBatch, cb: WriteCallback): Unit =
+  def prepare (batch: WriteBatch, cb: PrepareCallback): Unit =
     Callback.guard (cb) {
       require (!batch.ops.isEmpty, "Batch must include at least one operation")
       val ids = batch.ops map (op => (op.table, op.key).hashCode)

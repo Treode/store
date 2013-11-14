@@ -31,7 +31,7 @@ class LocalStoreSpec extends WordSpec {
       val store = new TestableTempStore (bits)
       val create =
         for (i <- 0 until size) yield Accounts.create (i, opening)
-      store.writeAndCommit (0, create: _*)
+      store.prepareAndCommit (0, create: _*)
 
       val executor = Executors.newScheduledThreadPool (threads)
       val scheduler = Scheduler (executor)
@@ -65,7 +65,7 @@ class LocalStoreSpec extends WordSpec {
             val n = Random.nextInt (b1)
             val wbatch = WriteBatch (Xid, ct, ct,
                 Accounts.update (x, b1-n), Accounts.update (y, b2+n))
-            store.write (wbatch, new StubWriteCallback {
+            store.prepare (wbatch, new StubPrepareCallback {
               override def pass (tx: Transaction): Unit = scheduler.execute {
                 tx.commit (tx.ft+1)
                 cb()

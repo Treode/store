@@ -11,7 +11,7 @@ import com.treode.store.local.locks.LockSet
 private class TimedWriter (
     batch: WriteBatch,
     locks: LockSet,
-    private var cb: WriteCallback) extends Transaction {
+    private var cb: PrepareCallback) extends Transaction {
 
   private var _ops = new ArrayList [TxClock => Any]
   private var _awaiting = batch.ops.size

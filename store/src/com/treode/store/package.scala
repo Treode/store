@@ -8,20 +8,30 @@ package store {
 
   trait ReadCallback extends Callback [Seq [Value]]
 
-  trait Transaction {
-    def ft: TxClock
-    def commit (wt: TxClock)
-    def abort()
-  }
-
-  trait WriteCallback extends Callback [Transaction] {
-    def advance()
+  trait WriteCallback extends Callback [TxClock] {
     def collisions (ks: Set [Int])
+    def advance()
   }
 
   trait Store {
     def read (batch: ReadBatch, cb: ReadCallback)
     def write (batch: WriteBatch, cb: WriteCallback)
+  }
+
+  private trait Transaction {
+    def ft: TxClock
+    def commit (wt: TxClock)
+    def abort()
+  }
+
+  private trait PrepareCallback extends Callback [Transaction] {
+    def collisions (ks: Set [Int])
+    def advance()
+  }
+
+  private trait PreparableStore {
+    def read (batch: ReadBatch, cb: ReadCallback)
+    def prepare (batch: WriteBatch, cb: PrepareCallback)
   }}
 
 package object store {

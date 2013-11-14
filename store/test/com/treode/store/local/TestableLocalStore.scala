@@ -18,10 +18,10 @@ private trait TestableLocalStore extends Assertions {
     })
   }
 
-  def writeAndCommit (ct: TxClock, ops: WriteOp*): TxClock = {
+  def prepareAndCommit (ct: TxClock, ops: WriteOp*): TxClock = {
     val batch = WriteBatch (Xid, ct, ct, ops)
     var ts = TxClock.zero
-    write (batch, new StubWriteCallback {
+    prepare (batch, new StubPrepareCallback {
       override def pass (tx: Transaction) {
         ts = tx.ft + 7 // Leave gaps in the timestamps
         tx.commit (ts)
@@ -29,23 +29,23 @@ private trait TestableLocalStore extends Assertions {
     ts
   }
 
-  def writeAndAbort (ct: TxClock, ops: WriteOp*) {
+  def prepareAndAbort (ct: TxClock, ops: WriteOp*) {
     val batch = WriteBatch (Xid, ct, ct, ops)
-    write (batch, new StubWriteCallback {
+    prepare (batch, new StubPrepareCallback {
       override def pass (tx: Transaction) = tx.abort()
     })
   }
 
-  def writeExpectAdvance (ct: TxClock, ops: WriteOp*) = {
+  def prepareExpectAdvance (ct: TxClock, ops: WriteOp*) = {
     val batch = WriteBatch (Xid, ct, ct, ops)
-    write (batch, new StubWriteCallback {
+    prepare (batch, new StubPrepareCallback {
       override def advance() = ()
     })
   }
 
-  def writeExpectCollisions (ct: TxClock, ops: WriteOp*) (expected: Int*) = {
+  def prepareExpectCollisions (ct: TxClock, ops: WriteOp*) (expected: Int*) = {
     val batch = WriteBatch (Xid, ct, ct, ops)
-    write (batch, new StubWriteCallback {
+    prepare (batch, new StubPrepareCallback {
       override def collisions (actual: Set [Int]) = expectResult (expected.toSet) (actual)
     })
   }}
