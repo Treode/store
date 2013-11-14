@@ -7,12 +7,12 @@ import com.treode.store.TxClock
 // Tracks the acquisition of locks and invokes the callback when they have all been granted.
 private class Writer (
     space: LockSpace,
-    ids: SortedSet [Int],
     _ft: TxClock,
+    private var ids: SortedSet [Int],
     private var cb: LockSet => Any) extends LockSet {
 
   // For testing mocks.
-  def this() = this (null, SortedSet.empty, TxClock.zero, _ => ())
+  def this() = this (null, TxClock.zero, SortedSet.empty, _ => ())
 
   private var iter = ids.iterator
   private var max = _ft
@@ -60,6 +60,11 @@ private class Writer (
   def ft = max
 
   def release() {
-    require (cb == null, "Locks cannot be released.")
+    require (cb == null, "Locks cannot be released until acquired.")
+    require (ids != null, "Locks were already released.")
     ids foreach (space.release (_, this))
-  }}
+    ids = null
+  }
+
+  override def toString = f"Writer:${System.identityHashCode(this)}%08X"
+}

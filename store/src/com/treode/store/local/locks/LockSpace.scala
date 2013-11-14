@@ -30,5 +30,5 @@ private [store] class LockSpace (bits: Int) {
     new Reader (rt, toRunnable (cb)) .init (this, ids map (_ & mask) toSet)
 
   def write (ft: TxClock, ids: Seq [Int]) (cb: LockSet => Any): Unit =
-    new Writer (this, SortedSet (ids map (_ & mask): _*), ft, cb) .init()
+    new Writer (this, ft, SortedSet (ids map (_ & mask): _*), cb) .init()
 }

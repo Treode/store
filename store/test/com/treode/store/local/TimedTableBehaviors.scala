@@ -35,28 +35,28 @@ trait TimedTableBehaviors extends TimedTestTools {
 
       "and a write commits should" - {
 
-        "allow and perform create Apple::1 at ts=0" in {
+        "allow create Apple::1 at ts=0" in {
           val t = nextTable
           val ts = s.prepareAndCommit (0, Create (t, Apple, One))
           expectCells (Apple##ts::1) (s.table (t))
         }
 
-        "allow and ignore hold Apple at ts=0" in {
+        "allow hold Apple at ts=0" in {
           val t = nextTable
           s.prepareAndCommit (0, Hold (t, Apple))
           expectCells () (s.table (t))
         }
 
-        "allow and perform update Apple::1 at ts=0" in {
+        "allow update Apple::1 at ts=0" in {
           val t = nextTable
           val ts = s.prepareAndCommit (0, Update (t, Apple, One))
           expectCells (Apple##ts::1) (s.table (t))
         }
 
-        "allow and ignore delete Apple at ts=0" in {
+        "allow delete Apple at ts=0" in {
           val t = nextTable
-          s.prepareAndCommit (0, Delete (t, Apple))
-          expectCells () (s.table (t))
+          val ts = s.prepareAndCommit (0, Delete (t, Apple))
+          expectCells (Apple##ts) (s.table (t))
         }}
 
       "and a write aborts should" - {
@@ -132,49 +132,49 @@ trait TimedTableBehaviors extends TimedTestTools {
 
       "and a write commits should" -  {
 
-        "allow and ignore hold Apple at ts+1" in {
+        "allow hold Apple at ts+1" in {
           val (t, ts) = newTableWithData
           s.prepareAndCommit (ts+1, Hold (t, Apple))
           expectCells (Apple##ts::1) (s.table (t))
         }
 
-        "allow and ignore hold Apple at ts" in {
+        "allow hold Apple at ts" in {
           val (t, ts) = newTableWithData
           s.prepareAndCommit (ts, Hold (t, Apple))
           expectCells (Apple##ts::1) (s.table (t))
         }
 
-        "allow and perform update Apple::2 at ts+1" in {
+        "allow update Apple::2 at ts+1" in {
           val (t, ts1) = newTableWithData
           val ts2 = s.prepareAndCommit (ts1+1, Update (t, Apple, Two))
           expectCells (Apple##ts2::2, Apple##ts1::1) (s.table (t))
         }
 
-        "allow and perform update Apple::2 at ts" in {
+        "allow update Apple::2 at ts" in {
           val (t, ts1) = newTableWithData
           val ts2 = s.prepareAndCommit (ts1, Update (t, Apple, Two))
           expectCells (Apple##ts2::2, Apple##ts1::1) (s.table (t))
         }
 
-        "allow and ignore update Apple::1 at ts+1" in {
-          val (t, ts) = newTableWithData
-          s.prepareAndCommit (ts+1, Update (t, Apple, One))
-          expectCells (Apple##ts::1) (s.table (t))
+        "allow update Apple::1 at ts+1" in {
+          val (t, ts1) = newTableWithData
+          val ts2 = s.prepareAndCommit (ts1+1, Update (t, Apple, One))
+          expectCells (Apple##ts2::1, Apple##ts1::1) (s.table (t))
         }
 
-        "allow and ignore update Apple::1 at ts" in {
-          val (t, ts) = newTableWithData
-          s.prepareAndCommit (ts, Update (t, Apple, One))
-          expectCells (Apple##ts::1) (s.table (t))
+        "allow update Apple::1 at ts" in {
+          val (t, ts1) = newTableWithData
+          val ts2 = s.prepareAndCommit (ts1, Update (t, Apple, One))
+          expectCells (Apple##ts2::1, Apple##ts1::1) (s.table (t))
         }
 
-        "allow and perform delete Apple at ts+1" in {
+        "allow delete Apple at ts+1" in {
           val (t, ts1) = newTableWithData
           val ts2 = s.prepareAndCommit (ts1+1, Delete (t, Apple))
           expectCells (Apple##ts2, Apple##ts1::1) (s.table (t))
         }
 
-        "allow and perform delete Apple at ts" in {
+        "allow delete Apple at ts" in {
           val (t, ts1) = newTableWithData
           val ts2 = s.prepareAndCommit (ts1, Delete (t, Apple))
           expectCells (Apple##ts2, Apple##ts1::1) (s.table (t))
@@ -182,16 +182,16 @@ trait TimedTableBehaviors extends TimedTestTools {
 
       "and a write aborts should" -  {
 
-        "allow and ignore update Apple::2 at ts+1" in {
+        "ignore update Apple::2 at ts+1" in {
           val (t, ts1) = newTableWithData
-          val ts2 = s.prepareAndCommit (ts1+1, Update (t, Apple, Two))
-          expectCells (Apple##ts2::2, Apple##ts1::1) (s.table (t))
+          s.prepareAndAbort (ts1+1, Update (t, Apple, Two))
+          expectCells (Apple##ts1::1) (s.table (t))
         }
 
-        "allow and perform delete Apple at ts+1" in {
+        "ignore delete Apple at ts+1" in {
           val (t, ts1) = newTableWithData
-          val ts2 = s.prepareAndCommit (ts1+1, Delete (t, Apple))
-          expectCells (Apple##ts2, Apple##ts1::1) (s.table (t))
+          s.prepareAndAbort (ts1+1, Delete (t, Apple))
+          expectCells (Apple##ts1::1) (s.table (t))
         }}}
 
     "when having Apple##ts2::2 and Apple##ts1::1 should" -  {

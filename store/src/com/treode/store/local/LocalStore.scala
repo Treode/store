@@ -25,7 +25,7 @@ private abstract class LocalStore (bits: Int) extends PreparableStore {
       require (!batch.ops.isEmpty, "Batch must include at least one operation")
       val ids = batch.ops map (op => (op.table, op.key).hashCode)
       space.write (batch.ft, ids) { locks =>
-        val w = new TimedWriter (batch, locks, cb)
+        val w = new TimedWriter (batch, this, locks, cb)
         for ((op, i) <- batch.ops.zipWithIndex) {
           import WriteOp._
           val t = table (op.table)
@@ -35,4 +35,18 @@ private abstract class LocalStore (bits: Int) extends PreparableStore {
             case op: Update => t.update (op.key, op.value, w)
             case op: Delete => t.delete (op.key, w)
           }}}}
+
+  def commit (batch: WriteBatch, wt: TxClock, cb: Callback [Unit]): Unit =
+    Callback.guard (cb) {
+      require (!batch.ops.isEmpty, "Batch must include at least one operation")
+      val c = new TimedCommitter (batch, cb)
+      for (op <- batch.ops) {
+        import WriteOp._
+        val t = table (op.table)
+        op match {
+          case op: Create => t.create (op.key, op.value, wt, c)
+          case op: Hold   => c()
+          case op: Update => t.update (op.key, op.value, wt, c)
+          case op: Delete => t.delete (op.key, wt, c)
+        }}}
 }

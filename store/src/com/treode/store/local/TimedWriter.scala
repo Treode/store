@@ -10,10 +10,10 @@ import com.treode.store.local.locks.LockSet
 
 private class TimedWriter (
     batch: WriteBatch,
-    locks: LockSet,
+    store: PreparableStore,
+    private var locks: LockSet,
     private var cb: PrepareCallback) extends Transaction {
 
-  private var _ops = new ArrayList [TxClock => Any]
   private var _awaiting = batch.ops.size
   private var _advance = TxClock.zero
   private var _collisions = Set.empty [Int]
@@ -24,12 +24,15 @@ private class TimedWriter (
     this.cb = null
     if (!(_advance == TxClock.zero)) {
       locks.release()
+      locks = null
       cb.advance()
     } else if (!_collisions.isEmpty) {
       locks.release()
+      locks = null
       cb.collisions (_collisions)
     } else if (!_failures.isEmpty) {
       locks.release()
+      locks = null
       cb.fail (MultiException (_failures.toSeq))
     } else {
       cb.apply (this)
@@ -38,16 +41,6 @@ private class TimedWriter (
   def ct = batch.ct
 
   def ft = locks.ft
-
-  def prepare (f: TxClock => Any) {
-    val ready = synchronized {
-      _ops.add (f)
-      _awaiting -= 1
-      _awaiting == 0
-    }
-    if (ready)
-      finish()
-  }
 
   def prepare() {
     val ready = synchronized {
@@ -88,14 +81,28 @@ private class TimedWriter (
       finish()
   }
 
-  def commit (wt: TxClock) {
-    require (cb == null, "Transaction cannot be committed.")
-    require (wt > ft)
-    _ops foreach (_ (wt))
-    locks.release()
-  }
+  def commit (wt: TxClock, cb: Callback [Unit]) {
+    val cb1 = new Callback [Unit] {
+      def pass (v: Unit) {
+        locks.release()
+        locks = null
+        cb()
+      }
+      def fail (t: Throwable) = cb.fail (t)
+    }
+    Callback.guard (cb1) {
+      require (this.cb == null, "Transaction cannot be closed until prepared.")
+      require (locks != null, "Transaction already closed.")
+      require (wt > ft)
+      store.commit (batch, wt, cb1)
+    }}
 
   def abort() {
-    require (cb == null, "Transaction cannot be aborted.")
+    require (this.cb == null, "Transaction cannot be closed until prepared.")
+    require (locks != null, "Transaction already closed.")
     locks.release()
-  }}
+    locks = null
+  }
+
+  override def toString = f"TimedWriter:${System.identityHashCode(this)}%08X"
+}

@@ -20,7 +20,7 @@ package store {
 
   private trait Transaction {
     def ft: TxClock
-    def commit (wt: TxClock)
+    def commit (wt: TxClock, cb: Callback [Unit])
     def abort()
   }
 
@@ -32,6 +32,7 @@ package store {
   private trait PreparableStore {
     def read (batch: ReadBatch, cb: ReadCallback)
     def prepare (batch: WriteBatch, cb: PrepareCallback)
+    def commit (batch: WriteBatch, wt: TxClock, cb: Callback [Unit])
   }}
 
 package object store {

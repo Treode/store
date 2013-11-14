@@ -67,8 +67,7 @@ class LocalStoreSpec extends WordSpec {
                 Accounts.update (x, b1-n), Accounts.update (y, b2+n))
             store.prepare (wbatch, new StubPrepareCallback {
               override def pass (tx: Transaction): Unit = scheduler.execute {
-                tx.commit (tx.ft+1)
-                cb()
+                tx.commit (tx.ft+1, cb)
               }
               override def advance() = cb()
             })
