@@ -7,5 +7,5 @@ class StubWriteCallback extends WriteCallback {
   def pass (tx: Transaction) = unexpected
   def fail (t: Throwable) = throw t
   def advance() = unexpected
-  def conflicts (ks: Set [Int]) = unexpected
+  def collisions (ks: Set [Int]) = unexpected
 }

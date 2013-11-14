@@ -16,7 +16,7 @@ private class TimedWriter (
   private var _ops = new ArrayList [TxClock => Any]
   private var _awaiting = batch.ops.size
   private var _advance = TxClock.zero
-  private var _conflicts = Set.empty [Int]
+  private var _collisions = Set.empty [Int]
   private var _failures = new ArrayList [Throwable]
 
   private def finish() {
@@ -25,9 +25,9 @@ private class TimedWriter (
     if (!(_advance == TxClock.zero)) {
       locks.release()
       cb.advance()
-    } else if (!_conflicts.isEmpty) {
+    } else if (!_collisions.isEmpty) {
       locks.release()
-      cb.conflicts (_conflicts)
+      cb.collisions (_collisions)
     } else if (!_failures.isEmpty) {
       locks.release()
       cb.fail (MultiException (_failures.toSeq))
@@ -70,7 +70,7 @@ private class TimedWriter (
 
   def conflict (n: Int) {
     val ready = synchronized {
-      _conflicts += n
+      _collisions += n
       _awaiting -= 1
       _awaiting == 0
     }

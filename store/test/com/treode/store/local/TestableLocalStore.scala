@@ -43,9 +43,9 @@ private trait TestableLocalStore extends Assertions {
     })
   }
 
-  def writeExpectConflicts (ct: TxClock, ops: WriteOp*) (expected: Int*) = {
+  def writeExpectCollisions (ct: TxClock, ops: WriteOp*) (expected: Int*) = {
     val batch = WriteBatch (Xid, ct, ct, ops)
     write (batch, new StubWriteCallback {
-      override def conflicts (actual: Set [Int]) = expectResult (expected.toSet) (actual)
+      override def collisions (actual: Set [Int]) = expectResult (expected.toSet) (actual)
     })
   }}

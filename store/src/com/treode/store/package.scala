@@ -16,7 +16,7 @@ package store {
 
   trait WriteCallback extends Callback [Transaction] {
     def advance()
-    def conflicts (ks: Set [Int])
+    def collisions (ks: Set [Int])
   }
 
   trait Store {

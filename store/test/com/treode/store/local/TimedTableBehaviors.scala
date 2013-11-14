@@ -112,7 +112,7 @@ trait TimedTableBehaviors extends TimedTestTools {
 
         "reject create Apple##ts-1" in {
           val (t, ts) = newTableWithData
-          s.writeExpectConflicts (ts-1, Create (t, Apple, One)) (0)
+          s.writeExpectCollisions (ts-1, Create (t, Apple, One)) (0)
         }
 
         "reject hold Apple##ts-1" in {
