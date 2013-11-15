@@ -18,6 +18,7 @@ private trait TestableLocalStore extends Assertions {
     read (batch, new StubReadCallback {
       override def pass (_actual: Seq [Value]) = actual = _actual
     })
+    assert (actual != null, "Expected values.")
     expectResult (expected) (actual)
   }
 
@@ -29,22 +30,28 @@ private trait TestableLocalStore extends Assertions {
         ts = tx.ft + 7 // Leave gaps in the timestamps
         tx.commit (ts, Callback.ignore)
       }})
-    assert (ts != TxClock.zero, "Write was not committed")
+    assert (ts != TxClock.zero, "Write was not committed.")
     ts
   }
 
   def prepareAndAbort (ct: TxClock, ops: WriteOp*) {
     val batch = WriteBatch (Xid, ct, ct, ops)
+    var mark = false
     prepare (batch, new StubPrepareCallback {
-      override def pass (tx: Transaction) = tx.abort()
-    })
+      override def pass (tx: Transaction) {
+        tx.abort()
+        mark = true
+      }})
+    assert (mark, "Write was not aborted.")
   }
 
   def prepareExpectAdvance (ct: TxClock, ops: WriteOp*) = {
     val batch = WriteBatch (Xid, ct, ct, ops)
+    var mark = false
     prepare (batch, new StubPrepareCallback {
-      override def advance() = ()
+      override def advance() = mark = true
     })
+    assert (mark, "Expected advance.")
   }
 
   def prepareExpectCollisions (ct: TxClock, ops: WriteOp*) (expected: Int*) = {
@@ -53,5 +60,6 @@ private trait TestableLocalStore extends Assertions {
     prepare (batch, new StubPrepareCallback {
       override def collisions (_actual: Set [Int]) = actual = _actual
     })
+    assert (actual != null, "Expected collisions.")
     expectResult (expected.toSet) (actual)
   }}

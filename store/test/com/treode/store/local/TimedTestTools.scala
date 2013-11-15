@@ -1,9 +1,12 @@
 package com.treode.store.local
 
-import com.treode.concurrent.Callback
-import com.treode.store.{Bytes, TxClock, Value}
+import scala.util.Random
 
-trait TimedTestTools {
+import com.treode.concurrent.Callback
+import com.treode.store.{Bytes, ReadOp, TableId, TxClock, Value}
+import org.scalatest.Assertions
+
+trait TimedTestTools extends Assertions {
 
   implicit class RichBytes (v: Bytes) {
     def ## (time: Int) = TimedCell (v, TxClock (time), None)
@@ -42,4 +45,12 @@ trait TimedTestTools {
         iter.next (loop)
       builder.result
     }}
+
+  def nextTable = TableId (Random.nextLong)
+
+  def Get (id: TableId, key: Bytes): ReadOp =
+    ReadOp (id, key)
+
+  def expectCells (cs: TimedCell*) (actual: TestableTimedTable) =
+    expectResult (cs) (actual.toSeq)
 }
