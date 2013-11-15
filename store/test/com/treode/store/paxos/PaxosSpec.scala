@@ -143,7 +143,7 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosSpecTools 
 
     def cleanup() {
       try {
-        kit.messageFlakiness = mf
+        kit.messageFlakiness = 0.0
         kit.runTasks()
         kit.cleanup()
       } catch {
@@ -188,7 +188,7 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosSpecTools 
     forAll (seeds) { seed =>
       summary = checkConsensus (seed, 0.0, summary)
     }
-    assert (summary.chosen contains 1)
+    assert (Seq (1, 2) forall (summary.chosen contains _))
   }
 
   property ("The acceptors should achieve consensus with a flakey network", LargeTest) {
@@ -196,5 +196,5 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosSpecTools 
     forAll (seeds) { seed =>
       summary = checkConsensus (seed, 0.1, summary)
     }
-    assert (summary.chosen contains 1)
+    assert (Seq (1, 2) forall (summary.chosen contains _))
   }}

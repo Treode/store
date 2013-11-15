@@ -25,13 +25,11 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
     def shutdown()
   }
 
-  private def illegal = throw new IllegalStateException
-
   object Restoring extends State {
 
     def restore (default: Bytes, cb: Callback [Unit]) (f: State => Unit) {
       Callback.guard (cb) {
-        db.get (key, cb.before {
+        db.get (key, Callback.unary {
           case Some (PaxosStatus.Deliberating (v, n, p)) =>
             state = new Deliberating (v, n, p)
             f (state)
