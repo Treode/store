@@ -1,4 +1,4 @@
-package com.treode.store.paxos
+package com.treode.store.cluster.paxos
 
 import java.util.concurrent.TimeoutException
 import scala.language.postfixOps

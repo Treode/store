@@ -1,4 +1,4 @@
-package com.treode.store.paxos
+package com.treode.store.cluster.paxos
 
 import com.treode.cluster.HostId
 
