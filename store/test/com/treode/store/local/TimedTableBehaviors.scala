@@ -14,21 +14,21 @@ trait TimedTableBehaviors extends TimedTestTools {
   private val One = Bytes (1)
   private val Two = Bytes (2)
 
-  def aTimedTable (s: TestableLocalStore) = {
+  def aTimedTable (kit: TestableLocalKit) = {
 
     "when empty" - {
 
       "and reading should" - {
 
         "get Apple##0 for Apple##1" in {
-          val t = s.table (nextTable)
+          val t = kit.getTimedTable (nextTable)
           t.getAndExpect (Apple, 1) (Apple##0)
         }}
 
       "and writing should" - {
 
         "put Apple##1::1" in {
-          val t = s.table (nextTable)
+          val t = kit.getTimedTable (nextTable)
           t.put (Apple, 1, Some (One))
           expectCells (Apple##1::1) (t)
         }}}
@@ -36,7 +36,7 @@ trait TimedTableBehaviors extends TimedTestTools {
     "when having Apple##7::1" - {
 
       def newTableWithData = {
-        val t = s.table (nextTable)
+        val t = kit.getTimedTable (nextTable)
         t.put (Apple, 7, Some (One))
         t
       }
@@ -74,7 +74,7 @@ trait TimedTableBehaviors extends TimedTestTools {
 
     "when having Apple##14::2 and Apple##7::1 should" -  {
 
-      val t = s.table (nextTable)
+      val t = kit.getTimedTable (nextTable)
       t.put (Apple, 7, Some (One))
       t.put (Apple, 14, Some (Two))
 

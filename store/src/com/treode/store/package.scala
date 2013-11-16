@@ -33,7 +33,21 @@ package store {
     def read (batch: ReadBatch, cb: ReadCallback)
     def prepare (batch: WriteBatch, cb: PrepareCallback)
     def commit (batch: WriteBatch, wt: TxClock, cb: Callback [Unit])
-  }}
+  }
+
+  private trait SimpleStore {
+    def openSimpleTable (id: TableId): SimpleTable
+  }
+
+  private trait LocalStore extends PreparableStore with SimpleStore
+
+  private trait PaxosStore {
+    def lead (key: Bytes, value: Bytes, cb: Callback [Bytes])
+    def propose (key: Bytes, value: Bytes, cb: Callback [Bytes])
+  }
+
+  private trait SuperStore extends LocalStore with PaxosStore
+}
 
 package object store {
 

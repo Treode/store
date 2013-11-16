@@ -1,4 +1,4 @@
-package com.treode.store.local
+package com.treode.store.local.temp
 
 import java.util.concurrent.{CountDownLatch, Executors}
 import scala.language.postfixOps
@@ -7,10 +7,9 @@ import scala.util.Random
 import com.treode.concurrent.{Callback, Scheduler}
 import com.treode.pickle.Picklers
 import com.treode.store._
-import com.treode.store.local.temp.TestableTempKit
 import org.scalatest.WordSpec
 
-class LocalStoreSpec extends WordSpec {
+class TempKitSpec extends WordSpec {
 
   val Xid = TxId (Bytes ("Tx"))
 
@@ -28,10 +27,10 @@ class LocalStoreSpec extends WordSpec {
 
       val size = 1 << bits
       val supply = size * opening
-      val store = new TestableTempKit (bits)
+      val kit = new TestableTempKit (bits)
       val create =
         for (i <- 0 until size) yield Accounts.create (i, opening)
-      store.prepareAndCommit (0, create: _*)
+      kit.prepareAndCommit (0, create: _*)
 
       val executor = Executors.newScheduledThreadPool (threads)
       val scheduler = Scheduler (executor)
@@ -43,7 +42,7 @@ class LocalStoreSpec extends WordSpec {
         val batch = ReadBatch (
             TxClock.now,
             for (i <- 0 until size) yield Accounts.read (i))
-        store.read (batch, new StubReadCallback {
+        kit.read (batch, new StubReadCallback {
           override def pass (vs: Seq [Value]): Unit = scheduler.execute {
             val total = vs .map (Accounts.value (_) .get) .sum
             expectResult (supply) (total)
@@ -58,14 +57,14 @@ class LocalStoreSpec extends WordSpec {
         while (x == y)
           y = Random.nextInt (size)
         val rbatch = ReadBatch (TxClock.now, Accounts.read (x), Accounts.read (y))
-        store.read (rbatch, new StubReadCallback {
+        kit.read (rbatch, new StubReadCallback {
           override def pass (vs: Seq [Value]): Unit = scheduler.execute {
             val ct = vs map (_.time) max
             val Seq (b1, b2) = vs map (Accounts.value (_) .get)
             val n = Random.nextInt (b1)
             val wbatch = WriteBatch (Xid, ct, ct,
                 Accounts.update (x, b1-n), Accounts.update (y, b2+n))
-            store.prepare (wbatch, new StubPrepareCallback {
+            kit.prepare (wbatch, new StubPrepareCallback {
               override def pass (tx: Transaction): Unit = scheduler.execute {
                 tx.commit (tx.ft+1, cb)
               }

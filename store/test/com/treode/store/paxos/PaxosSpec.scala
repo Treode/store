@@ -7,7 +7,7 @@ import scala.util.Random
 import com.treode.cluster.{ClusterStubBase, HostId}
 import com.treode.concurrent.{Callback, StubScheduler}
 import com.treode.store.{Bytes, LargeTest, SimpleAccessor, TestFiles}
-import com.treode.store.local.temp.TempSimpleStore
+import com.treode.store.local.temp.TestableTempKit
 import org.scalacheck.Gen
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, PropSpec, Specs, WordSpec}
@@ -42,7 +42,7 @@ trait PaxosSpecTools {
 
     class HostStub (id: HostId) extends HostStubBase (id) {
 
-      val store = new TempSimpleStore
+      val store = TestableTempKit (2)
 
       val paxos = new PaxosKit () (HostStub.this, store)
 

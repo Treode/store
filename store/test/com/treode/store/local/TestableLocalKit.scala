@@ -5,12 +5,12 @@ import com.treode.pickle.Picklers
 import com.treode.store._
 import org.scalatest.Assertions
 
-private trait TestableLocalStore extends Assertions {
-  this: LocalStore =>
+private trait TestableLocalKit extends Assertions {
+  this: LocalKit =>
 
   private val Xid = TxId (Bytes (Picklers.int, 1))
 
-  def table (id: TableId): TestableTimedTable
+  def getTimedTable (id: TableId): TestableTimedTable
 
   def readAndExpect (rt: TxClock, ops: ReadOp*) (expected: Value*) {
     val batch = ReadBatch (rt, ops)

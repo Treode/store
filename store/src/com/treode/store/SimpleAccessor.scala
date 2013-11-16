@@ -32,7 +32,7 @@ private object SimpleAccessor {
     }
 
   def apply [K, V] (s: SimpleStore, t: TableId): SimpleAccessor [Bytes, Bytes] =
-    apply (s.table (t))
+    apply (s.openSimpleTable (t))
 
   def apply [K, V] (t: SimpleTable, pk: Pickler [K], pv: Pickler [V]): SimpleAccessor [K, V] =
     new SimpleAccessor [K, V] {
@@ -59,7 +59,7 @@ private object SimpleAccessor {
     }
 
   def apply [K, V] (s: SimpleStore, t: TableId, pk: Pickler [K], pv: Pickler [V]): SimpleAccessor [K, V] =
-    apply (s.table (t), pk, pv)
+    apply (s.openSimpleTable (t), pk, pv)
 
   def key [K] (t: SimpleTable, pk: Pickler [K]): SimpleAccessor [K, Bytes] =
     new SimpleAccessor [K, Bytes] {
@@ -83,7 +83,7 @@ private object SimpleAccessor {
     }
 
   def key [K] (s: SimpleStore, t: TableId, pk: Pickler [K]): SimpleAccessor [K, Bytes] =
-    key (s.table (t), pk)
+    key (s.openSimpleTable (t), pk)
 
   def value [V] (t: SimpleTable, pv: Pickler [V]): SimpleAccessor [Bytes, V] =
     new SimpleAccessor [Bytes, V] {
@@ -108,5 +108,5 @@ private object SimpleAccessor {
     }
 
   def value [V] (s: SimpleStore, t: TableId, pv: Pickler [V]): SimpleAccessor [Bytes, V] =
-    value (s.table (t), pv)
+    value (s.openSimpleTable (t), pv)
 }

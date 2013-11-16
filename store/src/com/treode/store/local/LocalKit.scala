@@ -4,11 +4,11 @@ import com.treode.concurrent.Callback
 import com.treode.store._
 import com.treode.store.local.locks.LockSpace
 
-private abstract class LocalStore (bits: Int) extends PreparableStore {
+private abstract class LocalKit (bits: Int) extends LocalStore {
 
   private val space = new LockSpace (bits)
 
-  protected def table (id: TableId): TimedTable
+  protected def getTimedTable (id: TableId): TimedTable
 
   def read (batch: ReadBatch, cb: ReadCallback): Unit =
     Callback.guard (cb) {
@@ -17,7 +17,7 @@ private abstract class LocalStore (bits: Int) extends PreparableStore {
       space.read (batch.rt, ids) {
         val r = new TimedReader (batch, cb)
         for ((op, i) <- batch.ops.zipWithIndex)
-          table (op.table) .read (op.key, i, r)
+          getTimedTable (op.table) .read (op.key, i, r)
       }}
 
   def prepare (batch: WriteBatch, cb: PrepareCallback): Unit =
@@ -28,7 +28,7 @@ private abstract class LocalStore (bits: Int) extends PreparableStore {
         val w = new TimedWriter (batch, this, locks, cb)
         for ((op, i) <- batch.ops.zipWithIndex) {
           import WriteOp._
-          val t = table (op.table)
+          val t = getTimedTable (op.table)
           op match {
             case op: Create => t.create (op.key, op.value, i, w)
             case op: Hold   => t.hold (op.key, w)
@@ -42,7 +42,7 @@ private abstract class LocalStore (bits: Int) extends PreparableStore {
       val c = new TimedCommitter (batch, cb)
       for (op <- batch.ops) {
         import WriteOp._
-        val t = table (op.table)
+        val t = getTimedTable (op.table)
         op match {
           case op: Create => t.create (op.key, op.value, wt, c)
           case op: Hold   => c()

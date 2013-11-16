@@ -18,7 +18,7 @@ trait SimpleTableBehaviors extends SimpleTestTools {
   def aSimpleTable (s: SimpleStore) = {
 
     "A SimpleTable should get, put and delete" in {
-      val t = s.table (nextTable)
+      val t = s.openSimpleTable (nextTable)
       t.put (Apple, One, Callback.ignore)
       t.getAndExpect (Apple, Some (One))
       t.del (Apple, Callback.ignore)
