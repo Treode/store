@@ -4,28 +4,28 @@ import java.net.SocketAddress
 import scala.language.postfixOps
 import scala.util.Random
 
-import com.treode.cluster.events.EventsStub
+import com.treode.cluster.events.StubEvents
 import com.treode.cluster.messenger.{MailboxRegistry, PeerRegistry}
 import com.treode.concurrent.{Scheduler, StubScheduler}
 import com.treode.pickle.{Buffer, Pickler, pickle}
 
-abstract class ClusterStubBase (seed: Long, nhosts: Int) {
+abstract class BaseStubCluster (seed: Long, nhosts: Int) {
 
   private val emptyAddr = new SocketAddress {}
 
-  class HostStubBase (val localId: HostId) extends Host {
+  class BaseStubHost (val localId: HostId) extends Host {
 
-    val random: Random = ClusterStubBase.this.random
+    val random: Random = BaseStubCluster.this.random
 
-    val scheduler: Scheduler = ClusterStubBase.this.scheduler
+    val scheduler: Scheduler = BaseStubCluster.this.scheduler
 
-    val mailboxes: MailboxRegistry = new MailboxRegistry () (EventsStub)
+    val mailboxes: MailboxRegistry = new MailboxRegistry () (StubEvents)
 
     val peers: PeerRegistry =
-      new PeerRegistry (localId, new ConnectionStub (ClusterStubBase.this, _, localId)) (random)
+      new PeerRegistry (localId, new StubConnection (BaseStubCluster.this, _, localId)) (random)
 
     def locate (id: Int): Acknowledgements =
-      ClusterStubBase.this.locate (id)
+      BaseStubCluster.this.locate (id)
 
     def cleanup(): Unit = ()
 
@@ -33,9 +33,9 @@ abstract class ClusterStubBase (seed: Long, nhosts: Int) {
       mailboxes.deliver (id, peers.get (from), msg, msg.readableBytes)
   }
 
-  type HostStub <: HostStubBase
+  type StubHost <: BaseStubHost
 
-  def newHost (id: HostId): HostStub
+  def newHost (id: HostId): StubHost
 
   val random = new Random (seed)
 

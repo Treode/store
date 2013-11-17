@@ -4,85 +4,21 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
-import com.treode.cluster.{ClusterStubBase, HostId}
-import com.treode.concurrent.{Callback, StubScheduler}
-import com.treode.store.{Bytes, LargeTest, SimpleAccessor, TestFiles}
-import com.treode.store.local.temp.TestableTempKit
+import com.treode.concurrent.CallbackCaptor
+import com.treode.store.{Bytes, LargeTest}
 import org.scalacheck.Gen
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.{BeforeAndAfterAll, PropSpec, Specs, WordSpec}
 import org.scalatest.prop.PropertyChecks
 
 class PaxosSpec extends Specs (PaxosBehaviors, PaxosProperties)
 
-trait PaxosSpecTools {
-
-  class Captor [T] extends Callback [T] {
-
-    private var _v: T = null.asInstanceOf [T]
-
-    def v: T = {
-      assert (_v != null, "Callback was not invoked")
-      _v
-    }
-
-    def pass (v: T) = _v = v
-
-    def fail (t: Throwable) = throw t
-  }
-
-  def capture [T] (f: Callback [T] => Any) (implicit scheduler: StubScheduler): T = {
-    val cb = new Captor [T]
-    f (cb)
-    scheduler.runTasks()
-    cb.v
-  }
-
-  private [paxos] class ClusterStub (seed: Long, nhosts: Int) extends ClusterStubBase (seed, nhosts) {
-
-    class HostStub (id: HostId) extends HostStubBase (id) {
-
-      val store = TestableTempKit (2)
-
-      val paxos = new PaxosKit () (HostStub.this, store)
-
-      def db = paxos.Acceptors.db
-
-      override def cleanup() {
-        paxos.close()
-      }}
-
-    def newHost (id: HostId) = new HostStub (id)
-  }
-
-  implicit class TestableAcceptor (a: Acceptor) {
-
-    def isRestoring = a.state == a.Restoring
-    def isDeliberating = classOf [Acceptor#Deliberating] .isInstance (a.state)
-    def isClosed = classOf [Acceptor#Closed] .isInstance (a.state)
-
-    def getChosen: Option [Int] = {
-      if (isClosed)
-        Some (a.state.asInstanceOf [Acceptor#Closed] .chosen.int)
-      else if (isDeliberating)
-        a.state.asInstanceOf [Acceptor#Deliberating] .proposal.map (_._2.int)
-      else
-        None
-    }}
-
-  implicit class TestableSimpleAccessor [K, V] (db: SimpleAccessor [K, V]) {
-
-    def getAndCapture (k: K) (implicit scheduler: StubScheduler): Option [V] =
-      capture [Option [V]] (db.get (k, _))
-  }}
-
-object PaxosBehaviors extends WordSpec with BeforeAndAfterAll with MockFactory with PaxosSpecTools {
+object PaxosBehaviors extends WordSpec with BeforeAndAfterAll with PaxosTestTools {
 
   val failed = afterWord ("failed")
   val sent = afterWord ("sent")
 
-  val kit = new ClusterStub (0, 3)
-  val hs @ Seq (_, _, host) = kit.hosts
+  private val kit = new StubCluster (0, 3)
+  private val hs @ Seq (_, _, host) = kit.hosts
   import kit.{random, scheduler}
   import host.paxos.{Acceptors, lead}
 
@@ -101,7 +37,7 @@ object PaxosBehaviors extends WordSpec with BeforeAndAfterAll with MockFactory w
     }
 
     "be deliberating after running tasks" in {
-      a.query (host.peers.get (host.localId), 0, Bytes (0))
+      a.query (host.peers.get (host.localId), 0, Zero)
       kit.runTasks()
       assert (a.isDeliberating)
     }
@@ -117,10 +53,10 @@ object PaxosBehaviors extends WordSpec with BeforeAndAfterAll with MockFactory w
     val k = Bytes (random.nextLong)
 
     "yield a value for the leader" in {
-      val cb = mock [Callback [Bytes]]
-      lead (k, Bytes (1), cb)
-      (cb.apply _) .expects (Bytes (1)) .once()
+      val cb = new CallbackCaptor [Bytes]
+      lead (k, One, cb)
       kit.runTasks()
+      expectResult (One) (cb.passed)
     }
 
     "leave all acceptors closed and consistent" in {
@@ -129,14 +65,14 @@ object PaxosBehaviors extends WordSpec with BeforeAndAfterAll with MockFactory w
       expectResult (Set (1)) (as.map (_.getChosen) .flatten.toSet)
     }}}
 
-object PaxosProperties extends PropSpec with PropertyChecks with PaxosSpecTools {
+object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools {
 
   case class Summary (timedout: Boolean, chosen: Set [Int])
 
   val seeds = Gen.choose (0L, Long.MaxValue)
 
   def checkConsensus (seed: Long, mf: Double, summary: Summary): Summary = {
-    val kit = new ClusterStub (seed, 3)
+    val kit = new StubCluster (seed, 3)
     val Seq (h1, h2, h3) = kit.hosts
     var hs = kit.hosts
     import kit.{random, scheduler}
@@ -154,19 +90,19 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosSpecTools 
 
       // Setup.
       val k = Bytes (random.nextLong)
-      val cb1 = new Captor [Bytes]
-      val cb2 = new Captor [Bytes]
+      val cb1 = new CallbackCaptor [Bytes]
+      val cb2 = new CallbackCaptor [Bytes]
 
       // Proposed two values simultaneously, expect one choice.
-      h1.paxos.propose (k, Bytes (1), cb1)
-      h2.paxos.propose (k, Bytes (2), cb2)
+      h1.paxos.propose (k, One, cb1)
+      h2.paxos.propose (k, Two, cb2)
       kit.messageFlakiness = mf
       scheduler.runTasks (true)
-      val v = cb1.v
-      expectResult (v) (cb2.v)
+      val v = cb1.passed
+      expectResult (v) (cb2.passed)
 
       // Expect all acceptors closed and in agreement.
-      val as = hs.map (_.db.getAndCapture (k) (scheduler)) .toSet
+      val as = hs.map (_.db.get (k) (scheduler)) .toSet
       assert (as.size == 1)
       expectResult (Some (PaxosStatus.Closed (v))) (as.head)
 

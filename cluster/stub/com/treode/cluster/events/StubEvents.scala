@@ -3,11 +3,11 @@ package com.treode.cluster.events
 import com.codahale.metrics.Timer
 import org.scalatest.Assertions
 
-object EventsStub extends Events {
+object StubEvents extends Events {
 
   def newGauge [A] (n1: String, n2: String) (v: => A): Unit = ()
 
-  def newTimer [A] (n1: String, n2: String): Timer = TimerStub
+  def newTimer [A] (n1: String, n2: String): Timer = StubTimer
 
   def info (msg: String): Unit = ()
 

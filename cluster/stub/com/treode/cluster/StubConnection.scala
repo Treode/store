@@ -6,7 +6,7 @@ import scala.collection.JavaConversions._
 import com.treode.cluster.io.Socket
 import com.treode.pickle.{Buffer, Pickler}
 
-class ConnectionStub (cluster: ClusterStubBase, val id: HostId, localId: HostId) extends Peer {
+class StubConnection (cluster: BaseStubCluster, val id: HostId, localId: HostId) extends Peer {
 
   import cluster._
 

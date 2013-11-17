@@ -6,7 +6,7 @@ import scala.util.Random
 class StubScheduler private (random: Random) extends Scheduler {
 
   private val tasks = new ArrayBuffer [Runnable]
-  private val timers = new PriorityQueue [Timer]
+  private val timers = new PriorityQueue [StubTimer]
 
   private var time = 0L
 
@@ -17,10 +17,10 @@ class StubScheduler private (random: Random) extends Scheduler {
     tasks.append (toRunnable (task))
 
   def delay (millis: Long) (task: => Any): Unit =
-    timers.enqueue (Timer (time + millis, toRunnable (task)))
+    timers.enqueue (StubTimer (time + millis, toRunnable (task)))
 
   def at (millis: Long) (task: => Any): Unit =
-    timers.enqueue (Timer (millis, toRunnable (task)))
+    timers.enqueue (StubTimer (millis, toRunnable (task)))
 
   def spawn (task: => Any): Unit =
     tasks.append (toRunnable (task))
