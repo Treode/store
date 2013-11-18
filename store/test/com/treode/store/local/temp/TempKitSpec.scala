@@ -7,7 +7,10 @@ import scala.util.Random
 import com.treode.concurrent.{Callback, Scheduler}
 import com.treode.pickle.Picklers
 import com.treode.store._
+import com.treode.store.local.LocalTimedTestTools
 import org.scalatest.WordSpec
+
+import LocalTimedTestTools._
 
 class TempKitSpec extends WordSpec {
 

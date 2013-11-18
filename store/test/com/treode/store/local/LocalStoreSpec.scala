@@ -10,6 +10,8 @@ import com.treode.store._
 import com.treode.store.local.temp.TestableTempKit
 import org.scalatest.WordSpec
 
+import LocalTimedTestTools._
+
 class LocalStoreSpec extends WordSpec {
 
   val Xid = TxId (Bytes ("Tx"))

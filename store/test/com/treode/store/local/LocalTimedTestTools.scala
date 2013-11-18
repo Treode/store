@@ -3,7 +3,7 @@ package com.treode.store.local
 import scala.util.Random
 
 import com.treode.concurrent.{Callback, CallbackCaptor}
-import com.treode.store.{TimedCell, TimedTestTools}
+import com.treode.store._
 import org.scalatest.Assertions
 
 import Assertions._
@@ -27,6 +27,61 @@ private object LocalTimedTestTools extends TimedTestTools {
       builder.result
     }}
 
-  def expectCells (cs: TimedCell*) (actual: TestableTimedTable) =
-    expectResult (cs) (actual.toSeq)
-}
+  implicit class RichLocalStore (s: LocalStore) {
+
+    private val Xid = TxId (Bytes (1))
+
+    def readAndExpect (rt: TxClock, ops: ReadOp*) (expected: Value*) {
+      val batch = ReadBatch (rt, ops)
+      val cb = new ReadCaptor
+      s.read (batch, cb)
+      expectResult (expected) (cb.passed)
+    }
+
+    def prepareAndCommit (ct: TxClock, ops: WriteOp*): TxClock = {
+      val batch = WriteBatch (Xid, ct, ct, ops)
+      val cb1 = new PrepareCaptor
+      s.prepare (batch, cb1)
+      val tx = cb1.passed
+      val wt = tx.ft + 7 // Leave gaps in time.
+      val cb2 = new CallbackCaptor [Unit]
+      tx.commit (wt, cb2)
+      cb2.passed
+      wt
+    }
+
+    def prepareAndAbort (ct: TxClock, ops: WriteOp*) {
+      val batch = WriteBatch (Xid, ct, ct, ops)
+      val cb = new PrepareCaptor
+      s.prepare (batch, cb)
+      val tx = cb.passed
+      tx.abort()
+    }
+
+    def prepareExpectAdvance (ct: TxClock, ops: WriteOp*) = {
+      val batch = WriteBatch (Xid, ct, ct, ops)
+      val cb = new PrepareCaptor
+      s.prepare (batch, cb)
+      cb.advanced
+    }
+
+    def prepareExpectCollisions (ct: TxClock, ops: WriteOp*) (expected: Int*) = {
+      val batch = WriteBatch (Xid, ct, ct, ops)
+      val cb = new PrepareCaptor
+      s.prepare (batch, cb)
+      expectResult (expected.toSet) (cb.collided)
+    }}
+
+  implicit class RichTimedTable (t: TimedTable) {
+
+    def getAndExpect (key: Bytes, time: TxClock) (expected: TimedCell) {
+      val cb = new CallbackCaptor [TimedCell]
+      t.get (key, time, cb)
+      expectResult (expected) (cb.passed)
+    }
+
+    def putAndPass (key: Bytes, time: TxClock, value: Option [Bytes]) {
+      val cb = new CallbackCaptor [Unit]
+      t.put (key, time, value, cb)
+      cb.passed
+    }}}

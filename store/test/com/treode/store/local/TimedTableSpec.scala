@@ -31,25 +31,25 @@ class TimedTableSpec extends FreeSpec {
       "allow create Apple::1 at ts=0" in {
         val t = nextTable
         val ts = kit.prepareAndCommit (0, Create (t, Apple, One))
-        expectCells (Apple##ts::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts::1)
       }
 
       "allow hold Apple at ts=0" in {
         val t = nextTable
         kit.prepareAndCommit (0, Hold (t, Apple))
-        expectCells () (kit.getTimedTable (t))
+        kit.expectCells (t) ()
       }
 
       "allow update Apple::1 at ts=0" in {
         val t = nextTable
         val ts = kit.prepareAndCommit (0, Update (t, Apple, One))
-        expectCells (Apple##ts::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts::1)
       }
 
       "allow delete Apple at ts=0" in {
         val t = nextTable
         val ts = kit.prepareAndCommit (0, Delete (t, Apple))
-        expectCells (Apple##ts) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts)
       }}
 
     "and a write aborts should" - {
@@ -57,25 +57,25 @@ class TimedTableSpec extends FreeSpec {
       "allow and ignore create Apple::1 at ts=0" in {
         val t = nextTable
         kit.prepareAndAbort (0, Create (t, Apple, One))
-        expectCells () (kit.getTimedTable (t))
+        kit.expectCells (t) ()
       }
 
       "allow and ignore hold Apple at ts=0" in {
         val t = nextTable
         kit.prepareAndAbort (0, Hold (t, Apple))
-        expectCells () (kit.getTimedTable (t))
+        kit.expectCells (t) ()
       }
 
       "allow and ignore update Apple::1 at ts=0" in {
         val t = nextTable
         kit.prepareAndAbort (0, Update (t, Apple, One))
-        expectCells () (kit.getTimedTable (t))
+        kit.expectCells (t) ()
       }
 
       "allow and ignore delete Apple at ts=0" in {
         val t = nextTable
         kit.prepareAndAbort (0, Delete (t, Apple))
-        expectCells () (kit.getTimedTable (t))
+        kit.expectCells (t) ()
       }}}
 
   "when having Apple##ts::1" - {
@@ -128,49 +128,49 @@ class TimedTableSpec extends FreeSpec {
       "allow hold Apple at ts+1" in {
         val (t, ts) = newTableWithData
         kit.prepareAndCommit (ts+1, Hold (t, Apple))
-        expectCells (Apple##ts::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts::1)
       }
 
       "allow hold Apple at ts" in {
         val (t, ts) = newTableWithData
         kit.prepareAndCommit (ts, Hold (t, Apple))
-        expectCells (Apple##ts::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts::1)
       }
 
       "allow update Apple::2 at ts+1" in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1+1, Update (t, Apple, Two))
-        expectCells (Apple##ts2::2, Apple##ts1::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts2::2, Apple##ts1::1)
       }
 
       "allow update Apple::2 at ts" in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1, Update (t, Apple, Two))
-        expectCells (Apple##ts2::2, Apple##ts1::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts2::2, Apple##ts1::1)
       }
 
       "allow update Apple::1 at ts+1" in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1+1, Update (t, Apple, One))
-        expectCells (Apple##ts2::1, Apple##ts1::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts2::1, Apple##ts1::1)
       }
 
       "allow update Apple::1 at ts" in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1, Update (t, Apple, One))
-        expectCells (Apple##ts2::1, Apple##ts1::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts2::1, Apple##ts1::1)
       }
 
       "allow delete Apple at ts+1" in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1+1, Delete (t, Apple))
-        expectCells (Apple##ts2, Apple##ts1::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts2, Apple##ts1::1)
       }
 
       "allow delete Apple at ts" in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1, Delete (t, Apple))
-        expectCells (Apple##ts2, Apple##ts1::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts2, Apple##ts1::1)
       }}
 
     "and a write aborts should" -  {
@@ -178,13 +178,13 @@ class TimedTableSpec extends FreeSpec {
       "ignore update Apple::2 at ts+1" in {
         val (t, ts1) = newTableWithData
         kit.prepareAndAbort (ts1+1, Update (t, Apple, Two))
-        expectCells (Apple##ts1::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts1::1)
       }
 
       "ignore delete Apple at ts+1" in {
         val (t, ts1) = newTableWithData
         kit.prepareAndAbort (ts1+1, Delete (t, Apple))
-        expectCells (Apple##ts1::1) (kit.getTimedTable (t))
+        kit.expectCells (t) (Apple##ts1::1)
       }}}
 
   "when having Apple##ts2::2 and Apple##ts1::1 should" -  {

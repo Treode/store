@@ -1,6 +1,6 @@
 package com.treode.store
 
-import com.treode.concurrent.Callback
+import com.treode.concurrent.CallbackCaptor
 import org.scalatest.Assertions
 
 import Assertions._
@@ -18,10 +18,9 @@ private trait SimpleTestTools {
   implicit class RichSimpleTable (t: SimpleTable) {
 
     def getAndExpect (key: Bytes, expected: Option [Bytes]) {
-      t.get (key, new Callback [Option [Bytes]] {
-        def pass (value: Option [Bytes]) = expectResult (expected) (value)
-        def fail (t: Throwable) = throw t
-      })
+      val cb = new CallbackCaptor [Option [Bytes]]
+      t.get (key, cb)
+      cb.passed
     }}}
 
 private object SimpleTestTools extends SimpleTestTools
