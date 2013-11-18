@@ -44,10 +44,7 @@ package store {
   private trait PaxosStore {
     def lead (key: Bytes, value: Bytes, cb: Callback [Bytes])
     def propose (key: Bytes, value: Bytes, cb: Callback [Bytes])
-  }
-
-  private trait SuperStore extends LocalStore with PaxosStore
-}
+  }}
 
 package object store {
 

@@ -3,7 +3,7 @@ package com.treode.store.local
 import com.treode.pickle.size
 import com.treode.store.{Bytes, StorePicklers, TxClock}
 
-private [store] class TimedCell (val key: Bytes, val time: TxClock, val value: Option [Bytes])
+private class TimedCell (val key: Bytes, val time: TxClock, val value: Option [Bytes])
 extends Ordered [TimedCell] {
 
   def byteSize = size (TimedCell.pickle, this)
@@ -29,7 +29,7 @@ extends Ordered [TimedCell] {
   override def toString = "Cell" + (key, time, value)
 }
 
-private [store] object TimedCell extends Ordering [TimedCell] {
+private object TimedCell extends Ordering [TimedCell] {
 
   def apply (key: Bytes, vt: TxClock, value: Option [Bytes]): TimedCell =
     new TimedCell (key, vt, value)

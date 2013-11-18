@@ -83,7 +83,7 @@ class TierSpec extends WordSpec {
     }}
 
   /** Build a sequence of the cells in the tier using old-fashioned recursion. */
-  def toSeq (disk: DiskSystemStub, pos: Long): Seq [TimedCell] = {
+  private def toSeq (disk: DiskSystemStub, pos: Long): Seq [TimedCell] = {
     val builder = Seq.newBuilder [TimedCell]
     toSeq (disk, builder, pos)
     builder.result

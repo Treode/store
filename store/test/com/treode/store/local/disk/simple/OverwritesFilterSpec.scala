@@ -6,8 +6,9 @@ import com.treode.store.local.{SimpleCell, SimpleIterator, SimpleTestTools}
 import org.scalatest.FlatSpec
 
 import Fruits.{Apple, Banana, Orange}
+import SimpleTestTools._
 
-class OverwritesFilterSpec extends FlatSpec with SimpleTestTools {
+class OverwritesFilterSpec extends FlatSpec {
 
   private def expectCells (cs: SimpleCell*) (actual: SimpleIterator) =
     expectResult (cs) (actual.toSeq)

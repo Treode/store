@@ -2,10 +2,11 @@ package com.treode.store.local
 
 import com.treode.concurrent.Callback
 import com.treode.store.{Bytes, SimpleTable, Value}
-import org.scalatest.Suite
+import org.scalatest.Assertions
 
-trait SimpleTestTools {
-  this: Suite =>
+import Assertions._
+
+private object SimpleTestTools {
 
   implicit class RichInt (v: Int) {
     def :: (k: Bytes): SimpleCell = SimpleCell (k, Some (Bytes (v)))

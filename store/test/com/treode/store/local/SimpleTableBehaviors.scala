@@ -7,8 +7,9 @@ import com.treode.store.{Bytes, Fruits, SimpleStore, TableId}
 import org.scalatest.FreeSpec
 
 import Fruits.Apple
+import SimpleTestTools._
 
-trait SimpleTableBehaviors extends SimpleTestTools {
+trait SimpleTableBehaviors {
   this: FreeSpec =>
 
   private val One = Bytes ("one")

@@ -5,7 +5,9 @@ import com.treode.store.{Bytes, Fruits}
 import com.treode.store.local.{SimpleCell, SimpleIterator, SimpleTestTools}
 import org.scalatest.FlatSpec
 
-class SimpleSynthIteratorSpec extends FlatSpec with SimpleTestTools {
+import SimpleTestTools._
+
+class SimpleSynthIteratorSpec extends FlatSpec {
 
   private val Apple = Fruits.Apple::1
   private val Apple2 = Fruits.Apple::2

@@ -84,7 +84,7 @@ class SimpleTierSpec extends WordSpec {
     }}
 
   /** Build a sequence of the cells in the tier using old-fashioned recursion. */
-  def toSeq (disk: DiskSystemStub, pos: Long): Seq [SimpleCell] = {
+  private def toSeq (disk: DiskSystemStub, pos: Long): Seq [SimpleCell] = {
     val builder = Seq.newBuilder [SimpleCell]
     toSeq (disk, builder, pos)
     builder.result

@@ -5,7 +5,9 @@ import com.treode.pickle.Picklers
 import com.treode.store._
 import org.scalatest.Assertions
 
-private trait TestableLocalKit extends Assertions {
+import Assertions._
+
+private trait TestableLocalKit {
   this: LocalKit =>
 
   private val Xid = TxId (Bytes (Picklers.int, 1))

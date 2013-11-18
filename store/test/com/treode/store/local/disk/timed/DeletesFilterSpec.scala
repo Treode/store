@@ -6,8 +6,9 @@ import com.treode.store.local.{TimedCell, TimedIterator, TimedTestTools}
 import org.scalatest.FlatSpec
 
 import Fruits.{Apple, Banana}
+import TimedTestTools._
 
-class DeletesFilterSpec extends FlatSpec with TimedTestTools {
+class DeletesFilterSpec extends FlatSpec {
 
   private def expectCells (cs: TimedCell*) (actual: TimedIterator) =
     expectResult (cs) (actual.toSeq)

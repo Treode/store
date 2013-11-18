@@ -8,7 +8,7 @@ private abstract class LocalKit (bits: Int) extends LocalStore {
 
   private val space = new LockSpace (bits)
 
-  protected def getTimedTable (id: TableId): TimedTable
+  def getTimedTable (id: TableId): TimedTable
 
   def read (batch: ReadBatch, cb: ReadCallback): Unit =
     Callback.guard (cb) {

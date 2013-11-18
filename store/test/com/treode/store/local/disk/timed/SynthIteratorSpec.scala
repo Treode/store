@@ -5,7 +5,9 @@ import com.treode.store.{Bytes, Fruits}
 import com.treode.store.local.{TimedCell, TimedIterator, TimedTestTools}
 import org.scalatest.FlatSpec
 
-class SynthIteratorSpec extends FlatSpec with TimedTestTools {
+import TimedTestTools._
+
+class SynthIteratorSpec extends FlatSpec {
 
   private val One = Bytes ("one")
 

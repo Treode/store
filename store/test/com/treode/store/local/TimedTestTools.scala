@@ -2,11 +2,13 @@ package com.treode.store.local
 
 import scala.util.Random
 
-import com.treode.concurrent.Callback
-import com.treode.store.{Bytes, ReadOp, TableId, TxClock, Value}
+import com.treode.concurrent.{Callback, CallbackCaptor}
+import com.treode.store._
 import org.scalatest.Assertions
 
-trait TimedTestTools extends Assertions {
+import Assertions._
+
+private object TimedTestTools {
 
   implicit class RichBytes (v: Bytes) {
     def ## (time: Int) = TimedCell (v, TxClock (time), None)

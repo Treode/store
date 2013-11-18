@@ -5,8 +5,10 @@ import com.treode.store.{Bytes, Fruits}
 import com.treode.store.local.{SimpleCell, SimpleTestTools}
 import org.scalatest.WordSpec
 
-class SimpleCellPageSpec extends WordSpec with SimpleTestTools {
-  import Fruits.{Apple, Banana, Kiwi, Kumquat, Orange}
+import Fruits.{Apple, Banana, Kiwi, Kumquat, Orange}
+import SimpleTestTools._
+
+class SimpleCellPageSpec extends WordSpec {
 
   private def newPage (entries: SimpleCell*): CellPage =
     new CellPage (Array (entries: _*))
