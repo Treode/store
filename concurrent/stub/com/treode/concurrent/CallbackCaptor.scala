@@ -1,43 +1,70 @@
 package com.treode.concurrent
 
+import java.util.concurrent.TimeoutException
+
 class CallbackCaptor [T] extends Callback [T] {
 
   private var _invokation: Array [StackTraceElement] = null
   private var _v: T = null.asInstanceOf [T]
   private var _t: Throwable = null
 
-  private def notInvoked() {
-    if (_invokation == null) {
+  private def wasInvoked: Boolean =
+    _invokation != null
+
+  private def assertNotInvoked() {
+    if (!wasInvoked) {
       _invokation = Thread.currentThread.getStackTrace
     } else {
       val _second = Thread.currentThread.getStackTrace
       println ("First invokation:\n    " + (_invokation take (10) mkString "\n    "))
       println ("Second invokation:\n    " + (_second take (10) mkString "\n    "))
-      assert (false, "Callback was already invoked.")
+      assert (false, "back was already invoked.")
     }}
 
+  private def assertInvoked (e: Boolean) {
+    if (e && _t != null)
+      throw new AssertionError (_t)
+    assert (wasInvoked, "Callback was not invoked.")
+  }
+
   def pass (v: T) = {
-    notInvoked()
+    assertNotInvoked()
     _v = v
   }
 
   def fail (t: Throwable) {
-    notInvoked()
+    assertNotInvoked()
     _t = t
   }
 
-  private def invoked() {
-    assert (_invokation != null, "Callback was not invoked.")
-  }
+  def hasPassed: Boolean =
+    _v != null
 
   def passed: T = {
-    invoked()
-    assert (_v != null, "Operation failed.")
+    assertInvoked (true)
+    assert (hasPassed, "Operation failed.")
     _v
   }
 
+  def hasFailed: Boolean =
+    _t != null
+
+  def hasTimedOut: Boolean =
+    _t != null && _t.isInstanceOf [TimeoutException]
+
   def failed: Throwable = {
-    invoked()
-    assert (_t != null, "Operation passed.")
+    assertInvoked (false)
+    assert (hasFailed, "Operation passed.")
     _t
-  }}
+  }
+
+  override def toString: String =
+    if (!wasInvoked)
+      "CallbackCaptor:NotInvoked"
+    else if (hasPassed)
+      s"CallbackCaptor:Passed(${_v})"
+    else if (hasFailed)
+      s"CallbackCaptor:Failed(${_t})"
+    else
+      "CallbackCaptor:Confused"
+}

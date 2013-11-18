@@ -1,5 +1,7 @@
 package com.treode.store
 
+import java.util.concurrent.TimeoutException
+
 class WriteCaptor extends WriteCallback {
 
   private var _invokation: Array [StackTraceElement] = null
@@ -8,8 +10,11 @@ class WriteCaptor extends WriteCallback {
   private var _ks: Set [Int] = null
   private var _advance = false
 
-  private def notInvoked() {
-    if (_invokation == null) {
+  private def wasInvoked: Boolean =
+    _invokation != null
+
+  private def assertNotInvoked() {
+    if (!wasInvoked) {
       _invokation = Thread.currentThread.getStackTrace
     } else {
       val _second = Thread.currentThread.getStackTrace
@@ -18,50 +23,84 @@ class WriteCaptor extends WriteCallback {
       assert (false, "WriteCallback was already invoked.")
     }}
 
+  private def assertInvoked (e: Boolean) {
+    if (e && _t != null)
+      throw new AssertionError (_t)
+    assert (wasInvoked, "WriteCallback was not invoked.")
+  }
+
   def pass (v: TxClock) {
-    notInvoked()
+    assertNotInvoked()
     _v = v
   }
 
   def fail (t: Throwable) {
-    notInvoked()
+    assertNotInvoked()
     _t = t
   }
 
   def collisions (ks: Set [Int]) {
-    notInvoked()
+    assertNotInvoked()
     _ks = ks
   }
 
   def advance() {
-    notInvoked()
+    assertNotInvoked()
     _advance = true
   }
 
-  private def invoked() {
-    assert (_invokation != null, "WriteCallback was not invoked.")
-  }
+  def hasPassed: Boolean =
+    _v != TxClock.zero
 
   def passed: TxClock = {
-    invoked()
-    assert (_v != TxClock.zero, "WriteCallback did not pass.")
+    assertInvoked (true)
+    if (_t != null)
+      throw new AssertionError (_t)
+    assert (hasPassed, "WriteCallback did not pass.")
     _v
   }
 
+  def hasFailed: Boolean =
+    _t != null
+
+  def hasTimedOut: Boolean =
+    _t != null && _t.isInstanceOf [TimeoutException]
+
   def failed: Throwable = {
-    invoked()
-    assert (_t != null, "WriteCallback did not fail.")
+    assertInvoked (false)
+    assert (hasFailed, "WriteCallback did not fail.")
     _t
   }
 
+  def hasCollided: Boolean =
+    _ks != null
+
   def collided: Set [Int] = {
-    invoked()
-    assert (_ks != null, "WriteCallback did not collide.")
+    assertInvoked (true)
+    assert (hasCollided, "WriteCallback did not collide.")
     _ks
   }
 
-  def advanced: Boolean = {
-    invoked()
-    assert (_advance, "WriteCallback did not advance.")
+  def hasAdvanced: Boolean =
     _advance
-  }}
+
+  def advanced: Boolean = {
+    assertInvoked (true)
+    assert (hasAdvanced, "WriteCallback did not advance.")
+    _advance
+  }
+
+  override def toString: String =
+    if (!wasInvoked)
+      "WriteCaptor:NotInvoked"
+    else if (hasPassed)
+      s"WriteCaptor:Passed(${_v})"
+    else if (hasFailed)
+      s"WriteCaptor:Failed(${_t})"
+    else if (hasCollided)
+      s"WriteCaptor:Collided(${_ks})"
+    else if (hasAdvanced)
+      "WriteCaptor:Advanced"
+    else
+      "WriteCaptor:Confused"
+}

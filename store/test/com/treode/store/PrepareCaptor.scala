@@ -1,5 +1,7 @@
 package com.treode.store
 
+import java.util.concurrent.TimeoutException
+
 private class PrepareCaptor extends PrepareCallback {
 
   private var _invokation: Array [StackTraceElement] = null
@@ -8,8 +10,11 @@ private class PrepareCaptor extends PrepareCallback {
   private var _ks: Set [Int] = null
   private var _advance = false
 
-  private def notInvoked() {
-    if (_invokation == null) {
+  private def wasInvoked: Boolean =
+    _invokation != null
+
+  private def assertNotInvoked() {
+    if (!wasInvoked) {
       _invokation = Thread.currentThread.getStackTrace
     } else {
       val _second = Thread.currentThread.getStackTrace
@@ -18,50 +23,84 @@ private class PrepareCaptor extends PrepareCallback {
       assert (false, "PrepareCallback was already invoked.")
     }}
 
+  private def assertInvoked (e: Boolean) {
+    if (e && _t != null)
+      throw new AssertionError (_t)
+    assert (wasInvoked, "PrepareCallback was not invoked.")
+  }
+
   def pass (v: Transaction) {
-    notInvoked()
+    assertNotInvoked()
     _v = v
   }
 
   def fail (t: Throwable) {
-    notInvoked()
+    assertNotInvoked()
     _t = t
   }
 
   def collisions (ks: Set [Int]) {
-    notInvoked()
+    assertNotInvoked()
     _ks = ks
   }
 
   def advance() {
-    notInvoked()
+    assertNotInvoked()
     _advance = true
   }
 
-  private def invoked() {
-    assert (_invokation != null, "PrepareCallback was not invoked.")
-  }
+  def hasPassed: Boolean =
+    _v != null
 
   def passed: Transaction = {
-    invoked()
-    assert (_v != null, "PrepareCallback did not pass.")
+    assertInvoked (true)
+    if (_t != null)
+      throw new AssertionError (_t)
+    assert (hasPassed, "PrepareCallback did not pass.")
     _v
   }
 
+  def hasFailed: Boolean =
+    _t != null
+
+  def hasTimedOut: Boolean =
+    _t != null && _t.isInstanceOf [TimeoutException]
+
   def failed: Throwable = {
-    invoked()
-    assert (_t != null, "PrepareCallback did not fail.")
+    assertInvoked (false)
+    assert (hasFailed, "PrepareCallback did not fail.")
     _t
   }
 
+  def hasCollided: Boolean =
+    _ks != null
+
   def collided: Set [Int] = {
-    invoked()
-    assert (_ks != null, "PrepareCallback did not collide.")
+    assertInvoked (true)
+    assert (hasCollided, "PrepareCallback did not collide.")
     _ks
   }
 
-  def advanced: Boolean = {
-    invoked()
-    assert (_advance, "PrepareCallback did not advance.")
+  def hasAdvanced: Boolean =
     _advance
-  }}
+
+  def advanced: Boolean = {
+    assertInvoked (true)
+    assert (hasAdvanced, "PrepareCallback did not advance.")
+    _advance
+  }
+
+  override def toString: String =
+    if (!wasInvoked)
+      "PrepareCaptor:NotInvoked"
+    else if (hasPassed)
+      s"PrepareCaptor:Passed(${_v})"
+    else if (hasFailed)
+      s"PrepareCaptor:Failed(${_t})"
+    else if (hasCollided)
+      s"PrepareCaptor:Collided(${_ks})"
+    else if (hasAdvanced)
+      "PrepareCaptor:Advanced"
+    else
+      "PrepareCaptor:Confused"
+}
