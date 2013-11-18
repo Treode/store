@@ -3,7 +3,8 @@ package com.treode.store.local.disk.timed
 import scala.collection.mutable.PriorityQueue
 
 import com.treode.concurrent.Callback
-import com.treode.store.local.{TimedCell, TimedIterator}
+import com.treode.store.TimedCell
+import com.treode.store.local.TimedIterator
 
 private class SynthIterator extends TimedIterator {
   import SynthIterator.Element

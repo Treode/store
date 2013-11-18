@@ -4,8 +4,7 @@ import scala.collection.mutable.Builder
 
 import com.treode.concurrent.Callback
 import com.treode.pickle.Picklers
-import com.treode.store.{Bytes, Fruits, TxClock}
-import com.treode.store.local.TimedCell
+import com.treode.store.{Bytes, Fruits, TimedCell, TxClock}
 import com.treode.store.local.disk.DiskSystemStub
 import org.scalatest.WordSpec
 

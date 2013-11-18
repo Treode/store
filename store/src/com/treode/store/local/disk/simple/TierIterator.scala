@@ -1,7 +1,8 @@
 package com.treode.store.local.disk.simple
 
 import com.treode.concurrent.Callback
-import com.treode.store.local.{SimpleCell, SimpleIterator}
+import com.treode.store.SimpleCell
+import com.treode.store.local.SimpleIterator
 import com.treode.store.local.disk.{DiskSystem, Page}
 
 private class TierIterator (disk: DiskSystem) extends SimpleIterator {

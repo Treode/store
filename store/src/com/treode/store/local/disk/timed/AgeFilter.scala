@@ -1,11 +1,11 @@
 package com.treode.store.local.disk.timed
 
 import com.treode.concurrent.Callback
-import com.treode.store.TxClock
-import com.treode.store.local.{TimedCell, TimedIterator}
+import com.treode.store.{TimedCell, TxClock}
+import com.treode.store.local.TimedIterator
 
 /** Remove cells older than a limit. */
-class AgeFilter (iter: TimedIterator, limit: TxClock) extends TimedIterator {
+private class AgeFilter (iter: TimedIterator, limit: TxClock) extends TimedIterator {
 
   private var next: TimedCell = null
 

@@ -1,7 +1,7 @@
 package com.treode.store.local
 
 import com.treode.concurrent.CallbackCaptor
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{Bytes, TimedCell, TxClock}
 import org.scalatest.Assertions
 
 private trait TestableTimedTable extends TimedTable with Assertions {

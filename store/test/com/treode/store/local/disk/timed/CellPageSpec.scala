@@ -1,8 +1,7 @@
 package com.treode.store.local.disk.timed
 
 import com.treode.pickle.{Buffer, Picklers, pickle, unpickle}
-import com.treode.store.{Bytes, Fruits, TxClock}
-import com.treode.store.local.TimedCell
+import com.treode.store.{Bytes, Fruits, TimedCell, TxClock}
 import org.scalatest.WordSpec
 
 class CellPageSpec extends WordSpec {

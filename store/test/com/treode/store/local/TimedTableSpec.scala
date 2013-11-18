@@ -5,7 +5,7 @@ import com.treode.store.local.temp.TestableTempKit
 import org.scalatest.FreeSpec
 
 import Fruits.Apple
-import TimedTestTools._
+import LocalTimedTestTools._
 import WriteOp._
 
 class TimedTableSpec extends FreeSpec {

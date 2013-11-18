@@ -2,8 +2,7 @@ package com.treode.store.local.disk.simple
 
 import java.util.{Arrays, ArrayList}
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
-import com.treode.store.{Bytes, TxClock}
-import com.treode.store.local.SimpleCell
+import com.treode.store.{Bytes, SimpleCell, TxClock}
 import com.treode.store.local.disk.{AbstractPagePickler, Page}
 
 private class CellPage (val entries: Array [SimpleCell]) extends Page {

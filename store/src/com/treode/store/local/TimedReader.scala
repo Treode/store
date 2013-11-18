@@ -3,7 +3,7 @@ package com.treode.store.local
 import java.util.ArrayList
 import scala.collection.JavaConversions.asScalaBuffer
 
-import com.treode.store.{MultiException, ReadBatch, ReadCallback, Value}
+import com.treode.store.{MultiException, ReadBatch, ReadCallback, TimedCell, Value}
 
 private class TimedReader (batch: ReadBatch, cb: ReadCallback) {
 

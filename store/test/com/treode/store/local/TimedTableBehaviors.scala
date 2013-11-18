@@ -6,7 +6,7 @@ import com.treode.store.{Bytes, Fruits, ReadOp, TableId, WriteOp}
 import org.scalatest.FreeSpec
 
 import Fruits.Apple
-import TimedTestTools._
+import LocalTimedTestTools._
 import WriteOp._
 
 trait TimedTableBehaviors {

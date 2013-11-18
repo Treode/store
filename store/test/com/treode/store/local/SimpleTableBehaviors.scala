@@ -7,7 +7,7 @@ import com.treode.store.{Bytes, Fruits, SimpleStore, TableId}
 import org.scalatest.FreeSpec
 
 import Fruits.Apple
-import SimpleTestTools._
+import LocalSimpleTestTools._
 
 trait SimpleTableBehaviors {
   this: FreeSpec =>

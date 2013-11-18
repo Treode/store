@@ -1,14 +1,15 @@
 package com.treode.store.local
 
 import com.treode.concurrent.Callback
+import com.treode.store.TimedCell
 
-private [store] trait TimedIterator {
+private trait TimedIterator {
 
   def hasNext: Boolean
   def next (cb: Callback [TimedCell])
 }
 
-private [store] object TimedIterator {
+private object TimedIterator {
 
   def adapt (iter: Iterator [TimedCell]): TimedIterator =
     new TimedIterator {

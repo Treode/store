@@ -2,8 +2,7 @@ package com.treode.store.local.disk.timed
 
 import java.util.{Arrays, ArrayList}
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
-import com.treode.store.{Bytes, TxClock}
-import com.treode.store.local.TimedCell
+import com.treode.store.{Bytes, TimedCell, TxClock}
 import com.treode.store.local.disk.{AbstractPagePickler, Page}
 
 private class CellPage (val entries: Array [TimedCell]) extends Page {

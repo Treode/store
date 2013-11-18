@@ -1,7 +1,8 @@
 package com.treode.store.local.disk.simple
 
 import com.treode.concurrent.Callback
-import com.treode.store.local.{SimpleCell, SimpleIterator}
+import com.treode.store.SimpleCell
+import com.treode.store.local.SimpleIterator
 
 /** Preserves first cell for key and eliminates subsequent ones. */
 private class OverwritesFilter private (iter: SimpleIterator) extends SimpleIterator {

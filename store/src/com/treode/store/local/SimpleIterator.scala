@@ -1,14 +1,15 @@
 package com.treode.store.local
 
 import com.treode.concurrent.Callback
+import com.treode.store.SimpleCell
 
-private [store] trait SimpleIterator {
+private trait SimpleIterator {
 
   def hasNext: Boolean
   def next (cb: Callback [SimpleCell])
 }
 
-private [store] object SimpleIterator {
+private object SimpleIterator {
 
   def adapt (iter: Iterator [SimpleCell]): SimpleIterator =
     new SimpleIterator {

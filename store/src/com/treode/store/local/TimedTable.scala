@@ -3,7 +3,7 @@ package com.treode.store.local
 import java.io.Closeable
 
 import com.treode.concurrent.Callback
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{Bytes, TimedCell, TxClock}
 
 trait TimedTable extends Closeable {
 

@@ -1,12 +1,12 @@
 package com.treode.store.local.disk.timed
 
 import com.treode.concurrent.Callback
-import com.treode.store.Fruits
-import com.treode.store.local.{TimedCell, TimedIterator, TimedTestTools}
+import com.treode.store.{Fruits, TimedCell}
+import com.treode.store.local.{TimedIterator, LocalTimedTestTools}
 import org.scalatest.FlatSpec
 
 import Fruits.{Apple, Banana}
-import TimedTestTools._
+import LocalTimedTestTools._
 
 class AgeFilterSpec extends FlatSpec {
 

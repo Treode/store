@@ -1,8 +1,7 @@
 package com.treode.store.local.disk.timed
 
 import com.treode.concurrent.Callback
-import com.treode.store.{Bytes, TxClock}
-import com.treode.store.local.TimedCell
+import com.treode.store.{Bytes, TimedCell, TxClock}
 import com.treode.store.local.disk.{DiskSystem, Page}
 
 object Tier {

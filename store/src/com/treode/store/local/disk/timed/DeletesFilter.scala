@@ -1,7 +1,8 @@
 package com.treode.store.local.disk.timed
 
 import com.treode.concurrent.Callback
-import com.treode.store.local.{TimedCell, TimedIterator}
+import com.treode.store.TimedCell
+import com.treode.store.local.TimedIterator
 
 /** If the oldest cell for a key is a delete, then remove that cell; assumes the wrapped iterator
   * is sorted by cell.

@@ -1,7 +1,6 @@
-package com.treode.store.local
+package com.treode.store
 
 import com.treode.pickle.size
-import com.treode.store.{Bytes, StorePicklers, TxClock}
 
 private class SimpleCell (val key: Bytes, val value: Option [Bytes])
 extends Ordered [SimpleCell] {

@@ -1,10 +1,11 @@
 package com.treode.store.local
 
 import org.scalatest.FlatSpec
-import com.treode.store.Fruits
+import com.treode.store.{Fruits, TimedCell}
+
+import Fruits.{Apple, Orange}
 
 class TimedCellSpec extends FlatSpec {
-  import Fruits.{Apple, Orange}
 
   "TimedCell.compare" should "sort by key" in {
     assert (TimedCell (Apple, 1, None) < TimedCell (Orange, 1, None))

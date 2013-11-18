@@ -2,8 +2,7 @@ package com.treode.store.local.disk.simple
 
 import java.util.{ArrayDeque, ArrayList}
 import com.treode.concurrent.Callback
-import com.treode.store.{Bytes, TxClock}
-import com.treode.store.local.SimpleCell
+import com.treode.store.{Bytes, SimpleCell, TxClock}
 import com.treode.store.local.disk.DiskSystem
 
 private class TierBuilder (disk: DiskSystem) {

@@ -1,14 +1,8 @@
-package com.treode.store.local
+package com.treode.store
 
 import scala.util.Random
 
-import com.treode.concurrent.{Callback, CallbackCaptor}
-import com.treode.store._
-import org.scalatest.Assertions
-
-import Assertions._
-
-private object TimedTestTools {
+private trait TimedTestTools {
 
   implicit class RichBytes (v: Bytes) {
     def ## (time: Int) = TimedCell (v, TxClock (time), None)
@@ -31,28 +25,10 @@ private object TimedTestTools {
     def - (n: Int) = TxClock (v.time - n)
   }
 
-  implicit class RichCellIterator (iter: TimedIterator) {
-
-    def toSeq: Seq [TimedCell] = {
-      val builder = Seq.newBuilder [TimedCell]
-      val loop = new Callback [TimedCell] {
-        def pass (cell: TimedCell) {
-          builder += cell
-          if (iter.hasNext)
-            iter.next (this)
-        }
-        def fail (t: Throwable) = throw t
-      }
-      if (iter.hasNext)
-        iter.next (loop)
-      builder.result
-    }}
-
   def nextTable = TableId (Random.nextLong)
 
   def Get (id: TableId, key: Bytes): ReadOp =
     ReadOp (id, key)
-
-  def expectCells (cs: TimedCell*) (actual: TestableTimedTable) =
-    expectResult (cs) (actual.toSeq)
 }
+
+private object TimedTestTools extends TimedTestTools
