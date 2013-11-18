@@ -1,6 +1,6 @@
 package com.treode.store.local.temp
 
-import com.treode.store.{SimpleTable, LocalStore, TableId, TimedCell}
+import com.treode.store.{SimpleTable, TableId, TestableLocalStore, TimedCell}
 import com.treode.store.local.{LocalKit, TableCache, TestableLocalKit, TimedTable}
 import org.scalatest.Assertions
 
@@ -20,10 +20,12 @@ private [local] class TestableTempKit (bits: Int) extends LocalKit (bits) with T
 
   def openSimpleTable (id: TableId): SimpleTable =
     new TempSimpleTable
+
+  def close() = ()
 }
 
 private [store] object TestableTempKit {
 
-  def apply (bits: Int): LocalStore =
+  def apply (bits: Int): TestableLocalStore =
     new TestableTempKit (bits)
 }

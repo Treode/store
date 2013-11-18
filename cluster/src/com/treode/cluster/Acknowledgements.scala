@@ -6,6 +6,7 @@ trait Acknowledgements {
   def clear()
   def awaiting: Set [HostId]
   def quorum: Boolean
+  def unity: Boolean
 }
 
 object Acknowledgements {
@@ -17,6 +18,7 @@ object Acknowledgements {
     def clear() = ()
     def awaiting = Set.empty [HostId]
     def quorum = false
+    def unity = false
 
     override def toString = "Acknowledgements.empty"
   }
@@ -30,6 +32,7 @@ object Acknowledgements {
     def clear(): Unit = hs = hosts
     def awaiting = hs
     def quorum = hs.size < nquorum
+    def unity = hs.size == 0
 
     override def toString =
       s"Acknowledgements.Settled(${(hosts -- hs) mkString ","})"
@@ -54,6 +57,8 @@ object Acknowledgements {
     def awaiting = as ++ ts
 
     def quorum = as.size < aquorum && ts.size < tquorum
+
+    def unity = as.size == 0 && ts.size == 0
 
     override def toString =
       s"Acknowledgements.Moving(${(active ++ target -- as -- ts) mkString ","})"

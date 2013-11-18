@@ -64,6 +64,16 @@ class MailboxRegistry (implicit events: Events) {
     def receive (receiver: (M, Peer) => Any): Unit =
       mbx.receive {case (msg, from) => receiver (msg, from)}
 
+    def whilst (condition: => Boolean) (receiver: (M, Peer) => Any) {
+      if (condition) {
+        mbx.receive { case (msg, from) =>
+          receiver (msg, from)
+          whilst (condition) (receiver)
+        }
+      } else {
+        close()
+      }}
+
     def apply (from: Peer, buffer: Buffer): Unit =
       mbx.send (unpickle (p, buffer), from)
   }

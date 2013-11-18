@@ -1,5 +1,7 @@
 package com.treode
 
+import java.io.Closeable
+
 import com.treode.concurrent.Callback
 import com.treode.cluster.events.Events
 import com.treode.pickle.Pickler
@@ -39,9 +41,9 @@ package store {
     def openSimpleTable (id: TableId): SimpleTable
   }
 
-  private trait LocalStore extends PreparableStore with SimpleStore
+  private trait LocalStore extends PreparableStore with SimpleStore with Closeable
 
-  private trait PaxosStore {
+  private trait PaxosStore extends Closeable {
     def lead (key: Bytes, value: Bytes, cb: Callback [Bytes])
     def propose (key: Bytes, value: Bytes, cb: Callback [Bytes])
   }}
