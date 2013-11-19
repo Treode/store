@@ -2,7 +2,7 @@ package com.treode.store.cluster.atomic
 
 import com.treode.cluster.{Host, MessageDescriptor, RequestDescriptor, RequestMediator}
 import com.treode.concurrent.{Callback, Fiber}
-import com.treode.store.{PrepareCallback, Transaction, TxClock, TxId, WriteBatch}
+import com.treode.store.{PrepareCallback, Transaction, TxClock, TxId, WriteOp}
 
 private class Deputy (xid: TxId, kit: AtomicKit) {
   import Deputy._
@@ -16,38 +16,38 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
   var state: State = new Restoring
 
   trait State {
-    def prepare (mdtr: AtomicMediator, batch: WriteBatch, cb: Callback [Unit])
+    def prepare (mdtr: AtomicMediator, ct: TxClock, ops: Seq [WriteOp], cb: Callback [Unit])
     def commit (mdtr: AtomicMediator, wt: TxClock, cb: Callback [Unit])
     def abort (mdtr: AtomicMediator, cb: Callback [Unit])
     def timeout()
     def shutdown()
   }
 
-  def _prepare (mdtr: AtomicMediator, batch: WriteBatch, cb: Callback [Unit]): Unit =
+  def _prepare (mdtr: AtomicMediator, ct: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
     Callback.guard (cb) {
-      store.prepare (batch, new PrepareCallback {
+      store.prepare (ct, ops, new PrepareCallback {
 
         def pass (tx: Transaction) {
-          state = Prepared.save (batch, tx)
+          state = Prepared.save (ops, tx)
           mdtr.respond (AtomicResponse.Prepared (tx.ft))
           cb()
         }
 
         def fail (t: Throwable) {
-          state = new Aborting (batch, AtomicResponse.Failed)
+          state = new Aborting (ops, AtomicResponse.Failed)
           mdtr.respond (AtomicResponse.Failed)
           cb()
         }
 
         def collisions (ks: Set [Int]) {
           val rsp = AtomicResponse.Collisions (ks)
-          state = new Aborting (batch, rsp)
+          state = new Aborting (ops, rsp)
           mdtr.respond (rsp)
           cb()
         }
 
         def advance() {
-          state = new Aborting (batch, AtomicResponse.Advance)
+          state = new Aborting (ops, AtomicResponse.Advance)
           mdtr.respond (AtomicResponse.Advance)
           cb()
         }})
@@ -59,9 +59,9 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
       cb()
     }
 
-  def _commit (mdtr: AtomicMediator, batch: WriteBatch, wt: TxClock, cb: Callback [Unit]): Unit =
+  def _commit (mdtr: AtomicMediator, wt: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
     Callback.guard (cb) {
-      store.commit (batch, wt, new Callback [Unit] {
+      store.commit (wt, ops, new Callback [Unit] {
 
         def pass (v: Unit) {
           state = Committed.save()
@@ -119,8 +119,8 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
     def restore (cb: Callback [Unit]) (f: State => Unit) {
       Callback.guard (cb) {
         mainDb.get (xid.id, Callback.unary {
-          case Some (DeputyStatus.Prepared (ops)) =>
-            state = Prepared.forget (ops)
+          case Some (DeputyStatus.Prepared (ft, ops)) =>
+            state = new Aborting (ops, AtomicResponse.Prepared (ft))
             f (state)
           case Some (DeputyStatus.Committed) =>
             state = Committed.forget()
@@ -134,8 +134,8 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
         })
       }}
 
-    def prepare (mdtr: AtomicMediator, batch: WriteBatch, cb: Callback [Unit]): Unit =
-      restore (cb) (_.prepare (mdtr, batch, cb))
+    def prepare (mdtr: AtomicMediator, ct: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
+      restore (cb) (_.prepare (mdtr, ct, ops, cb))
 
     def abort (mdtr: AtomicMediator, cb: Callback [Unit]): Unit =
       restore (cb) (_.abort (mdtr, cb))
@@ -154,8 +154,8 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
 
   class Open extends State {
 
-    def prepare (mdtr: AtomicMediator, batch: WriteBatch, cb: Callback [Unit]): Unit =
-      _prepare (mdtr, batch, cb)
+    def prepare (mdtr: AtomicMediator, ct: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
+      _prepare (mdtr, ct, ops, cb)
 
     def abort (mdtr: AtomicMediator, cb: Callback [Unit]): Unit =
       _abort (mdtr, cb)
@@ -177,7 +177,7 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
 
   class Prepared private (tx: Transaction) extends State {
 
-    def prepare (mdtr: AtomicMediator, batch: WriteBatch, cb: Callback [Unit]): Unit =
+    def prepare (mdtr: AtomicMediator, ct: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
       _prepared (mdtr, AtomicResponse.Prepared (tx.ft), cb)
 
     def commit (mdtr: AtomicMediator, wt: TxClock, cb: Callback [Unit]): Unit =
@@ -195,20 +195,16 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
 
   object Prepared {
 
-    def save (batch: WriteBatch, tx: Transaction) = {
+    def save (ops: Seq [WriteOp], tx: Transaction) = {
       openDb.put (xid.id, ())
-      mainDb.put (xid.id, DeputyStatus.Prepared (batch))
+      mainDb.put (xid.id, DeputyStatus.Prepared (tx.ft, ops))
       new Prepared (tx)
-    }
-
-    def forget (batch: WriteBatch) =
-      new Prepared (null)
-  }
+    }}
 
   class Committing (wt: TxClock) extends State {
 
-    def prepare (mdtr: AtomicMediator, batch: WriteBatch, cb: Callback [Unit]): Unit =
-      _commit (mdtr, batch, wt, cb)
+    def prepare (mdtr: AtomicMediator, ct: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
+      _commit (mdtr, wt, ops, cb)
 
     def commit (mdtr: AtomicMediator, wt: TxClock, cb: Callback [Unit]) = ()
 
@@ -223,13 +219,13 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
     override def toString = "Deputy.Committing"
   }
 
-  class Aborting (batch: WriteBatch, rsp: AtomicResponse) extends State {
+  class Aborting (ops: Seq [WriteOp], rsp: AtomicResponse) extends State {
 
-    def prepare (mdtr: AtomicMediator, batch: WriteBatch, cb: Callback [Unit]): Unit =
+    def prepare (mdtr: AtomicMediator, ct: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
       _prepared (mdtr, rsp, cb)
 
     def commit (mdtr: AtomicMediator, wt: TxClock, cb: Callback [Unit]): Unit =
-      _commit (mdtr, batch, wt, cb)
+      _commit (mdtr, wt, ops, cb)
 
     def abort (mdtr: AtomicMediator, cb: Callback [Unit]): Unit =
       _abort (mdtr, cb)
@@ -244,7 +240,7 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
 
   class Committed private extends State {
 
-    def prepare (mdtr: AtomicMediator, batch: WriteBatch, cb: Callback [Unit]): Unit =
+    def prepare (mdtr: AtomicMediator, ct: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
       _committed (mdtr, cb)
 
     def commit (mdtr: AtomicMediator, wt: TxClock, cb: Callback [Unit]): Unit =
@@ -274,7 +270,7 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
 
   class Aborted private extends State {
 
-    def prepare (mdtr: AtomicMediator, batch: WriteBatch, cb: Callback [Unit]): Unit =
+    def prepare (mdtr: AtomicMediator, ct: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
       _aborted (mdtr, cb)
 
     def commit (mdtr: AtomicMediator, wt: TxClock, cb: Callback [Unit]): Unit =
@@ -305,7 +301,7 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
 
   class Shutdown extends State {
 
-    def prepare (mdtr: AtomicMediator, batch: WriteBatch, cb: Callback [Unit]) = cb()
+    def prepare (mdtr: AtomicMediator, ct: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]) = cb()
     def commit (mdtr: AtomicMediator, wt: TxClock, cb: Callback [Unit]) = cb()
     def abort (mdtr: AtomicMediator, cb: Callback [Unit]) = cb()
     def timeout() = ()
@@ -315,8 +311,8 @@ private class Deputy (xid: TxId, kit: AtomicKit) {
   }
 
 
-  def prepare (mdtr: AtomicMediator, batch: WriteBatch): Unit =
-    fiber.begin (state.prepare (mdtr, batch, _))
+  def prepare (mdtr: AtomicMediator, ct: TxClock, ops: Seq [WriteOp]): Unit =
+    fiber.begin (state.prepare (mdtr, ct, ops, _))
 
   def commit (mdtr: AtomicMediator, wt: TxClock): Unit =
     fiber.begin (state.commit (mdtr, wt, _))
@@ -331,7 +327,10 @@ private object Deputy {
 
   val prepare = {
     import AtomicPicklers._
-    new RequestDescriptor (0xFFDD52697F320AD1L, writeBatch, atomicResponse)
+    new RequestDescriptor (
+        0xFFDD52697F320AD1L,
+        tuple (txId, txClock, seq (writeOp)),
+        atomicResponse)
   }
 
   val commit = {

@@ -20,13 +20,13 @@ private abstract class LocalKit (bits: Int) extends LocalStore {
           getTimedTable (op.table) .read (op.key, i, r)
       }}
 
-  def prepare (batch: WriteBatch, cb: PrepareCallback): Unit =
+  def prepare (ct: TxClock, ops: Seq [WriteOp], cb: PrepareCallback): Unit =
     Callback.guard (cb) {
-      require (!batch.ops.isEmpty, "Batch must include at least one operation")
-      val ids = batch.ops map (op => (op.table, op.key).hashCode)
-      space.write (batch.ft, ids) { locks =>
-        val w = new TimedWriter (batch, this, locks, cb)
-        for ((op, i) <- batch.ops.zipWithIndex) {
+      require (!ops.isEmpty, "Prepare needs at least one operation")
+      val ids = ops map (op => (op.table, op.key).hashCode)
+      space.write (ct, ids) { locks =>
+        val w = new TimedWriter (ct, ops, this, locks, cb)
+        for ((op, i) <- ops.zipWithIndex) {
           import WriteOp._
           val t = getTimedTable (op.table)
           op match {
@@ -36,11 +36,11 @@ private abstract class LocalKit (bits: Int) extends LocalStore {
             case op: Delete => t.delete (op.key, w)
           }}}}
 
-  def commit (batch: WriteBatch, wt: TxClock, cb: Callback [Unit]): Unit =
+  def commit (wt: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
     Callback.guard (cb) {
-      require (!batch.ops.isEmpty, "Batch must include at least one operation")
-      val c = new TimedCommitter (batch, cb)
-      for (op <- batch.ops) {
+      require (!ops.isEmpty, "Commit needs at least one operation")
+      val c = new TimedCommitter (ops, cb)
+      for (op <- ops) {
         import WriteOp._
         val t = getTimedTable (op.table)
         op match {

@@ -13,7 +13,6 @@ private class StorePicklers extends Picklers {
   def txClock = TxClock.pickle
   def txId = TxId.pickle
   def value = Value.pickle
-  def writeBatch = WriteBatch.pickle
   def writeOp = WriteOp.pickle
 }
 

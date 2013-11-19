@@ -4,11 +4,9 @@ import java.nio.file.Paths
 import scala.util.Random
 
 import com.treode.cluster.{BaseStubCluster, HostId}
-import com.treode.store.{TableId, TestFiles, TimedCell, TxId, WriteBatch, WriteCallback}
+import com.treode.store.{TableId, TimedCell, TxClock, TxId, WriteCallback, WriteOp}
 import com.treode.store.cluster.paxos.PaxosKit
 import com.treode.store.local.temp.TestableTempKit
-
-import TestFiles.{createDirectory, deleteDirectory}
 
 private class StubCluster (seed: Long, nhosts: Int) extends BaseStubCluster (seed, nhosts) {
 
@@ -22,9 +20,11 @@ private class StubCluster (seed: Long, nhosts: Int) extends BaseStubCluster (see
 
     val mainDb = new TestableMainDb (atomic.Deputies.mainDb, StubCluster.this.scheduler)
 
-    def deputy (xid: TxId) = atomic.Deputies.get (xid)
+    def deputy (xid: TxId) =
+      atomic.Deputies.get (xid)
 
-    def write (batch: WriteBatch, cb: WriteCallback) = atomic.write (batch, cb)
+    def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback) =
+      atomic.write (xid, ct, ops, cb)
 
     def expectCells (id: TableId) (cs: TimedCell*) = store.expectCells (id) (cs: _*)
 

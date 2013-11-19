@@ -35,8 +35,8 @@ private class AtomicKit (implicit val host: Host, val store: LocalStore, val pax
       d1
     }
 
-    prepare.register { case (batch, mdtr) =>
-      get (batch.xid) .prepare (mdtr, batch)
+    prepare.register { case ((xid, ct, ops), mdtr) =>
+      get (xid) .prepare (mdtr, ct, ops)
     }
 
     commit.register { case ((xid, wt), mdtr) =>
@@ -49,9 +49,9 @@ private class AtomicKit (implicit val host: Host, val store: LocalStore, val pax
 
   Deputies
 
-  def write (batch: WriteBatch, cb: WriteCallback): Unit =
+  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
     Callback.guard (cb) {
-      new Director (batch, this) .open (cb)
+      new Director (xid, ct, ops, this) .open (cb)
     }
 
   def close() {

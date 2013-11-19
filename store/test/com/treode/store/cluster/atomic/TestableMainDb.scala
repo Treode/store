@@ -1,7 +1,7 @@
 package com.treode.store.cluster.atomic
 
 import com.treode.concurrent.{CallbackCaptor, StubScheduler}
-import com.treode.store.{Bytes, SimpleAccessor, TxId, WriteBatch}
+import com.treode.store.{Bytes, SimpleAccessor, TxId}
 import org.scalatest.Assertions
 
 private class TestableMainDb (db: SimpleAccessor [Bytes, DeputyStatus], scheduler: StubScheduler)
@@ -13,9 +13,6 @@ extends Assertions {
     scheduler.runTasks()
     cb.passed
   }
-
-  def expectPrepared (batch: WriteBatch) =
-    expectResult (Some (DeputyStatus.Prepared (batch))) (get (batch.xid))
 
   def expectCommitted (xid: TxId) =
     expectResult (Some (DeputyStatus.Committed)) (get (xid))

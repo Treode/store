@@ -5,11 +5,11 @@ import scala.collection.JavaConversions._
 import scala.language.postfixOps
 
 import com.treode.concurrent.Callback
-import com.treode.store.{MultiException, WriteBatch}
+import com.treode.store.{MultiException, WriteOp}
 
-private class TimedCommitter (batch: WriteBatch, cb: Callback [Unit]) extends Callback [Unit] {
+private class TimedCommitter (ops: Seq [WriteOp], cb: Callback [Unit]) extends Callback [Unit] {
 
-  private var _awaiting = batch.ops.size
+  private var _awaiting = ops.size
   private var _failures = new ArrayList [Throwable]
 
   private def finish() {

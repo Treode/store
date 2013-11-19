@@ -42,7 +42,7 @@ object AtomicBehaviors extends WordSpec with BeforeAndAfterAll with AtomicTestTo
     val cb = new WriteCaptor
 
     "commit a write" in {
-      write (WriteBatch (xid, TxClock.zero, TxClock.zero, Create (t, k, One)), cb)
+      write (xid, TxClock.zero, Seq (Create (t, k, One)), cb)
       kit.runTasks()
       cb.passed
     }
@@ -73,8 +73,8 @@ object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTool
     val cb2 = new WriteCaptor
 
     // Write two values simultaneously.
-    h1.write (WriteBatch (xid1, TxClock.zero, TxClock.zero, Create (t, k, One)), cb1)
-    h2.write (WriteBatch (xid2, TxClock.zero, TxClock.zero, Create (t, k, Two)), cb2)
+    h1.write (xid1, TxClock.zero, Seq (Create (t, k, One)), cb1)
+    h2.write (xid2, TxClock.zero, Seq (Create (t, k, Two)), cb2)
     kit.messageFlakiness = mf
     scheduler.runTasks (true)
 

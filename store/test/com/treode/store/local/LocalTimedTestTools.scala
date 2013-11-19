@@ -29,8 +29,6 @@ private object LocalTimedTestTools extends TimedTestTools {
 
   implicit class RichLocalStore (s: LocalStore) {
 
-    private val Xid = TxId (Bytes (1))
-
     def readAndExpect (rt: TxClock, ops: ReadOp*) (expected: Value*) {
       val batch = ReadBatch (rt, ops)
       val cb = new ReadCaptor
@@ -39,9 +37,8 @@ private object LocalTimedTestTools extends TimedTestTools {
     }
 
     def prepareAndCommit (ct: TxClock, ops: WriteOp*): TxClock = {
-      val batch = WriteBatch (Xid, ct, ct, ops)
       val cb1 = new PrepareCaptor
-      s.prepare (batch, cb1)
+      s.prepare (ct, ops, cb1)
       val tx = cb1.passed
       val wt = tx.ft + 7 // Leave gaps in time.
       val cb2 = new CallbackCaptor [Unit]
@@ -51,24 +48,21 @@ private object LocalTimedTestTools extends TimedTestTools {
     }
 
     def prepareAndAbort (ct: TxClock, ops: WriteOp*) {
-      val batch = WriteBatch (Xid, ct, ct, ops)
       val cb = new PrepareCaptor
-      s.prepare (batch, cb)
+      s.prepare (ct, ops, cb)
       val tx = cb.passed
       tx.abort()
     }
 
     def prepareExpectAdvance (ct: TxClock, ops: WriteOp*) = {
-      val batch = WriteBatch (Xid, ct, ct, ops)
       val cb = new PrepareCaptor
-      s.prepare (batch, cb)
+      s.prepare (ct, ops, cb)
       cb.advanced
     }
 
     def prepareExpectCollisions (ct: TxClock, ops: WriteOp*) (expected: Int*) = {
-      val batch = WriteBatch (Xid, ct, ct, ops)
       val cb = new PrepareCaptor
-      s.prepare (batch, cb)
+      s.prepare (ct, ops, cb)
       expectResult (expected.toSet) (cb.collided)
     }}
 

@@ -9,7 +9,7 @@ import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.concurrent.{Callback, Fiber}
 import com.treode.store._
 
-private class Director (batch: WriteBatch, kit: AtomicKit) {
+private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
   import Director.deliberate
   import kit.{host, paxos}
   import kit.host.{mailboxes, random, scheduler}
@@ -69,9 +69,9 @@ private class Director (batch: WriteBatch, kit: AtomicKit) {
     val acks = host.locate (0)
     var advance = false
     var ks = Set.empty [Int]
-    var ft = batch.ft
+    var ft = TxClock.now
 
-    Deputy.prepare (batch) (acks, mbx)
+    Deputy.prepare (xid, ct, ops) (acks, mbx)
     fiber.delay (backoff.next) (state.timeout())
 
     private def maybeNextState() {
@@ -115,7 +115,7 @@ private class Director (batch: WriteBatch, kit: AtomicKit) {
 
     override def timeout() {
       if (backoff.hasNext) {
-        Deputy.prepare (batch) (acks, mbx)
+        Deputy.prepare (xid, ct, ops) (acks, mbx)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         cb.fail (new TimeoutException)
@@ -128,7 +128,7 @@ private class Director (batch: WriteBatch, kit: AtomicKit) {
   class Deliberating (wt: TxClock, cb: WriteCallback) extends State {
     import AtomicStatus._
 
-    Director.deliberate.lead (batch.xid.id, Committed (wt), new Callback [AtomicStatus] {
+    Director.deliberate.lead (xid.id, Committed (wt), new Callback [AtomicStatus] {
 
       def pass (status: AtomicStatus) = fiber.execute {
         status match {
@@ -150,7 +150,7 @@ private class Director (batch: WriteBatch, kit: AtomicKit) {
 
     override def timeout() {
       if (backoff.hasNext) {
-        Deputy.prepare (batch) (prepares, mbx)
+        Deputy.prepare (xid, ct, ops) (prepares, mbx)
         fiber.delay (backoff.next) (state.timeout())
       }}
 
@@ -161,7 +161,7 @@ private class Director (batch: WriteBatch, kit: AtomicKit) {
 
     val commits = host.locate (0)
 
-    Deputy.commit (batch.xid, wt) (commits, mbx)
+    Deputy.commit (xid, wt) (commits, mbx)
     fiber.delay (backoff.next) (state.timeout())
 
     override def prepared (ft: TxClock, from: Peer): Unit =
@@ -176,8 +176,8 @@ private class Director (batch: WriteBatch, kit: AtomicKit) {
 
     override def timeout() {
       if (backoff.hasNext) {
-        Deputy.prepare (batch) (prepares, mbx)
-        Deputy.commit (batch.xid, wt) (commits, mbx)
+        Deputy.prepare (xid, ct, ops) (prepares, mbx)
+        Deputy.commit (xid, wt) (commits, mbx)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Closed
@@ -191,8 +191,8 @@ private class Director (batch: WriteBatch, kit: AtomicKit) {
     val aborts = host.locate (0)
 
     if (lead)
-      Director.deliberate.lead (batch.xid.id, AtomicStatus.Aborted, Callback.ignore)
-    Deputy.abort (batch.xid) (aborts, mbx)
+      Director.deliberate.lead (xid.id, AtomicStatus.Aborted, Callback.ignore)
+    Deputy.abort (xid) (aborts, mbx)
 
     override def aborted (from: Peer) {
       aborts += from
@@ -202,7 +202,7 @@ private class Director (batch: WriteBatch, kit: AtomicKit) {
 
     override def timeout() {
       if (backoff.hasNext) {
-        Deputy.abort (batch.xid) (aborts, mbx)
+        Deputy.abort (xid) (aborts, mbx)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Closed

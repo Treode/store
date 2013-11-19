@@ -65,9 +65,8 @@ class LocalStoreSpec extends WordSpec {
             val ct = vs map (_.time) max
             val Seq (b1, b2) = vs map (Accounts.value (_) .get)
             val n = Random.nextInt (b1)
-            val wbatch = WriteBatch (Xid, ct, ct,
-                Accounts.update (x, b1-n), Accounts.update (y, b2+n))
-            store.prepare (wbatch, new StubPrepareCallback {
+            val ops = Seq (Accounts.update (x, b1-n), Accounts.update (y, b2+n))
+            store.prepare (ct, ops, new StubPrepareCallback {
               override def pass (tx: Transaction): Unit = scheduler.execute {
                 tx.commit (tx.ft+1, cb)
               }

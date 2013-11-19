@@ -9,12 +9,13 @@ import com.treode.store._
 import com.treode.store.local.locks.LockSet
 
 private class TimedWriter (
-    batch: WriteBatch,
+    val ct: TxClock,
+    ops: Seq [WriteOp],
     store: PreparableStore,
     private var locks: LockSet,
     private var cb: PrepareCallback) extends Transaction {
 
-  private var _awaiting = batch.ops.size
+  private var _awaiting = ops.size
   private var _advance = TxClock.zero
   private var _collisions = Set.empty [Int]
   private var _failures = new ArrayList [Throwable]
@@ -37,8 +38,6 @@ private class TimedWriter (
     } else {
       cb.apply (this)
     }}
-
-  def ct = batch.ct
 
   def ft = locks.ft
 
@@ -94,7 +93,7 @@ private class TimedWriter (
       require (this.cb == null, "Transaction cannot be closed until prepared.")
       require (locks != null, "Transaction already closed.")
       require (wt > ft)
-      store.commit (batch, wt, cb1)
+      store.commit (wt, ops, cb1)
     }}
 
   def abort() {
