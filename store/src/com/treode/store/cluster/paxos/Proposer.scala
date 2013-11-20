@@ -129,7 +129,7 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
         accepted.clear()
         ballot = refused + random.nextInt (17) + 1
         refused = ballot
-        Acceptor.propose (key, ballot, value) (promised)
+        Acceptor.query (key, ballot, value) (promised)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         remove (key, Proposer.this)

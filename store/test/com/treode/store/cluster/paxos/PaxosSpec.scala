@@ -77,15 +77,6 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
     var hs = kit.hosts
     import kit.{random, scheduler}
 
-    def cleanup() {
-      try {
-        kit.messageFlakiness = 0.0
-        kit.runTasks()
-        kit.cleanup()
-      } catch {
-        case e: TimeoutException => ()
-      }}
-
     try {
 
       // Setup.
@@ -112,11 +103,11 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
       Summary (summary.timedout, summary.chosen + v.int)
     } catch {
       case e: TimeoutException =>
-        cleanup()
+        kit.cleanup()
         Summary (true, summary.chosen)
       case e: Throwable =>
-        cleanup()
-        e.printStackTrace; throw e
+        kit.cleanup()
+        throw e
     }}
 
   property ("The acceptors should achieve consensus", LargeTest) {
