@@ -26,10 +26,10 @@ class TimedTableSpec extends FreeSpec {
 
     "and a write commits should" - {
 
-      "allow create Apple::1 at ts=0" in {
+      "allow create Apple::One at ts=0" in {
         val t = nextTable
         val ts = kit.prepareAndCommit (0, Create (t, Apple, One))
-        kit.expectCells (t) (Apple##ts::1)
+        kit.expectCells (t) (Apple##ts::One)
       }
 
       "allow hold Apple at ts=0" in {
@@ -38,10 +38,10 @@ class TimedTableSpec extends FreeSpec {
         kit.expectCells (t) ()
       }
 
-      "allow update Apple::1 at ts=0" in {
+      "allow update Apple::One at ts=0" in {
         val t = nextTable
         val ts = kit.prepareAndCommit (0, Update (t, Apple, One))
-        kit.expectCells (t) (Apple##ts::1)
+        kit.expectCells (t) (Apple##ts::One)
       }
 
       "allow delete Apple at ts=0" in {
@@ -52,7 +52,7 @@ class TimedTableSpec extends FreeSpec {
 
     "and a write aborts should" - {
 
-      "allow and ignore create Apple::1 at ts=0" in {
+      "allow and ignore create Apple::One at ts=0" in {
         val t = nextTable
         kit.prepareAndAbort (0, Create (t, Apple, One))
         kit.expectCells (t) ()
@@ -64,7 +64,7 @@ class TimedTableSpec extends FreeSpec {
         kit.expectCells (t) ()
       }
 
-      "allow and ignore update Apple::1 at ts=0" in {
+      "allow and ignore update Apple::One at ts=0" in {
         val t = nextTable
         kit.prepareAndAbort (0, Update (t, Apple, One))
         kit.expectCells (t) ()
@@ -76,7 +76,7 @@ class TimedTableSpec extends FreeSpec {
         kit.expectCells (t) ()
       }}}
 
-  "when having Apple##ts::1" - {
+  "when having Apple##ts::One" - {
 
     def newTableWithData = {
       val t = nextTable
@@ -86,14 +86,14 @@ class TimedTableSpec extends FreeSpec {
 
     "and reading" -  {
 
-      "find ts::1 for Apple##ts+1" in {
+      "find ts::One for Apple##ts+1" in {
         val (t, ts) = newTableWithData
-        kit.readAndExpect (ts+1, Get (t, Apple)) (ts::1)
+        kit.readAndExpect (ts+1, Get (t, Apple)) (ts::One)
       }
 
-      "find ts::1 for Apple##ts" in {
+      "find ts::One for Apple##ts" in {
         val (t, ts) = newTableWithData
-        kit.readAndExpect (ts, Get (t, Apple)) (ts::1)
+        kit.readAndExpect (ts, Get (t, Apple)) (ts::One)
       }
 
       "find 0::None for Apple##ts-1" in {
@@ -126,89 +126,89 @@ class TimedTableSpec extends FreeSpec {
       "allow hold Apple at ts+1" in {
         val (t, ts) = newTableWithData
         kit.prepareAndCommit (ts+1, Hold (t, Apple))
-        kit.expectCells (t) (Apple##ts::1)
+        kit.expectCells (t) (Apple##ts::One)
       }
 
       "allow hold Apple at ts" in {
         val (t, ts) = newTableWithData
         kit.prepareAndCommit (ts, Hold (t, Apple))
-        kit.expectCells (t) (Apple##ts::1)
+        kit.expectCells (t) (Apple##ts::One)
       }
 
-      "allow update Apple::2 at ts+1" taggedAs (com.treode.store.LargeTest) in {
+      "allow update Apple::Two at ts+1" taggedAs (com.treode.store.LargeTest) in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1+1, Update (t, Apple, Two))
-        kit.expectCells (t) (Apple##ts2::2, Apple##ts1::1)
+        kit.expectCells (t) (Apple##ts2::Two, Apple##ts1::One)
       }
 
-      "allow update Apple::2 at ts" in {
+      "allow update Apple::Two at ts" in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1, Update (t, Apple, Two))
-        kit.expectCells (t) (Apple##ts2::2, Apple##ts1::1)
+        kit.expectCells (t) (Apple##ts2::Two, Apple##ts1::One)
       }
 
-      "allow update Apple::1 at ts+1" in {
+      "allow update Apple::One at ts+1" in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1+1, Update (t, Apple, One))
-        kit.expectCells (t) (Apple##ts2::1, Apple##ts1::1)
+        kit.expectCells (t) (Apple##ts2::One, Apple##ts1::One)
       }
 
-      "allow update Apple::1 at ts" in {
+      "allow update Apple::One at ts" in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1, Update (t, Apple, One))
-        kit.expectCells (t) (Apple##ts2::1, Apple##ts1::1)
+        kit.expectCells (t) (Apple##ts2::One, Apple##ts1::One)
       }
 
       "allow delete Apple at ts+1" in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1+1, Delete (t, Apple))
-        kit.expectCells (t) (Apple##ts2, Apple##ts1::1)
+        kit.expectCells (t) (Apple##ts2, Apple##ts1::One)
       }
 
       "allow delete Apple at ts" in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1, Delete (t, Apple))
-        kit.expectCells (t) (Apple##ts2, Apple##ts1::1)
+        kit.expectCells (t) (Apple##ts2, Apple##ts1::One)
       }}
 
     "and a write aborts should" -  {
 
-      "ignore update Apple::2 at ts+1" in {
+      "ignore update Apple::Two at ts+1" in {
         val (t, ts1) = newTableWithData
         kit.prepareAndAbort (ts1+1, Update (t, Apple, Two))
-        kit.expectCells (t) (Apple##ts1::1)
+        kit.expectCells (t) (Apple##ts1::One)
       }
 
       "ignore delete Apple at ts+1" in {
         val (t, ts1) = newTableWithData
         kit.prepareAndAbort (ts1+1, Delete (t, Apple))
-        kit.expectCells (t) (Apple##ts1::1)
+        kit.expectCells (t) (Apple##ts1::One)
       }}}
 
-  "when having Apple##ts2::2 and Apple##ts1::1 should" -  {
+  "when having Apple##ts2::Two and Apple##ts1::One should" -  {
 
     val t = nextTable
     val ts1 = kit.prepareAndCommit (0, Create (t, Apple, One))
     val ts2 = kit.prepareAndCommit (ts1, Update (t, Apple, Two))
 
-    "find ts2::2 for Apple##ts2+1" in {
-      kit.readAndExpect (ts2+1, Get (t, Apple)) (ts2::2)
+    "find ts2::Two for Apple##ts2+1" in {
+      kit.readAndExpect (ts2+1, Get (t, Apple)) (ts2::Two)
     }
 
-    "find ts2::2 for Apple##ts2" in {
-      kit.readAndExpect (ts2, Get (t, Apple)) (ts2::2)
+    "find ts2::Two for Apple##ts2" in {
+      kit.readAndExpect (ts2, Get (t, Apple)) (ts2::Two)
     }
 
-    "find ts1::1 for Apple##ts2-1" in {
-      kit.readAndExpect (ts2-1, Get (t, Apple)) (ts1::1)
+    "find ts1::One for Apple##ts2-1" in {
+      kit.readAndExpect (ts2-1, Get (t, Apple)) (ts1::One)
     }
 
-    "find ts1::1 for Apple##ts1+1" in {
-      kit.readAndExpect (ts1+1, Get (t, Apple)) (ts1::1)
+    "find ts1::One for Apple##ts1+1" in {
+      kit.readAndExpect (ts1+1, Get (t, Apple)) (ts1::One)
     }
 
-    "find ts1::1 for Apple##ts1" in {
-      kit.readAndExpect (ts1, Get (t, Apple)) (ts1::1)
+    "find ts1::One for Apple##ts1" in {
+      kit.readAndExpect (ts1, Get (t, Apple)) (ts1::One)
     }
 
     "find 0::None for Apple##ts1-1" in {

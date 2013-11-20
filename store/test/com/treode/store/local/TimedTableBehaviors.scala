@@ -26,14 +26,14 @@ trait TimedTableBehaviors {
 
       "and writing should" - {
 
-        "put Apple##1::1" in {
+        "put Apple##1::One" in {
           val id = nextTable
           val t = kit.getTimedTable (id)
           t.putAndPass (Apple, 1, Some (One))
-          kit.expectCells (id) (Apple##1::1)
+          kit.expectCells (id) (Apple##1::One)
         }}}
 
-    "when having Apple##7::1" - {
+    "when having Apple##7::One" - {
 
       def newTableWithData = {
         val id = nextTable
@@ -44,14 +44,14 @@ trait TimedTableBehaviors {
 
       "and reading should" -  {
 
-        "find Apple##7::1 for Apple##8" in {
+        "find Apple##7::One for Apple##8" in {
           val (id, t) = newTableWithData
-          t.getAndExpect (Apple, 8) (Apple##7::1)
+          t.getAndExpect (Apple, 8) (Apple##7::One)
         }
 
-        "find Apple##7::1 for Apple##7" in {
+        "find Apple##7::One for Apple##7" in {
           val (id, t) = newTableWithData
-          t.getAndExpect (Apple, 7) (Apple##7::1)
+          t.getAndExpect (Apple, 7) (Apple##7::One)
         }
 
         "find Apple##0 for Apple##6" in {
@@ -61,42 +61,42 @@ trait TimedTableBehaviors {
 
       "and writing should" -  {
 
-        "put Apple##11::2" in {
+        "put Apple##11::Two" in {
           val (id, t) = newTableWithData
           t.putAndPass (Apple, 11, Some (Two))
-          kit.expectCells (id) (Apple##11::2, Apple##7::1)
+          kit.expectCells (id) (Apple##11::Two, Apple##7::One)
         }
 
-        "put Apple##3::2" in {
+        "put Apple##3::Two" in {
           val (id, t) = newTableWithData
           t.putAndPass (Apple, 3, Some (Two))
-          kit.expectCells (id) (Apple##7::1, Apple##3::2)
+          kit.expectCells (id) (Apple##7::One, Apple##3::Two)
         }}}
 
-    "when having Apple##14::2 and Apple##7::1 should" -  {
+    "when having Apple##14::Two and Apple##7::One should" -  {
 
       val t = kit.getTimedTable (nextTable)
       t.putAndPass (Apple, 7, Some (One))
       t.putAndPass (Apple, 14, Some (Two))
 
-      "find Apple##14::2 for Apple##15" in {
-        t.getAndExpect (Apple, 15) (Apple##14::2)
+      "find Apple##14::Two for Apple##15" in {
+        t.getAndExpect (Apple, 15) (Apple##14::Two)
       }
 
-      "find Apple##14::2 for Apple##14" in {
-        t.getAndExpect (Apple, 14) (Apple##14::2)
+      "find Apple##14::Two for Apple##14" in {
+        t.getAndExpect (Apple, 14) (Apple##14::Two)
       }
 
-      "find Apple##7::1 for Apple##13" in {
-        t.getAndExpect (Apple, 13) (Apple##7::1)
+      "find Apple##7::One for Apple##13" in {
+        t.getAndExpect (Apple, 13) (Apple##7::One)
       }
 
-      "find Apple##7::1 for Apple##8" in {
-        t.getAndExpect (Apple, 8) (Apple##7::1)
+      "find Apple##7::One for Apple##8" in {
+        t.getAndExpect (Apple, 8) (Apple##7::One)
       }
 
-      "find Apple##7::1 for Apple##7" in {
-        t.getAndExpect (Apple, 7) (Apple##7::1)
+      "find Apple##7::One for Apple##7" in {
+        t.getAndExpect (Apple, 7) (Apple##7::One)
       }
 
       "find Apple##0 for Apple##6" in {

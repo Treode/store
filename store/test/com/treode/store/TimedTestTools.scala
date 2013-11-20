@@ -7,12 +7,9 @@ private trait TimedTestTools {
   implicit class RichBytes (v: Bytes) {
     def ## (time: Int) = TimedCell (v, TxClock (time), None)
     def ## (time: TxClock) = TimedCell (v, time, None)
-  }
-
-  implicit class RichInt (v: Int) {
-    def :: (cell: TimedCell) = TimedCell (cell.key, cell.time, Some (Bytes (v)))
-    def :: (time: Int) = Value (TxClock (time), Some (Bytes (v)))
-    def :: (time: TxClock) = Value (time, Some (Bytes (v)))
+    def :: (time: Int) = Value (TxClock (time), Some (v))
+    def :: (time: TxClock) = Value (time, Some (v))
+    def :: (cell: TimedCell) = TimedCell (cell.key, cell.time, Some (v))
   }
 
   implicit class RichOption (v: Option [Bytes]) {

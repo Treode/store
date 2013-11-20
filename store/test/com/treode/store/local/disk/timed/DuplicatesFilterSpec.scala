@@ -1,17 +1,18 @@
 package com.treode.store.local.disk.timed
 
 import com.treode.concurrent.Callback
-import com.treode.store.{Bytes, Fruits, TimedCell}
+import com.treode.store.{Bytes, Cardinals, Fruits, TimedCell}
 import com.treode.store.local.{TimedIterator, LocalTimedTestTools}
 import org.scalatest.FlatSpec
 
+import Cardinals.One
 import LocalTimedTestTools._
 
 class DuplicatesFilterSpec extends FlatSpec {
 
-  private val Apple = Fruits.Apple ## 1 :: 1
-  private val Banana = Fruits.Banana ## 1 :: 1
-  private val Orange = Fruits.Orange ## 1 :: 1
+  private val Apple = Fruits.Apple ## 1 :: One
+  private val Banana = Fruits.Banana ## 1 :: One
+  private val Orange = Fruits.Orange ## 1 :: One
 
   private def expectCells (cs: TimedCell*) (actual: TimedIterator) =
     expectResult (cs) (actual.toSeq)
