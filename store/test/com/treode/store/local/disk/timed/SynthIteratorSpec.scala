@@ -1,15 +1,14 @@
 package com.treode.store.local.disk.timed
 
 import com.treode.concurrent.Callback
-import com.treode.store.{Bytes, Fruits, TimedCell}
+import com.treode.store.{Bytes, Cardinals, Fruits, TimedCell}
 import com.treode.store.local.{TimedIterator, LocalTimedTestTools}
 import org.scalatest.FlatSpec
 
+import Cardinals.One
 import LocalTimedTestTools._
 
 class SynthIteratorSpec extends FlatSpec {
-
-  private val One = Bytes ("one")
 
   private val Apple = TimedCell (Fruits.Apple, 1, Some (One))
   private val Banana = TimedCell (Fruits.Banana, 1, Some (One))

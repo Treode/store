@@ -8,6 +8,7 @@ import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, PropSpec, Specs, WordSpec}
 import org.scalatest.prop.PropertyChecks
 
+import Cardinals.{One, Two}
 import WriteOp._
 import TimedTestTools._
 

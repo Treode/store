@@ -9,8 +9,6 @@ import LocalTimedTestTools._
 
 class DuplicatesFilterSpec extends FlatSpec {
 
-  private val One = Bytes ("one")
-
   private val Apple = Fruits.Apple ## 1 :: 1
   private val Banana = Fruits.Banana ## 1 :: 1
   private val Orange = Fruits.Orange ## 1 :: 1

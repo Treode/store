@@ -3,16 +3,15 @@ package com.treode.store.local
 import scala.util.Random
 
 import com.treode.concurrent.Callback
-import com.treode.store.{Bytes, Fruits, SimpleStore, TableId}
+import com.treode.store.{Bytes, Cardinals, Fruits, SimpleStore, TableId}
 import org.scalatest.FreeSpec
 
+import Cardinals.One
 import Fruits.Apple
 import LocalSimpleTestTools._
 
 trait SimpleTableBehaviors {
   this: FreeSpec =>
-
-  private val One = Bytes ("one")
 
   private def nextTable = TableId (Random.nextLong)
 

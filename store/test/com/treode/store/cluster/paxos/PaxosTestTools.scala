@@ -5,10 +5,6 @@ import com.treode.store.{Bytes, SimpleAccessor}
 
 trait PaxosTestTools {
 
-  val Zero = Bytes (0)
-  val One = Bytes (1)
-  val Two = Bytes (2)
-
   implicit class TestableAcceptor (a: Acceptor) {
 
     def isRestoring = a.state == a.Restoring

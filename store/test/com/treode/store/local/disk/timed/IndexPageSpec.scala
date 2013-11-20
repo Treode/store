@@ -8,7 +8,6 @@ class IndexPageSpec extends WordSpec {
   import Fruits.{Apple, Kiwi, Orange}
 
   val MaxTime = TxClock.max
-  val One = Bytes ("one")
 
   private def entry (key: Bytes, time: Int): IndexEntry =
     new IndexEntry (key, time, 0)

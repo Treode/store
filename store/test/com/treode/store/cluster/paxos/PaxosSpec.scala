@@ -5,10 +5,12 @@ import java.util.concurrent.TimeoutException
 import scala.util.Random
 
 import com.treode.concurrent.CallbackCaptor
-import com.treode.store.{Bytes, LargeTest}
+import com.treode.store.{Bytes, Cardinals, LargeTest}
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, PropSpec, Specs, WordSpec}
 import org.scalatest.prop.PropertyChecks
+
+import Cardinals.{Zero, One, Two}
 
 class PaxosSpec extends Specs (PaxosBehaviors, PaxosProperties)
 

@@ -4,14 +4,14 @@ import scala.collection.mutable.Builder
 
 import com.treode.concurrent.Callback
 import com.treode.pickle.Picklers
-import com.treode.store.{Bytes, Fruits, TimedCell, TxClock}
+import com.treode.store.{Bytes, Cardinals, Fruits, TimedCell, TxClock}
 import com.treode.store.local.disk.DiskSystemStub
 import org.scalatest.WordSpec
 
-class TierSpec extends WordSpec {
-  import Fruits.{AllFruits, Apple, Orange, Watermelon}
+import Cardinals.One
+import Fruits.{AllFruits, Apple, Orange, Watermelon}
 
-  private val One = Bytes (Picklers.string, "One")
+class TierSpec extends WordSpec {
 
   /** Get the depths of ValueBlocks reached from the index entries. */
   private def getDepths (disk: DiskSystemStub, entries: Iterable [IndexEntry], depth: Int): Set [Int] =

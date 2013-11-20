@@ -4,10 +4,6 @@ import com.treode.store.Bytes
 
 trait AtomicTestTools {
 
-  val Zero = Bytes (0)
-  val One = Bytes (1)
-  val Two = Bytes (2)
-
   implicit class TestableWriteDeputy (s: WriteDeputy) {
 
     def isRestoring = classOf [WriteDeputy#Restoring] .isInstance (s.state)

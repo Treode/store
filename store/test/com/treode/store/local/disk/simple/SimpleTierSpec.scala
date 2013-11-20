@@ -4,16 +4,15 @@ import scala.collection.mutable.Builder
 
 import com.treode.concurrent.Callback
 import com.treode.pickle.Picklers
-import com.treode.store.{Bytes, Fruits, SimpleCell, TxClock}
+import com.treode.store.{Bytes, Cardinals, Fruits, SimpleCell, TxClock}
 import com.treode.store.local.SimpleIterator
 import com.treode.store.local.disk.DiskSystemStub
 import org.scalatest.WordSpec
 
+import Cardinals.One
 import Fruits.{AllFruits, Apple, Orange, Watermelon}
 
 class SimpleTierSpec extends WordSpec {
-
-  private val One = Bytes ("One")
 
   /** Get the depths of ValueBlocks reached from the index entries. */
   private def getDepths (disk: DiskSystemStub, entries: Iterable [IndexEntry], depth: Int): Set [Int] =

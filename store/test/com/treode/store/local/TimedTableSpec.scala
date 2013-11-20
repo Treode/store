@@ -1,17 +1,15 @@
 package com.treode.store.local
 
-import com.treode.store.{Bytes, Fruits, WriteOp}
+import com.treode.store.{Bytes, Cardinals, Fruits, WriteOp}
 import com.treode.store.local.temp.TestableTempKit
 import org.scalatest.FreeSpec
 
+import Cardinals.{One, Two}
 import Fruits.Apple
 import LocalTimedTestTools._
 import WriteOp._
 
 class TimedTableSpec extends FreeSpec {
-
-  private val One = Bytes (1)
-  private val Two = Bytes (2)
 
   private val kit = new TestableTempKit (2)
 

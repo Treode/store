@@ -2,18 +2,16 @@ package com.treode.store.local
 
 import scala.util.Random
 
-import com.treode.store.{Bytes, Fruits, ReadOp, TableId, WriteOp}
+import com.treode.store.{Bytes, Cardinals, Fruits, ReadOp, TableId, WriteOp}
 import org.scalatest.FreeSpec
 
+import Cardinals.{One, Two}
 import Fruits.Apple
 import LocalTimedTestTools._
 import WriteOp._
 
 trait TimedTableBehaviors {
   this: FreeSpec =>
-
-  private val One = Bytes (1)
-  private val Two = Bytes (2)
 
   def aTimedTable (kit: TestableLocalKit) = {
 
