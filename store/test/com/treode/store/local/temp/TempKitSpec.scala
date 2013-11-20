@@ -42,10 +42,8 @@ class TempKitSpec extends WordSpec {
 
       // Check that the sum of the account balances equals the supply
       def audit (cb: Callback [Unit]) {
-        val batch = ReadBatch (
-            TxClock.now,
-            for (i <- 0 until size) yield Accounts.read (i))
-        kit.read (batch, new StubReadCallback {
+        val ops = for (i <- 0 until size) yield Accounts.read (i)
+        kit.read (TxClock.now, ops, new StubReadCallback {
           override def pass (vs: Seq [Value]): Unit = scheduler.execute {
             val total = vs .map (Accounts.value (_) .get) .sum
             expectResult (supply) (total)
@@ -59,14 +57,14 @@ class TempKitSpec extends WordSpec {
         var y = Random.nextInt (size)
         while (x == y)
           y = Random.nextInt (size)
-        val rbatch = ReadBatch (TxClock.now, Accounts.read (x), Accounts.read (y))
-        kit.read (rbatch, new StubReadCallback {
+        val rops = Seq (Accounts.read (x), Accounts.read (y))
+        kit.read (TxClock.now, rops, new StubReadCallback {
           override def pass (vs: Seq [Value]): Unit = scheduler.execute {
             val ct = vs map (_.time) max
             val Seq (b1, b2) = vs map (Accounts.value (_) .get)
             val n = Random.nextInt (b1)
-            val ops = Seq (Accounts.update (x, b1-n), Accounts.update (y, b2+n))
-            kit.prepare (ct, ops, new StubPrepareCallback {
+            val wops = Seq (Accounts.update (x, b1-n), Accounts.update (y, b2+n))
+            kit.prepare (ct, wops, new StubPrepareCallback {
               override def pass (tx: Transaction): Unit = scheduler.execute {
                 tx.commit (tx.ft+1, cb)
               }

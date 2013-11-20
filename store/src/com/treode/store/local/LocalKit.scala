@@ -10,13 +10,13 @@ private abstract class LocalKit (bits: Int) extends LocalStore {
 
   def getTimedTable (id: TableId): TimedTable
 
-  def read (batch: ReadBatch, cb: ReadCallback): Unit =
+  def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
     Callback.guard (cb) {
-      require (!batch.ops.isEmpty, "Batch must include at least one operation")
-      val ids = batch.ops map (op => (op.table, op.key).hashCode)
-      space.read (batch.rt, ids) {
-        val r = new TimedReader (batch, cb)
-        for ((op, i) <- batch.ops.zipWithIndex)
+      require (!ops.isEmpty, "Read needs at least one operation")
+      val ids = ops map (op => (op.table, op.key).hashCode)
+      space.read (rt, ids) {
+        val r = new TimedReader (rt, ops, cb)
+        for ((op, i) <- ops.zipWithIndex)
           getTimedTable (op.table) .read (op.key, i, r)
       }}
 

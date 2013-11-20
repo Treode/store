@@ -3,12 +3,12 @@ package com.treode.store.local
 import java.util.ArrayList
 import scala.collection.JavaConversions.asScalaBuffer
 
-import com.treode.store.{MultiException, ReadBatch, ReadCallback, TimedCell, Value}
+import com.treode.store.{MultiException, ReadCallback, ReadOp, TimedCell, TxClock, Value}
 
-private class TimedReader (batch: ReadBatch, cb: ReadCallback) {
+private class TimedReader (val rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback) {
 
-  private var _awaiting = batch.ops.length
-  private val _got = new Array [Value] (batch.ops.length)
+  private var _awaiting = ops.length
+  private val _got = new Array [Value] (ops.length)
   private val _failures = new ArrayList [Throwable]
 
   private def finish() {
@@ -17,8 +17,6 @@ private class TimedReader (batch: ReadBatch, cb: ReadCallback) {
     else
       cb.apply (_got.toSeq)
   }
-
-  def rt = batch.rt
 
   def got (n: Int, c: TimedCell) {
     val ready = synchronized {

@@ -30,9 +30,8 @@ private object LocalTimedTestTools extends TimedTestTools {
   implicit class RichLocalStore (s: LocalStore) {
 
     def readAndExpect (rt: TxClock, ops: ReadOp*) (expected: Value*) {
-      val batch = ReadBatch (rt, ops)
       val cb = new ReadCaptor
-      s.read (batch, cb)
+      s.read (rt, ops, cb)
       expectResult (expected) (cb.passed)
     }
 

@@ -16,7 +16,7 @@ package store {
   }
 
   trait Store {
-    def read (batch: ReadBatch, cb: ReadCallback)
+    def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback)
     def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback)
   }
 
@@ -32,7 +32,7 @@ package store {
   }
 
   private trait PreparableStore {
-    def read (batch: ReadBatch, cb: ReadCallback)
+    def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback)
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: PrepareCallback)
     def commit (wt: TxClock, ops: Seq [WriteOp], cb: Callback [Unit])
   }
