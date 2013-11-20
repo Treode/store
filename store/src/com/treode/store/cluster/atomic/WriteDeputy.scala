@@ -5,7 +5,6 @@ import com.treode.concurrent.{Callback, Fiber}
 import com.treode.store.{PrepareCallback, Transaction, TxClock, TxId, WriteOp}
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
-  import WriteDeputy._
   import kit.WriteDeputies.{mainDb, openDb}
   import kit.store
   import kit.host.scheduler

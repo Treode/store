@@ -79,14 +79,14 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
         if (prepares.quorum) {
           state = new Deliberating (ft+1, cb)
         } else if (advance) {
+          state = new Aborting (true)
           cb.advance()
-          state = new Aborting (true)
         } else if (!ks.isEmpty) {
+          state = new Aborting (true)
           cb.collisions (ks)
-          state = new Aborting (true)
         } else {
-          cb.fail (new Exception)
           state = new Aborting (true)
+          cb.fail (new Exception)
         }}}
 
     override def prepared (ft: TxClock, from: Peer) {
@@ -118,8 +118,8 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
         WriteDeputy.prepare (xid, ct, ops) (acks, mbx)
         fiber.delay (backoff.next) (state.timeout())
       } else {
-        cb.fail (new TimeoutException)
         state = new Aborting (true)
+        cb.fail (new TimeoutException)
       }}
 
     override def toString = "Director.Preparing"
@@ -133,16 +133,16 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
       def pass (status: TxStatus) = fiber.execute {
         status match {
           case Committed (wt) =>
-            cb (wt)
             state = new Committing (wt)
+            cb (wt)
           case Aborted =>
-            cb.fail (new TimeoutException)
             state = new Aborting (false)
+            cb.fail (new TimeoutException)
         }}
 
       def fail (t: Throwable) = fiber.execute {
-        cb.fail (t)
         state = new Aborting (false)
+        cb.fail (t)
       }})
 
     override def prepared (ft: TxClock, from: Peer): Unit =
