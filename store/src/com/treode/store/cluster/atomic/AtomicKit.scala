@@ -9,14 +9,14 @@ import com.treode.store.cluster.paxos.PaxosKit
 
 private class AtomicKit (implicit val host: Host, val store: LocalStore, val paxos: PaxosStore) {
 
-  object Deputies {
-    import Deputy._
+  object WriteDeputies {
+    import WriteDeputy._
 
-    private val deputies = new ConcurrentHashMap [Bytes, Deputy] ()
+    private val deputies = new ConcurrentHashMap [Bytes, WriteDeputy] ()
 
     val mainDb = {
       import AtomicPicklers._
-      SimpleAccessor.value (store, 0x5BA844914406891FL, deputyStatus)
+      SimpleAccessor.value (store, 0x5BA844914406891FL, writeStatus)
     }
 
     val openDb = {
@@ -24,11 +24,11 @@ private class AtomicKit (implicit val host: Host, val store: LocalStore, val pax
       SimpleAccessor.value (store, 0x9C5E5712B0C36CA8L, unit)
     }
 
-    def get (xid: TxId): Deputy = {
+    def get (xid: TxId): WriteDeputy = {
       var d0 = deputies.get (xid.id)
       if (d0 != null)
         return d0
-      val d1 = new Deputy (xid, AtomicKit.this)
+      val d1 = new WriteDeputy (xid, AtomicKit.this)
       d0 = deputies.putIfAbsent (xid.id, d1)
       if (d0 != null)
         return d0
@@ -47,14 +47,14 @@ private class AtomicKit (implicit val host: Host, val store: LocalStore, val pax
       get (xid) .abort (mdtr)
     }}
 
-  Deputies
+  WriteDeputies
 
   def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
     Callback.guard (cb) {
-      new Director (xid, ct, ops, this) .open (cb)
+      new WriteDirector (xid, ct, ops, this) .open (cb)
     }
 
   def close() {
-    Deputies.mainDb.close()
-    Deputies.openDb.close()
+    WriteDeputies.mainDb.close()
+    WriteDeputies.openDb.close()
   }}

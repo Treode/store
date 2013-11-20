@@ -9,8 +9,8 @@ import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.concurrent.{Callback, Fiber}
 import com.treode.store._
 
-private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
-  import Director.deliberate
+private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
+  import WriteDirector.deliberate
   import kit.{host, paxos}
   import kit.host.{mailboxes, random, scheduler}
 
@@ -18,7 +18,7 @@ private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicK
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)
-  val mbx = mailboxes.open (AtomicResponse.pickle, fiber)
+  val mbx = mailboxes.open (WriteResponse.pickle, fiber)
   var state: State = new Opening
 
   val backoff = prepareBackoff.iterator
@@ -71,7 +71,7 @@ private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicK
     var ks = Set.empty [Int]
     var ft = TxClock.now
 
-    Deputy.prepare (xid, ct, ops) (acks, mbx)
+    WriteDeputy.prepare (xid, ct, ops) (acks, mbx)
     fiber.delay (backoff.next) (state.timeout())
 
     private def maybeNextState() {
@@ -115,7 +115,7 @@ private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicK
 
     override def timeout() {
       if (backoff.hasNext) {
-        Deputy.prepare (xid, ct, ops) (acks, mbx)
+        WriteDeputy.prepare (xid, ct, ops) (acks, mbx)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         cb.fail (new TimeoutException)
@@ -126,11 +126,11 @@ private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicK
   }
 
   class Deliberating (wt: TxClock, cb: WriteCallback) extends State {
-    import AtomicStatus._
+    import TxStatus._
 
-    Director.deliberate.lead (xid.id, Committed (wt), new Callback [AtomicStatus] {
+    WriteDirector.deliberate.lead (xid.id, Committed (wt), new Callback [TxStatus] {
 
-      def pass (status: AtomicStatus) = fiber.execute {
+      def pass (status: TxStatus) = fiber.execute {
         status match {
           case Committed (wt) =>
             cb (wt)
@@ -150,7 +150,7 @@ private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicK
 
     override def timeout() {
       if (backoff.hasNext) {
-        Deputy.prepare (xid, ct, ops) (prepares, mbx)
+        WriteDeputy.prepare (xid, ct, ops) (prepares, mbx)
         fiber.delay (backoff.next) (state.timeout())
       }}
 
@@ -161,7 +161,7 @@ private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicK
 
     val commits = host.locate (0)
 
-    Deputy.commit (xid, wt) (commits, mbx)
+    WriteDeputy.commit (xid, wt) (commits, mbx)
     fiber.delay (backoff.next) (state.timeout())
 
     override def prepared (ft: TxClock, from: Peer): Unit =
@@ -176,8 +176,8 @@ private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicK
 
     override def timeout() {
       if (backoff.hasNext) {
-        Deputy.prepare (xid, ct, ops) (prepares, mbx)
-        Deputy.commit (xid, wt) (commits, mbx)
+        WriteDeputy.prepare (xid, ct, ops) (prepares, mbx)
+        WriteDeputy.commit (xid, wt) (commits, mbx)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Closed
@@ -191,8 +191,8 @@ private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicK
     val aborts = host.locate (0)
 
     if (lead)
-      Director.deliberate.lead (xid.id, AtomicStatus.Aborted, Callback.ignore)
-    Deputy.abort (xid) (aborts, mbx)
+      WriteDirector.deliberate.lead (xid.id, TxStatus.Aborted, Callback.ignore)
+    WriteDeputy.abort (xid) (aborts, mbx)
 
     override def aborted (from: Peer) {
       aborts += from
@@ -202,7 +202,7 @@ private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicK
 
     override def timeout() {
       if (backoff.hasNext) {
-        Deputy.abort (xid) (aborts, mbx)
+        WriteDeputy.abort (xid) (aborts, mbx)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Closed
@@ -221,7 +221,7 @@ private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicK
   }
 
   mbx.whilst (state.isOpen) { (msg, from) =>
-    import AtomicResponse._
+    import WriteResponse._
     msg match {
       case Prepared (ft)   => state.prepared (ft, from)
       case Collisions (ks) => state.collisions (ks, from)
@@ -235,9 +235,9 @@ private class Director (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicK
     fiber.execute (state.open (cb))
 }
 
-private object Director {
+private object WriteDirector {
 
   val deliberate = {
     import AtomicPicklers._
-    PaxosAccessor.value (atomicStatus)
+    PaxosAccessor.value (txStatus)
   }}

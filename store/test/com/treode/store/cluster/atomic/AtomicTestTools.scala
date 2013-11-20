@@ -8,12 +8,12 @@ trait AtomicTestTools {
   val One = Bytes (1)
   val Two = Bytes (2)
 
-  implicit class TestableDeputy (s: Deputy) {
+  implicit class TestableWriteDeputy (s: WriteDeputy) {
 
-    def isRestoring = classOf [Deputy#Restoring] .isInstance (s.state)
-    def isOpen = classOf [Deputy#Open] .isInstance (s.state)
-    def isPrepared = classOf [Deputy#Prepared] .isInstance (s.state)
-    def isCommitted = classOf [Deputy#Committed] .isInstance (s.state)
-    def isAborted = classOf [Deputy#Aborted] .isInstance (s.state)
-    def isShutdown = classOf [Deputy#Shutdown] .isInstance (s.state)
+    def isRestoring = classOf [WriteDeputy#Restoring] .isInstance (s.state)
+    def isOpen = classOf [WriteDeputy#Open] .isInstance (s.state)
+    def isPrepared = classOf [WriteDeputy#Prepared] .isInstance (s.state)
+    def isCommitted = classOf [WriteDeputy#Committed] .isInstance (s.state)
+    def isAborted = classOf [WriteDeputy#Aborted] .isInstance (s.state)
+    def isShutdown = classOf [WriteDeputy#Shutdown] .isInstance (s.state)
   }}

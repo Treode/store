@@ -18,10 +18,9 @@ private class StubCluster (seed: Long, nhosts: Int) extends BaseStubCluster (see
 
     val atomic = new AtomicKit () (StubHost.this, store, paxos)
 
-    val mainDb = new TestableMainDb (atomic.Deputies.mainDb, StubCluster.this.scheduler)
+    val mainDb = new TestableMainDb (atomic.WriteDeputies.mainDb, StubCluster.this.scheduler)
 
-    def deputy (xid: TxId) =
-      atomic.Deputies.get (xid)
+    def writeDeputy (xid: TxId) = atomic.WriteDeputies.get (xid)
 
     def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback) =
       atomic.write (xid, ct, ops, cb)

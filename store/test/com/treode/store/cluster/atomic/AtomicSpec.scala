@@ -18,7 +18,7 @@ object AtomicBehaviors extends WordSpec with BeforeAndAfterAll with AtomicTestTo
   private val kit = new StubCluster (0, 3)
   private val hs @ Seq (_, _, host) = kit.hosts
   import kit.{random, scheduler}
-  import host.{deputy, write}
+  import host.{writeDeputy, write}
 
   override def afterAll() {
     kit.cleanup()
@@ -27,10 +27,10 @@ object AtomicBehaviors extends WordSpec with BeforeAndAfterAll with AtomicTestTo
   "A Deputy" should {
 
     val xid = TxId (Bytes (random.nextLong))
-    var d: Deputy = null
+    var d: WriteDeputy = null
 
     "be restoring when first opened" in {
-      d = deputy (xid)
+      d = writeDeputy (xid)
       assert (d.isRestoring)
     }}
 
@@ -49,7 +49,7 @@ object AtomicBehaviors extends WordSpec with BeforeAndAfterAll with AtomicTestTo
 
     "leave deputies closed and tables consistent" in {
       val ts = cb.passed
-      val ds = hs map (_.atomic.Deputies.get (k))
+      val ds = hs map (_.writeDeputy (k))
       hs foreach (_.mainDb.expectCommitted (xid))
       hs foreach (_.expectCells (t) (k##ts::1))
     }}}
