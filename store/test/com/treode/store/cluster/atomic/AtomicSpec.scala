@@ -104,6 +104,6 @@ object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTool
     kit.cleanup()
   }
 
-  property ("The atomic implemetation should work", LargeTest) {
+  property ("The atomic implemetation should work") {
     forAll (seeds) (checkConsensus (_, 0.0))
   }}

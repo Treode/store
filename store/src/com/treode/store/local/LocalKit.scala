@@ -24,16 +24,16 @@ private abstract class LocalKit (bits: Int) extends LocalStore {
     Callback.guard (cb) {
       require (!ops.isEmpty, "Prepare needs at least one operation")
       val ids = ops map (op => (op.table, op.key).hashCode)
-      space.write (ct, ids) { locks =>
+      space.write (TxClock.now, ids) { locks =>
         val w = new TimedWriter (ct, ops, this, locks, cb)
         for ((op, i) <- ops.zipWithIndex) {
           import WriteOp._
           val t = getTimedTable (op.table)
           op match {
-            case op: Create => t.create (op.key, op.value, i, w)
-            case op: Hold   => t.hold (op.key, w)
-            case op: Update => t.update (op.key, op.value, w)
-            case op: Delete => t.delete (op.key, w)
+            case op: Create => t.create (op.key, i, w)
+            case op: Hold   => t.prepare (op.key, w)
+            case op: Update => t.prepare (op.key, w)
+            case op: Delete => t.prepare (op.key, w)
           }}}}
 
   def commit (wt: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =

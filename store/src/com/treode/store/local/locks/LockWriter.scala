@@ -5,7 +5,7 @@ import scala.collection.SortedSet
 import com.treode.store.TxClock
 
 // Tracks the acquisition of locks and invokes the callback when they have all been granted.
-private class Writer (
+private class LockWriter (
     space: LockSpace,
     _ft: TxClock,
     private var ids: SortedSet [Int],
@@ -66,5 +66,5 @@ private class Writer (
     ids = null
   }
 
-  override def toString = f"Writer:${System.identityHashCode(this)}%08X"
+  override def toString = s"LockWriter (ft=$ft, ready=${!iter.hasNext})"
 }

@@ -19,6 +19,7 @@ private class TimedWriter (
   private var _advance = TxClock.zero
   private var _collisions = Set.empty [Int]
   private var _failures = new ArrayList [Throwable]
+  private var _forecast = locks.ft
 
   private def finish() {
     val cb = this.cb
@@ -39,10 +40,11 @@ private class TimedWriter (
       cb.apply (this)
     }}
 
-  def ft = locks.ft
+  def ft = _forecast
 
-  def prepare() {
+  def prepare (vt: TxClock) {
     val ready = synchronized {
+      if (_forecast < vt) _forecast = vt
       _awaiting -= 1
       _awaiting == 0
     }
@@ -92,7 +94,6 @@ private class TimedWriter (
     Callback.guard (cb1) {
       require (this.cb == null, "Transaction cannot be closed until prepared.")
       require (locks != null, "Transaction already closed.")
-      require (wt > ft)
       store.commit (wt, ops, cb1)
     }}
 

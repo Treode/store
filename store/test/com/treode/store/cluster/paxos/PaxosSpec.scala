@@ -110,7 +110,7 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
         throw e
     }}
 
-  property ("The acceptors should achieve consensus", LargeTest) {
+  property ("The acceptors should achieve consensus") {
     var summary = Summary (false, Set.empty)
     forAll (seeds) { seed =>
       summary = checkConsensus (seed, 0.0, summary)
@@ -118,7 +118,7 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
     assert (Seq (1, 2) forall (summary.chosen contains _))
   }
 
-  property ("The acceptors should achieve consensus with a flakey network", LargeTest) {
+  property ("The acceptors should achieve consensus with a flakey network") {
     var summary = Summary (false, Set.empty)
     forAll (seeds) { seed =>
       summary = checkConsensus (seed, 0.1, summary)

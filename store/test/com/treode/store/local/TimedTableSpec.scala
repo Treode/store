@@ -137,7 +137,7 @@ class TimedTableSpec extends FreeSpec {
         kit.expectCells (t) (Apple##ts::1)
       }
 
-      "allow update Apple::2 at ts+1" in {
+      "allow update Apple::2 at ts+1" taggedAs (com.treode.store.LargeTest) in {
         val (t, ts1) = newTableWithData
         val ts2 = kit.prepareAndCommit (ts1+1, Update (t, Apple, Two))
         kit.expectCells (t) (Apple##ts2::2, Apple##ts1::1)

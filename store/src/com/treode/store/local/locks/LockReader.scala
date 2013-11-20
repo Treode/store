@@ -4,7 +4,7 @@ import com.treode.concurrent.toRunnable
 import com.treode.store.TxClock
 
 // Tracks the acquisition of locks and invokes the callback when they have all been granted.
-private class Reader (_rt: TxClock, cb: Runnable) {
+private class LockReader (_rt: TxClock, cb: Runnable) {
 
   // For testing mocks.
   def this() = this (TxClock.zero, toRunnable(()))
@@ -37,4 +37,8 @@ private class Reader (_rt: TxClock, cb: Runnable) {
     }
     if (ready)
       finish()
-  }}
+  }
+
+  override def toString = s"LockReader (rt=$rt, ready=${needed == 0})"
+
+}

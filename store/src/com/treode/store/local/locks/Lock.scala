@@ -11,7 +11,7 @@ import com.treode.store.TxClock
 // as the reader's timestamp is less than the one at which the writer will commit.
 private class Lock {
 
-  private val NoReaders = new util.ArrayList [Reader] (0)
+  private val NoReaders = new util.ArrayList [LockReader] (0)
 
   // The forecasted minimum version timestamp.  All future writers shall commit a value with a
   // version timestamp above this.  Any current reader as of a timestamp at or below this may
@@ -23,14 +23,14 @@ private class Lock {
 
   // Does a writer hold the lock?  If non-null, a writer holds the lock.  If it commits values,
   // they will be timestamped greater than the forecasted timestamp.
-  private var engaged: Writer = null
+  private var engaged: LockWriter = null
 
   // These readers want to acquire the lock at a timestamp greater than the forecasted timestamp
   // of the writer that currently holds the lock.
-  private var readers = new util.ArrayList [Reader]
+  private var readers = new util.ArrayList [LockReader]
 
   // These writers want to acquire the lock, but a writer already holds the lock.
-  private val writers = new util.ArrayDeque [Writer]
+  private val writers = new util.ArrayDeque [LockWriter]
 
   // A reader wants to acquire the lock; this means the reader ensures that no writer will commit
   // a value with a timestamp at or below the reader's timestamp.
@@ -44,7 +44,7 @@ private class Lock {
   //
   // If the reader may proceed immediately, this returns true.  Otherwise, it returns false and
   // queues the reader to be called back later.
-  def read (r: Reader): Boolean = synchronized {
+  def read (r: LockReader): Boolean = synchronized {
     if (r.rt <= forecast) {
       true
     } else if (engaged == null) {
@@ -61,7 +61,7 @@ private class Lock {
   //
   // If the writer may proceed immediately, returns Some (forecast).  Otherwise, it queues the
   // writer to be called back later.
-  def write (w: Writer): Option [TxClock] = synchronized {
+  def write (w: LockWriter): Option [TxClock] = synchronized {
     if (engaged == null) {
       if (forecast < w.ft)
         forecast = w.ft
@@ -75,10 +75,10 @@ private class Lock {
   // A writer is finished with the lock.  If there are any waiting readers, raise the forecast to
   // the maximum of all of them and then let all of them proceed.  If there is a waiting writer,
   // next let it proceed with that forecast.
-  def release (w0: Writer): Unit = {
+  def release (w0: LockWriter): Unit = {
     require (engaged == w0, "The writer releasing the lock does not hold it.")
     var rs = NoReaders
-    var w = Option.empty [Writer]
+    var w = Option.empty [LockWriter]
     var ft = TxClock.zero
     synchronized {
       var rt = TxClock.zero
@@ -107,4 +107,7 @@ private class Lock {
     }
     rs foreach (_.grant())
     w foreach (_.grant (ft))
-  }}
+  }
+
+  override def toString = s"Lock (ft=${forecast}"
+}
