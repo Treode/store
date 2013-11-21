@@ -35,6 +35,8 @@ trait LocalStoreBehaviors extends StoreBehaviors {
 
     def expectCells (t: TableId) (expected: TimedCell*): Unit =
       s.expectCells (t) (expected: _*)
+
+    def runTasks() = ()
   }
 
   def aLocalStore (s: TestableLocalStore) {

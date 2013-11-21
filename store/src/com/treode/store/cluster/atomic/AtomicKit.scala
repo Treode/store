@@ -7,7 +7,16 @@ import com.treode.concurrent.Callback
 import com.treode.store._
 import com.treode.store.cluster.paxos.PaxosKit
 
-private class AtomicKit (implicit val host: Host, val store: LocalStore, val paxos: PaxosStore) {
+private class AtomicKit (implicit val host: Host, val store: LocalStore, val paxos: PaxosStore)
+extends Store {
+
+  object ReadDeputies {
+
+    val deputy = new ReadDeputy (AtomicKit.this)
+
+    ReadDeputy.read.register { case ((rt, ops), mdtr) =>
+      deputy.read (mdtr, rt, ops)
+    }}
 
   object WriteDeputies {
     import WriteDeputy._
@@ -47,7 +56,13 @@ private class AtomicKit (implicit val host: Host, val store: LocalStore, val pax
       get (xid) .abort (mdtr)
     }}
 
+  ReadDeputies
   WriteDeputies
+
+  def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
+    Callback.guard (cb) {
+      new ReadDirector (rt, ops, this, cb)
+    }
 
   def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
     Callback.guard (cb) {

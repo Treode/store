@@ -1,6 +1,6 @@
 package com.treode.store
 
-import java.util.concurrent.{CountDownLatch, Executors}
+import java.util.concurrent.{CountDownLatch, Executors, TimeUnit}
 import java.util.concurrent.atomic.AtomicInteger
 import scala.language.postfixOps
 import scala.util.Random
@@ -153,35 +153,41 @@ trait StoreBehaviors {
 
       "the table has Apple##ts2::Two and Apple##ts1::One" -  {
 
-        val t = nextTable
-        val ts1 = s.writeExpectPass (0, Create (t, Apple, One))
-        val ts2 = s.writeExpectPass (ts1, Update (t, Apple, Two))
+        var t = TableId (0)
+        var ts1 = TxClock.zero
+        var ts2 = TxClock.zero
+
+        "setup should pass" in {
+          t = nextTable
+          ts1 = s.writeExpectPass (0, Create (t, Apple, One))
+          ts2 = s.writeExpectPass (ts1, Update (t, Apple, Two))
+        }
 
         "a read should" - {
 
-        "find ts2::Two for Apple##ts2+1" in {
-          s.readAndExpect (ts2+1, Get (t, Apple)) (ts2::Two)
-        }
+          "find ts2::Two for Apple##ts2+1" in {
+            s.readAndExpect (ts2+1, Get (t, Apple)) (ts2::Two)
+          }
 
-        "find ts2::Two for Apple##ts2" in {
-          s.readAndExpect (ts2, Get (t, Apple)) (ts2::Two)
-        }
+          "find ts2::Two for Apple##ts2" in {
+            s.readAndExpect (ts2, Get (t, Apple)) (ts2::Two)
+          }
 
-        "find ts1::One for Apple##ts2-1" in {
-          s.readAndExpect (ts2-1, Get (t, Apple)) (ts1::One)
-        }
+          "find ts1::One for Apple##ts2-1" in {
+            s.readAndExpect (ts2-1, Get (t, Apple)) (ts1::One)
+          }
 
-        "find ts1::One for Apple##ts1+1" in {
-          s.readAndExpect (ts1+1, Get (t, Apple)) (ts1::One)
-        }
+          "find ts1::One for Apple##ts1+1" in {
+            s.readAndExpect (ts1+1, Get (t, Apple)) (ts1::One)
+          }
 
-        "find ts1::One for Apple##ts1" in {
-          s.readAndExpect (ts1, Get (t, Apple)) (ts1::One)
-        }
+          "find ts1::One for Apple##ts1" in {
+            s.readAndExpect (ts1, Get (t, Apple)) (ts1::One)
+          }
 
-        "find 0::None for Apple##ts1-1" in {
-          s.readAndExpect (ts1-1, Get (t, Apple)) (0::None)
-        }}}}}
+          "find 0::None for Apple##ts1-1" in {
+            s.readAndExpect (ts1-1, Get (t, Apple)) (0::None)
+          }}}}}
 
   def aMultithreadableStore (size: Int, store: TestableStore) {
 
@@ -202,7 +208,7 @@ trait StoreBehaviors {
         override def pass (wt: TxClock) = createLatch.countDown()
       })
 
-      createLatch.await()
+      createLatch.await (200, TimeUnit.MILLISECONDS)
 
       val executor = Executors.newScheduledThreadPool (threads)
       val scheduler = Scheduler (executor)
@@ -284,7 +290,7 @@ trait StoreBehaviors {
         broker (i)
       auditor()
 
-      brokerLatch.await()
+      brokerLatch.await (2, TimeUnit.SECONDS)
       executor.shutdown()
 
       assert (countAuditsPassed.get > 0, "Expected at least one audit to pass.")

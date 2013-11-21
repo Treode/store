@@ -5,7 +5,7 @@ import java.util.concurrent.TimeoutException
 import com.treode.concurrent.CallbackCaptor
 import com.treode.store._
 import org.scalacheck.Gen
-import org.scalatest.{BeforeAndAfterAll, PropSpec, Specs, WordSpec}
+import org.scalatest.{BeforeAndAfterAll, FreeSpec, PropSpec, Specs}
 import org.scalatest.prop.PropertyChecks
 
 import Cardinals.{One, Two}
@@ -14,18 +14,22 @@ import TimedTestTools._
 
 class AtomicSpec extends Specs (AtomicBehaviors, AtomicProperties)
 
-object AtomicBehaviors extends WordSpec with BeforeAndAfterAll with AtomicTestTools {
+object AtomicBehaviors extends FreeSpec with BeforeAndAfterAll with AtomicTestTools
+    with StoreBehaviors {
 
   private val kit = new StubCluster (0, 3)
   private val hs @ Seq (_, _, host) = kit.hosts
   import kit.{random, scheduler}
   import host.{writeDeputy, write}
 
+  private val threaded = new StubCluster (0, 3, true)
+
   override def afterAll() {
     kit.cleanup()
+    threaded.cleanup()
   }
 
-  "A Deputy" should {
+  "A Deputy should" - {
 
     val xid = TxId (Bytes (random.nextLong))
     var d: WriteDeputy = null
@@ -35,7 +39,7 @@ object AtomicBehaviors extends WordSpec with BeforeAndAfterAll with AtomicTestTo
       assert (d.isRestoring)
     }}
 
-  "The atomic implementation" should {
+  "The transaction implementation should" - {
 
     val xid = TxId (Bytes (random.nextLong))
     val t = TableId (random.nextLong)
@@ -53,7 +57,12 @@ object AtomicBehaviors extends WordSpec with BeforeAndAfterAll with AtomicTestTo
       val ds = hs map (_.writeDeputy (k))
       hs foreach (_.mainDb.expectCommitted (xid))
       hs foreach (_.expectCells (t) (k##ts::One))
-    }}}
+    }}
+
+  "The AtomicKit should" - {
+    behave like aStore (kit)
+    behave like aMultithreadableStore (100, threaded)
+  }}
 
 object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTools {
 

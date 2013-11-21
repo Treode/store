@@ -10,6 +10,8 @@ case class Value (time: TxClock, value: Option [Bytes]) {
 
 object Value {
 
+  val empty = Value (TxClock.zero, None)
+
   val pickle = {
     import StorePicklers._
     wrap2 (txClock, option (bytes)) (apply _) (v => (v.time, v.value))

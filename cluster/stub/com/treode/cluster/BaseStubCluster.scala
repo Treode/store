@@ -1,6 +1,7 @@
 package com.treode.cluster
 
 import java.net.SocketAddress
+import java.util.concurrent.Executors
 import scala.language.postfixOps
 import scala.util.Random
 
@@ -9,7 +10,7 @@ import com.treode.cluster.messenger.{MailboxRegistry, PeerRegistry}
 import com.treode.concurrent.{Scheduler, StubScheduler}
 import com.treode.pickle.{Buffer, Pickler, pickle}
 
-abstract class BaseStubCluster (seed: Long, nhosts: Int) {
+abstract class BaseStubCluster (seed: Long, nhosts: Int, multithreaded: Boolean = false) {
 
   private val emptyAddr = new SocketAddress {}
 
@@ -39,7 +40,11 @@ abstract class BaseStubCluster (seed: Long, nhosts: Int) {
 
   val random = new Random (seed)
 
-  val scheduler = StubScheduler.random (random)
+  val scheduler =
+    if (multithreaded)
+      StubScheduler.multithreaded (Executors.newScheduledThreadPool (8))
+    else
+      StubScheduler.random (random)
 
   var messageTrace = false
   var messageFlakiness = 0.0
@@ -67,6 +72,7 @@ abstract class BaseStubCluster (seed: Long, nhosts: Int) {
 
   def runTasks(): Unit = scheduler.runTasks()
 
-  def cleanup(): Unit =
+  def cleanup(): Unit = {
     hosts.foreach (_.cleanup())
-}
+    scheduler.shutdown (200)
+  }}
