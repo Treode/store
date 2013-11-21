@@ -5,9 +5,9 @@ import java.util.concurrent.Executors
 import scala.language.postfixOps
 import scala.util.Random
 
+import com.treode.async.{Scheduler, StubScheduler}
 import com.treode.cluster.events.StubEvents
 import com.treode.cluster.messenger.{MailboxRegistry, PeerRegistry}
-import com.treode.concurrent.{Scheduler, StubScheduler}
 import com.treode.pickle.{Buffer, Pickler, pickle}
 
 abstract class BaseStubCluster (seed: Long, nhosts: Int, multithreaded: Boolean = false) {

@@ -2,7 +2,7 @@ package com.treode.store.local.temp
 
 import java.util.concurrent.ConcurrentSkipListMap
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.store.{Bytes, SimpleTable}
 
 private class TempSimpleTable extends SimpleTable {

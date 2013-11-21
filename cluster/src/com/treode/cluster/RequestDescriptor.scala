@@ -1,8 +1,8 @@
 package com.treode.cluster
 
+import com.treode.async.{Fiber, Scheduler}
 import com.treode.pickle.{Pickler, Picklers}
 import com.treode.cluster.misc.BackoffTimer
-import com.treode.concurrent.{Fiber, Scheduler}
 
 class RequestDescriptor [Req, Rsp] (id: MailboxId, preq: Pickler [Req], prsp: Pickler [Rsp]) {
 

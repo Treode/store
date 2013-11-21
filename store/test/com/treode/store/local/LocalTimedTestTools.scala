@@ -2,7 +2,7 @@ package com.treode.store.local
 
 import scala.util.Random
 
-import com.treode.concurrent.{Callback, CallbackCaptor}
+import com.treode.async.{Callback, CallbackCaptor}
 import com.treode.store._
 import org.scalatest.Assertions
 

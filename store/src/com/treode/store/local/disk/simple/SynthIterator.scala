@@ -2,7 +2,7 @@ package com.treode.store.local.disk.simple
 
 import scala.collection.mutable.PriorityQueue
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.store.SimpleCell
 import com.treode.store.local.SimpleIterator
 

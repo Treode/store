@@ -8,7 +8,7 @@ import java.util.{Arrays, Set => JavaSet}
 import java.util.concurrent.{Future, TimeUnit}
 import scala.util.Random
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 
 class AsyncSocketStub (random: Random) extends AsynchronousSocketChannel (null) {
 

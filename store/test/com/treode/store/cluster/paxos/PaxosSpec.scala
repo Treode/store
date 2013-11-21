@@ -4,7 +4,7 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
-import com.treode.concurrent.CallbackCaptor
+import com.treode.async.CallbackCaptor
 import com.treode.store.{Bytes, Cardinals, LargeTest}
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, PropSpec, Specs, WordSpec}

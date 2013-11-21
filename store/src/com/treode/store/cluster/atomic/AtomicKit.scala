@@ -2,8 +2,8 @@ package com.treode.store.cluster.atomic
 
 import java.util.concurrent.ConcurrentHashMap
 
+import com.treode.async.Callback
 import com.treode.cluster.Host
-import com.treode.concurrent.Callback
 import com.treode.store._
 import com.treode.store.cluster.paxos.PaxosKit
 

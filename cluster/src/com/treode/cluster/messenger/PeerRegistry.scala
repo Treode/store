@@ -5,9 +5,9 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions._
 import scala.util.Random
 
+import com.treode.async.{Fiber, Scheduler}
 import com.treode.cluster.{HostId, Peer}
 import com.treode.cluster.events.Events
-import com.treode.concurrent.{Fiber, Scheduler}
 
 class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit random: Random) {
 

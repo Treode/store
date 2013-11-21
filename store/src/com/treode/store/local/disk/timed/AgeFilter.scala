@@ -1,6 +1,6 @@
 package com.treode.store.local.disk.timed
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.store.{TimedCell, TxClock}
 import com.treode.store.local.TimedIterator
 

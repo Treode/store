@@ -3,9 +3,9 @@ package com.treode.store.cluster.atomic
 import java.util.concurrent.TimeoutException
 import scala.language.postfixOps
 
+import com.treode.async.Fiber
 import com.treode.cluster.Peer
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
-import com.treode.concurrent.Fiber
 import com.treode.store.{ReadCallback, ReadOp, TxClock, Value}
 
 private class ReadDirector (

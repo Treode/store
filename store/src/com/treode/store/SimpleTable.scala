@@ -2,7 +2,7 @@ package com.treode.store
 
 import java.io.Closeable
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 
 private trait SimpleTable extends Closeable {
 

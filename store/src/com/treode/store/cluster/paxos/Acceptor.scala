@@ -2,9 +2,9 @@ package com.treode.store.cluster.paxos
 
 import scala.language.postfixOps
 
+import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
-import com.treode.concurrent.{Callback, Fiber}
 import com.treode.store.{Bytes, StorePicklers}
 
 private class Acceptor (key: Bytes, kit: PaxosKit) {

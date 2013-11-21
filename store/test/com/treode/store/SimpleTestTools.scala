@@ -1,6 +1,6 @@
 package com.treode.store
 
-import com.treode.concurrent.CallbackCaptor
+import com.treode.async.CallbackCaptor
 import org.scalatest.Assertions
 
 import Assertions._

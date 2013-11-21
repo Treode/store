@@ -2,7 +2,7 @@ package com.treode.store.cluster.paxos
 
 import java.util.concurrent.ConcurrentHashMap
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.cluster.Host
 import com.treode.store.{Bytes, PaxosStore, SimpleAccessor, SimpleStore}
 

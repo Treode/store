@@ -2,7 +2,7 @@ package com.treode
 
 import java.io.Closeable
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.cluster.events.Events
 import com.treode.pickle.Pickler
 

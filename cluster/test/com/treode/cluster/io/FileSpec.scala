@@ -2,7 +2,7 @@ package com.treode.cluster.io
 
 import scala.util.Random
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.pickle.Buffer
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FlatSpec, PropSpec, Specs}

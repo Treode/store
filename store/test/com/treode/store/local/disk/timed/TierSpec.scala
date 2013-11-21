@@ -2,7 +2,7 @@ package com.treode.store.local.disk.timed
 
 import scala.collection.mutable.Builder
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, Cardinals, Fruits, TimedCell, TxClock}
 import com.treode.store.local.disk.DiskSystemStub

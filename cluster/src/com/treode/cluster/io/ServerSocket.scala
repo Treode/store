@@ -3,7 +3,7 @@ package com.treode.cluster.io
 import java.nio.channels._
 import java.net.SocketAddress
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 
 /** Something that can be mocked in tests. */
 class ServerSocket (socket: AsynchronousServerSocketChannel) {

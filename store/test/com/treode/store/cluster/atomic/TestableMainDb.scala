@@ -1,6 +1,6 @@
 package com.treode.store.cluster.atomic
 
-import com.treode.concurrent.{CallbackCaptor, StubScheduler}
+import com.treode.async.{CallbackCaptor, StubScheduler}
 import com.treode.store.{Bytes, SimpleAccessor, TxId}
 import org.scalatest.Assertions
 

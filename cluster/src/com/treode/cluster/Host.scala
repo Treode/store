@@ -2,8 +2,8 @@ package com.treode.cluster
 
 import scala.util.Random
 
+import com.treode.async.Scheduler
 import com.treode.cluster.messenger.{PeerRegistry, MailboxRegistry}
-import com.treode.concurrent.Scheduler
 import com.treode.pickle.Pickler
 
 trait Host {

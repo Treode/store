@@ -1,6 +1,6 @@
 package com.treode.store.local.locks
 
-import com.treode.concurrent.toRunnable
+import com.treode.async.toRunnable
 import com.treode.store.TxClock
 
 // Tracks the acquisition of locks and invokes the callback when they have all been granted.

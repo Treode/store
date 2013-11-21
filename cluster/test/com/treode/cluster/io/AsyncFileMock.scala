@@ -7,7 +7,7 @@ import java.util.ArrayDeque
 import java.util.concurrent.Future
 import scala.collection.JavaConversions._
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import org.scalatest.Assertions.assert
 
 /** ScalaMock refuses to mock AsynchronousFileChannel. */

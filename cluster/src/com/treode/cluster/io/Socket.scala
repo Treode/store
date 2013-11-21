@@ -5,7 +5,7 @@ import java.nio.channels.{AsynchronousChannelGroup, AsynchronousSocketChannel}
 import java.net.SocketAddress
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.pickle.Buffer
 
 /** A socket that has useful behavior (flush/fill) and that can be mocked. */

@@ -1,6 +1,6 @@
 package com.treode.store
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.store.local.temp.TestableTempKit
 import org.scalatest.FreeSpec
 import scala.util.Random

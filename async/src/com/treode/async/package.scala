@@ -1,6 +1,6 @@
 package com.treode
 
-package object concurrent {
+package object async {
 
   def toRunnable (task: => Any): Runnable =
     new Runnable {

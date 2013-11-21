@@ -3,10 +3,10 @@ package com.treode.cluster.messenger
 import java.util.concurrent.ConcurrentHashMap
 import scala.util.Random
 
-import com.treode.pickle._
+import com.treode.async.{Mailbox, Scheduler}
 import com.treode.cluster.{EphemeralMailbox, ClusterEvents, MailboxId, Peer}
 import com.treode.cluster.events.Events
-import com.treode.concurrent.{Mailbox, Scheduler}
+import com.treode.pickle._
 
 class MailboxRegistry (implicit events: Events) {
 

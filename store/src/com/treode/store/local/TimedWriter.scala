@@ -3,8 +3,8 @@ package com.treode.store.local
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
+import com.treode.async.Callback
 import com.treode.cluster.events.Events
-import com.treode.concurrent.Callback
 import com.treode.store._
 import com.treode.store.local.locks.LockSet
 

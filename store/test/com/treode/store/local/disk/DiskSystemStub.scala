@@ -3,7 +3,7 @@ package com.treode.store.local.disk
 import java.util.ArrayList
 import scala.collection.mutable.Builder
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 
 private [store] class DiskSystemStub (val maxPageSize: Int) extends DiskSystem {
 

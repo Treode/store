@@ -1,6 +1,6 @@
 package com.treode.store.local
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.store.SimpleCell
 
 private trait SimpleIterator {

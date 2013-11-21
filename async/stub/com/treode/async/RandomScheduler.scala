@@ -1,4 +1,4 @@
-package com.treode.concurrent
+package com.treode.async
 
 import scala.collection.mutable.{ArrayBuffer, PriorityQueue}
 import scala.util.Random

@@ -2,7 +2,7 @@ package com.treode.store.local
 
 import scala.util.Random
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.store.{Bytes, Cardinals, Fruits, SimpleStore, TableId}
 import org.scalatest.FreeSpec
 

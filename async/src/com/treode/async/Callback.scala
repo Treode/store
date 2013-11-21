@@ -1,4 +1,4 @@
-package com.treode.concurrent
+package com.treode.async
 
 import java.lang.{Integer => JavaInt, Long => JavaLong}
 import java.nio.channels.CompletionHandler

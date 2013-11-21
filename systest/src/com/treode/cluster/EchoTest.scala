@@ -6,10 +6,10 @@ import java.util.concurrent._
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.util.Random
 
+import com.treode.async.Scheduler
 import com.treode.cluster.events.Events
 import com.treode.cluster.messenger.{MailboxRegistry, Listener, PeerRegistry}
 import com.treode.cluster.misc.{RichBoolean, RichOption, parseInetSocketAddress, parseInt}
-import com.treode.concurrent.Scheduler
 import sun.misc.{SignalHandler, Signal}
 
 class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {

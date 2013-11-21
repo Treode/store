@@ -7,7 +7,7 @@ import java.util.Arrays
 import java.util.concurrent.Future
 import scala.util.Random
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 
 class AsyncFileStub (random: Random) extends AsynchronousFileChannel {
 

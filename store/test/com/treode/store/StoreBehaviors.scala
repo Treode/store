@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.language.postfixOps
 import scala.util.Random
 
-import com.treode.concurrent.{Callback, Scheduler}
+import com.treode.async.{Callback, Scheduler}
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 

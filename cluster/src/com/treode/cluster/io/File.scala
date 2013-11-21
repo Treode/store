@@ -3,7 +3,7 @@ package com.treode.cluster.io
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.ByteBuffer
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.pickle.Buffer
 
 /** A file that has useful behavior (flush/fill) and that can be mocked. */

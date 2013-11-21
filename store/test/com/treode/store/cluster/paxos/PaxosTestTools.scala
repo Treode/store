@@ -1,6 +1,6 @@
 package com.treode.store.cluster.paxos
 
-import com.treode.concurrent.{CallbackCaptor, StubScheduler}
+import com.treode.async.{CallbackCaptor, StubScheduler}
 import com.treode.store.{Bytes, SimpleAccessor}
 
 trait PaxosTestTools {

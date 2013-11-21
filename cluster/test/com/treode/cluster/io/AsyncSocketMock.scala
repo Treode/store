@@ -8,7 +8,7 @@ import java.util.{Set => JavaSet, ArrayDeque}
 import java.util.concurrent.{Future, TimeUnit}
 import scala.collection.JavaConversions._
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import org.scalatest.Assertions.assert
 
 /** ScalaMock refuses to mock AsynchronousSocketChannel. */

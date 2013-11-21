@@ -1,6 +1,6 @@
 package com.treode.store.local
 
-import com.treode.concurrent.CallbackCaptor
+import com.treode.async.CallbackCaptor
 import com.treode.pickle.Picklers
 import com.treode.store._
 import org.scalatest.Assertions

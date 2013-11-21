@@ -4,9 +4,9 @@ import java.util.concurrent.TimeoutException
 import scala.collection.mutable
 import scala.language.postfixOps
 
+import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{Acknowledgements, Host, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
-import com.treode.concurrent.{Callback, Fiber}
 import com.treode.store._
 
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {

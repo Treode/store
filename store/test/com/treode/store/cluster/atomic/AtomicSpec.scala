@@ -2,7 +2,7 @@ package com.treode.store.cluster.atomic
 
 import java.util.concurrent.TimeoutException
 
-import com.treode.concurrent.CallbackCaptor
+import com.treode.async.CallbackCaptor
 import com.treode.store._
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, PropSpec, Specs}

@@ -1,6 +1,6 @@
 package com.treode.store
 
-import com.treode.concurrent.Callback
+import com.treode.async.Callback
 import com.treode.pickle.Pickler
 
 private trait SimpleAccessor [K, V] {
