@@ -1,4 +1,4 @@
-package com.treode.cluster.io
+package com.treode.async.io
 
 import java.lang.{Integer => JavaInt}
 import java.nio.ByteBuffer

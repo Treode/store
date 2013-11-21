@@ -74,14 +74,15 @@ object TreodeBuild extends Build {
     .settings (standardSettings: _*)
 
   lazy val async = Project ("async", file ("async"))
+    .dependsOn (pickle)
     .settings (withStubSettings: _*)
 
   lazy val cluster = Project ("cluster", file ("cluster"))
-    .dependsOn (pickle, async % "compile;stub->stub")
+    .dependsOn (async % "compile;stub->stub")
     .settings (withStubSettings: _*)
 
   lazy val store = Project ("store", file ("store"))
-    .dependsOn (pickle, cluster % "compile;stub->stub")
+    .dependsOn (cluster % "compile;stub->stub")
     .settings (withStubSettings: _*)
 
   /*

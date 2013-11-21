@@ -2,7 +2,7 @@ package com.treode.cluster
 
 import java.net.SocketAddress
 
-import com.treode.cluster.io.Socket
+import com.treode.async.io.Socket
 import com.treode.pickle.{Buffer, Pickler}
 
 trait Peer {

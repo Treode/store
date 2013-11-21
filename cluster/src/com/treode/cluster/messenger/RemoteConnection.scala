@@ -7,9 +7,9 @@ import scala.language.postfixOps
 import scala.util.Random
 
 import com.treode.async.{Callback, Fiber}
+import com.treode.async.io.Socket
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
 import com.treode.cluster.events.Events
-import com.treode.cluster.io.Socket
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.pickle.{Buffer, Pickler, pickle, unpickle}
 

@@ -1,4 +1,4 @@
-package com.treode.cluster.io
+package com.treode.async.io
 
 import java.nio.channels._
 import java.net.SocketAddress
@@ -15,7 +15,11 @@ class ServerSocket (socket: AsynchronousServerSocketChannel) {
     socket.bind (addr)
 
   def accept (cb: Callback [Socket]): Unit =
-    Callback.guard (cb) (socket.accept (cb, ServerSocket.SocketHandler))
+    try {
+      socket.accept (cb, ServerSocket.SocketHandler)
+    } catch {
+      case t: Throwable => cb.fail (t)
+    }
 
   def close(): Unit =
     socket.close()

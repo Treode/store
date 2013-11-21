@@ -4,9 +4,9 @@ import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.channels.{AsynchronousChannelGroup, AsynchronousCloseException}
 
 import com.treode.async.{Callback, Scheduler}
+import com.treode.async.io.{Socket, ServerSocket}
 import com.treode.cluster.{ClusterEvents, HostId, messenger}
 import com.treode.cluster.events.Events
-import com.treode.cluster.io.{Socket, ServerSocket}
 import com.treode.pickle._
 
 class Listener (

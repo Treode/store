@@ -1,4 +1,4 @@
-package com.treode.cluster.io
+package com.treode.async.io
 
 import java.nio.ByteBuffer
 import java.nio.channels.{AsynchronousChannelGroup, AsynchronousSocketChannel}
@@ -15,7 +15,11 @@ class Socket (socket: AsynchronousSocketChannel) {
   def this() = this (null)
 
   def connect (addr: SocketAddress, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) (socket.connect (addr, cb, Callback.UnitHandler))
+    try {
+      socket.connect (addr, cb, Callback.UnitHandler)
+    } catch {
+      case t: Throwable => cb.fail (t)
+    }
 
   def close(): Unit =
     socket.close()
@@ -44,13 +48,16 @@ class Socket (socket: AsynchronousSocketChannel) {
   }
 
   def fill (input: Buffer, length: Int, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    try {
       if (length <= input.readableBytes) {
         cb()
       } else {
         input.capacity (input.readPos + length)
         new Filler (input, length, cb) .fill()
-      }}
+      }
+    } catch {
+      case t: Throwable => cb.fail (t)
+    }
 
   private class Flusher (output: Buffer, cb: Callback [Unit])
   extends Callback [Long] {
@@ -78,7 +85,11 @@ class Socket (socket: AsynchronousSocketChannel) {
 
 
   def flush (output: Buffer, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) (new Flusher (output, cb) .flush())
+    try {
+      new Flusher (output, cb) .flush()
+    } catch {
+      case t: Throwable => cb.fail (t)
+    }
 }
 
 object Socket {

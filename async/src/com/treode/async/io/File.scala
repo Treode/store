@@ -1,4 +1,4 @@
-package com.treode.cluster.io
+package com.treode.async.io
 
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.ByteBuffer
@@ -40,13 +40,16 @@ class File (file: AsynchronousFileChannel) {
   }
 
   def fill (input: Buffer, pos: Long, length: Int, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    try {
       if (length <= input.readableBytes) {
         cb()
       } else {
         input.capacity (input.readPos + length)
         new FileFiller (input, pos, length, cb) .fill()
-      }}
+      }
+    } catch {
+      case t: Throwable => cb.fail (t)
+    }
 
   private class FileFlusher (output: Buffer, pos: Long, cb: Callback [Unit])
   extends Callback [Int] {
@@ -78,5 +81,9 @@ class File (file: AsynchronousFileChannel) {
 
 
   def flush (output: Buffer, pos: Long, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) (new FileFlusher (output, pos, cb) .flush())
+    try {
+      new FileFlusher (output, pos, cb) .flush()
+    } catch {
+      case t: Throwable => cb.fail (t)
+    }
 }
