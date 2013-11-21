@@ -27,44 +27,6 @@ private object LocalTimedTestTools extends TimedTestTools {
       builder.result
     }}
 
-  implicit class RichLocalStore (s: LocalStore) {
-
-    def readAndExpect (rt: TxClock, ops: ReadOp*) (expected: Value*) {
-      val cb = new ReadCaptor
-      s.read (rt, ops, cb)
-      expectResult (expected) (cb.passed)
-    }
-
-    def prepareAndCommit (ct: TxClock, ops: WriteOp*): TxClock = {
-      val cb1 = new PrepareCaptor
-      s.prepare (ct, ops, cb1)
-      val tx = cb1.passed
-      val wt = tx.ft + 7 // Leave gaps in time.
-      val cb2 = new CallbackCaptor [Unit]
-      tx.commit (wt, cb2)
-      cb2.passed
-      wt
-    }
-
-    def prepareAndAbort (ct: TxClock, ops: WriteOp*) {
-      val cb = new PrepareCaptor
-      s.prepare (ct, ops, cb)
-      val tx = cb.passed
-      tx.abort()
-    }
-
-    def prepareExpectAdvance (ct: TxClock, ops: WriteOp*) = {
-      val cb = new PrepareCaptor
-      s.prepare (ct, ops, cb)
-      cb.advanced
-    }
-
-    def prepareExpectCollisions (ct: TxClock, ops: WriteOp*) (expected: Int*) = {
-      val cb = new PrepareCaptor
-      s.prepare (ct, ops, cb)
-      expectResult (expected.toSet) (cb.collided)
-    }}
-
   implicit class RichTimedTable (t: TimedTable) {
 
     def getAndExpect (key: Bytes, time: TxClock) (expected: TimedCell) {
