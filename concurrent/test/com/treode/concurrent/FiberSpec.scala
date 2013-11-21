@@ -12,17 +12,17 @@ class FiberSpec extends FlatSpec {
     }
 
   "A Fiber" should "run one task" in {
-    val s = StubScheduler()
+    val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     f.execute (a = true)
     expectResult (false) (a)
-    s.nextTask()
+    s.runTasks()
     expectResult (true) (a)
   }
 
   it should "run two queued tasks" in {
-    val s = StubScheduler()
+    val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     var b = false
@@ -36,22 +36,22 @@ class FiberSpec extends FlatSpec {
   }
 
   it should "run two tasks one after the other" in {
-    val s = StubScheduler()
+    val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     var b = false
     f.execute (a = true)
     expectResult (false) (a)
-    s.nextTask()
+    s.runTasks()
     expectResult (true) (a)
     f.execute (b = true)
     expectResult (false) (b)
-    s.nextTask()
+    s.runTasks()
     expectResult (true) (b)
   }
 
   it should "report an exception thrown from a task and continue" in {
-    val s = StubScheduler()
+    val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     f.execute (throwDistinguishedException)
@@ -63,17 +63,17 @@ class FiberSpec extends FlatSpec {
   }
 
   it should "run a suspendable task" in {
-    val s = StubScheduler()
+    val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     f.begin {cb => a = true; cb()}
     expectResult (false) (a)
-    s.nextTask()
+    s.runTasks()
     expectResult (true) (a)
   }
 
   it should "report an exception thrown from a suspendable task and continue" in {
-    val s = StubScheduler()
+    val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     f.begin {cb => throw new DistinguishedException}
@@ -85,7 +85,7 @@ class FiberSpec extends FlatSpec {
   }
 
   it should "report an exception passed from a suspendable task and continue" in {
-    val s = StubScheduler()
+    val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     f.begin {cb => cb.fail (new DistinguishedException)}

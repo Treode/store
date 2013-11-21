@@ -39,7 +39,7 @@ abstract class BaseStubCluster (seed: Long, nhosts: Int) {
 
   val random = new Random (seed)
 
-  val scheduler = StubScheduler (random)
+  val scheduler = StubScheduler.random (random)
 
   var messageTrace = false
   var messageFlakiness = 0.0
