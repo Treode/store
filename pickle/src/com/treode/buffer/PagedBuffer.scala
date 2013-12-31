@@ -3,7 +3,7 @@ package com.treode.buffer
 import java.nio.ByteBuffer
 import java.util.Arrays
 
-class PagedBuffer (pageBits: Int) extends Input with Output {
+class PagedBuffer (pageBits: Int) extends Buffer {
 
   private [this] val InitPages = 8
   private [this] val pageSize = 1 << pageBits
@@ -164,7 +164,7 @@ class PagedBuffer (pageBits: Int) extends Input with Output {
     rpos = pos & pageMask
   }
 
-  def readableBytes = writePos - readPos
+  def readableBytes: Int = writePos - readPos
 
   def writeBytes (data: Array [Byte], offset: Int, length: Int) {
     var segment = pageSize - wpos

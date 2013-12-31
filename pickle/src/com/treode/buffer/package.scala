@@ -2,6 +2,8 @@ package com.treode
 
 package buffer {
 
+  trait Buffer extends InputBuffer with OutputBuffer
+
   class BufferUnderflowException (required: Int, available: Int) extends Exception {
     override def getMessage = s"Buffer underflow, $required required, $available available."
   }}
