@@ -8,10 +8,11 @@ import scala.util.Random
 
 import com.treode.async.{Callback, Fiber}
 import com.treode.async.io.Socket
+import com.treode.buffer.PagedBuffer
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
 import com.treode.cluster.events.Events
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
-import com.treode.pickle.{Buffer, Pickler, pickle, unpickle}
+import com.treode.pickle.{Pickler, pickle, unpickle}
 
 private class RemoteConnection (
   val id: HostId,
@@ -34,9 +35,9 @@ private class RemoteConnection (
 
     def sent() = ()
 
-    def connect (socket: Socket, input: Buffer, clientId: HostId) {
+    def connect (socket: Socket, input: PagedBuffer, clientId: HostId) {
       Loop (socket, input)
-      state = Connected (socket, clientId, Buffer (12))
+      state = Connected (socket, clientId, PagedBuffer (12))
     }
 
     def close() {
@@ -50,7 +51,7 @@ private class RemoteConnection (
 
     def socket: Socket
     def clientId: HostId
-    def buffer: Buffer
+    def buffer: PagedBuffer
     def backoff: Iterator [Int]
 
     object Flushed extends Callback [Unit] {
@@ -95,7 +96,7 @@ private class RemoteConnection (
         state = Sending (socket, clientId)
       }}
 
-    override def connect (socket: Socket, input: Buffer, clientId: HostId) {
+    override def connect (socket: Socket, input: PagedBuffer, clientId: HostId) {
       if (clientId < this.clientId) {
         socket.close()
       } else {
@@ -132,7 +133,7 @@ private class RemoteConnection (
   case class Connecting (socket: Socket,  clientId: HostId, time: Long, backoff: Iterator [Int])
   extends HaveSocket {
 
-    val buffer = Buffer (12)
+    val buffer = PagedBuffer (12)
 
     override def disconnect (socket: Socket) {
       if (socket == this.socket) {
@@ -140,7 +141,7 @@ private class RemoteConnection (
         state = Block (time, backoff)
       }}}
 
-  case class Connected (socket: Socket, clientId: HostId, buffer: Buffer) extends HaveSocket {
+  case class Connected (socket: Socket, clientId: HostId, buffer: PagedBuffer) extends HaveSocket {
 
     def backoff = BlockedTimer.iterator
 
@@ -152,7 +153,7 @@ private class RemoteConnection (
 
   case class Sending (socket: Socket, clientId: HostId) extends HaveSocket {
 
-    val buffer = Buffer (12)
+    val buffer = PagedBuffer (12)
 
     def backoff = BlockedTimer.iterator
   }
@@ -172,7 +173,7 @@ private class RemoteConnection (
   // Visible for testing.
   private [messenger] var state: State = new Disconnected (BlockedTimer.iterator)
 
-  case class Loop (socket: Socket, input: Buffer) {
+  case class Loop (socket: Socket, input: PagedBuffer) {
 
     case class MessageRead (mbx: MailboxId, length: Int) extends Callback [Unit] {
 
@@ -209,7 +210,7 @@ private class RemoteConnection (
   }
 
   private def hearHello (socket: Socket) {
-    val input = Buffer (12)
+    val input = PagedBuffer (12)
     socket.fill (input, 9, new Callback [Unit] {
       def pass (v: Unit) {
         val Hello (clientId) = unpickle (Hello.pickle, input)
@@ -226,7 +227,7 @@ private class RemoteConnection (
   }
 
   private def sayHello (socket: Socket) {
-    val buffer = Buffer (12)
+    val buffer = PagedBuffer (12)
     pickle (Hello.pickle, Hello (localId), buffer)
     socket.flush (buffer, new Callback [Unit] {
       def pass (v: Unit) {
@@ -261,7 +262,7 @@ private class RemoteConnection (
     state.sent()
   }
 
-  def connect (socket: Socket, input: Buffer, clientId: HostId): Unit = fiber.execute {
+  def connect (socket: Socket, input: PagedBuffer, clientId: HostId): Unit = fiber.execute {
     state.connect (socket, input, clientId)
   }
 

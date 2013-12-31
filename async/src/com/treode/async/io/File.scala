@@ -4,7 +4,7 @@ import java.nio.channels.AsynchronousFileChannel
 import java.nio.ByteBuffer
 
 import com.treode.async.Callback
-import com.treode.pickle.Buffer
+import com.treode.buffer.PagedBuffer
 
 /** A file that has useful behavior (flush/fill) and that can be mocked. */
 class File (file: AsynchronousFileChannel) {
@@ -12,7 +12,7 @@ class File (file: AsynchronousFileChannel) {
   /** For testing mocks only. */
   def this() = this (null)
 
-  private class FileFiller (input: Buffer, pos: Long, length: Int, cb: Callback [Unit])
+  private class FileFiller (input: PagedBuffer, pos: Long, length: Int, cb: Callback [Unit])
   extends Callback [Int] {
 
     private [this] var bytebuf = input.buffer (input.writePos, input.writeableBytes)
@@ -39,7 +39,7 @@ class File (file: AsynchronousFileChannel) {
     def fail (t: Throwable) = cb.fail (t)
   }
 
-  def fill (input: Buffer, pos: Long, length: Int, cb: Callback [Unit]): Unit =
+  def fill (input: PagedBuffer, pos: Long, length: Int, cb: Callback [Unit]): Unit =
     try {
       if (length <= input.readableBytes) {
         cb()
@@ -51,7 +51,7 @@ class File (file: AsynchronousFileChannel) {
       case t: Throwable => cb.fail (t)
     }
 
-  private class FileFlusher (output: Buffer, pos: Long, cb: Callback [Unit])
+  private class FileFlusher (output: PagedBuffer, pos: Long, cb: Callback [Unit])
   extends Callback [Int] {
 
     private [this] var bytebuf = output.buffer (output.readPos, output.readableBytes)
@@ -80,7 +80,7 @@ class File (file: AsynchronousFileChannel) {
   }
 
 
-  def flush (output: Buffer, pos: Long, cb: Callback [Unit]): Unit =
+  def flush (output: PagedBuffer, pos: Long, cb: Callback [Unit]): Unit =
     try {
       new FileFlusher (output, pos, cb) .flush()
     } catch {

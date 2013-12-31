@@ -1,6 +1,8 @@
 package com.treode.pickle
 
-private class BufferUnpickleContext (buffer: Buffer) extends UnpickleContext {
+import com.treode.buffer.Input
+
+private class BufferUnpickleContext (buffer: Input) extends UnpickleContext {
 
   def readBytes (data: Array [Byte], offset: Int, length: Int) =
     buffer.readBytes (data, offset, length)

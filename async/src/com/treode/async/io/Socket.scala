@@ -6,7 +6,7 @@ import java.net.SocketAddress
 import java.util.concurrent.TimeUnit.MILLISECONDS
 
 import com.treode.async.Callback
-import com.treode.pickle.Buffer
+import com.treode.buffer.PagedBuffer
 
 /** A socket that has useful behavior (flush/fill) and that can be mocked. */
 class Socket (socket: AsynchronousSocketChannel) {
@@ -24,7 +24,7 @@ class Socket (socket: AsynchronousSocketChannel) {
   def close(): Unit =
     socket.close()
 
-  private class Filler (input: Buffer, length: Int, cb: Callback [Unit])
+  private class Filler (input: PagedBuffer, length: Int, cb: Callback [Unit])
   extends Callback [Long] {
 
     def fill() {
@@ -47,7 +47,7 @@ class Socket (socket: AsynchronousSocketChannel) {
     def fail (t: Throwable) = cb.fail (t)
   }
 
-  def fill (input: Buffer, length: Int, cb: Callback [Unit]): Unit =
+  def fill (input: PagedBuffer, length: Int, cb: Callback [Unit]): Unit =
     try {
       if (length <= input.readableBytes) {
         cb()
@@ -59,7 +59,7 @@ class Socket (socket: AsynchronousSocketChannel) {
       case t: Throwable => cb.fail (t)
     }
 
-  private class Flusher (output: Buffer, cb: Callback [Unit])
+  private class Flusher (output: PagedBuffer, cb: Callback [Unit])
   extends Callback [Long] {
 
     def flush() {
@@ -84,7 +84,7 @@ class Socket (socket: AsynchronousSocketChannel) {
   }
 
 
-  def flush (output: Buffer, cb: Callback [Unit]): Unit =
+  def flush (output: PagedBuffer, cb: Callback [Unit]): Unit =
     try {
       new Flusher (output, cb) .flush()
     } catch {

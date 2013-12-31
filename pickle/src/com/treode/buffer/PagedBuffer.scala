@@ -1,9 +1,9 @@
-package com.treode.pickle
+package com.treode.buffer
 
 import java.nio.ByteBuffer
 import java.util.Arrays
 
-class Buffer (pageBits: Int) {
+class PagedBuffer (pageBits: Int) extends Input with Output {
 
   private [this] val InitPages = 8
   private [this] val pageSize = 1 << pageBits
@@ -61,7 +61,7 @@ class Buffer (pageBits: Int) {
     if (npages <= limit)
       return
     if (npages > pages.length)
-      pages = Arrays.copyOf (pages, Buffer.twopow (npages))
+      pages = Arrays.copyOf (pages, twopow (npages))
     var i = limit
     while (i < npages) {
       pages (i) = new Array [Byte] (pageSize)
@@ -148,7 +148,8 @@ class Buffer (pageBits: Int) {
     wpos = pos & pageMask
   }
 
-  def writeableBytes = capacity - writePos
+  def writeableBytes: Int =
+    capacity - writePos
 
   def readPos: Int =
     roff + rpos
@@ -807,17 +808,8 @@ class Buffer (pageBits: Int) {
   override def toString = "Buffer" + (readPos, writePos, capacity)
 }
 
-object Buffer {
+object PagedBuffer {
 
-  def apply (bits: Int): Buffer =
-    new Buffer (bits)
-
-  private [pickle] def twopow (n: Int): Int = {
-    var x = n
-    x |= x >> 1
-    x |= x >> 2
-    x |= x >> 4
-    x |= x >> 8
-    x |= x >> 16
-    x + 1
-  }}
+  def apply (bits: Int): PagedBuffer =
+    new PagedBuffer (bits)
+}

@@ -1,4 +1,4 @@
-package com.treode.pickle
+package com.treode.buffer
 
 /**
   * See https://issues.scala-lang.org/browse/SI-7934

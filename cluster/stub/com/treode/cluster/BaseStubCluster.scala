@@ -6,9 +6,10 @@ import scala.language.postfixOps
 import scala.util.Random
 
 import com.treode.async.{Scheduler, StubScheduler}
+import com.treode.buffer.PagedBuffer
 import com.treode.cluster.events.StubEvents
 import com.treode.cluster.messenger.{MailboxRegistry, PeerRegistry}
-import com.treode.pickle.{Buffer, Pickler, pickle}
+import com.treode.pickle.{Pickler, pickle}
 
 abstract class BaseStubCluster (seed: Long, nhosts: Int, multithreaded: Boolean = false) {
 
@@ -30,7 +31,7 @@ abstract class BaseStubCluster (seed: Long, nhosts: Int, multithreaded: Boolean 
 
     def cleanup(): Unit = ()
 
-    private [cluster] def deliver (id: MailboxId, from: HostId, msg: Buffer): Unit =
+    private [cluster] def deliver (id: MailboxId, from: HostId, msg: PagedBuffer): Unit =
       mailboxes.deliver (id, peers.get (from), msg, msg.readableBytes)
   }
 
@@ -65,7 +66,7 @@ abstract class BaseStubCluster (seed: Long, nhosts: Int, multithreaded: Boolean 
       require (h.isDefined, s"$to does not exist.")
       if (messageTrace)
         println (s"$from->$to:$mbx: $msg")
-      val buf = Buffer (12)
+      val buf = PagedBuffer (12)
       pickle (p, msg, buf)
       h.get.deliver (mbx, from, buf)
     }}

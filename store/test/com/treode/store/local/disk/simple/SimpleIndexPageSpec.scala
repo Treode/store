@@ -1,6 +1,7 @@
 package com.treode.store.local.disk.simple
 
-import com.treode.pickle.{Buffer, Picklers, pickle, unpickle}
+import com.treode.buffer.PagedBuffer
+import com.treode.pickle.{pickle, unpickle}
 import com.treode.store.{Bytes, Fruits, TxClock}
 import org.scalatest.WordSpec
 
@@ -25,7 +26,7 @@ class SimpleIndexPageSpec extends WordSpec {
   }
 
   private def checkPickle (page: IndexPage) {
-    val buffer = Buffer (12)
+    val buffer = PagedBuffer (12)
     pickle (IndexPage.pickle, page, buffer)
     val result = unpickle (IndexPage.pickle, buffer)
     pagesEqual (page, result)

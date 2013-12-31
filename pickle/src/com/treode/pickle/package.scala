@@ -1,13 +1,11 @@
 package com.treode
 
+import com.treode.buffer.{PagedBuffer, Input, Output}
+
 package pickle {
 
   /** Superclass of all pickling and unpickling exceptions. */
   class PickleException extends Exception
-
-  class BufferUnderflowException (required: Int, available: Int) extends Exception {
-    override def getMessage = s"Buffer underflow, $required required, $available available."
-  }
 
   /** A tagged structure encountered an unknown tag. */
   class InvalidTagException (name: String, found: Long) extends PickleException {
@@ -22,14 +20,14 @@ package pickle {
 
 package object pickle {
 
-  def pickle [A] (p: Pickler [A], v: A, b: Buffer) =
+  def pickle [A] (p: Pickler [A], v: A, b: Output) =
     p.p (v, new BufferPickleContext (b))
 
-  def unpickle [A] (p: Pickler [A], b: Buffer): A =
+  def unpickle [A] (p: Pickler [A], b: Input): A =
     p.u (new BufferUnpickleContext (b))
 
   def toByteArray [A] (p: Pickler [A], v: A): Array [Byte] = {
-    val buf = Buffer (12)
+    val buf = PagedBuffer (12)
     com.treode.pickle.pickle (p, v, buf)
     val bytes = new Array [Byte] (buf.readableBytes)
     buf.readBytes (bytes, 0, bytes.length)
@@ -37,7 +35,7 @@ package object pickle {
   }
 
   def fromByteArray [A] (p: Pickler [A], bytes: Array [Byte]): A = {
-    val buf = Buffer (12)
+    val buf = PagedBuffer (12)
     buf.writeBytes (bytes, 0, bytes.length)
     val v = com.treode.pickle.unpickle (p, buf)
     require (buf.readableBytes == 0, "Bytes remain after unpickling.")

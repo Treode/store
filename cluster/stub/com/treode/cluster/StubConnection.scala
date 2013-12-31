@@ -4,7 +4,8 @@ import java.net.SocketAddress
 import scala.collection.JavaConversions._
 
 import com.treode.async.io.Socket
-import com.treode.pickle.{Buffer, Pickler}
+import com.treode.buffer.PagedBuffer
+import com.treode.pickle.Pickler
 
 class StubConnection (cluster: BaseStubCluster, val id: HostId, localId: HostId) extends Peer {
 
@@ -14,7 +15,7 @@ class StubConnection (cluster: BaseStubCluster, val id: HostId, localId: HostId)
     cluster.deliver (p, localId, id, mbx, msg)
 
   // Stubs do not require this.
-  def connect (socket: Socket, input: Buffer, clientId: HostId) =
+  def connect (socket: Socket, input: PagedBuffer, clientId: HostId) =
     throw new UnsupportedOperationException
 
   def close(): Unit = ()

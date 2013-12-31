@@ -4,16 +4,17 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.util.Random
 
 import com.treode.async.{Mailbox, Scheduler}
+import com.treode.buffer.PagedBuffer
 import com.treode.cluster.{EphemeralMailbox, ClusterEvents, MailboxId, Peer}
 import com.treode.cluster.events.Events
-import com.treode.pickle._
+import com.treode.pickle.{Pickler, unpickle}
 
 class MailboxRegistry (implicit events: Events) {
 
   // Visible for testing.
   private [messenger] val mbxs = new ConcurrentHashMap [Long, PickledFunction]
 
-  private [cluster] def deliver (id: MailboxId, from: Peer, buffer: Buffer, length: Int) {
+  private [cluster] def deliver (id: MailboxId, from: Peer, buffer: PagedBuffer, length: Int) {
     if (length == 0)
       return
 
@@ -74,7 +75,7 @@ class MailboxRegistry (implicit events: Events) {
         close()
       }}
 
-    def apply (from: Peer, buffer: Buffer): Unit =
+    def apply (from: Peer, buffer: PagedBuffer): Unit =
       mbx.send (unpickle (p, buffer), from)
   }
 

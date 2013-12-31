@@ -1,6 +1,7 @@
 package com.treode.store.local.disk.timed
 
-import com.treode.pickle.{Buffer, Picklers, pickle, unpickle}
+import com.treode.buffer.PagedBuffer
+import com.treode.pickle.{pickle, unpickle}
 import com.treode.store.{Bytes, Fruits, TimedCell, TxClock}
 import org.scalatest.WordSpec
 
@@ -28,7 +29,7 @@ class CellPageSpec extends WordSpec {
   }
 
   private def checkPickle (page: CellPage) {
-    val buffer = Buffer (12)
+    val buffer = PagedBuffer (12)
     pickle (CellPage.pickle, page, buffer)
     val result = unpickle (CellPage.pickle, buffer)
     pagesEqual (page, result)

@@ -2,6 +2,7 @@ package com.treode.pickle
 
 import scala.util.Random
 
+import com.treode.buffer.PagedBuffer
 import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.{FlatSpec, PropSpec, Specs}
@@ -41,7 +42,7 @@ private trait PicklersSpecCommon extends ShouldMatchers {
 
   def check [A] (pa: Pickler [A], x: A) {
     expectResult (x) {
-      val buffer = Buffer (10)
+      val buffer = PagedBuffer (10)
       pickle (pa, x, buffer)
       val y = unpickle (pa, buffer)
       y

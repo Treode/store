@@ -5,9 +5,10 @@ import java.nio.channels.{AsynchronousChannelGroup, AsynchronousCloseException}
 
 import com.treode.async.{Callback, Scheduler}
 import com.treode.async.io.{Socket, ServerSocket}
+import com.treode.buffer.PagedBuffer
 import com.treode.cluster.{ClusterEvents, HostId, messenger}
 import com.treode.cluster.events.Events
-import com.treode.pickle._
+import com.treode.pickle.{pickle, unpickle}
 
 class Listener (
   localId: HostId,
@@ -19,8 +20,8 @@ class Listener (
 
   private var server: ServerSocket = null
 
-  private def sayHello (socket: Socket, input: Buffer, remoteId: HostId) {
-    val buffer = Buffer (12)
+  private def sayHello (socket: Socket, input: PagedBuffer, remoteId: HostId) {
+    val buffer = PagedBuffer (12)
     pickle (Hello.pickle, Hello (localId), buffer)
     socket.flush (buffer, new Callback [Unit] {
       def pass (v: Unit) {
@@ -33,7 +34,7 @@ class Listener (
   }
 
   private def hearHello (socket: Socket) {
-    val buffer = Buffer (12)
+    val buffer = PagedBuffer (12)
     socket.fill (buffer, 9, new Callback [Unit] {
       def pass (v: Unit) {
         val Hello (remoteId) = unpickle (Hello.pickle, buffer)
