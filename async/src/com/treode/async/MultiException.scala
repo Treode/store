@@ -1,4 +1,4 @@
-package com.treode.store
+package com.treode.async
 
 class MultiException extends Exception
 

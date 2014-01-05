@@ -74,4 +74,8 @@ object Callback {
     new Callback [A] {
       def pass (v: A): Unit = f (v)
       def fail (t: Throwable): Unit = throw t
-    }}
+    }
+
+  def latch (count: Int, cb: Callback [Unit]): Callback [Any] =
+    new Latch (count, cb)
+}

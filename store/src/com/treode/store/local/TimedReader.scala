@@ -3,7 +3,8 @@ package com.treode.store.local
 import java.util.ArrayList
 import scala.collection.JavaConversions.asScalaBuffer
 
-import com.treode.store.{MultiException, ReadCallback, ReadOp, TimedCell, TxClock, Value}
+import com.treode.async.MultiException
+import com.treode.store.{ReadCallback, ReadOp, TimedCell, TxClock, Value}
 
 private class TimedReader (val rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback) {
 

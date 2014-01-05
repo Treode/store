@@ -8,7 +8,7 @@ class CallbackCaptor [T] extends Callback [T] {
   private var _v: T = null.asInstanceOf [T]
   private var _t: Throwable = null
 
-  private def wasInvoked: Boolean =
+  def wasInvoked: Boolean =
     _invokation != null
 
   private def assertNotInvoked() {
@@ -18,7 +18,7 @@ class CallbackCaptor [T] extends Callback [T] {
       val _second = Thread.currentThread.getStackTrace
       println ("First invokation:\n    " + (_invokation take (10) mkString "\n    "))
       println ("Second invokation:\n    " + (_second take (10) mkString "\n    "))
-      assert (false, "back was already invoked.")
+      assert (false, "Callback was already invoked.")
     }}
 
   private def assertInvoked (e: Boolean) {

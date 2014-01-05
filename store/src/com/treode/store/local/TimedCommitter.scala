@@ -4,8 +4,8 @@ import java.util.ArrayList
 import scala.collection.JavaConversions._
 import scala.language.postfixOps
 
-import com.treode.async.Callback
-import com.treode.store.{MultiException, WriteOp}
+import com.treode.async.{Callback, MultiException}
+import com.treode.store.WriteOp
 
 private class TimedCommitter (ops: Seq [WriteOp], cb: Callback [Unit]) extends Callback [Unit] {
 
