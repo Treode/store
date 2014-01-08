@@ -1,25 +1,29 @@
 package com.treode.async.io
 
-import java.nio.channels.AsynchronousFileChannel
 import java.nio.ByteBuffer
+import java.nio.channels.AsynchronousFileChannel
+import java.nio.file.{OpenOption, Path}
+import java.nio.file.attribute.FileAttribute
+import java.util.concurrent.ExecutorService
+import scala.collection.JavaConversions._
 
 import com.treode.async.Callback
 import com.treode.buffer.PagedBuffer
 
 /** A file that has useful behavior (flush/fill) and that can be mocked. */
-class File (file: AsynchronousFileChannel) {
+class File private [io] (file: AsynchronousFileChannel) {
 
   /** For testing mocks only. */
   def this() = this (null)
 
-  private class FileFiller (input: PagedBuffer, pos: Long, length: Int, cb: Callback [Unit])
+  private class FileFiller (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit])
   extends Callback [Int] {
 
     private [this] var bytebuf = input.buffer (input.writePos, input.writeableBytes)
     private [this] var _pos = pos
 
     def fill() {
-      if (length <= input.readableBytes)
+      if (len <= input.readableBytes)
         cb()
       else {
         if (bytebuf.remaining == 0)
@@ -39,13 +43,13 @@ class File (file: AsynchronousFileChannel) {
     def fail (t: Throwable) = cb.fail (t)
   }
 
-  def fill (input: PagedBuffer, pos: Long, length: Int, cb: Callback [Unit]): Unit =
+  def fill (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit]): Unit =
     try {
-      if (length <= input.readableBytes) {
+      if (len <= input.readableBytes) {
         cb()
       } else {
-        input.capacity (input.readPos + length)
-        new FileFiller (input, pos, length, cb) .fill()
+        input.capacity (input.readPos + len)
+        new FileFiller (input, pos, len, cb) .fill()
       }
     } catch {
       case t: Throwable => cb.fail (t)
@@ -79,11 +83,18 @@ class File (file: AsynchronousFileChannel) {
     def fail (t: Throwable) = cb.fail (t)
   }
 
-
   def flush (output: PagedBuffer, pos: Long, cb: Callback [Unit]): Unit =
     try {
       new FileFlusher (output, pos, cb) .flush()
     } catch {
       case t: Throwable => cb.fail (t)
     }
+
+  def close(): Unit = file.close()
+}
+
+object File {
+
+  def open (path: Path, opts: Set [OpenOption], attrs: Set [FileAttribute [Any]], exec: ExecutorService): File =
+    new File (AsynchronousFileChannel.open (path, opts, exec, attrs.toArray: _*))
 }
