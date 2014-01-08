@@ -1,11 +1,10 @@
 package com.treode.store.local.disk.timed
 
-import com.treode.async.Callback
+import com.treode.async.{AsyncIterator, Callback}
 import com.treode.store.TimedCell
-import com.treode.store.local.TimedIterator
 import com.treode.store.local.disk.{DiskSystem, Page}
 
-private class TierIterator (disk: DiskSystem) extends TimedIterator {
+private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] {
 
   private var stack = List.empty [(IndexPage, Int)]
   private var page: CellPage = null

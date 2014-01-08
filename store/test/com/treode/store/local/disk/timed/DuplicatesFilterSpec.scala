@@ -1,8 +1,8 @@
 package com.treode.store.local.disk.timed
 
-import com.treode.async.Callback
+import com.treode.async.{AsyncIterator, Callback, CallbackCaptor}
 import com.treode.store.{Bytes, Cardinals, Fruits, TimedCell}
-import com.treode.store.local.{TimedIterator, LocalTimedTestTools}
+import com.treode.store.local.LocalTimedTestTools
 import org.scalatest.FlatSpec
 
 import Cardinals.One
@@ -14,17 +14,16 @@ class DuplicatesFilterSpec extends FlatSpec {
   private val Banana = Fruits.Banana ## 1 :: One
   private val Orange = Fruits.Orange ## 1 :: One
 
-  private def expectCells (cs: TimedCell*) (actual: TimedIterator) =
-    expectResult (cs) (actual.toSeq)
+  private def expectCells (cs: TimedCell*) (actual: AsyncIterator [TimedCell]) {
+    val cb = new CallbackCaptor [Seq [TimedCell]]
+    AsyncIterator.scan (actual, cb)
+    expectResult (cs) (cb.passed)
+  }
 
   private def newFilter (cs: TimedCell*) = {
-    var iter: TimedIterator = null
-    DuplicatesFilter (TimedIterator.adapt (cs.iterator), new Callback [TimedIterator] {
-      def pass (_iter: TimedIterator) = iter = _iter
-      def fail (t: Throwable) = throw t
-    })
-    assert (iter != null)
-    iter
+    val cb = new CallbackCaptor [AsyncIterator [TimedCell]]
+    DuplicatesFilter (AsyncIterator.adapt (cs.iterator), cb)
+    cb.passed
   }
 
   "The DuplicatesFilter" should "handle []" in {

@@ -3,11 +3,11 @@ package com.treode.store.local.disk.simple
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{pickle, unpickle}
 import com.treode.store.{Bytes, Fruits, SimpleCell}
-import com.treode.store.local.LocalSimpleTestTools
+import com.treode.store.SimpleTestTools
 import org.scalatest.WordSpec
 
 import Fruits.{Apple, Banana, Kiwi, Kumquat, Orange}
-import LocalSimpleTestTools._
+import SimpleTestTools._
 
 class SimpleCellPageSpec extends WordSpec {
 

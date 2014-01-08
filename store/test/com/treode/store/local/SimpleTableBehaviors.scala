@@ -3,12 +3,12 @@ package com.treode.store.local
 import scala.util.Random
 
 import com.treode.async.Callback
-import com.treode.store.{Bytes, Cardinals, Fruits, SimpleStore, TableId}
+import com.treode.store._
 import org.scalatest.FreeSpec
 
 import Cardinals.One
 import Fruits.Apple
-import LocalSimpleTestTools._
+import SimpleTestTools._
 
 trait SimpleTableBehaviors {
   this: FreeSpec =>

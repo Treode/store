@@ -1,15 +1,15 @@
 package com.treode.store.local.disk.simple
 
-import com.treode.async.Callback
+import com.treode.async.{AsyncIterator, Callback}
 import com.treode.store.SimpleCell
-import com.treode.store.local.SimpleIterator
 
 /** Preserves first cell for key and eliminates subsequent ones. */
-private class OverwritesFilter private (iter: SimpleIterator) extends SimpleIterator {
+private class OverwritesFilter private (iter: AsyncIterator [SimpleCell])
+extends AsyncIterator [SimpleCell] {
 
   private var next: SimpleCell = null
 
-  private def init (cb: Callback [SimpleIterator]) {
+  private def init (cb: Callback [AsyncIterator [SimpleCell]]) {
     if (iter.hasNext) {
       iter.next (new Callback [SimpleCell] {
         def pass (cell: SimpleCell) {
@@ -56,6 +56,6 @@ private class OverwritesFilter private (iter: SimpleIterator) extends SimpleIter
 
 object OverwritesFilter {
 
-  def apply (iter: SimpleIterator, cb: Callback [SimpleIterator]): Unit =
+  def apply (iter: AsyncIterator [SimpleCell], cb: Callback [AsyncIterator [SimpleCell]]): Unit =
     new OverwritesFilter (iter) init (cb)
 }

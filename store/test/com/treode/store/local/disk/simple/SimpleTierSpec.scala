@@ -5,7 +5,6 @@ import scala.collection.mutable.Builder
 import com.treode.async.Callback
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, Cardinals, Fruits, SimpleCell, TxClock}
-import com.treode.store.local.SimpleIterator
 import com.treode.store.local.disk.DiskSystemStub
 import org.scalatest.WordSpec
 

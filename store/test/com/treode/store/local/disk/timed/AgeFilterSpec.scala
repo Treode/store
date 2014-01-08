@@ -1,8 +1,8 @@
 package com.treode.store.local.disk.timed
 
-import com.treode.async.Callback
+import com.treode.async.{AsyncIterator, Callback, CallbackCaptor}
 import com.treode.store.{Fruits, TimedCell}
-import com.treode.store.local.{TimedIterator, LocalTimedTestTools}
+import com.treode.store.local.LocalTimedTestTools
 import org.scalatest.FlatSpec
 
 import Fruits.{Apple, Banana}
@@ -10,17 +10,16 @@ import LocalTimedTestTools._
 
 class AgeFilterSpec extends FlatSpec {
 
-  private def expectCells (cs: TimedCell*) (actual: TimedIterator) =
-    expectResult (cs) (actual.toSeq)
+  private def expectCells (cs: TimedCell*) (actual: AsyncIterator [TimedCell]) {
+    val cb = new CallbackCaptor [Seq [TimedCell]]
+    AsyncIterator.scan (actual, cb)
+    expectResult (cs) (cb.passed)
+  }
 
   private def newFilter (cs: TimedCell*) = {
-    var iter: TimedIterator = null
-    AgeFilter (TimedIterator.adapt (cs.iterator), 14, new Callback [TimedIterator] {
-      def pass (_iter: TimedIterator) = iter = _iter
-      def fail (t: Throwable) = throw t
-    })
-    assert (iter != null)
-    iter
+    val cb = new CallbackCaptor [AsyncIterator [TimedCell]]
+    AgeFilter (AsyncIterator.adapt (cs.iterator), 14, cb)
+    cb.passed
   }
 
   "The AgeFilter" should "handle []" in {

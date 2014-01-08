@@ -1,10 +1,10 @@
 package com.treode.store.local
 
 import org.scalatest.FlatSpec
-import com.treode.store.Fruits
+import com.treode.store.{Fruits, SimpleTestTools}
 
 import Fruits.{Apple, Orange}
-import LocalSimpleTestTools._
+import SimpleTestTools._
 
 class SimpleCellSpec extends FlatSpec {
 

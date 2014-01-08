@@ -1,15 +1,15 @@
 package com.treode.store.local.disk.timed
 
-import com.treode.async.Callback
+import com.treode.async.{AsyncIterator, Callback}
 import com.treode.store.TimedCell
-import com.treode.store.local.TimedIterator
 
 /** Remove cells that duplicate (key, time); assumes the wrapped iterator is sorted by cell. */
-private class DuplicatesFilter private (iter: TimedIterator) extends TimedIterator {
+private class DuplicatesFilter private (iter: AsyncIterator [TimedCell])
+extends AsyncIterator [TimedCell] {
 
   private var next: TimedCell = null
 
-  private def init (cb: Callback [TimedIterator]) {
+  private def init (cb: Callback [AsyncIterator [TimedCell]]) {
     if (iter.hasNext) {
       iter.next (new Callback [TimedCell] {
         def pass (cell: TimedCell) {
@@ -56,6 +56,6 @@ private class DuplicatesFilter private (iter: TimedIterator) extends TimedIterat
 
 object DuplicatesFilter {
 
-  def apply (iter: TimedIterator, cb: Callback [TimedIterator]): Unit =
+  def apply (iter: AsyncIterator [TimedCell], cb: Callback [AsyncIterator [TimedCell]]): Unit =
     new DuplicatesFilter (iter) init (cb)
 }

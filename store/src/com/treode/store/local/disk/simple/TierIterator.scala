@@ -1,11 +1,10 @@
 package com.treode.store.local.disk.simple
 
-import com.treode.async.Callback
+import com.treode.async.{AsyncIterator, Callback}
 import com.treode.store.SimpleCell
-import com.treode.store.local.SimpleIterator
 import com.treode.store.local.disk.{DiskSystem, Page}
 
-private class TierIterator (disk: DiskSystem) extends SimpleIterator {
+private class TierIterator (disk: DiskSystem) extends AsyncIterator [SimpleCell] {
 
   private var stack = List.empty [(IndexPage, Int)]
   private var page: CellPage = null

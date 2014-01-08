@@ -1,11 +1,11 @@
 package com.treode.store.local.disk.timed
 
-import com.treode.async.Callback
+import com.treode.async.{AsyncIterator, Callback}
 import com.treode.store.{TimedCell, TxClock}
-import com.treode.store.local.TimedIterator
 
 /** Remove cells older than a limit. */
-private class AgeFilter (iter: TimedIterator, limit: TxClock) extends TimedIterator {
+private class AgeFilter (iter: AsyncIterator [TimedCell], limit: TxClock)
+extends AsyncIterator [TimedCell] {
 
   private var next: TimedCell = null
 
@@ -36,7 +36,7 @@ private class AgeFilter (iter: TimedIterator, limit: TxClock) extends TimedItera
       cb()
     }}
 
-  private def init (cb: Callback [TimedIterator]) {
+  private def init (cb: Callback [AsyncIterator [TimedCell]]) {
     loop (new Callback [Unit] {
       def pass (v: Unit): Unit = cb (AgeFilter.this)
       def fail (t: Throwable) = cb.fail (t)
@@ -55,6 +55,6 @@ private class AgeFilter (iter: TimedIterator, limit: TxClock) extends TimedItera
 
 private object AgeFilter {
 
-  def apply (iter: TimedIterator, limit: TxClock, cb: Callback [TimedIterator]): Unit =
+  def apply (iter: AsyncIterator [TimedCell], limit: TxClock, cb: Callback [AsyncIterator [TimedCell]]): Unit =
     new AgeFilter (iter, limit) init (cb)
 }

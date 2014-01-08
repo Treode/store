@@ -1,26 +1,25 @@
 package com.treode.store.local.disk.simple
 
-import com.treode.async.Callback
+import com.treode.async.{AsyncIterator, Callback, CallbackCaptor}
 import com.treode.store.{Bytes, Fruits, SimpleCell}
-import com.treode.store.local.{SimpleIterator, LocalSimpleTestTools}
+import com.treode.store.SimpleTestTools
 import org.scalatest.FlatSpec
 
 import Fruits.{Apple, Banana, Orange}
-import LocalSimpleTestTools._
+import SimpleTestTools._
 
 class OverwritesFilterSpec extends FlatSpec {
 
-  private def expectCells (cs: SimpleCell*) (actual: SimpleIterator) =
-    expectResult (cs) (actual.toSeq)
+  private def expectCells (cs: SimpleCell*) (actual: AsyncIterator [SimpleCell]) {
+    val cb = new CallbackCaptor [Seq [SimpleCell]]
+    AsyncIterator.scan (actual, cb)
+    expectResult (cs) (cb.passed)
+  }
 
   private def newFilter (cs: SimpleCell*) = {
-    var iter: SimpleIterator = null
-    OverwritesFilter (SimpleIterator.adapt (cs.iterator), new Callback [SimpleIterator] {
-      def pass (_iter: SimpleIterator) = iter = _iter
-      def fail (t: Throwable) = throw t
-    })
-    assert (iter != null)
-    iter
+    val cb = new CallbackCaptor [AsyncIterator [SimpleCell]]
+    OverwritesFilter (AsyncIterator.adapt (cs.iterator), cb)
+    cb.passed
   }
 
   "The OverwritesFilter" should "handle []" in {
