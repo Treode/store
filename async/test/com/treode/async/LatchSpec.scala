@@ -4,6 +4,8 @@ import org.scalatest.FlatSpec
 
 class LatchSpec extends FlatSpec {
 
+  class DistinguishedException extends Exception
+
   "The Latch" should "release immediately for count==0" in {
     val cb = new CallbackCaptor [Unit]
     val ltch = Callback.latch (0, cb)
@@ -29,9 +31,8 @@ class LatchSpec extends FlatSpec {
     val cb = new CallbackCaptor [Unit]
     val ltch = Callback.latch (1, cb)
     assert (!cb.wasInvoked)
-    val exc = new Exception
-    ltch.fail (new Exception)
-    assert (cb.failed.isInstanceOf [MultiException])
+    ltch.fail (new DistinguishedException)
+    assert (cb.failed.isInstanceOf [DistinguishedException])
   }
 
   it should "release after two passes for count==2" in {
@@ -50,8 +51,8 @@ class LatchSpec extends FlatSpec {
     assert (!cb.wasInvoked)
     ltch (0)
     assert (!cb.wasInvoked)
-    ltch.fail (new Exception)
-    assert (cb.failed.isInstanceOf [MultiException])
+    ltch.fail (new DistinguishedException)
+    assert (cb.failed.isInstanceOf [DistinguishedException])
   }
 
   it should "release after two fails for count==2" in {

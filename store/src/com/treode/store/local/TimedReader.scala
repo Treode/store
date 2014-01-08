@@ -14,7 +14,7 @@ private class TimedReader (val rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback)
 
   private def finish() {
     if (!_failures.isEmpty)
-      cb.fail (MultiException (_failures.toSeq))
+      cb.fail (MultiException.fit (_failures.toSeq))
     else
       cb.apply (_got.toSeq)
   }

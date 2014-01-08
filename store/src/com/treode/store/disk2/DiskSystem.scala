@@ -187,8 +187,8 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
       }
 
       if (thrown.size > 0) {
-        panic (MultiException (thrown))
-        cb.fail (MultiException (thrown))
+        panic (MultiException.fit (thrown))
+        cb.fail (MultiException.fit (thrown))
         return
       }
 

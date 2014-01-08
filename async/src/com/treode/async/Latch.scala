@@ -13,7 +13,7 @@ private class Latch (private var count: Int, cb: Callback [Unit]) extends Callba
     if (count > 0)
       return
     if (!thrown.isEmpty)
-      cb.fail (MultiException (thrown))
+      cb.fail (MultiException.fit (thrown))
     else
       cb()
   }

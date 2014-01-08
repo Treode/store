@@ -35,7 +35,7 @@ private class TimedWriter (
     } else if (!_failures.isEmpty) {
       locks.release()
       locks = null
-      cb.fail (MultiException (_failures.toSeq))
+      cb.fail (MultiException.fit (_failures.toSeq))
     } else {
       cb.apply (this)
     }}
