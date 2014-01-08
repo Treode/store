@@ -1,5 +1,6 @@
 package com.treode.pickle
 
+import java.io.DataOutput
 import scala.collection.mutable
 
 abstract class PickleContext private [pickle] {
@@ -25,4 +26,6 @@ abstract class PickleContext private [pickle] {
   def writeFloat (v: Float)
   def writeDouble (v: Double)
   def writeString (v: String)
+
+  def toDataOutput: DataOutput
 }

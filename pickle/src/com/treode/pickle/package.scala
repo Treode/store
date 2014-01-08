@@ -1,6 +1,6 @@
 package com.treode
 
-import com.treode.buffer.{PagedBuffer, Input, Output}
+import com.treode.buffer.{PagedBuffer, InputBuffer, OutputBuffer}
 
 package pickle {
 
@@ -20,10 +20,10 @@ package pickle {
 
 package object pickle {
 
-  def pickle [A] (p: Pickler [A], v: A, b: Output) =
+  def pickle [A] (p: Pickler [A], v: A, b: OutputBuffer) =
     p.p (v, new BufferPickleContext (b))
 
-  def unpickle [A] (p: Pickler [A], b: Input): A =
+  def unpickle [A] (p: Pickler [A], b: InputBuffer): A =
     p.u (new BufferUnpickleContext (b))
 
   def toByteArray [A] (p: Pickler [A], v: A): Array [Byte] = {

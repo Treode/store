@@ -1,5 +1,6 @@
 package com.treode.pickle
 
+import java.io.DataInput
 import scala.collection.mutable
 
 abstract class UnpickleContext private [pickle] {
@@ -23,4 +24,6 @@ abstract class UnpickleContext private [pickle] {
   def readFloat(): Float
   def readDouble(): Double
   def readString(): String
+
+  def toDataInput: DataInput
 }

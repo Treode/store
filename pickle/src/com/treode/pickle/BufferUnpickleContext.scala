@@ -1,8 +1,9 @@
 package com.treode.pickle
 
-import com.treode.buffer.Input
+import java.io.DataInput
+import com.treode.buffer.{DataInputBuffer, InputBuffer}
 
-private class BufferUnpickleContext (buffer: Input) extends UnpickleContext {
+private class BufferUnpickleContext (buffer: InputBuffer) extends UnpickleContext {
 
   def readBytes (data: Array [Byte], offset: Int, length: Int) =
     buffer.readBytes (data, offset, length)
@@ -18,4 +19,7 @@ private class BufferUnpickleContext (buffer: Input) extends UnpickleContext {
   def readFloat() = buffer.readFloat()
   def readDouble() = buffer.readDouble()
   def readString() = buffer.readString()
+
+  def toDataInput: DataInput =
+    new DataInputBuffer (buffer)
 }

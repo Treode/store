@@ -1,8 +1,9 @@
 package com.treode.pickle
 
-import com.treode.buffer.Output
+import java.io.DataOutput
+import com.treode.buffer.{DataOutputBuffer, OutputBuffer}
 
-private class BufferPickleContext (buffer: Output) extends PickleContext {
+private class BufferPickleContext (buffer: OutputBuffer) extends PickleContext {
 
   def writeBytes (v: Array [Byte], offset: Int, length: Int) =
     buffer.writeBytes (v, offset, length)
@@ -18,4 +19,7 @@ private class BufferPickleContext (buffer: Output) extends PickleContext {
   def writeFloat (v: Float) = buffer.writeFloat (v)
   def writeDouble (v: Double) = buffer.writeDouble (v)
   def writeString (v: String) = buffer.writeString (v)
+
+  def toDataOutput: DataOutput =
+    new DataOutputBuffer (buffer)
 }
