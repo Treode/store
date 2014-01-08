@@ -200,9 +200,9 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
         return
       }
 
-      val gen1 = if (sb1.isEmpty) -1 else sb1.map (_.gen) .max
+      val gen1 = if (sb1.isEmpty) -1 else sb1.map (_.boot.gen) .max
       val count1 = sb1 count (_.boot.gen == gen1)
-      val gen2 = if (sb2.isEmpty) -1 else sb2.map (_.gen) .max
+      val gen2 = if (sb2.isEmpty) -1 else sb2.map (_.boot.gen) .max
       val count2 = sb2 count (_.boot.gen == gen2)
       if (count1 != count && count2 != count) {
         panic (new InconsistentSuperBlocksException)

@@ -5,7 +5,11 @@ import com.treode.async.Callback
 
 package disk2 {
 
-  case class Segment (num: Int, pos: Long, limit: Long)
+  private case class Segment (num: Int, pos: Long, limit: Long)
+
+  class DiskFullException extends Exception {
+    override def getMessage = "DiskFull."
+  }
 
   class ReattachmentPendingException extends Exception {
     override def getMessage = "Reattachment pending."

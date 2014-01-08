@@ -6,30 +6,27 @@ import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{pickle, unpickle}
 
-class Disk (val path: Path, file: File, config: DiskConfig) {
+private class Disk (val path: Path, file: File, config: DiskConfig) {
 
-  var gen = 0
-  var engaged = false
+  val free = new Allocator (config)
 
   def init() {
-    gen = 1
+    free.init()
   }
 
   def engage() {
-    engaged = true
   }
 
   def checkpoint (boot: BootBlock, cb: Callback [Unit]) {
-    gen = boot.gen
-    val superblock = SuperBlock (boot, config, gen)
+    val superblock = SuperBlock (boot, config, free.checkpoint (boot.gen))
     val buffer = PagedBuffer (12)
     pickle (SuperBlock.pickle, superblock, buffer)
-    val pos = if ((gen & 1) == 0) 0 else SuperBlockBytes
+    val pos = if ((boot.gen & 1) == 0) 0 else SuperBlockBytes
     file.flush (buffer, pos, cb)
   }
 
   def recover (superblock: SuperBlock) {
-    gen = superblock.gen
+    free.recover (superblock.boot.gen, superblock.free)
   }
 
   def close() = file.close()
@@ -42,5 +39,5 @@ class Disk (val path: Path, file: File, config: DiskConfig) {
       case _ => false
     }
 
-  override def toString = s"Disk($path, $gen, $config)"
+  override def toString = s"Disk($path, $config)"
 }

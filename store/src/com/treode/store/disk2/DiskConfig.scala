@@ -14,7 +14,7 @@ class DiskConfig private (
   val segmentMask = segmentBytes - 1
   val segmentCount = ((diskBytes + segmentMask.toLong) >> segmentBits).toInt
 
-  def segment (num: Int): Segment = {
+  private [disk2] def segment (num: Int): Segment = {
     require (0 <= num && num < segmentCount)
     val pos = if (num == 0) DiskLeadBytes else num << segmentBits
     val end = (num + 1) << segmentBits

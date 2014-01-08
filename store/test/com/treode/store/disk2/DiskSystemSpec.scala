@@ -15,10 +15,13 @@ class DiskSystemSpec extends FreeSpec {
 
   implicit def pathToString (s: String): Path = Paths.get (s)
 
-  def mkSuperBlock (gen: Int, disks: Set [String], config: DiskConfig) =
-    SuperBlock (BootBlock (gen, disks map (Paths.get (_))), config, gen)
+  private def mkSuperBlock (gen: Int, disks: Set [String], config: DiskConfig) = {
+    val free = new Allocator (config)
+    free.init()
+    SuperBlock (BootBlock (gen, disks map (Paths.get (_))), config, free.checkpoint (gen))
+  }
 
-  class RichStubFile (scheduler: StubScheduler) extends StubFile (scheduler) {
+  private class RichStubFile (scheduler: StubScheduler) extends StubFile (scheduler) {
 
     def readSuperBlock (gen: Int): SuperBlock = {
       val buffer = PagedBuffer (12)
@@ -31,12 +34,12 @@ class DiskSystemSpec extends FreeSpec {
     }
 
     def expectSuperBlock (block: SuperBlock): Unit =
-      expectResult (block) (readSuperBlock (block.gen))
+      expectResult (block) (readSuperBlock (block.boot.gen))
 
     def writeSuperBlock (block: SuperBlock) {
       val buffer = PagedBuffer (12)
       pickle (SuperBlock.pickle, block, buffer)
-      val pos = if ((block.gen & 1) == 0) 0 else SuperBlockBytes
+      val pos = if ((block.boot.gen & 1) == 0) 0 else SuperBlockBytes
       val cb = new CallbackCaptor [Unit]
       flush (buffer, pos, cb)
       scheduler.runTasks()
@@ -64,7 +67,7 @@ class DiskSystemSpec extends FreeSpec {
       expectResult (paths.size) (disks.size)
       for (path <- paths) {
         val disk = disks.find (_.path == path) .get
-        expectResult (gen) (disk.gen)
+        expectResult (gen) (disk.free.gen)
       }}
 
     def attachAndPass (items: (Path, File, DiskConfig)*) {
@@ -422,8 +425,9 @@ class DiskSystemSpec extends FreeSpec {
       val sys = new RichDiskSystem (scheduler)
       var cb = new CallbackCaptor [Unit]
       sys._attach (Seq (("a", disk1, big)), cb)
-      disk1.expectFlush (SuperBlockBytes, 0, 14)
+      disk1.expectFlush (SuperBlockBytes, 0, 33)
       scheduler.runTasks()
+      assert (!cb.wasInvoked)
       disk1.completeLast()
       scheduler.runTasks()
       cb.passed
@@ -432,7 +436,7 @@ class DiskSystemSpec extends FreeSpec {
 
       cb = new CallbackCaptor [Unit]
       sys.checkpoint (cb)
-      disk1.expectFlush (0, 0, 14)
+      disk1.expectFlush (0, 0, 33)
       scheduler.runTasks()
       assert (!cb.wasInvoked)
       disk1.failLast (new Exception)
