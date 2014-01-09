@@ -15,7 +15,7 @@ extends BaseStubCluster (seed, nhosts, multithreaded) with TestableStore {
 
     val store = TestableTempKit (2)
 
-    val paxos = PaxosKit (StubHost.this, store)
+    val paxos = PaxosKit (StubHost.this)
 
     val atomic = new AtomicKit () (StubHost.this, store, paxos)
 

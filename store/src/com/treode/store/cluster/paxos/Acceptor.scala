@@ -2,60 +2,53 @@ package com.treode.store.cluster.paxos
 
 import scala.language.postfixOps
 
-import com.treode.async.{Callback, Fiber, callback, guard}
+import com.treode.async.{Fiber, callback}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.store.{Bytes, StorePicklers}
 
 private class Acceptor (key: Bytes, kit: PaxosKit) {
-  import kit.Acceptors.{db, locate, remove}
   import kit.host.scheduler
 
   val deliberatingTimeout = 2 seconds
   val closedLifetime = 2 seconds
 
   private val fiber = new Fiber (scheduler)
-  var state: State = Restoring
+  var state: State = new Restoring
 
   trait State {
-    def query (from: Peer, ballot: Long, default: Bytes, cb: Callback [Unit])
-    def propose (from: Peer, ballot: Long, value: Bytes, cb: Callback [Unit])
-    def choose (value: Bytes, cb: Callback [Unit])
+    def query (from: Peer, ballot: Long, default: Bytes)
+    def propose (from: Peer, ballot: Long, value: Bytes)
+    def choose (value: Bytes)
     def timeout()
     def shutdown()
   }
 
-  object Restoring extends State {
+  class Restoring extends State {
 
-    def restore (default: Bytes, cb: Callback [Unit]) (f: State => Unit) {
-      guard (cb) {
-        db.get (key, callback {
-          case Some (PaxosStatus.Deliberating (v, n, p)) =>
-            state = new Deliberating (v, n, p)
-            f (state)
-          case Some (PaxosStatus.Closed (v)) =>
-            state = new Closed (v)
-            f (state)
-          case None =>
-            state = new Deliberating (default, BallotNumber.zero, None)
-            f (state)
-          })
-      }}
+    def restore (default: Bytes): Unit =
+      state = new Deliberating (default, BallotNumber.zero, None)
 
-    def query (from: Peer, ballot: Long, default: Bytes, cb: Callback [Unit]) =
-      restore (default, cb) (_.query (from, ballot, default, cb))
+    def query (from: Peer, ballot: Long, default: Bytes) {
+      restore (default)
+      state.query (from, ballot, default)
+    }
 
-    def propose (from: Peer, ballot: Long, value: Bytes, cb: Callback [Unit]) =
-      restore (value, cb) (_.propose (from, ballot, value, cb))
+    def propose (from: Peer, ballot: Long, value: Bytes) {
+      restore (value)
+      state.propose (from, ballot, value)
+    }
 
-    def choose (value: Bytes, cb: Callback [Unit]) =
-      restore (value, cb) (_.choose (value, cb))
+    def choose (value: Bytes) {
+      restore (value)
+      state.choose (value)
+    }
 
-    def timeout() =
+    def timeout(): Unit =
       throw new IllegalStateException
 
-    def shutdown() =
-      throw new IllegalStateException
+    def shutdown(): Unit =
+      state = new Shutdown
 
     override def toString = "Acceptor.Restoring (%s)" format (key)
   }
@@ -67,111 +60,82 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
 
     fiber.delay (deliberatingTimeout) (state.timeout())
 
-    val acceptors = locate (key)
-
     var proposers = Set [Peer] ()
 
-    def query (from: Peer, _ballot: Long, default: Bytes, cb: Callback [Unit]): Unit =
-      guard (cb) {
-        proposers += from
-        val ballot = BallotNumber (_ballot, from.id)
-        if (ballot >= this.ballot) {
-          Proposer.promise (key, _ballot, proposal) (from)
-          this.ballot = ballot
-        } else {
-          Proposer.refuse (key, this.ballot.number) (from)
-        }
-        cb()
-      }
+    def query (from: Peer, _ballot: Long, default: Bytes) {
+      proposers += from
+      val ballot = BallotNumber (_ballot, from.id)
+      if (ballot >= this.ballot) {
+        Proposer.promise (key, _ballot, proposal) (from)
+        this.ballot = ballot
+      } else {
+        Proposer.refuse (key, this.ballot.number) (from)
+      }}
 
-    def propose (from: Peer, _ballot: Long, value: Bytes, cb: Callback [Unit]): Unit =
-      guard (cb) {
-        proposers += from
-        val ballot = BallotNumber (_ballot, from.id)
-        if (ballot >= this.ballot) {
-          Proposer.accept (key, _ballot) (from)
-          this.ballot = ballot
-          this.proposal = Some ((ballot, value))
-        }
-        cb()
-      }
+    def propose (from: Peer, _ballot: Long, value: Bytes) {
+      proposers += from
+      val ballot = BallotNumber (_ballot, from.id)
+      if (ballot >= this.ballot) {
+        Proposer.accept (key, _ballot) (from)
+        this.ballot = ballot
+        this.proposal = Some ((ballot, value))
+      }}
 
-    def choose (value: Bytes, cb: Callback [Unit]): Unit =
-      guard (cb) {
-        state = Closed (value)
-        cb()
-      }
+    def choose (value: Bytes): Unit =
+      state = new Closed (value)
 
-    def timeout() {
+    def timeout(): Unit =
       kit.propose (key, default, callback (Acceptor.this.choose (_)))
-    }
 
-    def shutdown() {
-      state = Shutdown
-      db.put (key, PaxosStatus.Deliberating (default, ballot, proposal))
-    }
+    def shutdown(): Unit =
+      state = new Shutdown
 
     override def toString = "Acceptor.Deliberating " + (key, proposal)
   }
 
   class Closed (val chosen: Bytes) extends State {
 
-    fiber.delay (closedLifetime) (remove (key, Acceptor.this))
+    // TODO: Purge acceptor from memory once it is saved.
+    //fiber.delay (closedLifetime) (remove (key, Acceptor.this))
 
-    def query (from: Peer, ballot: Long, default: Bytes, cb: Callback [Unit]): Unit =
-      guard (cb) {
-        Proposer.chosen (key, chosen) (from)
-        cb()
-      }
+    def query (from: Peer, ballot: Long, default: Bytes): Unit =
+      Proposer.chosen (key, chosen) (from)
 
-    def propose (from: Peer, ballot: Long, value: Bytes, cb: Callback [Unit]): Unit =
-      guard (cb) {
-        Proposer.chosen (key, chosen) (from)
-        cb()
-      }
+    def propose (from: Peer, ballot: Long, value: Bytes): Unit =
+      Proposer.chosen (key, chosen) (from)
 
-    def choose (value: Bytes, cb: Callback [Unit]): Unit =
-      guard (cb) {
-        require (value == chosen, "Paxos disagreement")
-        cb()
-      }
+    def choose (value: Bytes): Unit =
+      require (value == chosen, "Paxos disagreement")
 
-    def timeout() = ()
+    def timeout(): Unit = ()
 
-    def shutdown() =
-      state = Shutdown
+    def shutdown(): Unit =
+      state = new Shutdown
 
     override def toString = "Acceptor.Closed " + (key, chosen)
   }
 
-  object Closed {
+  class Shutdown extends State {
 
-    def apply (v: Bytes): Closed = {
-      db.put (key, PaxosStatus.Closed (v))
-      new Closed (v)
-    }}
-
-  object Shutdown extends State {
-
-    def query (from: Peer, ballot: Long, abort: Bytes, cb: Callback [Unit]) = cb()
-    def propose (from: Peer, ballot: Long, value: Bytes, cb: Callback [Unit]) = cb()
-    def choose (v: Bytes, cb: Callback [Unit]) = cb()
-    def timeout() = ()
-    def shutdown() = ()
+    def query (from: Peer, ballot: Long, abort: Bytes): Unit = ()
+    def propose (from: Peer, ballot: Long, value: Bytes): Unit = ()
+    def choose (v: Bytes): Unit = ()
+    def timeout(): Unit = ()
+    def shutdown(): Unit = ()
 
     override def toString = "Acceptor.Shutdown (%s)" format (key)
   }
 
-  def query (from: Peer, ballot: Long, default: Bytes) =
-    fiber.begin (state.query (from, ballot, default, _))
+  def query (from: Peer, ballot: Long, default: Bytes): Unit =
+    fiber.execute (state.query (from, ballot, default))
 
-  def propose (from: Peer, ballot: Long, value: Bytes) =
-    fiber.begin (state.propose (from, ballot, value, _))
+  def propose (from: Peer, ballot: Long, value: Bytes): Unit =
+    fiber.execute (state.propose (from, ballot, value))
 
-  def choose (value: Bytes) =
-    fiber.begin (state.choose (value, _))
+  def choose (value: Bytes): Unit =
+    fiber.execute (state.choose (value))
 
-  def shutdown() =
+  def shutdown(): Unit =
     fiber.execute (state.shutdown())
 
   override def toString = state.toString

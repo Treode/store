@@ -202,9 +202,7 @@ private object Proposer {
 
   val promise = {
     import PaxosPicklers._
-    new MessageDescriptor (
-        0xFF52232E0CCEE1D2L,
-        tuple (bytes, long, option (tuple (ballotNumber, bytes))))
+    new MessageDescriptor (0xFF52232E0CCEE1D2L, tuple (bytes, long, proposal))
   }
 
   val accept = {

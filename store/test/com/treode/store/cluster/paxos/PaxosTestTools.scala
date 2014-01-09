@@ -7,9 +7,9 @@ trait PaxosTestTools {
 
   implicit class TestableAcceptor (a: Acceptor) {
 
-    def isRestoring = a.state == a.Restoring
-    def isDeliberating = classOf [Acceptor#Deliberating] .isInstance (a.state)
-    def isClosed = classOf [Acceptor#Closed] .isInstance (a.state)
+    def isRestoring = a.state.isInstanceOf [Acceptor#Restoring]
+    def isDeliberating = a.state.isInstanceOf  [Acceptor#Deliberating]
+    def isClosed = a.state.isInstanceOf [Acceptor#Closed]
 
     def getChosen: Option [Int] = {
       if (isClosed)

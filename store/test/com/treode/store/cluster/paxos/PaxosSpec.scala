@@ -16,9 +16,6 @@ class PaxosSpec extends Specs (PaxosBehaviors, PaxosProperties)
 
 object PaxosBehaviors extends WordSpec with BeforeAndAfterAll with PaxosTestTools {
 
-  val failed = afterWord ("failed")
-  val sent = afterWord ("sent")
-
   private val kit = new StubCluster (0, 3)
   private val hs @ Seq (_, _, host) = kit.hosts
   import kit.{random, scheduler}
@@ -95,9 +92,9 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
       expectResult (v) (cb2.passed)
 
       // Expect all acceptors closed and in agreement.
-      val as = hs.map (_.db.get (k) (scheduler)) .toSet
-      assert (as.size == 1)
-      expectResult (Some (PaxosStatus.Closed (v))) (as.head)
+      val as = hs map (_.paxos.Acceptors.get (k))
+      assert (as forall (_.isClosed))
+      expectResult (1) (as.map (_.getChosen) .flatten.toSet.size)
 
       // Cleanup.
       kit.cleanup()

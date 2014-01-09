@@ -10,11 +10,7 @@ private class StubCluster (seed: Long, nhosts: Int) extends BaseStubCluster (see
 
   class StubHost (id: HostId) extends BaseStubHost (id) {
 
-    val store = TestableTempKit (2)
-
-    val paxos = new PaxosKit () (StubHost.this, store)
-
-    def db = paxos.Acceptors.db
+    val paxos = new PaxosKit () (StubHost.this)
 
     override def cleanup() {
       paxos.close()

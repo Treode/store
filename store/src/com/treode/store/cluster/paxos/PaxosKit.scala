@@ -4,20 +4,15 @@ import java.util.concurrent.ConcurrentHashMap
 
 import com.treode.async.{Callback, guard}
 import com.treode.cluster.Host
-import com.treode.store.{Bytes, PaxosStore, SimpleAccessor, SimpleStore}
+import com.treode.store.{Bytes, PaxosStore}
 
-private class PaxosKit (implicit val host: Host, val store: SimpleStore) extends PaxosStore {
+private class PaxosKit (implicit val host: Host) extends PaxosStore {
   import host.random
 
   object Acceptors {
     import Acceptor._
 
     private val acceptors = new ConcurrentHashMap [Bytes, Acceptor] ()
-
-    val db = {
-      import PaxosPicklers._
-      SimpleAccessor (store, 0x2D3A6EE38E27ABD0L, bytes, paxosStatus)
-    }
 
     def get (key: Bytes): Acceptor = {
       var a0 = acceptors.get (key)
@@ -103,12 +98,11 @@ private class PaxosKit (implicit val host: Host, val store: SimpleStore) extends
       Proposers.propose (random.nextInt (17) + 1, key, value, cb)
     }
 
-  def close() {
-    Acceptors.db.close()
-  }}
+  def close() = ()
+}
 
 private [store] object PaxosKit {
 
-  def apply (host: Host, store: SimpleStore): PaxosStore =
-    new PaxosKit () (host, store)
+  def apply (host: Host): PaxosStore =
+    new PaxosKit () (host)
 }
