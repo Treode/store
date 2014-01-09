@@ -6,18 +6,18 @@ import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{pickle, unpickle}
 
-private class Disk (
+private class DiskDrive (
     val path: Path,
     file: File,
-    config: DiskConfig,
+    config: DiskDriveConfig,
     scheduler: Scheduler,
     logd: LogDispatcher) {
 
-  val free = new Allocator (config)
-  val logw = new LogWriter (file, free, scheduler, logd)
+  val alloc = new SegmentAllocator (config)
+  val logw = new LogWriter (file, alloc, scheduler, logd)
 
   def init (cb: Callback [Unit]) {
-    free.init()
+    alloc.init()
     logw.init (cb)
   }
 
@@ -30,7 +30,7 @@ private class Disk (
     val superblock = SuperBlock (
         boot,
         config,
-        free.checkpoint (gen),
+        alloc.checkpoint (gen),
         logw.checkpoint (gen))
     val buffer = PagedBuffer (12)
     pickle (SuperBlock.pickle, superblock, buffer)
@@ -40,7 +40,7 @@ private class Disk (
 
   def recover (superblock: SuperBlock) {
     val gen = superblock.boot.gen
-    free.recover (gen, superblock.free)
+    alloc.recover (gen, superblock.alloc)
     logw.recover (gen, superblock.log)
   }
 
@@ -50,9 +50,9 @@ private class Disk (
 
   override def equals (other: Any): Boolean =
     other match {
-      case that: Disk => path == that.path
+      case that: DiskDrive => path == that.path
       case _ => false
     }
 
-  override def toString = s"Disk($path, $config)"
+  override def toString = s"DiskDrive($path, $config)"
 }

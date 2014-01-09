@@ -11,21 +11,21 @@ import org.scalatest.FreeSpec
 
 class DiskSystemSpec extends FreeSpec {
 
-  val big = DiskConfig (30, 20, 13, 1L<<40)
+  val big = DiskDriveConfig (30, 20, 13, 1L<<40)
 
   implicit def pathToString (s: String): Path = Paths.get (s)
 
-  private def mkSuperBlock (gen: Int, disks: Set [String], config: DiskConfig) (
+  private def mkSuperBlock (gen: Int, disks: Set [String], config: DiskDriveConfig) (
       implicit scheduler: Scheduler) = {
     val file = new StubFile (scheduler)
-    val free = new Allocator (config)
-    free.init()
-    val log = new LogWriter (file, free, null, null)
+    val alloc = new SegmentAllocator (config)
+    alloc.init()
+    val log = new LogWriter (file, alloc, null, null)
     log.init (Callback.ignore)
     SuperBlock (
         BootBlock (gen, disks map (Paths.get (_))),
         config,
-        free.checkpoint (gen),
+        alloc.checkpoint (gen),
         log.checkpoint (gen))
   }
 
@@ -75,10 +75,9 @@ class DiskSystemSpec extends FreeSpec {
       expectResult (paths.size) (disks.size)
       for (path <- paths) {
         val disk = disks.find (_.path == path) .get
-        expectResult (gen) (disk.free.gen)
       }}
 
-    def attachAndPass (items: (Path, File, DiskConfig)*) {
+    def attachAndPass (items: (Path, File, DiskDriveConfig)*) {
       val cb = new CallbackCaptor [Unit]
       _attach (items, cb)
       scheduler.runTasks()
@@ -86,7 +85,7 @@ class DiskSystemSpec extends FreeSpec {
       assertReady()
     }
 
-    def attachAndFail [E] (items: (Path, File, DiskConfig)*) (implicit m: Manifest [E]) {
+    def attachAndFail [E] (items: (Path, File, DiskDriveConfig)*) (implicit m: Manifest [E]) {
       val cb = new CallbackCaptor [Unit]
       _attach (items, cb)
       scheduler.runTasks()
@@ -97,7 +96,7 @@ class DiskSystemSpec extends FreeSpec {
         assertReady()
     }
 
-    def attachAndHold (items: (Path, File, DiskConfig)*): CallbackCaptor [Unit] = {
+    def attachAndHold (items: (Path, File, DiskDriveConfig)*): CallbackCaptor [Unit] = {
       val cb = new CallbackCaptor [Unit]
       _attach (items, cb)
       cb

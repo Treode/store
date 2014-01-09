@@ -12,7 +12,7 @@ import LogEntry.{Body, Continue, End, Header, Pending}
 
 private class LogWriter (
     file: File,
-    free: Allocator,
+    alloc: SegmentAllocator,
     scheduler: Scheduler,
     dispatcher: LogDispatcher) {
 
@@ -77,10 +77,10 @@ private class LogWriter (
 
       val _pos = pos
       if (realloc) {
-        val alloc = free.allocate()
-        pos = alloc.pos
-        limit = alloc.limit
-        pickleEntry (time, Continue (alloc.num))
+        val seg = alloc.allocate()
+        pos = seg.pos
+        limit = seg.limit
+        pickleEntry (time, Continue (seg.num))
       } else {
         pos += buffer.readableBytes
         pickleEntry (time, End)
@@ -90,10 +90,10 @@ private class LogWriter (
     }}
 
   def init (cb: Callback [Unit]) {
-    val alloc = free.allocate()
-    head = alloc.pos
-    pos = alloc.pos
-    limit = alloc.limit
+    val seg = alloc.allocate()
+    head = seg.pos
+    pos = seg.pos
+    limit = seg.limit
     pickleEntry (System.currentTimeMillis, End)
     file.flush (buffer, pos, new Callback [Unit] {
       def pass (v: Unit) {
@@ -110,10 +110,10 @@ private class LogWriter (
     LogWriter.Meta (head)
 
   def recover (gen: Int, meta: LogWriter.Meta) {
-    val alloc = free.allocPos (head)
+    val seg = alloc.allocPos (head)
     head = meta.head
     pos = head
-    limit = alloc.limit
+    limit = seg.limit
   }}
 
 object LogWriter {

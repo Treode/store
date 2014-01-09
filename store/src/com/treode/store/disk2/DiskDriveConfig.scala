@@ -4,7 +4,7 @@ import java.lang.{Long => JLong}
 import java.util.Objects
 import com.treode.pickle.Picklers
 
-class DiskConfig private [disk2] (
+class DiskDriveConfig private [disk2] (
     val segmentBits: Int,
     val pageBits: Int,
     val blockBits: Int,
@@ -27,7 +27,7 @@ class DiskConfig private [disk2] (
 
   override def equals (other: Any): Boolean =
     other match {
-      case that: DiskConfig =>
+      case that: DiskDriveConfig =>
         segmentBits == that.segmentBits &&
         pageBits == that.pageBits &&
         blockBits == that.blockBits &&
@@ -36,16 +36,16 @@ class DiskConfig private [disk2] (
         false
     }
 
-  override def toString = s"DiskConfig($segmentBits, $pageBits, $blockBits, $diskBytes)"
+  override def toString = s"DiskDriveConfig($segmentBits, $pageBits, $blockBits, $diskBytes)"
 }
 
-object DiskConfig {
+object DiskDriveConfig {
 
   def apply (
       segmentBits: Int,
       pageBits: Int,
       blockBits: Int,
-      diskBytes: Long): DiskConfig = {
+      diskBytes: Long): DiskDriveConfig = {
 
     require (segmentBits > SuperBlockBits, s"segmentBits must be greater than $SuperBlockBits")
     require (pageBits > 0, "pageBits must be greater than 0")
@@ -58,7 +58,7 @@ object DiskConfig {
     require (segmentBits < maxSegmentBits,
         s"segmentBits must allow at least four segments on the disk (max $maxSegmentBits for $diskBytes bytes)")
 
-    new DiskConfig (
+    new DiskDriveConfig (
         segmentBits,
         pageBits,
         blockBits,
@@ -68,7 +68,7 @@ object DiskConfig {
   val pickle = {
     import Picklers._
     wrap4 (int, int, int, long) {
-      (a, b, c, d) => new DiskConfig (a, b, c, d)
+      (a, b, c, d) => new DiskDriveConfig (a, b, c, d)
     } {
       v => (v.segmentBits, v.pageBits, v.blockBits, v.diskBytes)
     }}}

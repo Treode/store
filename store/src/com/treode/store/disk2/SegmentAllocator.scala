@@ -4,9 +4,8 @@ import scala.collection.JavaConversions._
 
 import com.treode.pickle._
 
-private class Allocator (config: DiskConfig) {
+private class SegmentAllocator (config: DiskDriveConfig) {
 
-  var gen = 0
   var free = IntSet.fill (0)
 
   def allocSeg (num: Int): Segment = {
@@ -27,19 +26,16 @@ private class Allocator (config: DiskConfig) {
     }}
 
   def init() {
-    gen = 0
     free = IntSet.fill (config.segmentCount)
     val superblocks = IntSet.fill (DiskLeadBytes >> config.segmentBits)
     free = free.remove (superblocks)
   }
 
   def checkpoint (gen: Int): Allocator.Meta = {
-    this.gen = gen
     Allocator.Meta (free)
   }
 
   def recover (gen: Int, meta: Allocator.Meta) {
-    this.gen = gen
     free = meta.free
   }}
 

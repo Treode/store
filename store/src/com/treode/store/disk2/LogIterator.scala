@@ -7,7 +7,7 @@ import com.treode.pickle.unpickle
 
 import LogEntry.{Body, Continue, End, Envelope, Header}
 
-private class LogIterator private (file: File, free: Allocator)
+private class LogIterator private (file: File, alloc: SegmentAllocator)
 extends AsyncIterator [Envelope] {
 
   private val buf = new PagedBuffer (12)
@@ -43,9 +43,9 @@ extends AsyncIterator [Envelope] {
             body match {
               case End =>
                 pos = -1L
-              case Continue (seg) =>
-                val alloc = free.allocSeg (seg)
-                pos = alloc.pos
+              case Continue (num) =>
+                val seg = alloc.allocSeg (num)
+                pos = seg.pos
                 buf.clear()
               case _ =>
                 pos += hdr.len
@@ -63,6 +63,6 @@ extends AsyncIterator [Envelope] {
 
 object LogIterator {
 
-  def apply (file: File, pos: Long, free: Allocator, cb: Callback [LogIterator]): Unit =
+  def apply (file: File, pos: Long, free: SegmentAllocator, cb: Callback [LogIterator]): Unit =
     new LogIterator (file, free) .init (pos, cb)
 }

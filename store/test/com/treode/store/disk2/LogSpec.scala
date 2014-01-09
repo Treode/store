@@ -8,16 +8,16 @@ import LogEntry.{Envelope, Update}
 
 class LogSpec extends FlatSpec {
 
-  val config = new DiskConfig (6, 3, 2, 1<<20)
+  val config = new DiskDriveConfig (6, 3, 2, 1<<20)
 
   "It" should "work" in {
     val scheduler = StubScheduler.random()
     val file = new StubFile (scheduler)
-    val free = new Allocator (config)
+    val alloc = new SegmentAllocator (config)
     val dispatcher = new LogDispatcher (scheduler)
-    val writer = new LogWriter (file, free, scheduler, dispatcher)
+    val writer = new LogWriter (file, alloc, scheduler, dispatcher)
 
-    free.init()
+    alloc.init()
     writer.init (Callback.ignore)
     scheduler.runTasks()
     dispatcher.engage (writer)
@@ -27,7 +27,7 @@ class LogSpec extends FlatSpec {
     scheduler.runTasks()
 
     val cb1 = new CallbackCaptor [LogIterator]
-    LogIterator (file, writer.head, free, cb1)
+    LogIterator (file, writer.head, alloc, cb1)
     scheduler.runTasks()
     val cb2 = new CallbackCaptor [Seq [Envelope]]
     AsyncIterator.scan (cb1.passed, cb2)
