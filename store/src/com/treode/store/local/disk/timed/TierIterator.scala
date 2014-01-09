@@ -10,7 +10,7 @@ private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] 
   private var page: CellPage = null
   private var index = 0
 
-  private def find (pos: Long, cb: Callback [Unit]) {
+  private def find (pos: Long, cb: Callback [TierIterator]) {
 
     val loop = new Callback [Page] {
 
@@ -23,7 +23,7 @@ private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] 
           case p: CellPage =>
             page = p
             index = 0
-            cb()
+            cb (TierIterator.this)
         }}
 
       def fail (t: Throwable) = cb.fail (t)
@@ -49,8 +49,8 @@ private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] 
       }
       if (i < b.size) {
         stack ::= (b, i)
-        find (b.get (i) .pos, new Callback [Unit] {
-          def pass (v: Unit): Unit = cb (entry)
+        find (b.get (i) .pos, new Callback [Any] {
+          def pass (v: Any): Unit = cb (entry)
           def fail (t: Throwable) = cb.fail (t)
         })
       } else {
@@ -62,10 +62,6 @@ private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] 
 
 private object TierIterator {
 
-  def apply (disk: DiskSystem, pos: Long, cb: Callback [TierIterator]) {
-    val iter = new TierIterator (disk)
-    iter.find (pos, new Callback [Unit] {
-      def pass (v: Unit): Unit = cb (iter)
-      def fail (t: Throwable) = cb.fail (t)
-    })
-  }}
+  def apply (disk: DiskSystem, pos: Long, cb: Callback [TierIterator]): Unit =
+    new TierIterator (disk) .find (pos, cb)
+}

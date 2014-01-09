@@ -6,7 +6,7 @@ import com.treode.store.TimedCell
 /** If the oldest cell for a key is a delete, then remove that cell; assumes the wrapped iterator
   * is sorted by cell.
   */
-private class DeletesFilter (iter: AsyncIterator [TimedCell])
+private class DeletesFilter private (iter: AsyncIterator [TimedCell])
 extends AsyncIterator [TimedCell] {
 
   private var next1: TimedCell = null
@@ -58,7 +58,7 @@ extends AsyncIterator [TimedCell] {
 
     }}
 
-  private def init (cb: Callback [AsyncIterator [TimedCell]]) {
+  private def init (cb: Callback [DeletesFilter]) {
     loop (new Callback [Unit] {
       def pass (v: Unit): Unit = cb.apply (DeletesFilter.this)
       def fail (t: Throwable) = cb.fail (t)
@@ -82,6 +82,6 @@ extends AsyncIterator [TimedCell] {
 
 private object DeletesFilter {
 
-  def apply (iter: AsyncIterator [TimedCell], cb: Callback [AsyncIterator [TimedCell]]): Unit =
+  def apply (iter: AsyncIterator [TimedCell], cb: Callback [DeletesFilter]): Unit =
     new DeletesFilter (iter) init (cb)
 }

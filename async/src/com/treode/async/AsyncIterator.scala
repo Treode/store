@@ -43,6 +43,9 @@ object AsyncIterator {
       cb (Seq.empty)
   }
 
+  def filter [A] (iter: AsyncIterator [A], pred: A => Boolean, cb: Callback [AsyncIterator [A]]): Unit =
+    FilteredIterator (iter, pred, cb)
+
   /** Given asynchronous iterators of sorted items, merge them into single asynchronous iterator
     * that maintains the sort.  Keep duplicate elements, and when two or more input iterators
     * duplicate an element, first list the element from the earlier iterator (that is, by position

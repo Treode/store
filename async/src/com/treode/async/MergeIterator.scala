@@ -2,9 +2,11 @@ package com.treode.async
 
 import scala.collection.mutable.PriorityQueue
 
-private class MergeIterator [A] (implicit order: Ordering [A]) extends AsyncIterator [A] {
+private class MergeIterator [A] private (implicit order: Ordering [A])
+extends AsyncIterator [A] {
 
-  case class Element (next: A, tier: Int, iter: AsyncIterator [A]) extends Ordered [Element] {
+  private case class Element (next: A, tier: Int, iter: AsyncIterator [A])
+  extends Ordered [Element] {
 
     // Reverse the sort for the PriorityQueue.
     def compare (that: Element): Int = {
@@ -12,7 +14,7 @@ private class MergeIterator [A] (implicit order: Ordering [A]) extends AsyncIter
       if (r != 0) r else that.tier compare tier
     }}
 
-  object Element extends Ordering [Element] {
+  private object Element extends Ordering [Element] {
 
     def compare (x: Element, y: Element): Int =
       x compare y
@@ -20,7 +22,7 @@ private class MergeIterator [A] (implicit order: Ordering [A]) extends AsyncIter
 
   private val pq = new PriorityQueue [Element]
 
-  def enqueue (iters: Iterator [AsyncIterator [A]], cb: Callback [Unit]) {
+  private def enqueue (iters: Iterator [AsyncIterator [A]], cb: Callback [AsyncIterator [A]]) {
 
     if (iters.hasNext) {
 
@@ -39,9 +41,9 @@ private class MergeIterator [A] (implicit order: Ordering [A]) extends AsyncIter
             if (iter.hasNext)
               iter.next (this)
             else
-              cb()
+              cb (MergeIterator.this)
           } else {
-            cb()
+            cb (MergeIterator.this)
           }}
 
         def fail (t: Throwable) = cb.fail (t)
@@ -50,10 +52,10 @@ private class MergeIterator [A] (implicit order: Ordering [A]) extends AsyncIter
       if (iter.hasNext)
         iter.next (loop)
       else
-        cb()
+        cb (MergeIterator.this)
 
     } else {
-      cb()
+      cb (MergeIterator.this)
     }}
 
   def hasNext: Boolean = !pq.isEmpty
@@ -81,10 +83,6 @@ private class MergeIterator [A] (implicit order: Ordering [A]) extends AsyncIter
 private object MergeIterator {
 
   def apply [A] (iters: Iterator [AsyncIterator [A]], cb: Callback [AsyncIterator [A]]) (
-      implicit ordering: Ordering [A]) {
-    val merge = new MergeIterator
-    merge.enqueue (iters, new Callback [Unit] {
-      def pass (v: Unit) = cb (merge)
-      def fail (t: Throwable) = cb.fail (t)
-    })
-  }}
+      implicit ordering: Ordering [A]): Unit =
+    new MergeIterator() .enqueue (iters, cb)
+}
