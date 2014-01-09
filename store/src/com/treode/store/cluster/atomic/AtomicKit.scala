@@ -2,7 +2,7 @@ package com.treode.store.cluster.atomic
 
 import java.util.concurrent.ConcurrentHashMap
 
-import com.treode.async.Callback
+import com.treode.async.guard
 import com.treode.cluster.Host
 import com.treode.store._
 import com.treode.store.cluster.paxos.PaxosKit
@@ -60,12 +60,12 @@ extends Store {
   WriteDeputies
 
   def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       new ReadDirector (rt, ops, this, cb)
     }
 
   def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       new WriteDirector (xid, ct, ops, this) .open (cb)
     }
 

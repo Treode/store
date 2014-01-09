@@ -1,6 +1,6 @@
 package com.treode.store
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, callback, guard}
 import com.treode.pickle.Pickler
 
 private trait PaxosAccessor [K, V] {
@@ -15,20 +15,14 @@ private object PaxosAccessor {
     new PaxosAccessor [K, V] {
 
       def lead (key: K, value: V, cb: Callback [V]) (implicit paxos: PaxosStore): Unit =
-        Callback.guard (cb) {
-          paxos.lead (Bytes (pk, key), Bytes (pv, value), new Callback [Bytes] {
-            def pass (v: Bytes) = cb (v.unpickle (pv))
-            def fail (t: Throwable) = cb.fail (t)
-          })
+        guard (cb) {
+          paxos.lead (Bytes (pk, key), Bytes (pv, value), callback (cb) (_.unpickle (pv)))
         }
 
       def propose (key: K, value: V, cb: Callback [V]) (implicit paxos: PaxosStore): Unit =
-        Callback.guard (cb) {
-          paxos.propose (Bytes (pk, key), Bytes (pv, value), new Callback [Bytes] {
-            def pass (v: Bytes) = cb (v.unpickle (pv))
-            def fail (t: Throwable) = cb.fail (t)
-          })
-        }}
+        guard (cb) {
+          paxos.propose (Bytes (pk, key), Bytes (pv, value), callback (cb) (_.unpickle (pv)))
+      }}
 
   def apply(): PaxosAccessor [Bytes, Bytes] =
     new PaxosAccessor [Bytes, Bytes] {
@@ -44,12 +38,12 @@ private object PaxosAccessor {
     new PaxosAccessor [K, Bytes] {
 
       def lead (key: K, value: Bytes, cb: Callback [Bytes]) (implicit paxos: PaxosStore): Unit =
-        Callback.guard (cb) {
+        guard (cb) {
           paxos.lead (Bytes (pk, key), value, cb)
         }
 
       def propose (key: K, value: Bytes, cb: Callback [Bytes]) (implicit paxos: PaxosStore): Unit =
-        Callback.guard (cb) {
+        guard (cb) {
           paxos.propose (Bytes (pk, key), value, cb)
         }}
 
@@ -57,18 +51,11 @@ private object PaxosAccessor {
     new PaxosAccessor [Bytes, V] {
 
       def lead (key: Bytes, value: V, cb: Callback [V]) (implicit paxos: PaxosStore): Unit =
-        Callback.guard (cb) {
-          paxos.lead (key, Bytes (pv, value), new Callback [Bytes] {
-            def pass (v: Bytes) = cb (v.unpickle (pv))
-            def fail (t: Throwable) = cb.fail (t)
-          })
+        guard (cb) {
+          paxos.lead (key, Bytes (pv, value), callback (cb) (_.unpickle (pv)))
         }
 
       def propose (key: Bytes, value: V, cb: Callback [V]) (implicit paxos: PaxosStore): Unit =
-        Callback.guard (cb) {
-          paxos.propose (key, Bytes (pv, value), new Callback [Bytes] {
-            def pass (v: Bytes) = cb (v.unpickle (pv))
-            def fail (t: Throwable) = cb.fail (t)
-          })
-        }}
-}
+        guard (cb) {
+          paxos.propose (key, Bytes (pv, value), callback (cb) (_.unpickle (pv)))
+        }}}

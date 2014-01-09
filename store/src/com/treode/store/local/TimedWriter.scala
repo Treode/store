@@ -3,7 +3,7 @@ package com.treode.store.local
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, MultiException}
+import com.treode.async.{Callback, MultiException, guard}
 import com.treode.cluster.events.Events
 import com.treode.store._
 import com.treode.store.local.locks.LockSet
@@ -91,7 +91,7 @@ private class TimedWriter (
       }
       def fail (t: Throwable) = cb.fail (t)
     }
-    Callback.guard (cb1) {
+    guard (cb1) {
       require (this.cb == null, "Transaction cannot be closed until prepared.")
       require (locks != null, "Transaction already closed.")
       store.commit (wt, ops, cb1)

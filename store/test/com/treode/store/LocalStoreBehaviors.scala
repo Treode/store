@@ -1,6 +1,6 @@
 package com.treode.store
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, callback}
 import com.treode.store.local.temp.TestableTempKit
 import org.scalatest.FreeSpec
 import scala.util.Random
@@ -22,10 +22,7 @@ trait LocalStoreBehaviors extends StoreBehaviors {
       s.prepare (ct, ops, new PrepareCallback {
         def pass (tx: Transaction) {
           val wt = tx.ft + 7 // Add gaps to the history.
-          tx.commit (wt, new Callback [Unit] {
-            def pass (v: Unit) = cb (wt)
-            def fail (t: Throwable) = cb.fail (t)
-          })
+          tx.commit (wt, callback (cb) (_ => wt))
         }
         def fail (t: Throwable) = cb.fail (t)
         def collisions (ks: Set [Int]) = cb.collisions (ks)

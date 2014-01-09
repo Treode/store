@@ -1,7 +1,7 @@
 package com.treode.store.local.disk.simple
 
 import java.util.{ArrayDeque, ArrayList}
-import com.treode.async.Callback
+import com.treode.async.{Callback, delay}
 import com.treode.store.{Bytes, SimpleCell, TxClock}
 import com.treode.store.local.disk.DiskSystem
 
@@ -71,12 +71,9 @@ private class TierBuilder (disk: DiskSystem) {
         stack.pop()
         val page = IndexPage (node.entries)
         val last = page.last
-        val pos2 = disk.write (page, new Callback [Long] {
-          def pass (pos2: Long) {
-            rpush (key, pos, height)
-            add (last.key, pos2, height+1, cb)
-          }
-          def fail (t: Throwable) = cb.fail (t)
+        disk.write (page, delay (cb) { pos2 =>
+          rpush (key, pos, height)
+          add (last.key, pos2, height+1, cb)
         })
       }}}
 
@@ -100,9 +97,8 @@ private class TierBuilder (disk: DiskSystem) {
       entries.add (entry)
       byteSize = entryByteSize
       val last = page.last
-      disk.write (page, new Callback [Long] {
-        def pass (pos: Long): Unit = add (last.key, pos, 0, cb)
-        def fail (t: Throwable) = cb.fail (t)
+      disk.write (page, delay (cb) { pos =>
+        add (last.key, pos, 0, cb)
       })
     }}
 
@@ -110,46 +106,39 @@ private class TierBuilder (disk: DiskSystem) {
 
     val page = CellPage (entries)
     val last = page.last
-    disk.write (page, new Callback [Long] {
+    disk.write (page, delay (cb) { _pos =>
 
-      def pass (_pos: Long) {
+      var pos = _pos
 
-        var pos = _pos
+      if (stack.isEmpty) {
+        cb (pos)
 
-        if (stack.isEmpty) {
-          cb (pos)
+      } else {
 
-        } else {
+        val loop = new Callback [Unit] {
 
-          val loop = new Callback [Unit] {
-
-            def next (node: IndexNode) {
-              if (!stack.isEmpty)
-                add (last.key, pos, node.height+1, this)
-              else
-                cb (pos)
-            }
-
-            def pass (v: Unit) {
-              val node = stack.pop()
-              if (node.size > 1)
-                disk.write (IndexPage (node.entries), new Callback [Long] {
-                  def pass (_pos: Long) {
-                    pos = _pos
-                    next (node)
-                  }
-                  def fail (t: Throwable) = cb.fail (t)
-                })
-              else
-                next (node)
-            }
-
-            def fail (t: Throwable) = cb.fail (t)
+          def next (node: IndexNode) {
+            if (!stack.isEmpty)
+              add (last.key, pos, node.height+1, this)
+            else
+              cb (pos)
           }
 
-          add (last.key, pos, 0, loop)
-        }}
+          def pass (v: Unit) {
+            val node = stack.pop()
+            if (node.size > 1)
+              disk.write (IndexPage (node.entries), delay (cb) { _pos =>
+                pos = _pos
+                next (node)
+              })
+            else
+              next (node)
+          }
 
-      def fail (t: Throwable) = cb.fail (t)
-    })
+          def fail (t: Throwable) = cb.fail (t)
+        }
+
+        add (last.key, pos, 0, loop)
+
+      }})
   }}

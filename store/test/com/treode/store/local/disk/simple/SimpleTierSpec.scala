@@ -2,7 +2,7 @@ package com.treode.store.local.disk.simple
 
 import scala.collection.mutable.Builder
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, callback}
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, Cardinals, Fruits, SimpleCell, TxClock}
 import com.treode.store.local.disk.DiskSystemStub
@@ -51,14 +51,14 @@ class SimpleTierSpec extends WordSpec {
     }
     loop()
     var pos = 0L
-    builder.result (Callback.unary (pos = _))
+    builder.result (callback (pos = _))
     pos
   }
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (disk: DiskSystemStub, pos: Long): Seq [SimpleCell] = {
     val builder = Seq.newBuilder [SimpleCell]
-    TierIterator (disk, pos, Callback.unary { iter: TierIterator =>
+    TierIterator (disk, pos, callback { iter =>
       val loop = new Callback [SimpleCell] {
         def pass (e: SimpleCell) {
           builder += e
@@ -93,33 +93,33 @@ class SimpleTierSpec extends WordSpec {
     "require that added entries are not duplicated" in {
       val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
-      builder.add (Apple, None, Callback.unit (()))
+      builder.add (Apple, None, Callback.ignore)
       intercept [IllegalArgumentException] {
-        builder.add (Apple, None, Callback.unit (()))
+        builder.add (Apple, None, Callback.ignore)
       }}
 
     "require that added entries are sorted by key" in {
       val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
-      builder.add (Orange, None, Callback.unit (()))
+      builder.add (Orange, None, Callback.ignore)
       intercept [IllegalArgumentException] {
-        builder.add (Apple, None, Callback.unit (()))
+        builder.add (Apple, None, Callback.ignore)
       }}
 
     "require that added entries are reverse sorted by time" in {
       val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
-      builder.add (Apple, None, Callback.unit (()))
+      builder.add (Apple, None, Callback.ignore)
       intercept [IllegalArgumentException] {
-        builder.add (Apple, None, Callback.unit (()))
+        builder.add (Apple, None, Callback.ignore)
       }}
 
     "allow properly sorted entries" in {
       val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
-      builder.add (Apple, None, Callback.unit (()))
-      builder.add (Orange, None, Callback.unit (()))
-      builder.add (Watermelon, None, Callback.unit (()))
+      builder.add (Apple, None, Callback.ignore)
+      builder.add (Orange, None, Callback.ignore)
+      builder.add (Watermelon, None, Callback.ignore)
     }
 
     "build a blanced tree with all keys" when {
@@ -168,16 +168,16 @@ class SimpleTierSpec extends WordSpec {
       def checkFind (maxPageSize: Int) {
         val disk = new DiskSystemStub (maxPageSize)
         val pos = buildTier (disk)
-        Tier.read (disk, pos, Apple, Callback.unary { cell: Option [SimpleCell] =>
+        Tier.read (disk, pos, Apple, callback { cell =>
           expectResult (Some (One)) (cell.get.value)
         })
-        Tier.read (disk, pos, Orange, Callback.unary { cell: Option [SimpleCell] =>
+        Tier.read (disk, pos, Orange, callback { cell =>
           expectResult (Some (One)) (cell.get.value)
         })
-        Tier.read (disk, pos, Watermelon, Callback.unary { cell: Option [SimpleCell] =>
+        Tier.read (disk, pos, Watermelon, callback { cell =>
           expectResult (Some (One)) (cell.get.value)
         })
-        Tier.read (disk, pos, One, Callback.unary { cell: Option [SimpleCell] =>
+        Tier.read (disk, pos, One, callback { cell =>
           expectResult (None) (cell)
         })
       }

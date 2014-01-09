@@ -1,6 +1,6 @@
 package com.treode.store.local.disk.timed
 
-import com.treode.async.{AsyncIterator, Callback}
+import com.treode.async.{AsyncIterator, Callback, callback, delay}
 import com.treode.store.TimedCell
 
 /** If the oldest cell for a key is a delete, then remove that cell; assumes the wrapped iterator
@@ -58,12 +58,8 @@ extends AsyncIterator [TimedCell] {
 
     }}
 
-  private def init (cb: Callback [DeletesFilter]) {
-    loop (new Callback [Unit] {
-      def pass (v: Unit): Unit = cb.apply (DeletesFilter.this)
-      def fail (t: Throwable) = cb.fail (t)
-    })
-  }
+  private def init (cb: Callback [DeletesFilter]): Unit =
+    loop (callback (_ => cb (DeletesFilter.this)))
 
   def hasNext: Boolean = next1 != null
 
@@ -74,10 +70,7 @@ extends AsyncIterator [TimedCell] {
       next2 = null
       cb (t)
     } else {
-      loop (new Callback [Unit] {
-        def pass (v: Unit): Unit = cb.apply (t)
-        def fail (t: Throwable) = cb.fail (t)
-      })
+      loop (delay (cb) (_ => cb (t)))
     }}}
 
 private object DeletesFilter {

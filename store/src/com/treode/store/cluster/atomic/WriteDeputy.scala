@@ -1,6 +1,6 @@
 package com.treode.store.cluster.atomic
 
-import com.treode.async.{Callback, Fiber}
+import com.treode.async.{Callback, Fiber, callback, guard}
 import com.treode.cluster.{Host, MessageDescriptor, RequestDescriptor, RequestMediator}
 import com.treode.store.{PrepareCallback, Transaction, TxClock, TxId, WriteOp}
 
@@ -23,7 +23,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   }
 
   def _prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       store.prepare (ct, ops, new PrepareCallback {
 
         def pass (tx: Transaction) {
@@ -53,54 +53,38 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     }
 
   def _prepared (mdtr: WriteMediator, rsp: WriteResponse, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       mdtr.respond (rsp)
       cb()
     }
 
   def _commit (mdtr: WriteMediator, wt: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
-      store.commit (wt, ops, new Callback [Unit] {
-
-        def pass (v: Unit) {
-          state = Committed.save()
-          mdtr.respond (WriteResponse.Committed)
-          cb()
-        }
-
-        def fail (t: Throwable) = cb.fail (t)
-      })
-    }
+    store.commit (wt, ops, callback (cb) { _ =>
+      state = Committed.save()
+      mdtr.respond (WriteResponse.Committed)
+    })
 
   def _commit (mdtr: WriteMediator, tx: Transaction, wt: TxClock, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
-      tx.commit (wt, new Callback [Unit] {
-
-        def pass (v: Unit) {
-          state = Committed.save()
-          mdtr.respond (WriteResponse.Committed)
-          cb()
-        }
-
-        def fail (t: Throwable) = cb.fail (t)
-      })
-    }
+    tx.commit (wt, callback (cb) { _ =>
+      state = Committed.save()
+      mdtr.respond (WriteResponse.Committed)
+    })
 
   def _committed (mdtr: WriteMediator, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       mdtr.respond (WriteResponse.Committed)
       cb()
     }
 
   def _abort (mdtr: WriteMediator, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       state = Aborted.save()
       mdtr.respond (WriteResponse.Aborted)
       cb()
     }
 
   def _abort (mdtr: WriteMediator, tx: Transaction, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       tx.abort()
       state = Aborted.save()
       mdtr.respond (WriteResponse.Aborted)
@@ -108,7 +92,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     }
 
   def _aborted (mdtr: WriteMediator, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       mdtr.respond (WriteResponse.Aborted)
       cb()
     }
@@ -116,8 +100,8 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   class Restoring extends State {
 
     def restore (cb: Callback [Unit]) (f: State => Unit) {
-      Callback.guard (cb) {
-        mainDb.get (xid.id, Callback.unary {
+      guard (cb) {
+        mainDb.get (xid.id, callback {
           case Some (WriteStatus.Prepared (ft, ops)) =>
             state = new Deliberating (ops, WriteResponse.Prepared (ft))
             f (state)
@@ -160,7 +144,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       _abort (mdtr, cb)
 
     def commit (mdtr: WriteMediator, wt: TxClock, cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
+      guard (cb) {
         state = new Committing (wt)
         cb()
       }

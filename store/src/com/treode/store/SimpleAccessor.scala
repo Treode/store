@@ -1,6 +1,6 @@
 package com.treode.store
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, callback, guard}
 import com.treode.pickle.Pickler
 
 private trait SimpleAccessor [K, V] {
@@ -38,20 +38,17 @@ private object SimpleAccessor {
     new SimpleAccessor [K, V] {
 
       def get (k: K, cb: Callback [Option [V]]): Unit =
-        Callback.guard (cb) {
-          t.get (Bytes (pk, k), new Callback [Option [Bytes]] {
-            def pass (v: Option [Bytes]) = cb (v map (_.unpickle (pv)))
-            def fail (t: Throwable) = cb.fail (t)
-          })
+        guard (cb) {
+          t.get (Bytes (pk, k), callback (cb) (_ map (_.unpickle (pv))))
         }
 
       def put (k: K, v: V, cb: Callback [Unit]): Unit =
-        Callback.guard (cb) {
+        guard (cb) {
           t.put (Bytes (pk, k), Bytes (pv, v), cb)
         }
 
       def del (k: K, cb: Callback [Unit]): Unit =
-        Callback.guard (cb) {
+        guard (cb) {
           t.del (Bytes (pk, k), cb)
         }
 
@@ -65,17 +62,17 @@ private object SimpleAccessor {
     new SimpleAccessor [K, Bytes] {
 
       def get (k: K, cb: Callback [Option [Bytes]]): Unit =
-        Callback.guard (cb) {
+        guard (cb) {
           t.get (Bytes (pk, k), cb)
         }
 
       def put (k: K, v: Bytes, cb: Callback [Unit]): Unit =
-        Callback.guard (cb) {
+        guard (cb) {
           t.put (Bytes (pk, k), v, cb)
         }
 
       def del (k: K, cb: Callback [Unit]): Unit =
-        Callback.guard (cb) {
+        guard (cb) {
           t.del (Bytes (pk, k), cb)
         }
 
@@ -89,15 +86,12 @@ private object SimpleAccessor {
     new SimpleAccessor [Bytes, V] {
 
       def get (k: Bytes, cb: Callback [Option [V]]): Unit =
-        Callback.guard (cb) {
-          t.get (k, new Callback [Option [Bytes]] {
-            def pass (v: Option [Bytes]) = cb (v map (_.unpickle (pv)))
-            def fail (t: Throwable) = cb.fail (t)
-          })
+        guard (cb) {
+          t.get (k, callback (cb) (_ map (_.unpickle (pv))))
         }
 
       def put (k: Bytes, v: V, cb: Callback [Unit]): Unit =
-        Callback.guard (cb) {
+        guard (cb) {
           t.put (k, Bytes (pv, v), cb)
         }
 

@@ -2,7 +2,7 @@ package com.treode.store.cluster.paxos
 
 import scala.language.postfixOps
 
-import com.treode.async.{Callback, Fiber}
+import com.treode.async.{Callback, Fiber, callback, guard}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.store.{Bytes, StorePicklers}
@@ -28,8 +28,8 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
   object Restoring extends State {
 
     def restore (default: Bytes, cb: Callback [Unit]) (f: State => Unit) {
-      Callback.guard (cb) {
-        db.get (key, Callback.unary {
+      guard (cb) {
+        db.get (key, callback {
           case Some (PaxosStatus.Deliberating (v, n, p)) =>
             state = new Deliberating (v, n, p)
             f (state)
@@ -72,7 +72,7 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
     var proposers = Set [Peer] ()
 
     def query (from: Peer, _ballot: Long, default: Bytes, cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
+      guard (cb) {
         proposers += from
         val ballot = BallotNumber (_ballot, from.id)
         if (ballot >= this.ballot) {
@@ -85,7 +85,7 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
       }
 
     def propose (from: Peer, _ballot: Long, value: Bytes, cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
+      guard (cb) {
         proposers += from
         val ballot = BallotNumber (_ballot, from.id)
         if (ballot >= this.ballot) {
@@ -97,16 +97,13 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
       }
 
     def choose (value: Bytes, cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
+      guard (cb) {
         state = Closed (value)
         cb()
       }
 
     def timeout() {
-      kit.propose (key, default, new Callback [Bytes] {
-        def pass (v: Bytes) = Acceptor.this.choose (v)
-        def fail (t: Throwable) = throw t
-      })
+      kit.propose (key, default, callback (Acceptor.this.choose (_)))
     }
 
     def shutdown() {
@@ -122,19 +119,19 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
     fiber.delay (closedLifetime) (remove (key, Acceptor.this))
 
     def query (from: Peer, ballot: Long, default: Bytes, cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
+      guard (cb) {
         Proposer.chosen (key, chosen) (from)
         cb()
       }
 
     def propose (from: Peer, ballot: Long, value: Bytes, cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
+      guard (cb) {
         Proposer.chosen (key, chosen) (from)
         cb()
       }
 
     def choose (value: Bytes, cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
+      guard (cb) {
         require (value == chosen, "Paxos disagreement")
         cb()
       }

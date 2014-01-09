@@ -25,7 +25,7 @@ private class DiskSystem (scheduler: Scheduler) {
   var state: State = new Opening
 
   private def readSuperBlocks (path: Path, file: File, cb: Callback [SuperBlocks]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
 
       val buffer = PagedBuffer (SuperBlockBits+1)
 
@@ -61,7 +61,7 @@ private class DiskSystem (scheduler: Scheduler) {
     var checkpoints: Checkpoints
 
     def attach (items: Seq [DiskDrive], cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
+      guard (cb) {
         attachments = attachments.enqueue (Attachment (items, cb))
       }
 
@@ -105,7 +105,7 @@ private class DiskSystem (scheduler: Scheduler) {
       state = new Recovering (items, cb, Queue.empty, checkpoints)
 
     def attach (items: Seq [DiskDrive], cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
+      guard (cb) {
         state = new Attaching (items, cb, Queue.empty, checkpoints)
       }
 
@@ -303,7 +303,7 @@ private class DiskSystem (scheduler: Scheduler) {
   object Ready extends State with ReattachCompleted {
 
     def attach (items: Seq [DiskDrive], cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
+      guard (cb) {
         state = new Attaching (items, cb, Queue.empty, List.empty)
       }
 
@@ -319,13 +319,13 @@ private class DiskSystem (scheduler: Scheduler) {
   }
 
   def _reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       require (!items.isEmpty, "Must list at least one file to reaattach.")
       fiber.execute (state.reattach (items, cb))
     }
 
   def reattach (items: Seq [Path], executor: ExecutorService, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       val files = items map (openFile (_, executor))
       fiber.execute (state.reattach (files, cb))
     }
@@ -345,14 +345,14 @@ private class DiskSystem (scheduler: Scheduler) {
     items map (openDisk (_, exec))
 
   def _attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       require (!items.isEmpty, "Must list at least one file to attach.")
       val disks = makeDisks (items)
       fiber.execute (state.attach (disks, cb))
     }
 
   def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Unit]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       require (!items.isEmpty, "Must llist at least one path to attach.")
       val disks = openDisks (items, exec)
       fiber.execute (state.attach (disks, cb))

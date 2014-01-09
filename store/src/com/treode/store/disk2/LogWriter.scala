@@ -3,7 +3,7 @@ package com.treode.store.disk2
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, Scheduler}
+import com.treode.async.{Callback, Scheduler, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{Picklers, pickle, unpickle}
@@ -69,7 +69,7 @@ private class LogWriter (
         entries foreach (e => scheduler.execute (e.cb.fail (t)))
       }}
 
-    Callback.guard (finish) {
+    guard (finish) {
 
       for (entry <- accepts)
         pickleEntry (entry.time, entry.body)

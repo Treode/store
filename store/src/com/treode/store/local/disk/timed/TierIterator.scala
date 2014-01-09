@@ -1,6 +1,6 @@
 package com.treode.store.local.disk.timed
 
-import com.treode.async.{AsyncIterator, Callback}
+import com.treode.async.{AsyncIterator, Callback, callback}
 import com.treode.store.TimedCell
 import com.treode.store.local.disk.{DiskSystem, Page}
 
@@ -49,10 +49,7 @@ private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] 
       }
       if (i < b.size) {
         stack ::= (b, i)
-        find (b.get (i) .pos, new Callback [Any] {
-          def pass (v: Any): Unit = cb (entry)
-          def fail (t: Throwable) = cb.fail (t)
-        })
+        find (b.get (i) .pos, callback (_ => cb (entry)))
       } else {
         cb (entry)
       }

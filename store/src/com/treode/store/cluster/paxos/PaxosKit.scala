@@ -2,7 +2,7 @@ package com.treode.store.cluster.paxos
 
 import java.util.concurrent.ConcurrentHashMap
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, guard}
 import com.treode.cluster.Host
 import com.treode.store.{Bytes, PaxosStore, SimpleAccessor, SimpleStore}
 
@@ -68,7 +68,7 @@ private class PaxosKit (implicit val host: Host, val store: SimpleStore) extends
       proposers.remove (key, p)
 
     def propose (ballot: Long, key: Bytes, value: Bytes, cb: Callback [Bytes]): Unit =
-      Callback.guard (cb) {
+      guard (cb) {
         val p = get (key)
         p.open (ballot, value)
         p.learn (cb)
@@ -94,12 +94,12 @@ private class PaxosKit (implicit val host: Host, val store: SimpleStore) extends
   Proposers
 
   def lead (key: Bytes, value: Bytes, cb: Callback [Bytes]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       Proposers.propose (0, key, value, cb)
     }
 
   def propose (key: Bytes, value: Bytes, cb: Callback [Bytes]): Unit =
-    Callback.guard (cb) {
+    guard (cb) {
       Proposers.propose (random.nextInt (17) + 1, key, value, cb)
     }
 

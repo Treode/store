@@ -2,7 +2,7 @@ package com.treode.store.local.disk.timed
 
 import scala.collection.mutable.Builder
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, callback}
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, Cardinals, Fruits, TimedCell, TxClock}
 import com.treode.store.local.disk.DiskSystemStub
@@ -51,14 +51,14 @@ class TierSpec extends WordSpec {
     }
     loop()
     var pos = 0L
-    builder.result (Callback.unary (pos = _))
+    builder.result (callback (pos = _))
     pos
   }
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (disk: DiskSystemStub, pos: Long): Seq [TimedCell] = {
     val builder = Seq.newBuilder [TimedCell]
-    TierIterator (disk, pos, Callback.unary { iter: TierIterator =>
+    TierIterator (disk, pos, callback { iter =>
       val loop = new Callback [TimedCell] {
         def pass (e: TimedCell) {
           builder += e
@@ -93,33 +93,33 @@ class TierSpec extends WordSpec {
     "require that added entries are not duplicated" in {
       val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
-      builder.add (Apple, 1, None, Callback.unit (()))
+      builder.add (Apple, 1, None, Callback.ignore)
       intercept [IllegalArgumentException] {
-        builder.add (Apple, 1, None, Callback.unit (()))
+        builder.add (Apple, 1, None, Callback.ignore)
       }}
 
     "require that added entries are sorted by key" in {
       val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
-      builder.add (Orange, 1, None, Callback.unit (()))
+      builder.add (Orange, 1, None, Callback.ignore)
       intercept [IllegalArgumentException] {
-        builder.add (Apple, 1, None, Callback.unit (()))
+        builder.add (Apple, 1, None, Callback.ignore)
       }}
 
     "require that added entries are reverse sorted by time" in {
       val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
-      builder.add (Apple, 1, None, Callback.unit (()))
+      builder.add (Apple, 1, None, Callback.ignore)
       intercept [IllegalArgumentException] {
-        builder.add (Apple, 2, None, Callback.unit (()))
+        builder.add (Apple, 2, None, Callback.ignore)
       }}
 
     "allow properly sorted entries" in {
       val disk = new DiskSystemStub (1 << 16)
       val builder = new TierBuilder (disk)
-      builder.add (Apple, 2, None, Callback.unit (()))
-      builder.add (Apple, 1, None, Callback.unit (()))
-      builder.add (Orange, 1, None, Callback.unit (()))
+      builder.add (Apple, 2, None, Callback.ignore)
+      builder.add (Apple, 1, None, Callback.ignore)
+      builder.add (Orange, 1, None, Callback.ignore)
     }
 
     "build a blanced tree with all keys" when {
@@ -168,31 +168,31 @@ class TierSpec extends WordSpec {
       def checkFind (maxPageSize: Int) {
         val disk = new DiskSystemStub (maxPageSize)
         val pos = buildTier (disk)
-        Tier.read (disk, pos, Apple, 8, Callback.unary { cell: Option [TimedCell] =>
+        Tier.read (disk, pos, Apple, 8, callback { cell =>
           expectResult (Some (One)) (cell.get.value)
         })
-        Tier.read (disk, pos, Apple, 7, Callback.unary { cell: Option [TimedCell] =>
+        Tier.read (disk, pos, Apple, 7, callback { cell =>
           expectResult (Some (One)) (cell.get.value)
         })
-        Tier.read (disk, pos, Apple, 6, Callback.unary { cell: Option [TimedCell] =>
+        Tier.read (disk, pos, Apple, 6, callback { cell =>
           expectResult (None) (cell)
         })
-        Tier.read (disk, pos, Orange, 8, Callback.unary { cell: Option [TimedCell] =>
+        Tier.read (disk, pos, Orange, 8, callback { cell =>
           expectResult (Some (One)) (cell.get.value)
         })
-        Tier.read (disk, pos, Orange, 7, Callback.unary { cell: Option [TimedCell] =>
+        Tier.read (disk, pos, Orange, 7, callback { cell =>
           expectResult (Some (One)) (cell.get.value)
         })
-        Tier.read (disk, pos, Orange, 6, Callback.unary { cell: Option [TimedCell] =>
+        Tier.read (disk, pos, Orange, 6, callback { cell =>
           expectResult (None) (cell)
         })
-        Tier.read (disk, pos, Watermelon, 8, Callback.unary { cell: Option [TimedCell] =>
+        Tier.read (disk, pos, Watermelon, 8, callback { cell =>
           expectResult (Some (One)) (cell.get.value)
         })
-        Tier.read (disk, pos, Watermelon, 7, Callback.unary { cell: Option [TimedCell] =>
+        Tier.read (disk, pos, Watermelon, 7, callback { cell =>
           expectResult (Some (One)) (cell.get.value)
         })
-        Tier.read (disk, pos, Watermelon, 6, Callback.unary { cell: Option [TimedCell] =>
+        Tier.read (disk, pos, Watermelon, 6, callback { cell =>
           expectResult (None) (cell)
         })
       }
