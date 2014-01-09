@@ -11,8 +11,14 @@ private class IntSet private (private val bitmap: Bitmap) {
   def add (i: Int): IntSet =
     new IntSet (bitmap.or (Bitmap.bitmapOf (i)))
 
+  def add (s: IntSet): IntSet =
+    new IntSet (bitmap.or (s.bitmap))
+
   def remove (i: Int): IntSet =
     new IntSet (bitmap.andNot (Bitmap.bitmapOf (i)))
+
+  def remove (s: IntSet): IntSet =
+    new IntSet (bitmap.andNot (s.bitmap))
 
   def contains (i: Int): Boolean =
     bitmap.get (i)

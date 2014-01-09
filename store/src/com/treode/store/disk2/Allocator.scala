@@ -29,6 +29,8 @@ private class Allocator (config: DiskConfig) {
   def init() {
     gen = 0
     free = IntSet.fill (config.segmentCount)
+    val superblocks = IntSet.fill (DiskLeadBytes >> config.segmentBits)
+    free = free.remove (superblocks)
   }
 
   def checkpoint (gen: Int): Allocator.Meta = {
@@ -37,11 +39,9 @@ private class Allocator (config: DiskConfig) {
   }
 
   def recover (gen: Int, meta: Allocator.Meta) {
-    if (gen > this.gen) {
-      this.gen = gen
-      free = meta.free
-    }}
-}
+    this.gen = gen
+    free = meta.free
+  }}
 
 private object Allocator {
 

@@ -19,15 +19,14 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
   type Checkpoints = List [Callback [Unit]]
 
   val fiber = new Fiber (scheduler)
+  val log = new LogDispatcher (scheduler)
   var disks = Set.empty [Disk]
   var generation = 0
   var state: State = new Opening
 
   private def initFile (item: (Path, File, DiskConfig)): Disk = {
     val (path, file, config) = item
-    val disk = new Disk (path, file, config)
-    disk.init()
-    disk
+    new Disk (path, file, config, scheduler, log)
   }
 
   private def initFiles (items: Seq [(Path, File, DiskConfig)]): Seq [Disk] =
@@ -223,13 +222,14 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
 
       for (read <- reads) {
         val superblock = if (useGen1) read.sb1.get else read.sb2.get
-        val disk = new Disk (read.path, read.file, superblock.config)
+        val disk = new Disk (read.path, read.file, superblock.config, scheduler, log)
         disk.recover (superblock)
         disks += disk
       }
 
       generation = boot.gen
 
+      disks foreach (_.engage())
       ready (false)
       cb()
     }
@@ -268,7 +268,8 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
   }
 
   class Attaching (
-      items: Seq [Disk], cb: Callback [Unit],
+      items: Seq [Disk],
+      cb: Callback [Unit],
       var attachments: Attachments,
       var checkpoints: Checkpoints)
   extends State with QueueAttachAndCheckpoint with ReattachCompleted {
@@ -277,37 +278,49 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
     val attaching = items map (_.path)
     val boot = BootBlock (generation+1, attached ++ attaching)
 
-    def latch3 = Callback.latch (disks.size, new Callback [Unit] {
+    def latch4 = Callback.latch (disks.size, new Callback [Unit] {
       def pass (v: Unit) = fiber.execute (ready (true))
       def fail (t: Throwable) = fiber.execute (panic (t))
     })
 
-    def latch2 = Callback.latch (disks.size, new Callback [Unit] {
+    def latch3 = Callback.latch (disks.size, new Callback [Unit] {
       def pass (v: Unit): Unit = fiber.execute {
         require (generation == boot.gen-1)
         generation = boot.gen
         disks ++= items
+        items foreach (_.engage())
         ready (true)
         cb()
       }
       def fail (t: Throwable): Unit = fiber.execute {
         val reboot = BootBlock (generation, attached)
-        val _latch3 = latch3
-        disks foreach (_.checkpoint (reboot, _latch3))
+        val latch = latch4
+        disks foreach (_.checkpoint (reboot, latch))
         cb.fail (t)
       }})
 
-    val latch1 = Callback.latch (items.size, new Callback [Unit] {
+    def latch2 = Callback.latch (items.size, new Callback [Unit] {
       def pass (v: Unit): Unit = fiber.execute {
-        val _latch2 = latch2
-        disks foreach (_.checkpoint (boot, _latch2))
+        val latch = latch3
+        disks foreach (_.checkpoint (boot, latch))
       }
       def fail (t: Throwable): Unit = fiber.execute {
         ready (false)
         cb.fail (t)
       }})
 
-    items foreach (_.checkpoint (boot, latch1))
+    val latch1 = Callback.latch (items.size, new Callback [Unit] {
+      def pass (v: Unit): Unit = fiber.execute {
+        val latch = latch2
+        items foreach (_.checkpoint (boot, latch))
+      }
+      def fail (t: Throwable): Unit = fiber.execute {
+        ready (false)
+        cb.fail (t)
+      }
+    })
+
+    items foreach (_.init (latch1))
 
     override def toString = "Attaching"
   }

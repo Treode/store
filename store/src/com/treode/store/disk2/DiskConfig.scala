@@ -4,7 +4,7 @@ import java.lang.{Long => JLong}
 import java.util.Objects
 import com.treode.pickle.Picklers
 
-class DiskConfig private (
+class DiskConfig private [disk2] (
     val segmentBits: Int,
     val pageBits: Int,
     val blockBits: Int,
@@ -47,7 +47,7 @@ object DiskConfig {
       blockBits: Int,
       diskBytes: Long): DiskConfig = {
 
-    require (segmentBits > SuperBlockBits, "segmentBits must be greater than $SuperBlockBits")
+    require (segmentBits > SuperBlockBits, s"segmentBits must be greater than $SuperBlockBits")
     require (pageBits > 0, "pageBits must be greater than 0")
     require (pageBits < segmentBits, "pageBits must be less than segmentBits")
     require (blockBits > 0, "blockBits must be greater than 0")

@@ -33,8 +33,8 @@ package disk2 {
 
 package object disk2 {
 
-  val SuperBlockBits = 14
-  val SuperBlockBytes = 1 << SuperBlockBits
-  val SuperBlockMask = SuperBlockBytes - 1
-  val DiskLeadBytes = 1 << (SuperBlockBits + 1)
+  private [disk2] val SuperBlockBits = 14
+  private [disk2] val SuperBlockBytes = 1 << SuperBlockBits
+  private [disk2] val SuperBlockMask = SuperBlockBytes - 1
+  private [disk2] val DiskLeadBytes = 1 << (SuperBlockBits + 1)
 }

@@ -6,7 +6,8 @@ import com.treode.pickle.Picklers
 private case class SuperBlock (
     boot: BootBlock,
     config: DiskConfig,
-    free: Allocator.Meta)
+    free: Allocator.Meta,
+    log: LogWriter.Meta)
 
 private object SuperBlock {
 
@@ -15,8 +16,9 @@ private object SuperBlock {
     val boot = BootBlock.pickle
     val config = DiskConfig.pickle
     val free = Allocator.Meta.pickle
-    wrap3 (boot, config, free) {
+    val log = LogWriter.Meta.pickle
+    wrap4 (boot, config, free, log) {
       SuperBlock.apply _
     } {
-      v => (v.boot, v.config, v.free)
+      v => (v.boot, v.config, v.free, v.log)
     }}}
