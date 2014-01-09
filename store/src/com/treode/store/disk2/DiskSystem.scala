@@ -10,7 +10,7 @@ import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.unpickle
 
-private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
+private class DiskSystem (scheduler: Scheduler) {
 
   case class SuperBlocks (path: Path, file: File, sb1: Option [SuperBlock], sb2: Option [SuperBlock])
   case class Attachment (disks: Seq [DiskDrive], cb: Callback [Unit])
@@ -23,25 +23,6 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
   var disks = Set.empty [DiskDrive]
   var generation = 0
   var state: State = new Opening
-
-  private def initFile (item: (Path, File, DiskDriveConfig)): DiskDrive = {
-    val (path, file, config) = item
-    new DiskDrive (path, file, config, scheduler, log)
-  }
-
-  private def initFiles (items: Seq [(Path, File, DiskDriveConfig)]): Seq [DiskDrive] =
-    items map (initFile _)
-
-  private def initPath (item: (Path, DiskDriveConfig)): DiskDrive = {
-    val (path, config) = item
-    import StandardOpenOption.{CREATE, READ, WRITE}
-    require (disks forall (_.path != path), s"Path $path is already attached.")
-    val file = File.open (path, Set (CREATE, READ, WRITE), Set.empty, executor)
-    initFile (path, file, config)
-  }
-
-  private def initPaths (items: Seq [(Path, DiskDriveConfig)]): Seq [DiskDrive] =
-    items map (initPath _)
 
   private def readSuperBlocks (path: Path, file: File, cb: Callback [SuperBlocks]): Unit =
     Callback.guard (cb) {
@@ -68,18 +49,9 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
       })
     }
 
-  private def readSuperBlocks (path: Path, cb: Callback [SuperBlocks]): Unit =
-    Callback.guard (cb) {
-      import StandardOpenOption.{READ, WRITE}
-      val file = File.open (path, Set (READ, WRITE), Set.empty, executor)
-      readSuperBlocks (path, file, cb)
-    }
-
   trait State {
-    def _reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit
-    def reattach (items: Seq [Path], cb: Callback [Unit]): Unit
-    def _attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit])
-    def attach (items: Seq [(Path, DiskDriveConfig)], cb: Callback [Unit])
+    def reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit
+    def attach (items: Seq [DiskDrive], cb: Callback [Unit])
     def checkpoint (cb: Callback [Unit])
   }
 
@@ -88,14 +60,9 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
     var attachments: Attachments
     var checkpoints: Checkpoints
 
-    def _attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit]): Unit =
+    def attach (items: Seq [DiskDrive], cb: Callback [Unit]): Unit =
       Callback.guard (cb) {
-       attachments = attachments.enqueue (Attachment (initFiles (items), cb))
-      }
-
-    def attach (items: Seq [(Path, DiskDriveConfig)], cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
-        attachments = attachments.enqueue (Attachment (initPaths (items), cb))
+        attachments = attachments.enqueue (Attachment (items, cb))
       }
 
     def checkpoint (cb: Callback [Unit]): Unit =
@@ -126,10 +93,7 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
 
   trait ReattachCompleted {
 
-    def _reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
-      cb.fail (new RecoveryCompletedException)
-
-    def reattach (items: Seq [Path], cb: Callback [Unit]): Unit =
+    def reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
       cb.fail (new RecoveryCompletedException)
   }
 
@@ -137,30 +101,12 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
 
     var checkpoints = List.empty [Callback [Unit]]
 
-    def _reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
-        require (!items.isEmpty, "Must at least one file to reattach.")
-        val next = new Recovering (cb, Queue.empty, checkpoints)
-        state = next
-        next._reattach (items)
-      }
+    def reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
+      state = new Recovering (items, cb, Queue.empty, checkpoints)
 
-    def reattach (items: Seq [Path], cb: Callback [Unit]): Unit =
+    def attach (items: Seq [DiskDrive], cb: Callback [Unit]): Unit =
       Callback.guard (cb) {
-        require (!items.isEmpty, "Must at least one path to reattach.")
-        val next = new Recovering (cb, Queue.empty, checkpoints)
-        state = next
-        next.reattach (items)
-      }
-
-    def _attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
-        state = new Attaching (initFiles (items), cb, Queue.empty, checkpoints)
-      }
-
-    def attach (items: Seq [(Path, DiskDriveConfig)], cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
-        state = new Attaching (initPaths (items), cb, Queue.empty, checkpoints)
+        state = new Attaching (items, cb, Queue.empty, checkpoints)
       }
 
     def checkpoint (cb: Callback [Unit]): Unit =
@@ -170,18 +116,17 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
   }
 
   class Recovering (
+      items: Seq [(Path, File)],
       cb: Callback [Unit],
       var attachments: Attachments,
       var checkpoints: Checkpoints)
   extends State with QueueAttachAndCheckpoint {
 
-    var reattaching = Set.empty [Path]
-    var count = 0
     var reads = List.empty [SuperBlocks]
     var thrown = List.empty [Throwable]
 
     def _superBlocksRead() {
-      if (reads.size + thrown.size < count) {
+      if (reads.size + thrown.size < items.size) {
         return
       }
 
@@ -203,20 +148,27 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
       val count1 = sb1 count (_.boot.gen == gen1)
       val gen2 = if (sb2.isEmpty) -1 else sb2.map (_.boot.gen) .max
       val count2 = sb2 count (_.boot.gen == gen2)
-      if (count1 != count && count2 != count) {
+      if (count1 != items.size && count2 != items.size) {
         panic (new InconsistentSuperBlocksException)
         cb.fail (new InconsistentSuperBlocksException)
         return
       }
 
-      val useGen1 = (count1 == count) && (gen1 > gen2 || count2 != count)
+      val useGen1 = (count1 == items.size) && (gen1 > gen2 || count2 != items.size)
       val boot = if (useGen1) reads.head.sb1.get.boot else reads.head.sb2.get.boot
 
-      val unseen = boot.disks -- reattaching
-      if (!unseen.isEmpty) {
-        reattaching ++= unseen
-        count += unseen.size
-        unseen foreach (readSuperBlocks (_, superBlocksRead))
+      val reattaching = items .map (_._1) .toSet
+      val attached = boot.disks.toSet
+      if (!(attached forall (reattaching contains _))) {
+        val missing = (attached -- reattaching).toSeq.sorted
+        panic (new MissingDisksException (missing))
+        cb.fail (new MissingDisksException (missing))
+        return
+      }
+      if (!(reattaching forall (attached contains _))) {
+        val extra = (reattaching -- attached).toSeq.sorted
+        panic (new ExtraDisksException (extra))
+        cb.fail (new ExtraDisksException (extra))
         return
       }
 
@@ -244,24 +196,10 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
         _superBlocksRead()
       }}
 
-    def _reattach (items: Seq [(Path, File)]) {
-      reattaching ++= items map (_._1)
-      count += items.size
-      for ((path, file) <- items)
-        readSuperBlocks (path, file, superBlocksRead)
-    }
+    for ((path, file) <- items)
+      readSuperBlocks (path, file, superBlocksRead)
 
-    def reattach (items: Seq [Path]) {
-      val unseen = items.toSet -- reattaching
-      reattaching ++= unseen
-      count += unseen.size
-      unseen foreach (readSuperBlocks (_, superBlocksRead))
-    }
-
-    def _reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
-      cb.fail (new ReattachmentPendingException)
-
-    def reattach (items: Seq [Path], cb: Callback [Unit]): Unit =
+    def reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
       cb.fail (new ReattachmentPendingException)
 
     override def toString = "Recovering"
@@ -274,8 +212,8 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
       var checkpoints: Checkpoints)
   extends State with QueueAttachAndCheckpoint with ReattachCompleted {
 
-    val attached = disks map (_.path)
-    val attaching = items map (_.path)
+    val attached = disks .map (_.path)
+    val attaching = items .map (_.path) .toSet
     val boot = BootBlock (generation+1, attached ++ attaching)
 
     def latch4 = Callback.latch (disks.size, new Callback [Unit] {
@@ -309,7 +247,7 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
         cb.fail (t)
       }})
 
-    val latch1 = Callback.latch (items.size, new Callback [Unit] {
+    def latch1 = Callback.latch (items.size, new Callback [Unit] {
       def pass (v: Unit): Unit = fiber.execute {
         val latch = latch2
         items foreach (_.checkpoint (boot, latch))
@@ -320,7 +258,14 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
       }
     })
 
-    items foreach (_.init (latch1))
+    if (attaching exists (attached contains _)) {
+      val already = (attaching -- attached).toSeq.sorted
+      ready (false)
+      cb.fail (new AlreadyAttachedException (already))
+    } else {
+      val latch = latch1
+      items foreach (_.init (latch))
+    }
 
     override def toString = "Attaching"
   }
@@ -343,16 +288,10 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
 
   class Panicked (t: Throwable) extends State {
 
-    def _reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
+    def reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
       cb.fail (new PanickedException (t))
 
-    def reattach (items: Seq [Path], cb: Callback [Unit]): Unit =
-      cb.fail (new PanickedException (t))
-
-    def _attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit]): Unit =
-      cb.fail (new PanickedException (t))
-
-    def attach (items: Seq [(Path, DiskDriveConfig)], cb: Callback [Unit]): Unit =
+    def attach (items: Seq [DiskDrive], cb: Callback [Unit]): Unit =
       cb.fail (new PanickedException (t))
 
     def checkpoint (cb: Callback [Unit]): Unit =
@@ -363,14 +302,9 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
 
   object Ready extends State with ReattachCompleted {
 
-    def _attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit]): Unit =
+    def attach (items: Seq [DiskDrive], cb: Callback [Unit]): Unit =
       Callback.guard (cb) {
-        state = new Attaching (initFiles (items), cb, Queue.empty, List.empty)
-      }
-
-    def attach (items: Seq [(Path, DiskDriveConfig)], cb: Callback [Unit]): Unit =
-      Callback.guard (cb) {
-        state = new Attaching (initPaths (items), cb, Queue.empty, List.empty)
+        state = new Attaching (items, cb, Queue.empty, List.empty)
       }
 
     def checkpoint (cb: Callback [Unit]): Unit =
@@ -379,17 +313,50 @@ private class DiskSystem (scheduler: Scheduler, executor: ExecutorService) {
     override def toString = "Ready"
   }
 
-  def _reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
-    fiber.execute (state._reattach (items, cb))
+  private def openFile (path: Path, exec: ExecutorService): (Path, File) = {
+    import StandardOpenOption.{READ, WRITE}
+    (path, File.open (path, Set (READ, WRITE), Set.empty, exec))
+  }
 
-  def reattach (items: Seq [Path], cb: Callback [Unit]): Unit =
-    fiber.execute (state.reattach (items, cb))
+  def _reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
+    Callback.guard (cb) {
+      require (!items.isEmpty, "Must list at least one file to reaattach.")
+      fiber.execute (state.reattach (items, cb))
+    }
+
+  def reattach (items: Seq [Path], executor: ExecutorService, cb: Callback [Unit]): Unit =
+    Callback.guard (cb) {
+      val files = items map (openFile (_, executor))
+      fiber.execute (state.reattach (files, cb))
+    }
+
+  private def makeDisks (items: Seq [(Path, File, DiskDriveConfig)]): Seq [DiskDrive] =
+    for ((path, file, config) <- items) yield
+      new DiskDrive (path, file, config, scheduler, log)
+
+  private def openDisk (item: (Path, DiskDriveConfig), exec: ExecutorService): DiskDrive = {
+    val (path, config) = item
+    import StandardOpenOption.{CREATE, READ, WRITE}
+    val file = File.open (path, Set (CREATE, READ, WRITE), Set.empty, exec)
+    new DiskDrive (path, file, config, scheduler, log)
+  }
+
+  private def openDisks (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService): Seq [DiskDrive] =
+    items map (openDisk (_, exec))
 
   def _attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit]): Unit =
-    fiber.execute (state._attach (items, cb))
+    Callback.guard (cb) {
+      require (!items.isEmpty, "Must list at least one file to attach.")
+      val disks = makeDisks (items)
+      fiber.execute (state.attach (disks, cb))
+    }
 
-  def attach (items: Seq [(Path, DiskDriveConfig)], cb: Callback [Unit]): Unit =
-    fiber.execute (state.attach (items, cb))
+  def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Unit]): Unit =
+    Callback.guard (cb) {
+      require (!items.isEmpty, "Must llist at least one path to attach.")
+      val disks = openDisks (items, exec)
+      fiber.execute (state.attach (disks, cb))
+    }
 
   def checkpoint (cb: Callback [Unit]): Unit =
     fiber.execute (state.checkpoint (cb))

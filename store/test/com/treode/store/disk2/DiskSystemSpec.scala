@@ -65,7 +65,7 @@ class DiskSystemSpec extends FreeSpec {
       cb.passed
     }}
 
-  private class RichDiskSystem (scheduler: StubScheduler) extends DiskSystem (scheduler, null) {
+  private class RichDiskSystem (scheduler: StubScheduler) extends DiskSystem (scheduler) {
 
     def assertOpening() = assert (state.isInstanceOf [Opening])
     def assertReady() = assert (state == Ready)
