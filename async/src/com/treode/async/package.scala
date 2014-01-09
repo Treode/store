@@ -22,8 +22,18 @@ package object async {
     reify {
       new Callback [B] {
         private val _cb = cb.splice
-        def pass (v: B): Unit = _cb.apply (f.splice.apply (v))
-        def fail (t: Throwable): Unit = _cb.fail (t)
+        def pass (b: B) {
+          val a: A = try {
+            f.splice.apply (b)
+          } catch {
+            case t: Throwable =>
+              _cb.fail (t)
+              return
+          }
+          _cb.apply (a)
+        }
+        def fail (t: Throwable): Unit =
+          _cb.fail (t)
       }}}
 
   def callback [A, B] (cb: Callback [A]) (f: B => A): Callback [B] = macro _callback2 [A, B]
@@ -34,8 +44,15 @@ package object async {
     reify {
       new Callback [B] {
         private val _cb = cb.splice
-        def pass (v: B): Unit = f.splice.apply (v)
-        def fail (t: Throwable): Unit = _cb.fail (t)
+        def pass (v: B) {
+          try {
+            f.splice.apply (v)
+          } catch {
+            case t: Throwable =>
+              _cb.fail (t)
+          }}
+        def fail (t: Throwable): Unit =
+          _cb.fail (t)
       }}}
 
   def delay [A, B] (cb: Callback [A]) (f: B => Any): Callback [B] = macro _delay [A, B]
@@ -47,7 +64,8 @@ package object async {
       try {
         f.splice
       } catch {
-        case t: Throwable => cb.splice.fail (t)
+        case t: Throwable =>
+          cb.splice.fail (t)
       }}}
 
   def guard [A] (cb: Callback [A]) (f: Any): Unit = macro _guard [A]

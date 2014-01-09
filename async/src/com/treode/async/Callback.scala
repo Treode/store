@@ -11,12 +11,8 @@ trait Callback [-T] extends (T => Unit) {
 
   def fail (t: Throwable)
 
-  def apply (v: T): Unit =
-    try {
-      pass (v)
-    } catch {
-      case t: Throwable => fail (t)
-    }}
+  def apply (v: T): Unit = pass (v)
+}
 
 object Callback {
 
