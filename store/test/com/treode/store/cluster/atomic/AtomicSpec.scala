@@ -3,6 +3,7 @@ package com.treode.store.cluster.atomic
 import java.util.concurrent.TimeoutException
 
 import com.treode.async.CallbackCaptor
+import com.treode.cluster.StubCluster
 import com.treode.store._
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, PropSpec, Specs}
@@ -14,20 +15,13 @@ import TimedTestTools._
 
 class AtomicSpec extends Specs (AtomicBehaviors, AtomicProperties)
 
-object AtomicBehaviors extends FreeSpec with BeforeAndAfterAll with AtomicTestTools
-    with StoreBehaviors {
+object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors {
 
-  private val kit = new StubCluster (0, 3)
-  private val hs @ Seq (_, _, host) = kit.hosts
+  private val kit = StubCluster()
+  private val hs = kit.install (3, new StubHost (_, kit))
+  private val host = hs.head
   import kit.{random, scheduler}
   import host.{writeDeputy, write}
-
-  private val threaded = new StubCluster (0, 3, true)
-
-  override def afterAll() {
-    kit.cleanup()
-    threaded.cleanup()
-  }
 
   "A Deputy should" - {
 
@@ -60,7 +54,15 @@ object AtomicBehaviors extends FreeSpec with BeforeAndAfterAll with AtomicTestTo
     }}
 
   "The AtomicKit should" - {
-    behave like aStore (kit)
+
+    behave like aStore (new TestableCluster (hs, kit))
+
+    val threaded = {
+      val kit = StubCluster (0, true)
+      val hs = kit.install (3, new StubHost (_, kit))
+      new TestableCluster (hs, kit)
+    }
+
     behave like aMultithreadableStore (100, threaded)
   }}
 
@@ -69,9 +71,9 @@ object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTool
   val seeds = Gen.choose (0L, Long.MaxValue)
 
   def checkConsensus (seed: Long, mf: Double) {
-    val kit = new StubCluster (seed, 3)
-    val Seq (h1, h2, h3) = kit.hosts
-    val hs = kit.hosts
+    val kit = StubCluster (seed)
+    val hs = kit.install (3, new StubHost (_, kit))
+    val Seq (h1, h2, h3) = hs
     import kit.{random, scheduler}
 
     // Setup.
@@ -107,12 +109,7 @@ object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTool
       hs foreach (_.mainDb.expectAborted (xid1))
       hs foreach (_.mainDb.expectAborted (xid2))
       hs foreach (_.expectCells (t) (k##0))
-    }
-
-    // Cleanup.
-    kit.messageFlakiness = 0.0
-    kit.cleanup()
-  }
+    }}
 
   property ("The atomic implemetation should work") {
     forAll (seeds) (checkConsensus (_, 0.0))

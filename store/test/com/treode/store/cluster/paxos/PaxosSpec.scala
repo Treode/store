@@ -5,6 +5,7 @@ import java.util.concurrent.TimeoutException
 import scala.util.Random
 
 import com.treode.async.CallbackCaptor
+import com.treode.cluster.StubCluster
 import com.treode.store.{Bytes, Cardinals, LargeTest}
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, PropSpec, Specs, WordSpec}
@@ -14,16 +15,13 @@ import Cardinals.{Zero, One, Two}
 
 class PaxosSpec extends Specs (PaxosBehaviors, PaxosProperties)
 
-object PaxosBehaviors extends WordSpec with BeforeAndAfterAll with PaxosTestTools {
+object PaxosBehaviors extends WordSpec with PaxosTestTools {
 
-  private val kit = new StubCluster (0, 3)
-  private val hs @ Seq (_, _, host) = kit.hosts
+  private val kit = StubCluster()
+  private val hs = kit.install (3, new StubHost (_, kit))
+  private val host = hs.head
   import kit.{random, scheduler}
   import host.paxos.{Acceptors, lead}
-
-  override def afterAll() {
-    kit.cleanup()
-  }
 
   "An acceptor" should {
 
@@ -71,9 +69,9 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
   val seeds = Gen.choose (0L, Long.MaxValue)
 
   def checkConsensus (seed: Long, mf: Double, summary: Summary): Summary = {
-    val kit = new StubCluster (seed, 3)
-    val Seq (h1, h2, h3) = kit.hosts
-    var hs = kit.hosts
+    val kit = StubCluster (seed)
+    val hs = kit.install (3, new StubHost (_, kit))
+    val Seq (h1, h2, h3) = hs
     import kit.{random, scheduler}
 
     try {
@@ -96,17 +94,10 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
       assert (as forall (_.isClosed))
       expectResult (1) (as.map (_.getChosen) .flatten.toSet.size)
 
-      // Cleanup.
-      kit.cleanup()
-
       Summary (summary.timedout, summary.chosen + v.int)
     } catch {
       case e: TimeoutException =>
-        kit.cleanup()
         Summary (true, summary.chosen)
-      case e: Throwable =>
-        kit.cleanup()
-        throw e
     }}
 
   property ("The acceptors should achieve consensus") {

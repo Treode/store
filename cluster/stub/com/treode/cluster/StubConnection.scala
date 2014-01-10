@@ -1,15 +1,15 @@
 package com.treode.cluster
 
 import java.net.SocketAddress
-import scala.collection.JavaConversions._
 
 import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Pickler
 
-class StubConnection (cluster: BaseStubCluster, val id: HostId, localId: HostId) extends Peer {
+private class StubConnection (val id: HostId, localId: HostId, cluster: StubCluster)
+extends Peer {
 
-  import cluster._
+  address = new SocketAddress {}
 
   def send [M] (p: Pickler [M], mbx: MailboxId, msg: M): Unit =
     cluster.deliver (p, localId, id, mbx, msg)
@@ -28,5 +28,5 @@ class StubConnection (cluster: BaseStubCluster, val id: HostId, localId: HostId)
       case _ => false
     }
 
-  override def toString = s"ConnectionStub($localId->$id)"
+  override def toString = s"StubConnection($localId->$id)"
 }
