@@ -167,14 +167,20 @@ trait Picklers {
 
       def p (v: C [A], ctx: PickleContext): Unit = {
         ctx.writeVarUInt (v.size)
-        v foreach (pa.p (_, ctx))
+        val i = v.iterator
+        while (i.hasNext)
+          pa.p (i.next, ctx)
       }
 
       def u (ctx: UnpickleContext) = {
         val n = ctx.readVarUInt()
         val b = c.newBuilder [A]
         b.sizeHint (n)
-        (1 to n) foreach (_ => b += pa.u (ctx))
+        var i = 0
+        while (i < n) {
+          b += pa.u (ctx)
+          i += 1
+        }
         b.result()
       }
 
@@ -274,15 +280,19 @@ trait Picklers {
 
         def p (v: util.List [A], ctx: PickleContext) = {
           ctx.writeInt (v.size)
-          for (i <- 0 until v.size)
-            pa.p (v.get (i), ctx)
+          val i = v.iterator
+          while (i.hasNext)
+            pa.p (i.next, ctx)
         }
 
         def u (ctx: UnpickleContext) = {
-          val l = ctx.readInt
-          val v = new util.ArrayList [A] (l)
-          for (i <- 0 until l)
+          val n = ctx.readInt
+          val v = new util.ArrayList [A] (n)
+          var i = 0
+          while (i < n) {
             v.add (pa.u (ctx))
+            i += 1
+          }
           v
         }}}}
 
