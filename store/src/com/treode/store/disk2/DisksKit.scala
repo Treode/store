@@ -10,7 +10,7 @@ import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.unpickle
 
-private class DiskSystem (scheduler: Scheduler) {
+private class DisksKit (scheduler: Scheduler) extends Disks {
 
   case class SuperBlocks (path: Path, file: File, sb1: Option [SuperBlock], sb2: Option [SuperBlock])
   case class Attachment (disks: Seq [DiskDrive], cb: Callback [Unit])
@@ -318,7 +318,7 @@ private class DiskSystem (scheduler: Scheduler) {
     (path, File.open (path, Set (READ, WRITE), Set.empty, exec))
   }
 
-  def _reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
+  def reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
     guard (cb) {
       require (!items.isEmpty, "Must list at least one file to reaattach.")
       fiber.execute (state.reattach (items, cb))
@@ -344,7 +344,7 @@ private class DiskSystem (scheduler: Scheduler) {
   private def openDisks (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService): Seq [DiskDrive] =
     items map (openDisk (_, exec))
 
-  def _attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit]): Unit =
+  def attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit]): Unit =
     guard (cb) {
       require (!items.isEmpty, "Must list at least one file to attach.")
       val disks = makeDisks (items)
@@ -360,6 +360,9 @@ private class DiskSystem (scheduler: Scheduler) {
 
   def checkpoint (cb: Callback [Unit]): Unit =
     fiber.execute (state.checkpoint (cb))
+
+  def record (entry: LogEntry.Body, cb: Callback [Unit]): Unit =
+    log.record (entry, cb)
 
   override def toString = state.toString
 }

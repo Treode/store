@@ -9,9 +9,9 @@ import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{pickle, unpickle}
 import org.scalatest.FreeSpec
 
-class DiskSystemSpec extends FreeSpec {
+class DisksKitSpec extends FreeSpec {
 
-  val big = DiskDriveConfig (30, 20, 13, 1L<<40)
+  val big = DiskDriveConfig (30, 13, 1L<<40)
 
   implicit def pathToString (s: String): Path = Paths.get (s)
 
@@ -65,7 +65,7 @@ class DiskSystemSpec extends FreeSpec {
       cb.passed
     }}
 
-  private class RichDiskSystem (scheduler: StubScheduler) extends DiskSystem (scheduler) {
+  private class RichDisksKit (scheduler: StubScheduler) extends DisksKit (scheduler) {
 
     def assertOpening() = assert (state.isInstanceOf [Opening])
     def assertReady() = assert (state == Ready)
@@ -79,7 +79,7 @@ class DiskSystemSpec extends FreeSpec {
 
     def attachAndPass (items: (Path, File, DiskDriveConfig)*) {
       val cb = new CallbackCaptor [Unit]
-      _attach (items, cb)
+      attach (items, cb)
       scheduler.runTasks()
       cb.passed
       assertReady()
@@ -87,7 +87,7 @@ class DiskSystemSpec extends FreeSpec {
 
     def attachAndFail [E] (items: (Path, File, DiskDriveConfig)*) (implicit m: Manifest [E]) {
       val cb = new CallbackCaptor [Unit]
-      _attach (items, cb)
+      attach (items, cb)
       scheduler.runTasks()
       m.runtimeClass.isInstance (cb.failed)
       if (disks.size == 0)
@@ -98,13 +98,13 @@ class DiskSystemSpec extends FreeSpec {
 
     def attachAndHold (items: (Path, File, DiskDriveConfig)*): CallbackCaptor [Unit] = {
       val cb = new CallbackCaptor [Unit]
-      _attach (items, cb)
+      attach (items, cb)
       cb
     }
 
     def reattachAndPass (items: (Path, File)*) {
       val cb = new CallbackCaptor [Unit]
-      _reattach (items, cb)
+      reattach (items, cb)
       scheduler.runTasks()
       cb.passed
       assertReady()
@@ -112,7 +112,7 @@ class DiskSystemSpec extends FreeSpec {
 
     def reattachAndFail [E] (items: (Path, File)*) (implicit m: Manifest [E]) {
       val cb = new CallbackCaptor [Unit]
-      _reattach (items, cb)
+      reattach (items, cb)
       scheduler.runTasks()
       m.runtimeClass.isInstance (cb.failed)
       if (m.runtimeClass.isAssignableFrom (classOf [RecoveryCompletedException]))
@@ -123,7 +123,7 @@ class DiskSystemSpec extends FreeSpec {
 
     def reattachAndHold (items: (Path, File)*): CallbackCaptor [Unit] = {
       val cb = new CallbackCaptor [Unit]
-      _reattach (items, cb)
+      reattach (items, cb)
       cb
     }
 
@@ -153,9 +153,9 @@ class DiskSystemSpec extends FreeSpec {
     "attach a new disk" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndPass (("a", disk1, big))
-      sys.expectDisks (1) ("a")
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndPass (("a", disk1, big))
+      kit.expectDisks (1) ("a")
       disk1.expectSuperBlock (mkSuperBlock (1, Set ("a"), big))
     }
 
@@ -163,9 +163,9 @@ class DiskSystemSpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
       val disk2 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndPass (("a", disk1, big), ("b", disk2, big))
-      sys.expectDisks (1) ("a", "b")
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndPass (("a", disk1, big), ("b", disk2, big))
+      kit.expectDisks (1) ("a", "b")
       val sb1 = mkSuperBlock (1, Set ("a", "b"), big)
       disk1.expectSuperBlock (sb1)
       disk1.expectSuperBlock (sb1)
@@ -174,9 +174,9 @@ class DiskSystemSpec extends FreeSpec {
     "pass through an attach failure and remain opening" in {
       val scheduler = StubScheduler.random()
       val disk1 = new MockFile
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndFail (("a", disk1, big))
-      sys.expectDisks (1) ()
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndFail (("a", disk1, big))
+      kit.expectDisks (1) ()
     }
 
     "reattach a disk with only the first superblock" in {
@@ -184,9 +184,9 @@ class DiskSystemSpec extends FreeSpec {
       val disk1 = new RichStubFile (scheduler)
       disk1.writeSuperBlock (mkSuperBlock (2, Set ("a"), big))
       disk1.destroySuperBlock (1)
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndPass (("a", disk1))
-      sys.expectDisks (2) ("a")
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndPass (("a", disk1))
+      kit.expectDisks (2) ("a")
     }
 
     "reattach a disk with only the second superblock" in {
@@ -194,9 +194,9 @@ class DiskSystemSpec extends FreeSpec {
       val disk1 = new RichStubFile (scheduler)
       disk1.destroySuperBlock (0)
       disk1.writeSuperBlock (mkSuperBlock (1, Set ("a"), big))
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndPass (("a", disk1))
-      sys.expectDisks (1) ("a")
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndPass (("a", disk1))
+      kit.expectDisks (1) ("a")
     }
 
     "reattach a disk with the first superblock as newest" in {
@@ -204,9 +204,9 @@ class DiskSystemSpec extends FreeSpec {
       val disk1 = new RichStubFile (scheduler)
       disk1.writeSuperBlock (mkSuperBlock (4, Set ("a"), big))
       disk1.writeSuperBlock (mkSuperBlock (3, Set ("a"), big))
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndPass (("a", disk1))
-      sys.expectDisks (4) ("a")
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndPass (("a", disk1))
+      kit.expectDisks (4) ("a")
     }
 
     "reattach a disk with the second superblock as newest" in {
@@ -214,9 +214,9 @@ class DiskSystemSpec extends FreeSpec {
       val disk1 = new RichStubFile (scheduler)
       disk1.writeSuperBlock (mkSuperBlock (2, Set ("a"), big))
       disk1.writeSuperBlock (mkSuperBlock (3, Set ("a"), big))
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndPass (("a", disk1))
-      sys.expectDisks (3) ("a")
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndPass (("a", disk1))
+      kit.expectDisks (3) ("a")
     }
 
     "reattach two disks with only the first superblock" in {
@@ -228,9 +228,9 @@ class DiskSystemSpec extends FreeSpec {
       val disk2 = new RichStubFile (scheduler)
       disk2.writeSuperBlock (sb1)
       disk2.destroySuperBlock (1)
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndPass (("a", disk1), ("b", disk2))
-      sys.expectDisks (2) ("a", "b")
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndPass (("a", disk1), ("b", disk2))
+      kit.expectDisks (2) ("a", "b")
     }
 
     "reattach two disks with only the second superblock" in {
@@ -242,9 +242,9 @@ class DiskSystemSpec extends FreeSpec {
       val disk2 = new RichStubFile (scheduler)
       disk2.destroySuperBlock (0)
       disk2.writeSuperBlock (sb1)
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndPass (("a", disk1), ("b", disk2))
-      sys.expectDisks (1) ("a", "b")
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndPass (("a", disk1), ("b", disk2))
+      kit.expectDisks (1) ("a", "b")
     }
 
     "reattach two disks with first superblock as newest" in {
@@ -257,9 +257,9 @@ class DiskSystemSpec extends FreeSpec {
       val disk2 = new RichStubFile (scheduler)
       disk2.writeSuperBlock (sb1)
       disk2.writeSuperBlock (sb2)
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndPass (("a", disk1), ("b", disk2))
-      sys.expectDisks (4) ("a", "b")
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndPass (("a", disk1), ("b", disk2))
+      kit.expectDisks (4) ("a", "b")
     }
 
     "reattach two disks with second superblock as newest" in {
@@ -272,9 +272,9 @@ class DiskSystemSpec extends FreeSpec {
       val disk2 = new RichStubFile (scheduler)
       disk2.writeSuperBlock (sb1)
       disk2.writeSuperBlock (sb2)
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndPass (("a", disk1), ("b", disk2))
-      sys.expectDisks (3) ("a", "b")
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndPass (("a", disk1), ("b", disk2))
+      kit.expectDisks (3) ("a", "b")
     }
 
     "reattach two disks with only first superblock in agreement" in {
@@ -287,9 +287,9 @@ class DiskSystemSpec extends FreeSpec {
       val disk2 = new RichStubFile (scheduler)
       disk2.writeSuperBlock (sb1)
       disk2.destroySuperBlock (3)
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndPass (("a", disk1), ("b", disk2))
-      sys.expectDisks (2) ("a", "b")
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndPass (("a", disk1), ("b", disk2))
+      kit.expectDisks (2) ("a", "b")
     }
 
     "reattach two disks with only second superblock in agreement" in {
@@ -302,9 +302,9 @@ class DiskSystemSpec extends FreeSpec {
       val disk2 = new RichStubFile (scheduler)
       disk2.destroySuperBlock (0)
       disk2.writeSuperBlock (sb2)
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndPass (("a", disk1), ("b", disk2))
-      sys.expectDisks (3) ("a", "b")
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndPass (("a", disk1), ("b", disk2))
+      kit.expectDisks (3) ("a", "b")
     }
 
     "panic on reattaching two disks with no superblocks in agreement" in {
@@ -315,8 +315,8 @@ class DiskSystemSpec extends FreeSpec {
       val disk2 = new RichStubFile (scheduler)
       disk2.writeSuperBlock (mkSuperBlock (4, Set ("a", "b"), big))
       disk2.writeSuperBlock (mkSuperBlock (3, Set ("a", "b"), big))
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndFail [MultiException] (("a", disk1), ("b", disk2))
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndFail [MultiException] (("a", disk1), ("b", disk2))
     }
 
     "panic on reattaching two disks with no superblocks fully present" in {
@@ -327,30 +327,30 @@ class DiskSystemSpec extends FreeSpec {
       val disk2 = new RichStubFile (scheduler)
       disk2.destroySuperBlock (4)
       disk2.writeSuperBlock (mkSuperBlock (3, Set ("a", "b"), big))
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndFail (("a", disk1), ("b", disk2))
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndFail (("a", disk1), ("b", disk2))
     }
 
     "queue a checkpoint and complete it with attach" in {
       implicit val scheduler = StubScheduler.random()
-      val sys = new RichDiskSystem (scheduler)
-      val cb = sys.checkpointAndQueue()
-      sys.assertOpening()
+      val kit = new RichDisksKit (scheduler)
+      val cb = kit.checkpointAndQueue()
+      kit.assertOpening()
       val disk1 = new RichStubFile (scheduler)
-      sys.attachAndPass (("a", disk1, big))
+      kit.attachAndPass (("a", disk1, big))
       cb.passed
       disk1.expectSuperBlock (mkSuperBlock (1, Set ("a"), big))
     }
 
     "queue a checkpoint and complete it after reattach" in {
       implicit val scheduler = StubScheduler.random()
-      val sys = new RichDiskSystem (scheduler)
-      val cb = sys.checkpointAndQueue()
-      sys.assertOpening()
+      val kit = new RichDisksKit (scheduler)
+      val cb = kit.checkpointAndQueue()
+      kit.assertOpening()
       val disk1 = new RichStubFile (scheduler)
       disk1.writeSuperBlock (mkSuperBlock (1, Set ("a"), big))
       disk1.destroySuperBlock (0)
-      sys.reattachAndPass (("a", disk1))
+      kit.reattachAndPass (("a", disk1))
       cb.passed
       disk1.expectSuperBlock (mkSuperBlock (2, Set ("a"), big))
       disk1.expectSuperBlock (mkSuperBlock (1, Set ("a"), big))
@@ -361,12 +361,12 @@ class DiskSystemSpec extends FreeSpec {
     "attach a new disk" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndPass (("a", disk1, big))
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndPass (("a", disk1, big))
 
       val disk2 = new RichStubFile (scheduler)
-      sys.attachAndPass (("b", disk2, big))
-      sys.expectDisks (2) ("a", "b")
+      kit.attachAndPass (("b", disk2, big))
+      kit.expectDisks (2) ("a", "b")
       val sb1 = mkSuperBlock (1, Set ("a"), big)
       disk1.expectSuperBlock (sb1)
       val sb2 = mkSuperBlock (2, Set ("a", "b"), big)
@@ -377,13 +377,13 @@ class DiskSystemSpec extends FreeSpec {
     "attach two new disks" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndPass (("a", disk1, big))
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndPass (("a", disk1, big))
 
       val disk2 = new RichStubFile (scheduler)
       val disk3 = new RichStubFile (scheduler)
-      sys.attachAndPass (("b", disk2, big), ("c", disk3, big))
-      sys.expectDisks (2) ("a", "b", "c")
+      kit.attachAndPass (("b", disk2, big), ("c", disk3, big))
+      kit.expectDisks (2) ("a", "b", "c")
       val sb1 = mkSuperBlock (1, Set ("a"), big)
       disk1.expectSuperBlock (sb1)
       val sb2 = mkSuperBlock (2, Set ("a", "b", "c"), big)
@@ -395,22 +395,22 @@ class DiskSystemSpec extends FreeSpec {
     "pass through an attach failure and remain ready" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndPass (("a", disk1, big))
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndPass (("a", disk1, big))
 
       val disk2 = new MockFile
-      sys.attachAndFail (("b", disk2, big))
-      sys.expectDisks (1) ("a")
+      kit.attachAndFail (("b", disk2, big))
+      kit.expectDisks (1) ("a")
     }
 
     "reject reattaching a disk" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndPass (("a", disk1, big))
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndPass (("a", disk1, big))
 
       val disk2 = new MockFile
-      sys.reattachAndFail [RecoveryCompletedException] (("b", disk2))
+      kit.reattachAndFail [RecoveryCompletedException] (("b", disk2))
       val sb1 = mkSuperBlock (1, Set ("a"), big)
       disk1.expectSuperBlock (sb1)
     }
@@ -418,10 +418,10 @@ class DiskSystemSpec extends FreeSpec {
     "checkpoint" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndPass (("a", disk1, big))
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndPass (("a", disk1, big))
 
-      sys.checkpointAndPass()
+      kit.checkpointAndPass()
       disk1.expectSuperBlock (mkSuperBlock (2, Set ("a"), big))
       disk1.expectSuperBlock (mkSuperBlock (1, Set ("a"), big))
     }
@@ -429,9 +429,9 @@ class DiskSystemSpec extends FreeSpec {
     "pass through a failed checkpoint and panic" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new MockFile
-      val sys = new RichDiskSystem (scheduler)
+      val kit = new RichDisksKit (scheduler)
       var cb = new CallbackCaptor [Unit]
-      sys._attach (Seq (("a", disk1, big)), cb)
+      kit.attach (Seq (("a", disk1, big)), cb)
       disk1.expectFlush (DiskLeadBytes, 0, 20)
       scheduler.runTasks()
       disk1.completeLast()
@@ -441,19 +441,19 @@ class DiskSystemSpec extends FreeSpec {
       disk1.completeLast()
       scheduler.runTasks()
       cb.passed
-      sys.expectDisks (1) ("a")
-      sys.assertReady()
+      kit.expectDisks (1) ("a")
+      kit.assertReady()
 
       cb = new CallbackCaptor [Unit]
-      sys.checkpoint (cb)
+      kit.checkpoint (cb)
       disk1.expectFlush (0, 0, 52)
       scheduler.runTasks()
       assert (!cb.wasInvoked)
       disk1.failLast (new Exception)
       scheduler.runTasks()
       cb.failed
-      sys.expectDisks (2) ("a")
-      sys.assertPanicked()
+      kit.expectDisks (2) ("a")
+      kit.assertPanicked()
     }}
 
   "When the DiskSystem is Attaching it should" - {
@@ -461,13 +461,13 @@ class DiskSystemSpec extends FreeSpec {
     "queue a second attach then complete it after the first attach" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndHold (("a", disk1, big))
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndHold (("a", disk1, big))
 
       val disk2 = new RichStubFile (scheduler)
-      sys.attachAndPass (("b", disk2, big))
-      sys.expectDisks (2) ("a", "b")
-      expectResult (2) (sys.disks.size)
+      kit.attachAndPass (("b", disk2, big))
+      kit.expectDisks (2) ("a", "b")
+      expectResult (2) (kit.disks.size)
       disk1.expectSuperBlock(mkSuperBlock (1, Set ("a"), big))
       disk1.expectSuperBlock(mkSuperBlock (2, Set ("a", "b"), big))
       disk2.expectSuperBlock(mkSuperBlock (2, Set ("a", "b"), big))
@@ -476,23 +476,23 @@ class DiskSystemSpec extends FreeSpec {
     "reject reattaching a disk" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndHold (("a", disk1, big))
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndHold (("a", disk1, big))
 
       val disk2 = new MockFile
-      sys.reattachAndFail [RecoveryCompletedException] (("b", disk2))
-      sys.expectDisks (1) ("a")
+      kit.reattachAndFail [RecoveryCompletedException] (("b", disk2))
+      kit.expectDisks (1) ("a")
       disk1.expectSuperBlock (mkSuperBlock (1, Set ("a"), big))
     }
 
     "queue a checkpoint and complete it with the attach" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndHold (("a", disk1, big))
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndHold (("a", disk1, big))
 
-      sys.checkpointAndPass()
-      sys.expectDisks (1) ("a")
+      kit.checkpointAndPass()
+      kit.expectDisks (1) ("a")
       disk1.expectSuperBlock (mkSuperBlock (1, Set ("a"), big))
     }}
 
@@ -502,12 +502,12 @@ class DiskSystemSpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
       disk1.writeSuperBlock( mkSuperBlock (1, Set ("a"), big))
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndHold (("a", disk1))
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndHold (("a", disk1))
 
       val disk2 = new RichStubFile (scheduler)
-      sys.attachAndPass (("b", disk2, big))
-      sys.expectDisks (2) ("a", "b")
+      kit.attachAndPass (("b", disk2, big))
+      kit.expectDisks (2) ("a", "b")
       disk1.expectSuperBlock(mkSuperBlock (1, Set ("a"), big))
       disk1.expectSuperBlock(mkSuperBlock (2, Set ("a", "b"), big))
       disk2.expectSuperBlock(mkSuperBlock (2, Set ("a", "b"), big))
@@ -517,12 +517,12 @@ class DiskSystemSpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
       disk1.writeSuperBlock( mkSuperBlock (1, Set ("a"), big))
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndHold (("a", disk1))
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndHold (("a", disk1))
 
       val disk2 = new MockFile
-      sys.reattachAndFail [RecoveryCompletedException] (("b", disk2))
-      sys.expectDisks (1) ("a")
+      kit.reattachAndFail [RecoveryCompletedException] (("b", disk2))
+      kit.expectDisks (1) ("a")
       disk1.expectSuperBlock (mkSuperBlock (1, Set ("a"), big))
     }
 
@@ -530,11 +530,11 @@ class DiskSystemSpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
       disk1.writeSuperBlock( mkSuperBlock (1, Set ("a"), big))
-      val sys = new RichDiskSystem (scheduler)
-      sys.reattachAndHold (("a", disk1))
+      val kit = new RichDisksKit (scheduler)
+      kit.reattachAndHold (("a", disk1))
 
-      sys.checkpointAndPass()
-      sys.expectDisks (2) ("a")
+      kit.checkpointAndPass()
+      kit.expectDisks (2) ("a")
       disk1.expectSuperBlock (mkSuperBlock (1, Set ("a"), big))
       disk1.expectSuperBlock (mkSuperBlock (2, Set ("a"), big))
     }
@@ -545,13 +545,13 @@ class DiskSystemSpec extends FreeSpec {
     "queue an attach then complete it after the checkpoint" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndPass (("a", disk1, big))
-      sys.checkpointAndHold()
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndPass (("a", disk1, big))
+      kit.checkpointAndHold()
 
       val disk2 = new RichStubFile (scheduler)
-      sys.attachAndPass (("b", disk2, big))
-      sys.expectDisks (3) ("a", "b")
+      kit.attachAndPass (("b", disk2, big))
+      kit.expectDisks (3) ("a", "b")
       disk1.expectSuperBlock(mkSuperBlock (2, Set ("a"), big))
       disk1.expectSuperBlock(mkSuperBlock (3, Set ("a", "b"), big))
       disk2.expectSuperBlock(mkSuperBlock (3, Set ("a", "b"), big))
@@ -560,13 +560,13 @@ class DiskSystemSpec extends FreeSpec {
     "reject reattaching a disk" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndPass (("a", disk1, big))
-      sys.checkpointAndHold()
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndPass (("a", disk1, big))
+      kit.checkpointAndHold()
 
       val disk2 = new MockFile
-      sys.reattachAndFail [RecoveryCompletedException] (("b", disk2))
-      sys.expectDisks (2) ("a")
+      kit.reattachAndFail [RecoveryCompletedException] (("b", disk2))
+      kit.expectDisks (2) ("a")
       disk1.expectSuperBlock (mkSuperBlock (1, Set ("a"), big))
       disk1.expectSuperBlock (mkSuperBlock (2, Set ("a"), big))
     }
@@ -574,12 +574,12 @@ class DiskSystemSpec extends FreeSpec {
     "queue a second checkpoint and complete it with the first checkpoint" in {
       implicit val scheduler = StubScheduler.random()
       val disk1 = new RichStubFile (scheduler)
-      val sys = new RichDiskSystem (scheduler)
-      sys.attachAndPass (("a", disk1, big))
-      sys.checkpointAndHold()
+      val kit = new RichDisksKit (scheduler)
+      kit.attachAndPass (("a", disk1, big))
+      kit.checkpointAndHold()
 
-      sys.checkpointAndPass()
-      sys.expectDisks (2) ("a")
+      kit.checkpointAndPass()
+      kit.expectDisks (2) ("a")
       disk1.expectSuperBlock (mkSuperBlock (1, Set ("a"), big))
       disk1.expectSuperBlock (mkSuperBlock (2, Set ("a"), big))
     }}}

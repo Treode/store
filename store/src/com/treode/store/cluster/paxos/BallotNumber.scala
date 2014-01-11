@@ -2,7 +2,7 @@ package com.treode.store.cluster.paxos
 
 import com.treode.cluster.HostId
 
-private class BallotNumber private (
+class BallotNumber private (
     val number: Long,
     val host: HostId) extends Ordered [BallotNumber] {
 
@@ -25,7 +25,7 @@ private class BallotNumber private (
   override def toString = f"BallotNumber:$number%X:${host.id}%X"
 }
 
-private object BallotNumber extends Ordering [BallotNumber] {
+object BallotNumber extends Ordering [BallotNumber] {
 
   val zero = new BallotNumber (0, 0)
 

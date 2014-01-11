@@ -4,9 +4,10 @@ import java.util.concurrent.ConcurrentHashMap
 
 import com.treode.async.{Callback, guard}
 import com.treode.cluster.Host
-import com.treode.store.{Bytes, PaxosStore}
+import com.treode.store.{Bytes, PaxosStore, SimpleAccessor, SimpleStore}
+import com.treode.store.disk2.Disks
 
-private class PaxosKit (implicit val host: Host) extends PaxosStore {
+private class PaxosKit (implicit val host: Host, val disks: Disks) extends PaxosStore {
   import host.random
 
   object Acceptors {
@@ -103,6 +104,6 @@ private class PaxosKit (implicit val host: Host) extends PaxosStore {
 
 private [store] object PaxosKit {
 
-  def apply (host: Host): PaxosStore =
-    new PaxosKit () (host)
+  def apply (host: Host, disks: Disks): PaxosStore =
+    new PaxosKit () (host, disks)
 }

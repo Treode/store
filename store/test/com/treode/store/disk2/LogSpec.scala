@@ -8,7 +8,7 @@ import LogEntry.{Envelope, Update}
 
 class LogSpec extends FlatSpec {
 
-  val config = new DiskDriveConfig (6, 3, 2, 1<<20)
+  val config = DiskDriveConfig (6, 2, 1<<20)
 
   "It" should "work" in {
     val scheduler = StubScheduler.random()
