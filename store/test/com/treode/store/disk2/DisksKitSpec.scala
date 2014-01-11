@@ -435,7 +435,7 @@ class DisksKitSpec extends FreeSpec {
       disk1.expectFlush (DiskLeadBytes, 0, 20)
       scheduler.runTasks()
       disk1.completeLast()
-      disk1.expectFlush (SuperBlockBytes, 0, 52)
+      disk1.expectFlush (SuperBlockBytes, 0, 51)
       scheduler.runTasks()
       assert (!cb.wasInvoked)
       disk1.completeLast()
@@ -446,7 +446,7 @@ class DisksKitSpec extends FreeSpec {
 
       cb = new CallbackCaptor [Unit]
       kit.checkpoint (cb)
-      disk1.expectFlush (0, 0, 52)
+      disk1.expectFlush (0, 0, 51)
       scheduler.runTasks()
       assert (!cb.wasInvoked)
       disk1.failLast (new Exception)
