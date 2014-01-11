@@ -56,8 +56,7 @@ object DiskDriveConfig {
 
   val pickle = {
     import Picklers._
-    wrap3 (int, int, long) {
-      (a, b, c) => new DiskDriveConfig (a, b, c)
-    } {
-      v => (v.segmentBits, v.blockBits, v.diskBytes)
-    }}}
+    wrap (int, int, long)
+    .build ((apply _).tupled)
+    .inspect (v => (v.segmentBits, v.blockBits, v.diskBytes))
+  }}

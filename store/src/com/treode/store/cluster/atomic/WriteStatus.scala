@@ -15,7 +15,9 @@ private object WriteStatus {
   val pickle = {
     import AtomicPicklers._
     tagged [WriteStatus] (
-        0x1 -> wrap2 (txClock, seq (writeOp)) (Prepared.apply _) (v => (v.ft, v.ops)),
+        0x1 -> wrap (txClock, seq (writeOp))
+            .build ((Prepared.apply _).tupled)
+            .inspect (v => (v.ft, v.ops)),
         0x2 -> const (Committed),
         0x3 -> const (Aborted))
   }}

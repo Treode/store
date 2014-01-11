@@ -16,5 +16,5 @@ object TableId {
 
   val pickle = {
     import Picklers._
-    wrap1 (fixedLong) (apply _) (_.id)
+    wrap (fixedLong) build (apply _) inspect (_.id)
   }}

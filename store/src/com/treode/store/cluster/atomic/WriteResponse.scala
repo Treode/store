@@ -16,8 +16,8 @@ private object WriteResponse {
   val pickle = {
     import AtomicPicklers._
     tagged [WriteResponse] (
-        0x1 -> wrap1 (txClock) (Prepared.apply _) (_.ft),
-        0x2 -> wrap1 (set (int)) (Collisions.apply _) (_.ks),
+        0x1 -> wrap (txClock) .build (Prepared.apply _) .inspect (_.ft),
+        0x2 -> wrap (set (int)) .build (Collisions.apply _) .inspect (_.ks),
         0x3 -> const (Advance),
         0x4 -> const (Committed),
         0x5 -> const (Aborted),

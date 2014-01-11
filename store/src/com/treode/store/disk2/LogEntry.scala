@@ -27,13 +27,27 @@ object LogEntry {
       val bytes = Bytes.pickle
       tagged [Body] (
           0x00405750E4FE92DAL -> const (End),
-          0x1 -> wrap1 (int) (Continue.apply _) (_.seg),
-          0x2 -> wrap2 (bytes, bytes) (PaxosOpen.apply _) (v => (v.key, v.default)),
-          0x3 -> wrap2 (bytes, ballot) (PaxosPromise.apply _) (v => (v.key, v.ballot)),
-          0x4 -> wrap3 (bytes, ballot, bytes) (PaxosAccept.apply _) (v => (v.key, v.ballot, v.value)),
-          0x5 -> wrap2 (bytes, ballot) (PaxosReaccept.apply _) (v => (v.key, v.ballot)),
-          0x6 -> wrap2 (bytes, bytes) (PaxosClose.apply _) (v => (v.key, v.value)),
-          0x7 -> wrap1 (string) (Update.apply _) (_.s))
+          0x1 -> wrap (int)
+              .build (Continue.apply _)
+              .inspect (_.seg),
+          0x2 -> wrap (bytes, bytes)
+              .build ((PaxosOpen.apply _).tupled)
+              .inspect (v => (v.key, v.default)),
+          0x3 -> wrap (bytes, ballot)
+              .build ((PaxosPromise.apply _).tupled)
+              .inspect (v => (v.key, v.ballot)),
+          0x4 -> wrap (bytes, ballot, bytes)
+              .build ((PaxosAccept.apply _).tupled)
+              .inspect (v => (v.key, v.ballot, v.value)),
+          0x5 -> wrap (bytes, ballot)
+              .build ((PaxosReaccept.apply _).tupled)
+              .inspect (v => (v.key, v.ballot)),
+          0x6 -> wrap (bytes, bytes)
+              .build ((PaxosClose.apply _).tupled)
+              .inspect (v => (v.key, v.value)),
+          0x7 -> wrap (string)
+              .build (Update.apply _)
+              .inspect (_.s))
     }}
 
   case class Header (time: Long, len: Int)
@@ -44,7 +58,9 @@ object LogEntry {
 
     val pickle = {
       import Picklers._
-      wrap2 (fixedLong, fixedInt) (Header.apply _) (v => (v.time, v.len))
+      wrap (fixedLong, fixedInt)
+      .build ((Header.apply _).tupled)
+      .inspect (v => (v.time, v.len))
     }}
 
   case class Envelope (hdr: Header, body: Body) extends Ordered [Envelope] {

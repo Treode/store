@@ -17,8 +17,7 @@ private object SuperBlock {
     val config = DiskDriveConfig.pickle
     val alloc = Allocator.Meta.pickle
     val log = LogWriter.Meta.pickle
-    wrap4 (boot, config, alloc, log) {
-      SuperBlock.apply _
-    } {
-      v => (v.boot, v.config, v.alloc, v.log)
-    }}}
+    wrap (boot, config, alloc, log)
+    .build ((SuperBlock.apply _).tupled)
+    .inspect (v => (v.boot, v.config, v.alloc, v.log))
+  }}

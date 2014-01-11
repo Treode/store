@@ -9,6 +9,6 @@ private object BootBlock {
 
   val pickle = {
     import Picklers._
-    val path = wrap1 (string) (Paths.get (_)) (_.toString)
-    wrap2 (int, set (path)) (BootBlock.apply _) (v => (v.gen, v.disks))
+    val path = wrap (string) build (Paths.get (_)) inspect (_.toString)
+    wrap (int, set (path)) build ((apply _).tupled) inspect (v => (v.gen, v.disks))
   }}

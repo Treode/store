@@ -14,5 +14,7 @@ object Value {
 
   val pickle = {
     import StorePicklers._
-    wrap2 (txClock, option (bytes)) (apply _) (v => (v.time, v.value))
+    wrap (txClock, option (bytes))
+    .build ((apply _).tupled)
+    .inspect (v => (v.time, v.value))
   }}

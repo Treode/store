@@ -35,5 +35,9 @@ object BallotNumber extends Ordering [BallotNumber] {
 
   val pickle = {
     import PaxosPicklers._
-    wrap2 (long, hostId) (BallotNumber.apply _) (v => (v.number, v.host))
+    wrap (long, hostId) build {
+      v => BallotNumber (v._1, v._2)
+    } inspect {
+      v => (v.number, v.host)
+    }
   }}

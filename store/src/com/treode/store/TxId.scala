@@ -17,5 +17,5 @@ object TxId {
 
   val pickle = {
     import StorePicklers._
-    wrap1 (bytes) (apply _) (_.id)
+    wrap (bytes) build (apply _) inspect (_.id)
   }}

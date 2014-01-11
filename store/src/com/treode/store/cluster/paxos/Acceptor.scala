@@ -21,32 +21,32 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
   private val fiber = new Fiber (scheduler)
   var state: State = new Restoring
 
-  val _recorded = new Callback [Unit] {
+  val recorded = new Callback [Unit] {
     def pass (v: Unit): Unit = fiber.execute (state.recorded())
     def fail (t: Throwable): Unit = fiber.execute (state = new Panicked (t))
   }
 
   def open (ballot: Long, default: Bytes, from: Peer): Post =
     new Post {
-      def record = disks.record (PaxosOpen (key, default), _recorded)
+      def record = disks.record (PaxosOpen (key, default), recorded)
       def reply() = Proposer.promise (key, ballot, None) (from)
     }
 
   def promise (ballot: BallotNumber, proposal: Proposal, from: Peer): Post =
     new Post {
-      def record = disks.record (PaxosPromise (key, ballot), _recorded)
+      def record = disks.record (PaxosPromise (key, ballot), recorded)
       def reply() = Proposer.promise (key, ballot.number, proposal) (from)
     }
 
   def accept (ballot: BallotNumber, value: Bytes, from: Peer): Post =
     new Post {
-      def record() = disks.record (PaxosAccept (key, ballot, value), _recorded)
+      def record() = disks.record (PaxosAccept (key, ballot, value), recorded)
       def reply() = Proposer.accept (key, ballot.number) (from)
     }
 
   def reaccept (ballot: BallotNumber, from: Peer): Post =
     new Post {
-      def record() = disks.record (PaxosReaccept (key, ballot), _recorded)
+      def record() = disks.record (PaxosReaccept (key, ballot), recorded)
       def reply() = Proposer.accept (key, ballot.number) (from)
     }
 

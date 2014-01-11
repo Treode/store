@@ -38,5 +38,7 @@ private object TimedCell extends Ordering [TimedCell] {
 
   val pickle = {
     import StorePicklers._
-    wrap3 (bytes, txClock, option (bytes)) (TimedCell.apply _) (v => (v.key, v.time, v.value))
+    wrap (bytes, txClock, option (bytes))
+    .build ((apply _).tupled)
+    .inspect (v => (v.key, v.time, v.value))
   }}

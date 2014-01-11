@@ -190,7 +190,9 @@ trait Picklers {
   def map [K, V] (pk: Pickler [K], pv: Pickler [V]) = {
     require (pk != null)
     require (pv != null)
-    wrap1 (list (tuple (pk, pv))) (kvs => Map (kvs: _*)) (m => m.toList)
+    wrap (list (tuple (pk, pv)))
+    .build (kvs => Map (kvs: _*))
+    .inspect (m => m.toList)
   }
 
   def option [A] (pa: Pickler [A]): Pickler [Option [A]] = {
@@ -249,8 +251,11 @@ trait Picklers {
     def sortedMap [K, V] (pk: Pickler [K], pv: Pickler [V]) (implicit ordk: Ordering [K]) = {
       require (pk != null)
       require (pv != null)
-      wrap1 (list (tuple (pk, pv))) (kvs => SortedMap (kvs: _*)) (m => m.toList)
+      wrap (list (tuple (pk, pv)))
+      .build (kvs => SortedMap (kvs: _*))
+      .inspect (m => m.toList)
     }}
+
 
   object java {
     import _root_.java.lang.Enum
@@ -1256,247 +1261,79 @@ trait Picklers {
         "tuple " + (pa, pb, pc, pd, pe, pf, pg, ph, pi, pj, pk, pl, pm, pn, po, pp, pq, pr)
     }}
 
-  def wrap1 [A, V] (pa: Pickler [A]) (build: A => V) (inspect: V => A) (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+  private def _wrap [A, B] (
+      pickler: Pickler [A],
+      build: A => B,
+      inspect: B => A,
+      tag: ClassTag [B]): Pickler [B] =
+    new Pickler [B] {
+      def p (v: B, ctx: PickleContext): Unit = pickler.p (inspect (v), ctx)
+      def u (ctx: UnpickleContext): B = build (pickler.u (ctx))
+      override def toString = tag.runtimeClass.getSimpleName
+  }
 
-    require (pa != null)
+  class WrapInspect [A, B] (pickler: Pickler [A], build: A => B) {
+    def inspect (f: B => A) (implicit t: ClassTag [B]) = _wrap (pickler, build, f, t)
+  }
 
-    new Pickler [V] {
+  class WrapBuild [A] (pickler: Pickler [A]) {
+    def build [B] (f: A => B) = new WrapInspect (pickler, f)
+  }
 
-      def p (v: V, ctx: PickleContext) {
-        pa.p (inspect (v), ctx)
-      }
+  trait Wrap [T] {
+    def apply [V] (build: T => V, inspect: V => T) (implicit ct: ClassTag [V]): Pickler [V]
+  }
 
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx))
-      }
+  def wrap [A] (
+      pa: Pickler [A]) =
+        new WrapBuild (pa)
 
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap2 [A, B, V] (
+  def wrap [A, B] (
       pa: Pickler [A],
-      pb: Pickler [B])
-      (build: (A, B) => V)
-      (inspect: V => (A, B))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pb: Pickler [B]) =
+        new WrapBuild (tuple (pa, pb))
 
-    require (pa != null)
-    require (pb != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap3 [A, B, C, V] (
+  def wrap [A, B, C] (
       pa: Pickler [A],
       pb: Pickler [B],
-      pc: Pickler [C])
-      (build: (A, B, C) => V)
-      (inspect: V => (A, B, C))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pc: Pickler [C]) =
+        new WrapBuild (tuple (pa, pb, pc))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap4 [A, B, C, D, V] (
+  def wrap [A, B, C, D] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
-      pd: Pickler [D])
-      (build: (A, B, C, D) => V)
-      (inspect: V => (A, B, C, D))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pd: Pickler [D]) =
+        new WrapBuild (tuple (pa, pb, pc, pd))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap5 [A, B, C, D, E, V] (
+  def wrap [A, B, C, D, E] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
       pd: Pickler [D],
-      pe: Pickler [E])
-      (build: (A, B, C, D, E) => V)
-      (inspect: V => (A, B, C, D, E))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pe: Pickler [E]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap6 [A, B, C, D, E, F, V] (
+  def wrap [A, B, C, D, E, F] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
       pd: Pickler [D],
       pe: Pickler [E],
-      pf: Pickler [F])
-      (build: (A, B, C, D, E, F) => V)
-      (inspect: V => (A, B, C, D, E, F))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pf: Pickler [F]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap7 [A, B, C, D, E, F, G, V] (
+  def wrap [A, B, C, D, E, F, G] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
       pd: Pickler [D],
       pe: Pickler [E],
       pf: Pickler [F],
-      pg: Pickler [G])
-      (build: (A, B, C, D, E, F, G) => V)
-      (inspect: V => (A, B, C, D, E, F, G))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pg: Pickler [G]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap8 [A, B, C, D, E, F, G, H, V] (
+  def wrap [A, B, C, D, E, F, G, H] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1504,50 +1341,10 @@ trait Picklers {
       pe: Pickler [E],
       pf: Pickler [F],
       pg: Pickler [G],
-      ph: Pickler [H])
-      (build: (A, B, C, D, E, F, G, H) => V)
-      (inspect: V => (A, B, C, D, E, F, G, H))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      ph: Pickler [H]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg, ph))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-    require (ph != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-        ph.p (vt._8, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx),
-            ph.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap9 [A, B, C, D, E, F, G, H, I, V] (
+  def wrap [A, B, C, D, E, F, G, H, I] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1556,53 +1353,10 @@ trait Picklers {
       pf: Pickler [F],
       pg: Pickler [G],
       ph: Pickler [H],
-      pi: Pickler [I])
-      (build: (A, B, C, D, E, F, G, H, I) => V)
-      (inspect: V => (A, B, C, D, E, F, G, H, I))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pi: Pickler [I]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg, ph, pi))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-    require (ph != null)
-    require (pi != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-        ph.p (vt._8, ctx)
-        pi.p (vt._9, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx),
-            ph.u (ctx),
-            pi.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap10 [A, B, C, D, E, F, G, H, I, J, V] (
+  def wrap [A, B, C, D, E, F, G, H, I, J] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1612,56 +1366,10 @@ trait Picklers {
       pg: Pickler [G],
       ph: Pickler [H],
       pi: Pickler [I],
-      pj: Pickler [J])
-      (build: (A, B, C, D, E, F, G, H, I, J) => V)
-      (inspect: V => (A, B, C, D, E, F, G, H, I, J))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pj: Pickler [J]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg, ph, pi, pj))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-    require (ph != null)
-    require (pi != null)
-    require (pj != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-        ph.p (vt._8, ctx)
-        pi.p (vt._9, ctx)
-        pj.p (vt._10, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx),
-            ph.u (ctx),
-            pi.u (ctx),
-            pj.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap11 [A, B, C, D, E, F, G, H, I, J, K, V] (
+  def wrap [A, B, C, D, E, F, G, H, I, J, K] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1672,59 +1380,10 @@ trait Picklers {
       ph: Pickler [H],
       pi: Pickler [I],
       pj: Pickler [J],
-      pk: Pickler [K])
-      (build: (A, B, C, D, E, F, G, H, I, J, K) => V)
-      (inspect: V => (A, B, C, D, E, F, G, H, I, J, K))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pk: Pickler [K]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg, ph, pi, pj, pk))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-    require (ph != null)
-    require (pi != null)
-    require (pj != null)
-    require (pk != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-        ph.p (vt._8, ctx)
-        pi.p (vt._9, ctx)
-        pj.p (vt._10, ctx)
-        pk.p (vt._11, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx),
-            ph.u (ctx),
-            pi.u (ctx),
-            pj.u (ctx),
-            pk.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap12 [A, B, C, D, E, F, G, H, I, J, K, L, V] (
+  def wrap [A, B, C, D, E, F, G, H, I, J, K, L] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1736,62 +1395,10 @@ trait Picklers {
       pi: Pickler [I],
       pj: Pickler [J],
       pk: Pickler [K],
-      pl: Pickler [L])
-      (build: (A, B, C, D, E, F, G, H, I, J, K, L) => V)
-      (inspect: V => (A, B, C, D, E, F, G, H, I, J, K, L))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pl: Pickler [L]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg, ph, pi, pj, pk, pl))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-    require (ph != null)
-    require (pi != null)
-    require (pj != null)
-    require (pk != null)
-    require (pl != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-        ph.p (vt._8, ctx)
-        pi.p (vt._9, ctx)
-        pj.p (vt._10, ctx)
-        pk.p (vt._11, ctx)
-        pl.p (vt._12, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx),
-            ph.u (ctx),
-            pi.u (ctx),
-            pj.u (ctx),
-            pk.u (ctx),
-            pl.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap13 [A, B, C, D, E, F, G, H, I, J, K, L, M, V] (
+  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1804,65 +1411,10 @@ trait Picklers {
       pj: Pickler [J],
       pk: Pickler [K],
       pl: Pickler [L],
-      pm: Pickler [M])
-      (build: (A, B, C, D, E, F, G, H, I, J, K, L, M) => V)
-      (inspect: V => (A, B, C, D, E, F, G, H, I, J, K, L, M))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pm: Pickler [M]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg, ph, pi, pj, pk, pl, pm))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-    require (ph != null)
-    require (pi != null)
-    require (pj != null)
-    require (pk != null)
-    require (pl != null)
-    require (pm != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-        ph.p (vt._8, ctx)
-        pi.p (vt._9, ctx)
-        pj.p (vt._10, ctx)
-        pk.p (vt._11, ctx)
-        pl.p (vt._12, ctx)
-        pm.p (vt._13, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx),
-            ph.u (ctx),
-            pi.u (ctx),
-            pj.u (ctx),
-            pk.u (ctx),
-            pl.u (ctx),
-            pm.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap14 [A, B, C, D, E, F, G, H, I, J, K, L, M, N, V] (
+  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M, N] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1876,68 +1428,10 @@ trait Picklers {
       pk: Pickler [K],
       pl: Pickler [L],
       pm: Pickler [M],
-      pn: Pickler [N])
-      (build: (A, B, C, D, E, F, G, H, I, J, K, L, M, N) => V)
-      (inspect: V => (A, B, C, D, E, F, G, H, I, J, K, L, M, N))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pn: Pickler [N]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg, ph, pi, pj, pk, pl, pm, pn))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-    require (ph != null)
-    require (pi != null)
-    require (pj != null)
-    require (pk != null)
-    require (pl != null)
-    require (pm != null)
-    require (pn != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-        ph.p (vt._8, ctx)
-        pi.p (vt._9, ctx)
-        pj.p (vt._10, ctx)
-        pk.p (vt._11, ctx)
-        pl.p (vt._12, ctx)
-        pm.p (vt._13, ctx)
-        pn.p (vt._14, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx),
-            ph.u (ctx),
-            pi.u (ctx),
-            pj.u (ctx),
-            pk.u (ctx),
-            pl.u (ctx),
-            pm.u (ctx),
-            pn.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap15 [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, V] (
+  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -1952,71 +1446,10 @@ trait Picklers {
       pl: Pickler [L],
       pm: Pickler [M],
       pn: Pickler [N],
-      po: Pickler [O])
-      (build: (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O) => V)
-      (inspect: V => (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      po: Pickler [O]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg, ph, pi, pj, pk, pl, pm, pn, po))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-    require (ph != null)
-    require (pi != null)
-    require (pj != null)
-    require (pk != null)
-    require (pl != null)
-    require (pm != null)
-    require (pn != null)
-    require (po != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-        ph.p (vt._8, ctx)
-        pi.p (vt._9, ctx)
-        pj.p (vt._10, ctx)
-        pk.p (vt._11, ctx)
-        pl.p (vt._12, ctx)
-        pm.p (vt._13, ctx)
-        pn.p (vt._14, ctx)
-        po.p (vt._15, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx),
-            ph.u (ctx),
-            pi.u (ctx),
-            pj.u (ctx),
-            pk.u (ctx),
-            pl.u (ctx),
-            pm.u (ctx),
-            pn.u (ctx),
-            po.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap16 [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, V] (
+  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -2032,74 +1465,10 @@ trait Picklers {
       pm: Pickler [M],
       pn: Pickler [N],
       po: Pickler [O],
-      pp: Pickler [P])
-      (build: (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P) => V)
-      (inspect: V => (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pp: Pickler [P]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg, ph, pi, pj, pk, pl, pm, pn, po, pp))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-    require (ph != null)
-    require (pi != null)
-    require (pj != null)
-    require (pk != null)
-    require (pl != null)
-    require (pm != null)
-    require (pn != null)
-    require (po != null)
-    require (pp != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-        ph.p (vt._8, ctx)
-        pi.p (vt._9, ctx)
-        pj.p (vt._10, ctx)
-        pk.p (vt._11, ctx)
-        pl.p (vt._12, ctx)
-        pm.p (vt._13, ctx)
-        pn.p (vt._14, ctx)
-        po.p (vt._15, ctx)
-        pp.p (vt._16, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx),
-            ph.u (ctx),
-            pi.u (ctx),
-            pj.u (ctx),
-            pk.u (ctx),
-            pl.u (ctx),
-            pm.u (ctx),
-            pn.u (ctx),
-            po.u (ctx),
-            pp.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap17 [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, V] (
+  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -2116,77 +1485,10 @@ trait Picklers {
       pn: Pickler [N],
       po: Pickler [O],
       pp: Pickler [P],
-      pq: Pickler [Q])
-      (build: (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q) => V)
-      (inspect: V => (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
+      pq: Pickler [Q]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg, ph, pi, pj, pk, pl, pm, pn, po, pp, pq))
 
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-    require (ph != null)
-    require (pi != null)
-    require (pj != null)
-    require (pk != null)
-    require (pl != null)
-    require (pm != null)
-    require (pn != null)
-    require (po != null)
-    require (pp != null)
-    require (pq != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-        ph.p (vt._8, ctx)
-        pi.p (vt._9, ctx)
-        pj.p (vt._10, ctx)
-        pk.p (vt._11, ctx)
-        pl.p (vt._12, ctx)
-        pm.p (vt._13, ctx)
-        pn.p (vt._14, ctx)
-        po.p (vt._15, ctx)
-        pp.p (vt._16, ctx)
-        pq.p (vt._17, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx),
-            ph.u (ctx),
-            pi.u (ctx),
-            pj.u (ctx),
-            pk.u (ctx),
-            pl.u (ctx),
-            pm.u (ctx),
-            pn.u (ctx),
-            po.u (ctx),
-            pp.u (ctx),
-            pq.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}
-
-  def wrap18 [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R, V] (
+  def wrap [A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R] (
       pa: Pickler [A],
       pb: Pickler [B],
       pc: Pickler [C],
@@ -2204,78 +1506,9 @@ trait Picklers {
       po: Pickler [O],
       pp: Pickler [P],
       pq: Pickler [Q],
-      pr: Pickler [R])
-      (build: (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R) => V)
-      (inspect: V => (A, B, C, D, E, F, G, H, I, J, K, L, M, N, O, P, Q, R))
-      (implicit ct: ClassTag [V]):
-      Pickler [V] = {
-
-    require (pa != null)
-    require (pb != null)
-    require (pc != null)
-    require (pd != null)
-    require (pe != null)
-    require (pf != null)
-    require (pg != null)
-    require (ph != null)
-    require (pi != null)
-    require (pj != null)
-    require (pk != null)
-    require (pl != null)
-    require (pm != null)
-    require (pn != null)
-    require (po != null)
-    require (pp != null)
-    require (pq != null)
-    require (pr != null)
-
-    new Pickler [V] {
-
-      def p (v: V, ctx: PickleContext) {
-        val vt = inspect (v)
-        pa.p (vt._1, ctx)
-        pb.p (vt._2, ctx)
-        pc.p (vt._3, ctx)
-        pd.p (vt._4, ctx)
-        pe.p (vt._5, ctx)
-        pf.p (vt._6, ctx)
-        pg.p (vt._7, ctx)
-        ph.p (vt._8, ctx)
-        pi.p (vt._9, ctx)
-        pj.p (vt._10, ctx)
-        pk.p (vt._11, ctx)
-        pl.p (vt._12, ctx)
-        pm.p (vt._13, ctx)
-        pn.p (vt._14, ctx)
-        po.p (vt._15, ctx)
-        pp.p (vt._16, ctx)
-        pq.p (vt._17, ctx)
-        pr.p (vt._18, ctx)
-      }
-
-      def u (ctx: UnpickleContext) = {
-        build (pa.u (ctx),
-            pb.u (ctx),
-            pc.u (ctx),
-            pd.u (ctx),
-            pe.u (ctx),
-            pf.u (ctx),
-            pg.u (ctx),
-            ph.u (ctx),
-            pi.u (ctx),
-            pj.u (ctx),
-            pk.u (ctx),
-            pl.u (ctx),
-            pm.u (ctx),
-            pn.u (ctx),
-            po.u (ctx),
-            pp.u (ctx),
-            pq.u (ctx),
-            pr.u (ctx))
-      }
-
-      override def toString = ct.runtimeClass.getSimpleName
-    }}}
+      pr: Pickler [R]) =
+        new WrapBuild (tuple (pa, pb, pc, pd, pe, pf, pg, ph, pi, pj, pk, pl, pm, pn, po, pp, pq, pr))
+}
 
 object Picklers extends Picklers {
 

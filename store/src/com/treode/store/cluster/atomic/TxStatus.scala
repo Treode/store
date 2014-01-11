@@ -14,5 +14,5 @@ object TxStatus {
     import AtomicPicklers._
     tagged [TxStatus] (
         0x1 -> const (Aborted),
-        0x2 -> wrap1 (txClock) (Committed.apply _) (_.wt))
+        0x2 -> wrap (txClock) .build (Committed.apply _) .inspect (_.wt))
   }}

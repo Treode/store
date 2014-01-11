@@ -124,5 +124,5 @@ object LogWriter {
 
     val pickle = {
       import Picklers._
-      wrap1 (long) (Meta.apply _) (_.head)
+      wrap (long) build (Meta.apply _) inspect (_.head)
     }}}

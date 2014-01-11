@@ -52,5 +52,7 @@ object FreeSet {
 
   def pickle (maxRanges: Int) = {
     import Picklers._
-    wrap1 (immutable.sortedMap (int, int)) (new FreeSet (maxRanges, _)) (_.ranges)
+    wrap (immutable.sortedMap (int, int))
+    .build (new FreeSet (maxRanges, _))
+    .inspect (_.ranges)
   }}

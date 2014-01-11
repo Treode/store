@@ -6,5 +6,5 @@ object ReadOp {
 
   val pickle = {
     import StorePicklers._
-    wrap2 (tableId, bytes) (apply _) (v => (v.table, v.key))
+    wrap (tableId, bytes) build ((apply _).tupled) inspect (v => (v.table, v.key))
   }}

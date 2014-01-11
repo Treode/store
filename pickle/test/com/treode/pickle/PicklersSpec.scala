@@ -18,27 +18,24 @@ private trait PicklersSpecCommon extends ShouldMatchers {
   case class Link (name: String, link: Url) extends Bookmark
   case class Folder (name: String, bookmarks: List [Bookmark]) extends Bookmark
 
-  val url = wrap3 (string, int, string) {
-    Url.apply _
-  } {
-    x => (x.host, x.port, x.path)
-  }
+  val url =
+    wrap (string, int, string)
+    .build (x => Url.apply (x._1, x._2, x._3))
+    .inspect (x => (x.host, x.port, x.path))
 
   val bookmark = laze (tagged [Bookmark] (
       0x1 -> link,
       0x2 -> folder))
 
-  val link = wrap2 (string, url) {
-    Link.apply _
-  } {
-    x => (x.name, x.link)
-  }
+  val link =
+    wrap (string, url)
+    .build (x => Link (x._1, x._2))
+    .inspect (x => (x.name, x.link))
 
-  val folder: Pickler [Folder] = wrap2 (string, list (bookmark)) {
-    Folder.apply _
-  } {
-    x => (x.name, x.bookmarks)
-  }
+  val folder: Pickler [Folder] =
+    wrap (string, list (bookmark))
+    .build (x => Folder (x._1, x._2))
+    .inspect (x => (x.name, x.bookmarks))
 
   def check [A] (pa: Pickler [A], x: A) {
     expectResult (x) {

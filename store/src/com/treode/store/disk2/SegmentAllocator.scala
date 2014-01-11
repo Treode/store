@@ -48,6 +48,6 @@ private object Allocator {
     val pickle = {
       import Picklers._
       val intset = IntSet.pickle
-      wrap1 (intset) (Meta.apply _) (_.free)
+      wrap (intset) build (Meta.apply _) inspect (_.free)
     }}
 }

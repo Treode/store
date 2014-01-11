@@ -12,6 +12,6 @@ private object ReadResponse {
   val pickle = {
     import AtomicPicklers._
     tagged [ReadResponse] (
-        0x1 -> wrap1 (seq (value)) (Got.apply _) (_.vs),
+        0x1 -> wrap (seq (value)) .build (Got.apply _) .inspect (_.vs),
         0x2 -> const (Failed))
   }}
