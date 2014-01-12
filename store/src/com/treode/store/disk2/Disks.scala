@@ -6,6 +6,8 @@ import java.util.concurrent.ExecutorService
 import com.google.common.annotations.VisibleForTesting
 import com.treode.async.{Callback, Scheduler}
 import com.treode.async.io.File
+import com.treode.cluster.events.Events
+import com.treode.pickle.Pickler
 
 trait Disks {
 
@@ -13,12 +15,13 @@ trait Disks {
   def reattach (items: Seq [Path], executor: ExecutorService, cb: Callback [Unit])
   def attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit])
   def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Unit])
-  def record (entry: LogEntry.Body, cb: Callback [Unit])
+
+  def register [R] (p: Pickler [R], id: TypeId) (f: R => Any)
+  def record [R] (p: Pickler [R], id: TypeId, entry: R, cb: Callback [Unit])
 }
 
 object Disks {
 
-  def apply (scheduler: Scheduler): Disks =
-    new DisksKit (scheduler)
+  def apply (scheduler: Scheduler, events: Events): Disks =
+    new DisksKit (scheduler, events)
 }
-

@@ -31,7 +31,6 @@ class MailboxRegistry (implicit events: Events) {
     try {
       f (from, buffer)
       if (buffer.readPos != end) {
-        println ((buffer.readPos, end))
         events.unpicklingMessageConsumedWrongNumberOfBytes (id)
         buffer.readPos = end
         buffer.discard (end)

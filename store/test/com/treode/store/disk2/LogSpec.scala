@@ -2,13 +2,15 @@ package com.treode.store.disk2
 
 import com.treode.async._
 import com.treode.async.io.StubFile
+import com.treode.cluster.events.StubEvents
+import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec
-
-import LogEntry.{Envelope, Update}
 
 class LogSpec extends FlatSpec {
 
   val config = DiskDriveConfig (6, 2, 1<<20)
+
+  val update = new RecordDescriptor (0x0E4F8ABF, Picklers.string)
 
   "It" should "work" in {
     val scheduler = StubScheduler.random()
@@ -16,32 +18,32 @@ class LogSpec extends FlatSpec {
     val alloc = new SegmentAllocator (config)
     val dispatcher = new LogDispatcher (scheduler)
     val writer = new LogWriter (file, alloc, scheduler, dispatcher)
+    val registry = new RecordRegistry (StubEvents)
 
     alloc.init()
     writer.init (Callback.ignore)
     scheduler.runTasks()
     dispatcher.engage (writer)
 
+    var replayed = Seq.empty [String]
+    update.register (registry) (replayed :+= _)
+
     for (i <- 0 until 9)
-      dispatcher.record (Update ("apple"), Callback.ignore)
+      update (dispatcher) ("apple") (Callback.ignore)
     scheduler.runTasks()
 
     val cb1 = new CallbackCaptor [LogIterator]
-    LogIterator (file, writer.head, alloc, cb1)
+    LogIterator (file, writer.head, alloc, registry, cb1)
     scheduler.runTasks()
-    val cb2 = new CallbackCaptor [Seq [Envelope]]
+    val cb2 = new CallbackCaptor [Seq [Replay]]
     AsyncIterator.scan (cb1.passed, cb2)
     scheduler.runTasks()
     val entries = cb2.passed
-    expectResult (9) {
-      entries count { e =>
-        e.body match {
-          case body: Update => body.s == "apple"
-          case _ => false
-        }}}
+    entries foreach (_.replay())
+    expectResult (9) (replayed.size)
+    assert (replayed forall (_ == "apple"))
     var time = 0L
-    println (entries)
     for (e <- entries) {
-      assert (e.hdr.time >= time)
-      time = e.hdr.time
+      assert (e.time >= time)
+      time = e.time
     }}}

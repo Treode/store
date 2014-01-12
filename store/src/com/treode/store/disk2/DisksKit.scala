@@ -7,10 +7,11 @@ import scala.collection.immutable.Queue
 
 import com.treode.async._
 import com.treode.async.io.File
+import com.treode.cluster.events.Events
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.unpickle
+import com.treode.pickle.{Pickler, unpickle}
 
-private class DisksKit (scheduler: Scheduler) extends Disks {
+private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
 
   case class SuperBlocks (path: Path, file: File, sb1: Option [SuperBlock], sb2: Option [SuperBlock])
   case class Attachment (disks: Seq [DiskDrive], cb: Callback [Unit])
@@ -19,6 +20,7 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
   type Checkpoints = List [Callback [Unit]]
 
   val fiber = new Fiber (scheduler)
+  val records = new RecordRegistry (events)
   val log = new LogDispatcher (scheduler)
   var disks = Set.empty [DiskDrive]
   var generation = 0
@@ -361,8 +363,11 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
   def checkpoint (cb: Callback [Unit]): Unit =
     fiber.execute (state.checkpoint (cb))
 
-  def record (entry: LogEntry.Body, cb: Callback [Unit]): Unit =
-    log.record (entry, cb)
+  def register [R] (p: Pickler [R], id: TypeId) (f: R => Any): Unit =
+    records.register (p, id) (f)
+
+  def record [R] (p: Pickler [R], id: TypeId, entry: R, cb: Callback [Unit]): Unit =
+    log.record (p, id, entry, cb)
 
   override def toString = state.toString
 }

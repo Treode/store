@@ -6,6 +6,7 @@ import scala.language.implicitConversions
 import com.treode.async._
 import com.treode.async.io.{File, MockFile, StubFile}
 import com.treode.buffer.PagedBuffer
+import com.treode.cluster.events.StubEvents
 import com.treode.pickle.{pickle, unpickle}
 import org.scalatest.FreeSpec
 
@@ -65,7 +66,8 @@ class DisksKitSpec extends FreeSpec {
       cb.passed
     }}
 
-  private class RichDisksKit (scheduler: StubScheduler) extends DisksKit (scheduler) {
+  private class RichDisksKit (scheduler: StubScheduler)
+  extends DisksKit (scheduler, StubEvents) {
 
     def assertOpening() = assert (state.isInstanceOf [Opening])
     def assertReady() = assert (state == Ready)
@@ -432,7 +434,7 @@ class DisksKitSpec extends FreeSpec {
       val kit = new RichDisksKit (scheduler)
       var cb = new CallbackCaptor [Unit]
       kit.attach (Seq (("a", disk1, big)), cb)
-      disk1.expectFlush (DiskLeadBytes, 0, 20)
+      disk1.expectFlush (DiskLeadBytes, 0, 5)
       scheduler.runTasks()
       disk1.completeLast()
       disk1.expectFlush (SuperBlockBytes, 0, 51)

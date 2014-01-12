@@ -16,5 +16,5 @@ private object PickledMessage {
     new PickledMessage {
       def mbx = _mbx
       def write (buf: PagedBuffer) = pickle (p, msg, buf)
-      override def toString = "PickledMessage" + (mbx, msg)
+      override def toString = s"PickledMessage($mbx, $msg)"
     }}

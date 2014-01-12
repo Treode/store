@@ -9,7 +9,7 @@ class HostId private (val id: Long) extends AnyVal with Ordered [HostId] {
   def compare (that: HostId): Int =
     this.id compare that.id
 
-  override def toString = "Host:%08X" format id
+  override def toString = f"Host:$id%016X"
 }
 
 object HostId extends Ordering [HostId] {

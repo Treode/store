@@ -8,8 +8,6 @@ import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{Picklers, pickle, unpickle}
 
-import LogEntry.{Body, Continue, End, Header, Pending}
-
 private class LogWriter (
     file: File,
     alloc: SegmentAllocator,
@@ -21,32 +19,42 @@ private class LogWriter (
   var pos = 0L
   var limit = 0L
 
-  def byteSize (body: Body): Int =
-    com.treode.pickle.size (Body.pickle, body)
-
-  def pickleEntry (time: Long, body: Body) {
+  def pickleHeader (header: LogHeader) {
     val start = buffer.writePos
-    buffer.writePos += Header.ByteSize
-    pickle (Body.pickle, body, buffer)
+    buffer.writePos += 4
+    pickle (LogHeader.pickle, header, buffer)
     val end = buffer.writePos
+    val length = end - start - 4
     buffer.writePos = start
-    pickle (Header.pickle, Header (time, end - start), buffer)
+    buffer.writeInt (length)
     buffer.writePos = end
   }
 
-  val receiver: (ArrayList [Pending] => Unit) = (receive _)
+  def pickleEntry (entry: PickledEntry) {
+    val start = buffer.writePos
+    buffer.writePos += 4
+    pickle (LogHeader.pickle, LogHeader.Entry (entry.time, entry.id), buffer)
+    entry.write (buffer)
+    val end = buffer.writePos
+    val length = end - start - 4
+    buffer.writePos = start
+    buffer.writeInt (length)
+    buffer.writePos = end
+  }
 
-  def receive (entries: ArrayList [Pending]) {
+  val receiver: (ArrayList [PickledEntry] => Unit) = (receive _)
 
-    val accepts = new ArrayList [Pending]
-    val rejects = new ArrayList [Pending]
+  def receive (entries: ArrayList [PickledEntry]) {
+
+    val accepts = new ArrayList [PickledEntry]
+    val rejects = new ArrayList [PickledEntry]
     var projection = pos
     var realloc = false
     var i = 0
     while (i < entries.size) {
       val entry = entries.get (i)
-      val len = byteSize (entry.body)
-      if (projection + len + LogEntry.SegmentTrailerBytes < limit) {
+      val len = entry.byteSize
+      if (projection + len + LogSegmentTrailerBytes < limit) {
         accepts.add (entry)
         projection += len
       } else {
@@ -72,18 +80,23 @@ private class LogWriter (
     guard (finish) {
 
       for (entry <- accepts)
-        pickleEntry (entry.time, entry.body)
-      val time = accepts .map (_.time) .max
+        pickleEntry (entry)
+
+      val time =
+        if (accepts.isEmpty)
+          System.currentTimeMillis
+        else
+          accepts .map (_.time) .max
 
       val _pos = pos
       if (realloc) {
         val seg = alloc.allocate()
         pos = seg.pos
         limit = seg.limit
-        pickleEntry (time, Continue (seg.num))
+        pickleHeader (LogHeader.Continue (seg.num))
       } else {
         pos += buffer.readableBytes
-        pickleEntry (time, End)
+        pickleHeader (LogHeader.End)
       }
 
       file.flush (buffer, _pos, finish)
@@ -94,7 +107,7 @@ private class LogWriter (
     head = seg.pos
     pos = seg.pos
     limit = seg.limit
-    pickleEntry (System.currentTimeMillis, End)
+    pickleHeader (LogHeader.End)
     file.flush (buffer, pos, new Callback [Unit] {
       def pass (v: Unit) {
         buffer.clear()

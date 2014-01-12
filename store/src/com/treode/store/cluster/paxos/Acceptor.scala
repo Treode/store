@@ -6,9 +6,7 @@ import com.treode.async.{Callback, Fiber, callback}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.store.{Bytes, StorePicklers}
-import com.treode.store.disk2.LogEntry
-
-import LogEntry.{PaxosAccept, PaxosClose, PaxosOpen, PaxosPromise, PaxosReaccept}
+import com.treode.store.disk2.RecordDescriptor
 
 private class Acceptor (key: Bytes, kit: PaxosKit) {
   import Acceptor.{Post, noop}
@@ -28,25 +26,25 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
 
   def open (ballot: Long, default: Bytes, from: Peer): Post =
     new Post {
-      def record = disks.record (PaxosOpen (key, default), recorded)
+      def record = Acceptor.open (key, default) (recorded)
       def reply() = Proposer.promise (key, ballot, None) (from)
     }
 
   def promise (ballot: BallotNumber, proposal: Proposal, from: Peer): Post =
     new Post {
-      def record = disks.record (PaxosPromise (key, ballot), recorded)
+      def record = Acceptor.promise (key, ballot) (recorded)
       def reply() = Proposer.promise (key, ballot.number, proposal) (from)
     }
 
   def accept (ballot: BallotNumber, value: Bytes, from: Peer): Post =
     new Post {
-      def record() = disks.record (PaxosAccept (key, ballot, value), recorded)
+      def record() = Acceptor.accept (key, ballot, value) (recorded)
       def reply() = Proposer.accept (key, ballot.number) (from)
     }
 
   def reaccept (ballot: BallotNumber, from: Peer): Post =
     new Post {
-      def record() = disks.record (PaxosReaccept (key, ballot), recorded)
+      def record() = Acceptor.reaccept (key, ballot) (recorded)
       def reply() = Proposer.accept (key, ballot.number) (from)
     }
 
@@ -185,7 +183,7 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
   object Closed {
 
     def record (chosen: Bytes): State = {
-      disks.record (PaxosClose (key, chosen), Callback.ignore)
+      Acceptor.close (key, chosen) (Callback.ignore)
       new Closed (chosen)
     }}
 
@@ -242,16 +240,41 @@ private object Acceptor {
     }
 
   val query = {
-    import StorePicklers._
+    import PaxosPicklers._
     new MessageDescriptor (0xFF14D4F00908FB59L, tuple (bytes, long, bytes))
   }
 
   val propose = {
-    import StorePicklers._
+    import PaxosPicklers._
     new MessageDescriptor (0xFF09AFD4F9B688D9L, tuple (bytes, long, bytes))
   }
 
   val choose = {
-    import StorePicklers._
+    import PaxosPicklers._
     new MessageDescriptor (0xFF761FFCDF5DEC8BL, tuple (bytes, bytes))
+  }
+
+  val open = {
+    import PaxosPicklers._
+    new RecordDescriptor (0x77784AB1, tuple (bytes, bytes))
+  }
+
+  val promise = {
+    import PaxosPicklers._
+    new RecordDescriptor (0x32A1544B, tuple (bytes, ballotNumber))
+  }
+
+  val accept = {
+    import PaxosPicklers._
+    new RecordDescriptor (0xD6CCC0BE, tuple (bytes, ballotNumber, bytes))
+  }
+
+  val reaccept = {
+    import PaxosPicklers._
+    new RecordDescriptor (0x52720640, tuple (bytes, ballotNumber))
+  }
+
+  val close = {
+    import PaxosPicklers._
+    new RecordDescriptor (0xAE980885, tuple (bytes, bytes))
   }}

@@ -9,7 +9,7 @@ class MailboxId (val id: Long) extends AnyVal {
 
   def isFixed = (id & fixed) == fixed
 
-  override def toString = "Mailbox:%08X" format id
+  override def toString = f"Mailbox:$id%016X"
 }
 
 object MailboxId {

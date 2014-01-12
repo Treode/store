@@ -50,6 +50,13 @@ trait Picklers {
       override def toString = "long"
     }
 
+  val fixedShort: Pickler [Short] =
+    new Pickler [Short] {
+      def p (v: Short, ctx: PickleContext) = ctx.writeShort (v)
+      def u (ctx: UnpickleContext) = ctx.readShort()
+      override def toString = "fixedShort"
+    }
+
   val fixedInt: Pickler [Int] =
     new Pickler [Int] {
       def p (v: Int, ctx: PickleContext) = ctx.writeInt (v)
