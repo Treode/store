@@ -7,6 +7,7 @@ import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{pickle, unpickle}
 
 private class DiskDrive (
+    val id: Int,
     val path: Path,
     file: File,
     config: DiskDriveConfig,
@@ -28,6 +29,7 @@ private class DiskDrive (
   def checkpoint (boot: BootBlock, cb: Callback [Unit]) {
     val gen = boot.gen
     val superblock = SuperBlock (
+        id,
         boot,
         config,
         alloc.checkpoint (gen),
