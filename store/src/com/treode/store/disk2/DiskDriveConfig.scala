@@ -10,8 +10,17 @@ class DiskDriveConfig private (
     val diskBytes: Long) {
 
   val segmentBytes = 1 << segmentBits
-  val segmentMask = segmentBytes - 1
-  val segmentCount = ((diskBytes + segmentMask.toLong) >> segmentBits).toInt
+  val segmentMask = ~(segmentBytes - 1)
+  val segmentCount = ((diskBytes + segmentBytes - 1) >> segmentBits).toInt
+
+  val blockBytes = 1 << blockBits
+  val blockMask = ~(blockBytes - 1)
+
+  def blockAlignLength (length: Int): Int =
+    (length + blockBytes - 1) & blockMask
+
+  def blockAlignPosition (position: Long): Long =
+    position & (blockMask.toLong)
 
   private [disk2] def segment (num: Int): Segment = {
     require (0 <= num && num < segmentCount)

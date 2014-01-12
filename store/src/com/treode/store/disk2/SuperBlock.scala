@@ -8,7 +8,8 @@ private case class SuperBlock (
     boot: BootBlock,
     config: DiskDriveConfig,
     alloc: Allocator.Meta,
-    log: LogWriter.Meta)
+    log: LogWriter.Meta,
+    pages: PageWriter.Meta)
 
 private object SuperBlock {
 
@@ -18,7 +19,8 @@ private object SuperBlock {
     val config = DiskDriveConfig.pickle
     val alloc = Allocator.Meta.pickle
     val log = LogWriter.Meta.pickle
-    wrap (int, boot, config, alloc, log)
+    val pages = PageWriter.Meta.pickle
+    wrap (int, boot, config, alloc, log, pages)
     .build ((SuperBlock.apply _).tupled)
-    .inspect (v => (v.id, v.boot, v.config, v.alloc, v.log))
+    .inspect (v => (v.id, v.boot, v.config, v.alloc, v.log, v.pages))
   }}

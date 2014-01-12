@@ -4,6 +4,7 @@ import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService
 import scala.collection.JavaConversions._
 import scala.collection.immutable.Queue
+import scala.reflect.ClassTag
 
 import com.treode.async._
 import com.treode.async.io.File
@@ -24,6 +25,8 @@ private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
   val fiber = new Fiber (scheduler)
   val records = new RecordRegistry (events)
   val log = new LogDispatcher (scheduler)
+  val pages = new PageDispatcher (scheduler)
+  val cache = new PageCache
   var disks = Map.empty [Int, DiskDrive]
   var number = 0
   var generation = 0
@@ -179,8 +182,8 @@ private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
 
       for (read <- reads) {
         val superblock = if (useGen1) read.sb1.get else read.sb2.get
-        val disk =
-          new DiskDrive (superblock.id, read.path, read.file, superblock.config, scheduler, log)
+        val disk = new DiskDrive (superblock.id, read.path, read.file, superblock.config,
+            scheduler, log, pages)
         disk.recover (superblock)
         disks += disk.id -> disk
       }
@@ -221,7 +224,7 @@ private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
 
     val items =
       for ((path, file, config) <- _items) yield {
-        val disk = new DiskDrive (number, path, file, config, scheduler, log)
+        val disk = new DiskDrive (number, path, file, config, scheduler, log, pages)
         number += 1
         disk
       }
@@ -372,6 +375,12 @@ private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
 
   def record [R] (p: Pickler [R], id: TypeId, entry: R, cb: Callback [Unit]): Unit =
     log.record (p, id, entry, cb)
+
+  def read [P] (p: Pickler [P], disk: Int, pos: Long, len: Int, cb: Callback [P]) (implicit tag: ClassTag [P]): Unit =
+    cache.read (p, tag, disks, disk, pos, len, cb)
+
+  def write [P] (p: Pickler [P], page: P, cb: Callback [(Int, Long, Int)]): Unit =
+    pages.write (p, page, cb)
 
   override def toString = state.toString
 }

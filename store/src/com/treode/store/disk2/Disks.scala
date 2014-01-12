@@ -2,6 +2,7 @@ package com.treode.store.disk2
 
 import java.nio.file.Path
 import java.util.concurrent.ExecutorService
+import scala.reflect.ClassTag
 
 import com.google.common.annotations.VisibleForTesting
 import com.treode.async.{Callback, Scheduler}
@@ -18,6 +19,9 @@ trait Disks {
 
   def register [R] (p: Pickler [R], id: TypeId) (f: R => Any)
   def record [R] (p: Pickler [R], id: TypeId, entry: R, cb: Callback [Unit])
+
+  def read [P] (p: Pickler [P], disk: Int, pos: Long, len: Int, cb: Callback [P]) (implicit tag: ClassTag [P])
+  def write [P] (p: Pickler [P], page: P, cb: Callback [(Int, Long, Int)])
 }
 
 object Disks {

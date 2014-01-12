@@ -167,6 +167,34 @@ private object PagedBufferBehaviors extends FlatSpec {
   readWriteBytes (64, 7, 21, 42)
   readWriteBytes (64, 7, 21, 43)
   readWriteBytes (64, 7, 21, 44)
+
+  def zeroAlign (offset: Int, bits: Int, length: Int) {
+    it should (s"zero align offset=$offset, bits=$bits") in {
+      val buffer = new PagedBuffer (pageBits)
+      buffer.writePos = offset
+      buffer.writeZeroToAlign (bits)
+      expectResult (offset + length) (buffer.writePos)
+      buffer.readPos = offset
+      for (i <- 0 until length)
+        expectResult (0) (buffer.readByte())
+    }}
+
+  behavior of "A PagedBuffer"
+  zeroAlign (0, 5, 0)
+  zeroAlign (1, 5, 31)
+  zeroAlign (31, 5, 1)
+  zeroAlign (32, 5, 0)
+  zeroAlign (33, 5, 31)
+  zeroAlign (0, 3, 0)
+  zeroAlign (1, 3, 7)
+  zeroAlign (7, 3, 1)
+  zeroAlign (8, 3, 0)
+  zeroAlign (9, 3, 7)
+  zeroAlign (0, 7, 0)
+  zeroAlign (1, 7, 127)
+  zeroAlign (127, 7, 1)
+  zeroAlign (128, 7, 0)
+  zeroAlign (129, 7, 127)
 }
 
 private object PagedBufferProperties extends PropSpec with PropertyChecks {

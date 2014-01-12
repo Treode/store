@@ -6,7 +6,7 @@ import scala.collection.JavaConversions._
 import com.treode.async.{Callback, Scheduler, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{Picklers, pickle, unpickle}
+import com.treode.pickle.{Picklers, pickle}
 
 private class LogWriter (
     file: File,
@@ -30,7 +30,7 @@ private class LogWriter (
     buffer.writePos = end
   }
 
-  def pickleEntry (entry: PickledEntry) {
+  def pickleEntry (entry: PickledRecord) {
     val start = buffer.writePos
     buffer.writePos += 4
     pickle (LogHeader.pickle, LogHeader.Entry (entry.time, entry.id), buffer)
@@ -42,12 +42,12 @@ private class LogWriter (
     buffer.writePos = end
   }
 
-  val receiver: (ArrayList [PickledEntry] => Unit) = (receive _)
+  val receiver: (ArrayList [PickledRecord] => Unit) = (receive _)
 
-  def receive (entries: ArrayList [PickledEntry]) {
+  def receive (entries: ArrayList [PickledRecord]) {
 
-    val accepts = new ArrayList [PickledEntry]
-    val rejects = new ArrayList [PickledEntry]
+    val accepts = new ArrayList [PickledRecord]
+    val rejects = new ArrayList [PickledRecord]
     var projection = pos
     var realloc = false
     var i = 0

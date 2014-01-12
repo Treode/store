@@ -14,4 +14,5 @@ trait Output {
   def writeFloat (v: Float)
   def writeDouble (v: Double)
   def writeString (v: String)
+  def writeZeroToAlign (bits: Int)
 }

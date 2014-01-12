@@ -173,7 +173,7 @@ class PagedBuffer (pageBits: Int) extends Buffer {
       System.arraycopy (data, offset, wpage, wpos, segment)
       var position = offset + segment
       var remaining = length - segment
-      var windex = (wpos >> pageBits) + 1
+      var windex = (woff >> pageBits) + 1
       while (remaining > pageSize) {
         wpage = pages (windex)
         segment = math.min (remaining, pageSize)
@@ -198,7 +198,7 @@ class PagedBuffer (pageBits: Int) extends Buffer {
       System.arraycopy (rpage, rpos, data, offset, segment)
       var position = offset + segment
       var remaining = length - segment
-      var rindex = (rpos >> pageBits) + 1
+      var rindex = (roff >> pageBits) + 1
       while (remaining > pageSize) {
         rpage = pages (rindex)
         segment = math.min (remaining, pageSize)
@@ -214,6 +214,33 @@ class PagedBuffer (pageBits: Int) extends Buffer {
     } else {
       System.arraycopy (rpage, rpos, data, offset, length)
       rpos += length
+    }}
+
+  def writeZeroToAlign (bits: Int) {
+    val bytes = 1 << bits
+    val mask = ~(bytes - 1)
+    val end = (writePos + bytes - 1) & mask
+    val length = end - writePos
+    var segment = pageSize - wpos
+    if (segment < length) {
+      capacity (end)
+      Arrays.fill (wpage, wpos, pageSize, 0.toByte)
+      var remaining = length - segment
+      var windex = (woff >> pageBits) + 1
+      while (remaining > pageSize) {
+        wpage = pages (windex)
+        segment = math.min (remaining, pageSize)
+        Arrays.fill (wpage, 0, segment, 0.toByte)
+        remaining -= segment
+        windex += 1
+      }
+      wpage = pages (windex)
+      Arrays.fill (wpage, 0, remaining, 0.toByte)
+      woff = windex << pageBits
+      wpos = remaining
+    } else {
+      Arrays.fill (wpage, wpos, wpos + length, 0.toByte)
+      wpos += length
     }}
 
   def writeByte (v: Byte) {

@@ -1,10 +1,10 @@
 package com.treode.store.disk2
 
 import java.nio.file.Path
-import com.treode.async.{Callback, Scheduler}
+import com.treode.async.{Callback, Scheduler, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{pickle, unpickle}
+import com.treode.pickle.{Pickler, pickle}
 
 private class DiskDrive (
     val id: Int,
@@ -12,10 +12,12 @@ private class DiskDrive (
     file: File,
     config: DiskDriveConfig,
     scheduler: Scheduler,
-    logd: LogDispatcher) {
+    logd: LogDispatcher,
+    paged: PageDispatcher) {
 
   val alloc = new SegmentAllocator (config)
   val logw = new LogWriter (file, alloc, scheduler, logd)
+  val pagew = new PageWriter (id, file, config, alloc, scheduler, paged)
 
   def init (cb: Callback [Unit]) {
     alloc.init()
@@ -24,7 +26,11 @@ private class DiskDrive (
 
   def engage() {
     logd.engage (logw)
+    paged.engage (pagew)
   }
+
+  def fill (buf: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit]): Unit =
+    file.fill (buf, pos, len, cb)
 
   def checkpoint (boot: BootBlock, cb: Callback [Unit]) {
     val gen = boot.gen
@@ -33,7 +39,8 @@ private class DiskDrive (
         boot,
         config,
         alloc.checkpoint (gen),
-        logw.checkpoint (gen))
+        logw.checkpoint (gen),
+        pagew.checkpoint (gen))
     val buffer = PagedBuffer (12)
     pickle (SuperBlock.pickle, superblock, buffer)
     val pos = if ((boot.gen & 1) == 0) 0 else SuperBlockBytes
@@ -44,6 +51,7 @@ private class DiskDrive (
     val gen = superblock.boot.gen
     alloc.recover (gen, superblock.alloc)
     logw.recover (gen, superblock.log)
+    pagew.recover (gen, superblock.pages)
   }
 
   def close() = file.close()
