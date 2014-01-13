@@ -19,5 +19,5 @@ private class OverwritesFilter private extends (SimpleCell => Boolean) {
 object OverwritesFilter {
 
   def apply (iter: AsyncIterator [SimpleCell], cb: Callback [AsyncIterator [SimpleCell]]): Unit =
-    AsyncIterator.filter (iter, new OverwritesFilter, cb)
+    AsyncIterator.filter (iter, cb) (new OverwritesFilter)
 }

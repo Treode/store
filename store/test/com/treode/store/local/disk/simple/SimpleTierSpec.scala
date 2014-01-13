@@ -43,17 +43,13 @@ class SimpleTierSpec extends WordSpec {
   /** Build a tier from fruit. */
   private def buildTier (disk: DiskSystemStub): Position = {
     val builder = new TierBuilder (disk)
-    val iter = AllFruits.iterator
-    val loop = new Callback [Unit] {
-      def pass (v: Unit): Unit =
-        if (iter.hasNext)
-          builder.add (iter.next, Some (One), this)
-      def fail (t: Throwable) = throw t
-    }
-    loop()
-    var pos = Position (0, 0, 0)
-    builder.result (callback (pos = _))
-    pos
+    val iter = AsyncIterator.adapt (AllFruits.iterator)
+    val added = new CallbackCaptor [Unit]
+    AsyncIterator.foreach (iter, added) (builder.add (_, Some (One), _))
+    added.passed
+    val built = new CallbackCaptor [Position]
+    builder.result (built)
+    built.passed
   }
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */

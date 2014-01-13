@@ -19,5 +19,5 @@ private class DuplicatesFilter private extends (TimedCell => Boolean) {
 object DuplicatesFilter {
 
   def apply (iter: AsyncIterator [TimedCell], cb: Callback [AsyncIterator [TimedCell]]): Unit =
-    AsyncIterator.filter (iter, new DuplicatesFilter, cb)
+    AsyncIterator.filter (iter, cb) (new DuplicatesFilter)
 }

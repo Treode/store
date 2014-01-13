@@ -19,6 +19,41 @@ object AsyncIterator {
   def adapt [A] (iter: Iterable [A]): AsyncIterator [A] =
     adapt (iter.iterator)
 
+  def filter [A] (iter: AsyncIterator [A], cb: Callback [AsyncIterator [A]]) (pred: A => Boolean): Unit =
+    FilteredIterator (iter, pred, cb)
+
+  private class Looper [A] (iter: AsyncIterator [A], func: (A, Callback [Unit]) => Any, cb: Callback [Unit])
+  extends Callback [A] {
+
+    val next = new Callback [Unit] {
+      def pass (v: Unit) {
+        if (iter.hasNext)
+          iter.next (Looper.this)
+        else
+          cb()
+      }
+      def fail (t: Throwable) = cb.fail (t)
+    }
+
+    def pass (v: A) = func (v, next)
+    def fail (t: Throwable) = cb.fail (t)
+  }
+
+  def foreach [A] (iter: AsyncIterator [A], cb: Callback [Unit]) (func: (A, Callback [Unit]) => Any): Unit =
+    if (iter.hasNext)
+      iter.next (new Looper (iter, func, cb))
+    else
+      cb()
+
+  /** Given asynchronous iterators of sorted items, merge them into single asynchronous iterator
+    * that maintains the sort.  Keep duplicate elements, and when two or more input iterators
+    * duplicate an element, first list the element from the earlier iterator (that is, by position
+    * in `iters`).
+    */
+  def merge [A] (iters: Iterator [AsyncIterator [A]], cb: Callback [AsyncIterator [A]]) (
+      implicit ordering: Ordering [A]): Unit =
+    MergeIterator (iters, cb)
+
   private class Scanner [A] (iter: AsyncIterator [A], cb: Callback [Seq [A]])
   extends Callback [A] {
 
@@ -42,16 +77,4 @@ object AsyncIterator {
     else
       cb (Seq.empty)
   }
-
-  def filter [A] (iter: AsyncIterator [A], pred: A => Boolean, cb: Callback [AsyncIterator [A]]): Unit =
-    FilteredIterator (iter, pred, cb)
-
-  /** Given asynchronous iterators of sorted items, merge them into single asynchronous iterator
-    * that maintains the sort.  Keep duplicate elements, and when two or more input iterators
-    * duplicate an element, first list the element from the earlier iterator (that is, by position
-    * in `iters`).
-    */
-  def merge [A] (iters: Iterator [AsyncIterator [A]], cb: Callback [AsyncIterator [A]]) (
-      implicit ordering: Ordering [A]): Unit =
-    MergeIterator (iters, cb)
 }
