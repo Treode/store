@@ -12,11 +12,8 @@ private class LocalConnection (val id: HostId, mbxs: MailboxRegistry) extends Pe
 
   def close() = ()
 
-  def send [A] (p: Pickler [A], mbx: MailboxId, msg: A) {
-    val buffer = PagedBuffer (12)
-    pickle (p, msg, buffer)
-    mbxs.deliver (mbx, this, buffer, buffer.writePos)
-  }
+  def send [M] (p: Pickler [M], mbx: MailboxId, msg: M): Unit =
+    mbxs.deliver (p, this, mbx, msg)
 
   override def hashCode = id.id.hashCode
 

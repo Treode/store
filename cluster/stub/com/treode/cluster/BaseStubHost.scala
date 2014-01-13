@@ -23,8 +23,6 @@ extends Host with StubHost {
   def locate (id: Int): Acknowledgements =
     cluster.locate (id)
 
-  def deliver [M] (p: Pickler [M], from: HostId, mbx: MailboxId, msg: M) {
-    val buf = PagedBuffer (12)
-    pickle (p, msg, buf)
-    mailboxes.deliver (mbx, peers.get (from), buf, buf.readableBytes)
-  }}
+  def deliver [M] (p: Pickler [M], from: HostId, mbx: MailboxId, msg: M): Unit =
+    mailboxes.deliver (p, peers.get (from), mbx, msg)
+}

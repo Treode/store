@@ -25,6 +25,7 @@ private class RemoteConnection (
 
   require (id != localId)
 
+  type PickledMessage = PagedBuffer => Unit
   type Queue = util.ArrayList [PickledMessage]
 
   abstract class State {
@@ -36,7 +37,7 @@ private class RemoteConnection (
     def sent() = ()
 
     def connect (socket: Socket, input: PagedBuffer, clientId: HostId) {
-      Loop (socket, input)
+      loop (socket, input)
       state = Connected (socket, clientId, PagedBuffer (12))
     }
 
@@ -72,14 +73,7 @@ private class RemoteConnection (
     }
 
     def enque (message: PickledMessage) {
-      buffer.writeLong (message.mbx.id)
-      buffer.writeInt (0)
-      val start = buffer.writePos
-      message.write (buffer)
-      val end = buffer.writePos
-      buffer.writePos = start - 4
-      buffer.writeInt (end - start)
-      buffer.writePos = end
+      message (buffer)
     }
 
     override def disconnect (socket: Socket) {
@@ -102,7 +96,7 @@ private class RemoteConnection (
       } else {
         if (socket != this.socket)
           this.socket.close()
-        Loop (socket, input)
+        loop (socket, input)
         if (buffer.readableBytes == 0) {
           state = Connected (socket, clientId, buffer)
         } else {
@@ -170,16 +164,14 @@ private class RemoteConnection (
 
   private val BlockedTimer = BackoffTimer (500, 500, 1 minutes) (Random)
 
-  // Visible for testing.
-  private [messenger] var state: State = new Disconnected (BlockedTimer.iterator)
+  private var state: State = new Disconnected (BlockedTimer.iterator)
 
-  case class Loop (socket: Socket, input: PagedBuffer) {
+  def loop (socket: Socket, input: PagedBuffer) {
 
-    case class MessageRead (mbx: MailboxId, length: Int) extends Callback [Unit] {
+    val loop = new Callback [Unit] {
 
       def pass (v: Unit) {
-        mailboxes.deliver (mbx, RemoteConnection.this, input, length)
-        readHeader()
+        mailboxes.deliver (RemoteConnection.this, socket, input, this)
       }
 
       def fail (t: Throwable) {
@@ -187,26 +179,7 @@ private class RemoteConnection (
         disconnect (socket)
       }}
 
-    def readMessage (mbx: MailboxId, length: Int): Unit =
-      socket.fill (input, length, MessageRead (mbx, length))
-
-    object HeaderRead extends Callback [Unit] {
-
-      def pass (v: Unit) {
-        val mbx = input.readLong()
-        val length = input.readInt()
-        readMessage (mbx, length)
-      }
-
-      def fail (t: Throwable) {
-        events.exceptionReadingMessage (t)
-        disconnect (socket)
-      }}
-
-    def readHeader(): Unit =
-      socket.fill (input, 12, HeaderRead)
-
-    fiber.spawn (readHeader())
+    fiber.spawn (loop())
   }
 
   private def hearHello (socket: Socket) {
@@ -271,7 +244,7 @@ private class RemoteConnection (
   }
 
   def send [A] (p: Pickler [A], mbx: MailboxId, msg: A): Unit = fiber.execute {
-    state.send (PickledMessage (p, mbx, msg))
+    state.send (MailboxId.framer.write (p, mbx, msg, _))
   }
 
   override def hashCode() = id.hashCode()

@@ -43,5 +43,5 @@ object Echo {
 
     if (host.localId == HostId (2)) {
       start = System.currentTimeMillis
-      loop (0)
+      loop (1)
     }}}

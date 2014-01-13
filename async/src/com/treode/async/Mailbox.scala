@@ -23,3 +23,9 @@ class Mailbox [M] (scheduler: Scheduler) {
     else
       execute (receiver, messages.remove())
   }}
+
+object Mailbox {
+
+  def curried2 [A, B] (mbx: Mailbox [(A, B)]): A => B => Unit =
+    (a => b => mbx.send (a, b))
+}

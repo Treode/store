@@ -1,14 +1,15 @@
 package com.treode.cluster
 
 import scala.language.implicitConversions
+import scala.util.Random
 
+import com.treode.async.io.Framer
+import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Picklers
 
 class MailboxId (val id: Long) extends AnyVal {
-  import MailboxId.fixed
 
-  def isFixed = (id & fixed) == fixed
-
+  def isFixed = MailboxId.isFixed (id)
   override def toString = f"Mailbox:$id%016X"
 }
 
@@ -19,7 +20,29 @@ object MailboxId {
   implicit def apply (id: Long): MailboxId =
     new MailboxId (id)
 
+  def isFixed (id: MailboxId): Boolean =
+    (id.id & fixed) == fixed
+
+  def isEphemeral (id: MailboxId): Boolean =
+    (id.id & fixed) != fixed
+
+  def newEphemeral(): MailboxId = {
+    var id = Random.nextLong()
+    while ((id & fixed) == fixed)
+      id = Random.nextLong
+    new MailboxId (id)
+  }
+
   val pickle = {
     import Picklers._
     wrap (fixedLong) build (apply _) inspect (_.id)
-  }}
+  }
+
+  val framer: Framer.Strategy [MailboxId] =
+    new Framer.Strategy [MailboxId] {
+      def idByteSize = 8
+      def newEphemeralId = MailboxId.newEphemeral()
+      def isEphemeralId (id: MailboxId) = MailboxId.isEphemeral (id)
+      def readId (buf: PagedBuffer) = MailboxId (buf.readLong())
+      def writeId (id: MailboxId, buf: PagedBuffer) = buf.writeLong (id.id)
+    }}
