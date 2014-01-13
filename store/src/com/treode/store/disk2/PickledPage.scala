@@ -6,14 +6,14 @@ import com.treode.pickle.{Pickler, pickle, size}
 
 private trait PickledPage {
 
-  def cb: Callback [(Int, Long, Int)]
+  def cb: Callback [Position]
   def byteSize: Int
   def write (buffer: PagedBuffer)
 }
 
 private object PickledPage {
 
-  def apply [A] (p: Pickler [A], entry: A, _cb: Callback [(Int, Long, Int)]): PickledPage =
+  def apply [A] (p: Pickler [A], entry: A, _cb: Callback [Position]): PickledPage =
     new PickledPage {
       def cb = _cb
       def byteSize = size (p, entry)

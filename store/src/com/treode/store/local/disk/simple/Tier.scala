@@ -2,11 +2,12 @@ package com.treode.store.local.disk.simple
 
 import com.treode.async.Callback
 import com.treode.store.{Bytes, SimpleCell, TxClock}
+import com.treode.store.disk2.Position
 import com.treode.store.local.disk.{DiskSystem, Page}
 
 object Tier {
 
-  def read (disk: DiskSystem, root: Long, key: Bytes, cb: Callback [Option [SimpleCell]]) {
+  def read (disk: DiskSystem, root: Position, key: Bytes, cb: Callback [Option [SimpleCell]]) {
 
     val loop = new Callback [Page] {
 

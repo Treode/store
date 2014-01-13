@@ -9,7 +9,7 @@ class SimpleIndexPageSpec extends WordSpec {
   import Fruits.{Apple, Banana, Kiwi, Kumquat, Orange}
 
   private def entry (key: Bytes): IndexEntry =
-    new IndexEntry (key, 0)
+    new IndexEntry (key, 0, 0, 0)
 
   private def newPage (entries: IndexEntry*): IndexPage =
     new IndexPage (Array (entries: _*))

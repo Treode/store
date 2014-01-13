@@ -2,9 +2,10 @@ package com.treode.store.local.disk.simple
 
 import scala.collection.mutable.Builder
 
-import com.treode.async.{Callback, callback}
+import com.treode.async.{AsyncIterator, Callback, CallbackCaptor, callback}
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, Cardinals, Fruits, SimpleCell, TxClock}
+import com.treode.store.disk2.Position
 import com.treode.store.local.disk.DiskSystemStub
 import org.scalatest.WordSpec
 
@@ -18,7 +19,7 @@ class SimpleTierSpec extends WordSpec {
     entries.map (e => getDepths (disk, e.pos, depth+1)) .fold (Set.empty) (_ ++ _)
 
   /** Get the depths of ValueBlocks for the tree root at `pos`. */
-  private def getDepths (disk: DiskSystemStub, pos: Long, depth: Int): Set [Int] = {
+  private def getDepths (disk: DiskSystemStub, pos: Position, depth: Int): Set [Int] = {
     disk.read (pos) match {
       case b: IndexPage => getDepths (disk, b.entries, depth+1)
       case b: CellPage => Set (depth)
@@ -27,7 +28,7 @@ class SimpleTierSpec extends WordSpec {
   /** Check that tree rooted at `pos` has all ValueBlocks at the same depth, expect those under
     * the final index entry.
     */
-  private def expectBalanced (disk: DiskSystemStub, pos: Long) {
+  private def expectBalanced (disk: DiskSystemStub, pos: Position) {
     disk.read (pos) match {
       case b: IndexPage =>
         val ds1 = getDepths (disk, b.entries.take (b.size-1), 1)
@@ -40,7 +41,7 @@ class SimpleTierSpec extends WordSpec {
     }}
 
   /** Build a tier from fruit. */
-  private def buildTier (disk: DiskSystemStub): Long = {
+  private def buildTier (disk: DiskSystemStub): Position = {
     val builder = new TierBuilder (disk)
     val iter = AllFruits.iterator
     val loop = new Callback [Unit] {
@@ -50,30 +51,21 @@ class SimpleTierSpec extends WordSpec {
       def fail (t: Throwable) = throw t
     }
     loop()
-    var pos = 0L
+    var pos = Position (0, 0, 0)
     builder.result (callback (pos = _))
     pos
   }
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
-  private def iterateTier (disk: DiskSystemStub, pos: Long): Seq [SimpleCell] = {
-    val builder = Seq.newBuilder [SimpleCell]
-    TierIterator (disk, pos, callback { iter =>
-      val loop = new Callback [SimpleCell] {
-        def pass (e: SimpleCell) {
-          builder += e
-          if (iter.hasNext)
-            iter.next (this)
-        }
-        def fail (t: Throwable) = throw t
-      }
-      if (iter.hasNext)
-        iter.next (loop)
-    })
-    builder.result
+  private def iterateTier (disk: DiskSystemStub, pos: Position): Seq [SimpleCell] = {
+    val iter = new CallbackCaptor [TierIterator]
+    TierIterator (disk, pos, iter)
+    val seq = new CallbackCaptor [Seq [SimpleCell]]
+    AsyncIterator.scan (iter.passed, seq)
+    seq.passed
   }
 
-  private def toSeq (disk: DiskSystemStub, builder: Builder [SimpleCell, _], pos: Long) {
+  private def toSeq (disk: DiskSystemStub, builder: Builder [SimpleCell, _], pos: Position) {
     disk.read (pos) match {
       case page: IndexPage =>
         page.entries foreach (e => toSeq (disk, builder, e.pos))
@@ -82,7 +74,7 @@ class SimpleTierSpec extends WordSpec {
     }}
 
   /** Build a sequence of the cells in the tier using old-fashioned recursion. */
-  private def toSeq (disk: DiskSystemStub, pos: Long): Seq [SimpleCell] = {
+  private def toSeq (disk: DiskSystemStub, pos: Position): Seq [SimpleCell] = {
     val builder = Seq.newBuilder [SimpleCell]
     toSeq (disk, builder, pos)
     builder.result

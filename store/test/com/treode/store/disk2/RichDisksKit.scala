@@ -102,16 +102,16 @@ extends DisksKit (scheduler, StubEvents) {
     cb
   }
 
-  def writeAndPass [P] (pickle: Pickler [P], page: P): (Int, Long, Int) = {
-    val cb = new CallbackCaptor [(Int, Long, Int)]
+  def writeAndPass [P] (pickle: Pickler [P], page: P): Position = {
+    val cb = new CallbackCaptor [Position]
     write (pickle, page, cb)
     scheduler.runTasks()
     cb.passed
   }
 
-  def readAndPass [P] (pickle: Pickler [P], disk: Int, pos: Long, len: Int) (implicit tag: ClassTag [P]): P = {
+  def readAndPass [P] (pickle: Pickler [P], pos: Position) (implicit tag: ClassTag [P]): P = {
     val cb = new CallbackCaptor [P]
-    read (pickle, disk, pos, len, cb)
+    read (pickle, pos, cb)
     scheduler.runTasks()
     cb.passed
   }}

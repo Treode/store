@@ -2,6 +2,7 @@ package com.treode.store.local.disk.timed
 
 import com.treode.async.{AsyncIterator, Callback, callback}
 import com.treode.store.TimedCell
+import com.treode.store.disk2.Position
 import com.treode.store.local.disk.{DiskSystem, Page}
 
 private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] {
@@ -10,7 +11,7 @@ private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] 
   private var page: CellPage = null
   private var index = 0
 
-  private def find (pos: Long, cb: Callback [TierIterator]) {
+  private def find (pos: Position, cb: Callback [TierIterator]) {
 
     val loop = new Callback [Page] {
 
@@ -59,6 +60,6 @@ private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] 
 
 private object TierIterator {
 
-  def apply (disk: DiskSystem, pos: Long, cb: Callback [TierIterator]): Unit =
+  def apply (disk: DiskSystem, pos: Position, cb: Callback [TierIterator]): Unit =
     new TierIterator (disk) .find (pos, cb)
 }

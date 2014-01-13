@@ -7,6 +7,8 @@ import com.treode.pickle.Pickler
 
 package disk2 {
 
+  case class Position (disk: Int, offset: Long, length: Int)
+
   class AlreadyAttachedException (paths: Seq [Path]) extends Exception {
     override def getMessage = s"Disks already attached: ${paths mkString ", "}"
   }

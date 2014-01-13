@@ -8,7 +8,7 @@ private class PageDispatcher (scheduler: Scheduler) {
 
   private val dsp = new Dispatcher [PickledPage] (scheduler)
 
-  def write [P] (p: Pickler [P], page: P, cb: Callback [(Int, Long, Int)]): Unit =
+  def write [P] (p: Pickler [P], page: P, cb: Callback [Position]): Unit =
     dsp.send (PickledPage (p, page, cb))
 
   def engage (writer: PageWriter): Unit =

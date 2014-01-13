@@ -11,7 +11,7 @@ private class IndexPage (val entries: Array [IndexEntry]) extends Page {
     entries (i)
 
   def find (key: Bytes): Int = {
-    val i = Arrays.binarySearch (entries, IndexEntry (key, 0), IndexEntry)
+    val i = Arrays.binarySearch (entries, IndexEntry (key, 0, 0, 0), IndexEntry)
     if (i < 0) -i-1 else i
   }
 
@@ -35,28 +35,38 @@ private object IndexPage {
   private val _pickle: Pickler [IndexPage] =
     new AbstractPagePickler [IndexPage, IndexEntry] {
 
-      private [this] val blockPos = Picklers.ulong
+      private [this] val disk = Picklers.uint
+      private [this] val offset = Picklers.ulong
+      private [this] val length = Picklers.uint
 
       protected def writeEntry (entry: IndexEntry, ctx: PickleContext) {
         writeKey (entry.key, ctx)
-        blockPos.p (entry.pos, ctx)
+        disk.p (entry.disk, ctx)
+        offset.p (entry.offset, ctx)
+        length.p (entry.length, ctx)
       }
 
       protected def readEntry (ctx: UnpickleContext): IndexEntry = {
         val key = readKey (ctx)
-        val pos = blockPos.u (ctx)
-        IndexEntry (key, pos)
+        val _disk = disk.u (ctx)
+        val _offset = offset.u (ctx)
+        val _length = length.u (ctx)
+        IndexEntry (key, _disk, _offset, _length)
       }
 
       protected def writeEntry (prev: IndexEntry, entry: IndexEntry, ctx: PickleContext) {
         writeKey (prev.key, entry.key, ctx)
-        blockPos.p (entry.pos, ctx)
+        disk.p (entry.disk, ctx)
+        offset.p (entry.offset, ctx)
+        length.p (entry.length, ctx)
       }
 
       protected def readEntry (prev: IndexEntry, ctx: UnpickleContext): IndexEntry = {
         val key = readKey (prev.key, ctx)
-        val pos = blockPos.u (ctx)
-        IndexEntry (key, pos)
+        val _disk = disk.u (ctx)
+        val _offset = offset.u (ctx)
+        val _length = length.u (ctx)
+        IndexEntry (key, _disk, _offset, _length)
       }
 
       def p (page: IndexPage, ctx: PickleContext): Unit =

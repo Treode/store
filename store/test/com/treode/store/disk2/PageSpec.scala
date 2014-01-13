@@ -21,6 +21,6 @@ class PageSpec extends FlatSpec {
     kit.attachAndPass (("a", disk1, config))
 
     val seq = Seq (0, 1, 2)
-    val (disk, pos, len) = kit.writeAndPass (pickle, seq)
-    expectResult (seq) (kit.readAndPass (pickle, disk, pos, len))
+    val pos = kit.writeAndPass (pickle, seq)
+    expectResult (seq) (kit.readAndPass (pickle, pos))
   }}

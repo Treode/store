@@ -1,6 +1,7 @@
 package com.treode.store.local
 
 import com.treode.async.Callback
+import com.treode.store.disk2.Position
 
 package disk {
 
@@ -10,7 +11,7 @@ package disk {
 
     def maxPageSize: Int
 
-    def read (pos: Long, cb: Callback [Page])
+    def read (pos: Position, cb: Callback [Page])
 
-    def write (page: Page, cb: Callback [Long])
+    def write (page: Page, cb: Callback [Position])
   }}

@@ -20,9 +20,9 @@ private class PageWriter (
   var base = 0L
   var pos = 0L
 
-  class PositionCallback (id: Int, offset: Int, length: Int, cb: Callback [(Int, Long, Int)])
+  class PositionCallback (id: Int, offset: Int, length: Int, cb: Callback [Position])
   extends Callback [Long] {
-    def pass (base: Long) = cb (id, base + offset, length)
+    def pass (base: Long) = cb (Position (id, base + offset, length))
     def fail (t: Throwable) = cb.fail (t)
   }
 

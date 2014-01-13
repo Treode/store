@@ -376,10 +376,10 @@ private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
   def record [R] (p: Pickler [R], id: TypeId, entry: R, cb: Callback [Unit]): Unit =
     log.record (p, id, entry, cb)
 
-  def read [P] (p: Pickler [P], disk: Int, pos: Long, len: Int, cb: Callback [P]) (implicit tag: ClassTag [P]): Unit =
-    cache.read (p, tag, disks, disk, pos, len, cb)
+  def read [P] (p: Pickler [P], pos: Position, cb: Callback [P]) (implicit tag: ClassTag [P]): Unit =
+    cache.read (p, tag, disks, pos, cb)
 
-  def write [P] (p: Pickler [P], page: P, cb: Callback [(Int, Long, Int)]): Unit =
+  def write [P] (p: Pickler [P], page: P, cb: Callback [Position]): Unit =
     pages.write (p, page, cb)
 
   override def toString = state.toString

@@ -3,6 +3,7 @@ package com.treode.store.local.disk.simple
 import java.util.{ArrayDeque, ArrayList}
 import com.treode.async.{Callback, delay}
 import com.treode.store.{Bytes, SimpleCell, TxClock}
+import com.treode.store.disk2.Position
 import com.treode.store.local.disk.DiskSystem
 
 private class TierBuilder (disk: DiskSystem) {
@@ -28,14 +29,14 @@ private class TierBuilder (disk: DiskSystem) {
   private var entries = newCellEntries
   private var byteSize = 0
 
-  private def push (key: Bytes, pos: Long, height: Int) {
+  private def push (key: Bytes, pos: Position, height: Int) {
     val node = new IndexNode (height)
     val entry = IndexEntry (key, pos)
     node.add (entry, entry.byteSize)
     stack.push (node)
   }
 
-  private def rpush (key: Bytes, pos: Long, height: Int) {
+  private def rpush (key: Bytes, pos: Position, height: Int) {
     val node = new IndexNode (height)
     val entry = IndexEntry (key, pos)
     node.add (entry, entry.byteSize)
@@ -47,7 +48,7 @@ private class TierBuilder (disk: DiskSystem) {
       stack.push (rstack.pop())
   }
 
-  private def add (key: Bytes, pos: Long, height: Int, cb: Callback [Unit]) {
+  private def add (key: Bytes, pos: Position, height: Int, cb: Callback [Unit]) {
 
     val node = stack.peek
 
@@ -102,7 +103,7 @@ private class TierBuilder (disk: DiskSystem) {
       })
     }}
 
-  def result (cb: Callback [Long]) {
+  def result (cb: Callback [Position]) {
 
     val page = CellPage (entries)
     val last = page.last

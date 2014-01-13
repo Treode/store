@@ -11,7 +11,7 @@ class IndexPageSpec extends WordSpec {
   val MaxTime = TxClock.max
 
   private def entry (key: Bytes, time: Int): IndexEntry =
-    new IndexEntry (key, time, 0)
+    new IndexEntry (key, time, 0, 0, 0)
 
   private def newPage (entries: IndexEntry*): IndexPage =
     new IndexPage (Array (entries: _*))

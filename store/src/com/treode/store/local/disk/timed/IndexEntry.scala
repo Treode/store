@@ -3,9 +3,12 @@ package com.treode.store.local.disk.timed
 import com.google.common.primitives.Longs
 import com.treode.pickle.size
 import com.treode.store.{Bytes, StorePicklers, TxClock}
+import com.treode.store.disk2.Position
 
-private class IndexEntry (val key: Bytes, val time: TxClock, val pos: Long)
-extends Ordered [IndexEntry] {
+private class IndexEntry (val key: Bytes, val time: TxClock, val disk: Int, val offset: Long,
+    val length: Int) extends Ordered [IndexEntry] {
+
+  def pos = Position (disk, offset, length)
 
   def byteSize = size (IndexEntry.pickle, this)
 
@@ -22,15 +25,18 @@ extends Ordered [IndexEntry] {
 
 private object IndexEntry extends Ordering [IndexEntry] {
 
-  def apply (key: Bytes, time: TxClock, pos: Long): IndexEntry =
-    new IndexEntry (key, time, pos)
+  def apply (key: Bytes, time: TxClock, disk: Int, offset: Long, length: Int): IndexEntry =
+    new IndexEntry (key, time, disk, offset, length)
+
+  def apply (key: Bytes, time: TxClock, pos: Position): IndexEntry =
+    new IndexEntry (key, time, pos.disk, pos.offset, pos.length)
 
   def compare (x: IndexEntry, y: IndexEntry): Int =
     x compare y
 
   val pickle = {
     import StorePicklers._
-    wrap (bytes, txClock, long)
-    .build ((IndexEntry.apply _).tupled)
-    .inspect (v => (v.key, v.time, v.pos))
+    wrap (bytes, txClock, uint, ulong, uint)
+    .build (v => (IndexEntry (v._1, v._2, v._3, v._4, v._5)))
+    .inspect (v => (v.key, v.time, v.disk, v.offset, v.length))
   }}
