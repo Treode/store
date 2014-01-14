@@ -15,7 +15,7 @@ extends Host with StubHost {
 
   val scheduler: Scheduler = cluster.scheduler
 
-  val mailboxes: MailboxRegistry = new MailboxRegistry () (StubEvents)
+  val mailboxes: MailboxRegistry = new MailboxRegistry
 
   val peers: PeerRegistry =
     new PeerRegistry (localId, new StubConnection (_, localId, cluster)) (random)

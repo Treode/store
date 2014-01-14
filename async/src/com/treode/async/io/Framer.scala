@@ -12,13 +12,13 @@ class Framer [ID, T] (strategy: Framer.Strategy [ID]) {
 
   private val framers = new ConcurrentHashMap [ID, Frame [T]]
 
-  def register [P] (p: Pickler [P], id: ID, read: P => T) {
+  def register [P] (p: Pickler [P], id: ID) (read: P => T) {
     val h = Frame (p, id, read)
     val h0 = framers.putIfAbsent (id, h)
     require (h0 == null, s"$id already registered")
   }
 
-  def register [P] (p: Pickler [P], read: P => T): ID = {
+  def register [P] (p: Pickler [P]) (read: P => T): ID = {
     var id = strategy.newEphemeralId
     while (framers.putIfAbsent (id, Frame (p, id, read)) != null)
       id = strategy.newEphemeralId
@@ -28,37 +28,47 @@ class Framer [ID, T] (strategy: Framer.Strategy [ID]) {
   def unregister [P] (id: ID): Unit =
     framers.remove (id)
 
-  def send [P] (p: Pickler [P], id: ID, v: P, handle: T => Any) {
-    val buf = new PagedBuffer (12)
-    pickle (p, v, buf)
+  private def send (len: Int, id: ID, buf: PagedBuffer) (handle: T => Any) {
+    val end = buf.readPos + len
     val frm = framers.get (id)
-    require (frm != null || strategy.isEphemeralId (id), s"$id not recognized.")
     if (frm != null) {
       val x = frm.read (buf)
-      require (buf.readPos == buf.writePos, s"Frame overflow on $id.")
-      handle (x)
+      if (buf.readPos == end) {
+        handle (x)
+      } else if (buf.readPos < end) {
+        throw new FrameOverflowException
+      } else {
+        throw new FrameUnderflowException
+      }
+    } else {
+      buf.readPos = end
+      if (!strategy.isEphemeralId (id))
+        throw new FrameNotRecognizedException (id)
     }}
 
-  def read (pos: Long, file: File, buf: PagedBuffer, handle: T => Any, cb: Callback [Unit]) {
+  def send [P] (p: Pickler [P], id: ID, v: P) (handle: T => Any) {
+    val buf = new PagedBuffer (12)
+    pickle (p, v, buf)
+    send (buf.writePos, id, buf) (handle)
+  }
 
-    def bodyRead (len: Int, id: ID) = new Callback [Unit] {
+  def read (buf: PagedBuffer, handle: T => Any) {
+    val len = buf.readInt()
+    val id = strategy.readId (buf)
+    send (len, id, buf) (handle)
+  }
+
+  private def bodyRead (len: Int, id: ID, buf: PagedBuffer, handle: T => Any, cb: Callback [Unit]) =
+
+    new Callback [Unit] {
 
       def pass (v: Unit) {
-        val end = buf.readPos + len
         try {
-          val frm = framers.get (id)
-          require (frm != null || strategy.isEphemeralId (id), s"$id not recognized.")
-          if (frm != null) {
-            val x = frm.read (buf)
-            require (buf.readPos == end, s"Frame overflow on $id.")
-            handle (x)
-          } else {
-            buf.readPos = end
-          }
+          send (len, id, buf) (handle)
         } catch {
           case e: Throwable =>
-            buf.readPos = end
             cb.fail (e)
+            return
         }
         cb()
       }
@@ -66,13 +76,15 @@ class Framer [ID, T] (strategy: Framer.Strategy [ID]) {
       def fail (t: Throwable) = cb.fail (t)
     }
 
+  def read (file: File, pos: Long, buf: PagedBuffer, handle: T => Any, cb: Callback [Unit]) {
+
     def headerRead() = new Callback [Unit] {
 
       def pass (v: Unit) {
         try {
           val len = buf.readInt()
           val id = strategy.readId (buf)
-          file.fill (buf, pos + headerByteSize, len, bodyRead (len, id))
+          file.fill (buf, pos + headerByteSize, len, bodyRead (len, id, buf, handle, cb))
         } catch {
           case e: Throwable => cb.fail (e)
         }}
@@ -85,38 +97,13 @@ class Framer [ID, T] (strategy: Framer.Strategy [ID]) {
 
   def read (socket: Socket, buf: PagedBuffer, handle: T => Any, cb: Callback [Unit]) {
 
-    def bodyRead (len: Int, id: ID) = new Callback [Unit] {
-
-      def pass (v: Unit) {
-        val end = buf.readPos + len
-        try {
-          val frm = framers.get (id)
-          require (frm != null || strategy.isEphemeralId (id), s"$id not recognized.")
-          if (frm != null) {
-            val x = frm.read (buf)
-            require (buf.readPos == end, s"Frame overflow on $id.")
-            handle (x)
-          } else {
-            buf.readPos = end
-          }
-        } catch {
-          case e: Throwable =>
-            buf.readPos = end
-            cb.fail (e)
-        }
-        cb()
-      }
-
-      def fail (t: Throwable) = cb.fail (t)
-    }
-
     def headerRead() = new Callback [Unit] {
 
       def pass (v: Unit) {
         try {
           val len = buf.readInt()
           val id = strategy.readId (buf)
-          socket.fill (buf, len, bodyRead (len, id))
+          socket.fill (buf, len, bodyRead (len, id, buf, handle, cb))
         } catch {
           case e: Throwable => cb.fail (e)
         }}

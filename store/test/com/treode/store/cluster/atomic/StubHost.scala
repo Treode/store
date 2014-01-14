@@ -15,7 +15,7 @@ import com.treode.store.local.temp.TestableTempKit
 private class StubHost (id: HostId, cluster: StubCluster) extends BaseStubHost (id, cluster) {
 
   val disks = Disks (scheduler, StubEvents)
-  val file = new StubFile (scheduler)
+  val file = new StubFile (cluster.scheduler)
   val config = DiskDriveConfig (16, 8, 1L<<20)
   disks.attach (Seq ((Paths.get ("a"), file, config)), Callback.ignore)
 

@@ -87,7 +87,7 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
     _executor = Executors.newScheduledThreadPool (nt)
     _scheduler = Scheduler (_executor)
 
-    _mailboxes = new MailboxRegistry () (Events.live)
+    _mailboxes = new MailboxRegistry
 
     _group = AsynchronousChannelGroup.withFixedThreadPool (1, Executors.defaultThreadFactory)
 
