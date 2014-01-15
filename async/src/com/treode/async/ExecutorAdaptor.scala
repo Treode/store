@@ -7,20 +7,17 @@ private class ExecutorAdaptor (executor: ScheduledExecutorService) extends Sched
   def execute (task: Runnable) =
     executor.execute (task)
 
-  def execute (task: => Any) =
-    executor.execute (toRunnable (task))
+  def delay (millis: Long, task: Runnable) =
+    executor.schedule (task, millis, TimeUnit.MILLISECONDS)
 
-  def delay (millis: Long) (task: => Any) =
-    executor.schedule (toRunnable (task), millis, TimeUnit.MILLISECONDS)
-
-  def at (millis: Long) (task: => Any) {
+  def at (millis: Long, task: Runnable) {
     val t = System.currentTimeMillis
     if (millis < t)
-      executor.execute (toRunnable (task))
+      executor.execute (task)
     else
-      executor.schedule (toRunnable (task), millis - t, TimeUnit.MILLISECONDS)
+      executor.schedule (task, millis - t, TimeUnit.MILLISECONDS)
   }
 
-  def spawn (task: => Any): Unit =
-    executor.execute (toRunnable (task))
+  def spawn (task: Runnable): Unit =
+    executor.execute (task)
 }

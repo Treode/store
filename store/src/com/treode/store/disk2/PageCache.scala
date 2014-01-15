@@ -3,16 +3,16 @@ package com.treode.store.disk2
 import java.util.concurrent.Callable
 import scala.reflect.ClassTag
 import com.google.common.cache.{CacheBuilder, CacheLoader, Cache}
-import com.treode.async.{Callback, Future, callback, guard}
+import com.treode.async.{Callback, Future, Scheduler, callback, guard}
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{Pickler, unpickle}
 
-private class PageCache {
+private class PageCache (scheduler: Scheduler) {
 
   class Load (p: Pickler [_], disks: Map [Int, DiskDrive], pos: Position)
   extends Callable [Future [Any]] {
     def call(): Future [Any] = {
-      val fut = new Future [Any]
+      val fut = new Future [Any] (scheduler)
       guard (fut) {
         val disk = disks (pos.disk)
         val buf = PagedBuffer (12)

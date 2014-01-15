@@ -73,4 +73,14 @@ package object async {
   def toRunnable (task: => Any): Runnable =
     new Runnable {
       def run() = task
+    }
+
+  def toRunnable [A] (cb: Callback [A], v: A): Runnable =
+    new Runnable {
+      def run() = cb (v)
+    }
+
+  def toRunnable [A] (cb: Callback [A], t: Throwable): Runnable =
+    new Runnable {
+      def run() = cb.fail (t)
     }}

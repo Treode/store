@@ -31,15 +31,6 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
           disengage()
         }}})
 
-  def execute (task: => Any): Unit =
-    add (new Runnable {
-      def run() {
-        try {
-          task
-        } finally {
-          disengage()
-        }}})
-
   def begin (task: Callback [Unit] => Any): Unit =
     add (new Runnable {
       def run() {
@@ -55,12 +46,12 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
           case t: Throwable => cb.fail (t)
         }}})
 
-  def delay (millis: Long) (task: => Any): Unit =
+  def delay (millis: Long, task: Runnable): Unit =
     scheduler.delay (millis) (execute (task))
 
-  def at (millis: Long) (task: => Any): Unit =
+  def at (millis: Long, task: Runnable): Unit =
     scheduler.at (millis) (execute (task))
 
-  def spawn (task: => Any): Unit =
+  def spawn (task: Runnable): Unit =
     scheduler.execute (task)
 }

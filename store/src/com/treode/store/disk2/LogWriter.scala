@@ -48,7 +48,7 @@ private class LogWriter (
     val finish = new Callback [Unit] {
       def pass (v: Unit) = {
         buffer.clear()
-        entries foreach (e =>  scheduler.execute (e.cb()))
+        entries foreach (e =>  scheduler.execute (e.cb, ()))
         dispatcher.engage (LogWriter.this)
       }
       def fail (t: Throwable) {
@@ -90,11 +90,11 @@ private class LogWriter (
     file.flush (buffer, pos, new Callback [Unit] {
       def pass (v: Unit) {
         buffer.clear()
-        cb()
+        scheduler.execute (cb, ())
       }
       def fail (t: Throwable) {
         buffer.clear()
-        cb.fail (t)
+        scheduler.fail (cb, t)
       }})
   }
 

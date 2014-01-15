@@ -13,17 +13,14 @@ private class RandomScheduler (random: Random) extends StubScheduler {
   def execute (task: Runnable): Unit =
     tasks.append (task)
 
-  def execute (task: => Any): Unit =
-    tasks.append (toRunnable (task))
+  def delay (millis: Long, task: Runnable): Unit =
+    timers.enqueue (StubTimer (time + millis, task))
 
-  def delay (millis: Long) (task: => Any): Unit =
-    timers.enqueue (StubTimer (time + millis, toRunnable (task)))
+  def at (millis: Long, task: Runnable): Unit =
+    timers.enqueue (StubTimer (millis, task))
 
-  def at (millis: Long) (task: => Any): Unit =
-    timers.enqueue (StubTimer (millis, toRunnable (task)))
-
-  def spawn (task: => Any): Unit =
-    tasks.append (toRunnable (task))
+  def spawn (task: Runnable): Unit =
+    tasks.append (task)
 
   def nextTask(): Unit = {
     val i = random.nextInt (tasks.size)

@@ -25,7 +25,7 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
   val records = new RecordRegistry
   val log = new LogDispatcher (scheduler)
   val pages = new PageDispatcher (scheduler)
-  val cache = new PageCache
+  val cache = new PageCache (scheduler)
   var disks = Map.empty [Int, DiskDrive]
   var number = 0
   var generation = 0
@@ -277,13 +277,13 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
         disks ++= items map (item => item.id -> item)
         items foreach (_.engage())
         ready (true)
-        cb()
+        scheduler.execute (cb, ())
       }
       def fail (t: Throwable): Unit = fiber.execute {
         val reboot = BootBlock (generation, attached)
         val latch = latch4
         disks.values foreach (_.checkpoint (reboot, latch))
-        cb.fail (t)
+        scheduler.fail (cb, t)
       }})
 
     def latch2 = Callback.latch (items.size, new Callback [Unit] {

@@ -64,12 +64,12 @@ private class PageWriter (
       def pass (v: Unit) = {
         buffer.clear()
         val _pos = pos
-        callbacks foreach (cb =>  scheduler.execute (cb (_pos)))
+        callbacks foreach (scheduler.execute (_, _pos))
         dispatcher.engage (PageWriter.this)
       }
       def fail (t: Throwable) {
         buffer.clear()
-        callbacks foreach (cb => scheduler.execute (cb.fail (t)))
+        callbacks foreach (scheduler.fail (_, t))
       }}
 
     guard (finish) {
@@ -96,11 +96,11 @@ private class PageWriter (
     file.flush (buffer, base, new Callback [Unit] {
       def pass (v: Unit) {
         buffer.clear()
-        cb()
+        scheduler.execute (cb, ())
       }
       def fail (t: Throwable) {
         buffer.clear()
-        cb.fail (t)
+        scheduler.fail (cb, t)
       }})
   }
 
