@@ -40,5 +40,4 @@ private class LockReader (_rt: TxClock, cb: Runnable) {
   }
 
   override def toString = s"LockReader (rt=$rt, ready=${needed == 0})"
-
 }

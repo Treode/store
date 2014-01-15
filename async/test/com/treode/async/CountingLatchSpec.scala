@@ -2,11 +2,11 @@ package com.treode.async
 
 import org.scalatest.FlatSpec
 
-class LatchSpec extends FlatSpec {
+class CountingLatchSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
 
-  "The Latch" should "release immediately for count==0" in {
+  "The CountingLatchSpec" should "release immediately for count==0" in {
     val cb = new CallbackCaptor [Unit]
     val ltch = Callback.latch (0, cb)
     cb.passed

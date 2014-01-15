@@ -41,5 +41,11 @@ object Callback {
     }
 
   def latch (count: Int, cb: Callback [Unit]): Callback [Any] =
-    new Latch (count, cb)
+    new CountingLatch (count, cb)
+
+  def collate [A] (count: Int, cb: Callback [Array [A]]) (implicit m: Manifest [A]): Callback [(Int, A)] =
+    new ArrayLatch (count, cb)
+
+  def collect [A] (count: Int, cb: Callback [Seq [A]]) (implicit m: Manifest [A]): Callback [A] =
+    new SeqLatch (count, cb)
 }

@@ -1,13 +1,15 @@
 package com.treode.async
 
-private class Latch (private var count: Int, cb: Callback [Unit]) extends Callback [Any] {
+private abstract class AbstractLatch [A] (private var count: Int, cb: Callback [A]) {
 
   private var thrown = List.empty [Throwable]
 
-  if (count == 0)
-    cb()
+  def init() {
+    if (count == 0)
+      cb (value)
+  }
 
-  private def release() {
+  def release() {
     require (count > 0, "Latch was already released.")
     count -= 1
     if (count > 0)
@@ -15,14 +17,13 @@ private class Latch (private var count: Int, cb: Callback [Unit]) extends Callba
     if (!thrown.isEmpty)
       cb.fail (MultiException.fit (thrown))
     else
-      cb()
-  }
-
-  def pass (v: Any): Unit = synchronized {
-    release()
+      cb (value)
   }
 
   def fail (t: Throwable): Unit = synchronized {
     thrown ::= t
     release()
-  }}
+  }
+
+  def value: A
+}
