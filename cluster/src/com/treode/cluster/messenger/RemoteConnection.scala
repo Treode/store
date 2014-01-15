@@ -244,7 +244,7 @@ private class RemoteConnection (
   }
 
   def send [A] (p: Pickler [A], mbx: MailboxId, msg: A): Unit = fiber.execute {
-    state.send (MailboxId.framer.write (p, mbx, msg, _))
+    state.send (MailboxRegistry.framer.write (p, mbx, msg, _))
   }
 
   override def hashCode() = id.hashCode()

@@ -8,6 +8,8 @@ import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{Picklers, pickle}
 
+import RecordHeader.{Continue, End}
+
 private class LogWriter (
     file: File,
     alloc: SegmentAllocator,
@@ -18,29 +20,6 @@ private class LogWriter (
   var head = 0L
   var pos = 0L
   var limit = 0L
-
-  def pickleHeader (header: LogHeader) {
-    val start = buffer.writePos
-    buffer.writePos += 4
-    pickle (LogHeader.pickle, header, buffer)
-    val end = buffer.writePos
-    val length = end - start - 4
-    buffer.writePos = start
-    buffer.writeInt (length)
-    buffer.writePos = end
-  }
-
-  def pickleEntry (entry: PickledRecord) {
-    val start = buffer.writePos
-    buffer.writePos += 4
-    pickle (LogHeader.pickle, LogHeader.Entry (entry.time, entry.id), buffer)
-    entry.write (buffer)
-    val end = buffer.writePos
-    val length = end - start - 4
-    buffer.writePos = start
-    buffer.writeInt (length)
-    buffer.writePos = end
-  }
 
   val receiver: (ArrayList [PickledRecord] => Unit) = (receive _)
 
@@ -80,23 +59,23 @@ private class LogWriter (
     guard (finish) {
 
       for (entry <- accepts)
-        pickleEntry (entry)
+        entry.write (buffer)
 
       val time =
         if (accepts.isEmpty)
           System.currentTimeMillis
         else
-          accepts .map (_.time) .max
+          accepts.last.time
 
       val _pos = pos
       if (realloc) {
         val seg = alloc.allocate()
         pos = seg.pos
         limit = seg.limit
-        pickleHeader (LogHeader.Continue (seg.num))
+        RecordRegistry.framer.write (Continue (seg.num), buffer)
       } else {
         pos += buffer.readableBytes
-        pickleHeader (LogHeader.End)
+        RecordRegistry.framer.write (End, buffer)
       }
 
       file.flush (buffer, _pos, finish)
@@ -107,7 +86,7 @@ private class LogWriter (
     head = seg.pos
     pos = seg.pos
     limit = seg.limit
-    pickleHeader (LogHeader.End)
+    RecordRegistry.framer.write (End, buffer)
     file.flush (buffer, pos, new Callback [Unit] {
       def pass (v: Unit) {
         buffer.clear()
@@ -127,7 +106,11 @@ private class LogWriter (
     head = meta.head
     pos = head
     limit = seg.limit
-  }}
+  }
+
+  def iterator (records: RecordRegistry, cb: Callback [LogIterator]): Unit =
+    LogIterator (file, head, alloc, records, cb)
+}
 
 object LogWriter {
 

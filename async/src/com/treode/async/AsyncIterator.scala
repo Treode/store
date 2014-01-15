@@ -22,6 +22,17 @@ object AsyncIterator {
   def filter [A] (iter: AsyncIterator [A], cb: Callback [AsyncIterator [A]]) (pred: A => Boolean): Unit =
     FilteredIterator (iter, pred, cb)
 
+  private class Mapper [A, B] (iter: AsyncIterator [A], f: A => B) extends AsyncIterator [B] {
+    def hasNext = iter.hasNext
+    def next (cb: Callback [B]) = iter.next (new Callback [A] {
+      def pass (v: A) = cb (f (v))
+      def fail (t: Throwable) = cb.fail (t)
+    })
+  }
+
+  def map [A, B] (iter: AsyncIterator [A]) (f: A => B): AsyncIterator [B] =
+    new Mapper (iter, f)
+
   private class Looper [A] (iter: AsyncIterator [A], func: (A, Callback [Unit]) => Any, cb: Callback [Unit])
   extends Callback [A] {
 

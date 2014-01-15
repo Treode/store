@@ -26,6 +26,6 @@ trait Disks {
 
 object Disks {
 
-  def apply (scheduler: Scheduler, events: Events): Disks =
-    new DisksKit (scheduler, events)
+  def apply (scheduler: Scheduler): Disks =
+    new DisksKit (scheduler)
 }

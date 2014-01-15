@@ -3,24 +3,25 @@ package com.treode.async.io
 import java.util.concurrent.ConcurrentHashMap
 import com.treode.async.Callback
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{Pickler, unpickle, pickle}
+import com.treode.pickle.{Pickler, pickle, size, unpickle}
 
-class Framer [ID, T] (strategy: Framer.Strategy [ID]) {
-  import Framer.Frame
+class Framer [ID, H, T] (strategy: Framer.Strategy [ID, H]) {
+  import Framer.Unpickler
 
-  private val headerByteSize = strategy.idByteSize + 4
+  type FileFrame = (Int, H, Option [T])
+  type SocketFrame = (H, Option [T])
 
-  private val framers = new ConcurrentHashMap [ID, Frame [T]]
+  private val framers = new ConcurrentHashMap [ID, Unpickler [T]]
 
   def register [P] (p: Pickler [P], id: ID) (read: P => T) {
-    val h = Frame (p, id, read)
+    val h = Unpickler (p, id, read)
     val h0 = framers.putIfAbsent (id, h)
     require (h0 == null, s"$id already registered")
   }
 
   def register [P] (p: Pickler [P]) (read: P => T): ID = {
     var id = strategy.newEphemeralId
-    while (framers.putIfAbsent (id, Frame (p, id, read)) != null)
+    while (framers.putIfAbsent (id, Unpickler (p, id, read)) != null)
       id = strategy.newEphemeralId
     id
   }
@@ -28,63 +29,71 @@ class Framer [ID, T] (strategy: Framer.Strategy [ID]) {
   def unregister [P] (id: ID): Unit =
     framers.remove (id)
 
-  private def send (len: Int, id: ID, buf: PagedBuffer) (handle: T => Any) {
+  private def read (len: Int, buf: PagedBuffer): SocketFrame = {
     val end = buf.readPos + len
-    val frm = framers.get (id)
+    val (id, hdr) = strategy.readHeader (buf)
+    if (id.isEmpty) {
+      buf.readPos = end
+      buf.discard (buf.readPos)
+      return (hdr, None)
+    }
+    val frm = framers.get (id.get)
     if (frm != null) {
-      val x = frm.read (buf)
+      val v = frm.read (buf)
       if (buf.readPos == end) {
-        handle (x)
-      } else if (buf.readPos < end) {
-        throw new FrameOverflowException
+        buf.discard (buf.readPos)
+        (hdr, Some (v))
       } else {
-        throw new FrameUnderflowException
+        buf.readPos = end
+        buf.discard (buf.readPos)
+        throw new FrameBoundsException
       }
     } else {
       buf.readPos = end
-      if (!strategy.isEphemeralId (id))
+      buf.discard (buf.readPos)
+      if (!strategy.isEphemeralId (id.get))
         throw new FrameNotRecognizedException (id)
+      (hdr, None)
     }}
 
-  def send [P] (p: Pickler [P], id: ID, v: P) (handle: T => Any) {
+  def read [P] (p: Pickler [P], hdr: H, v: P): SocketFrame = {
     val buf = new PagedBuffer (12)
+    strategy.writeHeader (hdr, buf)
     pickle (p, v, buf)
-    send (buf.writePos, id, buf) (handle)
+    read (buf.writePos, buf)
   }
 
-  def read (buf: PagedBuffer, handle: T => Any) {
+  def read (buf: PagedBuffer): SocketFrame = {
     val len = buf.readInt()
-    val id = strategy.readId (buf)
-    send (len, id, buf) (handle)
+    read (len, buf)
   }
 
-  private def bodyRead (len: Int, id: ID, buf: PagedBuffer, handle: T => Any, cb: Callback [Unit]) =
+  def read (file: File, pos: Long, buf: PagedBuffer, cb: Callback [FileFrame]) {
 
-    new Callback [Unit] {
+    def bodyRead (len: Int, buf: PagedBuffer, cb: Callback [FileFrame]) =
 
-      def pass (v: Unit) {
-        try {
-          send (len, id, buf) (handle)
-        } catch {
-          case e: Throwable =>
-            cb.fail (e)
-            return
+      new Callback [Unit] {
+
+        def pass (v: Unit) {
+          val (hdr, v) = try {
+            read (len, buf)
+          } catch {
+            case e: Throwable =>
+              cb.fail (e)
+              return
+          }
+          cb (len, hdr, v)
         }
-        cb()
+
+        def fail (t: Throwable) = cb.fail (t)
       }
 
-      def fail (t: Throwable) = cb.fail (t)
-    }
-
-  def read (file: File, pos: Long, buf: PagedBuffer, handle: T => Any, cb: Callback [Unit]) {
-
     def headerRead() = new Callback [Unit] {
 
       def pass (v: Unit) {
         try {
           val len = buf.readInt()
-          val id = strategy.readId (buf)
-          file.fill (buf, pos + headerByteSize, len, bodyRead (len, id, buf, handle, cb))
+          file.fill (buf, pos + 4, len, bodyRead (len, buf, cb))
         } catch {
           case e: Throwable => cb.fail (e)
         }}
@@ -92,18 +101,35 @@ class Framer [ID, T] (strategy: Framer.Strategy [ID]) {
       def fail (t: Throwable) = cb.fail (t)
     }
 
-    file.fill (buf, pos, headerByteSize, headerRead())
+    file.fill (buf, pos, 4, headerRead())
   }
 
-  def read (socket: Socket, buf: PagedBuffer, handle: T => Any, cb: Callback [Unit]) {
+  def read (socket: Socket, buf: PagedBuffer, cb: Callback [SocketFrame]) {
+
+    def bodyRead (len: Int, buf: PagedBuffer, cb: Callback [SocketFrame]) =
+
+      new Callback [Unit] {
+
+        def pass (v: Unit) {
+          val (hdr, v) = try {
+            read (len, buf)
+          } catch {
+            case e: Throwable =>
+              cb.fail (e)
+              return
+          }
+          cb (hdr, v)
+        }
+
+        def fail (t: Throwable) = cb.fail (t)
+      }
 
     def headerRead() = new Callback [Unit] {
 
       def pass (v: Unit) {
         try {
           val len = buf.readInt()
-          val id = strategy.readId (buf)
-          socket.fill (buf, len, bodyRead (len, id, buf, handle, cb))
+          socket.fill (buf, len, bodyRead (len, buf, cb))
         } catch {
           case e: Throwable => cb.fail (e)
         }}
@@ -111,40 +137,48 @@ class Framer [ID, T] (strategy: Framer.Strategy [ID]) {
       def fail (t: Throwable) = cb.fail (t)
     }
 
-    socket.fill (buf, headerByteSize, headerRead())
+    socket.fill (buf, 4, headerRead())
   }}
 
 object Framer {
 
-  private trait Frame [T] {
+  private trait Unpickler [T] {
 
     def read (buf: PagedBuffer): T
   }
 
-  private object Frame {
+  private object Unpickler {
 
-    def apply [ID, P, T] (p: Pickler [P], id: ID, reader: P => T): Frame [T] =
-      new Frame [T] {
+    def apply [ID, P, T] (p: Pickler [P], id: ID, reader: P => T): Unpickler [T] =
+      new Unpickler [T] {
         def read (buf: PagedBuffer): T = reader (unpickle (p, buf))
-        override def toString = s"Framer($id)"
+        override def toString = s"Unpickler($id)"
     }}
 
-  trait Strategy [ID] {
+  trait Strategy [ID, H] {
 
-    def idByteSize: Int
     def newEphemeralId: ID
     def isEphemeralId (id: ID): Boolean
-    def readId (buf: PagedBuffer): ID
-    def writeId (id: ID, buf: PagedBuffer)
+    def readHeader (buf: PagedBuffer): (Option [ID], H)
+    def writeHeader (hdr: H, buf: PagedBuffer)
 
-    def write [P] (p: Pickler [P], id: ID, v: P, buf: PagedBuffer) {
-      val header = buf.writePos
-      buf.writeInt (0)
-      writeId (id, buf)
-      val body = buf.writePos
+    def write (hdr: H, buf: PagedBuffer) {
+      val preamble = buf.writePos
+      buf.writePos = preamble + 4
+      writeHeader (hdr, buf)
+      val end = buf.writePos
+      buf.writePos = preamble
+      buf.writeInt (end - preamble - 4)
+      buf.writePos = end
+    }
+
+    def write [P] (p: Pickler [P], hdr: H, v: P, buf: PagedBuffer) {
+      val preamble = buf.writePos
+      buf.writePos = preamble + 4
+      writeHeader (hdr, buf)
       pickle (p, v, buf)
       val end = buf.writePos
-      buf.writePos = header
-      buf.writeInt (end - body)
+      buf.writePos = preamble
+      buf.writeInt (end - preamble - 4)
       buf.writePos = end
     }}}

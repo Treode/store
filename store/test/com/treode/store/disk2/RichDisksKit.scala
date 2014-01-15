@@ -5,14 +5,13 @@ import scala.reflect.ClassTag
 
 import com.treode.async.{CallbackCaptor, StubScheduler}
 import com.treode.async.io.File
-import com.treode.cluster.events.StubEvents
 import com.treode.pickle.Pickler
 import org.scalatest.Assertions
 
 import Assertions._
 
 private class RichDisksKit (scheduler: StubScheduler)
-extends DisksKit (scheduler, StubEvents) {
+extends DisksKit (scheduler) {
 
   def assertOpening() = assert (state.isInstanceOf [Opening])
   def assertReady() = assert (state == Ready)

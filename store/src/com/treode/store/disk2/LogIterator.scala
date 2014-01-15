@@ -1,12 +1,12 @@
 package com.treode.store.disk2
 
-import com.treode.async.{AsyncIterator, Callback, guard}
+import com.treode.async.{AsyncIterator, Callback, callback, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.unpickle
 
 private class LogIterator private (file: File, alloc: SegmentAllocator, records: RecordRegistry)
-extends AsyncIterator [Replay] {
+extends AsyncIterator [(Long, Unit => Any)] {
 
   private val buf = new PagedBuffer (12)
   private var pos = -1L
@@ -16,8 +16,8 @@ extends AsyncIterator [Replay] {
     cb.fail (t)
   }
 
-  private def init (pos: Long, cb: Callback [LogIterator]) {
-    this.pos = pos
+  private def init (head: Long, cb: Callback [LogIterator]) {
+    pos = head
     file.fill (buf, pos, 4, new Callback [Unit] {
       def pass (v: Unit) = cb (LogIterator.this)
       def fail (t: Throwable) = failed (cb, t)
@@ -26,52 +26,46 @@ extends AsyncIterator [Replay] {
 
   def hasNext: Boolean = pos > 0
 
-  def readEntry (len: Int, cb: Callback [Replay]): Callback [Unit] =
-    new Callback [Unit] {
+  private def entryRead (cb: Callback [(Long, Unit => Any)]) =
+    new Callback [(Int, RecordHeader, Option [Unit => Any])] {
 
-      def pass (v: Unit) {
-        val start = buf.readPos
-        val hdr = unpickle (LogHeader.pickle, buf)
-        hdr match {
-          case LogHeader.End =>
+      def pass (v: (Int, RecordHeader, Option [Unit => Any])) {
+        v match {
+          case (len, RecordHeader.End, None) =>
             pos = -1L
             buf.clear()
-            cb (Replay.noop (Long.MaxValue))
+            cb (Long.MaxValue, _ => ())
 
-          case LogHeader.Continue (num) =>
+          case (len, RecordHeader.Continue (num), None) =>
             val seg = alloc.allocSeg (num)
             pos = seg.pos
             buf.clear()
-            file.fill (buf, pos, 4, readLength (cb))
+            records.read (file, pos, buf, this)
 
-          case LogHeader.Entry (time, id) =>
+          case (len, RecordHeader.Entry (time, id), Some (entry)) =>
             pos += len
-            val replay = records.prepare (time, id, buf, len - (buf.readPos - start))
-            cb (replay)
-        }}
+            cb (time, entry)
 
-      def fail (t: Throwable) = failed (cb, t)
-    }
-
-  def readLength (cb: Callback [Replay]): Callback [Unit] =
-    new Callback [Unit] {
-
-      def pass (v: Unit) {
-        pos += 4
-        val len = buf.readInt()
-        file.fill (buf, pos, len, readEntry (len, cb))
+          case _ =>
+            cb.fail (new MatchError)
+        }
       }
 
       def fail (t: Throwable) = failed (cb, t)
     }
 
-  def next (cb: Callback [Replay]): Unit =
-    file.fill (buf, pos, 4, readLength (cb))
+  def next (cb: Callback [(Long, Unit => Any)]): Unit =
+    records.read (file, pos, buf, entryRead (cb))
 }
 
 object LogIterator {
 
-  def apply (file: File, pos: Long, free: SegmentAllocator, records: RecordRegistry,
+  def apply (file: File, head: Long, alloc: SegmentAllocator, records: RecordRegistry,
       cb: Callback [LogIterator]): Unit =
-    new LogIterator (file, free, records) .init (pos, cb)
+    new LogIterator (file, alloc, records) .init (head, cb)
+
+  private val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
+
+  def merge (iters: Iterator [LogIterator], cb: Callback [AsyncIterator [(Long, Unit => Any)]]): Unit =
+    AsyncIterator.merge (iters, cb) (ordering)
 }

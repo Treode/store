@@ -1,44 +1,37 @@
 package com.treode.store.disk2
 
-import java.util.concurrent.ConcurrentHashMap
-import com.treode.cluster.events.Events
+import com.treode.async.{Callback, callback}
+import com.treode.async.io.{File, Framer}
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.Pickler
+import com.treode.pickle.{Pickler, pickle, unpickle}
 
-private class RecordRegistry (events: Events) {
+private class RecordRegistry {
 
-  private val types = new ConcurrentHashMap [Int, PickledReplay]
+  private val records = new Framer [TypeId, RecordHeader, Unit => Any] (RecordRegistry.framer)
 
-  def prepare (time: Long, id: TypeId, buf: PagedBuffer, len: Int): Replay = {
-    if (len == 0)
-      return Replay.noop (time)
+  def read (file: File, pos: Long, buf: PagedBuffer, cb: Callback [records.FileFrame]): Unit =
+    records.read (file, pos, buf, cb)
 
-    val end = buf.readPos + len
-    val pr = types.get (id.id)
-    if (pr == null) {
-      events.recordNotRecognized (id, len)
-      buf.readPos = end
-      buf.discard (end)
-      return Replay.noop (time)
-    }
+  def register [R] (p: Pickler [R], id: TypeId) (f: R => Any): Unit =
+    records.register (p, id) (v => _ => f (v))
+}
 
-    try {
-      val replay = pr.prepare (time, buf)
-      if (buf.readPos != end) {
-        events.unpicklingRecordConsumedWrongNumberOfBytes (id)
-        buf.readPos = end
-        buf.discard (end)
-      }
-      replay
-    } catch {
-      case e: Throwable =>
-        events.exceptionFromRecordHandler (e)
-        buf.readPos = end
-        buf.discard (end)
-        Replay.noop (time)
-    }}
+private object RecordRegistry {
 
-  def register [R] (p: Pickler [R], id: TypeId) (f: R => Any) {
-    val pf = PickledReplay (p, id, f)
-    require (types.putIfAbsent (id.id, pf) == null, "Record type already registered: " + id)
-  }}
+  val framer: Framer.Strategy [TypeId, RecordHeader] =
+    new Framer.Strategy [TypeId, RecordHeader] {
+
+    def newEphemeralId = ???
+
+    def isEphemeralId (id: TypeId) = false
+
+    def readHeader (buf: PagedBuffer): (Option [TypeId], RecordHeader) = {
+      val hdr = unpickle (RecordHeader.pickle, buf)
+      hdr match {
+        case RecordHeader.Entry (time, id) => (Some (id), hdr)
+        case _ => (None, hdr)
+      }}
+
+    def writeHeader (hdr: RecordHeader, buf: PagedBuffer) {
+      pickle (RecordHeader.pickle, hdr, buf)
+    }}}

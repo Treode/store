@@ -54,6 +54,9 @@ private class DiskDrive (
     pagew.recover (gen, superblock.pages)
   }
 
+  def logIterator (records: RecordRegistry, cb: Callback [LogIterator]): Unit =
+    logw.iterator (records, cb)
+
   def close() = file.close()
 
   override def hashCode: Int = path.hashCode

@@ -2,9 +2,6 @@ package com.treode.cluster
 
 import scala.language.implicitConversions
 import scala.util.Random
-
-import com.treode.async.io.Framer
-import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Picklers
 
 class MailboxId (val id: Long) extends AnyVal {
@@ -36,13 +33,4 @@ object MailboxId {
   val pickle = {
     import Picklers._
     wrap (fixedLong) build (apply _) inspect (_.id)
-  }
-
-  val framer: Framer.Strategy [MailboxId] =
-    new Framer.Strategy [MailboxId] {
-      def idByteSize = 8
-      def newEphemeralId = MailboxId.newEphemeral()
-      def isEphemeralId (id: MailboxId) = MailboxId.isEphemeral (id)
-      def readId (buf: PagedBuffer) = MailboxId (buf.readLong())
-      def writeId (id: MailboxId, buf: PagedBuffer) = buf.writeLong (id.id)
-    }}
+  }}

@@ -2,7 +2,6 @@ package com.treode.store
 
 import java.nio.file.Path
 import com.treode.async.Callback
-import com.treode.cluster.events.Events
 import com.treode.pickle.Pickler
 
 package disk2 {
@@ -55,15 +54,4 @@ package object disk2 {
   private [disk2] val SuperBlockMask = SuperBlockBytes - 1
   private [disk2] val DiskLeadBytes = 1 << (SuperBlockBits + 1)
   private [disk2] val LogSegmentTrailerBytes = 20
-
-  private [disk2] implicit class DiskEvents (events: Events) {
-
-    def exceptionFromRecordHandler (e: Throwable): Unit =
-      events.warning ("A log record handler threw an exception.", e)
-
-    def recordNotRecognized (id: TypeId, length: Int): Unit =
-      events.warning (s"Log record not recognized: $id")
-
-    def unpicklingRecordConsumedWrongNumberOfBytes (id: TypeId): Unit =
-      events.warning (s"Unpickling a log record consumed the wrong number of bytes: $id")
-  }}
+}

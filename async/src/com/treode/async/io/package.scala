@@ -2,11 +2,10 @@ package com.treode.async
 
 package io {
 
-  class FrameNotRecognizedException (id: Any) extends Exception {
-    override def getMessage = s"$id not recognzied."
+  class FrameBoundsException extends Exception {
+    override def getMessage = "Object did not fit frame."
   }
 
-  class FrameOverflowException extends Exception
-
-  class FrameUnderflowException extends Exception
-}
+  class FrameNotRecognizedException (id: Any) extends Exception {
+    override def getMessage = s"$id not recognzied."
+  }}

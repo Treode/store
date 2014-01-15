@@ -8,11 +8,10 @@ import scala.reflect.ClassTag
 
 import com.treode.async._
 import com.treode.async.io.File
-import com.treode.cluster.events.Events
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{Pickler, unpickle}
 
-private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
+private class DisksKit (scheduler: Scheduler) extends Disks {
 
   case class SuperBlocks (path: Path, file: File, sb1: Option [SuperBlock], sb2: Option [SuperBlock])
 
@@ -23,7 +22,7 @@ private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
   type CheckpointsPending = List [Callback [Unit]]
 
   val fiber = new Fiber (scheduler)
-  val records = new RecordRegistry (events)
+  val records = new RecordRegistry
   val log = new LogDispatcher (scheduler)
   val pages = new PageDispatcher (scheduler)
   val cache = new PageCache
@@ -99,6 +98,12 @@ private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
         scheduler.execute (checkpoint.fail (new PanickedException (t)))
     }}
 
+  trait ReattachPending {
+
+    def reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
+      cb.fail (new ReattachmentPendingException)
+  }
+
   trait ReattachCompleted {
 
     def reattach (items: Seq [ReattachItem], cb: Callback [Unit]): Unit =
@@ -110,7 +115,7 @@ private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
     var checkpoints = List.empty [Callback [Unit]]
 
     def reattach (items: Seq [ReattachItem], cb: Callback [Unit]): Unit =
-      state = new Recovering (items, cb, Queue.empty, checkpoints)
+      state = new Reattaching (items, cb, Queue.empty, checkpoints)
 
     def attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
       guard (cb) {
@@ -123,26 +128,14 @@ private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
     override def toString = "Opening"
   }
 
-  class Recovering (
+  class Reattaching (
       items: Seq [ReattachItem],
       cb: Callback [Unit],
       var attaches: AttachesPending,
-      var checkpoints: CheckpointsPending)
-  extends State with QueueAttachAndCheckpoint {
+      var checkpoints: CheckpointsPending
+  ) extends State with QueueAttachAndCheckpoint with ReattachPending {
 
-    var reads = List.empty [SuperBlocks]
-    var thrown = List.empty [Throwable]
-
-    def _superBlocksRead() {
-      if (reads.size + thrown.size < items.size) {
-        return
-      }
-
-      if (thrown.size > 0) {
-        panic (MultiException.fit (thrown))
-        cb.fail (MultiException.fit (thrown))
-        return
-      }
+    def superBlocksRead (reads: Seq [SuperBlocks]) {
 
       val sb1 = reads.map (_.sb1) .flatten
       val sb2 = reads.map (_.sb2) .flatten
@@ -191,28 +184,67 @@ private class DisksKit (scheduler: Scheduler, events: Events) extends Disks {
       number = disks.keySet.max + 1
       generation = boot.gen
 
-      disks.values foreach (_.engage())
-      ready (false)
-      cb()
+      state = new Replaying (cb, attaches, checkpoints)
     }
 
-    val superBlocksRead = new Callback [SuperBlocks] {
-      def pass (v: SuperBlocks): Unit = fiber.execute {
-        reads ::= v
-        _superBlocksRead()
+    val _superBlocksRead = Callback.collect (items.size, new Callback [Seq [SuperBlocks]] {
+      def pass (reads: Seq [SuperBlocks]) = fiber.execute {
+        superBlocksRead (reads)
       }
-      def fail (t: Throwable): Unit = fiber.execute {
-        thrown ::= t
-        _superBlocksRead()
-      }}
+      def fail (t: Throwable) = fiber.execute {
+        panic (t)
+        cb.fail (t)
+      }})
 
     for ((path, file) <- items)
-      readSuperBlocks (path, file, superBlocksRead)
+      readSuperBlocks (path, file, _superBlocksRead)
 
-    def reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
-      cb.fail (new ReattachmentPendingException)
+    override def toString = "Reattaching"
+  }
 
-    override def toString = "Recovering"
+  class Replaying (
+      cb: Callback [Unit],
+      var attaches: AttachesPending,
+      var checkpoints: CheckpointsPending
+  ) extends State with QueueAttachAndCheckpoint with ReattachPending {
+
+    def logIteratorReplayed = new Callback [Unit] {
+      def pass (v: Unit) = fiber.execute {
+        disks.values foreach (_.engage())
+        ready (false)
+        cb()
+      }
+      def fail (t: Throwable) {
+        panic (t)
+        cb.fail (t)
+      }}
+
+    def merged = new Callback [AsyncIterator [(Long, Unit => Any)]] {
+      def pass (iter: AsyncIterator [(Long, Unit => Any)]): Unit = fiber.execute {
+        AsyncIterator.foreach (iter, logIteratorReplayed) { case ((time, replay), cb) =>
+          guard (cb) (replay())
+          cb()
+        }}
+      def fail (t: Throwable): Unit = fiber.execute {
+        panic (t)
+        cb.fail (t)
+      }}
+
+    val allMade = new Callback [Seq [LogIterator]] {
+      def pass (iters: Seq [LogIterator]): Unit = fiber.execute {
+        LogIterator.merge (iters.iterator, merged)
+      }
+      def fail (t: Throwable): Unit = fiber.execute {
+        panic (t)
+        cb.fail (t)
+      }}
+
+    val oneMade = Callback.collect (disks.size, allMade)
+
+    for (disk <- disks.values)
+      disk.logIterator (records, oneMade)
+
+    override def toString = "Replaying"
   }
 
   class Attaching (

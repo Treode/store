@@ -2,7 +2,6 @@ package com.treode.store.disk2
 
 import com.treode.async._
 import com.treode.async.io.StubFile
-import com.treode.cluster.events.StubEvents
 import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec
 
@@ -18,7 +17,7 @@ class LogSpec extends FlatSpec {
     val alloc = new SegmentAllocator (config)
     val dispatcher = new LogDispatcher (scheduler)
     val writer = new LogWriter (file, alloc, scheduler, dispatcher)
-    val registry = new RecordRegistry (StubEvents)
+    val registry = new RecordRegistry
 
     alloc.init()
     writer.init (Callback.ignore)
@@ -35,15 +34,15 @@ class LogSpec extends FlatSpec {
     val cb1 = new CallbackCaptor [LogIterator]
     LogIterator (file, writer.head, alloc, registry, cb1)
     scheduler.runTasks()
-    val cb2 = new CallbackCaptor [Seq [Replay]]
+    val cb2 = new CallbackCaptor [Seq [(Long, Unit => Any)]]
     AsyncIterator.scan (cb1.passed, cb2)
     scheduler.runTasks()
     val entries = cb2.passed
-    entries foreach (_.replay())
+    entries foreach (_._2())
     expectResult (9) (replayed.size)
     assert (replayed forall (_ == "apple"))
     var time = 0L
     for (e <- entries) {
-      assert (e.time >= time)
-      time = e.time
+      assert (e._1 >= time)
+      time = e._1
     }}}

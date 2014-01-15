@@ -14,9 +14,8 @@ class DisksKitSpec extends FreeSpec {
 
   val config = DiskDriveConfig (16, 12, 1L<<20)
 
-  private def mkSuperBlock (id: Int, gen: Int, disks: Set [String], config: DiskDriveConfig,
-      scheduler: StubScheduler) = {
-    val file = new StubFile (scheduler)
+  private def mkSuperBlock (file: File, id: Int, gen: Int, disks: Set [String],
+      config: DiskDriveConfig, scheduler: StubScheduler) = {
     val alloc = new SegmentAllocator (config)
     alloc.init()
     val log = new LogWriter (file, alloc, scheduler, null)
@@ -55,7 +54,7 @@ class DisksKitSpec extends FreeSpec {
     }
 
     def writeSuperBlock (id: Int, gen: Int, disks: Set [String], config: DiskDriveConfig) {
-      val block = mkSuperBlock (id, gen, disks, config, scheduler)
+      val block = mkSuperBlock (this, id, gen, disks, config, scheduler)
       val buffer = PagedBuffer (12)
       pickle (SuperBlock.pickle, block, buffer)
       val pos = if ((block.boot.gen & 1) == 0) 0 else SuperBlockBytes
