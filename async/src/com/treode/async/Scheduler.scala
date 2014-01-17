@@ -1,8 +1,8 @@
 package com.treode.async
 
-import java.util.concurrent.{TimeUnit, ScheduledExecutorService}
+import java.util.concurrent.{Executor, TimeUnit, ScheduledExecutorService}
 
-trait Scheduler {
+trait Scheduler extends Executor {
 
   def execute (task: Runnable)
 

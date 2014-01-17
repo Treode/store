@@ -6,7 +6,7 @@ import java.util.Arrays
 import com.treode.async.{Callback, CallbackCaptor, StubScheduler}
 import com.treode.buffer.PagedBuffer
 
-class StubFile (scheduler: StubScheduler) extends File {
+class StubFile (scheduler: StubScheduler) extends File (null, scheduler) {
 
   private var data = new Array [Byte] (0)
 

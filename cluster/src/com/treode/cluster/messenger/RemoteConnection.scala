@@ -6,7 +6,7 @@ import scala.collection.JavaConversions._
 import scala.language.postfixOps
 import scala.util.Random
 
-import com.treode.async.{Callback, Fiber}
+import com.treode.async.{Scheduler, Callback, Fiber}
 import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
@@ -20,7 +20,8 @@ private class RemoteConnection (
   fiber: Fiber,
   group: AsynchronousChannelGroup,
   mailboxes: MailboxRegistry) (
-    implicit events: Events
+    implicit scheduler: Scheduler,
+    events: Events
 ) extends Peer {
 
   require (id != localId)
@@ -118,7 +119,7 @@ private class RemoteConnection (
     val time = System.currentTimeMillis
 
     override def send (message: PickledMessage) {
-      val socket = Socket.open (group)
+      val socket = Socket.open (group, scheduler)
       greet (socket)
       state = new Connecting (socket, localId, time, backoff)
       state.send (message)

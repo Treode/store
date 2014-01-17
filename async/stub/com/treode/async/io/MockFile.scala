@@ -7,7 +7,7 @@ import com.treode.async.Callback
 import com.treode.buffer.PagedBuffer
 
 /** This captures callbacks which makes it easier to use than ScalaMock's implementation. */
-class MockFile extends File {
+class MockFile extends File (null, null) {
 
   private class Expectation {
     def fill (input: PagedBuffer, pos: Long, length: Int) {

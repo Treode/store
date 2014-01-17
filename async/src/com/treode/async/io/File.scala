@@ -4,17 +4,14 @@ import java.nio.ByteBuffer
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.file.{OpenOption, Path}
 import java.nio.file.attribute.FileAttribute
-import java.util.concurrent.ExecutorService
+import java.util.concurrent.{Executor, ExecutorService}
 import scala.collection.JavaConversions._
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, toRunnable}
 import com.treode.buffer.PagedBuffer
 
 /** A file that has useful behavior (flush/fill) and that can be mocked. */
-class File private [io] (file: AsynchronousFileChannel) {
-
-  /** For testing mocks only. */
-  def this() = this (null)
+class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 
   private class FileFiller (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit])
   extends Callback [Int] {
@@ -24,7 +21,7 @@ class File private [io] (file: AsynchronousFileChannel) {
 
     def fill() {
       if (len <= input.readableBytes)
-        cb()
+        exec.execute (toRunnable (cb, ()))
       else {
         if (bytebuf.remaining == 0)
           bytebuf = input.buffer (input.writePos, input.writeableBytes)
@@ -46,7 +43,7 @@ class File private [io] (file: AsynchronousFileChannel) {
   def fill (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit]): Unit =
     try {
       if (len <= input.readableBytes) {
-        cb()
+        exec.execute (toRunnable (cb, ()))
       } else {
         input.capacity (input.readPos + len)
         new FileFiller (input, pos, len, cb) .fill()
@@ -64,7 +61,7 @@ class File private [io] (file: AsynchronousFileChannel) {
     def flush() {
       if (output.readableBytes == 0) {
         //buffer.release()
-        cb()
+        exec.execute (toRunnable (cb, ()))
       } else {
         if (bytebuf.remaining == 0)
           bytebuf = output.buffer (output.readPos, output.readableBytes)
@@ -96,5 +93,5 @@ class File private [io] (file: AsynchronousFileChannel) {
 object File {
 
   def open (path: Path, opts: Set [OpenOption], attrs: Set [FileAttribute [Any]], exec: ExecutorService): File =
-    new File (AsynchronousFileChannel.open (path, opts, exec, attrs.toArray: _*))
+    new File (AsynchronousFileChannel.open (path, opts, exec, attrs.toArray: _*), exec)
 }

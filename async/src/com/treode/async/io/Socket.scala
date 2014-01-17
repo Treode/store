@@ -3,16 +3,15 @@ package com.treode.async.io
 import java.nio.ByteBuffer
 import java.nio.channels.{AsynchronousChannelGroup, AsynchronousSocketChannel}
 import java.net.SocketAddress
-import java.util.concurrent.TimeUnit.MILLISECONDS
+import java.util.concurrent.{Executor, TimeUnit}
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, toRunnable}
 import com.treode.buffer.PagedBuffer
 
-/** A socket that has useful behavior (flush/fill) and that can be mocked. */
-class Socket (socket: AsynchronousSocketChannel) {
+import TimeUnit.MILLISECONDS
 
-  /** For testing mocks only. */
-  def this() = this (null)
+/** A socket that has useful behavior (flush/fill) and that can be mocked. */
+class Socket (socket: AsynchronousSocketChannel, exec: Executor) {
 
   def connect (addr: SocketAddress, cb: Callback [Unit]): Unit =
     try {
@@ -29,7 +28,7 @@ class Socket (socket: AsynchronousSocketChannel) {
 
     def fill() {
       if (length <= input.readableBytes)
-        cb()
+        exec.execute (toRunnable (cb, ()))
       else {
         val bytebufs = input.buffers (input.writePos, input.writeableBytes)
         socket.read (bytebufs, 0, bytebufs.length, -1, MILLISECONDS, this, Callback.LongHandler)
@@ -50,7 +49,7 @@ class Socket (socket: AsynchronousSocketChannel) {
   def fill (input: PagedBuffer, length: Int, cb: Callback [Unit]): Unit =
     try {
       if (length <= input.readableBytes) {
-        cb()
+        exec.execute (toRunnable (cb, ()))
       } else {
         input.capacity (input.readPos + length)
         new Filler (input, length, cb) .fill()
@@ -65,7 +64,7 @@ class Socket (socket: AsynchronousSocketChannel) {
     def flush() {
       if (output.readableBytes == 0) {
         //buffer.release()
-        cb()
+        exec.execute (toRunnable (cb, ()))
       } else {
         val bytebufs = output.buffers (output.readPos, output.readableBytes)
         socket.write (bytebufs, 0, bytebufs.length, -1, MILLISECONDS, this, Callback.LongHandler)
@@ -94,6 +93,6 @@ class Socket (socket: AsynchronousSocketChannel) {
 
 object Socket {
 
-  def open (group: AsynchronousChannelGroup): Socket =
-    new Socket (AsynchronousSocketChannel.open (group))
+  def open (group: AsynchronousChannelGroup, exec: Executor): Socket =
+    new Socket (AsynchronousSocketChannel.open (group), exec)
 }

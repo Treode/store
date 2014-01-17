@@ -12,19 +12,22 @@ class SocketSpec extends Specs (SocketBehaviors, SocketProperties)
 
 object SocketBehaviors extends FlatSpec with MockFactory {
 
-  "The flush method" should "handle an empty buffer" in {
+  def mkSocket = {
     val async = new AsyncSocketMock
-    val socket = new Socket (async)
+    val socket = new Socket (async, ExecutorMock)
     val buffer = PagedBuffer (5)
+    (async, socket, buffer)
+  }
+
+  "The flush method" should "handle an empty buffer" in {
+    val (async, socket, buffer) = mkSocket
     val cb = mock [Callback [Unit]]
     (cb.apply _) .expects() .once()
     socket.flush (buffer, cb)
   }
 
   it should "flush an int" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val buffer = PagedBuffer (5)
+    val (async, socket, buffer) = mkSocket
     buffer.writeInt (0)
     async.expectWrite (0, 4)
     val cb = mock [Callback [Unit]]
@@ -34,9 +37,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   }
 
   it should "loop to flush an int" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val output = PagedBuffer (5)
+    val (async, socket, output) = mkSocket
     output.writeInt (0)
     val cb = mock [Callback [Unit]]
     var _pos = 0
@@ -49,9 +50,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   }
 
   it should "handle socket close" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val output = PagedBuffer (5)
+    val (async, socket, output) = mkSocket
     output.writeInt (0)
     val cb = mock [Callback [Unit]]
     async.expectWrite (0, 4)
@@ -61,18 +60,14 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   }
 
   "The fill method for a socket" should "handle a request for 0 bytes" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val input = PagedBuffer (5)
+    val (async, socket, input) = mkSocket
     val cb = mock [Callback [Unit]]
     (cb.apply _) .expects() .once()
     socket.fill (input, 0, cb)
   }
 
   it should "handle a request for bytes available at the beginning" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val input = PagedBuffer (5)
+    val (async, socket, input) = mkSocket
     input.writePos = 4
     val cb = mock [Callback [Unit]]
     (cb.apply _) .expects() .once()
@@ -80,9 +75,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   }
 
   it should "fill needed bytes with an empty buffer" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val input = PagedBuffer (5)
+    val (async, socket, input) = mkSocket
     val cb = mock [Callback [Unit]]
     async.expectRead (0, 32)
     socket.fill (input, 4, cb)
@@ -91,9 +84,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   }
 
   it should "loop to fill needed bytes within a page" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val input = PagedBuffer (5)
+    val (async, socket, input) = mkSocket
     val cb = mock [Callback [Unit]]
     async.expectRead (0, 32)
     async.expectRead (2, 32)
@@ -104,9 +95,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   }
 
   it should "fill needed bytes with some at the beginning" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val input = PagedBuffer (5)
+    val (async, socket, input) = mkSocket
     input.writePos = 2
     val cb = mock [Callback [Unit]]
     async.expectRead (2, 32)
@@ -116,9 +105,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   }
 
   it should "handle a request for bytes available in the middle" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val input = PagedBuffer (5)
+    val (async, socket, input) = mkSocket
     input.writePos = 4
     input.readPos = 4
     val cb = mock [Callback [Unit]]
@@ -129,9 +116,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   }
 
   it should "fill needed bytes with some in the middle and space after" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val input = PagedBuffer (5)
+    val (async, socket, input) = mkSocket
     input.writePos = 6
     input.readPos = 4
     val cb = mock [Callback [Unit]]
@@ -142,9 +127,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   }
 
   it should "repeat to fill needed bytes across pages" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val input = PagedBuffer (5)
+    val (async, socket, input) = mkSocket
     input.writePos = 30
     input.readPos = 26
     val cb = mock [Callback [Unit]]
@@ -157,9 +140,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   }
 
   it should "handle socket close" in {
-    val async = new AsyncSocketMock
-    val socket = new Socket (async)
-    val input = PagedBuffer (5)
+    val (async, socket, input) = mkSocket
     val cb = mock [Callback [Unit]]
     async.expectRead (0, 32)
     socket.fill (input, 4, cb)
@@ -172,7 +153,7 @@ object SocketProperties extends PropSpec with PropertyChecks {
   property ("It should work") {
     forAll ("seed") { seed: Int =>
       val random = new Random (seed)
-      val socket = new Socket (new AsyncSocketStub (random))
+      val socket = new Socket (new AsyncSocketStub (random), ExecutorMock)
       val data = Array.fill (100) (random.nextInt)
       val buffer = PagedBuffer (5)
       for (i <- data)
