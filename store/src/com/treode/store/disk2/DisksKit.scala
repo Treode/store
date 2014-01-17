@@ -364,7 +364,7 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
 
   private def reopenFile (path: Path, exec: ExecutorService) = {
     import StandardOpenOption.{READ, WRITE}
-    (path, File.open (path, Set (READ, WRITE), Set.empty, exec))
+    (path, File.open (path, exec, READ, WRITE))
   }
 
   def reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
@@ -382,7 +382,7 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
   private def openFile (item: (Path, DiskDriveConfig), exec: ExecutorService) = {
     val (path, config) = item
     import StandardOpenOption.{CREATE, READ, WRITE}
-    val file = File.open (path, Set (CREATE, READ, WRITE), Set.empty, exec)
+    val file = File.open (path, exec, CREATE, READ, WRITE)
     (path, file, config)
   }
 

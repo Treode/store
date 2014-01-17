@@ -92,6 +92,6 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 
 object File {
 
-  def open (path: Path, opts: Set [OpenOption], attrs: Set [FileAttribute [Any]], exec: ExecutorService): File =
-    new File (AsynchronousFileChannel.open (path, opts, exec, attrs.toArray: _*), exec)
+  def open (path: Path, exec: ExecutorService, opts: OpenOption*): File =
+    new File (AsynchronousFileChannel.open (path, opts.toSet, exec, null), exec)
 }
