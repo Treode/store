@@ -85,7 +85,10 @@ class Socket (socket: AsynchronousSocketChannel, exec: Executor) {
 
   def flush (output: PagedBuffer, cb: Callback [Unit]): Unit =
     try {
-      new Flusher (output, cb) .flush()
+      if (output.readableBytes == 0)
+        exec.execute (toRunnable (cb, ()))
+      else
+        new Flusher (output, cb) .flush()
     } catch {
       case t: Throwable => cb.fail (t)
     }

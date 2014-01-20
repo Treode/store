@@ -21,17 +21,17 @@ private object RecordRegistry {
   val framer: Framer.Strategy [TypeId, RecordHeader] =
     new Framer.Strategy [TypeId, RecordHeader] {
 
-    def newEphemeralId = ???
+      def newEphemeralId = ???
 
-    def isEphemeralId (id: TypeId) = false
+      def isEphemeralId (id: TypeId) = false
 
-    def readHeader (buf: PagedBuffer): (Option [TypeId], RecordHeader) = {
-      val hdr = unpickle (RecordHeader.pickle, buf)
-      hdr match {
-        case RecordHeader.Entry (time, id) => (Some (id), hdr)
-        case _ => (None, hdr)
-      }}
+      def readHeader (buf: PagedBuffer): (Option [TypeId], RecordHeader) = {
+        val hdr = unpickle (RecordHeader.pickle, buf)
+        hdr match {
+          case RecordHeader.Entry (time, id) => (Some (id), hdr)
+          case _ => (None, hdr)
+        }}
 
-    def writeHeader (hdr: RecordHeader, buf: PagedBuffer) {
-      pickle (RecordHeader.pickle, hdr, buf)
-    }}}
+      def writeHeader (hdr: RecordHeader, buf: PagedBuffer) {
+        pickle (RecordHeader.pickle, hdr, buf)
+      }}}

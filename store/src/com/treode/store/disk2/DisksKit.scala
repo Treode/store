@@ -26,9 +26,11 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
   val log = new LogDispatcher (scheduler)
   val pages = new PageDispatcher (scheduler)
   val cache = new PageCache (scheduler)
+  val roots = new RootRegistry (this, pages)
   var disks = Map.empty [Int, DiskDrive]
   var number = 0
   var generation = 0
+  var meta = RootRegistry.Meta.empty
   var state: State = new Opening
 
   private def readSuperBlocks (path: Path, file: File, cb: Callback [SuperBlocks]): Unit =
@@ -81,33 +83,35 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
           scheduler.execute (checkpoint())
         checkpoints = List.empty
       }
-      if (attaches.isEmpty && checkpoints.isEmpty) {
-        state = if (disks.size == 0) new Opening else Ready
-      } else if (attaches.isEmpty) {
-        state = new Checkpointing (checkpoints)
-      } else {
+      if (!attaches.isEmpty) {
         val (first, rest) = attaches.dequeue
         state = new Attaching (first._1, first._2, rest, checkpoints)
+      } else if (!checkpoints.isEmpty) {
+        state = new Checkpointing (attaches, checkpoints)
+      } else if (!disks.isEmpty) {
+        state = Ready
+      } else {
+        state = new Opening
       }}
 
     def panic (t: Throwable) {
       state = new Panicked (t)
       for (attach <- attaches)
-        scheduler.execute (attach._2.fail (new PanickedException (t)))
-      for (checkpoint <- checkpoints)
-        scheduler.execute (checkpoint.fail (new PanickedException (t)))
+        scheduler.fail (attach._2, new PanickedException (t))
+      for (cp <- checkpoints)
+        scheduler.fail (cp, new PanickedException (t))
     }}
 
   trait ReattachPending {
 
     def reattach (items: Seq [(Path, File)], cb: Callback [Unit]): Unit =
-      cb.fail (new ReattachmentPendingException)
+      scheduler.fail (cb, new ReattachmentPendingException)
   }
 
   trait ReattachCompleted {
 
     def reattach (items: Seq [ReattachItem], cb: Callback [Unit]): Unit =
-      cb.fail (new RecoveryCompletedException)
+      scheduler.fail (cb, new RecoveryCompletedException)
   }
 
   class Opening extends State {
@@ -141,7 +145,7 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
       val sb2 = reads.map (_.sb2) .flatten
       if (sb1.size == 0 && sb2.size == 0) {
         panic (new NoSuperBlocksException)
-        cb.fail (new NoSuperBlocksException)
+        scheduler.fail (cb, new NoSuperBlocksException)
         return
       }
 
@@ -151,7 +155,7 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
       val count2 = sb2 count (_.boot.gen == gen2)
       if (count1 != items.size && count2 != items.size) {
         panic (new InconsistentSuperBlocksException)
-        cb.fail (new InconsistentSuperBlocksException)
+        scheduler.fail (cb, new InconsistentSuperBlocksException)
         return
       }
 
@@ -163,13 +167,13 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
       if (!(attached forall (reattaching contains _))) {
         val missing = (attached -- reattaching).toSeq.sorted
         panic (new MissingDisksException (missing))
-        cb.fail (new MissingDisksException (missing))
+        scheduler.fail (cb, new MissingDisksException (missing))
         return
       }
       if (!(reattaching forall (attached contains _))) {
         val extra = (reattaching -- attached).toSeq.sorted
         panic (new ExtraDisksException (extra))
-        cb.fail (new ExtraDisksException (extra))
+        scheduler.fail (cb, new ExtraDisksException (extra))
         return
       }
 
@@ -193,7 +197,7 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
       }
       def fail (t: Throwable) = fiber.execute {
         panic (t)
-        cb.fail (t)
+        scheduler.fail (cb, t)
       }})
 
     for ((path, file) <- items)
@@ -216,7 +220,7 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
       }
       def fail (t: Throwable) {
         panic (t)
-        cb.fail (t)
+        scheduler.fail (cb, t)
       }}
 
     def merged = new Callback [AsyncIterator [(Long, Unit => Any)]] {
@@ -227,7 +231,7 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
         }}
       def fail (t: Throwable): Unit = fiber.execute {
         panic (t)
-        cb.fail (t)
+        scheduler.fail (cb, t)
       }}
 
     val allMade = new Callback [Seq [LogIterator]] {
@@ -236,7 +240,7 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
       }
       def fail (t: Throwable): Unit = fiber.execute {
         panic (t)
-        cb.fail (t)
+        scheduler.fail (cb, t)
       }}
 
     val oneMade = Callback.collect (disks.size, allMade)
@@ -263,88 +267,101 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
 
     val attached = disks.values.map (_.path) .toSet
     val attaching = items.map (_.path) .toSet
-    val boot = BootBlock (generation+1, attached ++ attaching)
+    val newboot = BootBlock (generation+1, attached ++ attaching, meta)
 
     def latch4 = Callback.latch (disks.size, new Callback [Unit] {
-      def pass (v: Unit) = fiber.execute (ready (true))
+      def pass (v: Unit) = fiber.execute (ready (false))
       def fail (t: Throwable) = fiber.execute (panic (t))
     })
 
     def latch3 = Callback.latch (disks.size, new Callback [Unit] {
       def pass (v: Unit): Unit = fiber.execute {
-        require (generation == boot.gen-1)
-        generation = boot.gen
+        generation = newboot.gen
         disks ++= items map (item => item.id -> item)
         items foreach (_.engage())
-        ready (true)
+        ready (false)
         scheduler.execute (cb, ())
       }
       def fail (t: Throwable): Unit = fiber.execute {
-        val reboot = BootBlock (generation, attached)
+        val oldboot = BootBlock (generation, attached, meta)
         val latch = latch4
-        disks.values foreach (_.checkpoint (reboot, latch))
+        disks.values foreach (_.checkpoint (oldboot, latch))
         scheduler.fail (cb, t)
       }})
 
     def latch2 = Callback.latch (items.size, new Callback [Unit] {
       def pass (v: Unit): Unit = fiber.execute {
         val latch = latch3
-        disks.values foreach (_.checkpoint (boot, latch))
+        disks.values foreach (_.checkpoint (newboot, latch))
       }
       def fail (t: Throwable): Unit = fiber.execute {
         ready (false)
-        cb.fail (t)
+        scheduler.fail (cb, t)
       }})
 
     def latch1 = Callback.latch (items.size, new Callback [Unit] {
       def pass (v: Unit): Unit = fiber.execute {
         val latch = latch2
-        items foreach (_.checkpoint (boot, latch))
+        items foreach (_.checkpoint (newboot, latch))
       }
       def fail (t: Throwable): Unit = fiber.execute {
         ready (false)
-        cb.fail (t)
+        scheduler.fail (cb, t)
       }
     })
 
     if (attaching exists (attached contains _)) {
       val already = (attaching -- attached).toSeq.sorted
       ready (false)
-      cb.fail (new AlreadyAttachedException (already))
+      scheduler.fail (cb, new AlreadyAttachedException (already))
     } else {
       val latch = latch1
-      items foreach (_.init (latch))
+      guard (latch) (items foreach (_.init (latch)))
     }
 
     override def toString = "Attaching"
   }
 
-  class Checkpointing (var checkpoints: CheckpointsPending)
+  class Checkpointing (var attaches: AttachesPending, var checkpoints: CheckpointsPending)
   extends State with QueueAttachAndCheckpoint with ReattachCompleted {
 
-    var attaches = Queue.empty [AttachPending]
-
-    val latch = Callback.latch (disks.size, new Callback [Unit] {
-      def pass (v: Unit) = fiber.execute (ready (true))
-      def fail (t: Throwable) = fiber.execute (panic (t))
-    })
-
-    generation += 1
     val attached = disks.values.map (_.path) .toSet
-    val boot = BootBlock (generation, attached)
-    disks.values foreach (_.checkpoint (boot, latch))
+
+    def rootPageWritten (newboot: BootBlock, roots: RootRegistry.Meta) =
+      Callback.latch (disks.size, new Callback [Unit] {
+        def pass (v: Unit) = fiber.execute {
+          generation = newboot.gen
+          meta = roots
+          ready (true)
+        }
+        def fail (t: Throwable) = fiber.execute (panic (t))
+      })
+
+    val rootsWritten =
+      new Callback [RootRegistry.Meta] {
+        def pass (roots: RootRegistry.Meta) = fiber.execute {
+          val newboot = BootBlock (generation+1, attached, roots)
+          val latch = rootPageWritten (newboot, roots)
+          disks.values foreach (_.checkpoint (newboot, latch))
+        }
+        def fail (t: Throwable) = fiber.execute (panic (t))
+    }
+
+    roots.checkpoint (generation+1, rootsWritten)
+
+    override def toString = "Checkpointing"
   }
 
   class Panicked (t: Throwable) extends State {
 
     def reattach (items: Seq [ReattachItem], cb: Callback [Unit]): Unit =
-      cb.fail (new PanickedException (t))
+      scheduler.fail (cb, new PanickedException (t))
 
     def attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
-      cb.fail (new PanickedException (t))
+      scheduler.fail (cb, new PanickedException (t))
 
     def checkpoint (cb: Callback [Unit]): Unit =
-      cb.fail (new PanickedException (t))
+      scheduler.fail (cb, new PanickedException (t))
 
     override def toString = s"Panicked(${t})"
   }
@@ -357,7 +374,9 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
       }
 
     def checkpoint (cb: Callback [Unit]): Unit =
-      state = new Checkpointing (List (cb))
+      guard (cb) {
+        state = new Checkpointing (Queue.empty, List (cb))
+      }
 
     override def toString = "Ready"
   }
@@ -407,6 +426,9 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
 
   def record [R] (p: Pickler [R], id: TypeId, entry: R, cb: Callback [Unit]): Unit =
     log.record (p, id, entry, cb)
+
+  def fill (buf: PagedBuffer, pos: Position, cb: Callback [Unit]): Unit =
+    disks (pos.disk) .fill (buf, pos.offset, pos.length, cb)
 
   def read [P] (p: Pickler [P], pos: Position, cb: Callback [P]) (implicit tag: ClassTag [P]): Unit =
     cache.read (p, tag, disks, pos, cb)

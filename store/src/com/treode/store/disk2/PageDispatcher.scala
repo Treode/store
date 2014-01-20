@@ -2,11 +2,15 @@ package com.treode.store.disk2
 
 import java.util.ArrayList
 import com.treode.async.{Callback, Scheduler}
+import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Pickler
 
 private class PageDispatcher (scheduler: Scheduler) {
 
   private val dsp = new Dispatcher [PickledPage] (scheduler)
+
+  def write (byteSize: Int, write: PagedBuffer => Any, cb: Callback [Position]): Unit =
+    dsp.send (PickledPage (byteSize, write, cb))
 
   def write [P] (p: Pickler [P], page: P, cb: Callback [Position]): Unit =
     dsp.send (PickledPage (p, page, cb))

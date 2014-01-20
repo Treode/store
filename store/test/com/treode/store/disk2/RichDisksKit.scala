@@ -13,9 +13,14 @@ import Assertions._
 private class RichDisksKit (scheduler: StubScheduler)
 extends DisksKit (scheduler) {
 
-  def assertOpening() = assert (state.isInstanceOf [Opening])
-  def assertReady() = assert (state == Ready)
-  def assertPanicked() = assert (state.isInstanceOf [Panicked])
+  def assertOpening() =
+    assert (state.isInstanceOf [Opening], s"Expected Opening, found $state")
+
+  def assertReady() =
+    assert (state == Ready, s"Expected Ready, found $state")
+
+  def assertPanicked() =
+    assert (state.isInstanceOf [Panicked], s"Expected Panicked, found $state")
 
   def expectDisks (gen: Int) (items: (Int, String)*) {
     expectResult (items.size) (disks.size)

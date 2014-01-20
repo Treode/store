@@ -13,7 +13,7 @@ import com.treode.buffer.PagedBuffer
 /** A file that has useful behavior (flush/fill) and that can be mocked. */
 class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 
-  private class FileFiller (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit])
+  private class Filler (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit])
   extends Callback [Int] {
 
     private [this] var bytebuf = input.buffer (input.writePos, input.writeableBytes)
@@ -46,13 +46,13 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
         exec.execute (toRunnable (cb, ()))
       } else {
         input.capacity (input.readPos + len)
-        new FileFiller (input, pos, len, cb) .fill()
+        new Filler (input, pos, len, cb) .fill()
       }
     } catch {
       case t: Throwable => cb.fail (t)
     }
 
-  private class FileFlusher (output: PagedBuffer, pos: Long, cb: Callback [Unit])
+  private class Flusher (output: PagedBuffer, pos: Long, cb: Callback [Unit])
   extends Callback [Int] {
 
     private [this] var bytebuf = output.buffer (output.readPos, output.readableBytes)
@@ -82,7 +82,10 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 
   def flush (output: PagedBuffer, pos: Long, cb: Callback [Unit]): Unit =
     try {
-      new FileFlusher (output, pos, cb) .flush()
+      if (output.readableBytes == 0)
+        exec.execute (toRunnable (cb, ()))
+      else
+        new Flusher (output, pos, cb) .flush()
     } catch {
       case t: Throwable => cb.fail (t)
     }

@@ -62,6 +62,10 @@ private class PageWriter (
 
     val finish = new Callback [Unit] {
       def pass (v: Unit) = {
+        if (realloc) {
+          val seg = alloc.allocate()
+          pos = seg.limit
+        }
         buffer.clear()
         val _pos = pos
         callbacks foreach (scheduler.execute (_, _pos))
@@ -73,18 +77,9 @@ private class PageWriter (
       }}
 
     guard (finish) {
-
       for (page <- accepts)
         callbacks.add (picklePage (page))
-
-      if (realloc) {
-        val seg = alloc.allocate()
-        pos = seg.limit
-      } else {
-        pos -= buffer.readableBytes
-      }
-      assert (pos == config.blockAlignPosition (pos))
-
+      pos -= buffer.readableBytes
       file.flush (buffer, pos, finish)
     }}
 

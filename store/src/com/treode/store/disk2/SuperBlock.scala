@@ -1,6 +1,5 @@
 package com.treode.store.disk2
 
-import java.nio.file.{Path, Paths}
 import com.treode.pickle.Picklers
 
 private case class SuperBlock (
