@@ -11,7 +11,13 @@ import com.treode.buffer.PagedBuffer
 import TimeUnit.MILLISECONDS
 
 /** A socket that has useful behavior (flush/fill) and that can be mocked. */
-class Socket (socket: AsynchronousSocketChannel, exec: Executor) {
+class Socket (socket: AsynchronousSocketChannel, execx: Executor) {
+
+  private def execute (cb: Callback [Unit]): Unit =
+    execx.execute (toRunnable (cb, ()))
+
+  private def fail (cb: Callback [Unit], t: Throwable): Unit =
+    execx.execute (toRunnable (cb, t))
 
   def connect (addr: SocketAddress, cb: Callback [Unit]): Unit =
     try {
@@ -28,7 +34,7 @@ class Socket (socket: AsynchronousSocketChannel, exec: Executor) {
 
     def fill() {
       if (length <= input.readableBytes)
-        exec.execute (toRunnable (cb, ()))
+        execute (cb)
       else {
         val bytebufs = input.buffers (input.writePos, input.writeableBytes)
         socket.read (bytebufs, 0, bytebufs.length, -1, MILLISECONDS, this, Callback.LongHandler)
@@ -37,25 +43,25 @@ class Socket (socket: AsynchronousSocketChannel, exec: Executor) {
     def pass (result: Long) {
       require (result <= Int.MaxValue)
       if (result < 0) {
-        cb.fail (new Exception ("End of file reached."))
+        Socket.this.fail (cb, new Exception ("End of file reached."))
       } else {
         input.writePos = input.writePos + result.toInt
         fill()
       }}
 
-    def fail (t: Throwable) = cb.fail (t)
+    def fail (t: Throwable) = Socket.this.fail (cb, t)
   }
 
   def fill (input: PagedBuffer, length: Int, cb: Callback [Unit]): Unit =
     try {
       if (length <= input.readableBytes) {
-        exec.execute (toRunnable (cb, ()))
+        execute (cb)
       } else {
         input.capacity (input.readPos + length)
         new Filler (input, length, cb) .fill()
       }
     } catch {
-      case t: Throwable => cb.fail (t)
+      case t: Throwable => Socket.this.fail (cb, t)
     }
 
   private class Flusher (output: PagedBuffer, cb: Callback [Unit])
@@ -64,7 +70,7 @@ class Socket (socket: AsynchronousSocketChannel, exec: Executor) {
     def flush() {
       if (output.readableBytes == 0) {
         //buffer.release()
-        exec.execute (toRunnable (cb, ()))
+        execute (cb)
       } else {
         val bytebufs = output.buffers (output.readPos, output.readableBytes)
         socket.write (bytebufs, 0, bytebufs.length, -1, MILLISECONDS, this, Callback.LongHandler)
@@ -73,24 +79,24 @@ class Socket (socket: AsynchronousSocketChannel, exec: Executor) {
     def pass (result: Long) {
       require (result <= Int.MaxValue)
       if (result < 0) {
-        cb.fail (new Exception ("File write failed."))
+        Socket.this.fail (cb, new Exception ("File write failed."))
       } else {
         output.readPos = output.readPos + result.toInt
         flush()
       }}
 
-    def fail (t: Throwable) = cb.fail (t)
+    def fail (t: Throwable) = Socket.this.fail (cb, t)
   }
 
 
   def flush (output: PagedBuffer, cb: Callback [Unit]): Unit =
     try {
       if (output.readableBytes == 0)
-        exec.execute (toRunnable (cb, ()))
+        execute (cb)
       else
         new Flusher (output, cb) .flush()
     } catch {
-      case t: Throwable => cb.fail (t)
+      case t: Throwable => Socket.this.fail (cb, t)
     }
 }
 

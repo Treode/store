@@ -13,6 +13,12 @@ import com.treode.buffer.PagedBuffer
 /** A file that has useful behavior (flush/fill) and that can be mocked. */
 class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 
+  private def execute (cb: Callback [Unit]): Unit =
+    exec.execute (toRunnable (cb, ()))
+
+  private def fail (cb: Callback [Unit], t: Throwable): Unit =
+    exec.execute (toRunnable (cb, t))
+
   private class Filler (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit])
   extends Callback [Int] {
 
@@ -21,7 +27,7 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 
     def fill() {
       if (len <= input.readableBytes)
-        exec.execute (toRunnable (cb, ()))
+        execute (cb)
       else {
         if (bytebuf.remaining == 0)
           bytebuf = input.buffer (input.writePos, input.writeableBytes)
@@ -30,26 +36,26 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 
     def pass (result: Int) {
       if (result < 0) {
-        cb.fail (new Exception ("End of file reached."))
+        File.this.fail (cb, new Exception ("End of file reached."))
       } else {
         input.writePos = input.writePos + result
         _pos += result
         fill()
       }}
 
-    def fail (t: Throwable) = cb.fail (t)
+    def fail (t: Throwable) = File.this.fail (cb, t)
   }
 
   def fill (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit]): Unit =
     try {
       if (len <= input.readableBytes) {
-        exec.execute (toRunnable (cb, ()))
+        execute (cb)
       } else {
         input.capacity (input.readPos + len)
         new Filler (input, pos, len, cb) .fill()
       }
     } catch {
-      case t: Throwable => cb.fail (t)
+      case t: Throwable => File.this.fail (cb, t)
     }
 
   private class Flusher (output: PagedBuffer, pos: Long, cb: Callback [Unit])
@@ -61,7 +67,7 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
     def flush() {
       if (output.readableBytes == 0) {
         //buffer.release()
-        exec.execute (toRunnable (cb, ()))
+        execute (cb)
       } else {
         if (bytebuf.remaining == 0)
           bytebuf = output.buffer (output.readPos, output.readableBytes)
@@ -70,24 +76,24 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 
     def pass (result: Int) {
       if (result < 0) {
-        cb.fail (new Exception ("File write failed."))
+        File.this.fail (cb, new Exception ("File write failed."))
       } else {
         output.readPos = output.readPos + result
         _pos += result
         flush()
       }}
 
-    def fail (t: Throwable) = cb.fail (t)
+    def fail (t: Throwable) = File.this.fail (cb, t)
   }
 
   def flush (output: PagedBuffer, pos: Long, cb: Callback [Unit]): Unit =
     try {
       if (output.readableBytes == 0)
-        exec.execute (toRunnable (cb, ()))
+        execute (cb)
       else
         new Flusher (output, pos, cb) .flush()
     } catch {
-      case t: Throwable => cb.fail (t)
+      case t: Throwable => File.this.fail (cb, t)
     }
 
   def close(): Unit = file.close()
