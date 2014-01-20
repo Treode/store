@@ -1,5 +1,7 @@
 package com.treode.buffer
 
+import java.io.DataInput
+
 trait Input {
 
   def readBytes (data: Array [Byte], offset: Int, length: Int)
@@ -14,4 +16,10 @@ trait Input {
   def readFloat(): Float
   def readDouble(): Double
   def readString(): String
+}
+
+object Input {
+
+  def asDataInput (in: Input): DataInput =
+    new DataInputWrapper (in)
 }

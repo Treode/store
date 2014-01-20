@@ -4,7 +4,7 @@ import java.io.EOFException
 import scala.collection.mutable.Builder
 
 import com.treode.async.{CallbackCaptor, StubScheduler}
-import com.treode.buffer.{BufferUnderflowException, PagedBuffer}
+import com.treode.buffer.{BufferUnderflowException, Input, PagedBuffer, Output}
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
@@ -31,12 +31,12 @@ class FramerSpec extends FreeSpec {
   val strategy = new Framer.Strategy [Int, Int] {
     def newEphemeralId = ???
     def isEphemeralId (id: Int) = false
-    def readHeader (buf: PagedBuffer) = {
-      val i = buf.readInt()
+    def readHeader (in: Input) = {
+      val i = in.readInt()
       (Some (i), i)
     }
-    def writeHeader (hdr: Int, buf: PagedBuffer) {
-      buf.writeInt (hdr)
+    def writeHeader (hdr: Int, out: Output) {
+      out.writeInt (hdr)
     }}
 
   val p1 = Picklers.fixedInt

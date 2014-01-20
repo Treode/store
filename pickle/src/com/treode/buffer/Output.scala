@@ -1,5 +1,7 @@
 package com.treode.buffer
 
+import java.io.DataOutput
+
 trait Output {
 
   def writeBytes (data: Array [Byte], offset: Int, length: Int)
@@ -14,5 +16,10 @@ trait Output {
   def writeFloat (v: Float)
   def writeDouble (v: Double)
   def writeString (v: String)
-  def writeZeroToAlign (bits: Int)
+}
+
+object Output {
+
+  def asDataOutput (out: Output): DataOutput =
+    new DataOutputWrapper (out)
 }

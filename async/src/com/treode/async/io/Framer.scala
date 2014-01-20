@@ -2,8 +2,8 @@ package com.treode.async.io
 
 import java.util.concurrent.ConcurrentHashMap
 import com.treode.async.Callback
-import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{Pickler, pickle, size, unpickle}
+import com.treode.buffer.{Input, PagedBuffer, Output}
+import com.treode.pickle._
 
 class Framer [ID, H, T] (strategy: Framer.Strategy [ID, H]) {
   import Framer.Unpickler
@@ -62,6 +62,15 @@ class Framer [ID, H, T] (strategy: Framer.Strategy [ID, H]) {
     pickle (p, v, buf)
     read (buf.writePos, buf)
   }
+
+  def unpickler: Pickler [T] =
+    new Pickler [T] {
+      def p (v: T, ctx: PickleContext) = ???
+      def u (ctx: UnpickleContext) = {
+        val (id, hdr) = strategy.readHeader (ctx)
+        val frm = framers.get (id.get)
+        frm.read (ctx)
+      }}
 
   def read (buf: PagedBuffer): SocketFrame = {
     val len = buf.readInt()
@@ -143,15 +152,14 @@ class Framer [ID, H, T] (strategy: Framer.Strategy [ID, H]) {
 object Framer {
 
   private trait Unpickler [T] {
-
-    def read (buf: PagedBuffer): T
+    def read (in: Input): T
   }
 
   private object Unpickler {
 
     def apply [ID, P, T] (p: Pickler [P], id: ID, reader: P => T): Unpickler [T] =
       new Unpickler [T] {
-        def read (buf: PagedBuffer): T = reader (unpickle (p, buf))
+        def read (in: Input): T = reader (unpickle (p, in))
         override def toString = s"Unpickler($id)"
     }}
 
@@ -159,26 +167,26 @@ object Framer {
 
     def newEphemeralId: ID
     def isEphemeralId (id: ID): Boolean
-    def readHeader (buf: PagedBuffer): (Option [ID], H)
-    def writeHeader (hdr: H, buf: PagedBuffer)
+    def readHeader (in: Input): (Option [ID], H)
+    def writeHeader (hdr: H, out: Output)
 
-    def write (hdr: H, buf: PagedBuffer) {
-      val preamble = buf.writePos
-      buf.writePos = preamble + 4
-      writeHeader (hdr, buf)
-      val end = buf.writePos
-      buf.writePos = preamble
-      buf.writeInt (end - preamble - 4)
-      buf.writePos = end
+    def write (hdr: H, in: PagedBuffer) {
+      val preamble = in.writePos
+      in.writePos = preamble + 4
+      writeHeader (hdr, in)
+      val end = in.writePos
+      in.writePos = preamble
+      in.writeInt (end - preamble - 4)
+      in.writePos = end
     }
 
-    def write [P] (p: Pickler [P], hdr: H, v: P, buf: PagedBuffer) {
-      val preamble = buf.writePos
-      buf.writePos = preamble + 4
-      writeHeader (hdr, buf)
-      pickle (p, v, buf)
-      val end = buf.writePos
-      buf.writePos = preamble
-      buf.writeInt (end - preamble - 4)
-      buf.writePos = end
+    def write [P] (p: Pickler [P], hdr: H, v: P, out: PagedBuffer) {
+      val preamble = out.writePos
+      out.writePos = preamble + 4
+      writeHeader (hdr, out)
+      pickle (p, v, out)
+      val end = out.writePos
+      out.writePos = preamble
+      out.writeInt (end - preamble - 4)
+      out.writePos = end
     }}}

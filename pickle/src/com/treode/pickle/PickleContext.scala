@@ -3,7 +3,9 @@ package com.treode.pickle
 import java.io.DataOutput
 import scala.collection.mutable
 
-abstract class PickleContext private [pickle] {
+import com.treode.buffer.Output
+
+abstract class PickleContext private [pickle] extends Output {
 
   private [this] val m = mutable.Map [Any, Int]()
 
@@ -12,20 +14,6 @@ abstract class PickleContext private [pickle] {
   private [pickle] def get (v: Any) = m (v)
 
   private [pickle] def put (v: Any) = m.put (v, m.size)
-
-  def writeBytes (data: Array [Byte], offset: Int, length: Int)
-
-  def writeByte (v: Byte)
-  def writeShort (v: Short)
-  def writeInt (v: Int)
-  def writeVarInt (v: Int)
-  def writeVarUInt (v: Int)
-  def writeLong (v: Long)
-  def writeVarLong (v: Long)
-  def writeVarULong (v: Long)
-  def writeFloat (v: Float)
-  def writeDouble (v: Double)
-  def writeString (v: String)
 
   def toDataOutput: DataOutput
 }

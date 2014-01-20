@@ -5,7 +5,7 @@ import scala.collection.JavaConversions._
 
 import com.treode.async.{Callback, callback, delay}
 import com.treode.async.io.Framer
-import com.treode.buffer.PagedBuffer
+import com.treode.buffer.{Input, PagedBuffer, Output}
 import com.treode.pickle.{Pickler, Picklers}
 
 class RootRegistry (disks: DisksKit, pages: PageDispatcher) {
@@ -74,11 +74,11 @@ object RootRegistry {
 
       def isEphemeralId (id: TypeId) = false
 
-      def readHeader (buf: PagedBuffer): (Option [TypeId], TypeId) = {
-        val id =TypeId (readInt())
+      def readHeader (in: Input): (Option [TypeId], TypeId) = {
+        val id = TypeId (in.readInt())
         (Some (id), id)
       }
 
-      def writeHeader (hdr: TypeId, buf: PagedBuffer) {
-        buf.writeInt (hdr.id)
+      def writeHeader (hdr: TypeId, out: Output) {
+        out.writeInt (hdr.id)
       }}}

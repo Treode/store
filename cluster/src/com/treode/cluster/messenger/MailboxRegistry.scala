@@ -2,7 +2,7 @@ package com.treode.cluster.messenger
 
 import com.treode.async.{Callback, Mailbox, Scheduler, callback}
 import com.treode.async.io.{Framer, Socket}
-import com.treode.buffer.PagedBuffer
+import com.treode.buffer.{Input, PagedBuffer, Output}
 import com.treode.cluster.{EphemeralMailbox, MailboxId, Peer}
 import com.treode.pickle.{Pickler, pickle, unpickle}
 
@@ -60,11 +60,11 @@ object MailboxRegistry {
 
       def isEphemeralId (id: MailboxId) = MailboxId.isEphemeral (id)
 
-      def readHeader (buf: PagedBuffer) = {
-        val id = MailboxId (buf.readLong())
+      def readHeader (in: Input) = {
+        val id = MailboxId (in.readLong())
         (Some (id), id)
       }
 
-      def writeHeader (hdr: MailboxId, buf: PagedBuffer) {
-        buf.writeLong (hdr.id)
+      def writeHeader (hdr: MailboxId, out: Output) {
+        out.writeLong (hdr.id)
       }}}
