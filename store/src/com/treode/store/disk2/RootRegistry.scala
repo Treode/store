@@ -4,26 +4,27 @@ import java.util.ArrayList
 import scala.collection.JavaConversions._
 
 import com.treode.async.{Callback, callback, delay}
-import com.treode.async.io.Framer
 import com.treode.buffer.{Input, PagedBuffer, Output}
-import com.treode.pickle.{Pickler, Picklers}
+import com.treode.pickle.{Pickler, Picklers, TagRegistry, pickle, unpickle}
+
+import TagRegistry.Tagger
 
 class RootRegistry (disks: DisksKit, pages: PageDispatcher) {
 
-  private val checkpoints = new ArrayList [Callback [PickledRoot] => Unit]
+  private val checkpoints = new ArrayList [Callback [Tagger] => Unit]
 
-  private val recoveries = new Framer [TypeId, TypeId, Any] (RootRegistry.framer)
+  private val recoveries = new TagRegistry [Any]
 
-  def checkpoint [B] (pblk: Pickler [B], id: TypeId) (f: Callback [B] => Any): Unit =
+  def checkpoint [B <: AnyRef] (pblk: Pickler [B], id: TypeId) (f: Callback [B] => Any): Unit =
     synchronized {
       checkpoints.add { cb =>
         f (callback (cb) { root =>
-          PickledRoot (pblk, id, root)
+          TagRegistry.tagger (pblk, id.id, root)
         })
       }}
 
   def recover [B] (pblk: Pickler [B], id: TypeId) (f: B => Any): Unit =
-    recoveries.register (pblk, id) (f)
+    recoveries.register (pblk, id.id) (f)
 
   def checkpoint (gen: Int, cb: Callback [RootRegistry.Meta]) = synchronized {
     val count = checkpoints.size
@@ -32,9 +33,9 @@ class RootRegistry (disks: DisksKit, pages: PageDispatcher) {
       RootRegistry.Meta (count, pos)
     }
 
-    val rootsWritten = Callback.collect (count, delay (cb) { roots: Seq [PickledRoot] =>
-      val byteSize = roots .map (_.byteSize) .sum
-      val write = {buf: PagedBuffer => roots foreach (_.write (buf))}
+    val rootsWritten = Callback.collect (count, delay (cb) { roots: Seq [Tagger] =>
+      val byteSize = roots .map (_.size) .sum
+      val write = pickle (Picklers.seq (TagRegistry.pickler), roots, _: PagedBuffer)
       pages.write (byteSize, write, rootsPageWritten)
     })
 
@@ -45,11 +46,9 @@ class RootRegistry (disks: DisksKit, pages: PageDispatcher) {
   def recover (meta: RootRegistry.Meta, cb: Callback [Unit]) {
     val buf = PagedBuffer (12)
     disks.fill (buf, meta.pos, callback (cb) { _ =>
-      for (i <- 0 until meta.count) {
-        recoveries.read (buf)
-      }})
-  }
-}
+      unpickle (Picklers.seq (recoveries.unpickler), buf)
+    })
+  }}
 
 object RootRegistry {
 
@@ -65,20 +64,4 @@ object RootRegistry {
       wrap (int, pos)
       .build ((Meta.apply _).tupled)
       .inspect (v => (v.count, v.pos))
-    }}
-
-  val framer: Framer.Strategy [TypeId, TypeId] =
-    new Framer.Strategy [TypeId, TypeId] {
-
-      def newEphemeralId = ???
-
-      def isEphemeralId (id: TypeId) = false
-
-      def readHeader (in: Input): (Option [TypeId], TypeId) = {
-        val id = TypeId (in.readInt())
-        (Some (id), id)
-      }
-
-      def writeHeader (hdr: TypeId, out: Output) {
-        out.writeInt (hdr.id)
-      }}}
+    }}}

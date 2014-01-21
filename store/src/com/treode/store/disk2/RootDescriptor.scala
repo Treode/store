@@ -3,7 +3,7 @@ package com.treode.store.disk2
 import com.treode.async.Callback
 import com.treode.pickle.Pickler
 
-class RootDescriptor [B] (id: TypeId, pblk: Pickler [B]) {
+class RootDescriptor [B <: AnyRef] (id: TypeId, pblk: Pickler [B]) {
 
   private [disk2] def checkpoint (roots: RootRegistry) (f: Callback [B] => Any): Unit =
     roots.checkpoint (pblk, id) (f)

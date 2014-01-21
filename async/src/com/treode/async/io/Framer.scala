@@ -26,7 +26,7 @@ class Framer [ID, H, T] (strategy: Framer.Strategy [ID, H]) {
     id
   }
 
-  def unregister [P] (id: ID): Unit =
+  def unregister (id: ID): Unit =
     framers.remove (id)
 
   private def read (len: Int, buf: PagedBuffer): SocketFrame = {
