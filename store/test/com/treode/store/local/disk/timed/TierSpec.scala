@@ -5,7 +5,7 @@ import scala.collection.mutable.Builder
 import com.treode.async.{AsyncIterator, Callback, CallbackCaptor, callback}
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, Cardinals, Fruits, TimedCell, TxClock}
-import com.treode.store.disk2.Position
+import com.treode.disk.Position
 import com.treode.store.local.disk.DiskSystemStub
 import org.scalatest.WordSpec
 

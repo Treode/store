@@ -6,7 +6,7 @@ import com.treode.async.{Callback, Fiber, callback}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.store.{Bytes, StorePicklers}
-import com.treode.store.disk2.RecordDescriptor
+import com.treode.disk.RecordDescriptor
 
 private class Acceptor (key: Bytes, kit: PaxosKit) {
   import Acceptor.{Post, noop}

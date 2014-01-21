@@ -4,7 +4,7 @@ import java.nio.file.Paths
 import com.treode.async.Callback
 import com.treode.async.io.StubFile
 import com.treode.cluster.{BaseStubHost, HostId, StubCluster}
-import com.treode.store.disk2.{Disks, DiskDriveConfig}
+import com.treode.disk.{Disks, DiskDriveConfig}
 
 private class StubHost (id: HostId, cluster: StubCluster) extends BaseStubHost (id, cluster) {
 

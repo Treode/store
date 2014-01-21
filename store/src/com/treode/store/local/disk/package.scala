@@ -1,7 +1,7 @@
 package com.treode.store.local
 
 import com.treode.async.Callback
-import com.treode.store.disk2.Position
+import com.treode.disk.Position
 
 package disk {
 

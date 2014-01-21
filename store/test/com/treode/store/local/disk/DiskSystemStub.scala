@@ -4,7 +4,7 @@ import java.util.ArrayList
 import scala.collection.mutable.Builder
 
 import com.treode.async.Callback
-import com.treode.store.disk2.Position
+import com.treode.disk.Position
 
 private [store] class DiskSystemStub (val maxPageSize: Int) extends DiskSystem {
 

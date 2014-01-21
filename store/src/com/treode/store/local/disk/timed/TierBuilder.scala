@@ -3,7 +3,7 @@ package com.treode.store.local.disk.timed
 import java.util.{ArrayDeque, ArrayList}
 import com.treode.async.{Callback, delay}
 import com.treode.store.{Bytes, TimedCell, TxClock}
-import com.treode.store.disk2.Position
+import com.treode.disk.Position
 import com.treode.store.local.disk.DiskSystem
 
 private class TierBuilder (disk: DiskSystem) {

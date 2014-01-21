@@ -3,7 +3,7 @@ package com.treode.store.local.disk.timed
 import com.google.common.primitives.Longs
 import com.treode.pickle.size
 import com.treode.store.{Bytes, StorePicklers, TxClock}
-import com.treode.store.disk2.Position
+import com.treode.disk.Position
 
 private class IndexEntry (val key: Bytes, val time: TxClock, val disk: Int, val offset: Long,
     val length: Int) extends Ordered [IndexEntry] {

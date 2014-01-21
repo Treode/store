@@ -2,7 +2,7 @@ package com.treode.store.local.disk.timed
 
 import com.treode.async.Callback
 import com.treode.store.{Bytes, TimedCell, TxClock}
-import com.treode.store.disk2.Position
+import com.treode.disk.Position
 import com.treode.store.local.disk.{DiskSystem, Page}
 
 object Tier {

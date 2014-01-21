@@ -2,7 +2,7 @@ package com.treode.store.local.disk.timed
 
 import com.treode.async.{AsyncIterator, Callback, callback}
 import com.treode.store.TimedCell
-import com.treode.store.disk2.Position
+import com.treode.disk.Position
 import com.treode.store.local.disk.{DiskSystem, Page}
 
 private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] {
