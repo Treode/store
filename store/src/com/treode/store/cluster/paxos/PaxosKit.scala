@@ -105,6 +105,6 @@ private class PaxosKit (implicit val random: Random, val scheduler: Scheduler, v
 
 private [store] object PaxosKit {
 
-  def apply (random: Random, scheduler: Scheduler, host: Host, disks: Disks): PaxosStore =
-    new PaxosKit () (random, scheduler, host, disks)
+  def apply () (implicit random: Random, scheduler: Scheduler, host: Host, disks: Disks): PaxosStore =
+    new PaxosKit
 }

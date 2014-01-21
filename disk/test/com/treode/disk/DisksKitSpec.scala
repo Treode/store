@@ -36,7 +36,7 @@ class DisksKitSpec extends FreeSpec {
         pages.checkpoint (gen))
   }
 
-  private class RichStubFile (scheduler: StubScheduler) extends StubFile (scheduler) {
+  private class RichStubFile (implicit scheduler: StubScheduler) extends StubFile {
 
     def readSuperBlock (gen: Int): SuperBlock = {
       val buffer = PagedBuffer (12)
@@ -83,8 +83,8 @@ class DisksKitSpec extends FreeSpec {
 
     "attach a new disk" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndPass (("a", disk1, config))
       kit.expectDisks (1) ((0, "a"))
       disk1.expectSuperBlock (0, 1, Set ("a"), config)
@@ -92,9 +92,9 @@ class DisksKitSpec extends FreeSpec {
 
     "attach two new disks" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val disk2 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val disk2 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndPass (("a", disk1, config), ("b", disk2, config))
       kit.expectDisks (1) ((0, "a"), (1, "b"))
       disk1.expectSuperBlock (0, 1, Set ("a", "b"), config)
@@ -102,161 +102,161 @@ class DisksKitSpec extends FreeSpec {
     }
 
     "pass through an attach failure and remain opening" in {
-      val scheduler = StubScheduler.random()
+      implicit val scheduler = StubScheduler.random()
       val disk1 = new MockFile
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.attachAndFail (("a", disk1, config))
       kit.expectDisks (1) ()
     }
 
     "reattach a disk with only the first superblock" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 2, Set ("a"), config)
       disk1.destroySuperBlock (1)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndPass (("a", disk1))
       kit.expectDisks (2) ((0, "a"))
     }
 
     "reattach a disk with only the second superblock" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.destroySuperBlock (0)
       disk1.writeSuperBlock (0, 1, Set ("a"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndPass (("a", disk1))
       kit.expectDisks (1) ((0, "a"))
     }
 
     "reattach a disk with the first superblock as newest" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 4, Set ("a"), config)
       disk1.writeSuperBlock (0, 3, Set ("a"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndPass (("a", disk1))
       kit.expectDisks (4) ((0, "a"))
     }
 
     "reattach a disk with the second superblock as newest" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 2, Set ("a"), config)
       disk1.writeSuperBlock (0, 3, Set ("a"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndPass (("a", disk1))
       kit.expectDisks (3) ((0, "a"))
     }
 
     "reattach two disks with only the first superblock" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 2, Set ("a", "b"), config)
       disk1.destroySuperBlock (1)
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       disk2.writeSuperBlock (1, 2, Set ("a", "b"), config)
       disk2.destroySuperBlock (1)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndPass (("a", disk1), ("b", disk2))
       kit.expectDisks (2) ((0, "a"), (1, "b"))
     }
 
     "reattach two disks with only the second superblock" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.destroySuperBlock (0)
       disk1.writeSuperBlock (0, 1, Set ("a", "b"), config)
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       disk2.destroySuperBlock (0)
       disk2.writeSuperBlock (1, 1, Set ("a", "b"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndPass (("a", disk1), ("b", disk2))
       kit.expectDisks (1) ((0, "a"), (1, "b"))
     }
 
     "reattach two disks with first superblock as newest" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 4, Set ("a", "b"), config)
       disk1.writeSuperBlock (0, 3, Set ("a", "b"), config)
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       disk2.writeSuperBlock (1, 4, Set ("a", "b"), config)
       disk2.writeSuperBlock (1, 3, Set ("a", "b"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndPass (("a", disk1), ("b", disk2))
       kit.expectDisks (4) ((0, "a"), (1, "b"))
     }
 
     "reattach two disks with second superblock as newest" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 2, Set ("a", "b"), config)
       disk1.writeSuperBlock (0, 3, Set ("a", "b"), config)
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       disk2.writeSuperBlock (1, 2, Set ("a", "b"), config)
       disk2.writeSuperBlock (1, 3, Set ("a", "b"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndPass (("a", disk1), ("b", disk2))
       kit.expectDisks (3) ((0, "a"), (1, "b"))
     }
 
     "reattach two disks with only first superblock in agreement" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 2, Set ("a", "b"), config)
       disk1.writeSuperBlock (0, 3, Set ("a", "b"), config)
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       disk2.writeSuperBlock (1, 2, Set ("a", "b"), config)
       disk2.destroySuperBlock (3)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndPass (("a", disk1), ("b", disk2))
       kit.expectDisks (2) ((0, "a"), (1, "b"))
     }
 
     "reattach two disks with only second superblock in agreement" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 4, Set ("a", "b"), config)
       disk1.writeSuperBlock (0, 3, Set ("a", "b"), config)
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       disk2.destroySuperBlock (4)
       disk2.writeSuperBlock (1, 3, Set ("a", "b"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndPass (("a", disk1), ("b", disk2))
       kit.expectDisks (3) ((0, "a"), (1, "b"))
     }
 
     "panic on reattaching two disks with no superblocks in agreement" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 2, Set ("a", "b"), config)
       disk1.writeSuperBlock (0, 1, Set ("a", "b"), config)
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       disk2.writeSuperBlock (1, 4, Set ("a", "b"), config)
       disk2.writeSuperBlock (1, 3, Set ("a", "b"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndFail [MultiException] (("a", disk1), ("b", disk2))
     }
 
     "panic on reattaching two disks with no superblocks fully present" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 4, Set ("a", "b"), config)
       disk1.destroySuperBlock (3)
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       disk2.destroySuperBlock (4)
       disk2.writeSuperBlock (1, 3, Set ("a", "b"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndFail (("a", disk1), ("b", disk2))
     }
 
     "queue a checkpoint and complete it with attach" in {
       implicit val scheduler = StubScheduler.random()
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       val cb = kit.checkpointAndQueue()
       kit.assertOpening()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       kit.attachAndPass (("a", disk1, config))
       cb.passed
       disk1.expectSuperBlock (0, 1, Set ("a"), config)
@@ -264,10 +264,10 @@ class DisksKitSpec extends FreeSpec {
 
     "queue a checkpoint and complete it after reattach" in {
       implicit val scheduler = StubScheduler.random()
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       val cb = kit.checkpointAndQueue()
       kit.assertOpening()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 1, Set ("a"), config)
       disk1.destroySuperBlock (0)
       kit.reattachAndPass (("a", disk1))
@@ -280,11 +280,11 @@ class DisksKitSpec extends FreeSpec {
 
     "attach a new disk" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndPass (("a", disk1, config))
 
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       kit.attachAndPass (("b", disk2, config))
       kit.expectDisks (2) ((0, "a"), (1, "b"))
       disk1.expectSuperBlock (0, 1, Set ("a"), config)
@@ -294,12 +294,12 @@ class DisksKitSpec extends FreeSpec {
 
     "attach two new disks" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndPass (("a", disk1, config))
 
-      val disk2 = new RichStubFile (scheduler)
-      val disk3 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
+      val disk3 = new RichStubFile
       kit.attachAndPass (("b", disk2, config), ("c", disk3, config))
       kit.expectDisks (2) ((0, "a"), (1, "b"), (2, "c"))
       disk1.expectSuperBlock (0, 1, Set ("a"), config)
@@ -310,8 +310,8 @@ class DisksKitSpec extends FreeSpec {
 
     "pass through an attach failure and remain ready" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndPass (("a", disk1, config))
 
       val disk2 = new MockFile
@@ -321,8 +321,8 @@ class DisksKitSpec extends FreeSpec {
 
     "reject reattaching a disk" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndPass (("a", disk1, config))
 
       val disk2 = new MockFile
@@ -332,8 +332,8 @@ class DisksKitSpec extends FreeSpec {
 
     "checkpoint" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndPass (("a", disk1, config))
 
       kit.checkpointAndPass()
@@ -344,7 +344,7 @@ class DisksKitSpec extends FreeSpec {
     "pass through a failed checkpoint and panic" in { pending
       implicit val scheduler = StubScheduler.random()
       val disk1 = new MockFile
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       var cb = kit.attachAndHold (("a", disk1, config))
       disk1.expectFlush (DiskLeadBytes, 0, 5)
       scheduler.runTasks()
@@ -378,11 +378,11 @@ class DisksKitSpec extends FreeSpec {
 
     "queue a second attach then complete it after the first attach" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndHold (("a", disk1, config))
 
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       kit.attachAndPass (("b", disk2, config))
       kit.expectDisks (2) ((0, "a"), (1, "b"))
       expectResult (2) (kit.disks.size)
@@ -393,8 +393,8 @@ class DisksKitSpec extends FreeSpec {
 
     "reject reattaching a disk" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndHold (("a", disk1, config))
 
       val disk2 = new MockFile
@@ -405,8 +405,8 @@ class DisksKitSpec extends FreeSpec {
 
     "queue a checkpoint and complete it with the attach" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndHold (("a", disk1, config))
 
       kit.checkpointAndPass()
@@ -418,12 +418,12 @@ class DisksKitSpec extends FreeSpec {
 
     "queue an attach then complete it after the reattach" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 1, Set ("a"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndHold (("a", disk1))
 
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       kit.attachAndPass (("b", disk2, config))
       kit.expectDisks (2) ((0, "a"), (1, "b"))
       disk1.expectSuperBlock (0, 1, Set ("a"), config)
@@ -433,9 +433,9 @@ class DisksKitSpec extends FreeSpec {
 
     "reject reattaching a disk" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 1, Set ("a"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndHold (("a", disk1))
 
       val disk2 = new MockFile
@@ -446,9 +446,9 @@ class DisksKitSpec extends FreeSpec {
 
     "queue a checkpoint and complete it after the reattach" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
+      val disk1 = new RichStubFile
       disk1.writeSuperBlock (0, 1, Set ("a"), config)
-      val kit = new RichDisksKit (scheduler)
+      val kit = new RichDisksKit
       kit.reattachAndHold (("a", disk1))
 
       kit.checkpointAndPass()
@@ -461,12 +461,12 @@ class DisksKitSpec extends FreeSpec {
 
     "queue an attach then complete it after the checkpoint" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndPass (("a", disk1, config))
       kit.checkpointAndHold()
 
-      val disk2 = new RichStubFile (scheduler)
+      val disk2 = new RichStubFile
       kit.attachAndPass (("b", disk2, config))
       kit.expectDisks (3) ((0, "a"), (1, "b"))
       disk1.expectSuperBlock (0, 2, Set ("a"), config)
@@ -476,8 +476,8 @@ class DisksKitSpec extends FreeSpec {
 
     "reject reattaching a disk" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndPass (("a", disk1, config))
       kit.checkpointAndHold()
 
@@ -490,8 +490,8 @@ class DisksKitSpec extends FreeSpec {
 
     "queue a second checkpoint and complete it with the first checkpoint" in {
       implicit val scheduler = StubScheduler.random()
-      val disk1 = new RichStubFile (scheduler)
-      val kit = new RichDisksKit (scheduler)
+      val disk1 = new RichStubFile
+      val kit = new RichDisksKit
       kit.attachAndPass (("a", disk1, config))
       kit.checkpointAndHold()
 

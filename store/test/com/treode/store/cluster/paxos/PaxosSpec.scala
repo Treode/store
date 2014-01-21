@@ -5,7 +5,7 @@ import java.util.concurrent.TimeoutException
 import scala.util.Random
 
 import com.treode.async.CallbackCaptor
-import com.treode.cluster.StubCluster
+import com.treode.cluster.StubNetwork
 import com.treode.store.{Bytes, Cardinals, LargeTest}
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, PropSpec, Specs, WordSpec}
@@ -17,7 +17,7 @@ class PaxosSpec extends Specs (PaxosBehaviors, PaxosProperties)
 
 object PaxosBehaviors extends WordSpec with PaxosTestTools {
 
-  private val kit = StubCluster()
+  private val kit = StubNetwork()
   private val hs = kit.install (3, new StubHost (_, kit))
   private val host = hs.head
   import kit.{random, scheduler}
@@ -69,7 +69,7 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
   val seeds = Gen.choose (0L, Long.MaxValue)
 
   def checkConsensus (seed: Long, mf: Double, summary: Summary): Summary = {
-    val kit = StubCluster (seed)
+    val kit = StubNetwork (seed)
     val hs = kit.install (3, new StubHost (_, kit))
     val Seq (h1, h2, h3) = hs
     import kit.{random, scheduler}

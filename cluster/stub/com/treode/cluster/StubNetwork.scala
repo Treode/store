@@ -6,7 +6,7 @@ import scala.util.Random
 import com.treode.async.StubScheduler
 import com.treode.pickle.Pickler
 
-class StubCluster (val random: Random, val scheduler: StubScheduler) {
+class StubNetwork (implicit val random: Random, val scheduler: StubScheduler) {
 
   private val hosts = new ConcurrentHashMap [HostId, StubHost]
 
@@ -49,17 +49,17 @@ class StubCluster (val random: Random, val scheduler: StubScheduler) {
     scheduler.runTasks (timers)
 }
 
-object StubCluster {
+object StubNetwork {
 
-  def apply (seed: Long = 0, multithreaded: Boolean = false): StubCluster = {
+  def apply (seed: Long = 0, multithreaded: Boolean = false): StubNetwork = {
 
-    val random = new Random (seed)
+    implicit val random = new Random (seed)
 
-    val scheduler =
+    implicit val scheduler =
       if (multithreaded)
         StubScheduler.multithreaded (Executors.newScheduledThreadPool (8))
       else
         StubScheduler.random (random)
 
-    new StubCluster (random, scheduler)
+    new StubNetwork
   }}

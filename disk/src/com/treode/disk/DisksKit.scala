@@ -9,7 +9,7 @@ import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.unpickle
 
-private class DisksKit (scheduler: Scheduler) extends Disks {
+private class DisksKit (implicit scheduler: Scheduler) extends Disks {
 
   case class SuperBlocks (path: Path, file: File, sb1: Option [SuperBlock], sb2: Option [SuperBlock])
 

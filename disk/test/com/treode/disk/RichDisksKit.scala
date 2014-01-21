@@ -10,8 +10,7 @@ import org.scalatest.Assertions
 
 import Assertions._
 
-private class RichDisksKit (scheduler: StubScheduler)
-extends DisksKit (scheduler) {
+private class RichDisksKit (implicit scheduler: StubScheduler) extends DisksKit {
 
   def assertOpening() =
     assert (state.isInstanceOf [Opening], s"Expected Opening, found $state")

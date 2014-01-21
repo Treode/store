@@ -12,8 +12,8 @@ class LogSpec extends FlatSpec {
   val update = new RecordDescriptor (0x0E4F8ABF, Picklers.string)
 
   "It" should "work" in {
-    val scheduler = StubScheduler.random()
-    val file = new StubFile (scheduler)
+    implicit val scheduler = StubScheduler.random()
+    val file = new StubFile
     val alloc = new SegmentAllocator (config)
     val dispatcher = new LogDispatcher (scheduler)
     val writer = new LogWriter (file, alloc, scheduler, dispatcher)

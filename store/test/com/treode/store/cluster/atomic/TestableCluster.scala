@@ -1,11 +1,10 @@
 package com.treode.store.cluster.atomic
 
-import com.treode.cluster.StubCluster
+import com.treode.cluster.StubNetwork
 import com.treode.store._
 
-private class TestableCluster (hosts: Seq [StubHost], cluster: StubCluster) extends TestableStore {
-
-  private def random = cluster.random
+private class TestableCluster (hosts: Seq [StubHost], network: StubNetwork) extends TestableStore {
+  import network.random
 
   private def randomHost: StubHost =
     hosts (random.nextInt (hosts.size))
@@ -19,5 +18,5 @@ private class TestableCluster (hosts: Seq [StubHost], cluster: StubCluster) exte
   def expectCells (t: TableId) (expected: TimedCell*): Unit =
     hosts foreach (_.expectCells (t) (expected: _*))
 
-  def runTasks() = cluster.runTasks()
+  def runTasks() = network.runTasks()
 }

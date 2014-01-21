@@ -52,8 +52,8 @@ class FramerSpec extends FreeSpec {
   }
 
   def mkFile = {
-    val scheduler = StubScheduler.random()
-    val file = new StubFile (scheduler)
+    implicit val scheduler = StubScheduler.random()
+    val file = new StubFile
     val buf = PagedBuffer (12)
     (scheduler, file, buf)
   }

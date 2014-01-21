@@ -16,8 +16,8 @@ class PageSpec extends FlatSpec {
 
   "It" should "work" in {
     implicit val scheduler = StubScheduler.random()
-    val disk1 = new StubFile (scheduler)
-    val kit = new RichDisksKit (scheduler)
+    val disk1 = new StubFile
+    val kit = new RichDisksKit
     kit.attachAndPass (("a", disk1, config))
 
     val seq = Seq (0, 1, 2)

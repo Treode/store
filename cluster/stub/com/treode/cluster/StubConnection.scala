@@ -6,13 +6,13 @@ import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Pickler
 
-private class StubConnection (val id: HostId, localId: HostId, cluster: StubCluster)
+private class StubConnection (val id: HostId, localId: HostId, network: StubNetwork)
 extends Peer {
 
   address = new SocketAddress {}
 
   def send [M] (p: Pickler [M], mbx: MailboxId, msg: M): Unit =
-    cluster.deliver (p, localId, id, mbx, msg)
+    network.deliver (p, localId, id, mbx, msg)
 
   // Stubs do not require this.
   def connect (socket: Socket, input: PagedBuffer, clientId: HostId) =

@@ -27,6 +27,6 @@ trait Disks {
 
 object Disks {
 
-  def apply (scheduler: Scheduler): Disks =
-    new DisksKit (scheduler)
+  def apply () (implicit scheduler: Scheduler): Disks =
+    new DisksKit
 }

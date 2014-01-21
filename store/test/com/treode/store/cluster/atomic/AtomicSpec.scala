@@ -3,7 +3,7 @@ package com.treode.store.cluster.atomic
 import java.util.concurrent.TimeoutException
 
 import com.treode.async.CallbackCaptor
-import com.treode.cluster.StubCluster
+import com.treode.cluster.StubNetwork
 import com.treode.store._
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, PropSpec, Specs}
@@ -17,7 +17,7 @@ class AtomicSpec extends Specs (AtomicBehaviors, AtomicProperties)
 
 object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors {
 
-  private val kit = StubCluster()
+  private val kit = StubNetwork()
   private val hs = kit.install (3, new StubHost (_, kit))
   private val host = hs.head
   import kit.{random, scheduler}
@@ -58,7 +58,7 @@ object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors
     behave like aStore (new TestableCluster (hs, kit))
 
     val threaded = {
-      val kit = StubCluster (0, true)
+      val kit = StubNetwork (0, true)
       val hs = kit.install (3, new StubHost (_, kit))
       new TestableCluster (hs, kit)
     }
@@ -71,7 +71,7 @@ object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTool
   val seeds = Gen.choose (0L, Long.MaxValue)
 
   def checkConsensus (seed: Long, mf: Double) {
-    val kit = StubCluster (seed)
+    val kit = StubNetwork (seed)
     val hs = kit.install (3, new StubHost (_, kit))
     val Seq (h1, h2, h3) = hs
     import kit.{random, scheduler}
