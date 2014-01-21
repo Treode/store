@@ -9,11 +9,11 @@ private class RecordRegistry {
 
   private val records = new Framer [TypeId, RecordHeader, Unit => Any] (RecordRegistry.framer)
 
+  def register [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
+    records.register (desc.prec, desc.id) (v => _ => f (v))
+
   def read (file: File, pos: Long, buf: PagedBuffer, cb: Callback [records.FileFrame]): Unit =
     records.read (file, pos, buf, cb)
-
-  def register [R] (p: Pickler [R], id: TypeId) (f: R => Any): Unit =
-    records.register (p, id) (v => _ => f (v))
 }
 
 private object RecordRegistry {

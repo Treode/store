@@ -14,13 +14,13 @@ private trait PickledRecord {
 
 private object PickledRecord {
 
-  def apply [A] (p: Pickler [A], id: TypeId, _time: Long, entry: A, _cb: Callback [Unit]): PickledRecord =
+  def apply [R] (desc: RecordDescriptor [R], _time: Long, entry: R, _cb: Callback [Unit]): PickledRecord =
     new PickledRecord {
-      val hdr = RecordHeader.Entry (_time, id)
+      val hdr = RecordHeader.Entry (_time, desc.id)
       def cb = _cb
       def time = _time
-      val byteSize = 17 + size (p, entry) // TODO: Yikes! A magic number...
+      val byteSize = 17 + size (desc.prec, entry) // TODO: Yikes! A magic number...
       def write (buf: PagedBuffer) =
-        RecordRegistry.framer.write (p, hdr, entry, buf)
-      override def toString = s"PickledRecord($id, $time, $entry)"
+        RecordRegistry.framer.write (desc.prec, hdr, entry, buf)
+      override def toString = s"PickledRecord(${desc.id}, $time, $entry)"
     }}

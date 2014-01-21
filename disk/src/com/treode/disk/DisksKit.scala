@@ -2,14 +2,12 @@ package com.treode.disk
 
 import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService
-import scala.collection.JavaConversions._
 import scala.collection.immutable.Queue
-import scala.reflect.ClassTag
 
 import com.treode.async._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{Pickler, unpickle}
+import com.treode.pickle.unpickle
 
 private class DisksKit (scheduler: Scheduler) extends Disks {
 
@@ -421,11 +419,11 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
   def checkpoint (cb: Callback [Unit]): Unit =
     fiber.execute (state.checkpoint (cb))
 
-  def register [R] (p: Pickler [R], id: TypeId) (f: R => Any): Unit =
-    records.register (p, id) (f)
+  def register [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
+    records.register (desc) (f)
 
-  def record [R] (p: Pickler [R], id: TypeId, entry: R, cb: Callback [Unit]): Unit =
-    log.record (p, id, entry, cb)
+  def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit]): Unit =
+    log.record (desc, entry, cb)
 
   def fill (buf: PagedBuffer, pos: Position, cb: Callback [Unit]): Unit =
     disks (pos.disk) .fill (buf, pos.offset, pos.length, cb)
