@@ -7,7 +7,6 @@ import scala.reflect.ClassTag
 import com.google.common.annotations.VisibleForTesting
 import com.treode.async.{Callback, Scheduler}
 import com.treode.async.io.File
-import com.treode.cluster.events.Events
 import com.treode.pickle.Pickler
 
 trait Disks {

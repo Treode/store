@@ -82,8 +82,12 @@ object TreodeBuild extends Build {
     .dependsOn (async % "compile;stub->stub")
     .settings (withStubSettings: _*)
 
+  lazy val disk = Project ("disk", file ("disk"))
+    .dependsOn (async % "compile;stub->stub")
+    .settings (standardSettings: _*)
+
   lazy val store = Project ("store", file ("store"))
-    .dependsOn (cluster % "compile;stub->stub")
+    .dependsOn (cluster % "compile;stub->stub", disk)
     .settings (withStubSettings: _*)
 
   /*

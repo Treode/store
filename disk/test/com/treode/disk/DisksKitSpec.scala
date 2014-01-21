@@ -6,7 +6,6 @@ import scala.language.implicitConversions
 import com.treode.async._
 import com.treode.async.io.{File, MockFile, StubFile}
 import com.treode.buffer.PagedBuffer
-import com.treode.cluster.events.StubEvents
 import com.treode.pickle.{pickle, unpickle}
 import org.scalatest.FreeSpec
 
