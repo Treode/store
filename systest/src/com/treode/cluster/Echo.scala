@@ -14,7 +14,7 @@ object Echo {
     new RequestDescriptor (0xFF9F76CB490BE8A8L, string, string)
   }
 
-  def attach (localId: HostId) (implicit random: Random, scheduler: Scheduler, host: Host) {
+  def attach (localId: HostId) (implicit random: Random, scheduler: Scheduler, cluster: Cluster) {
 
     val period = 10000
     val backoff = BackoffTimer (100, 200)
@@ -25,7 +25,7 @@ object Echo {
     }
 
     def loop (i: Int) {
-      new _echo.QuorumCollector ("Hello World") (host.locate (0), backoff) {
+      new _echo.QuorumCollector ("Hello World") (cluster.locate (0), backoff) {
 
         process (_ => ())
 

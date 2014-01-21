@@ -3,10 +3,11 @@ package com.treode.store.cluster.atomic
 import com.treode.cluster.StubNetwork
 import com.treode.store._
 
-private class TestableCluster (hosts: Seq [StubHost], network: StubNetwork) extends TestableStore {
+private class TestableCluster (hosts: Seq [StubAtomicHost], network: StubNetwork)
+extends TestableStore {
   import network.random
 
-  private def randomHost: StubHost =
+  private def randomHost: StubAtomicHost =
     hosts (random.nextInt (hosts.size))
 
   def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =

@@ -14,17 +14,17 @@ private class ReadDirector (
     kit: AtomicKit,
     private var cb: ReadCallback) {
 
-  import kit.{host, random, scheduler}
+  import kit.{cluster, random, scheduler}
 
   val readBackoff = BackoffTimer (100, 100, 1 seconds, 7) (random)
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)
-  val mbx = host.open (ReadResponse.pickle, fiber)
+  val mbx = cluster.open (ReadResponse.pickle, fiber)
 
   val backoff = readBackoff.iterator
-  val acks = host.locate (0)
-  val gots = host.locate (0)
+  val acks = cluster.locate (0)
+  val gots = cluster.locate (0)
   val vs = Array.fill (ops.size) (Value.empty)
 
   private def maybeFinish() {

@@ -4,12 +4,12 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.util.Random
 
 import com.treode.async.{Callback, Scheduler, guard}
-import com.treode.cluster.Host
+import com.treode.cluster.Cluster
 import com.treode.store.{Bytes, PaxosStore, SimpleAccessor, SimpleStore}
 import com.treode.disk.Disks
 
-private class PaxosKit (implicit val random: Random, val scheduler: Scheduler, val host: Host,
-    val disks: Disks) extends PaxosStore {
+private class PaxosKit (implicit val random: Random, val scheduler: Scheduler,
+    val cluster: Cluster, val disks: Disks) extends PaxosStore {
 
   object Acceptors {
     import Acceptor._
@@ -31,7 +31,7 @@ private class PaxosKit (implicit val random: Random, val scheduler: Scheduler, v
       acceptors.remove (key, a)
 
     def locate (key: Bytes) =
-      host.locate (key.hashCode)
+      cluster.locate (key.hashCode)
 
     query.register { case ((key, ballot, default), c) =>
       get (key) query (c, ballot, default)
@@ -105,6 +105,6 @@ private class PaxosKit (implicit val random: Random, val scheduler: Scheduler, v
 
 private [store] object PaxosKit {
 
-  def apply () (implicit random: Random, scheduler: Scheduler, host: Host, disks: Disks): PaxosStore =
+  def apply () (implicit random: Random, scheduler: Scheduler, cluster: Cluster, disks: Disks): PaxosStore =
     new PaxosKit
 }

@@ -15,8 +15,8 @@ class MessageDescriptor [M] (val id: MailboxId, val pmsg: Pickler [M]) {
   private [cluster] def register (m: MailboxRegistry) (f: (M, Peer) => Any): Unit =
     m.register (pmsg, id) (f)
 
-  def register (f: (M, Peer) => Any) (implicit h: Host): Unit =
-    h.register (this) (f)
+  def register (f: (M, Peer) => Any) (implicit c: Cluster): Unit =
+    c.register (this) (f)
 
   def apply (msg: M) = MessageSender (id, pmsg, msg)
 }

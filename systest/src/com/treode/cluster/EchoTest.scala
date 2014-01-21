@@ -99,7 +99,7 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
     _listener = new Listener (localId, addresses (localId.id.toInt), _group, _peers) (_scheduler, Events.live)
     _listener.startup()
 
-    val host = new Host {
+    val cluster = new Cluster {
 
       def register [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
         _mailboxes.register (desc.pmsg, desc.id) (f)
@@ -113,7 +113,7 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
       def locate (id: Int) = Acknowledgements.settled (0, 1, 2)
     }
 
-    Echo.attach (localId) (_random, _scheduler, host)
+    Echo.attach (localId) (_random, _scheduler, cluster)
 
   } catch {
     case e: Throwable =>

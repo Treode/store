@@ -7,9 +7,9 @@ trait RequestSender [Rsp] {
   type Mailbox = EphemeralMailbox [Rsp]
 
   def apply (to: Peer, mbx: Mailbox)
-  def apply (to: HostId, mbx: Mailbox) (implicit h: Host)
-  def apply (to: Iterable [HostId], mbx: Mailbox) (implicit h: Host)
-  def apply (acks: Acknowledgements, mbx: Mailbox) (implicit h: Host)
+  def apply (to: HostId, mbx: Mailbox) (implicit c: Cluster)
+  def apply (to: Iterable [HostId], mbx: Mailbox) (implicit c: Cluster)
+  def apply (acks: Acknowledgements, mbx: Mailbox) (implicit c: Cluster)
 }
 
 object RequestSender {
@@ -23,12 +23,12 @@ object RequestSender {
       def apply (to: Peer, mbx: Mailbox): Unit =
         sender (mbx.id) (to)
 
-      def apply (to: HostId, mbx: Mailbox) (implicit h: Host): Unit =
+      def apply (to: HostId, mbx: Mailbox) (implicit c: Cluster): Unit =
         sender (mbx.id) (to)
 
-      def apply (to: Iterable [HostId], mbx: Mailbox) (implicit h: Host): Unit =
+      def apply (to: Iterable [HostId], mbx: Mailbox) (implicit c: Cluster): Unit =
         sender (mbx.id) (to)
 
-      def apply (acks: Acknowledgements, mbx: Mailbox) (implicit h: Host): Unit =
+      def apply (acks: Acknowledgements, mbx: Mailbox) (implicit c: Cluster): Unit =
         sender (mbx.id) (acks.awaiting)
     }}

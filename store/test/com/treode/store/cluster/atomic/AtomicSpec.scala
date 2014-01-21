@@ -18,7 +18,7 @@ class AtomicSpec extends Specs (AtomicBehaviors, AtomicProperties)
 object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors {
 
   private val kit = StubNetwork()
-  private val hs = kit.install (3, new StubHost (_, kit))
+  private val hs = kit.install (3, new StubAtomicHost (_, kit))
   private val host = hs.head
   import kit.{random, scheduler}
   import host.{writeDeputy, write}
@@ -59,7 +59,7 @@ object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors
 
     val threaded = {
       val kit = StubNetwork (0, true)
-      val hs = kit.install (3, new StubHost (_, kit))
+      val hs = kit.install (3, new StubAtomicHost (_, kit))
       new TestableCluster (hs, kit)
     }
 
@@ -72,7 +72,7 @@ object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTool
 
   def checkConsensus (seed: Long, mf: Double) {
     val kit = StubNetwork (seed)
-    val hs = kit.install (3, new StubHost (_, kit))
+    val hs = kit.install (3, new StubAtomicHost (_, kit))
     val Seq (h1, h2, h3) = hs
     import kit.{random, scheduler}
 

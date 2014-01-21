@@ -10,7 +10,7 @@ class RequestDescriptor [Req, Rsp] (id: MailboxId, preq: Pickler [Req], prsp: Pi
   type Mediator = RequestMediator [Rsp]
 
   abstract class QuorumCollector (req: Req) (acks: Acknowledgements, backoff: BackoffTimer) (
-      implicit scheduler: Scheduler, host: Host) {
+      implicit scheduler: Scheduler, cluster: Cluster) {
 
     private val fiber = new Fiber (scheduler)
     private val mbx = open (fiber)
@@ -53,13 +53,13 @@ class RequestDescriptor [Req, Rsp] (id: MailboxId, preq: Pickler [Req], prsp: Pi
     tuple (MailboxId.pickle, preq)
   }
 
-  def register (f: (Req, Mediator) => Any) (implicit h: Host): Unit =
-    h.register (new MessageDescriptor (id, _preq)) { case ((mbx, req), c) =>
+  def register (f: (Req, Mediator) => Any) (implicit c: Cluster): Unit =
+    c.register (new MessageDescriptor (id, _preq)) { case ((mbx, req), c) =>
       f (req, new RequestMediator (prsp, mbx, c))
     }
 
   def apply (req: Req) = RequestSender [Req, Rsp] (id, _preq, req)
 
-  def open (s: Scheduler) (implicit h: Host): Mailbox =
-    h.open (prsp, s)
+  def open (s: Scheduler) (implicit c: Cluster): Mailbox =
+    c.open (prsp, s)
 }

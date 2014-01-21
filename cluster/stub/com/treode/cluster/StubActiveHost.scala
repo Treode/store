@@ -7,8 +7,7 @@ import com.treode.cluster.events.StubEvents
 import com.treode.cluster.messenger.{MailboxRegistry, PeerRegistry}
 import com.treode.pickle.Pickler
 
-class BaseStubHost (val localId: HostId, network: StubNetwork)
-extends Host with StubHost {
+class StubActiveHost (val localId: HostId, network: StubNetwork) extends Cluster with StubHost {
   import network.random
 
   private val mailboxes: MailboxRegistry =

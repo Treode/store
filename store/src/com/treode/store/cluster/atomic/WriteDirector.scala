@@ -5,23 +5,23 @@ import scala.collection.mutable
 import scala.language.postfixOps
 
 import com.treode.async.{Callback, Fiber}
-import com.treode.cluster.{Acknowledgements, Host, Peer}
+import com.treode.cluster.{Cluster, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.store._
 
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
   import WriteDirector.deliberate
-  import kit.{host, paxos, random, scheduler}
+  import kit.{cluster, paxos, random, scheduler}
 
   val prepareBackoff = BackoffTimer (100, 100, 1 seconds, 7) (random)
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)
-  val mbx = host.open (WriteResponse.pickle, fiber)
+  val mbx = cluster.open (WriteResponse.pickle, fiber)
   var state: State = new Opening
 
   val backoff = prepareBackoff.iterator
-  val prepares = host.locate (0)
+  val prepares = cluster.locate (0)
 
   trait State {
 
@@ -65,7 +65,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
   class Preparing (cb: WriteCallback) extends State {
 
-    val acks = host.locate (0)
+    val acks = cluster.locate (0)
     var advance = false
     var ks = Set.empty [Int]
     var ft = TxClock.now
@@ -158,7 +158,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
   class Committing (wt: TxClock) extends State {
 
-    val commits = host.locate (0)
+    val commits = cluster.locate (0)
 
     WriteDeputy.commit (xid, wt) (commits, mbx)
     fiber.delay (backoff.next) (state.timeout())
@@ -187,7 +187,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
   class Aborting (lead: Boolean) extends State {
 
-    val aborts = host.locate (0)
+    val aborts = cluster.locate (0)
 
     if (lead)
       WriteDirector.deliberate.lead (xid.id, TxStatus.Aborted, Callback.ignore)

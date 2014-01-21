@@ -4,7 +4,7 @@ import com.treode.async.Scheduler
 import com.treode.cluster.messenger.{MailboxRegistry, PeerRegistry}
 import com.treode.pickle.Pickler
 
-trait Host {
+trait Cluster {
 
   def register [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any)
 

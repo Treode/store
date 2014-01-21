@@ -4,12 +4,12 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.util.Random
 
 import com.treode.async.{Scheduler, guard}
-import com.treode.cluster.Host
+import com.treode.cluster.Cluster
 import com.treode.store._
 import com.treode.store.cluster.paxos.PaxosKit
 
-private class AtomicKit (implicit val random: Random, val scheduler: Scheduler, val host: Host,
-    val store: LocalStore, val paxos: PaxosStore) extends Store {
+private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
+    val cluster: Cluster, val store: LocalStore, val paxos: PaxosStore) extends Store {
 
   object ReadDeputies {
 

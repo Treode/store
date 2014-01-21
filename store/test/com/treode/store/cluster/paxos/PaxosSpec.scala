@@ -18,7 +18,7 @@ class PaxosSpec extends Specs (PaxosBehaviors, PaxosProperties)
 object PaxosBehaviors extends WordSpec with PaxosTestTools {
 
   private val kit = StubNetwork()
-  private val hs = kit.install (3, new StubHost (_, kit))
+  private val hs = kit.install (3, new StubPaxosHost (_, kit))
   private val host = hs.head
   import kit.{random, scheduler}
   import host.paxos.{Acceptors, lead}
@@ -70,7 +70,7 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
 
   def checkConsensus (seed: Long, mf: Double, summary: Summary): Summary = {
     val kit = StubNetwork (seed)
-    val hs = kit.install (3, new StubHost (_, kit))
+    val hs = kit.install (3, new StubPaxosHost (_, kit))
     val Seq (h1, h2, h3) = hs
     import kit.{random, scheduler}
 
