@@ -1,30 +1,26 @@
 package com.treode.store.disk2
 
 import com.treode.async.Callback
-import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{Pickler, pickle, size}
+import com.treode.buffer.Output
+import com.treode.pickle.{Pickler, TagRegistry, pickle, size}
+
+import TagRegistry.Tagger
 
 private trait PickledPage {
 
+  def group: Tagger
   def cb: Callback [Position]
   def byteSize: Int
-  def write (buf: PagedBuffer)
+  def write (out: Output)
 }
 
 private object PickledPage {
 
-  def apply [A] (p: Pickler [A], page: A, _cb: Callback [Position]): PickledPage =
+  def apply [G, P] (desc: PageDescriptor [G, P], _group: G, page: P, _cb: Callback [Position]): PickledPage =
     new PickledPage {
+      def group = TagRegistry.tagger (desc.pgrp, desc.id.id, _group)
       def cb = _cb
-      def byteSize = size (p, page)
-      def write (buf: PagedBuffer) = pickle (p, page, buf)
-      override def toString = s"PickledPage($page)"
-    }
-
-  def apply (_byteSize: Int, _write: PagedBuffer => Any, _cb: Callback [Position]): PickledPage =
-    new PickledPage {
-      def cb = _cb
-      def byteSize = _byteSize
-      def write (buf: PagedBuffer) = _write (buf)
-      override def toString = s"PickledPage(writer)"
-  }}
+      def byteSize = size (desc.ppag, page)
+      def write (out: Output) = pickle (desc.ppag, page, out)
+      override def toString = s"PickledPage($group)"
+    }}

@@ -106,16 +106,16 @@ extends DisksKit (scheduler) {
     cb
   }
 
-  def writeAndPass [P] (pickle: Pickler [P], page: P): Position = {
+  def writeAndPass [G, P] (desc: PageDescriptor [G, P], group: G, page: P): Position = {
     val cb = new CallbackCaptor [Position]
-    write (pickle, page, cb)
+    write (desc, group, page, cb)
     scheduler.runTasks()
     cb.passed
   }
 
-  def readAndPass [P] (pickle: Pickler [P], pos: Position) (implicit tag: ClassTag [P]): P = {
+  def readAndPass [G, P] (desc: PageDescriptor [G, P], pos: Position): P = {
     val cb = new CallbackCaptor [P]
-    read (pickle, pos, cb)
+    read (desc, pos, cb)
     scheduler.runTasks()
     cb.passed
   }}

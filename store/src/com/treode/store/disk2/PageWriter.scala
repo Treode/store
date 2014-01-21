@@ -5,8 +5,12 @@ import scala.collection.JavaConversions._
 
 import com.treode.async.{Callback, Scheduler, guard}
 import com.treode.async.io.File
-import com.treode.buffer.PagedBuffer
+import com.treode.buffer.{Input, PagedBuffer, Output}
 import com.treode.pickle.{Picklers, pickle}
+
+
+import com.treode.pickle.{Pickler, TagRegistry}
+import TagRegistry.Tagger
 
 private class PageWriter (
     id: Int,
@@ -24,14 +28,6 @@ private class PageWriter (
   extends Callback [Long] {
     def pass (base: Long) = cb (Position (id, base + offset, length))
     def fail (t: Throwable) = cb.fail (t)
-  }
-
-  def picklePage (page: PickledPage): Callback [Long] = {
-    val start = buffer.writePos
-    page.write (buffer)
-    buffer.writeZeroToAlign (config.blockBits)
-    val length = buffer.writePos - start
-    new PositionCallback (id, start, length, page.cb)
   }
 
   val receiver: (ArrayList [PickledPage] => Unit) = (receive _)
@@ -77,26 +73,24 @@ private class PageWriter (
       }}
 
     guard (finish) {
-      for (page <- accepts)
-        callbacks.add (picklePage (page))
+
+      for (page <- accepts) {
+        val start = buffer.writePos
+        page.write (buffer)
+        buffer.writeZeroToAlign (config.blockBits)
+        val length = buffer.writePos - start
+        callbacks.add (new PositionCallback (id, start, length, page.cb))
+      }
+
       pos -= buffer.readableBytes
+
       file.flush (buffer, pos, finish)
     }}
 
-  def init (cb: Callback [Unit]) {
+  def init() {
     val seg = alloc.allocate()
     base = seg.pos
     pos = seg.limit
-    buffer.writeInt (0)
-    file.flush (buffer, base, new Callback [Unit] {
-      def pass (v: Unit) {
-        buffer.clear()
-        scheduler.execute (cb, ())
-      }
-      def fail (t: Throwable) {
-        buffer.clear()
-        scheduler.fail (cb, t)
-      }})
   }
 
   def checkpoint (gen: Int): PageWriter.Meta =

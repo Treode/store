@@ -21,7 +21,7 @@ class DisksKitSpec extends FreeSpec {
     val log = new LogWriter (file, alloc, scheduler, null)
     log.init (Callback.ignore)
     val pages = new PageWriter (id, file, config, alloc, scheduler, null)
-    pages.init (Callback.ignore)
+    pages.init()
     val roots = RootRegistry.Meta.empty
     scheduler.runTasks()
     val boot = BootBlock (

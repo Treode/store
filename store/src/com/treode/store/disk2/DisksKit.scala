@@ -430,11 +430,11 @@ private class DisksKit (scheduler: Scheduler) extends Disks {
   def fill (buf: PagedBuffer, pos: Position, cb: Callback [Unit]): Unit =
     disks (pos.disk) .fill (buf, pos.offset, pos.length, cb)
 
-  def read [P] (p: Pickler [P], pos: Position, cb: Callback [P]) (implicit tag: ClassTag [P]): Unit =
-    cache.read (p, tag, disks, pos, cb)
+  def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P]): Unit =
+    cache.read (desc, disks, pos, cb)
 
-  def write [P] (p: Pickler [P], page: P, cb: Callback [Position]): Unit =
-    pages.write (p, page, cb)
+  def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P, cb: Callback [Position]): Unit =
+    pages.write (desc, group, page, cb)
 
   override def toString = state.toString
 }

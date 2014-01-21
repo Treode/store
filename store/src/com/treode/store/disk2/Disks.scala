@@ -20,8 +20,8 @@ trait Disks {
   def register [R] (p: Pickler [R], id: TypeId) (f: R => Any)
   def record [R] (p: Pickler [R], id: TypeId, entry: R, cb: Callback [Unit])
 
-  def read [P] (p: Pickler [P], pos: Position, cb: Callback [P]) (implicit tag: ClassTag [P])
-  def write [P] (p: Pickler [P], page: P, cb: Callback [Position])
+  def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P])
+  def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P, cb: Callback [Position])
 }
 
 object Disks {

@@ -1,7 +1,5 @@
 package com.treode.pickle
 
-import java.lang.{Long => JLong}
-import java.util.{Objects => JObjects}
 import java.util.concurrent.ConcurrentHashMap
 import com.treode.buffer.Input
 
@@ -52,7 +50,7 @@ object TagRegistry {
     def pickle (ctx: PickleContext)
   }
 
-  private class TaggerImpl [P <: AnyRef] (p: Pickler [P], val id: Long, val v: P)
+  private class TaggerImpl [P] (p: Pickler [P], val id: Long, val v: P)
   extends Tagger {
 
     def size: Int =
@@ -64,12 +62,12 @@ object TagRegistry {
     }
 
     override def hashCode: Int =
-      JObjects.hash (id: JLong, v)
+      (id, v).hashCode
 
     override def equals (other: Any): Boolean =
       other match {
         case that: TaggerImpl [_] =>
-          id == that.id && JObjects.equals (v, that.v)
+          id == that.id && v == that.v
         case _ =>
           false
       }
@@ -78,7 +76,7 @@ object TagRegistry {
       s"Tagger($id,$v)"
   }
 
-  def tagger [P <: AnyRef] (p: Pickler [P], id: Long, v: P): Tagger =
+  def tagger [P] (p: Pickler [P], id: Long, v: P): Tagger =
     new TaggerImpl (p, id, v)
 
   def pickler: Pickler [Tagger] =

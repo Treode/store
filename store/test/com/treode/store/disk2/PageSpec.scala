@@ -9,9 +9,9 @@ class PageSpec extends FlatSpec {
 
   val config = DiskDriveConfig (16, 12, 1L<<20)
 
-  val pickle = {
+  val desc = {
     import Picklers._
-    seq (int)
+    new PageDescriptor (0xF2D7C1E9, int, seq (int))
   }
 
   "It" should "work" in {
@@ -21,6 +21,6 @@ class PageSpec extends FlatSpec {
     kit.attachAndPass (("a", disk1, config))
 
     val seq = Seq (0, 1, 2)
-    val pos = kit.writeAndPass (pickle, seq)
-    expectResult (seq) (kit.readAndPass (pickle, pos))
+    val pos = kit.writeAndPass (desc, 0, seq)
+    expectResult (seq) (kit.readAndPass (desc, pos))
   }}

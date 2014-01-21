@@ -15,7 +15,7 @@ class RootRegistry (disks: DisksKit, pages: PageDispatcher) {
 
   private val recoveries = new TagRegistry [Any]
 
-  def checkpoint [B <: AnyRef] (pblk: Pickler [B], id: TypeId) (f: Callback [B] => Any): Unit =
+  def checkpoint [B] (pblk: Pickler [B], id: TypeId) (f: Callback [B] => Any): Unit =
     synchronized {
       checkpoints.add { cb =>
         f (callback (cb) { root =>
@@ -34,9 +34,7 @@ class RootRegistry (disks: DisksKit, pages: PageDispatcher) {
     }
 
     val rootsWritten = Callback.collect (count, delay (cb) { roots: Seq [Tagger] =>
-      val byteSize = roots .map (_.size) .sum
-      val write = pickle (Picklers.seq (TagRegistry.pickler), roots, _: PagedBuffer)
-      pages.write (byteSize, write, rootsPageWritten)
+      pages.write (RootRegistry.page, 0, roots, rootsPageWritten)
     })
 
     for (cp <- checkpoints)
@@ -64,4 +62,10 @@ object RootRegistry {
       wrap (int, pos)
       .build ((Meta.apply _).tupled)
       .inspect (v => (v.count, v.pos))
-    }}}
+    }}
+
+
+  val page = {
+    import Picklers._
+    new PageDescriptor (0x6EC7584D, const (0), seq (TagRegistry.pickler))
+  }}

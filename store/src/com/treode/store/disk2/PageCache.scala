@@ -9,7 +9,7 @@ import com.treode.pickle.{Pickler, unpickle}
 
 private class PageCache (scheduler: Scheduler) {
 
-  class Load (p: Pickler [_], disks: Map [Int, DiskDrive], pos: Position)
+  class Load (desc: PageDescriptor [_, _], disks: Map [Int, DiskDrive], pos: Position)
   extends Callable [Future [Any]] {
     def call(): Future [Any] = {
       val fut = new Future [Any] (scheduler)
@@ -17,7 +17,7 @@ private class PageCache (scheduler: Scheduler) {
         val disk = disks (pos.disk)
         val buf = PagedBuffer (12)
         disk.fill (buf, pos.offset, pos.length, callback (fut) { _ =>
-          unpickle (p, buf)
+          unpickle (desc.ppag, buf)
         })
       }
       fut
@@ -28,10 +28,10 @@ private class PageCache (scheduler: Scheduler) {
       .build()
       .asInstanceOf [Cache [(Int, Long), Future [Any]]]
 
-  def read [P] (p: Pickler [P], tag: ClassTag [P], disks: Map [Int, DiskDrive], pos: Position, cb: Callback [P]) {
+  def read [G, P] (desc: PageDescriptor [G, P], disks: Map [Int, DiskDrive], pos: Position, cb: Callback [P]) {
     guard (cb) {
       pages
-          .get ((pos.disk, pos.offset), new Load (p, disks, pos))
-          .get (callback (cb) (v => tag.runtimeClass.cast (v) .asInstanceOf [P]))
+          .get ((pos.disk, pos.offset), new Load (desc, disks, pos))
+          .get (callback (cb) (v => desc.tpag.runtimeClass.cast (v) .asInstanceOf [P]))
     }}
 }

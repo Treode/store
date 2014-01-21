@@ -1,7 +1,5 @@
 package com.treode.store.disk2
 
-import java.lang.{Long => JLong}
-import java.util.Objects
 import com.treode.pickle.Picklers
 
 class DiskDriveConfig private (
@@ -31,7 +29,7 @@ class DiskDriveConfig private (
   }
 
   override def hashCode: Int =
-    Objects.hash (segmentBits: JLong, blockBits: JLong, diskBytes: JLong)
+    (segmentBits, blockBits, diskBytes).hashCode
 
   override def equals (other: Any): Boolean =
     other match {
