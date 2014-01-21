@@ -6,8 +6,7 @@ import com.treode.store.{PrepareCallback, Transaction, TxClock, TxId, WriteOp}
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   import kit.WriteDeputies.{mainDb, openDb}
-  import kit.store
-  import kit.host.scheduler
+  import kit.{scheduler, store}
 
   type WriteMediator = RequestMediator [WriteResponse]
 

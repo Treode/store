@@ -1,18 +1,16 @@
 package com.treode.cluster
 
-import scala.util.Random
-
 import com.treode.async.Scheduler
-import com.treode.cluster.messenger.{PeerRegistry, MailboxRegistry}
+import com.treode.cluster.messenger.{MailboxRegistry, PeerRegistry}
 import com.treode.pickle.Pickler
 
 trait Host {
 
-  val localId: HostId
-  val random: Random
-  val scheduler: Scheduler
-  val mailboxes: MailboxRegistry
-  val peers: PeerRegistry
+  def register [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any)
+
+  def open [M] (p: Pickler [M], s: Scheduler): EphemeralMailbox [M]
+
+  def peer (id: HostId): Peer
 
   def locate (id: Int): Acknowledgements
 

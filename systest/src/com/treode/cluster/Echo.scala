@@ -1,7 +1,9 @@
 package com.treode.cluster
 
 import java.util.concurrent.TimeoutException
+import scala.util.Random
 
+import com.treode.async.Scheduler
 import com.treode.pickle.Picklers
 import com.treode.cluster.misc.BackoffTimer
 
@@ -12,10 +14,10 @@ object Echo {
     new RequestDescriptor (0xFF9F76CB490BE8A8L, string, string)
   }
 
-  def attach () (implicit host: Host) {
+  def attach (localId: HostId) (implicit random: Random, scheduler: Scheduler, host: Host) {
 
     val period = 10000
-    val backoff = BackoffTimer (100, 200) (host.random)
+    val backoff = BackoffTimer (100, 200)
     var start = 0L
 
     _echo.register { case (s, mdtr) =>
@@ -41,7 +43,7 @@ object Echo {
         def timeout() = throw new TimeoutException
       }}
 
-    if (host.localId == HostId (2)) {
+    if (localId == HostId (2)) {
       start = System.currentTimeMillis
       loop (1)
     }}}

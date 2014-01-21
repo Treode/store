@@ -34,7 +34,7 @@ object PaxosBehaviors extends WordSpec with PaxosTestTools {
     }
 
     "be deliberating after running tasks" in {
-      a.query (host.peers.get (host.localId), 0, Zero)
+      a.query (host.peer (host.localId), 0, Zero)
       kit.runTasks()
       assert (a.isDeliberating)
     }

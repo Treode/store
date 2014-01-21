@@ -8,10 +8,10 @@ import com.treode.disk.{Disks, DiskDriveConfig}
 
 private class StubHost (id: HostId, cluster: StubCluster) extends BaseStubHost (id, cluster) {
 
-  val disks = Disks (scheduler)
+  val disks = Disks (cluster.scheduler)
   val file = new StubFile (cluster.scheduler)
   val config = DiskDriveConfig (16, 8, 1L<<20)
   disks.attach (Seq ((Paths.get ("a"), file, config)), Callback.ignore)
 
-  val paxos = new PaxosKit () (this, disks)
+  val paxos = new PaxosKit () (cluster.random, cluster.scheduler, this, disks)
 }

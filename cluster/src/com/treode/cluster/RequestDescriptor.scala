@@ -9,9 +9,10 @@ class RequestDescriptor [Req, Rsp] (id: MailboxId, preq: Pickler [Req], prsp: Pi
   type Mailbox = EphemeralMailbox [Rsp]
   type Mediator = RequestMediator [Rsp]
 
-  abstract class QuorumCollector (req: Req) (acks: Acknowledgements, backoff: BackoffTimer) (implicit host: Host) {
+  abstract class QuorumCollector (req: Req) (acks: Acknowledgements, backoff: BackoffTimer) (
+      implicit scheduler: Scheduler, host: Host) {
 
-    private val fiber = new Fiber (host.scheduler)
+    private val fiber = new Fiber (scheduler)
     private val mbx = open (fiber)
     private val sender = apply (req)
     private val timer = backoff.iterator
@@ -53,12 +54,12 @@ class RequestDescriptor [Req, Rsp] (id: MailboxId, preq: Pickler [Req], prsp: Pi
   }
 
   def register (f: (Req, Mediator) => Any) (implicit h: Host): Unit =
-    h.mailboxes.register (_preq, id) { case ((mbx, req), c) =>
+    h.register (new MessageDescriptor (id, _preq)) { case ((mbx, req), c) =>
       f (req, new RequestMediator (prsp, mbx, c))
     }
 
   def apply (req: Req) = RequestSender [Req, Rsp] (id, _preq, req)
 
   def open (s: Scheduler) (implicit h: Host): Mailbox =
-    h.mailboxes.open (prsp, s)
+    h.open (prsp, s)
 }

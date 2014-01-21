@@ -11,14 +11,13 @@ import com.treode.store._
 
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
   import WriteDirector.deliberate
-  import kit.{host, paxos}
-  import kit.host.{mailboxes, random, scheduler}
+  import kit.{host, paxos, random, scheduler}
 
   val prepareBackoff = BackoffTimer (100, 100, 1 seconds, 7) (random)
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)
-  val mbx = mailboxes.open (WriteResponse.pickle, fiber)
+  val mbx = host.open (WriteResponse.pickle, fiber)
   var state: State = new Opening
 
   val backoff = prepareBackoff.iterator

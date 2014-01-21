@@ -10,8 +10,7 @@ import com.treode.disk.RecordDescriptor
 
 private class Acceptor (key: Bytes, kit: PaxosKit) {
   import Acceptor.{Post, noop}
-  import kit.disks
-  import kit.host.scheduler
+  import kit.{disks, scheduler}
 
   val deliberatingTimeout = 2 seconds
   val closedLifetime = 2 seconds

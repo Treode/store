@@ -18,7 +18,7 @@ object MessageSender {
         to.send (p, mbx, msg)
 
       def apply (to: HostId) (implicit h: Host): Unit =
-        apply (h.peers.get (to))
+        apply (h.peer (to))
 
       def apply (to: Iterable [HostId]) (implicit h: Host): Unit =
         to foreach (apply _)

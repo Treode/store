@@ -14,14 +14,13 @@ private class ReadDirector (
     kit: AtomicKit,
     private var cb: ReadCallback) {
 
-  import kit.host
-  import kit.host.{mailboxes, random, scheduler}
+  import kit.{host, random, scheduler}
 
   val readBackoff = BackoffTimer (100, 100, 1 seconds, 7) (random)
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)
-  val mbx = mailboxes.open (ReadResponse.pickle, fiber)
+  val mbx = host.open (ReadResponse.pickle, fiber)
 
   val backoff = readBackoff.iterator
   val acks = host.locate (0)

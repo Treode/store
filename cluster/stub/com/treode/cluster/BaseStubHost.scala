@@ -11,14 +11,20 @@ import com.treode.pickle.{Pickler, pickle}
 class BaseStubHost (val localId: HostId, cluster: StubCluster)
 extends Host with StubHost {
 
-  val random: Random = cluster.random
+  private val mailboxes: MailboxRegistry =
+    new MailboxRegistry
 
-  val scheduler: Scheduler = cluster.scheduler
+  private val peers: PeerRegistry =
+    new PeerRegistry (localId, new StubConnection (_, localId, cluster)) (cluster.random)
 
-  val mailboxes: MailboxRegistry = new MailboxRegistry
+  def register [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
+    mailboxes.register (desc.pmsg, desc.id) (f)
 
-  val peers: PeerRegistry =
-    new PeerRegistry (localId, new StubConnection (_, localId, cluster)) (random)
+  def open [M] (p: Pickler [M], s: Scheduler): EphemeralMailbox [M] =
+    mailboxes.open (p, s)
+
+  def peer (id: HostId): Peer =
+    peers.get (id)
 
   def locate (id: Int): Acknowledgements =
     cluster.locate (id)

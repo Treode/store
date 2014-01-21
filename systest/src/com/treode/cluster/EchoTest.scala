@@ -10,6 +10,7 @@ import com.treode.async.Scheduler
 import com.treode.cluster.events.Events
 import com.treode.cluster.messenger.{MailboxRegistry, Listener, PeerRegistry}
 import com.treode.cluster.misc.{RichBoolean, RichOption, parseInetSocketAddress, parseInt}
+import com.treode.pickle.Pickler
 import sun.misc.{SignalHandler, Signal}
 
 class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
@@ -98,16 +99,21 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
     _listener = new Listener (localId, addresses (localId.id.toInt), _group, _peers) (_scheduler, Events.live)
     _listener.startup()
 
-    implicit val host = new Host {
-      val localId = EchoTest.this.localId
-      val random = _random
-      val scheduler = _scheduler
-      val mailboxes = _mailboxes
-      val peers = _peers
+    val host = new Host {
+
+      def register [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
+        _mailboxes.register (desc.pmsg, desc.id) (f)
+
+      def open [M] (p: Pickler [M], s: Scheduler): EphemeralMailbox [M] =
+        _mailboxes.open (p, s)
+
+      def peer (id: HostId): Peer =
+        _peers.get (id)
+
       def locate (id: Int) = Acknowledgements.settled (0, 1, 2)
     }
 
-    Echo.attach()
+    Echo.attach (localId) (_random, _scheduler, host)
 
   } catch {
     case e: Throwable =>
