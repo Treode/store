@@ -15,16 +15,16 @@ class RootRegistry (disks: DisksKit, pages: PageDispatcher) {
 
   private val recoveries = new TagRegistry [Any]
 
-  def checkpoint [B] (pblk: Pickler [B], id: TypeId) (f: Callback [B] => Any): Unit =
+  def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any): Unit =
     synchronized {
       checkpoints.add { cb =>
         f (callback (cb) { root =>
-          TagRegistry.tagger (pblk, id.id, root)
+          TagRegistry.tagger (desc.pblk, desc.id.id, root)
         })
       }}
 
-  def recover [B] (pblk: Pickler [B], id: TypeId) (f: B => Any): Unit =
-    recoveries.register (pblk, id.id) (f)
+  def recover [B] (desc: RootDescriptor [B]) (f: B => Any): Unit =
+    recoveries.register (desc.pblk, desc.id.id) (f)
 
   def checkpoint (gen: Int, cb: Callback [RootRegistry.Meta]) = synchronized {
     val count = checkpoints.size

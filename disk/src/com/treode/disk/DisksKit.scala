@@ -185,8 +185,9 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
 
       number = disks.keySet.max + 1
       generation = boot.gen
+      meta = boot.roots
 
-      state = new Replaying (cb, attaches, checkpoints)
+      state = new Recovering (cb, attaches, checkpoints)
     }
 
     val _superBlocksRead = Callback.collect (items.size, new Callback [Seq [SuperBlocks]] {
@@ -204,7 +205,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
     override def toString = "Reattaching"
   }
 
-  class Replaying (
+  class Recovering (
       cb: Callback [Unit],
       var attaches: AttachesPending,
       var checkpoints: CheckpointsPending
@@ -232,7 +233,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
         scheduler.fail (cb, t)
       }}
 
-    val allMade = new Callback [Seq [LogIterator]] {
+    def allMade = new Callback [Seq [LogIterator]] {
       def pass (iters: Seq [LogIterator]): Unit = fiber.execute {
         LogIterator.merge (iters.iterator, merged)
       }
@@ -241,12 +242,22 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
         scheduler.fail (cb, t)
       }}
 
-    val oneMade = Callback.collect (disks.size, allMade)
+    def oneMade = Callback.collect (disks.size, allMade)
 
-    for (disk <- disks.values)
-      disk.logIterator (records, oneMade)
+    def rootsRecovered = new Callback [Unit] {
+      def pass (v: Unit) {
+        val latch = oneMade
+        for (disk <- disks.values)
+          disk.logIterator (records, latch)
+      }
+      def fail (t: Throwable): Unit = fiber.execute {
+        panic (t)
+        scheduler.fail (cb, t)
+      }}
 
-    override def toString = "Replaying"
+    roots.recover (meta, rootsRecovered)
+
+    override def toString = "Recovering"
   }
 
   class Attaching (
@@ -419,11 +430,17 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
   def checkpoint (cb: Callback [Unit]): Unit =
     fiber.execute (state.checkpoint (cb))
 
-  def register [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
-    records.register (desc) (f)
+  def recover [B] (desc: RootDescriptor [B]) (f: B => Any): Unit =
+    roots.recover (desc) (f)
+
+  def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any): Unit =
+    roots.checkpoint (desc) (f)
 
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit]): Unit =
     log.record (desc, entry, cb)
+
+  def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
+    records.register (desc) (f)
 
   def fill (buf: PagedBuffer, pos: Position, cb: Callback [Unit]): Unit =
     disks (pos.disk) .fill (buf, pos.offset, pos.length, cb)

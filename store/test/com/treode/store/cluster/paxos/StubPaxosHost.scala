@@ -11,11 +11,12 @@ extends StubActiveHost (id, network) {
   import network.{random, scheduler}
 
   implicit val disks = Disks()
-  val file = new StubFile
-  val config = DiskDriveConfig (16, 8, 1L<<20)
-  disks.attach (Seq ((Paths.get ("a"), file, config)), Callback.ignore)
 
   implicit val cluster: Cluster = this
 
   val paxos = new PaxosKit
+
+  val file = new StubFile
+  val config = DiskDriveConfig (16, 8, 1L<<20)
+  disks.attach (Seq ((Paths.get ("a"), file, config)), Callback.ignore)
 }

@@ -45,6 +45,16 @@ package object misc {
         case None => throw e
       }}
 
+  def materialize [A] (vs: java.lang.Iterable [A]): Seq [A] = {
+    // Do the convenient methods in Scala's library return a materialized collection or some view?
+    // Nobody can be sure.
+    val i = vs.iterator
+    val b = Seq.newBuilder [A]
+    while (i.hasNext)
+      b += i.next
+    b.result
+  }
+
   def parseInt (s: String, radix: Int = 10): Option [Int] = {
     try {
       Some (java.lang.Integer.parseInt (s, radix))

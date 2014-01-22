@@ -1,12 +1,14 @@
 package com.treode.store.cluster.paxos
 
 import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConversions._
 import scala.util.Random
 
-import com.treode.async.{Callback, Scheduler, guard}
+import com.treode.async.{Callback, Scheduler, callback, delay, guard}
 import com.treode.cluster.Cluster
+import com.treode.cluster.misc.materialize
 import com.treode.store.{Bytes, PaxosStore, SimpleAccessor, SimpleStore}
-import com.treode.disk.Disks
+import com.treode.disk.{Disks, Position}
 
 private class PaxosKit (implicit val random: Random, val scheduler: Scheduler,
     val cluster: Cluster, val disks: Disks) extends PaxosStore {
@@ -43,6 +45,42 @@ private class PaxosKit (implicit val random: Random, val scheduler: Scheduler,
 
     choose.register { case ((key, value), c) =>
       get (key) choose (value)
+    }
+
+    root.checkpoint { cb =>
+      guard (cb) {
+        val as = materialize (acceptors.values)
+        val latch = Callback.collect [Status] (
+            as.size,
+            delay (cb) (openTable.write (0, _, cb)))
+        as foreach (_.checkpoint (latch))
+      }}
+
+    root.recover { pos =>
+      disks.read (openTable, pos, callback [Seq [Status]] { statii =>
+        for (status <- statii)
+          get (status.key) recover (status)
+      })
+    }
+
+    open.replay { case (key, default) =>
+      get (key) opened (default)
+    }
+
+    promise.replay { case (key, ballot) =>
+      get (key) promised (ballot)
+    }
+
+    accept.replay { case (key, ballot, value) =>
+      get (key) accepted (ballot, value)
+    }
+
+    reaccept.replay { case (key, ballot) =>
+      get (key) reaccepted (ballot)
+    }
+
+    Acceptor.close.replay { case (key, chosen) =>
+      get (key) closed (chosen)
     }}
 
   object Proposers {
