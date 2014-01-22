@@ -2,7 +2,7 @@ package com.treode.store.local
 
 import com.treode.async.{Callback, guard}
 import com.treode.store._
-import com.treode.store.local.locks.LockSpace
+import com.treode.store.locks.LockSpace
 
 private abstract class LocalKit (bits: Int) extends LocalStore {
 

@@ -6,7 +6,7 @@ import scala.collection.JavaConversions._
 import com.treode.async.{Callback, MultiException, guard}
 import com.treode.cluster.events.Events
 import com.treode.store._
-import com.treode.store.local.locks.LockSet
+import com.treode.store.locks.LockSet
 
 private class TimedWriter (
     val ct: TxClock,

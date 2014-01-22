@@ -1,4 +1,4 @@
-package com.treode.store.local.locks
+package com.treode.store.locks
 
 import com.treode.async.toRunnable
 import com.treode.store.TxClock

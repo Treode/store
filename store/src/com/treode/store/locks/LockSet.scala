@@ -1,8 +1,8 @@
-package com.treode.store.local.locks
+package com.treode.store.locks
 
 import com.treode.store.TxClock
 
-private [local] trait LockSet {
+private [store] trait LockSet {
 
   def ft: TxClock
 

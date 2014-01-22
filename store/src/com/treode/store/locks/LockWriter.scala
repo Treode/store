@@ -1,4 +1,4 @@
-package com.treode.store.local.locks
+package com.treode.store.locks
 
 import scala.collection.SortedSet
 
