@@ -1,7 +1,6 @@
-package com.treode.store.cluster
+package com.treode.store
 
 import com.treode.async.Callback
-import com.treode.store.Bytes
 
 package object paxos {
 

@@ -1,4 +1,4 @@
-package com.treode.store.cluster.paxos
+package com.treode.store.paxos
 
 import com.treode.async.{CallbackCaptor, StubScheduler}
 import com.treode.store.{Bytes, SimpleAccessor}

@@ -7,7 +7,7 @@ import com.treode.async.Callback
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
-import com.treode.store.cluster.paxos.PaxosKit
+import com.treode.store.paxos.PaxosKit
 import com.treode.disk.{Disks, DiskDriveConfig}
 import com.treode.store.local.temp.TestableTempKit
 

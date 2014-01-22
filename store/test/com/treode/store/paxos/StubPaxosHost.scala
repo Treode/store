@@ -1,4 +1,4 @@
-package com.treode.store.cluster.paxos
+package com.treode.store.paxos
 
 import java.nio.file.Paths
 import com.treode.async.Callback
