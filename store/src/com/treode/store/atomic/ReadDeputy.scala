@@ -1,4 +1,4 @@
-package com.treode.store.cluster.atomic
+package com.treode.store.atomic
 
 import com.treode.cluster.RequestDescriptor
 import com.treode.store.{ReadCallback, ReadOp, TxClock, Value}

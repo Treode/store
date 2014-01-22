@@ -1,4 +1,4 @@
-package com.treode.store.cluster.atomic
+package com.treode.store.atomic
 
 import java.util.concurrent.TimeoutException
 import scala.language.postfixOps

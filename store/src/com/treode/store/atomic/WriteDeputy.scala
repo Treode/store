@@ -1,4 +1,4 @@
-package com.treode.store.cluster.atomic
+package com.treode.store.atomic
 
 import com.treode.async.{Callback, Fiber, callback, guard}
 import com.treode.cluster.{RequestDescriptor, RequestMediator}

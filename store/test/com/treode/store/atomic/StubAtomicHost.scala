@@ -1,4 +1,4 @@
-package com.treode.store.cluster.atomic
+package com.treode.store.atomic
 
 import java.nio.file.Paths
 import scala.util.Random
