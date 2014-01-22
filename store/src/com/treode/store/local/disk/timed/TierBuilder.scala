@@ -2,11 +2,10 @@ package com.treode.store.local.disk.timed
 
 import java.util.{ArrayDeque, ArrayList}
 import com.treode.async.{Callback, delay}
-import com.treode.store.{Bytes, TimedCell, TxClock}
-import com.treode.disk.Position
-import com.treode.store.local.disk.DiskSystem
+import com.treode.disk.{Disks, Position}
+import com.treode.store.{Bytes, StoreConfig, TimedCell, TxClock}
 
-private class TierBuilder (disk: DiskSystem) {
+private class TierBuilder (config: StoreConfig) (implicit val disks: Disks) {
 
   private def newIndexEntries = new ArrayList [IndexEntry] (1024)
   private def newCellEntries = new ArrayList [TimedCell] (256)
@@ -63,7 +62,7 @@ private class TierBuilder (disk: DiskSystem) {
       val entryByteSize = entry.byteSize
 
       // Ensure that an index page has at least two entries.
-      if (node.byteSize + entryByteSize < disk.maxPageSize || node.size < 2) {
+      if (node.byteSize + entryByteSize < config.targetPageBytes || node.size < 2) {
         node.add (entry, entryByteSize)
         rpop()
         cb()
@@ -72,7 +71,7 @@ private class TierBuilder (disk: DiskSystem) {
         stack.pop()
         val page = IndexPage (node.entries)
         val last = page.last
-        val pos2 = disk.write (page, delay (cb) { pos2 =>
+        TierPage.page.write (0, page, delay (cb) { pos2 =>
           rpush (key, time, pos, height)
           add (last.key, last.time, pos2, height+1, cb)
         })
@@ -87,7 +86,7 @@ private class TierBuilder (disk: DiskSystem) {
     require (entries.isEmpty || entries.get (entries.size-1) < entry)
 
     // Ensure that a value page has at least one entry.
-    if (byteSize + entryByteSize < disk.maxPageSize || entries.size < 1) {
+    if (byteSize + entryByteSize < config.targetPageBytes || entries.size < 1) {
       entries.add (entry)
       byteSize += entryByteSize
       cb()
@@ -98,7 +97,7 @@ private class TierBuilder (disk: DiskSystem) {
       entries.add (entry)
       byteSize = entryByteSize
       val last = page.last
-      disk.write (page, delay (cb) { pos =>
+      TierPage.page.write (0, page, delay (cb) { pos =>
         add (last.key, last.time, pos, 0, cb)
       })
     }}
@@ -107,7 +106,7 @@ private class TierBuilder (disk: DiskSystem) {
 
     val page = CellPage (entries)
     val last = page.last
-    disk.write (page, delay (cb) { _pos =>
+    TierPage.page.write (0, page, delay (cb) { _pos =>
 
       var pos = _pos
 
@@ -127,14 +126,15 @@ private class TierBuilder (disk: DiskSystem) {
 
           def pass (v: Unit) {
             val node = stack.pop()
-            if (node.size > 1)
-              disk.write (IndexPage (node.entries), delay (cb) { _pos =>
+            if (node.size > 1) {
+              val page = IndexPage (node.entries)
+              TierPage.page.write (0, page, delay (cb) { _pos =>
                 pos = _pos
                 next (node)
               })
-            else
+            } else {
               next (node)
-          }
+            }}
 
           def fail (t: Throwable) = cb.fail (t)
         }

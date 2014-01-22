@@ -38,7 +38,7 @@ abstract class AbstractPagePickler [T, E] extends Pickler [T] {
     count.p (_key.length, ctx)
     count.p (prefix, ctx)
     assert (prefix <= _prev.length && prefix <= _key.length)
-    if (prefix != _prev.length)
+    if (prefix < _key.length)
       ctx.writeBytes (_key, prefix, _key.length - prefix)
   }
 
@@ -48,7 +48,7 @@ abstract class AbstractPagePickler [T, E] extends Pickler [T] {
     val length = count.u (ctx)
     val prefix = count.u (ctx)
     assert (prefix <= _prev.length && prefix <= length)
-    if (prefix != _prev.length) {
+    if (prefix < length) {
       val bytes = new Array [Byte] (length)
       System.arraycopy (_prev, 0, bytes, 0, prefix)
       ctx.readBytes (bytes, prefix, length - prefix)

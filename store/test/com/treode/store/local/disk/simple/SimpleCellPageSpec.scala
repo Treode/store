@@ -6,7 +6,7 @@ import com.treode.store.{Bytes, Fruits, SimpleCell}
 import com.treode.store.SimpleTestTools
 import org.scalatest.WordSpec
 
-import Fruits.{Apple, Banana, Kiwi, Kumquat, Orange}
+import Fruits.{AllFruits, Apple, Banana, Kiwi, Kumquat, Orange}
 import SimpleTestTools._
 
 class SimpleCellPageSpec extends WordSpec {
@@ -41,6 +41,22 @@ class SimpleCellPageSpec extends WordSpec {
       "find nothing" in {
         expectResult (0) (page.find (Apple))
       }
+
+      "pickle and unpickle to the same value" in {
+        checkPickle (page)
+      }}
+
+    "holding a list of fruits" should {
+
+      val page = newPage (AllFruits.map (_::None): _*)
+
+      "pickle and unpickle to the same value" in {
+        checkPickle (page)
+      }}
+
+    "holding a list of repeated keys" should {
+
+      val page = newPage (Apple::None, Apple::None, Apple::None)
 
       "pickle and unpickle to the same value" in {
         checkPickle (page)

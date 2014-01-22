@@ -3,9 +3,9 @@ package com.treode.store.local.disk.timed
 import java.util.{Arrays, ArrayList}
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 import com.treode.store.{Bytes, TimedCell, TxClock}
-import com.treode.store.local.disk.{AbstractPagePickler, Page}
+import com.treode.store.local.disk.AbstractPagePickler
 
-private class CellPage (val entries: Array [TimedCell]) extends Page {
+private class CellPage (val entries: Array [TimedCell]) extends TierPage {
 
   def get (i: Int): TimedCell =
     entries (i)
@@ -20,7 +20,11 @@ private class CellPage (val entries: Array [TimedCell]) extends Page {
   def isEmpty: Boolean = entries.size == 0
 
   def last: TimedCell = entries (entries.size - 1)
-}
+
+  override def toString = {
+    val (first, last) = (entries.head, entries.last)
+    s"CellPage(${first.key}::${first.time}, ${last.key}::${last.time})"
+  }}
 
 private object CellPage {
 

@@ -42,7 +42,7 @@ private class PageWriter (
     while (i < pages.size) {
       val entry = pages.get (i)
       val len = config.blockAlignLength (entry.byteSize)
-      if (projection - len > 0) {
+      if (projection - len > base) {
         accepts.add (entry)
         projection -= len
       } else {
@@ -60,6 +60,7 @@ private class PageWriter (
       def pass (v: Unit) = {
         if (realloc) {
           val seg = alloc.allocate()
+          base = seg.pos
           pos = seg.limit
         }
         buffer.clear()

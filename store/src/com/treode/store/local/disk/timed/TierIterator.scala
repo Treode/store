@@ -1,11 +1,10 @@
 package com.treode.store.local.disk.timed
 
 import com.treode.async.{AsyncIterator, Callback, callback}
+import com.treode.disk.{Disks, Position}
 import com.treode.store.TimedCell
-import com.treode.disk.Position
-import com.treode.store.local.disk.{DiskSystem, Page}
 
-private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] {
+private class TierIterator (implicit disks: Disks) extends AsyncIterator [TimedCell] {
 
   private var stack = List.empty [(IndexPage, Int)]
   private var page: CellPage = null
@@ -13,14 +12,14 @@ private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] 
 
   private def find (pos: Position, cb: Callback [TierIterator]) {
 
-    val loop = new Callback [Page] {
+    val loop = new Callback [TierPage] {
 
-      def pass (p: Page) {
+      def pass (p: TierPage) {
         p match {
           case p: IndexPage =>
             val e = p.get (0)
             stack ::= (p, 0)
-            disk.read (e.pos, this)
+            TierPage.page.read (e.pos, this)
           case p: CellPage =>
             page = p
             index = 0
@@ -30,7 +29,7 @@ private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] 
       def fail (t: Throwable) = cb.fail (t)
     }
 
-    disk.read (pos, loop)
+    TierPage.page.read (pos, loop)
   }
 
   def hasNext: Boolean =
@@ -60,6 +59,6 @@ private class TierIterator (disk: DiskSystem) extends AsyncIterator [TimedCell] 
 
 private object TierIterator {
 
-  def apply (disk: DiskSystem, pos: Position, cb: Callback [TierIterator]): Unit =
-    new TierIterator (disk) .find (pos, cb)
+  def apply (pos: Position, cb: Callback [TierIterator]) (implicit disks: Disks): Unit =
+    new TierIterator() .find (pos, cb)
 }

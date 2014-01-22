@@ -1,11 +1,12 @@
 package com.treode.store.local.disk.simple
 
 import java.util.{Arrays, ArrayList}
+
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 import com.treode.store.{Bytes, TxClock}
-import com.treode.store.local.disk.{AbstractPagePickler, Page}
+import com.treode.store.local.disk.AbstractPagePickler
 
-private class IndexPage (val entries: Array [IndexEntry]) extends Page {
+private class IndexPage (val entries: Array [IndexEntry]) extends TierPage {
 
   def get (i: Int): IndexEntry =
     entries (i)
@@ -20,6 +21,9 @@ private class IndexPage (val entries: Array [IndexEntry]) extends Page {
   def isEmpty: Boolean = entries.size == 0
 
   def last: IndexEntry = entries (entries.size - 1)
+
+  override def toString =
+    s"IndexPage(${entries.head.key}, ${entries.last.key})"
 }
 
 private object IndexPage {

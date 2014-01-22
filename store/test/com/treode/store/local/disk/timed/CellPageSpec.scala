@@ -1,12 +1,15 @@
 package com.treode.store.local.disk.timed
 
+import scala.collection.JavaConversions._
+
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{pickle, unpickle}
 import com.treode.store.{Bytes, Fruits, TimedCell, TxClock}
 import org.scalatest.WordSpec
 
+import Fruits.{AllFruits, Apple, Kiwi, Orange}
+
 class CellPageSpec extends WordSpec {
-  import Fruits.{Apple, Kiwi, Orange}
 
   val MaxTime = TxClock.max
 
@@ -44,6 +47,22 @@ class CellPageSpec extends WordSpec {
       "find nothing" in {
         expectResult (0) (page.find (Apple, MaxTime))
       }
+
+      "pickle and unpickle to the same value" in {
+        checkPickle (page)
+      }}
+
+    "holding a list of fruits" should {
+
+      val page = newPage (AllFruits.map (entry (_, 7)): _*)
+
+      "pickle and unpickle to the same value" in {
+        checkPickle (page)
+      }}
+
+    "holding a list of repeated keys" should {
+
+      val page = newPage (entry (Apple, 7), entry (Apple, 7), entry (Apple, 7))
 
       "pickle and unpickle to the same value" in {
         checkPickle (page)

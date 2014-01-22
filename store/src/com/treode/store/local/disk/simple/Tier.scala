@@ -1,17 +1,17 @@
 package com.treode.store.local.disk.simple
 
 import com.treode.async.Callback
+import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, SimpleCell, TxClock}
-import com.treode.disk.Position
-import com.treode.store.local.disk.{DiskSystem, Page}
 
 object Tier {
 
-  def read (disk: DiskSystem, root: Position, key: Bytes, cb: Callback [Option [SimpleCell]]) {
+  def read (root: Position, key: Bytes, cb: Callback [Option [SimpleCell]]) (
+      implicit disks: Disks) {
 
-    val loop = new Callback [Page] {
+    val loop = new Callback [TierPage] {
 
-      def pass (p: Page) {
+      def pass (p: TierPage) {
         p match {
           case p: IndexPage =>
             val i = p.find (key)
@@ -19,7 +19,7 @@ object Tier {
               cb (None)
             } else {
               val e = p.get (i)
-              disk.read (e.pos, this)
+              TierPage.page.read (e.pos, this)
             }
           case p: CellPage =>
             val i = p.find (key)
@@ -36,5 +36,5 @@ object Tier {
       def fail (t: Throwable) = cb.fail (t)
     }
 
-    disk.read (root, loop)
+    TierPage.page.read (root, loop)
   }}
