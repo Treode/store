@@ -26,9 +26,9 @@ trait TimedTable extends Closeable {
     val cb = new Callback [TimedCell] {
       def pass (c: TimedCell) {
         if (c == null)
-          writer.prepare (TxClock.zero)
+          writer.advance (TxClock.zero)
         else if (c.value.isEmpty)
-          writer.prepare (c.time)
+          writer.advance (c.time)
         else
           writer.conflict (n)
       }
@@ -42,9 +42,9 @@ trait TimedTable extends Closeable {
     val cb = new Callback [TimedCell] {
       def pass (c: TimedCell) {
         if (c == null)
-          writer.prepare (TxClock.zero)
+          writer.advance (TxClock.zero)
         else if (c.time <= writer.ct)
-          writer.prepare (c.time)
+          writer.advance (c.time)
         else
           writer.advance (c.time)
       }

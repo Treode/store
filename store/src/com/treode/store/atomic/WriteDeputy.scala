@@ -2,7 +2,7 @@ package com.treode.store.atomic
 
 import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{RequestDescriptor, RequestMediator}
-import com.treode.store.{PrepareCallback, Transaction, TxClock, TxId, WriteOp}
+import com.treode.store.{Preparation, PrepareCallback, TxClock, TxId, WriteOp}
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   import kit.{scheduler, store}
@@ -75,25 +75,25 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     store.prepare (ct, ops, new PrepareCallback {
 
-      def pass (tx: Transaction): Unit = fiber.execute {
+      def pass (prep: Preparation): Unit = fiber.execute {
         if (committed.isDefined) {
           val Some ((mdtr2, wt)) = committed
-          state = new Committing2 (mdtr2, wt, ops)
-          mdtr.respond (WriteResponse.Prepared (tx.ft))
+          state = new Committing2 (mdtr2, wt, ops, Some (prep))
+          mdtr.respond (WriteResponse.Prepared (prep.ft))
         } else if (aborted.isDefined) {
           val Some (mdtr2) = aborted
           state = new Aborted
-          tx.abort()
+          prep.release()
           mdtr2.respond (WriteResponse.Aborted)
         } else {
-          state = new Prepared (tx)
-          mdtr.respond (WriteResponse.Prepared (tx.ft))
+          state = new Prepared (ops, prep)
+          mdtr.respond (WriteResponse.Prepared (prep.ft))
         }}
 
       def fail (t: Throwable): Unit = fiber.execute {
         if (committed.isDefined) {
           val Some ((mdtr2, wt)) = committed
-          state = new Committing2 (mdtr2, wt, ops)
+          state = new Committing2 (mdtr2, wt, ops, None)
         } else if (aborted.isDefined) {
           val Some (mdtr2) = aborted
           state = new Aborted
@@ -106,7 +106,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       def collisions (ks: Set [Int]): Unit = fiber.execute {
         if (committed.isDefined) {
           val Some ((mdtr2, wt)) = committed
-          state = new Committing2 (mdtr2, wt, ops)
+          state = new Committing2 (mdtr2, wt, ops, None)
         } else if (aborted.isDefined) {
           val Some (mdtr2) = aborted
           state = new Aborted
@@ -120,7 +120,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       def advance(): Unit = fiber.execute {
         if (committed.isDefined) {
           val Some ((mdtr2, wt)) = committed
-          state = new Committing2 (mdtr2, wt, ops)
+          state = new Committing2 (mdtr2, wt, ops, None)
         } else if (aborted.isDefined) {
           val Some (mdtr2) = aborted
           state = new Aborted
@@ -145,26 +145,27 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       state = new Shutdown
   }
 
-  class Prepared (tx: Transaction) extends State {
+  class Prepared (ops: Seq [WriteOp], prep: Preparation) extends State {
 
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit =
-      mdtr.respond (WriteResponse.Prepared (tx.ft))
+      mdtr.respond (WriteResponse.Prepared (prep.ft))
 
     def commit (mdtr: WriteMediator, wt: TxClock): Unit =
-      new Committing3 (mdtr, wt, tx)
+      new Committing2 (mdtr, wt, ops, Some (prep))
 
     def abort (mdtr: WriteMediator) {
       state = new Aborted
-      tx.abort()
+      prep.release()
       mdtr.respond (WriteResponse.Aborted)
     }
 
     def timeout(): Unit =
       throw new IllegalStateException
 
-    def shutdown(): Unit =
+    def shutdown() {
+      prep.release()
       state = new Shutdown
-  }
+    }}
 
   class Deliberating (ops: Seq [WriteOp], rsp: WriteResponse) extends State {
 
@@ -172,7 +173,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       mdtr.respond (rsp)
 
     def commit (mdtr: WriteMediator, wt: TxClock): Unit =
-      new Committing2 (mdtr, wt, ops)
+      new Committing2 (mdtr, wt, ops, None)
 
     def abort (mdtr: WriteMediator): Unit =
       state = new Aborted
@@ -188,7 +189,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   class Committing (mdtr: WriteMediator, wt: TxClock) extends State {
 
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit =
-      new Committing2 (mdtr, wt, ops)
+      new Committing2 (mdtr, wt, ops, None)
 
     def commit (mdtr: WriteMediator, wt: TxClock) = ()
 
@@ -203,15 +204,21 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     override def toString = "Deputy.Committing"
   }
 
-  class Committing2 (mdtr: WriteMediator, wt: TxClock, ops: Seq [WriteOp]) extends State {
+  class Committing2 (
+      mdtr: WriteMediator,
+      wt: TxClock,
+      ops: Seq [WriteOp],
+      prep: Option [Preparation]) extends State {
 
     store.commit (wt, ops, new Callback [Unit] {
       def pass (v: Unit) = fiber.execute {
         state = new Committed
+        prep foreach (_.release())
         mdtr.respond (WriteResponse.Committed)
       }
       def fail (t: Throwable) = fiber.execute {
         state = new Panicked
+        prep foreach (_.release())
         throw t
       }})
 
@@ -224,35 +231,10 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     def timeout() = ()
 
-    def shutdown(): Unit =
+    def shutdown() {
       state = new Shutdown
-
-    override def toString = "Deputy.Committing2"
-  }
-
-  class Committing3 (mdtr: WriteMediator, wt: TxClock, tx: Transaction) extends State {
-
-    tx.commit (wt, new Callback [Unit] {
-      def pass (v: Unit) = fiber.execute {
-        state = new Committed
-        mdtr.respond (WriteResponse.Committed)
-      }
-      def fail (t: Throwable) = fiber.execute {
-        state = new Panicked
-        throw t
-      }})
-
-    def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit = ()
-
-    def commit (mdtr: WriteMediator, wt: TxClock): Unit = ()
-
-    def abort (mdtr: WriteMediator): Unit =
-      throw new IllegalStateException
-
-    def timeout() = ()
-
-    def shutdown(): Unit =
-      state = new Shutdown
+      prep foreach (_.release())
+    }
 
     override def toString = "Deputy.Committing2"
   }

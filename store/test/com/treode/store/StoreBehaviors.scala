@@ -153,39 +153,43 @@ trait StoreBehaviors {
 
       "the table has Apple##ts2::Two and Apple##ts1::One" -  {
 
-        var t = TableId (0)
-        var ts1 = TxClock.zero
-        var ts2 = TxClock.zero
-
-        "setup should pass" in {
-          t = nextTable
-          ts1 = s.writeExpectPass (0, Create (t, Apple, One))
-          ts2 = s.writeExpectPass (ts1, Update (t, Apple, Two))
+        def newTableWithData = {
+          val t = nextTable
+          val ts1 = s.writeExpectPass (0, Create (t, Apple, One))
+          val ts2 = s.writeExpectPass (ts1, Update (t, Apple, Two))
+          s.expectCells (t) (Apple##ts2::Two, Apple##ts1::One)
+          (t, ts1, ts2)
         }
 
         "a read should" - {
 
           "find ts2::Two for Apple##ts2+1" in {
+            val (t, ts1, ts2) = newTableWithData
             s.readAndExpect (ts2+1, Get (t, Apple)) (ts2::Two)
           }
 
           "find ts2::Two for Apple##ts2" in {
+            val (t, ts1, ts2) = newTableWithData
             s.readAndExpect (ts2, Get (t, Apple)) (ts2::Two)
           }
 
           "find ts1::One for Apple##ts2-1" in {
+            val (t, ts1, ts2) = newTableWithData
             s.readAndExpect (ts2-1, Get (t, Apple)) (ts1::One)
           }
 
           "find ts1::One for Apple##ts1+1" in {
+            val (t, ts1, ts2) = newTableWithData
             s.readAndExpect (ts1+1, Get (t, Apple)) (ts1::One)
           }
 
           "find ts1::One for Apple##ts1" in {
+            val (t, ts1, ts2) = newTableWithData
             s.readAndExpect (ts1, Get (t, Apple)) (ts1::One)
           }
 
           "find 0::None for Apple##ts1-1" in {
+            val (t, ts1, ts2) = newTableWithData
             s.readAndExpect (ts1-1, Get (t, Apple)) (0::None)
           }}}}}
 

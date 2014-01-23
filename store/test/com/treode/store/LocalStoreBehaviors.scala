@@ -1,9 +1,8 @@
 package com.treode.store
 
-import com.treode.async.{Callback, callback}
-import com.treode.store.temp.TestableTempKit
+import com.treode.async.Callback
+import com.treode.store.locks.LockSet
 import org.scalatest.FreeSpec
-import scala.util.Random
 
 import Cardinals.{One, Two}
 import Fruits.Apple
@@ -20,9 +19,18 @@ trait LocalStoreBehaviors extends StoreBehaviors {
 
     def write (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback) {
       s.prepare (ct, ops, new PrepareCallback {
-        def pass (tx: Transaction) {
-          val wt = tx.ft + 7 // Add gaps to the history.
-          tx.commit (wt, callback (cb) (_ => wt))
+        def pass (prep: Preparation) {
+          val wt = prep.ft + 7 // Add gaps to the history.
+          s.commit (wt, ops, new Callback [Unit] {
+            def pass (v: Unit) {
+              prep.release()
+              cb (wt)
+            }
+            def fail (t: Throwable) {
+              prep.release()
+              cb.fail (t)
+            }
+          })
         }
         def fail (t: Throwable) = cb.fail (t)
         def collisions (ks: Set [Int]) = cb.collisions (ks)

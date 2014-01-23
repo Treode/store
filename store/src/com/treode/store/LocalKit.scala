@@ -25,7 +25,7 @@ private abstract class LocalKit (bits: Int) extends LocalStore {
       require (!ops.isEmpty, "Prepare needs at least one operation")
       val ids = ops map (op => (op.table, op.key).hashCode)
       space.write (TxClock.now, ids) { locks =>
-        val w = new TimedWriter (ct, ops, this, locks, cb)
+        val w = new TimedWriter (ct, ops.size, locks, cb)
         for ((op, i) <- ops.zipWithIndex) {
           import WriteOp._
           val t = getTimedTable (op.table)

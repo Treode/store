@@ -52,19 +52,20 @@ private trait TimedTestTools {
     def prepareAndCommit (ct: TxClock, ops: WriteOp*): TxClock = {
       val cb1 = new PrepareCaptor
       s.prepare (ct, ops, cb1)
-      val tx = cb1.passed
-      val wt = tx.ft + 7 // Leave gaps in time.
+      val prep = cb1.passed
+      val wt = prep.ft + 7 // Add gaps to the history.
       val cb2 = new CallbackCaptor [Unit]
-      tx.commit (wt, cb2)
+      s.commit (wt, ops, cb2)
       cb2.passed
+      prep.release()
       wt
     }
 
     def prepareAndAbort (ct: TxClock, ops: WriteOp*) {
       val cb = new PrepareCaptor
       s.prepare (ct, ops, cb)
-      val tx = cb.passed
-      tx.abort()
+      val prep = cb.passed
+      prep.release()
     }
 
     def prepareExpectAdvance (ct: TxClock, ops: WriteOp*) = {

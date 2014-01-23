@@ -1,11 +1,12 @@
 package com.treode.store
 
 import java.util.concurrent.TimeoutException
+import com.treode.store.locks.LockSet
 
 private class PrepareCaptor extends PrepareCallback {
 
   private var _invokation: Array [StackTraceElement] = null
-  private var _v: Transaction = null
+  private var _v: Preparation = null
   private var _t: Throwable = null
   private var _ks: Set [Int] = null
   private var _advance = false
@@ -29,7 +30,7 @@ private class PrepareCaptor extends PrepareCallback {
     assert (wasInvoked, "PrepareCallback was not invoked.")
   }
 
-  def pass (v: Transaction) {
+  def pass (v: Preparation) {
     assertNotInvoked()
     _v = v
   }
@@ -52,7 +53,7 @@ private class PrepareCaptor extends PrepareCallback {
   def hasPassed: Boolean =
     _v != null
 
-  def passed: Transaction = {
+  def passed: Preparation = {
     assertInvoked (true)
     if (_t != null)
       throw new AssertionError (_t)

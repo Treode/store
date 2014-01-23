@@ -5,6 +5,7 @@ import java.io.Closeable
 import com.treode.async.Callback
 import com.treode.cluster.events.Events
 import com.treode.pickle.Pickler
+import com.treode.store.locks.LockSet
 
 package store {
 
@@ -20,13 +21,7 @@ package store {
     def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback)
   }
 
-  private trait Transaction {
-    def ft: TxClock
-    def commit (wt: TxClock, cb: Callback [Unit])
-    def abort()
-  }
-
-  private trait PrepareCallback extends Callback [Transaction] {
+  private trait PrepareCallback extends Callback [Preparation] {
     def collisions (ks: Set [Int])
     def advance()
   }
