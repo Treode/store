@@ -31,21 +31,6 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
           disengage()
         }}})
 
-  def begin (task: Callback [Unit] => Any): Unit =
-    add (new Runnable {
-      def run() {
-        val cb = new Callback [Unit] {
-          def pass (v: Unit): Unit = disengage()
-          def fail (t: Throwable) {
-            disengage()
-            throw t
-          }}
-        try {
-          task (cb)
-        } catch {
-          case t: Throwable => cb.fail (t)
-        }}})
-
   def delay (millis: Long, task: Runnable): Unit =
     scheduler.delay (millis) (execute (task))
 

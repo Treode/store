@@ -60,38 +60,4 @@ class FiberSpec extends FlatSpec {
     intercept [DistinguishedException] (s.runTasks())
     s.runTasks()
     expectResult (true) (a)
-  }
-
-  it should "run a suspendable task" in {
-    val s = StubScheduler.random()
-    val f = new Fiber (s)
-    var a = false
-    f.begin {cb => a = true; cb()}
-    expectResult (false) (a)
-    s.runTasks()
-    expectResult (true) (a)
-  }
-
-  it should "report an exception thrown from a suspendable task and continue" in {
-    val s = StubScheduler.random()
-    val f = new Fiber (s)
-    var a = false
-    f.begin {cb => throw new DistinguishedException}
-    f.execute (a = true)
-    expectResult (false) (a)
-    intercept [DistinguishedException] (s.runTasks())
-    s.runTasks()
-    expectResult (true) (a)
-  }
-
-  it should "report an exception passed from a suspendable task and continue" in {
-    val s = StubScheduler.random()
-    val f = new Fiber (s)
-    var a = false
-    f.begin {cb => cb.fail (new DistinguishedException)}
-    f.execute (a = true)
-    expectResult (false) (a)
-    intercept [DistinguishedException] (s.runTasks())
-    s.runTasks()
-    expectResult (true) (a)
   }}
