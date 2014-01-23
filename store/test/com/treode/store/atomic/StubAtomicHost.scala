@@ -9,7 +9,7 @@ import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
 import com.treode.store.paxos.PaxosKit
 import com.treode.disk.{Disks, DiskDriveConfig}
-import com.treode.store.local.temp.TestableTempKit
+import com.treode.store.temp.TestableTempKit
 
 private class StubAtomicHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {

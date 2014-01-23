@@ -1,7 +1,7 @@
 package com.treode.store
 
 import com.treode.async.{Callback, callback}
-import com.treode.store.local.temp.TestableTempKit
+import com.treode.store.temp.TestableTempKit
 import org.scalatest.FreeSpec
 import scala.util.Random
 
