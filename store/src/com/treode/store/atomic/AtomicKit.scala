@@ -24,16 +24,6 @@ private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
 
     private val deputies = new ConcurrentHashMap [Bytes, WriteDeputy] ()
 
-    val mainDb = {
-      import AtomicPicklers._
-      SimpleAccessor.value (store, 0x5BA844914406891FL, writeStatus)
-    }
-
-    val openDb = {
-      import AtomicPicklers._
-      SimpleAccessor.value (store, 0x9C5E5712B0C36CA8L, unit)
-    }
-
     def get (xid: TxId): WriteDeputy = {
       var d0 = deputies.get (xid.id)
       if (d0 != null)
@@ -70,7 +60,5 @@ private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
       new WriteDirector (xid, ct, ops, this) .open (cb)
     }
 
-  def close() {
-    WriteDeputies.mainDb.close()
-    WriteDeputies.openDb.close()
-  }}
+  def close() = ()
+}

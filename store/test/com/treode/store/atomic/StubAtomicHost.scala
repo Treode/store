@@ -28,8 +28,6 @@ extends StubActiveHost (id, network) {
 
   val atomic = new AtomicKit
 
-  val mainDb = new TestableMainDb (atomic.WriteDeputies.mainDb, scheduler)
-
   def writeDeputy (xid: TxId) = atomic.WriteDeputies.get (xid)
 
   def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback) =

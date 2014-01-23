@@ -49,7 +49,6 @@ object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors
     "leave deputies closed and tables consistent" in {
       val ts = cb.passed
       val ds = hs map (_.writeDeputy (k))
-      hs foreach (_.mainDb.expectCommitted (xid))
       hs foreach (_.expectCells (t) (k##ts::One))
     }}
 
@@ -94,20 +93,14 @@ object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTool
     if (cb1.hasPassed) {
       assert (cb2.hasCollided || cb2.hasTimedOut)
       val ts = cb1.passed
-      hs foreach (_.mainDb.expectCommitted (xid1))
-      hs foreach (_.mainDb.expectAborted (xid2))
       hs foreach (_.expectCells (t) (k##ts::One))
     } else if (cb2.hasPassed) {
       assert (cb1.hasCollided || cb1.hasTimedOut)
       val ts = cb2.passed
-      hs foreach (_.mainDb.expectCommitted (xid2))
-      hs foreach (_.mainDb.expectAborted (xid1))
       hs foreach (_.expectCells (t) (k##ts::Two))
     } else {
       assert (cb1.hasCollided || cb1.hasTimedOut)
       assert (cb2.hasCollided || cb2.hasTimedOut)
-      hs foreach (_.mainDb.expectAborted (xid1))
-      hs foreach (_.mainDb.expectAborted (xid2))
       hs foreach (_.expectCells (t) (k##0))
     }}
 
