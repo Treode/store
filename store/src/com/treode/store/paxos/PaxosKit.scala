@@ -56,32 +56,34 @@ private class PaxosKit (implicit val random: Random, val scheduler: Scheduler,
         as foreach (_.checkpoint (latch))
       }}
 
-    root.recover { pos =>
-      disks.read (openTable, pos, callback [Seq [Status]] { statii =>
-        for (status <- statii)
-          get (status.key) recover (status)
-      })
-    }
+    root.open { recovery =>
 
-    open.replay { case (key, default) =>
-      get (key) opened (default)
-    }
+      root.recover (recovery) { pos =>
+        disks.read (openTable, pos, callback [Seq [Status]] { statii =>
+          for (status <- statii)
+            get (status.key) recover (status)
+        })
+      }
 
-    promise.replay { case (key, ballot) =>
-      get (key) promised (ballot)
-    }
+      open.replay (recovery) { case (key, default) =>
+        get (key) opened (default)
+      }
 
-    accept.replay { case (key, ballot, value) =>
-      get (key) accepted (ballot, value)
-    }
+      promise.replay (recovery) { case (key, ballot) =>
+        get (key) promised (ballot)
+      }
 
-    reaccept.replay { case (key, ballot) =>
-      get (key) reaccepted (ballot)
-    }
+      accept.replay (recovery) { case (key, ballot, value) =>
+        get (key) accepted (ballot, value)
+      }
 
-    Acceptor.close.replay { case (key, chosen) =>
-      get (key) closed (chosen)
-    }}
+      reaccept.replay (recovery) { case (key, ballot) =>
+        get (key) reaccepted (ballot)
+      }
+
+      Acceptor.close.replay (recovery) { case (key, chosen) =>
+        get (key) closed (chosen)
+      }}}
 
   object Proposers {
     import Proposer._

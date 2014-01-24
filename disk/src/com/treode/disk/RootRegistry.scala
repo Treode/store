@@ -9,11 +9,9 @@ import com.treode.pickle.{Pickler, Picklers, TagRegistry, pickle, unpickle}
 
 import TagRegistry.Tagger
 
-class RootRegistry (disks: DisksKit, pages: PageDispatcher) {
+class RootRegistry (pages: PageDispatcher) {
 
   private val checkpoints = new ArrayList [Callback [Tagger] => Unit]
-
-  private val recoveries = new TagRegistry [Any]
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any): Unit =
     synchronized {
@@ -22,9 +20,6 @@ class RootRegistry (disks: DisksKit, pages: PageDispatcher) {
           TagRegistry.tagger (desc.pblk, desc.id.id, root)
         })
       }}
-
-  def recover [B] (desc: RootDescriptor [B]) (f: B => Any): Unit =
-    recoveries.register (desc.pblk, desc.id.id) (f)
 
   def checkpoint (gen: Int, cb: Callback [RootRegistry.Meta]) = synchronized {
     val count = checkpoints.size
@@ -39,13 +34,6 @@ class RootRegistry (disks: DisksKit, pages: PageDispatcher) {
 
     for (cp <- checkpoints)
       cp (rootsWritten)
-  }
-
-  def recover (meta: RootRegistry.Meta, cb: Callback [Unit]) {
-    val buf = PagedBuffer (12)
-    disks.fill (buf, meta.pos, callback (cb) { _ =>
-      unpickle (Picklers.seq (recoveries.unpickler), buf)
-    })
   }}
 
 object RootRegistry {

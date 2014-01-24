@@ -64,8 +64,19 @@ object LogIterator {
       cb: Callback [LogIterator]): Unit =
     new LogIterator (file, alloc, records) .init (head, cb)
 
-  private val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
+  def merge (disks: Iterable [DiskDrive], records: RecordRegistry, cb: Callback [ReplayIterator]) {
 
-  def merge (iters: Iterator [LogIterator], cb: Callback [AsyncIterator [(Long, Unit => Any)]]): Unit =
-    AsyncIterator.merge (iters, cb) (ordering)
-}
+    val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
+
+    val allMade = new Callback [Seq [LogIterator]] {
+
+      def pass (iters: Seq [LogIterator]): Unit =
+        AsyncIterator.merge (iters.iterator, cb) (ordering)
+
+      def fail (t: Throwable): Unit = cb.fail (t)
+    }
+
+    val oneMade = Callback.collect (disks.size, allMade)
+
+    disks foreach (_.logIterator (records, oneMade))
+  }}

@@ -12,4 +12,6 @@ class PageDescriptor [G, P] (val id: TypeId, val pgrp: Pickler [G], val ppag: Pi
 
   def write (group: G, page: P, cb: Callback [Position]) (implicit disks: Disks): Unit =
     disks.write (this, group, page, cb)
+
+  override def toString = s"PageDescriptor($id)"
 }

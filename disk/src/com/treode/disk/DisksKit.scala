@@ -20,11 +20,11 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
   type CheckpointsPending = List [Callback [Unit]]
 
   val fiber = new Fiber (scheduler)
-  val records = new RecordRegistry
   val log = new LogDispatcher (scheduler)
   val pages = new PageDispatcher (scheduler)
   val cache = new PageCache (scheduler)
-  val roots = new RootRegistry (this, pages)
+  val recovery = new Recovery (scheduler, this)
+  val roots = new RootRegistry (pages)
   var disks = Map.empty [Int, DiskDrive]
   var number = 0
   var generation = 0
@@ -211,7 +211,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
       var checkpoints: CheckpointsPending
   ) extends State with QueueAttachAndCheckpoint with ReattachPending {
 
-    def logIteratorReplayed = new Callback [Unit] {
+    def recovered = new Callback [Unit] {
       def pass (v: Unit) = fiber.execute {
         disks.values foreach (_.engage())
         ready (false)
@@ -222,40 +222,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
         scheduler.fail (cb, t)
       }}
 
-    def merged = new Callback [AsyncIterator [(Long, Unit => Any)]] {
-      def pass (iter: AsyncIterator [(Long, Unit => Any)]): Unit = fiber.execute {
-        AsyncIterator.foreach (iter, logIteratorReplayed) { case ((time, replay), cb) =>
-          guard (cb) (replay())
-          cb()
-        }}
-      def fail (t: Throwable): Unit = fiber.execute {
-        panic (t)
-        scheduler.fail (cb, t)
-      }}
-
-    def allMade = new Callback [Seq [LogIterator]] {
-      def pass (iters: Seq [LogIterator]): Unit = fiber.execute {
-        LogIterator.merge (iters.iterator, merged)
-      }
-      def fail (t: Throwable): Unit = fiber.execute {
-        panic (t)
-        scheduler.fail (cb, t)
-      }}
-
-    def oneMade = Callback.collect (disks.size, allMade)
-
-    def rootsRecovered = new Callback [Unit] {
-      def pass (v: Unit) {
-        val latch = oneMade
-        for (disk <- disks.values)
-          disk.logIterator (records, latch)
-      }
-      def fail (t: Throwable): Unit = fiber.execute {
-        panic (t)
-        scheduler.fail (cb, t)
-      }}
-
-    roots.recover (meta, rootsRecovered)
+    recovery.recover (meta, recovered)
 
     override def toString = "Recovering"
   }
@@ -430,17 +397,17 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
   def checkpoint (cb: Callback [Unit]): Unit =
     fiber.execute (state.checkpoint (cb))
 
-  def recover [B] (desc: RootDescriptor [B]) (f: B => Any): Unit =
-    roots.recover (desc) (f)
+  def replayIterator (records: RecordRegistry, cb: Callback [ReplayIterator]): Unit =
+    LogIterator.merge (disks.values, records, cb)
+
+  def open [B] (desc: RootDescriptor [B]) (f: Recovery => Any): Unit =
+    recovery.open (desc) (f)
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any): Unit =
     roots.checkpoint (desc) (f)
 
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit]): Unit =
     log.record (desc, entry, cb)
-
-  def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
-    records.register (desc) (f)
 
   def fill (buf: PagedBuffer, pos: Position, cb: Callback [Unit]): Unit =
     disks (pos.disk) .fill (buf, pos.offset, pos.length, cb)

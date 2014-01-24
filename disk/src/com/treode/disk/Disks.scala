@@ -16,13 +16,11 @@ trait Disks {
 
   def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Unit])
 
-  def recover [B] (desc: RootDescriptor [B]) (f: B => Any)
+  def open [B] (desc: RootDescriptor [B]) (f: Recovery => Any)
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any)
 
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit])
-
-  def replay [R] (desc: RecordDescriptor [R]) (f: R => Any)
 
   def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P])
 

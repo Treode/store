@@ -1,7 +1,7 @@
 package com.treode
 
 import java.nio.file.Path
-import com.treode.async.Callback
+import com.treode.async.{AsyncIterator, Callback}
 import com.treode.pickle.Pickler
 
 package disk {
@@ -46,6 +46,8 @@ package disk {
 }
 
 package object disk {
+
+  private [disk] type ReplayIterator = AsyncIterator [(Long, Unit => Any)]
 
   private [disk] val SuperBlockBits = 14
   private [disk] val SuperBlockBytes = 1 << SuperBlockBits

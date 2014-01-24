@@ -5,9 +5,14 @@ import com.treode.pickle.Pickler
 
 class RootDescriptor [B] (val id: TypeId, val pblk: Pickler [B]) {
 
-  def recover (f: B => Any) (implicit disks: Disks): Unit =
-    disks.recover (this) (f)
+  def open (f: Recovery => Any) (implicit disks: Disks): Unit =
+    disks.open (this) (f)
+
+  def recover (recovery: Recovery) (f: B => Any): Unit =
+    recovery.recover (this) (f)
 
   def checkpoint (f: Callback [B] => Any) (implicit disks: Disks): Unit =
     disks.checkpoint (this) (f)
+
+  override def toString = s"RootDescriptor($id)"
 }

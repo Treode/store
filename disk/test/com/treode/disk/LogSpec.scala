@@ -9,7 +9,9 @@ class LogSpec extends FlatSpec {
 
   val config = DiskDriveConfig (6, 2, 1<<20)
 
-  val desc = new RecordDescriptor (0x0E4F8ABF, Picklers.string)
+  val root = new RootDescriptor (0xD6BA4C18, Picklers.string)
+
+  val record = new RecordDescriptor (0x0E4F8ABF, Picklers.string)
 
   implicit class RichRecordDescriptor [R] (desc: RecordDescriptor [R]) {
 
@@ -20,22 +22,26 @@ class LogSpec extends FlatSpec {
       cb.passed
     }}
 
+  def replay (f: String => Any) (implicit disks: Disks): Unit =
+    root.open (record.replay (_) (f))
 
   "The logger" should "replay when reattaching disks" in {
     implicit val scheduler = StubScheduler.random()
     val disk1 = new StubFile
 
     {
+      println ("attach")
       implicit val disks = new RichDisksKit
-      desc.replay (_ => fail ("Nothing to replay."))
+      replay (_ => fail ("Nothing to replay."))
       disks.attachAndPass (("a", disk1, config))
-      desc.recordAndPass ("one")
+      record.recordAndPass ("one")
     }
 
     {
+      println ("reattach")
       implicit val disks = new RichDisksKit
       val replayed = Seq.newBuilder [String]
-      desc.replay (replayed += _)
+      replay (replayed += _)
       disks.reattachAndPass (("a", disk1))
       expectResult (Seq ("one")) (replayed.result)
     }}}
