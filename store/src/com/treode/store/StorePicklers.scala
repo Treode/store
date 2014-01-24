@@ -1,12 +1,14 @@
 package com.treode.store
 
 import com.treode.cluster.HostId
+import com.treode.disk.Position
 import com.treode.pickle.Picklers
 
 private trait StorePicklers extends Picklers {
 
   def bytes = Bytes.pickle
   def hostId = HostId.pickle
+  def pos = Position.pickle
   def readOp = ReadOp.pickle
   def tableId = TableId.pickle
   def txClock = TxClock.pickle

@@ -1,8 +1,8 @@
 package com.treode.store.simple
 
 import com.treode.async.Callback
-import com.treode.disk.Disks
-import com.treode.store.{Bytes, SimpleCell, StoreConfig}
+import com.treode.disk.{Disks, Position}
+import com.treode.store.{Bytes, SimpleCell, StoreConfig, StorePicklers}
 
 trait SimpleTable {
 
@@ -10,19 +10,33 @@ trait SimpleTable {
 
   def iterator (cb: Callback [SimpleIterator])
 
-  def delete (key: Bytes): Long
-
   def put (key: Bytes, value: Bytes): Long
 
-  def checkpoint (cb: Callback [Unit])
+  def delete (key: Bytes): Long
 
-  def put (gen: Long, key: Bytes, value: Bytes)
-
-  def deleted (gen: Long, key: Bytes)
+  def checkpoint (cb: Callback [SimpleTable.Meta])
 }
 
 object SimpleTable {
 
-  def apply (config: StoreConfig) (implicit disks: Disks): SimpleTable =
-    new SynthTable (config)
+  case class Meta (gen: Long, tiers: Array [Position])
+
+  object Meta {
+
+    val pickle = {
+      import StorePicklers._
+      wrap (long, array (pos))
+      .build ((Meta.apply _).tupled)
+      .inspect (v => (v.gen, v.tiers))
+    }}
+
+  trait Medic {
+
+    def put (gen: Long, key: Bytes, value: Bytes)
+
+    def delete (gen: Long, key: Bytes)
+  }
+
+  def recover (meta: Meta, config: StoreConfig) (implicit disks: Disks): Medic =
+    new SynthMedic (meta, config)
 }
