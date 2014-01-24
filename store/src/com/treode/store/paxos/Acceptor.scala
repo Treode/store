@@ -7,7 +7,7 @@ import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.store.{Bytes, StorePicklers}
 import com.treode.disk.{PageDescriptor, RecordDescriptor, RootDescriptor}
 
-private class Acceptor (key: Bytes, kit: PaxosKit) {
+private class Acceptor private (key: Bytes, kit: PaxosKit) {
   import Acceptor.{NoPost, Post, Status}
   import kit.{disks, scheduler}
 
@@ -15,19 +15,13 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
   val closedLifetime = 2 seconds
 
   private val fiber = new Fiber (scheduler)
-  var state: State = new Restoring
+  var state: State = null
 
   trait State {
     def query (from: Peer, ballot: Long, default: Bytes)
     def propose (from: Peer, ballot: Long, value: Bytes)
     def choose (value: Bytes)
     def checkpoint (cb: Callback [Status])
-    def recover (status: Status)
-    def opened (default: Bytes)
-    def promised (ballot: BallotNumber)
-    def accepted (ballot: BallotNumber, value: Bytes)
-    def reaccepted (ballot: BallotNumber)
-    def closed (chosen: Bytes)
     def shutdown()
   }
 
@@ -47,31 +41,6 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
       state = Closed.record (value)
 
     def checkpoint (cb: Callback [Status]): Unit =
-      throw new IllegalStateException
-
-    def recover (status: Status) {
-      status match {
-        case Status.Deliberating (_, default, ballot, proposal) =>
-          state = Deliberating.recover (default, ballot, proposal)
-        case Status.Closed (_, chosen) =>
-          state = Closed.recover (chosen)
-      }
-      throw new IllegalStateException
-    }
-
-    def opened (default: Bytes): Unit =
-      state = Deliberating.opened (default)
-
-    def promised (ballot: BallotNumber): Unit =
-      throw new IllegalStateException
-
-    def accepted (ballot: BallotNumber, value: Bytes): Unit =
-      throw new IllegalStateException
-
-    def reaccepted (ballot: BallotNumber): Unit =
-      throw new IllegalStateException
-
-    def closed (chosen: Bytes): Unit =
       throw new IllegalStateException
 
     def shutdown(): Unit =
@@ -172,33 +141,6 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
     def checkpoint (cb: Callback [Status]): Unit =
       cb (Status.Deliberating (key, default, ballot, proposal))
 
-    def recover (status: Status): Unit =
-      throw new IllegalStateException
-
-    def opened (default: Bytes): Unit = ()
-
-    def promised (ballot: BallotNumber) {
-      if (this.ballot < ballot)
-        this.ballot = ballot
-    }
-
-    def accepted (ballot: BallotNumber, value: Bytes) {
-      if (this.ballot < ballot) {
-        this.ballot = ballot
-        this.proposal = Some ((ballot, value))
-      }}
-
-    def reaccepted (ballot: BallotNumber) {
-      val value = proposal.get._2
-      if (this.ballot < ballot) {
-        this.ballot = ballot
-        this.proposal = Some ((ballot, value))
-      }}
-
-    def closed (chosen: Bytes) {
-      state = Closed.record (chosen)
-    }
-
     def shutdown(): Unit =
       state = new Shutdown (Status.Deliberating (key, default, ballot, proposal))
 
@@ -237,19 +179,8 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
     def checkpoint (cb: Callback [Status]): Unit =
       cb (Status.Closed (key, chosen))
 
-    def recover (status: Status): Unit =
-      throw new IllegalStateException
-
-    def closed (chosen: Bytes): Unit =
-      require (this.chosen == chosen, "Confused recovery.")
-
     def shutdown(): Unit =
       state = new Shutdown (Status.Closed (key, chosen))
-
-    def opened (default: Bytes): Unit = ()
-    def promised (ballot: BallotNumber): Unit = ()
-    def accepted (ballot: BallotNumber, value: Bytes): Unit = ()
-    def reaccepted (ballot: BallotNumber): Unit = ()
 
     override def toString = s"Acceptor.Closed($key, $chosen)"
   }
@@ -270,25 +201,17 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
     def checkpoint (cb: Callback [Status]): Unit =
       cb (status)
 
-    def recover (status: Status): Unit =
-      throw new IllegalStateException
-
     def query (from: Peer, ballot: Long, abort: Bytes): Unit = ()
     def propose (from: Peer, ballot: Long, value: Bytes): Unit = ()
     def choose (v: Bytes): Unit = ()
-    def opened (default: Bytes): Unit = ()
-    def promised (ballot: BallotNumber): Unit = ()
     def shutdown(): Unit = ()
-    def accepted (ballot: BallotNumber, value: Bytes): Unit = ()
-    def reaccepted (ballot: BallotNumber): Unit = ()
-    def closed (chosen: Bytes): Unit = ()
 
-    override def toString = s"Acceptor.Shutdown ($key)"
+    override def toString = s"Acceptor.Shutdown($key)"
   }
 
   class Panicked (status: Status, thrown: Throwable) extends Shutdown (status) {
 
-    override def toString = s"Acceptor.Panicked ($key, $thrown)"
+    override def toString = s"Acceptor.Panicked($key, $thrown)"
   }
 
   def query (from: Peer, ballot: Long, default: Bytes): Unit =
@@ -303,24 +226,6 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
   def checkpoint (cb: Callback [Status]) =
     fiber.execute (state.checkpoint (cb))
 
-  def recover (status: Status) =
-    fiber.execute (state.recover (status))
-
-  def opened (default: Bytes): Unit =
-    fiber.execute (state.opened (default))
-
-  def promised (ballot: BallotNumber): Unit =
-    fiber.execute (state.promised (ballot))
-
-  def accepted (ballot: BallotNumber, value: Bytes): Unit =
-    fiber.execute (state.accepted (ballot, value))
-
-  def reaccepted (ballot: BallotNumber): Unit =
-    fiber.execute (state.reaccepted (ballot))
-
-  def closed (chosen: Bytes): Unit =
-    fiber.execute (state.closed (chosen))
-
   def shutdown(): Unit =
     fiber.execute (state.shutdown())
 
@@ -328,41 +233,6 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
 }
 
 private object Acceptor {
-
-  sealed abstract class Status {
-    def key: Bytes
-  }
-
-  object Status {
-
-    case class Deliberating (
-        key: Bytes, default:
-        Bytes, ballot:
-        BallotNumber,
-        proposal: Proposal) extends Status
-
-    case class Closed (key: Bytes, chosen: Bytes) extends Status
-
-    val pickle = {
-      import PaxosPicklers._
-      tagged [Status] (
-          0x1 -> wrap (bytes, bytes, ballotNumber, proposal)
-                .build ((Deliberating.apply _).tupled)
-                .inspect (v => (v.key, v.default, v.ballot, v.proposal)),
-          0x2 -> wrap (bytes, bytes)
-                .build ((Closed.apply _).tupled)
-                .inspect (v => (v.key, v.chosen)))
-    }}
-
-  trait Post {
-    def record()
-    def reply()
-  }
-
-  object NoPost extends Post {
-    def record() = ()
-    def reply() = ()
-  }
 
   val query = {
     import PaxosPicklers._
@@ -412,4 +282,109 @@ private object Acceptor {
   val close = {
     import PaxosPicklers._
     new RecordDescriptor (0xAE980885, tuple (bytes, bytes))
+  }
+
+  def apply (key: Bytes, kit: PaxosKit): Acceptor = {
+    val a = new Acceptor (key, kit)
+    a.state = new a.Restoring
+    a
+  }
+
+  trait Post {
+    def record()
+    def reply()
+  }
+
+  object NoPost extends Post {
+    def record() = ()
+    def reply() = ()
+  }
+
+  sealed abstract class Status {
+    def key: Bytes
+    def default: Bytes
+  }
+
+  object Status {
+
+    case class Deliberating (
+        key: Bytes,
+        default: Bytes,
+        ballot: BallotNumber,
+        proposal: Proposal) extends Status
+
+    case class Closed (key: Bytes, chosen: Bytes) extends Status {
+      def default = chosen
+    }
+
+    val pickle = {
+      import PaxosPicklers._
+      tagged [Status] (
+          0x1 -> wrap (bytes, bytes, ballotNumber, proposal)
+                .build ((Deliberating.apply _).tupled)
+                .inspect (v => (v.key, v.default, v.ballot, v.proposal)),
+          0x2 -> wrap (bytes, bytes)
+                .build ((Closed.apply _).tupled)
+                .inspect (v => (v.key, v.chosen)))
+    }}
+
+  class Medic (
+      val key: Bytes,
+      val default: Bytes,
+      var ballot: BallotNumber,
+      var proposal: Proposal,
+      var chosen: Option [Bytes],
+      kit: PaxosKit) {
+
+    import kit.{Acceptors, scheduler}
+
+    val fiber = new Fiber (scheduler)
+
+    def promised (ballot: BallotNumber): Unit = fiber.execute {
+      if (this.ballot < ballot)
+        this.ballot = ballot
+    }
+
+    def accepted (ballot: BallotNumber, value: Bytes): Unit = fiber.execute {
+      if (this.ballot < ballot) {
+        this.ballot = ballot
+        this.proposal = Some ((ballot, value))
+      }}
+
+    def reaccepted (ballot: BallotNumber): Unit = fiber.execute {
+      val value = proposal.get._2
+      if (this.ballot < ballot) {
+        this.ballot = ballot
+        this.proposal = Some ((ballot, value))
+      }}
+
+    def closed (chosen: Bytes): Unit = fiber.execute {
+      this.chosen =Some (chosen)
+    }
+
+    def close (cb: Callback [Unit]): Unit = fiber.execute {
+      val a = Acceptor (key, kit)
+      if (chosen.isDefined) {
+        a.state = a.Closed.recover (chosen.get)
+      } else {
+        a.state = a.Deliberating.recover (default, ballot, proposal)
+      }
+      Acceptors.recover (key, a)
+    }
+
+    override def toString = s"Acceptor.Medic($key, $default, $proposal, $chosen)"
+  }
+
+  object Medic {
+
+    def apply (status: Status, kit: PaxosKit): Medic = {
+      status match {
+        case Status.Deliberating (key, default, ballot, proposal) =>
+          new Medic (key, default, ballot, proposal, None, kit)
+        case Status.Closed (key, chosen) =>
+          new Medic (key, chosen, BallotNumber.zero, Option.empty, Some (chosen), kit)
+      }}
+
+    def apply (key: Bytes, default: Bytes, kit: PaxosKit): Medic =
+      new Medic (key, default, BallotNumber.zero, Option.empty, None, kit)
   }}

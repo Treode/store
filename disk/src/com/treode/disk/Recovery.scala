@@ -9,7 +9,7 @@ import com.treode.pickle.{Picklers, TagRegistry, unpickle}
 
 class Recovery (scheduler: Scheduler, disks: DisksKit) {
 
-  private val recoveries = new TagRegistry [Any]
+  private val recoveries = new TagRegistry [Callback [Unit] => Any]
   private val records = new RecordRegistry
   private var openers = new ArrayList [Recovery => Any]
   private var closers = new ArrayList [Runnable]
@@ -19,15 +19,15 @@ class Recovery (scheduler: Scheduler, disks: DisksKit) {
     openers.add (f)
   }
 
-  def recover [B] (desc: RootDescriptor [B]) (f: B => Any): Unit =
-    recoveries.register (desc.pblk, desc.id.id) (f)
+  def recover [B] (desc: RootDescriptor [B]) (f: (B, Callback [Unit]) => Any): Unit =
+    recoveries.register (desc.pblk, desc.id.id) (f.curried)
 
   def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit = {
     println (s"registring $desc")
     records.register (desc) (f)
   }
 
-  def onClose (f: => Any): Unit = synchronized {
+  def onClose (f: Callback [Unit] => Any): Unit = synchronized {
     require (closers != null, "Recovery has already closed.")
     closers.add (toRunnable (f))
   }

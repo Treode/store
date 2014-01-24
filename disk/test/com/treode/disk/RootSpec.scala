@@ -12,7 +12,11 @@ class RootSpec extends FlatSpec {
   val root = new RootDescriptor (0x5FD8D9DF, Picklers.string)
 
   def recover (f: String => Any) (implicit disks: Disks): Unit =
-    root.open (root.recover (_) (f))
+    root.open { recovery =>
+      root.recover (recovery) { (v, cb) =>
+        f (v)
+        cb()
+      }}
 
   "The roots" should "work" in {
     implicit val scheduler = StubScheduler.random()

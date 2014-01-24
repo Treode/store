@@ -8,7 +8,7 @@ class RootDescriptor [B] (val id: TypeId, val pblk: Pickler [B]) {
   def open (f: Recovery => Any) (implicit disks: Disks): Unit =
     disks.open (this) (f)
 
-  def recover (recovery: Recovery) (f: B => Any): Unit =
+  def recover (recovery: Recovery) (f: (B, Callback [Unit]) => Any): Unit =
     recovery.recover (this) (f)
 
   def checkpoint (f: Callback [B] => Any) (implicit disks: Disks): Unit =
