@@ -3,9 +3,9 @@ package com.treode.store.simple
 import com.treode.disk.PageDescriptor
 import com.treode.pickle.Picklers
 
-trait TierPage
+private trait TierPage
 
-object TierPage {
+private object TierPage {
 
   val pickle = {
     import Picklers._

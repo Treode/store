@@ -1,6 +1,8 @@
 package com.treode.store.simple
 
-import com.treode.async.{AsyncIterator, Callback, callback}
+import java.lang.{Iterable => JIterable}
+
+import com.treode.async.{AsyncIterator, Callback, callback, delay}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.SimpleCell
 
@@ -59,6 +61,20 @@ private class TierIterator (implicit disks: Disks) extends AsyncIterator [Simple
 
 private object TierIterator {
 
-  def apply (pos: Position, cb: Callback [TierIterator]) (implicit disks: Disks): Unit =
+  def apply (pos: Position, cb: Callback [SimpleIterator]) (implicit disks: Disks): Unit =
     new TierIterator() .find (pos, cb)
-}
+
+  def merge (primary: JIterable [SimpleCell], secondary: JIterable [SimpleCell],
+      tiers: Array [Position], cb: Callback [SimpleIterator]) (implicit disks: Disks) {
+
+    val allBuilt = delay (cb) { iters: Array [SimpleIterator] =>
+      AsyncIterator.merge (iters.iterator, cb)
+    }
+
+    val oneBuilt = Callback.collate (tiers.length + 1, allBuilt)
+
+    oneBuilt (0, AsyncIterator.adapt (primary))
+    oneBuilt (1, AsyncIterator.adapt (secondary))
+    for (i <- 0 until tiers.length)
+      TierIterator (tiers (i), delay (oneBuilt) (oneBuilt (i+2, _)))
+  }}

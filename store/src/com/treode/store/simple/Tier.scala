@@ -4,7 +4,7 @@ import com.treode.async.Callback
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, SimpleCell, TxClock}
 
-object Tier {
+private object Tier {
 
   def read (root: Position, key: Bytes, cb: Callback [Option [SimpleCell]]) (
       implicit disks: Disks) {

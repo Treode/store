@@ -1,7 +1,8 @@
 package com.treode.store.simple
 
 import java.util.{ArrayDeque, ArrayList}
-import com.treode.async.{Callback, delay}
+
+import com.treode.async.{AsyncIterator, Callback, delay}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, SimpleCell, StoreConfig, TxClock}
 
@@ -143,3 +144,14 @@ private class TierBuilder (config: StoreConfig) (implicit disks: Disks) {
 
       }})
   }}
+
+private object TierBuilder {
+
+  def build (config: StoreConfig, iter: SimpleIterator, cb: Callback [Position]) (implicit disks: Disks) {
+    val builder = new TierBuilder (config)
+    val cellsAdded = delay (cb) { _: Unit =>
+      builder.result (cb)
+    }
+    AsyncIterator.foreach (iter, cellsAdded) { (cell, cb) =>
+      builder.add (cell.key, cell.value, cb)
+    }}}

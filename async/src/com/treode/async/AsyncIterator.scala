@@ -1,5 +1,8 @@
 package com.treode.async
 
+import java.lang.{Iterable => JIterable}
+import java.util.{Iterator => JIterator}
+
 trait AsyncIterator [+A] {
 
   def hasNext: Boolean
@@ -8,15 +11,26 @@ trait AsyncIterator [+A] {
 
 object AsyncIterator {
 
-  /** Transform the standard iterator into an AsyncIterator. */
+  /** Transform a Scala iterator into an AsyncIterator. */
   def adapt [A] (iter: Iterator [A]): AsyncIterator [A] =
     new AsyncIterator [A] {
       def hasNext: Boolean = iter.hasNext
       def next (cb: Callback [A]): Unit = cb (iter.next)
     }
 
-  /** Transform the standard iterable into an AsyncIterator. */
+  /** Transform a Scala iterable into an AsyncIterator. */
   def adapt [A] (iter: Iterable [A]): AsyncIterator [A] =
+    adapt (iter.iterator)
+
+  /** Transform a Java iterator into an AsyncIterator. */
+  def adapt [A] (iter: JIterator [A]): AsyncIterator [A] =
+    new AsyncIterator [A] {
+      def hasNext: Boolean = iter.hasNext
+      def next (cb: Callback [A]): Unit = cb (iter.next)
+    }
+
+  /** Transform a Java iterable into an AsyncIterator. */
+  def adapt [A] (iter: JIterable [A]): AsyncIterator [A] =
     adapt (iter.iterator)
 
   def filter [A] (iter: AsyncIterator [A], cb: Callback [AsyncIterator [A]]) (pred: A => Boolean): Unit =

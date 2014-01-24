@@ -90,7 +90,7 @@ class SimpleTierSpec extends WordSpec {
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (pos: Position) (
       implicit scheduler: StubScheduler, disks: Disks): Seq [SimpleCell] = {
-    val iter = new CallbackCaptor [TierIterator]
+    val iter = new CallbackCaptor [SimpleIterator]
     TierIterator (pos, iter)
     scheduler.runTasks()
     val seq = new CallbackCaptor [Seq [SimpleCell]]
