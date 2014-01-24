@@ -30,7 +30,6 @@ class LogSpec extends FlatSpec {
     val disk1 = new StubFile
 
     {
-      println ("attach")
       implicit val disks = new RichDisksKit
       replay (_ => fail ("Nothing to replay."))
       disks.attachAndPass (("a", disk1, config))
@@ -38,7 +37,6 @@ class LogSpec extends FlatSpec {
     }
 
     {
-      println ("reattach")
       implicit val disks = new RichDisksKit
       val replayed = Seq.newBuilder [String]
       replay (replayed += _)

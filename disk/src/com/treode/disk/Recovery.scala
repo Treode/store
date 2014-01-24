@@ -19,13 +19,13 @@ class Recovery (scheduler: Scheduler, disks: DisksKit) {
     openers.add (f)
   }
 
-  def recover [B] (desc: RootDescriptor [B]) (f: (B, Callback [Unit]) => Any): Unit =
+  def recover [B] (desc: RootDescriptor [B]) (f: (B, Callback [Unit]) => Any): Unit = {
+    println (s"registered $desc")
     recoveries.register (desc.pblk, desc.id.id) (f.curried)
-
-  def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit = {
-    println (s"registring $desc")
-    records.register (desc) (f)
   }
+
+  def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
+    records.register (desc) (f)
 
   def onClose (f: Callback [Unit] => Any): Unit = synchronized {
     require (closers != null, "Recovery has already closed.")
@@ -64,12 +64,16 @@ class Recovery (scheduler: Scheduler, disks: DisksKit) {
         cb()
       }}
 
+    val rootsRecovered = delay (cb) { _: Unit =>
+      disks.replayIterator (records, logsMerged)
+    }
+
     val buf = PagedBuffer (12)
 
     val rootsRead = delay (cb) { _: Unit =>
-      unpickle (DiskPicklers.seq (recoveries.unpickler), buf)
-      println ("replaying")
-      disks.replayIterator (records, logsMerged)
+      val roots = unpickle (DiskPicklers.seq (recoveries.unpickler), buf)
+      val latch = Callback.latch (roots.size, rootsRecovered)
+      roots foreach (_ (latch))
     }
 
     disks.fill (buf, meta.pos, rootsRead)
