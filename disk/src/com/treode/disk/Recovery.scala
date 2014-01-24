@@ -5,7 +5,7 @@ import scala.collection.JavaConversions._
 
 import com.treode.async._
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{Picklers, TagRegistry, unpickle}
+import com.treode.pickle.{TagRegistry, unpickle}
 
 class Recovery (scheduler: Scheduler, disks: DisksKit) {
 
@@ -67,7 +67,7 @@ class Recovery (scheduler: Scheduler, disks: DisksKit) {
     val buf = PagedBuffer (12)
 
     val rootsRead = delay (cb) { _: Unit =>
-      unpickle (Picklers.seq (recoveries.unpickler), buf)
+      unpickle (DiskPicklers.seq (recoveries.unpickler), buf)
       println ("replaying")
       disks.replayIterator (records, logsMerged)
     }

@@ -5,12 +5,7 @@ import scala.collection.JavaConversions._
 
 import com.treode.async.{Callback, Scheduler, guard}
 import com.treode.async.io.File
-import com.treode.buffer.{Input, PagedBuffer, Output}
-import com.treode.pickle.{Picklers, pickle}
-
-
-import com.treode.pickle.{Pickler, TagRegistry}
-import TagRegistry.Tagger
+import com.treode.buffer.PagedBuffer
 
 private class PageWriter (
     id: Int,
@@ -110,6 +105,6 @@ object PageWriter {
   object Meta {
 
     val pickle = {
-      import Picklers._
+      import DiskPicklers._
       wrap (long) build (Meta.apply _) inspect (_.pos)
     }}}

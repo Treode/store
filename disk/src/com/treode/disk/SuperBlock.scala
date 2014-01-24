@@ -1,7 +1,5 @@
 package com.treode.disk
 
-import com.treode.pickle.Picklers
-
 private case class SuperBlock (
     id: Int,
     boot: BootBlock,
@@ -13,12 +11,7 @@ private case class SuperBlock (
 private object SuperBlock {
 
   val pickle = {
-    import Picklers._
-    val boot = BootBlock.pickle
-    val config = DiskDriveConfig.pickle
-    val alloc = Allocator.Meta.pickle
-    val log = LogWriter.Meta.pickle
-    val pages = PageWriter.Meta.pickle
+    import DiskPicklers._
     wrap (int, boot, config, alloc, log, pages)
     .build ((SuperBlock.apply _).tupled)
     .inspect (v => (v.id, v.boot, v.config, v.alloc, v.log, v.pages))

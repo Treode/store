@@ -1,7 +1,5 @@
 package com.treode.disk
 
-import com.treode.pickle.Picklers
-
 sealed abstract class RecordHeader
 
 object RecordHeader {
@@ -11,8 +9,7 @@ object RecordHeader {
   case class Entry (time: Long, id: TypeId) extends RecordHeader
 
   val pickle = {
-    import Picklers._
-    val typeId = TypeId.pickle
+    import DiskPicklers._
     tagged [RecordHeader] (
         0x1 -> const (End),
         0x2 -> wrap (int) .build (Continue.apply _) .inspect (_.seg),

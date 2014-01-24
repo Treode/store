@@ -4,8 +4,8 @@ import java.util.ArrayList
 import scala.collection.JavaConversions._
 
 import com.treode.async.{Callback, callback, delay}
-import com.treode.buffer.{Input, PagedBuffer, Output}
-import com.treode.pickle.{Pickler, Picklers, TagRegistry, pickle, unpickle}
+import com.treode.buffer.PagedBuffer
+import com.treode.pickle.TagRegistry
 
 import TagRegistry.Tagger
 
@@ -45,8 +45,7 @@ object RootRegistry {
     val empty = Meta (0, Position (0, 0, 0))
 
     val pickle = {
-      import Picklers._
-      val pos = Position.pickle
+      import DiskPicklers._
       wrap (int, pos)
       .build ((Meta.apply _).tupled)
       .inspect (v => (v.count, v.pos))
@@ -54,6 +53,6 @@ object RootRegistry {
 
 
   val page = {
-    import Picklers._
+    import DiskPicklers._
     new PageDescriptor (0x6EC7584D, const (0), seq (TagRegistry.pickler))
   }}

@@ -6,7 +6,7 @@ import scala.collection.JavaConversions._
 import com.treode.async.{Callback, Scheduler, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{Picklers, pickle}
+import com.treode.pickle.pickle
 
 import RecordHeader.{Continue, End}
 
@@ -119,6 +119,6 @@ object LogWriter {
   object Meta {
 
     val pickle = {
-      import Picklers._
+      import DiskPicklers._
       wrap (long) build (Meta.apply _) inspect (_.head)
     }}}

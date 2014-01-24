@@ -1,7 +1,5 @@
 package com.treode.disk
 
-import com.treode.pickle.Picklers
-
 class DiskDriveConfig private (
     val segmentBits: Int,
     val blockBits: Int,
@@ -62,7 +60,7 @@ object DiskDriveConfig {
   }
 
   val pickle = {
-    import Picklers._
+    import DiskPicklers._
     wrap (int, int, long)
     .build ((apply _).tupled)
     .inspect (v => (v.segmentBits, v.blockBits, v.diskBytes))

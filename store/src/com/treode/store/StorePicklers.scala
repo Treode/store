@@ -3,7 +3,7 @@ package com.treode.store
 import com.treode.cluster.HostId
 import com.treode.pickle.Picklers
 
-private class StorePicklers extends Picklers {
+private trait StorePicklers extends Picklers {
 
   def bytes = Bytes.pickle
   def hostId = HostId.pickle
