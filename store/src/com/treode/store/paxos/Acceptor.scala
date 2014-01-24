@@ -17,38 +17,10 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
   private val fiber = new Fiber (scheduler)
   var state: State = new Restoring
 
-  val recorded = new Callback [Unit] {
-    def pass (v: Unit): Unit = fiber.execute (state.recorded())
-    def fail (t: Throwable): Unit = fiber.execute (state.failed (t))
-  }
-
-  class OpenPost (ballot: Long, default: Bytes, from: Peer) extends Post {
-    def record = Acceptor.open (key, default) (recorded)
-    def reply() = Proposer.promise (key, ballot, None) (from)
-  }
-
-  class PromisePost (ballot: BallotNumber, proposal: Proposal, from: Peer) extends Post {
-    def record = Acceptor.promise (key, ballot) (recorded)
-    def reply() = Proposer.promise (key, ballot.number, proposal) (from)
-  }
-
-  class AcceptPost (ballot: BallotNumber, value: Bytes, from: Peer) extends Post {
-    def record() = Acceptor.accept (key, ballot, value) (recorded)
-    def reply() = Proposer.accept (key, ballot.number) (from)
-  }
-
-  class ReacceptPost (ballot: BallotNumber, from: Peer) extends Post {
-    def record() = Acceptor.reaccept (key, ballot) (recorded)
-    def reply() = Proposer.accept (key, ballot.number) (from)
-  }
-
   trait State {
     def query (from: Peer, ballot: Long, default: Bytes)
     def propose (from: Peer, ballot: Long, value: Bytes)
     def choose (value: Bytes)
-    def recorded()
-    def failed (thrown: Throwable)
-    def timeout (default: Bytes)
     def checkpoint (cb: Callback [Status])
     def recover (status: Status)
     def opened (default: Bytes)
@@ -61,30 +33,18 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
 
   class Restoring extends State {
 
-    def restore (from: Peer, ballot: Long, default: Bytes): Unit =
-      state = Deliberating.record (from, ballot, default)
-
     def query (from: Peer, ballot: Long, default: Bytes) {
-      restore (from, ballot, default)
+      state = Deliberating.record (from, ballot, default)
       state.query (from, ballot, default)
     }
 
     def propose (from: Peer, ballot: Long, value: Bytes) {
-      restore (from, ballot, value)
+      state = Deliberating.record (from, ballot, value)
       state.propose (from, ballot, value)
     }
 
     def choose (value: Bytes): Unit =
       state = Closed.record (value)
-
-    def recorded(): Unit =
-      throw new IllegalStateException
-
-    def failed (thrown: Throwable): Unit =
-      throw new IllegalStateException
-
-    def timeout (default: Bytes): Unit =
-      throw new IllegalStateException
 
     def checkpoint (cb: Callback [Status]): Unit =
       throw new IllegalStateException
@@ -124,11 +84,26 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
       val default: Bytes,
       var proposers: Set [Peer],
       var ballot: BallotNumber,
-      var proposal: Proposal,
-      var posting: Post
-  ) extends State {
+      var proposal: Proposal) extends State {
 
+    var posting: Post = NoPost
     var postable: Post = NoPost
+
+    val posted = new Callback [Unit] {
+
+      def pass (v: Unit): Unit = fiber.execute {
+        if (state == Deliberating.this) {
+          posting.reply()
+          posting = postable
+          postable = NoPost
+          posting.record()
+        }}
+
+      def fail (t: Throwable): Unit = fiber.execute {
+        if (state == Deliberating.this) {
+          val s = Status.Deliberating (key, default, ballot, proposal)
+          state = new Panicked (s, t)
+        }}}
 
     def post (post: Post) {
       if (posting == NoPost) {
@@ -138,13 +113,42 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
         this.postable = post
       }}
 
+    fiber.delay (deliberatingTimeout) {
+      if (state == Deliberating.this)
+        kit.propose (key, default, callback (Acceptor.this.choose (_)))
+    }
+
+    def open (ballot: Long, default: Bytes, from: Peer): Unit =
+      post (new Post {
+        def record = Acceptor.open (key, default) (posted)
+        def reply() = Proposer.promise (key, ballot, None) (from)
+      })
+
+    def promise (ballot: BallotNumber, proposal: Proposal, from: Peer): Unit =
+      post (new Post {
+        def record = Acceptor.promise (key, ballot) (posted)
+        def reply() = Proposer.promise (key, ballot.number, proposal) (from)
+      })
+
+    def accept (ballot: BallotNumber, value: Bytes, from: Peer): Unit =
+      post (new Post {
+        def record() = Acceptor.accept (key, ballot, value) (posted)
+        def reply() = Proposer.accept (key, ballot.number) (from)
+      })
+
+    def reaccept (ballot: BallotNumber, from: Peer): Unit =
+      post (new Post {
+        def record() = Acceptor.reaccept (key, ballot) (posted)
+        def reply() = Proposer.accept (key, ballot.number) (from)
+      })
+
     def query (from: Peer, _ballot: Long, default: Bytes) {
       proposers += from
       val ballot = BallotNumber (_ballot, from.id)
       if (ballot < this.ballot) {
         Proposer.refuse (key, this.ballot.number) (from)
       } else {
-        post (new PromisePost (ballot, proposal, from))
+        promise (ballot, proposal, from)
         this.ballot = ballot
       }}
 
@@ -155,28 +159,15 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
         Proposer.refuse (key, this.ballot.number) (from)
       } else {
         if (proposal.isDefined && value == proposal.get._2)
-          post (new ReacceptPost (ballot, from))
+          reaccept (ballot, from)
         else
-          post (new AcceptPost (ballot, value, from))
+          accept (ballot, value, from)
         this.ballot = ballot
         this.proposal = Some ((ballot, value))
       }}
 
     def choose (value: Bytes): Unit =
       state = Closed.record (value)
-
-    def recorded() {
-      posting.reply()
-      posting = postable
-      postable = NoPost
-      posting.record()
-    }
-
-    def failed (thrown: Throwable): Unit =
-      state = new Panicked (Status.Deliberating (key, default, ballot, proposal), thrown)
-
-    def timeout (default: Bytes): Unit =
-      kit.propose (key, default, callback (Acceptor.this.choose (_)))
 
     def checkpoint (cb: Callback [Status]): Unit =
       cb (Status.Deliberating (key, default, ballot, proposal))
@@ -217,21 +208,17 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
   object Deliberating {
 
     def record (from: Peer, ballot: Long, default: Bytes): State = {
-      fiber.delay (deliberatingTimeout) (state.timeout (default))
-      val post = new OpenPost (ballot, default, from)
-      post.record()
-      new Deliberating (default, Set (from), BallotNumber.zero, Option.empty, post)
+      val s = new Deliberating (default, Set (from), BallotNumber.zero, Option.empty)
+      s.open (ballot, default, from)
+      s
     }
 
-    def recover (default: Bytes, ballot: BallotNumber, proposal: Proposal): State = {
-      fiber.delay (deliberatingTimeout) (state.timeout (default))
-      new Deliberating (default, Set.empty, ballot, proposal, NoPost)
-    }
+    def recover (default: Bytes, ballot: BallotNumber, proposal: Proposal): State =
+      new Deliberating (default, Set.empty, ballot, proposal)
 
-    def opened (default: Bytes): State = {
-      fiber.delay (deliberatingTimeout) (state.timeout (default))
-      new Deliberating (default, Set.empty, BallotNumber.zero, Option.empty, NoPost)
-    }}
+    def opened (default: Bytes): State =
+      new Deliberating (default, Set.empty, BallotNumber.zero, Option.empty)
+  }
 
   class Closed private (val chosen: Bytes) extends State {
 
@@ -259,9 +246,6 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
     def shutdown(): Unit =
       state = new Shutdown (Status.Closed (key, chosen))
 
-    def recorded(): Unit = ()
-    def failed (thrown: Throwable) = ()
-    def timeout (default: Bytes): Unit = ()
     def opened (default: Bytes): Unit = ()
     def promised (ballot: BallotNumber): Unit = ()
     def accepted (ballot: BallotNumber, value: Bytes): Unit = ()
@@ -292,9 +276,6 @@ private class Acceptor (key: Bytes, kit: PaxosKit) {
     def query (from: Peer, ballot: Long, abort: Bytes): Unit = ()
     def propose (from: Peer, ballot: Long, value: Bytes): Unit = ()
     def choose (v: Bytes): Unit = ()
-    def recorded(): Unit = ()
-    def failed (thrown: Throwable) = ()
-    def timeout (default: Bytes): Unit = ()
     def opened (default: Bytes): Unit = ()
     def promised (ballot: BallotNumber): Unit = ()
     def shutdown(): Unit = ()
