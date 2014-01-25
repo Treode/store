@@ -7,16 +7,19 @@ import scala.util.Random
 import com.treode.async.{Callback, Fiber, Scheduler, callback, delay, guard}
 import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
-import com.treode.store.{Bytes, PaxosStore, SimpleAccessor, SimpleStore}
 import com.treode.disk.{Disks, Position}
+import com.treode.store.{Bytes, PaxosStore, StoreConfig}
+import com.treode.store.simple.SimpleTable
 
 private class PaxosKit (implicit val random: Random, val scheduler: Scheduler,
-    val cluster: Cluster, val disks: Disks) extends PaxosStore {
+    val cluster: Cluster, val disks: Disks, val config: StoreConfig) extends PaxosStore {
 
   object Acceptors {
     import Acceptor._
 
-    private var acceptors = new ConcurrentHashMap [Bytes, Acceptor] ()
+    var acceptors = new ConcurrentHashMap [Bytes, Acceptor] ()
+
+    var db = SimpleTable()
 
     def recover (key: Bytes, a1: Acceptor) {
       val a0 = acceptors.put (key, a1)
@@ -48,8 +51,8 @@ private class PaxosKit (implicit val random: Random, val scheduler: Scheduler,
       get (key) propose (c, ballot, value)
     }
 
-    choose.register { case ((key, value), c) =>
-      get (key) choose (value)
+    choose.register { case ((key, chosen), c) =>
+      get (key) choose (chosen)
     }
 
     root.checkpoint { cb =>
@@ -64,10 +67,11 @@ private class PaxosKit (implicit val random: Random, val scheduler: Scheduler,
     root.open { recovery =>
 
       val fiber = new Fiber (scheduler)
+      val db = SimpleTable.medic()
       val medics = new ConcurrentHashMap [Bytes, Medic] ()
 
       def open1 (status: Status) {
-        val m1 = Medic (status, PaxosKit.this)
+        val m1 = Medic (status, db, PaxosKit.this)
         val m0 = medics.putIfAbsent (m1.key, m1)
         require (m0 == null, "Paxos instance already recovering.")
       }
@@ -76,7 +80,7 @@ private class PaxosKit (implicit val random: Random, val scheduler: Scheduler,
         var m0 = medics.get (key)
         if (m0 != null)
           return
-        val m1 = Medic (key, default, PaxosKit.this)
+        val m1 = Medic (key, default, db, PaxosKit.this)
         m0 = medics.putIfAbsent (key, m1)
         if (m0 != null)
           return
@@ -111,12 +115,13 @@ private class PaxosKit (implicit val random: Random, val scheduler: Scheduler,
         get (key) reaccepted (ballot)
       }
 
-      Acceptor.close.replay (recovery) { case (key, chosen) =>
-        get (key) closed (chosen)
+      Acceptor.close.replay (recovery) { case (key, chosen, gen) =>
+        get (key) closed (chosen, gen)
       }
 
       recovery.onClose { cb =>
         require (acceptors.isEmpty, "Confused recovery: some acceptors already exist.")
+        Acceptors.db = db.close()
         val ms = materialize (medics.values)
         val latch = Callback.latch (ms.size, cb)
         ms foreach (_.close (latch))
@@ -182,6 +187,7 @@ private class PaxosKit (implicit val random: Random, val scheduler: Scheduler,
 
 private [store] object PaxosKit {
 
-  def apply () (implicit random: Random, scheduler: Scheduler, cluster: Cluster, disks: Disks): PaxosStore =
+  def apply () (implicit random: Random, scheduler: Scheduler, cluster: Cluster, disks: Disks,
+      config: StoreConfig): PaxosStore =
     new PaxosKit
 }

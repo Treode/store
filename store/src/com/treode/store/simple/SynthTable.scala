@@ -75,7 +75,10 @@ private class SynthTable (
       def fail (t: Throwable) = cb.fail (t)
     }
 
-    Tier.read (tiers (i), key, loop)
+    if (i < tiers.length)
+      Tier.read (tiers (i), key, loop)
+    else
+      cb (None)
   }
 
   def get (key: Bytes, cb: Callback [Option [Bytes]]): Unit =

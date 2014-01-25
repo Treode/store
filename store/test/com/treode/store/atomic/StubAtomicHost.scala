@@ -22,10 +22,9 @@ extends StubActiveHost (id, network) {
 
   implicit val cluster: Cluster = this
 
+  implicit val storeConfig = StoreConfig (1<<16)
   implicit val store = TestableTempKit (2)
-
   implicit val paxos = PaxosKit()
-
   val atomic = new AtomicKit
 
   def writeDeputy (xid: TxId) = atomic.WriteDeputies.get (xid)

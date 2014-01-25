@@ -1,5 +1,7 @@
 package com.treode.store.simple
 
+import java.util.concurrent.locks.ReentrantReadWriteLock
+
 import com.treode.async.Callback
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, SimpleCell, StoreConfig, StorePicklers}
@@ -35,8 +37,15 @@ object SimpleTable {
     def put (gen: Long, key: Bytes, value: Bytes)
 
     def delete (gen: Long, key: Bytes)
+
+    def close(): SimpleTable
   }
 
-  def recover (meta: Meta, config: StoreConfig) (implicit disks: Disks): Medic =
-    new SynthMedic (meta, config)
+  def apply () (implicit disks: Disks, config: StoreConfig): SimpleTable = {
+    val lock = new ReentrantReadWriteLock
+    new SynthTable (config, lock, 0, newMemTable, newMemTable, Array.empty)
+  }
+
+  def medic () (implicit disks: Disks, config: StoreConfig): Medic =
+    new SynthMedic (config)
 }

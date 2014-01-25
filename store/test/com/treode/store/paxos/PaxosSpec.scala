@@ -28,9 +28,9 @@ object PaxosBehaviors extends WordSpec with PaxosTestTools {
     val k = Bytes (random.nextLong)
     var a: Acceptor = null
 
-    "be restoring when first opened" in {
+    "be opening when first opened" in {
       a = Acceptors.get (k)
-      assert (a.isRestoring)
+      assert (a.isOpening)
     }
 
     "be deliberating after running tasks" in {
@@ -39,10 +39,10 @@ object PaxosBehaviors extends WordSpec with PaxosTestTools {
       assert (a.isDeliberating)
     }
 
-    "be restoring when removed and reopened" in {
+    "be opening when removed and reopened" in {
       Acceptors.remove (k, a)
       a = Acceptors.get (k)
-      assert (a.isRestoring)
+      assert (a.isOpening)
     }}
 
   "The paxos implementation" should {

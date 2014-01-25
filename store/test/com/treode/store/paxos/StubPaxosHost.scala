@@ -5,6 +5,7 @@ import com.treode.async.Callback
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.disk.{Disks, DiskDriveConfig}
+import com.treode.store.StoreConfig
 
 private class StubPaxosHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {
@@ -13,6 +14,8 @@ extends StubActiveHost (id, network) {
   implicit val disks = Disks()
 
   implicit val cluster: Cluster = this
+
+  implicit val storeConfig = StoreConfig (1<<16)
 
   val paxos = new PaxosKit
 

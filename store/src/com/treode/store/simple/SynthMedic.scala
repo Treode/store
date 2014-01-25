@@ -6,7 +6,7 @@ import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, SimpleCell, StoreConfig}
 import SimpleTable.{Medic, Meta}
 
-private class SynthMedic (meta: Meta, config: StoreConfig) (implicit disks: Disks) extends Medic {
+private class SynthMedic (config: StoreConfig) (implicit disks: Disks) extends Medic {
 
   private val lock = new ReentrantReadWriteLock
   private val readLock = lock.readLock()
@@ -22,6 +22,17 @@ private class SynthMedic (meta: Meta, config: StoreConfig) (implicit disks: Disk
 
   // The position of each tier on disk.
   private var tiers = Array [Position] ()
+
+  private def recover (meta: SimpleTable.Meta) {
+    writeLock.lock()
+    try {
+      generation = meta.gen+1
+      primary = newMemTable
+      secondary = newMemTable
+      tiers = meta.tiers
+    } finally {
+      writeLock.unlock()
+    }}
 
   private def replay (gen: Long, key: Bytes, value: Option [Bytes]) {
 
