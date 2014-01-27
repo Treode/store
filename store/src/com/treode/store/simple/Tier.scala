@@ -2,7 +2,7 @@ package com.treode.store.simple
 
 import com.treode.async.Callback
 import com.treode.disk.{Disks, Position}
-import com.treode.store.{Bytes, SimpleCell, TxClock}
+import com.treode.store.{Bytes, TxClock}
 
 private object Tier {
 

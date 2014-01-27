@@ -17,9 +17,6 @@ private [store] class TestableTempKit (bits: Int) extends LocalKit (bits) with T
   def expectCells (id: TableId) (cs: TimedCell*): Unit =
     expectResult (cs) (timedTables.get (id) .toSeq)
 
-  def openSimpleTable (id: TableId): SimpleTable =
-    new TempSimpleTable
-
   def close() = ()
 }
 

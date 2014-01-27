@@ -32,11 +32,7 @@ package store {
     def commit (wt: TxClock, ops: Seq [WriteOp], cb: Callback [Unit])
   }
 
-  private trait SimpleStore {
-    def openSimpleTable (id: TableId): SimpleTable
-  }
-
-  private trait LocalStore extends PreparableStore with SimpleStore with Closeable
+  private trait LocalStore extends PreparableStore with Closeable
 }
 
 package object store {

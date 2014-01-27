@@ -4,7 +4,6 @@ import java.lang.{Iterable => JIterable}
 
 import com.treode.async.{AsyncIterator, Callback, callback, delay}
 import com.treode.disk.{Disks, Position}
-import com.treode.store.SimpleCell
 
 private class TierIterator (implicit disks: Disks) extends AsyncIterator [SimpleCell] {
 

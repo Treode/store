@@ -5,7 +5,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.{AsyncIterator, Callback, callback, delay}
 import com.treode.disk.{Disks, Position}
-import com.treode.store.{Bytes, SimpleCell, StoreConfig}
+import com.treode.store.{Bytes, StoreConfig}
 
 import SimpleTable.Meta
 
@@ -28,7 +28,7 @@ private class SynthTable (
     var secondary: MemTable,
 
     // The position of each tier on disk.
-    var tiers: Array [Position]
+    var tiers: Tiers
 
 ) (implicit disks: Disks) extends SimpleTable {
 

@@ -4,7 +4,7 @@ import java.util.{ArrayDeque, ArrayList}
 
 import com.treode.async.{AsyncIterator, Callback, delay}
 import com.treode.disk.{Disks, Position}
-import com.treode.store.{Bytes, SimpleCell, StoreConfig, TxClock}
+import com.treode.store.{Bytes, StoreConfig, TxClock}
 
 private class TierBuilder (config: StoreConfig) (implicit disks: Disks) {
 

@@ -2,7 +2,7 @@ package com.treode.store.paxos
 
 import com.treode.async.{Callback, Fiber}
 import com.treode.store.Bytes
-import com.treode.store.simple.SimpleTable
+import com.treode.store.simple.SimpleMedic
 
 import Acceptor.Status
 
@@ -12,7 +12,7 @@ private class Medic (
     var ballot: BallotNumber,
     var proposal: Proposal,
     var chosen: Option [Bytes],
-    db: SimpleTable.Medic,
+    db: SimpleMedic,
     kit: PaxosKit) {
 
   import kit.scheduler
@@ -56,7 +56,7 @@ private class Medic (
 
 private object Medic {
 
-  def apply (status: Status, db: SimpleTable.Medic, kit: PaxosKit): Medic = {
+  def apply (status: Status, db: SimpleMedic, kit: PaxosKit): Medic = {
     status match {
       case Status.Restoring (key, default) =>
         new Medic (key, default, BallotNumber.zero, Option.empty, None, db, kit)
@@ -66,6 +66,6 @@ private object Medic {
         new Medic (key, chosen, BallotNumber.zero, Option.empty, Some (chosen), db, kit)
     }}
 
-  def apply (key: Bytes, default: Bytes, db: SimpleTable.Medic, kit: PaxosKit): Medic =
+  def apply (key: Bytes, default: Bytes, db: SimpleMedic, kit: PaxosKit): Medic =
     new Medic (key, default, BallotNumber.zero, Option.empty, None, db, kit)
 }

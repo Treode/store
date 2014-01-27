@@ -1,5 +1,6 @@
-package com.treode.store
+package com.treode.store.simple
 
+import com.treode.store.Fruits
 import org.scalatest.FlatSpec
 
 import Fruits.{Apple, Orange}

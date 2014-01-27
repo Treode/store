@@ -1,8 +1,7 @@
 package com.treode.store.simple
 
 import com.treode.async.{AsyncIterator, Callback, CallbackCaptor}
-import com.treode.store.{Bytes, Fruits, SimpleCell}
-import com.treode.store.SimpleTestTools
+import com.treode.store.{Bytes, Fruits}
 import org.scalatest.FlatSpec
 
 import Fruits.{Apple, Banana, Orange}

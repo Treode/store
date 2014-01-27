@@ -5,7 +5,7 @@ import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, StoreConfig}
-import com.treode.store.simple.SimpleTable
+import com.treode.store.simple.{SimpleMedic, SimpleTable}
 
 private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
 
@@ -67,7 +67,7 @@ private object Acceptors {
 
     disks.open { implicit recovery =>
 
-      val db = SimpleTable.medic()
+      val db = SimpleMedic()
       val medics = newMedicsMap
 
       def openByStatus (status: Status) {

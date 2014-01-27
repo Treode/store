@@ -1,7 +1,6 @@
 package com.treode.store.simple
 
 import com.treode.async.{AsyncIterator, Callback}
-import com.treode.store.SimpleCell
 
 /** Preserves first cell for key and eliminates subsequent ones. */
 private class OverwritesFilter private extends (SimpleCell => Boolean) {

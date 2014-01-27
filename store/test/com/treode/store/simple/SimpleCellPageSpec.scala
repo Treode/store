@@ -1,8 +1,7 @@
 package com.treode.store.simple
 
 import com.treode.buffer.PagedBuffer
-import com.treode.store.{Bytes, Fruits, SimpleCell}
-import com.treode.store.SimpleTestTools
+import com.treode.store.{Bytes, Fruits}
 import org.scalatest.WordSpec
 
 import Fruits.{AllFruits, Apple, Banana, Kiwi, Kumquat, Orange}

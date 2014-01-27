@@ -3,10 +3,11 @@ package com.treode.store.simple
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.disk.{Disks, Position}
-import com.treode.store.{Bytes, SimpleCell, StoreConfig}
-import SimpleTable.{Medic, Meta}
+import com.treode.store.{Bytes, StoreConfig}
 
-private class SynthMedic (config: StoreConfig) (implicit disks: Disks) extends Medic {
+import SimpleTable.Meta
+
+private class SynthMedic (config: StoreConfig) (implicit disks: Disks) extends SimpleMedic {
 
   private val lock = new ReentrantReadWriteLock
   private val readLock = lock.readLock()

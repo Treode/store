@@ -1,4 +1,6 @@
-package com.treode.store
+package com.treode.store.simple
+
+import com.treode.store.{Bytes, StorePicklers}
 
 private class SimpleCell (val key: Bytes, val value: Option [Bytes])
 extends Ordered [SimpleCell] {
