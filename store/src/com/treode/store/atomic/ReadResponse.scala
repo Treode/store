@@ -9,7 +9,7 @@ private object ReadResponse {
   case class Got (vs: Seq [Value]) extends ReadResponse
   case object Failed extends ReadResponse
 
-  val pickle = {
+  val pickler = {
     import AtomicPicklers._
     tagged [ReadResponse] (
         0x1 -> wrap (seq (value)) .build (Got.apply _) .inspect (_.vs),

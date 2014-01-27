@@ -118,7 +118,7 @@ object LogWriter {
 
   object Meta {
 
-    val pickle = {
+    val pickler = {
       import DiskPicklers._
       wrap (long) build (Meta.apply _) inspect (_.head)
     }}}

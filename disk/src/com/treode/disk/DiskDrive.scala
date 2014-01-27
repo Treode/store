@@ -42,7 +42,7 @@ private class DiskDrive (
         logw.checkpoint (gen),
         pagew.checkpoint (gen))
     val buffer = PagedBuffer (12)
-    pickle (SuperBlock.pickle, superblock, buffer)
+    pickle (SuperBlock.pickler, superblock, buffer)
     val pos = if ((boot.gen & 1) == 0) 0 else SuperBlockBytes
     file.flush (buffer, pos, cb)
   }

@@ -49,7 +49,7 @@ class RequestDescriptor [Req, Rsp] (id: MailboxId, preq: Pickler [Req], prsp: Pi
 
   private val _preq = {
     import Picklers._
-    tuple (MailboxId.pickle, preq)
+    tuple (MailboxId.pickler, preq)
   }
 
   def listen (f: (Req, Mediator) => Any) (implicit c: Cluster): Unit =

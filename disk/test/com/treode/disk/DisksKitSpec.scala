@@ -45,7 +45,7 @@ class DisksKitSpec extends FreeSpec {
       fill (buffer, pos, 1, cb)
       scheduler.runTasks()
       cb.passed
-      unpickle (SuperBlock.pickle, buffer)
+      unpickle (SuperBlock.pickler, buffer)
     }
 
     def expectSuperBlock (id: Int, gen: Int, disks: Set [String], config: DiskDriveConfig) {
@@ -60,7 +60,7 @@ class DisksKitSpec extends FreeSpec {
     def writeSuperBlock (id: Int, gen: Int, disks: Set [String], config: DiskDriveConfig) {
       val block = mkSuperBlock (this, id, gen, disks, config, scheduler)
       val buffer = PagedBuffer (12)
-      pickle (SuperBlock.pickle, block, buffer)
+      pickle (SuperBlock.pickler, block, buffer)
       val pos = if ((block.boot.gen & 1) == 0) 0 else SuperBlockBytes
       val cb = new CallbackCaptor [Unit]
       flush (buffer, pos, cb)

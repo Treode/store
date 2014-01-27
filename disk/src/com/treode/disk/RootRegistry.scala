@@ -43,7 +43,7 @@ private object RootRegistry {
 
     val empty = Meta (0, Position (0, 0, 0))
 
-    val pickle = {
+    val pickler = {
       import DiskPicklers._
       wrap (int, pos)
       .build ((Meta.apply _).tupled)

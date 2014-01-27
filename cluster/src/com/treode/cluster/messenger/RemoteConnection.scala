@@ -187,7 +187,7 @@ private class RemoteConnection (
     val input = PagedBuffer (12)
     socket.fill (input, 9, new Callback [Unit] {
       def pass (v: Unit) {
-        val Hello (clientId) = unpickle (Hello.pickle, input)
+        val Hello (clientId) = unpickle (Hello.pickler, input)
         if (clientId == id) {
           connect (socket, input, localId)
         } else {
@@ -202,7 +202,7 @@ private class RemoteConnection (
 
   private def sayHello (socket: Socket) {
     val buffer = PagedBuffer (12)
-    pickle (Hello.pickle, Hello (localId), buffer)
+    pickle (Hello.pickler, Hello (localId), buffer)
     socket.flush (buffer, new Callback [Unit] {
       def pass (v: Unit) {
         hearHello (socket)

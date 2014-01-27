@@ -17,7 +17,7 @@ object HostId extends Ordering [HostId] {
   implicit def apply (id: Long): HostId =
     new HostId (id)
 
-  val pickle = {
+  val pickler = {
     import Picklers._
     wrap (fixedLong) build (apply _) inspect (_.id)
   }

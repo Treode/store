@@ -30,7 +30,7 @@ object MailboxId {
     new MailboxId (id)
   }
 
-  val pickle = {
+  val pickler = {
     import Picklers._
     wrap (fixedLong) build (apply _) inspect (_.id)
   }}

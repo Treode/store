@@ -17,7 +17,7 @@ private class PaxosKit (implicit val random: Random, val scheduler: Scheduler,
   val proposers = new Proposers (this)
 
   def locate (key: Bytes): Acknowledgements =
-    cluster.locate (Bytes.pickle, 0, key)
+    cluster.locate (Bytes.pickler, 0, key)
 
   def lead (key: Bytes, value: Bytes, cb: Callback [Bytes]): Unit =
     guard (cb) {

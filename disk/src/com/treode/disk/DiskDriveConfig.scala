@@ -59,7 +59,7 @@ object DiskDriveConfig {
         diskBytes)
   }
 
-  val pickle = {
+  val pickler = {
     import DiskPicklers._
     wrap (int, int, long)
     .build ((apply _).tupled)

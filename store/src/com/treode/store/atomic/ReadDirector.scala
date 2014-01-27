@@ -20,7 +20,7 @@ private class ReadDirector (
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)
-  val mbx = cluster.open (ReadResponse.pickle, fiber)
+  val mbx = cluster.open (ReadResponse.pickler, fiber)
 
   val backoff = readBackoff.iterator
   val acks = cluster.locate (0)

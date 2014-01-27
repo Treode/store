@@ -7,8 +7,8 @@ private case class Hello (id: HostId)
 
 private object Hello {
 
-  val pickle = {
+  val pickler = {
     import Picklers._
     tagged [Hello] (
-      0x1 -> wrap (HostId.pickle) .build (apply _) .inspect (_.id))
+      0x1 -> wrap (HostId.pickler) .build (apply _) .inspect (_.id))
   }}

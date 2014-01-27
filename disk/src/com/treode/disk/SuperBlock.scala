@@ -10,7 +10,7 @@ private case class SuperBlock (
 
 private object SuperBlock {
 
-  val pickle = {
+  val pickler = {
     import DiskPicklers._
     wrap (int, boot, config, alloc, log, pages)
     .build ((SuperBlock.apply _).tupled)

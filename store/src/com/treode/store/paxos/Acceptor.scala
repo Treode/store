@@ -361,7 +361,7 @@ private object Acceptor {
       def default = chosen
     }
 
-    val pickle = {
+    val pickler = {
       import PaxosPicklers._
       tagged [Status] (
           0x1 -> wrap (bytes, bytes)

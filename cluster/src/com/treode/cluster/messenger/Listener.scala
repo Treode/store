@@ -22,7 +22,7 @@ class Listener (
 
   private def sayHello (socket: Socket, input: PagedBuffer, remoteId: HostId) {
     val buffer = PagedBuffer (12)
-    pickle (Hello.pickle, Hello (localId), buffer)
+    pickle (Hello.pickler, Hello (localId), buffer)
     socket.flush (buffer, new Callback [Unit] {
       def pass (v: Unit) {
         peers.get (remoteId) connect (socket, input, remoteId)
@@ -37,7 +37,7 @@ class Listener (
     val buffer = PagedBuffer (12)
     socket.fill (buffer, 9, new Callback [Unit] {
       def pass (v: Unit) {
-        val Hello (remoteId) = unpickle (Hello.pickle, buffer)
+        val Hello (remoteId) = unpickle (Hello.pickler, buffer)
         sayHello (socket, buffer, remoteId)
       }
       def fail (t: Throwable) {

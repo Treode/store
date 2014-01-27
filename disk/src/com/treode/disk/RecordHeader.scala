@@ -1,14 +1,14 @@
 package com.treode.disk
 
-sealed abstract class RecordHeader
+private sealed abstract class RecordHeader
 
-object RecordHeader {
+private object RecordHeader {
 
   case object End extends RecordHeader
   case class Continue (seg: Int) extends RecordHeader
   case class Entry (time: Long, id: TypeId) extends RecordHeader
 
-  val pickle = {
+  val pickler = {
     import DiskPicklers._
     tagged [RecordHeader] (
         0x1 -> const (End),

@@ -45,7 +45,7 @@ private object Allocator {
 
   object Meta {
 
-    val pickle = {
+    val pickler = {
       import Picklers._
       val intset = IntSet.pickle
       wrap (intset) build (Meta.apply _) inspect (_.free)

@@ -7,7 +7,7 @@ import com.treode.async._
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.unpickle
 
-class RecoveryKit (scheduler: Scheduler, disks: DisksKit) extends Recovery {
+private class RecoveryKit (scheduler: Scheduler, disks: DisksKit) extends Recovery {
 
   private val records = new RecordRegistry
   private var openers = new ArrayList [Recovery => Any]
@@ -89,6 +89,4 @@ class RecoveryKit (scheduler: Scheduler, disks: DisksKit) extends Recovery {
     }
 
     disks.fill (buf, meta.pos, rootsRead)
-  }
-
-}
+  }}

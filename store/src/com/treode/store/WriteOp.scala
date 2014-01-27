@@ -15,7 +15,7 @@ object WriteOp {
 
   case class Delete (table: TableId, key: Bytes) extends WriteOp
 
-  val pickle = {
+  val pickler = {
     import StorePicklers._
     tagged [WriteOp] (
         0x1 -> wrap (tableId, bytes, bytes)

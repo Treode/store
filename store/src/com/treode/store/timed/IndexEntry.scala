@@ -10,7 +10,7 @@ private class IndexEntry (val key: Bytes, val time: TxClock, val disk: Int, val 
 
   def pos = Position (disk, offset, length)
 
-  def byteSize = size (IndexEntry.pickle, this)
+  def byteSize = size (IndexEntry.pickler, this)
 
   def compare (that: IndexEntry): Int = {
     val r = key compare that.key
@@ -34,7 +34,7 @@ private object IndexEntry extends Ordering [IndexEntry] {
   def compare (x: IndexEntry, y: IndexEntry): Int =
     x compare y
 
-  val pickle = {
+  val pickler = {
     import StorePicklers._
     wrap (bytes, txClock, uint, ulong, uint)
     .build (v => (IndexEntry (v._1, v._2, v._3, v._4, v._5)))

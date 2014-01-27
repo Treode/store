@@ -33,7 +33,7 @@ object BallotNumber extends Ordering [BallotNumber] {
 
   def compare (x: BallotNumber, y: BallotNumber) = x compare (y)
 
-  val pickle = {
+  val pickler = {
     import PaxosPicklers._
     wrap (long, hostId) build {
       v => BallotNumber (v._1, v._2)

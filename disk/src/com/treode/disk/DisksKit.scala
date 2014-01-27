@@ -39,7 +39,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
       def unpickleSuperBlock (pos: Int): Option [SuperBlock] =
         try {
           buffer.readPos = pos
-          Some (unpickle (SuperBlock.pickle, buffer))
+          Some (unpickle (SuperBlock.pickler, buffer))
         } catch {
           case e: Throwable => None
         }

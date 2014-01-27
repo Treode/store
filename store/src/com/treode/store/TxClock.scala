@@ -31,7 +31,7 @@ object TxClock extends Ordering [TxClock] {
   def compare (x: TxClock, y: TxClock): Int =
     x compare y
 
-  val pickle = {
+  val pickler = {
     import Picklers._
     wrap (ulong) build (new TxClock (_)) inspect (_.time)
   }}

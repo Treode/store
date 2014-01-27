@@ -5,7 +5,7 @@ import com.treode.pickle.size
 private class SimpleCell (val key: Bytes, val value: Option [Bytes])
 extends Ordered [SimpleCell] {
 
-  def byteSize = size (SimpleCell.pickle, this)
+  def byteSize = size (SimpleCell.pickler, this)
 
   def compare (that: SimpleCell): Int = key compare that.key
 
@@ -28,7 +28,7 @@ private object SimpleCell extends Ordering [SimpleCell] {
   def compare (x: SimpleCell, y: SimpleCell): Int =
     x compare y
 
-  val pickle = {
+  val pickler = {
     import StorePicklers._
     wrap (bytes, option (bytes)) build ((apply _).tupled) inspect (v => (v.key, v.value))
   }}

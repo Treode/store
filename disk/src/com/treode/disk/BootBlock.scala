@@ -6,7 +6,7 @@ private case class BootBlock (gen: Int, disks: Set [Path], roots: RootRegistry.M
 
 private object BootBlock {
 
-  val pickle = {
+  val pickler = {
     import DiskPicklers._
     wrap (int, set (path), roots)
     .build ((apply _).tupled)

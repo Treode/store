@@ -65,7 +65,7 @@ object Bytes extends Ordering [Bytes] {
   def compare (x: Bytes, y: Bytes): Int =
     x compare y
 
-  val pickle = {
+  val pickler = {
     new Pickler [Bytes] {
 
       def p (v: Bytes, ctx: PickleContext) {

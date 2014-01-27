@@ -5,12 +5,12 @@ import com.treode.store.StorePicklers
 
 private class PaxosPicklers extends StorePicklers {
 
-  def acceptorStatus = Acceptor.Status.pickle
-  def ballotNumber = BallotNumber.pickle
+  def acceptorStatus = Acceptor.Status.pickler
+  def ballotNumber = BallotNumber.pickler
 }
 
 private object PaxosPicklers extends PaxosPicklers {
 
-  val position = Position.pickle
+  val position = Position.pickler
   val proposal = option (tuple (ballotNumber, bytes))
 }

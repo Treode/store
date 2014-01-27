@@ -26,12 +26,12 @@ private object RecordRegistry {
       def isEphemeralId (id: TypeId) = false
 
       def readHeader (in: Input): (Option [TypeId], RecordHeader) = {
-        val hdr = unpickle (RecordHeader.pickle, in)
+        val hdr = unpickle (RecordHeader.pickler, in)
         hdr match {
           case RecordHeader.Entry (time, id) => (Some (id), hdr)
           case _ => (None, hdr)
         }}
 
       def writeHeader (hdr: RecordHeader, out: Output) {
-        pickle (RecordHeader.pickle, hdr, out)
+        pickle (RecordHeader.pickler, hdr, out)
       }}}

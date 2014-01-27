@@ -4,9 +4,9 @@ import com.treode.store.StorePicklers
 
 private class AtomicPicklers extends StorePicklers {
 
-  def txStatus = TxStatus.pickle
-  def readResponse = ReadResponse.pickle
-  def writeResponse = WriteResponse.pickle
+  def txStatus = TxStatus.pickler
+  def readResponse = ReadResponse.pickler
+  def writeResponse = WriteResponse.pickler
 }
 
 private object AtomicPicklers extends AtomicPicklers

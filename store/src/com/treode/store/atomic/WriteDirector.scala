@@ -18,7 +18,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)
-  val mbx = cluster.open (WriteResponse.pickle, fiber)
+  val mbx = cluster.open (WriteResponse.pickler, fiber)
   var state: State = new Opening
 
   val backoff = prepareBackoff.iterator

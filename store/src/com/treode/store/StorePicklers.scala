@@ -6,15 +6,15 @@ import com.treode.pickle.Picklers
 
 private trait StorePicklers extends Picklers {
 
-  def bytes = Bytes.pickle
-  def hostId = HostId.pickle
-  def pos = Position.pickle
-  def readOp = ReadOp.pickle
-  def tableId = TableId.pickle
-  def txClock = TxClock.pickle
-  def txId = TxId.pickle
-  def value = Value.pickle
-  def writeOp = WriteOp.pickle
+  def bytes = Bytes.pickler
+  def hostId = HostId.pickler
+  def pos = Position.pickler
+  def readOp = ReadOp.pickler
+  def tableId = TableId.pickler
+  def txClock = TxClock.pickler
+  def txId = TxId.pickler
+  def value = Value.pickler
+  def writeOp = WriteOp.pickler
 }
 
 private object StorePicklers extends StorePicklers

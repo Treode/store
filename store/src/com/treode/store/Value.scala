@@ -12,7 +12,7 @@ object Value {
 
   val empty = Value (TxClock.zero, None)
 
-  val pickle = {
+  val pickler = {
     import StorePicklers._
     wrap (txClock, option (bytes))
     .build ((apply _).tupled)

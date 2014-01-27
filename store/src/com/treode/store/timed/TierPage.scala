@@ -7,14 +7,14 @@ trait TierPage
 
 object TierPage {
 
-  val pickle = {
+  val pickler = {
     import Picklers._
     tagged [TierPage] (
-      0x1 -> IndexPage.pickle,
-      0x2 -> CellPage.pickle)
+      0x1 -> IndexPage.pickler,
+      0x2 -> CellPage.pickler)
   }
 
   val page = {
     import Picklers._
-    new PageDescriptor (0x45CF6FFC, const (0), pickle)
+    new PageDescriptor (0x45CF6FFC, const (0), pickler)
   }}

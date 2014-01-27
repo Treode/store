@@ -27,8 +27,8 @@ class SimpleCellPageSpec extends WordSpec {
 
   private def checkPickle (page: CellPage) {
     val buffer = PagedBuffer (12)
-    pickle (CellPage.pickle, page, buffer)
-    val result = unpickle (CellPage.pickle, buffer)
+    pickle (CellPage.pickler, page, buffer)
+    val result = unpickle (CellPage.pickler, buffer)
     pagesEqual (page, result)
   }
 

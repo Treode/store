@@ -5,7 +5,7 @@ import com.treode.pickle.size
 private class TimedCell (val key: Bytes, val time: TxClock, val value: Option [Bytes])
 extends Ordered [TimedCell] {
 
-  def byteSize = size (TimedCell.pickle, this)
+  def byteSize = size (TimedCell.pickler, this)
 
   def compare (that: TimedCell): Int = {
     val rk = key compare that.key
@@ -36,7 +36,7 @@ private object TimedCell extends Ordering [TimedCell] {
   def compare (x: TimedCell, y: TimedCell): Int =
     x compare y
 
-  val pickle = {
+  val pickler = {
     import StorePicklers._
     wrap (bytes, txClock, option (bytes))
     .build ((apply _).tupled)

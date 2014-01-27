@@ -30,8 +30,8 @@ class IndexPageSpec extends WordSpec {
 
   private def checkPickle (page: IndexPage) {
     val buffer = PagedBuffer (12)
-    pickle (IndexPage.pickle, page, buffer)
-    val result = unpickle (IndexPage.pickle, buffer)
+    pickle (IndexPage.pickler, page, buffer)
+    val result = unpickle (IndexPage.pickler, buffer)
     pagesEqual (page, result)
   }
 

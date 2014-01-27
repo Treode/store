@@ -39,7 +39,7 @@ private object CellPage {
   private val _pickle: Pickler [CellPage] =
     new AbstractPagePickler [CellPage, SimpleCell] {
 
-      private [this] val value = Picklers.option (Bytes.pickle)
+      private [this] val value = Picklers.option (Bytes.pickler)
 
       protected def writeEntry (entry: SimpleCell, ctx: PickleContext) {
         writeKey (entry.key, ctx)
@@ -64,7 +64,7 @@ private object CellPage {
         new CellPage (_u (ctx))
   }
 
-  val pickle = {
+  val pickler = {
     import Picklers._
     tagged [CellPage] (0x1 -> _pickle)
   }}

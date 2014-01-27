@@ -10,7 +10,7 @@ object TxStatus {
 
   case class Committed (wt: TxClock) extends TxStatus
 
-  val pickle = {
+  val pickler = {
     import AtomicPicklers._
     tagged [TxStatus] (
         0x1 -> const (Aborted),

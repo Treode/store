@@ -14,7 +14,7 @@ object TableId {
   implicit def apply (id: Long): TableId =
     new TableId (id)
 
-  val pickle = {
+  val pickler = {
     import Picklers._
     wrap (fixedLong) build (apply _) inspect (_.id)
   }}

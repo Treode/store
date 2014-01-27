@@ -15,7 +15,7 @@ object TxId {
   implicit def apply (id: Long): TxId =
     new TxId (Bytes (id))
 
-  val pickle = {
+  val pickler = {
     import StorePicklers._
     wrap (bytes) build (apply _) inspect (_.id)
   }}

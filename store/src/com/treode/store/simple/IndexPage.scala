@@ -80,7 +80,7 @@ private object IndexPage {
         new IndexPage (_u (ctx))
   }
 
-  val pickle = {
+  val pickler = {
     import Picklers._
     tagged [IndexPage] (0x1 -> _pickle)
   }}

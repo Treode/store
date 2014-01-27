@@ -39,7 +39,7 @@ private object IndexPage {
   private val _pickle: Pickler [IndexPage] =
     new AbstractPagePickler [IndexPage, IndexEntry] {
 
-      private [this] val txClock = TxClock.pickle
+      private [this] val txClock = TxClock.pickler
       private [this] val disk = Picklers.uint
       private [this] val offset = Picklers.ulong
       private [this] val length = Picklers.uint
@@ -85,7 +85,7 @@ private object IndexPage {
         new IndexPage (_u (ctx))
     }
 
-  val pickle = {
+  val pickler = {
     import Picklers._
     tagged [IndexPage] (0x1 -> _pickle)
   }}

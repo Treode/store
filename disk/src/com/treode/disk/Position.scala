@@ -4,7 +4,7 @@ case class Position (disk: Int, offset: Long, length: Int)
 
 object Position {
 
-  val pickle = {
+  val pickler = {
     import DiskPicklers._
     wrap (int, long, int)
     .build ((Position.apply _).tupled)

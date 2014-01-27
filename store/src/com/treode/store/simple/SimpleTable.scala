@@ -25,7 +25,7 @@ object SimpleTable {
 
   object Meta {
 
-    val pickle = {
+    val pickler = {
       import StorePicklers._
       wrap (long, array (pos))
       .build ((Meta.apply _).tupled)

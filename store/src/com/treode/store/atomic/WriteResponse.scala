@@ -13,7 +13,7 @@ private object WriteResponse {
   case object Aborted extends WriteResponse
   case object Failed extends WriteResponse
 
-  val pickle = {
+  val pickler = {
     import AtomicPicklers._
     tagged [WriteResponse] (
         0x1 -> wrap (txClock) .build (Prepared.apply _) .inspect (_.ft),

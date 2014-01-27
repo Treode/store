@@ -12,7 +12,7 @@ object TypeId {
   implicit def apply (id: Int): TypeId =
     new TypeId (id)
 
-  val pickle = {
+  val pickler = {
     import DiskPicklers._
     wrap (fixedInt) build (new TypeId (_)) inspect (_.id)
   }}
