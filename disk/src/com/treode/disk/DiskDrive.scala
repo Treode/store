@@ -4,7 +4,7 @@ import java.nio.file.Path
 import com.treode.async.{Callback, Scheduler, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{Pickler, pickle}
+import com.treode.pickle.Pickler
 
 private class DiskDrive (
     val id: Int,
@@ -42,7 +42,7 @@ private class DiskDrive (
         logw.checkpoint (gen),
         pagew.checkpoint (gen))
     val buffer = PagedBuffer (12)
-    pickle (SuperBlock.pickler, superblock, buffer)
+    SuperBlock.pickler.pickle (superblock, buffer)
     val pos = if ((boot.gen & 1) == 0) 0 else SuperBlockBytes
     file.flush (buffer, pos, cb)
   }

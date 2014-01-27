@@ -1,7 +1,6 @@
 package com.treode.store.timed
 
 import com.google.common.primitives.Longs
-import com.treode.pickle.size
 import com.treode.store.{Bytes, StorePicklers, TxClock}
 import com.treode.disk.Position
 
@@ -10,7 +9,7 @@ private class IndexEntry (val key: Bytes, val time: TxClock, val disk: Int, val 
 
   def pos = Position (disk, offset, length)
 
-  def byteSize = size (IndexEntry.pickler, this)
+  def byteSize = IndexEntry.pickler.byteSize (this)
 
   def compare (that: IndexEntry): Int = {
     val r = key compare that.key

@@ -1,11 +1,9 @@
 package com.treode.store
 
-import com.treode.pickle.size
-
 private class TimedCell (val key: Bytes, val time: TxClock, val value: Option [Bytes])
 extends Ordered [TimedCell] {
 
-  def byteSize = size (TimedCell.pickler, this)
+  def byteSize = TimedCell.pickler.byteSize (this)
 
   def compare (that: TimedCell): Int = {
     val rk = key compare that.key

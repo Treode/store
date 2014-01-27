@@ -8,7 +8,6 @@ import com.treode.async.io.{Socket, ServerSocket}
 import com.treode.buffer.PagedBuffer
 import com.treode.cluster.{ClusterEvents, HostId, messenger}
 import com.treode.cluster.events.Events
-import com.treode.pickle.{pickle, unpickle}
 
 class Listener (
   localId: HostId,
@@ -22,7 +21,7 @@ class Listener (
 
   private def sayHello (socket: Socket, input: PagedBuffer, remoteId: HostId) {
     val buffer = PagedBuffer (12)
-    pickle (Hello.pickler, Hello (localId), buffer)
+    Hello.pickler.pickle (Hello (localId), buffer)
     socket.flush (buffer, new Callback [Unit] {
       def pass (v: Unit) {
         peers.get (remoteId) connect (socket, input, remoteId)
@@ -37,7 +36,7 @@ class Listener (
     val buffer = PagedBuffer (12)
     socket.fill (buffer, 9, new Callback [Unit] {
       def pass (v: Unit) {
-        val Hello (remoteId) = unpickle (Hello.pickler, buffer)
+        val Hello (remoteId) = Hello.pickler.unpickle (buffer)
         sayHello (socket, buffer, remoteId)
       }
       def fail (t: Throwable) {

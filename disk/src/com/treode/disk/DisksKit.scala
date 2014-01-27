@@ -7,7 +7,6 @@ import scala.collection.immutable.Queue
 import com.treode.async._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.unpickle
 
 private class DisksKit (implicit scheduler: Scheduler) extends Disks {
 
@@ -39,7 +38,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
       def unpickleSuperBlock (pos: Int): Option [SuperBlock] =
         try {
           buffer.readPos = pos
-          Some (unpickle (SuperBlock.pickler, buffer))
+          Some (SuperBlock.pickler.unpickle (buffer))
         } catch {
           case e: Throwable => None
         }

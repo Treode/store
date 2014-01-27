@@ -3,7 +3,7 @@ package com.treode.disk
 import com.treode.async.{Callback, callback}
 import com.treode.async.io.{File, Framer}
 import com.treode.buffer.{Input, PagedBuffer, Output}
-import com.treode.pickle.{Pickler, pickle, unpickle}
+import com.treode.pickle.Pickler
 
 private class RecordRegistry {
 
@@ -26,12 +26,12 @@ private object RecordRegistry {
       def isEphemeralId (id: TypeId) = false
 
       def readHeader (in: Input): (Option [TypeId], RecordHeader) = {
-        val hdr = unpickle (RecordHeader.pickler, in)
+        val hdr = RecordHeader.pickler.unpickle (in)
         hdr match {
           case RecordHeader.Entry (time, id) => (Some (id), hdr)
           case _ => (None, hdr)
         }}
 
       def writeHeader (hdr: RecordHeader, out: Output) {
-        pickle (RecordHeader.pickler, hdr, out)
+        RecordHeader.pickler.pickle (hdr, out)
       }}}

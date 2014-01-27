@@ -6,7 +6,6 @@ import scala.collection.JavaConversions._
 import com.treode.async.{Callback, Scheduler, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.pickle
 
 import RecordHeader.{Continue, End}
 

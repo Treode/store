@@ -2,7 +2,7 @@ package com.treode.disk
 
 import com.treode.async.Callback
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{Pickler, pickle, size}
+import com.treode.pickle.Pickler
 
 private trait PickledRecord {
 
@@ -19,7 +19,7 @@ private object PickledRecord {
       val hdr = RecordHeader.Entry (_time, desc.id)
       def cb = _cb
       def time = _time
-      val byteSize = 17 + size (desc.prec, entry) // TODO: Yikes! A magic number...
+      val byteSize = 17 + desc.prec.byteSize (entry) // TODO: Yikes! A magic number...
       def write (buf: PagedBuffer) =
         RecordRegistry.framer.write (desc.prec, hdr, entry, buf)
       override def toString = s"PickledRecord(${desc.id}, $time, $entry)"

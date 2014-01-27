@@ -2,7 +2,7 @@ package com.treode.disk
 
 import com.treode.async.Callback
 import com.treode.buffer.Output
-import com.treode.pickle.{Pickler, pickle, size}
+import com.treode.pickle.Pickler
 
 import TagRegistry.Tagger
 
@@ -20,7 +20,7 @@ private object PickledPage {
     new PickledPage {
       def group = TagRegistry.tagger (desc.pgrp, desc.id.id, _group)
       def cb = _cb
-      def byteSize = size (desc.ppag, page)
-      def write (out: Output) = pickle (desc.ppag, page, out)
+      def byteSize = desc.ppag.byteSize (page)
+      def write (out: Output) = desc.ppag.pickle (page, out)
       override def toString = s"PickledPage($group)"
     }}

@@ -1,7 +1,6 @@
 package com.treode.store.simple
 
 import com.google.common.primitives.Longs
-import com.treode.pickle.size
 import com.treode.store.{Bytes, StorePicklers, TxClock}
 import com.treode.disk.Position
 
@@ -10,7 +9,7 @@ extends Ordered [IndexEntry] {
 
   def pos = Position (disk, offset, length)
 
-  def byteSize = size (IndexEntry.pickler, this)
+  def byteSize = IndexEntry.pickler.byteSize (this)
 
   def compare (that: IndexEntry): Int = key compare that.key
 

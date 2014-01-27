@@ -5,12 +5,12 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.util.Arrays
 
 import com.google.common.primitives.UnsignedBytes
-import com.treode.pickle._
+import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 
 class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
 
   def unpickle [A] (p: Pickler [A]): A =
-    fromByteArray (p, bytes)
+    p.fromByteArray (bytes)
 
   /** Only applies if this was created using `Bytes (String, Charset)`. */
   def string (cs: Charset): String = {
@@ -48,7 +48,7 @@ object Bytes extends Ordering [Bytes] {
     new Bytes (bytes)
 
   def apply [A] (pk: Pickler [A], v: A): Bytes =
-    new Bytes (toByteArray (pk, v))
+    new Bytes (pk.toByteArray (v))
 
   /** Yield a Bytes object directly from the string. */
   def apply (s: String, cs: Charset = StandardCharsets.UTF_8): Bytes =

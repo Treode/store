@@ -40,8 +40,8 @@ private trait PicklersSpecCommon extends ShouldMatchers {
   def check [A] (pa: Pickler [A], x: A) {
     expectResult (x) {
       val buffer = PagedBuffer (10)
-      pickle (pa, x, buffer)
-      val y = unpickle (pa, buffer)
+      pa.pickle (x, buffer)
+      val y = pa.unpickle (buffer)
       y
     }}}
 

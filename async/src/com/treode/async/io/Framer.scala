@@ -3,7 +3,7 @@ package com.treode.async.io
 import java.util.concurrent.ConcurrentHashMap
 import com.treode.async.Callback
 import com.treode.buffer.{Input, PagedBuffer, Output}
-import com.treode.pickle._
+import com.treode.pickle.{Pickler, PickleContext, UnpickleContext}
 
 class Framer [ID, H, T] (strategy: Framer.Strategy [ID, H]) {
   import Framer.Unpickler
@@ -59,7 +59,7 @@ class Framer [ID, H, T] (strategy: Framer.Strategy [ID, H]) {
   def read [P] (p: Pickler [P], hdr: H, v: P): SocketFrame = {
     val buf = new PagedBuffer (12)
     strategy.writeHeader (hdr, buf)
-    pickle (p, v, buf)
+    p.pickle (v, buf)
     read (buf.writePos, buf)
   }
 
@@ -159,7 +159,7 @@ object Framer {
 
     def apply [ID, P, T] (p: Pickler [P], id: ID, reader: P => T): Unpickler [T] =
       new Unpickler [T] {
-        def read (in: Input): T = reader (unpickle (p, in))
+        def read (in: Input): T = reader (p.unpickle (in))
         override def toString = s"Unpickler($id)"
     }}
 
@@ -184,7 +184,7 @@ object Framer {
       val preamble = out.writePos
       out.writePos = preamble + 4
       writeHeader (hdr, out)
-      pickle (p, v, out)
+      p.pickle (v, out)
       val end = out.writePos
       out.writePos = preamble
       out.writeInt (end - preamble - 4)

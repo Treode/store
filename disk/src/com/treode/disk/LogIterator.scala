@@ -3,7 +3,6 @@ package com.treode.disk
 import com.treode.async.{AsyncIterator, Callback, callback, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.unpickle
 
 private class LogIterator private (file: File, alloc: SegmentAllocator, records: RecordRegistry)
 extends AsyncIterator [(Long, Unit => Any)] {

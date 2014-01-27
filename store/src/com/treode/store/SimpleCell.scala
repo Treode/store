@@ -1,11 +1,9 @@
 package com.treode.store
 
-import com.treode.pickle.size
-
 private class SimpleCell (val key: Bytes, val value: Option [Bytes])
 extends Ordered [SimpleCell] {
 
-  def byteSize = size (SimpleCell.pickler, this)
+  def byteSize = SimpleCell.pickler.byteSize (this)
 
   def compare (that: SimpleCell): Int = key compare that.key
 

@@ -5,7 +5,7 @@ import scala.reflect.ClassTag
 import com.google.common.cache.{CacheBuilder, CacheLoader, Cache}
 import com.treode.async.{Callback, Future, Scheduler, callback, guard}
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{Pickler, unpickle}
+import com.treode.pickle.Pickler
 
 private class PageCache (scheduler: Scheduler) {
 
@@ -17,7 +17,7 @@ private class PageCache (scheduler: Scheduler) {
         val disk = disks (pos.disk)
         val buf = PagedBuffer (12)
         disk.fill (buf, pos.offset, pos.length, callback (fut) { _ =>
-          unpickle (desc.ppag, buf)
+          desc.ppag.unpickle (buf)
         })
       }
       fut

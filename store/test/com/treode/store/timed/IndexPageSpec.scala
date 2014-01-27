@@ -1,7 +1,6 @@
 package com.treode.store.timed
 
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{pickle, unpickle}
 import com.treode.store.{Bytes, Fruits, TxClock}
 import org.scalatest.WordSpec
 
@@ -30,8 +29,8 @@ class IndexPageSpec extends WordSpec {
 
   private def checkPickle (page: IndexPage) {
     val buffer = PagedBuffer (12)
-    pickle (IndexPage.pickler, page, buffer)
-    val result = unpickle (IndexPage.pickler, buffer)
+    IndexPage.pickler.pickle (page, buffer)
+    val result = IndexPage.pickler.unpickle (buffer)
     pagesEqual (page, result)
   }
 

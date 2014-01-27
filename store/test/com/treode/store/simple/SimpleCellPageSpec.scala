@@ -1,7 +1,6 @@
 package com.treode.store.simple
 
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{pickle, unpickle}
 import com.treode.store.{Bytes, Fruits, SimpleCell}
 import com.treode.store.SimpleTestTools
 import org.scalatest.WordSpec
@@ -27,8 +26,8 @@ class SimpleCellPageSpec extends WordSpec {
 
   private def checkPickle (page: CellPage) {
     val buffer = PagedBuffer (12)
-    pickle (CellPage.pickler, page, buffer)
-    val result = unpickle (CellPage.pickler, buffer)
+    CellPage.pickler.pickle (page, buffer)
+    val result = CellPage.pickler.unpickle (buffer)
     pagesEqual (page, result)
   }
 

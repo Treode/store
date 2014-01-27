@@ -3,7 +3,6 @@ package com.treode.store.timed
 import scala.collection.JavaConversions._
 
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{pickle, unpickle}
 import com.treode.store.{Bytes, Fruits, TimedCell, TxClock}
 import org.scalatest.WordSpec
 
@@ -33,8 +32,8 @@ class CellPageSpec extends WordSpec {
 
   private def checkPickle (page: CellPage) {
     val buffer = PagedBuffer (12)
-    pickle (CellPage.pickler, page, buffer)
-    val result = unpickle (CellPage.pickler, buffer)
+    CellPage.pickler.pickle (page, buffer)
+    val result = CellPage.pickler.unpickle (buffer)
     pagesEqual (page, result)
   }
 

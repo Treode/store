@@ -6,7 +6,6 @@ import scala.language.implicitConversions
 import com.treode.async._
 import com.treode.async.io.{File, MockFile, StubFile}
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{pickle, unpickle}
 import org.scalatest.FreeSpec
 
 class DisksKitSpec extends FreeSpec {
@@ -45,7 +44,7 @@ class DisksKitSpec extends FreeSpec {
       fill (buffer, pos, 1, cb)
       scheduler.runTasks()
       cb.passed
-      unpickle (SuperBlock.pickler, buffer)
+      SuperBlock.pickler.unpickle (buffer)
     }
 
     def expectSuperBlock (id: Int, gen: Int, disks: Set [String], config: DiskDriveConfig) {
@@ -60,7 +59,7 @@ class DisksKitSpec extends FreeSpec {
     def writeSuperBlock (id: Int, gen: Int, disks: Set [String], config: DiskDriveConfig) {
       val block = mkSuperBlock (this, id, gen, disks, config, scheduler)
       val buffer = PagedBuffer (12)
-      pickle (SuperBlock.pickler, block, buffer)
+      SuperBlock.pickler.pickle (block, buffer)
       val pos = if ((block.boot.gen & 1) == 0) 0 else SuperBlockBytes
       val cb = new CallbackCaptor [Unit]
       flush (buffer, pos, cb)

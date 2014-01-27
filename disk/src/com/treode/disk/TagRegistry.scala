@@ -47,20 +47,20 @@ private object TagRegistry {
     }}
 
   trait Tagger {
-    def size: Int
     def pickle (ctx: PickleContext)
+    def byteSize: Int
   }
 
   private class TaggerImpl [P] (p: Pickler [P], val id: Long, val v: P)
   extends Tagger {
 
-    def size: Int =
-      com.treode.pickle.size (p, v) + 9
-
     def pickle (ctx: PickleContext) {
       ctx.writeVarULong (id)
       p.p (v, ctx)
     }
+
+    def byteSize: Int =
+      p.byteSize (v) + 9
 
     override def hashCode: Int =
       (id, v).hashCode

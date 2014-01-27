@@ -4,7 +4,7 @@ import com.treode.async.{Callback, Mailbox, Scheduler, callback}
 import com.treode.async.io.{Framer, Socket}
 import com.treode.buffer.{Input, PagedBuffer, Output}
 import com.treode.cluster.{EphemeralMailbox, MailboxId, Peer}
-import com.treode.pickle.{Pickler, pickle, unpickle}
+import com.treode.pickle.Pickler
 
 class MailboxRegistry {
 

@@ -12,7 +12,7 @@ import com.treode.buffer.PagedBuffer
 import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
 import com.treode.cluster.events.Events
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
-import com.treode.pickle.{Pickler, pickle, unpickle}
+import com.treode.pickle.Pickler
 
 private class RemoteConnection (
   val id: HostId,
@@ -187,7 +187,7 @@ private class RemoteConnection (
     val input = PagedBuffer (12)
     socket.fill (input, 9, new Callback [Unit] {
       def pass (v: Unit) {
-        val Hello (clientId) = unpickle (Hello.pickler, input)
+        val Hello (clientId) = Hello.pickler.unpickle (input)
         if (clientId == id) {
           connect (socket, input, localId)
         } else {
@@ -202,7 +202,7 @@ private class RemoteConnection (
 
   private def sayHello (socket: Socket) {
     val buffer = PagedBuffer (12)
-    pickle (Hello.pickler, Hello (localId), buffer)
+    Hello.pickler.pickle (Hello (localId), buffer)
     socket.flush (buffer, new Callback [Unit] {
       def pass (v: Unit) {
         hearHello (socket)
