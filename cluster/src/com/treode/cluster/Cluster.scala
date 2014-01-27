@@ -6,7 +6,7 @@ import com.treode.pickle.Pickler
 
 trait Cluster {
 
-  def register [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any)
+  def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any)
 
   def open [M] (p: Pickler [M], s: Scheduler): EphemeralMailbox [M]
 

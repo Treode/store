@@ -12,15 +12,15 @@ import com.treode.store.simple.SimpleTable
 private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
   import Acceptor.{NoPost, Post, Status}
   import acceptors.db
-  import kit.{disks, scheduler}
+  import kit.{cluster, disks, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
 
   private val fiber = new Fiber (scheduler)
   var state: State = null
 
   trait State {
-    def query (from: Peer, ballot: Long, default: Bytes)
-    def propose (from: Peer, ballot: Long, value: Bytes)
+    def query (proposer: Peer, ballot: Long, default: Bytes)
+    def propose (proposer: Peer, ballot: Long, value: Bytes)
     def choose (chosen: Bytes)
     def checkpoint (cb: Callback [Status])
     def shutdown()
@@ -28,15 +28,15 @@ private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
 
   class Opening extends State {
 
-    def query (from: Peer, ballot: Long, default: Bytes) {
+    def query (proposer: Peer, ballot: Long, default: Bytes) {
       val s = new Restoring (default)
-      s.restore (_.query (from, ballot, default))
+      s.restore (_.query (proposer, ballot, default))
       state = s
     }
 
-    def propose (from: Peer, ballot: Long, value: Bytes) {
+    def propose (proposer: Peer, ballot: Long, value: Bytes) {
       val s = new Restoring (value)
-      s.restore (_.propose (from, ballot, value))
+      s.restore (_.propose (proposer, ballot, value))
       state = s
     }
 
@@ -60,11 +60,11 @@ private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
     var proposers = Set.empty [Peer]
     var postable = {_: Deliberating => ()}
 
-    def promise (ballot: BallotNumber, proposal: Proposal, from: Peer): Unit =
-      postable = (_.promise (ballot, proposal, from))
+    def promise (ballot: BallotNumber, proposal: Proposal, proposer: Peer): Unit =
+      postable = (_.promise (ballot, proposal, proposer))
 
-    def accept (ballot: BallotNumber, value: Bytes, from: Peer): Unit =
-      postable = (_.accept (ballot, value, from))
+    def accept (ballot: BallotNumber, value: Bytes, proposer: Peer): Unit =
+      postable = (_.accept (ballot, value, proposer))
 
     def restore (f: State => Unit) {
       db.get (key, new Callback [Option [Bytes]] {
@@ -73,7 +73,7 @@ private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
           if (state == Restoring.this) {
             state = chosen match {
               case Some (value) =>
-                proposers foreach (Proposer.chosen (key, value) (_))
+                Proposer.chosen (key, value) (proposers)
                 new Closed (value)
               case None =>
                 val s = new Deliberating (default, ballot, proposal, proposers)
@@ -90,19 +90,19 @@ private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
           }}})
     }
 
-    def query (from: Peer, _ballot: Long, default: Bytes) {
-      proposers += from
-      val ballot = BallotNumber (_ballot, from.id)
+    def query (proposer: Peer, _ballot: Long, default: Bytes) {
+      proposers += proposer
+      val ballot = BallotNumber (_ballot, proposer.id)
       if (this.ballot <= ballot) {
-        promise (ballot, proposal, from)
+        promise (ballot, proposal, proposer)
         this.ballot = ballot
       }}
 
-    def propose (from: Peer, _ballot: Long, value: Bytes) {
-      proposers += from
-      val ballot = BallotNumber (_ballot, from.id)
+    def propose (proposer: Peer, _ballot: Long, value: Bytes) {
+      proposers += proposer
+      val ballot = BallotNumber (_ballot, proposer.id)
       if (this.ballot <= ballot) {
-        accept (ballot, value, from)
+        accept (ballot, value, proposer)
         this.ballot = ballot
         this.proposal = Some ((ballot, value))
       }}
@@ -110,8 +110,8 @@ private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
     def choose (chosen: Bytes) {
       state = new Closed (chosen)
       val gen  = db.put (key, chosen)
-      Acceptor.close (key, chosen, gen) (Callback.ignore)
-      proposers foreach (Proposer.chosen (key, chosen) (_))
+      Acceptor.close.record (key, chosen, gen) (Callback.ignore)
+      Proposer.chosen (key, chosen) (proposers)
     }
 
     def checkpoint (cb: Callback [Status]): Unit =
@@ -161,50 +161,50 @@ private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
         kit.propose (key, default, callback (Acceptor.this.choose (_)))
     }
 
-    def open (ballot: Long, default: Bytes, from: Peer): Unit =
+    def open (ballot: Long, default: Bytes, proposer: Peer): Unit =
       post (new Post {
-        def record = Acceptor.open (key, default) (posted)
-        def reply() = Proposer.promise (key, ballot, None) (from)
+        def record = Acceptor.open.record (key, default) (posted)
+        def reply() = Proposer.promise (key, ballot, None) (proposer)
       })
 
-    def promise (ballot: BallotNumber, proposal: Proposal, from: Peer): Unit =
+    def promise (ballot: BallotNumber, proposal: Proposal, proposer: Peer): Unit =
       post (new Post {
-        def record = Acceptor.promise (key, ballot) (posted)
-        def reply() = Proposer.promise (key, ballot.number, proposal) (from)
+        def record = Acceptor.promise.record (key, ballot) (posted)
+        def reply() = Proposer.promise (key, ballot.number, proposal) (proposer)
       })
 
-    def accept (ballot: BallotNumber, value: Bytes, from: Peer): Unit =
+    def accept (ballot: BallotNumber, value: Bytes, proposer: Peer): Unit =
       post (new Post {
-        def record() = Acceptor.accept (key, ballot, value) (posted)
-        def reply() = Proposer.accept (key, ballot.number) (from)
+        def record() = Acceptor.accept.record (key, ballot, value) (posted)
+        def reply() = Proposer.accept (key, ballot.number) (proposer)
       })
 
-    def reaccept (ballot: BallotNumber, from: Peer): Unit =
+    def reaccept (ballot: BallotNumber, proposer: Peer): Unit =
       post (new Post {
-        def record() = Acceptor.reaccept (key, ballot) (posted)
-        def reply() = Proposer.accept (key, ballot.number) (from)
+        def record() = Acceptor.reaccept.record (key, ballot) (posted)
+        def reply() = Proposer.accept (key, ballot.number) (proposer)
       })
 
-    def query (from: Peer, _ballot: Long, default: Bytes) {
-      proposers += from
-      val ballot = BallotNumber (_ballot, from.id)
+    def query (proposer: Peer, _ballot: Long, default: Bytes) {
+      proposers += proposer
+      val ballot = BallotNumber (_ballot, proposer.id)
       if (ballot < this.ballot) {
-        Proposer.refuse (key, this.ballot.number) (from)
+        Proposer.refuse (key, this.ballot.number) (proposer)
       } else {
-        promise (ballot, proposal, from)
+        promise (ballot, proposal, proposer)
         this.ballot = ballot
       }}
 
-    def propose (from: Peer, _ballot: Long, value: Bytes) {
-      proposers += from
-      val ballot = BallotNumber (_ballot, from.id)
+    def propose (proposer: Peer, _ballot: Long, value: Bytes) {
+      proposers += proposer
+      val ballot = BallotNumber (_ballot, proposer.id)
       if (ballot < this.ballot) {
-        Proposer.refuse (key, this.ballot.number) (from)
+        Proposer.refuse (key, this.ballot.number) (proposer)
       } else {
         if (proposal.isDefined && value == proposal.get._2)
-          reaccept (ballot, from)
+          reaccept (ballot, proposer)
         else
-          accept (ballot, value, from)
+          accept (ballot, value, proposer)
         this.ballot = ballot
         this.proposal = Some ((ballot, value))
       }}
@@ -212,7 +212,7 @@ private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
     def choose (chosen: Bytes) {
       state = new Closed (chosen)
       val gen  = db.put (key, chosen)
-      Acceptor.close (key, chosen, gen) (Callback.ignore)
+      Acceptor.close.record (key, chosen, gen) (Callback.ignore)
     }
 
     def checkpoint (cb: Callback [Status]): Unit =
@@ -229,11 +229,11 @@ private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
     // TODO: Purge acceptor from memory once tests are fixed.
     // fiber.delay (closedLifetime) (remove (key, Acceptor.this))
 
-    def query (from: Peer, ballot: Long, default: Bytes): Unit =
-      Proposer.chosen (key, chosen) (from)
+    def query (proposer: Peer, ballot: Long, default: Bytes): Unit =
+      Proposer.chosen (key, chosen) (proposer)
 
-    def propose (from: Peer, ballot: Long, value: Bytes): Unit =
-      Proposer.chosen (key, chosen) (from)
+    def propose (proposer: Peer, ballot: Long, value: Bytes): Unit =
+      Proposer.chosen (key, chosen) (proposer)
 
     def choose (chosen: Bytes): Unit =
       require (chosen == this.chosen, "Paxos disagreement")
@@ -252,8 +252,8 @@ private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
     def checkpoint (cb: Callback [Status]): Unit =
       cb (status)
 
-    def query (from: Peer, ballot: Long, abort: Bytes): Unit = ()
-    def propose (from: Peer, ballot: Long, value: Bytes): Unit = ()
+    def query (proposer: Peer, ballot: Long, abort: Bytes): Unit = ()
+    def propose (proposer: Peer, ballot: Long, value: Bytes): Unit = ()
     def choose (chosen: Bytes): Unit = ()
     def shutdown(): Unit = ()
 
@@ -265,11 +265,11 @@ private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
     override def toString = s"Acceptor.Panicked($key, $thrown)"
   }
 
-  def query (from: Peer, ballot: Long, default: Bytes): Unit =
-    fiber.execute (state.query (from, ballot, default))
+  def query (proposer: Peer, ballot: Long, default: Bytes): Unit =
+    fiber.execute (state.query (proposer, ballot, default))
 
-  def propose (from: Peer, ballot: Long, value: Bytes): Unit =
-    fiber.execute (state.propose (from, ballot, value))
+  def propose (proposer: Peer, ballot: Long, value: Bytes): Unit =
+    fiber.execute (state.propose (proposer, ballot, value))
 
   def choose (chosen: Bytes): Unit =
     fiber.execute (state.choose (chosen))

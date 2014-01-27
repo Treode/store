@@ -6,9 +6,8 @@ trait RequestSender [Rsp] {
 
   type Mailbox = EphemeralMailbox [Rsp]
 
-  def apply (to: Peer, mbx: Mailbox)
-  def apply (to: HostId, mbx: Mailbox) (implicit c: Cluster)
-  def apply (to: Iterable [HostId], mbx: Mailbox) (implicit c: Cluster)
+  def apply (h: Peer, mbx: Mailbox)
+  def apply (hs: Iterable [Peer], mbx: Mailbox) (implicit c: Cluster)
   def apply (acks: Acknowledgements, mbx: Mailbox) (implicit c: Cluster)
 }
 
@@ -17,18 +16,15 @@ object RequestSender {
   def apply [Req, Rsp] (id: MailboxId, preq: Pickler [(MailboxId, Req)], req: Req): RequestSender [Rsp] =
     new RequestSender [Rsp] {
 
-      private def sender (mbx: MailboxId) =
+      private def send (mbx: MailboxId) =
         MessageSender (id, preq, (mbx, req))
 
-      def apply (to: Peer, mbx: Mailbox): Unit =
-        sender (mbx.id) (to)
+      def apply (h: Peer, mbx: Mailbox): Unit =
+        send (mbx.id) (h)
 
-      def apply (to: HostId, mbx: Mailbox) (implicit c: Cluster): Unit =
-        sender (mbx.id) (to)
-
-      def apply (to: Iterable [HostId], mbx: Mailbox) (implicit c: Cluster): Unit =
-        sender (mbx.id) (to)
+      def apply (hs: Iterable [Peer], mbx: Mailbox) (implicit c: Cluster): Unit =
+        hs foreach (send (mbx.id) (_))
 
       def apply (acks: Acknowledgements, mbx: Mailbox) (implicit c: Cluster): Unit =
-        sender (mbx.id) (acks.awaiting)
+        acks.awaiting foreach (h => send (mbx.id) (c.peer (h)))
     }}

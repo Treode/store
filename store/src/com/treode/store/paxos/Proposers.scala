@@ -32,18 +32,18 @@ private class Proposers (kit: PaxosKit) {
     import Proposer.{accept, chosen, promise, refuse}
     import kit.cluster
 
-    refuse.register { case ((key, ballot), c) =>
+    refuse.listen { case ((key, ballot), c) =>
       get (key) refuse (ballot)
     }
 
-    promise.register { case ((key, ballot, proposal), c) =>
+    promise.listen { case ((key, ballot, proposal), c) =>
       get (key) promise (c, ballot, proposal)
     }
 
-    accept.register { case ((key, ballot), c) =>
+    accept.listen { case ((key, ballot), c) =>
       get (key) accept (c, ballot)
     }
 
-    chosen.register { case ((key, v), _) =>
+    chosen.listen { case ((key, v), _) =>
       get (key) chosen (v)
     }}}

@@ -23,7 +23,7 @@ class MailboxRegistry {
     })
   }
 
-  def register [M] (p: Pickler [M], id: MailboxId) (f: (M, Peer) => Any): Unit =
+  def listen [M] (p: Pickler [M], id: MailboxId) (f: (M, Peer) => Any): Unit =
     mailboxes.register (p, id) (f.curried)
 
   private class EphemeralMailboxImpl [M] (val id: MailboxId, mbx: Mailbox [(M, Peer)])

@@ -47,15 +47,15 @@ private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
       as foreach (_.checkpoint (latch))
     }}
 
-    query.register { case ((key, ballot, default), c) =>
+    query.listen { case ((key, ballot, default), c) =>
       get (key) query (c, ballot, default)
     }
 
-    propose.register { case ((key, ballot, value), c) =>
+    propose.listen { case ((key, ballot, value), c) =>
       get (key) propose (c, ballot, value)
     }
 
-    choose.register { case ((key, chosen), c) =>
+    choose.listen { case ((key, chosen), c) =>
       get (key) choose (chosen)
     }}}
 

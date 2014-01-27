@@ -12,11 +12,11 @@ import com.treode.pickle.Pickler
  */
 class MessageDescriptor [M] (val id: MailboxId, val pmsg: Pickler [M]) {
 
-  private [cluster] def register (m: MailboxRegistry) (f: (M, Peer) => Any): Unit =
-    m.register (pmsg, id) (f)
+  private [cluster] def listen (m: MailboxRegistry) (f: (M, Peer) => Any): Unit =
+    m.listen (pmsg, id) (f)
 
-  def register (f: (M, Peer) => Any) (implicit c: Cluster): Unit =
-    c.register (this) (f)
+  def listen (f: (M, Peer) => Any) (implicit c: Cluster): Unit =
+    c.listen (this) (f)
 
   def apply (msg: M) = MessageSender (id, pmsg, msg)
 }

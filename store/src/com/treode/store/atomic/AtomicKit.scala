@@ -15,7 +15,7 @@ private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
 
     val deputy = new ReadDeputy (AtomicKit.this)
 
-    ReadDeputy.read.register { case ((rt, ops), mdtr) =>
+    ReadDeputy.read.listen { case ((rt, ops), mdtr) =>
       deputy.read (mdtr, rt, ops)
     }}
 
@@ -35,15 +35,15 @@ private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
       d1
     }
 
-    prepare.register { case ((xid, ct, ops), mdtr) =>
+    prepare.listen { case ((xid, ct, ops), mdtr) =>
       get (xid) .prepare (mdtr, ct, ops)
     }
 
-    commit.register { case ((xid, wt), mdtr) =>
+    commit.listen { case ((xid, wt), mdtr) =>
       get (xid) .commit (mdtr, wt)
     }
 
-    abort.register { case (xid, mdtr) =>
+    abort.listen { case (xid, mdtr) =>
       get (xid) .abort (mdtr)
     }}
 

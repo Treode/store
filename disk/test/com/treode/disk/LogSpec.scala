@@ -17,7 +17,7 @@ class LogSpec extends FlatSpec {
 
     def recordAndPass (entry: R) (implicit scheduler: StubScheduler, disks: Disks) {
       val cb = new CallbackCaptor [Unit]
-      desc.apply (entry) (cb)
+      desc.record (entry) (cb)
       scheduler.runTasks()
       cb.passed
     }}

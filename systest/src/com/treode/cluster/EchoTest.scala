@@ -101,8 +101,8 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
     val cluster = new Cluster {
 
-      def register [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
-        _mailboxes.register (desc.pmsg, desc.id) (f)
+      def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
+        _mailboxes.listen (desc.pmsg, desc.id) (f)
 
       def open [M] (p: Pickler [M], s: Scheduler): EphemeralMailbox [M] =
         _mailboxes.open (p, s)

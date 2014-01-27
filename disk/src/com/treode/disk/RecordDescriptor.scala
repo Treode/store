@@ -5,7 +5,7 @@ import com.treode.pickle.Pickler
 
 class RecordDescriptor [R] (val id: TypeId, val prec: Pickler [R]) {
 
-  def apply (entry: R) (cb: Callback [Unit]) (implicit disks: Disks): Unit =
+  def record (entry: R) (cb: Callback [Unit]) (implicit disks: Disks): Unit =
     disks.record (this, entry, cb)
 
   def replay (f: R => Any) (implicit recovery: Recovery): Unit =

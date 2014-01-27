@@ -20,7 +20,7 @@ object Echo {
     val backoff = BackoffTimer (100, 200)
     var start = 0L
 
-    _echo.register { case (s, mdtr) =>
+    _echo.listen { case (s, mdtr) =>
       mdtr.respond (s)
     }
 

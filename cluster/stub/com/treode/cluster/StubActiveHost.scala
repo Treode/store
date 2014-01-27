@@ -16,8 +16,8 @@ class StubActiveHost (val localId: HostId, network: StubNetwork) extends Cluster
   private val peers: PeerRegistry =
     new PeerRegistry (localId, new StubConnection (_, localId, network))
 
-  def register [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
-    mailboxes.register (desc.pmsg, desc.id) (f)
+  def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
+    mailboxes.listen (desc.pmsg, desc.id) (f)
 
   def open [M] (p: Pickler [M], s: Scheduler): EphemeralMailbox [M] =
     mailboxes.open (p, s)
