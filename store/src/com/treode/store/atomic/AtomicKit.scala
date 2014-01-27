@@ -6,10 +6,10 @@ import scala.util.Random
 import com.treode.async.{Scheduler, guard}
 import com.treode.cluster.Cluster
 import com.treode.store._
-import com.treode.store.paxos.PaxosKit
+import com.treode.store.paxos.Paxos
 
 private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
-    val cluster: Cluster, val store: LocalStore, val paxos: PaxosStore) extends Store {
+    val cluster: Cluster, val store: LocalStore, val paxos: Paxos) extends Store {
 
   object ReadDeputies {
 

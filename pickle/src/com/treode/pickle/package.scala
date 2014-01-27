@@ -9,7 +9,7 @@ package pickle {
 
   /** A tagged structure encountered an unknown tag. */
   class InvalidTagException (name: String, found: Long) extends PickleException {
-    override def getMessage = "Invalid tag for " + name + ", found " + found
+    override def getMessage = f"Invalid tag for $name, found $found%X"
   }
 
   /** How to read and write an object of a particular type. */

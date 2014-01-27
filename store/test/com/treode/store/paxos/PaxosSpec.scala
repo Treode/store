@@ -21,29 +21,10 @@ object PaxosBehaviors extends WordSpec with PaxosTestTools {
   private val hs = kit.install (3, new StubPaxosHost (_, kit))
   private val host = hs.head
   import kit.{random, scheduler}
-  import host.paxos.{Acceptors, lead}
+  import host.acceptors
+  import host.paxos.lead
 
-  "An acceptor" should {
-
-    val k = Bytes (random.nextLong)
-    var a: Acceptor = null
-
-    "be opening when first opened" in {
-      a = Acceptors.get (k)
-      assert (a.isOpening)
-    }
-
-    "be deliberating after running tasks" in {
-      a.query (host.peer (host.localId), 0, Zero)
-      kit.runTasks()
-      assert (a.isDeliberating)
-    }
-
-    "be opening when removed and reopened" in {
-      Acceptors.remove (k, a)
-      a = Acceptors.get (k)
-      assert (a.isOpening)
-    }}
+  kit.runTasks()
 
   "The paxos implementation" should {
 
@@ -57,7 +38,7 @@ object PaxosBehaviors extends WordSpec with PaxosTestTools {
     }
 
     "leave all acceptors closed and consistent" in {
-      val as = hs map (_.paxos.Acceptors.get (k))
+      val as = hs map (_.acceptors.get (k))
       assert (as forall (_.isClosed))
       expectResult (Set (1)) (as.map (_.getChosen) .flatten.toSet)
     }}}
@@ -73,6 +54,8 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
     val hs = kit.install (3, new StubPaxosHost (_, kit))
     val Seq (h1, h2, h3) = hs
     import kit.{random, scheduler}
+
+    kit.runTasks()
 
     try {
 
@@ -90,7 +73,7 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
       expectResult (v) (cb2.passed)
 
       // Expect all acceptors closed and in agreement.
-      val as = hs map (_.paxos.Acceptors.get (k))
+      val as = hs map (_.acceptors.get (k))
       assert (as forall (_.isClosed))
       expectResult (1) (as.map (_.getChosen) .flatten.toSet.size)
 

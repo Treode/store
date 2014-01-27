@@ -7,7 +7,8 @@ import scala.language.postfixOps
 import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{Cluster, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
-import com.treode.store._
+import com.treode.store.{TxClock, TxId, WriteCallback, WriteOp}
+import com.treode.store.paxos.PaxosAccessor
 
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
   import WriteDirector.deliberate

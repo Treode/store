@@ -41,7 +41,7 @@ object SimpleTable {
     def close(): SimpleTable
   }
 
-  def apply () (implicit disks: Disks, config: StoreConfig): SimpleTable = {
+  def create () (implicit disks: Disks, config: StoreConfig): SimpleTable = {
     val lock = new ReentrantReadWriteLock
     new SynthTable (config, lock, 0, newMemTable, newMemTable, Array.empty)
   }

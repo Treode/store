@@ -9,9 +9,8 @@ import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.store.Bytes
 
 private class Proposer (key: Bytes, kit: PaxosKit) {
-  import kit.Acceptors.locate
-  import kit.Proposers.remove
-  import kit.{cluster, random, scheduler}
+  import kit.proposers.remove
+  import kit.{cluster, locate, random, scheduler}
 
   private val proposingBackoff = BackoffTimer (200, 300, 1 minutes, 7)
   private val confirmingBackoff = BackoffTimer (200, 300, 1 minutes, 7)

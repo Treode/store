@@ -23,7 +23,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
   val log = new LogDispatcher (scheduler)
   val pages = new PageDispatcher (scheduler)
   val cache = new PageCache (scheduler)
-  val recovery = new Recovery (scheduler, this)
+  val recovery = new RecoveryKit (scheduler, this)
   val roots = new RootRegistry (pages)
   var disks = Map.empty [Int, DiskDrive]
   var number = 0
@@ -83,7 +83,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
       }
       if (!attaches.isEmpty) {
         val (first, rest) = attaches.dequeue
-        state = new Attaching (first._1, first._2, rest, checkpoints)
+        state = new Attaching (first._1, first._2, false, rest, checkpoints)
       } else if (!checkpoints.isEmpty) {
         state = new Checkpointing (attaches, checkpoints)
       } else if (!disks.isEmpty) {
@@ -121,7 +121,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
 
     def attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
       guard (cb) {
-        state = new Attaching (items, cb, Queue.empty, checkpoints)
+        state = new Attaching (items, cb, true, Queue.empty, checkpoints)
       }
 
     def checkpoint (cb: Callback [Unit]): Unit =
@@ -230,6 +230,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
   class Attaching (
       _items: Seq [AttachItem],
       cb: Callback [Unit],
+      opening: Boolean,
       var attaches: AttachesPending,
       var checkpoints: CheckpointsPending)
   extends State with QueueAttachAndCheckpoint with ReattachCompleted {
@@ -255,6 +256,8 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
         generation = newboot.gen
         disks ++= items map (item => item.id -> item)
         items foreach (_.engage())
+        if (opening)
+          recovery.recover()
         ready (false)
         scheduler.execute (cb, ())
       }
@@ -346,7 +349,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
 
     def attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
       guard (cb) {
-        state = new Attaching (items, cb, Queue.empty, List.empty)
+        state = new Attaching (items, cb, false, Queue.empty, List.empty)
       }
 
     def checkpoint (cb: Callback [Unit]): Unit =
@@ -400,8 +403,8 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
   def replayIterator (records: RecordRegistry, cb: Callback [ReplayIterator]): Unit =
     LogIterator.merge (disks.values, records, cb)
 
-  def open [B] (desc: RootDescriptor [B]) (f: Recovery => Any): Unit =
-    recovery.open (desc) (f)
+  def open (f: Recovery => Any): Unit =
+    recovery.open (f)
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any): Unit =
     roots.checkpoint (desc) (f)

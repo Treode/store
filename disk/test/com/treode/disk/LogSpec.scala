@@ -23,7 +23,9 @@ class LogSpec extends FlatSpec {
     }}
 
   def replay (f: String => Any) (implicit disks: Disks): Unit =
-    root.open (record.replay (_) (f))
+    disks.open { implicit recovery =>
+      record.replay (f)
+    }
 
   "The logger" should "replay when reattaching disks" in {
     implicit val scheduler = StubScheduler.random()

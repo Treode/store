@@ -1,6 +1,6 @@
 package com.treode.store.atomic
 
-import com.treode.store.{PaxosAccessor, TxClock}
+import com.treode.store.TxClock
 
 sealed abstract class TxStatus
 

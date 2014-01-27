@@ -37,11 +37,7 @@ package store {
   }
 
   private trait LocalStore extends PreparableStore with SimpleStore with Closeable
-
-  private trait PaxosStore extends Closeable {
-    def lead (key: Bytes, value: Bytes, cb: Callback [Bytes])
-    def propose (key: Bytes, value: Bytes, cb: Callback [Bytes])
-  }}
+}
 
 package object store {
 

@@ -16,7 +16,7 @@ trait Disks {
 
   def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Unit])
 
-  def open [B] (desc: RootDescriptor [B]) (f: Recovery => Any)
+  def open (f: Recovery => Any)
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any)
 

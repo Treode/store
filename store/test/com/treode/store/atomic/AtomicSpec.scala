@@ -23,6 +23,8 @@ object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors
   import kit.{random, scheduler}
   import host.{writeDeputy, write}
 
+  kit.runTasks()
+
   "A Deputy should" - {
 
     val xid = TxId (Bytes (random.nextLong))
@@ -74,6 +76,8 @@ object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTool
     val hs = kit.install (3, new StubAtomicHost (_, kit))
     val Seq (h1, h2, h3) = hs
     import kit.{random, scheduler}
+
+    kit.runTasks()
 
     // Setup.
     val xid1 = TxId (Bytes (random.nextLong))

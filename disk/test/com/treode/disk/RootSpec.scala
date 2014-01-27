@@ -11,10 +11,10 @@ class RootSpec extends FlatSpec {
 
   val root = new RootDescriptor (0x5FD8D9DF, Picklers.string)
 
-  def recover (f: String => Any) (implicit disks: Disks): Unit =
-    root.open { recovery =>
-      root.recover (recovery) { (v, cb) =>
-        f (v)
+  def reload (f: String => Any) (implicit disks: Disks): Unit =
+    disks.open { implicit recovery =>
+      root.reload { (s, cb) =>
+        f (s)
         cb()
       }}
 
@@ -25,15 +25,15 @@ class RootSpec extends FlatSpec {
     {
       implicit val disks = new RichDisksKit
       root.checkpoint (_ ("one"))
-      recover (_ => fail ("Nothing to recover."))
+      reload (_ => fail ("Nothing to reload."))
       disks.attachAndPass (("a", disk1, config))
       disks.checkpointAndPass()
     }
 
     {
       implicit val disks = new RichDisksKit
-      var recovered: String = null
-      recover (recovered = _)
+      var reloaded: String = null
+      reload (reloaded = _)
       disks.reattachAndPass (("a", disk1))
-      expectResult ("one") (recovered)
+      expectResult ("one") (reloaded)
     }}}

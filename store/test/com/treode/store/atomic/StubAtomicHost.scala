@@ -7,7 +7,7 @@ import com.treode.async.Callback
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
-import com.treode.store.paxos.PaxosKit
+import com.treode.store.paxos.Paxos
 import com.treode.disk.{Disks, DiskDriveConfig}
 import com.treode.store.temp.TestableTempKit
 
@@ -24,7 +24,7 @@ extends StubActiveHost (id, network) {
 
   implicit val storeConfig = StoreConfig (1<<16)
   implicit val store = TestableTempKit (2)
-  implicit val paxos = PaxosKit()
+  implicit val paxos = Paxos()
   val atomic = new AtomicKit
 
   def writeDeputy (xid: TxId) = atomic.WriteDeputies.get (xid)

@@ -9,10 +9,10 @@ import com.treode.disk.{PageDescriptor, RecordDescriptor, RootDescriptor}
 import com.treode.store.{Bytes, StorePicklers}
 import com.treode.store.simple.SimpleTable
 
-private class Acceptor private (key: Bytes, kit: PaxosKit) {
+private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
   import Acceptor.{NoPost, Post, Status}
+  import acceptors.db
   import kit.{disks, scheduler}
-  import kit.Acceptors.{db, remove}
   import kit.config.{closedLifetime, deliberatingTimeout}
 
   private val fiber = new Fiber (scheduler)
@@ -335,12 +335,6 @@ private object Acceptor {
     new RecordDescriptor (0xAE980885, tuple (bytes, bytes, long))
   }
 
-  def apply (key: Bytes, kit: PaxosKit): Acceptor = {
-    val a = new Acceptor (key, kit)
-    a.state = new a.Opening
-    a
-  }
-
   trait Post {
     def record()
     def reply()
@@ -379,69 +373,4 @@ private object Acceptor {
           0x3 -> wrap (bytes, bytes)
                  .build ((Closed.apply _).tupled)
                  .inspect (v => (v.key, v.chosen)))
-    }}
-
-  class Medic (
-      val key: Bytes,
-      val default: Bytes,
-      var ballot: BallotNumber,
-      var proposal: Proposal,
-      var chosen: Option [Bytes],
-      db: SimpleTable.Medic,
-      kit: PaxosKit) {
-
-    import kit.{Acceptors, scheduler}
-
-    val fiber = new Fiber (scheduler)
-
-    def promised (ballot: BallotNumber): Unit = fiber.execute {
-      if (this.ballot < ballot)
-        this.ballot = ballot
-    }
-
-    def accepted (ballot: BallotNumber, value: Bytes): Unit = fiber.execute {
-      if (this.ballot < ballot) {
-        this.ballot = ballot
-        this.proposal = Some ((ballot, value))
-      }}
-
-    def reaccepted (ballot: BallotNumber): Unit = fiber.execute {
-      val value = proposal.get._2
-      if (this.ballot < ballot) {
-        this.ballot = ballot
-        this.proposal = Some ((ballot, value))
-      }}
-
-    def closed (chosen: Bytes, gen: Long): Unit = fiber.execute {
-      this.chosen = Some (chosen)
-      db.put (gen, key, chosen)
-    }
-
-    def close (cb: Callback [Unit]): Unit = fiber.execute {
-      val a = new Acceptor (key, kit)
-      if (chosen.isDefined) {
-        a.state = new a.Closed (chosen.get)
-      } else {
-        a.state = new a.Deliberating (default, ballot, proposal, Set.empty)
-      }
-      Acceptors.recover (key, a)
-    }
-
-    override def toString = s"Acceptor.Medic($key, $default, $proposal, $chosen)"
-  }
-
-  object Medic {
-
-    def apply (status: Status, db: SimpleTable.Medic, kit: PaxosKit): Medic = {
-      status match {
-        case Status.Restoring (key, default) =>
-          new Medic (key, default, BallotNumber.zero, Option.empty, None, db, kit)
-        case Status.Deliberating (key, default, ballot, proposal) =>
-          new Medic (key, default, ballot, proposal, None, db, kit)
-        case Status.Closed (key, chosen) =>
-          new Medic (key, chosen, BallotNumber.zero, Option.empty, Some (chosen), db, kit)
-      }}
-
-    def apply (key: Bytes, default: Bytes, db: SimpleTable.Medic, kit: PaxosKit): Medic =
-      new Medic (key, default, BallotNumber.zero, Option.empty, None, db, kit)
-  }}
+    }}}
