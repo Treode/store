@@ -5,7 +5,7 @@ import scala.collection.JavaConversions._
 
 import com.treode.async._
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{TagRegistry, unpickle}
+import com.treode.pickle.unpickle
 
 class RecoveryKit (scheduler: Scheduler, disks: DisksKit) extends Recovery {
 

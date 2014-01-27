@@ -1,9 +1,10 @@
-package com.treode.pickle
+package com.treode.disk
 
 import java.util.concurrent.ConcurrentHashMap
 import com.treode.buffer.Input
+import com.treode.pickle.{InvalidTagException, Pickler, PickleContext, UnpickleContext}
 
-class TagRegistry [T] {
+private class TagRegistry [T] {
   import TagRegistry.Opener
 
   private val opener = new ConcurrentHashMap [Long, Opener [T]]
@@ -31,7 +32,7 @@ class TagRegistry [T] {
       def u (ctx: UnpickleContext): T = TagRegistry.this.unpickle (ctx)
     }}
 
-object TagRegistry {
+private object TagRegistry {
 
   private trait Opener [T] {
     def read (ctx: UnpickleContext): T

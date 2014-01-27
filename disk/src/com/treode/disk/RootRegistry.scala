@@ -5,11 +5,10 @@ import scala.collection.JavaConversions._
 
 import com.treode.async.{Callback, callback, delay}
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.TagRegistry
 
 import TagRegistry.Tagger
 
-class RootRegistry (pages: PageDispatcher) {
+private class RootRegistry (pages: PageDispatcher) {
 
   private val checkpoints = new ArrayList [Callback [Tagger] => Unit]
 
@@ -36,7 +35,7 @@ class RootRegistry (pages: PageDispatcher) {
       cp (rootsWritten)
   }}
 
-object RootRegistry {
+private object RootRegistry {
 
   case class Meta (count: Int, pos: Position)
 
