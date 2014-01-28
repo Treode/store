@@ -20,6 +20,8 @@ trait Disks {
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any)
 
+  def handle [G, P] (desc: PageDescriptor [G, P], handler: PageHandler [G])
+
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit])
 
   def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P])

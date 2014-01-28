@@ -3,6 +3,7 @@ package com.treode.disk
 import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService
 import scala.collection.immutable.Queue
+import scala.language.postfixOps
 
 import com.treode.async._
 import com.treode.async.io.File
@@ -24,9 +25,10 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
   val cache = new PageCache (scheduler)
   val recovery = new RecoveryKit (scheduler, this)
   val roots = new RootRegistry (pages)
+  val cleaner = new SegmentCleaner
   var disks = Map.empty [Int, DiskDrive]
-  var number = 0
   var generation = 0
+  var number = 0
   var meta = RootRegistry.Meta.empty
   var state: State = new Opening
 
@@ -174,20 +176,26 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
         return
       }
 
+      number = boot.num
+      generation = boot.gen
+      meta = boot.roots
+
+      val latch = Callback.latch (reads.size, new Callback [Unit] {
+        def pass (v: Unit) {
+          state = new Recovering (cb, attaches, checkpoints)
+        }
+        def fail (t: Throwable) {
+          panic (t)
+          scheduler.fail (cb, t)
+        }})
+
       for (read <- reads) {
         val superblock = if (useGen1) read.sb1.get else read.sb2.get
         val disk = new DiskDrive (superblock.id, read.path, read.file, superblock.config,
             scheduler, log, pages)
-        disk.recover (superblock)
         disks += disk.id -> disk
-      }
-
-      number = disks.keySet.max + 1
-      generation = boot.gen
-      meta = boot.roots
-
-      state = new Recovering (cb, attaches, checkpoints)
-    }
+        disk.recover (superblock, latch)
+      }}
 
     val _superBlocksRead = Callback.collect (items.size, new Callback [Seq [SuperBlocks]] {
       def pass (reads: Seq [SuperBlocks]) = fiber.execute {
@@ -235,15 +243,12 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
   extends State with QueueAttachAndCheckpoint with ReattachCompleted {
 
     val items =
-      for ((path, file, config) <- _items) yield {
-        val disk = new DiskDrive (number, path, file, config, scheduler, log, pages)
-        number += 1
-        disk
-      }
+      for (((path, file, config), i) <- _items zipWithIndex) yield
+        new DiskDrive (number + i, path, file, config, scheduler, log, pages)
 
     val attached = disks.values.map (_.path) .toSet
     val attaching = items.map (_.path) .toSet
-    val newboot = BootBlock (generation+1, attached ++ attaching, meta)
+    val newboot = BootBlock (generation + 1, number + items.size, attached ++ attaching, meta)
 
     def latch4 = Callback.latch (disks.size, new Callback [Unit] {
       def pass (v: Unit) = fiber.execute (ready (false))
@@ -253,7 +258,8 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
     def latch3 = Callback.latch (disks.size, new Callback [Unit] {
       def pass (v: Unit): Unit = fiber.execute {
         generation = newboot.gen
-        disks ++= items map (item => item.id -> item)
+        number = newboot.num
+        disks ++= (for (item <- items) yield item.id -> item)
         items foreach (_.engage())
         if (opening)
           recovery.recover()
@@ -261,7 +267,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
         scheduler.execute (cb, ())
       }
       def fail (t: Throwable): Unit = fiber.execute {
-        val oldboot = BootBlock (generation, attached, meta)
+        val oldboot = BootBlock (generation, number, attached, meta)
         val latch = latch4
         disks.values foreach (_.checkpoint (oldboot, latch))
         scheduler.fail (cb, t)
@@ -318,7 +324,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
     val rootsWritten =
       new Callback [RootRegistry.Meta] {
         def pass (roots: RootRegistry.Meta) = fiber.execute {
-          val newboot = BootBlock (generation+1, attached, roots)
+          val newboot = BootBlock (generation + 1, number, attached, roots)
           val latch = rootPageWritten (newboot, roots)
           disks.values foreach (_.checkpoint (newboot, latch))
         }
@@ -407,6 +413,9 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any): Unit =
     roots.checkpoint (desc) (f)
+
+  def handle [G, P] (desc: PageDescriptor [G, P], handler: PageHandler [G]): Unit =
+    cleaner.handle (desc, handler)
 
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit]): Unit =
     log.record (desc, entry, cb)

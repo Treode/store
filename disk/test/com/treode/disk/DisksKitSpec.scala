@@ -19,20 +19,23 @@ class DisksKitSpec extends FreeSpec {
     val log = new LogWriter (file, alloc, scheduler, null)
     log.init (Callback.ignore)
     val pages = new PageWriter (id, file, config, alloc, scheduler, null)
-    pages.init()
+    pages.init (Callback.ignore)
     val roots = RootRegistry.Meta.empty
     scheduler.runTasks()
     val boot = BootBlock (
         gen,
+        disks.size,
         disks map (Paths.get (_)),
         roots)
-    SuperBlock (
+    val block = SuperBlock (
         id,
         boot,
         config,
         alloc.checkpoint (gen),
         log.checkpoint (gen),
-        pages.checkpoint (gen))
+        pages.checkpoint (gen, Callback.ignore))
+    scheduler.runTasks()
+    block
   }
 
   private class RichStubFile (implicit scheduler: StubScheduler) extends StubFile {

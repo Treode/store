@@ -285,6 +285,8 @@ private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
 
 private object Acceptor {
 
+  val ClosedTable = 0xDD683792
+
   val query = {
     import PaxosPicklers._
     new MessageDescriptor (0xFF14D4F00908FB59L, tuple (bytes, long, bytes))
@@ -305,7 +307,7 @@ private object Acceptor {
     new RootDescriptor (0xBFD4F3D3, position)
   }
 
-  val openTable = {
+  val statii = {
     import PaxosPicklers._
     new PageDescriptor (0x7C71E2AF, const (0), seq (acceptorStatus))
   }

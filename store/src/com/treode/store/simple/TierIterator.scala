@@ -1,11 +1,10 @@
 package com.treode.store.simple
 
-import java.lang.{Iterable => JIterable}
-
 import com.treode.async.{AsyncIterator, Callback, callback, delay}
 import com.treode.disk.{Disks, Position}
 
-private class TierIterator (implicit disks: Disks) extends AsyncIterator [SimpleCell] {
+private class TierIterator (pager: TierPage.Descriptor) (implicit disks: Disks)
+extends AsyncIterator [SimpleCell] {
 
   private var stack = List.empty [(IndexPage, Int)]
   private var page: CellPage = null
@@ -20,7 +19,7 @@ private class TierIterator (implicit disks: Disks) extends AsyncIterator [Simple
           case p: IndexPage =>
             val e = p.get (0)
             stack ::= (p, 0)
-            TierPage.page.read (e.pos, this)
+            pager.read (e.pos, this)
           case p: CellPage =>
             page = p
             index = 0
@@ -30,7 +29,7 @@ private class TierIterator (implicit disks: Disks) extends AsyncIterator [Simple
       def fail (t: Throwable) = cb.fail (t)
     }
 
-    TierPage.page.read (pos, loop)
+    pager.read (pos, loop)
   }
 
   def hasNext: Boolean =
@@ -60,20 +59,21 @@ private class TierIterator (implicit disks: Disks) extends AsyncIterator [Simple
 
 private object TierIterator {
 
-  def apply (pos: Position, cb: Callback [SimpleIterator]) (implicit disks: Disks): Unit =
-    new TierIterator() .find (pos, cb)
+  def apply (pager: TierPage.Descriptor, pos: Position, cb: Callback [SimpleIterator]) (
+      implicit disks: Disks): Unit =
+    new TierIterator (pager) .find (pos, cb)
 
-  def merge (primary: JIterable [SimpleCell], secondary: JIterable [SimpleCell],
-      tiers: Array [Position], cb: Callback [SimpleIterator]) (implicit disks: Disks) {
+  def merge (pager: TierPage.Descriptor, primary: MemTier, secondary: MemTier, tiers: Tiers,
+      cb: Callback [SimpleIterator]) (implicit disks: Disks) {
 
     val allBuilt = delay (cb) { iters: Array [SimpleIterator] =>
       AsyncIterator.merge (iters.iterator, cb)
     }
 
-    val oneBuilt = Callback.collate (tiers.length + 1, allBuilt)
+    val oneBuilt = Callback.collate (tiers.size + 2, allBuilt)
 
     oneBuilt (0, AsyncIterator.adapt (primary))
     oneBuilt (1, AsyncIterator.adapt (secondary))
-    for (i <- 0 until tiers.length)
-      TierIterator (tiers (i), delay (oneBuilt) (oneBuilt (i+2, _)))
+    for (i <- 0 until tiers.size)
+      TierIterator (pager, tiers.pos (i), delay (oneBuilt) (oneBuilt (i+2, _)))
   }}

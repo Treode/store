@@ -2,12 +2,13 @@ package com.treode.store.simple
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import com.treode.disk.{Disks, Position}
+import com.treode.disk.{Disks, Position, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
 import SimpleTable.Meta
 
-private class SynthMedic (config: StoreConfig) (implicit disks: Disks) extends SimpleMedic {
+private class SynthMedic (id: TypeId) (implicit disks: Disks, config: StoreConfig)
+extends SimpleMedic {
 
   private val lock = new ReentrantReadWriteLock
   private val readLock = lock.readLock()
@@ -16,20 +17,20 @@ private class SynthMedic (config: StoreConfig) (implicit disks: Disks) extends S
   private var generation = 0L
 
   // This resides in memory and it is the only tier that is written.
-  private var primary = newMemTable
+  private var primary = newMemTier
 
   // This tier resides in memory and is being compacted and written to disk.
-  private var secondary = newMemTable
+  private var secondary = newMemTier
 
   // The position of each tier on disk.
-  private var tiers = Array [Position] ()
+  private var tiers = Tiers.empty
 
   private def recover (meta: SimpleTable.Meta) {
     writeLock.lock()
     try {
       generation = meta.gen+1
-      primary = newMemTable
-      secondary = newMemTable
+      primary = newMemTier
+      secondary = newMemTier
       tiers = meta.tiers
     } finally {
       writeLock.unlock()
@@ -64,12 +65,12 @@ private class SynthMedic (config: StoreConfig) (implicit disks: Disks) extends S
         } else if (gen == this.generation + 1) {
           this.generation = gen
           secondary = primary
-          primary = newMemTable
+          primary = newMemTier
           primary.add (cell)
         } else if (gen > this.generation + 1) {
           this.generation = gen
-          primary = newMemTable
-          secondary = newMemTable
+          primary = newMemTier
+          secondary = newMemTier
           primary.add (cell)
         }
       } finally {
@@ -88,9 +89,9 @@ private class SynthMedic (config: StoreConfig) (implicit disks: Disks) extends S
       if (!secondary.isEmpty) {
         secondary.addAll (primary)
         primary = secondary
-        secondary = newMemTable
+        secondary = newMemTier
       }
-      val t = new SynthTable (config, lock, generation, primary, secondary, tiers)
+      val t = new SynthTable (id, lock, generation, primary, secondary, tiers)
       primary = null
       secondary = null
       t

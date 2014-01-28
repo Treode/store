@@ -35,7 +35,7 @@ private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
   }
 
   def attach() {
-    import Acceptor.{Status, choose, openTable, propose, query, root}
+    import Acceptor.{Status, choose, statii, propose, query, root}
     import kit.{cluster, disks}
 
     root.checkpoint { cb =>
@@ -43,7 +43,7 @@ private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
       val as = materialize (acceptors.values)
       val latch = Callback.collect [Status] (
           as.size,
-          delay (cb) (openTable.write (0, _, cb)))
+          delay (cb) (statii.write (0, _, cb)))
       as foreach (_.checkpoint (latch))
     }}
 
@@ -63,11 +63,12 @@ private object Acceptors {
   import Acceptor._
 
   def attach (kit: PaxosKit, cb: Callback [Acceptors]) {
+    import Acceptor.{ClosedTable}
     import kit.{cluster, disks, config, proposers, random, scheduler}
 
     disks.open { implicit recovery =>
 
-      val db = SimpleMedic()
+      val db = SimpleMedic (ClosedTable)
       val medics = newMedicsMap
 
       def openByStatus (status: Status) {
@@ -93,10 +94,10 @@ private object Acceptors {
       }
 
       root.reload { (pos, cb) =>
-        val statiiRead = callback (cb) { statii: Seq [Status] =>
-          statii foreach (openByStatus _)
+        val statiiRead = callback (cb) { instances: Seq [Status] =>
+          instances foreach (openByStatus _)
         }
-        openTable.read (pos, statiiRead)
+        statii.read (pos, statiiRead)
       }
 
       open.replay { case (key, default) =>

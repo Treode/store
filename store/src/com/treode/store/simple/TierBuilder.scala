@@ -6,7 +6,8 @@ import com.treode.async.{AsyncIterator, Callback, delay}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, StoreConfig, TxClock}
 
-private class TierBuilder (config: StoreConfig) (implicit disks: Disks) {
+private class TierBuilder (pager: TierPage.Descriptor, generation: Long) (
+    implicit disks: Disks, config: StoreConfig) {
 
   private def newIndexEntries = new ArrayList [IndexEntry] (1024)
   private def newCellEntries = new ArrayList [SimpleCell] (256)
@@ -72,7 +73,7 @@ private class TierBuilder (config: StoreConfig) (implicit disks: Disks) {
         stack.pop()
         val page = IndexPage (node.entries)
         val last = page.last
-        TierPage.page.write (0, page, delay (cb) { pos2 =>
+        pager.write (generation, page, delay (cb) { pos2 =>
           rpush (key, pos, height)
           add (last.key, pos2, height+1, cb)
         })
@@ -98,21 +99,21 @@ private class TierBuilder (config: StoreConfig) (implicit disks: Disks) {
       entries.add (entry)
       byteSize = entryByteSize
       val last = page.last
-      TierPage.page.write (0, page, delay (cb) { pos =>
+      pager.write (generation, page, delay (cb) { pos =>
         add (last.key, pos, 0, cb)
       })
     }}
 
-  def result (cb: Callback [Position]) {
+  def result (cb: Callback [Tier]) {
 
     val page = CellPage (entries)
     val last = page.last
-    TierPage.page.write (0, page, delay (cb) { _pos =>
+    pager.write (generation, page, delay (cb) { _pos =>
 
       var pos = _pos
 
       if (stack.isEmpty) {
-        cb (pos)
+        cb (Tier (generation, pos))
 
       } else {
 
@@ -122,14 +123,14 @@ private class TierBuilder (config: StoreConfig) (implicit disks: Disks) {
             if (!stack.isEmpty)
               add (last.key, pos, node.height+1, this)
             else
-              cb (pos)
+              cb (Tier (generation, pos))
           }
 
           def pass (v: Unit) {
             val node = stack.pop()
             if (node.size > 1) {
               val page = IndexPage (node.entries)
-              TierPage.page.write (0, page, delay (cb) { _pos =>
+              pager.write (generation, page, delay (cb) { _pos =>
                 pos = _pos
                 next (node)
               })
@@ -147,8 +148,10 @@ private class TierBuilder (config: StoreConfig) (implicit disks: Disks) {
 
 private object TierBuilder {
 
-  def build (config: StoreConfig, iter: SimpleIterator, cb: Callback [Position]) (implicit disks: Disks) {
-    val builder = new TierBuilder (config)
+  def build (pager: TierPage.Descriptor, generation: Long, iter: SimpleIterator,
+      cb: Callback [Tier]) (implicit disks: Disks, config: StoreConfig) {
+
+    val builder = new TierBuilder (pager, generation)
     val cellsAdded = delay (cb) { _: Unit =>
       builder.result (cb)
     }

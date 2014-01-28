@@ -33,6 +33,7 @@ private class DiskDrive (
     file.fill (buf, pos, len, cb)
 
   def checkpoint (boot: BootBlock, cb: Callback [Unit]) {
+    val latch = Callback.latch (2, cb)
     val gen = boot.gen
     val superblock = SuperBlock (
         id,
@@ -40,18 +41,18 @@ private class DiskDrive (
         config,
         alloc.checkpoint (gen),
         logw.checkpoint (gen),
-        pagew.checkpoint (gen))
+        pagew.checkpoint (gen, latch))
     val buffer = PagedBuffer (12)
     SuperBlock.pickler.pickle (superblock, buffer)
     val pos = if ((boot.gen & 1) == 0) 0 else SuperBlockBytes
-    file.flush (buffer, pos, cb)
+    file.flush (buffer, pos, latch)
   }
 
-  def recover (superblock: SuperBlock) {
+  def recover (superblock: SuperBlock, cb: Callback [Unit]) {
     val gen = superblock.boot.gen
     alloc.recover (gen, superblock.alloc)
     logw.recover (gen, superblock.log)
-    pagew.recover (gen, superblock.pages)
+    pagew.recover (gen, superblock.pages, cb)
   }
 
   def logIterator (records: RecordRegistry, cb: Callback [LogIterator]): Unit =
@@ -67,5 +68,5 @@ private class DiskDrive (
       case _ => false
     }
 
-  override def toString = s"DiskDrive($path, $config)"
+  override def toString = s"DiskDrive($id, $path, $config)"
 }

@@ -1,6 +1,7 @@
 package com.treode.store.simple
 
 import com.treode.async.Callback
+import com.treode.disk.{PageDescriptor, TypeId}
 import com.treode.store.{Bytes, StorePicklers}
 
 trait SimpleTable {
@@ -18,13 +19,15 @@ trait SimpleTable {
 
 object SimpleTable {
 
-  case class Meta (gen: Long, tiers: Tiers)
+  class Meta (
+      private [simple] val gen: Long,
+      private [simple] val tiers: Tiers)
 
   object Meta {
 
     val pickler = {
       import StorePicklers._
-      wrap (long, array (pos))
-      .build ((Meta.apply _).tupled)
+      wrap (long, Tiers.pickler)
+      .build (v => new Meta (v._1, v._2))
       .inspect (v => (v.gen, v.tiers))
     }}}

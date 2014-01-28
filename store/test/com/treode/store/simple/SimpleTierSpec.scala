@@ -15,6 +15,8 @@ import Fruits.{AllFruits, Apple, Orange, Watermelon}
 
 class SimpleTierSpec extends WordSpec {
 
+  private val pager = TierPage.pager (0x4F56A427)
+
   implicit class RichPageDescriptor [G, P] (desc: PageDescriptor [G, P]) {
 
     def readAndPass (pos: Position) (implicit scheduler: StubScheduler, disks: Disks): P = {
@@ -44,7 +46,7 @@ class SimpleTierSpec extends WordSpec {
   /** Get the depths of ValueBlocks for the tree root at `pos`. */
   private def getDepths (pos: Position, depth: Int) (
       implicit scheduler: StubScheduler, disks: Disks): Set [Int] = {
-    TierPage.page.readAndPass (pos) match {
+    pager.readAndPass (pos) match {
       case b: IndexPage => getDepths (b.entries, depth+1)
       case b: CellPage => Set (depth)
     }}
@@ -52,8 +54,8 @@ class SimpleTierSpec extends WordSpec {
   /** Check that tree rooted at `pos` has all ValueBlocks at the same depth, expect those under
     * the final index entry.
     */
-  private def expectBalanced (pos: Position) (implicit scheduler: StubScheduler, disks: Disks) {
-    TierPage.page.readAndPass (pos) match {
+  private def expectBalanced (tier: Tier) (implicit scheduler: StubScheduler, disks: Disks) {
+    pager.readAndPass (tier.pos) match {
       case b: IndexPage =>
         val ds1 = getDepths (b.entries.take (b.size-1), 1)
         expectResult (1, "Expected lead ValueBlocks at the same depth.") (ds1.size)
@@ -66,32 +68,33 @@ class SimpleTierSpec extends WordSpec {
 
   /** Build a tier from fruit. */
   private def buildTier (pageBytes: Int) (
-      implicit scheduler: StubScheduler, disks: Disks): Position = {
-    val builder = new TierBuilder (StoreConfig (pageBytes))
+      implicit scheduler: StubScheduler, disks: Disks): Tier = {
+    implicit val config = StoreConfig (pageBytes)
+    val builder = new TierBuilder (pager, 0)
     val iter = AsyncIterator.adapt (AllFruits.iterator)
     val added = new CallbackCaptor [Unit]
     AsyncIterator.foreach (iter, added) (builder.add (_, Some (One), _))
     scheduler.runTasks()
     added.passed
-    val built = new CallbackCaptor [Position]
+    val built = new CallbackCaptor [Tier]
     builder.result (built)
     scheduler.runTasks()
     built.passed
   }
 
-  private def read (pos: Position, key: Bytes) (
+  private def read (tier: Tier, key: Bytes) (
       implicit scheduler: StubScheduler, disks: Disks): Option [SimpleCell] = {
     val cb = new CallbackCaptor [Option [SimpleCell]]
-    Tier.read (pos, key, cb)
+    TierReader.read (pager, tier.pos, key, cb)
     scheduler.runTasks()
     cb.passed
   }
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
-  private def iterateTier (pos: Position) (
+  private def iterateTier (tier: Tier) (
       implicit scheduler: StubScheduler, disks: Disks): Seq [SimpleCell] = {
     val iter = new CallbackCaptor [SimpleIterator]
-    TierIterator (pos, iter)
+    TierIterator (pager, tier.pos, iter)
     scheduler.runTasks()
     val seq = new CallbackCaptor [Seq [SimpleCell]]
     AsyncIterator.scan (iter.passed, seq)
@@ -101,7 +104,7 @@ class SimpleTierSpec extends WordSpec {
 
   private def toSeq (builder: Builder [SimpleCell, _], pos: Position) (
       implicit scheduler: StubScheduler, disks: Disks) {
-    TierPage.page.readAndPass (pos) match {
+    pager.readAndPass (pos) match {
       case page: IndexPage =>
         page.entries foreach (e => toSeq (builder, e.pos))
       case page: CellPage =>
@@ -109,10 +112,10 @@ class SimpleTierSpec extends WordSpec {
     }}
 
   /** Build a sequence of the cells in the tier using old-fashioned recursion. */
-  private def toSeq (pos: Position) (
+  private def toSeq (tier: Tier) (
       implicit scheduler: StubScheduler, disks: Disks): Seq [SimpleCell] = {
     val builder = Seq.newBuilder [SimpleCell]
-    toSeq (builder, pos)
+    toSeq (builder, tier.pos)
     builder.result
   }
 
@@ -120,7 +123,8 @@ class SimpleTierSpec extends WordSpec {
 
     "require that added entries are not duplicated" in {
       implicit val (scheduler, disks) = setup()
-      val builder = new TierBuilder (StoreConfig (1 << 16))
+      implicit val config = StoreConfig (1 << 16)
+      val builder = new TierBuilder (pager, 0)
       builder.add (Apple, None, Callback.ignore)
       intercept [IllegalArgumentException] {
         builder.add (Apple, None, Callback.ignore)
@@ -128,7 +132,8 @@ class SimpleTierSpec extends WordSpec {
 
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disks) = setup()
-      val builder = new TierBuilder (StoreConfig (1 << 16))
+      implicit val config = StoreConfig (1 << 16)
+      val builder = new TierBuilder (pager, 0)
       builder.add (Orange, None, Callback.ignore)
       intercept [IllegalArgumentException] {
         builder.add (Apple, None, Callback.ignore)
@@ -136,7 +141,8 @@ class SimpleTierSpec extends WordSpec {
 
     "require that added entries are reverse sorted by time" in {
       implicit val (scheduler, disks) = setup()
-      val builder = new TierBuilder (StoreConfig (1 << 16))
+      implicit val config = StoreConfig (1 << 16)
+      val builder = new TierBuilder (pager, 0)
       builder.add (Apple, None, Callback.ignore)
       intercept [IllegalArgumentException] {
         builder.add (Apple, None, Callback.ignore)
@@ -144,7 +150,8 @@ class SimpleTierSpec extends WordSpec {
 
     "allow properly sorted entries" in {
       implicit val (scheduler, disks) = setup()
-      val builder = new TierBuilder (StoreConfig (1 << 16))
+      implicit val config = StoreConfig (1 << 16)
+      val builder = new TierBuilder (pager, 0)
       builder.add (Apple, None, Callback.ignore)
       builder.add (Orange, None, Callback.ignore)
       builder.add (Watermelon, None, Callback.ignore)
@@ -154,9 +161,9 @@ class SimpleTierSpec extends WordSpec {
 
       def checkBuild (pageBytes: Int) {
         implicit val (scheduler, disks) = setup()
-        val pos = buildTier (pageBytes)
-        expectBalanced (pos)
-        expectResult (AllFruits.toSeq) (toSeq (pos) .map (_.key))
+        val tier = buildTier (pageBytes)
+        expectBalanced (tier)
+        expectResult (AllFruits.toSeq) (toSeq (tier) .map (_.key))
       }
 
       "the pages are limited to one byte" in {
@@ -177,8 +184,8 @@ class SimpleTierSpec extends WordSpec {
 
       def checkIterator (pageBytes: Int) {
         implicit val (scheduler, disks) = setup()
-        val pos = buildTier (pageBytes)
-        expectResult (AllFruits.toSeq) (iterateTier (pos) map (_.key))
+        val tier = buildTier (pageBytes)
+        expectResult (AllFruits.toSeq) (iterateTier (tier) map (_.key))
       }
 
       "the pages are limited to one byte" in {
@@ -199,11 +206,11 @@ class SimpleTierSpec extends WordSpec {
 
       def checkFind (pageBytes: Int) {
         implicit val (scheduler, disks) = setup()
-        val pos = buildTier (pageBytes)
-        expectResult (Some (One)) (read (pos, Apple) .get.value)
-        expectResult (Some (One)) (read (pos, Orange) .get.value)
-        expectResult (Some (One)) (read (pos, Watermelon) .get.value)
-        expectResult (None) (read (pos, One))
+        val tier = buildTier (pageBytes)
+        expectResult (Some (One)) (read (tier, Apple) .get.value)
+        expectResult (Some (One)) (read (tier, Orange) .get.value)
+        expectResult (Some (One)) (read (tier, Watermelon) .get.value)
+        expectResult (None) (read (tier, One))
       }
 
       "the pages are limited to one byte" in {

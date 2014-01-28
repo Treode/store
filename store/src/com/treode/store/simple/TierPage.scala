@@ -1,11 +1,13 @@
 package com.treode.store.simple
 
-import com.treode.disk.PageDescriptor
+import com.treode.disk.{PageDescriptor, TypeId}
 import com.treode.pickle.Picklers
 
 private trait TierPage
 
 private object TierPage {
+
+  type Descriptor = PageDescriptor [Long, TierPage]
 
   val pickler = {
     import Picklers._
@@ -14,7 +16,7 @@ private object TierPage {
       0x2 -> CellPage.pickler)
   }
 
-  val page = {
+  def pager (id: TypeId) = {
     import Picklers._
-    new PageDescriptor (0x45CF6FFC, const (0), pickler)
+    new PageDescriptor (id, long, pickler)
   }}
