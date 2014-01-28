@@ -58,6 +58,21 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
       case t: Throwable => File.this.fail (cb, t)
     }
 
+  def deframe (input: PagedBuffer, pos: Long, cb: Callback [Int]) {
+    def body (len: Int) = new Callback [Unit] {
+      def pass (v: Unit) = cb (len)
+      def fail (t: Throwable) = cb.fail (t)
+    }
+    val header = new Callback [Unit] {
+      def pass (v: Unit) = {
+        val len = input.readInt()
+        fill (input, pos+4, len, body (len))
+      }
+      def fail (t: Throwable) = cb.fail (t)
+    }
+    fill (input, pos, 4, header)
+  }
+
   private class Flusher (output: PagedBuffer, pos: Long, cb: Callback [Unit])
   extends Callback [Int] {
 

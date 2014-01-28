@@ -125,7 +125,7 @@ trait Picklers {
       def p (v: A, ctx: PickleContext): Unit = {
         tags.find (_.clazz.isInstance (v)) match {
           case Some (tag) => tag.write (v, ctx)
-          case None => throw new Exception ("No tag type for " + v.getClass.getName)
+          case None => throw new Exception ("No tag for " + v.getClass.getName)
         }}
 
       def u (ctx: UnpickleContext): A = {

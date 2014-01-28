@@ -1,12 +1,12 @@
 package com.treode.disk
 
-import com.treode.pickle.Pickler
+import com.treode.pickle.{Pickler, PicklerRegistry}
 
 private class SegmentMap (
-    private val m: Map [TagRegistry.Tagger, Long],
+    private val m: Map [PickledPageHandler, Long],
     val byteSize: Int) {
 
-  def add (t: TagRegistry.Tagger, byteSize: Long): SegmentMap = {
+  def add (t: PickledPageHandler, byteSize: Long): SegmentMap = {
     m.get (t) match {
       case Some (s) =>
         new SegmentMap (
@@ -15,7 +15,7 @@ private class SegmentMap (
       case None =>
         new SegmentMap (
             m + (t -> byteSize),
-            this.byteSize + t.byteSize + SegmentMap.longByteSize)
+            this.byteSize + t.tag.byteSize + SegmentMap.longByteSize)
     }}}
 
 private object SegmentMap {
@@ -25,21 +25,9 @@ private object SegmentMap {
 
   val empty = new SegmentMap (Map.empty, emptyByteSize)
 
-  def pickler = {
+  def pickler (pages: PageRegistry) = {
     import DiskPicklers._
-    wrap (map (TagRegistry.pickler, long), int)
-    .build [SegmentMap] (_ => throw new UnsupportedOperationException)
-    .inspect (v => (v.m, v.byteSize))
-  }
-
-  def unpickler (registry: TagRegistry [PickledPageHandler]) = {
-    import DiskPicklers._
-
-    val retag = wrap (registry.unpickler)
-    .build (_.retag)
-    .inspect (_ => throw new UnsupportedOperationException)
-
-    wrap (map (retag, long), int)
+    wrap (map (pages.pickler, long), int)
     .build (v => new SegmentMap (v._1, v._2))
-    .inspect (_ => throw new UnsupportedOperationException)
+    .inspect (v => (v.m, v.byteSize))
   }}

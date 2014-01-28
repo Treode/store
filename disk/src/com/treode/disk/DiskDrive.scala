@@ -13,11 +13,12 @@ private class DiskDrive (
     config: DiskDriveConfig,
     scheduler: Scheduler,
     logd: LogDispatcher,
-    paged: PageDispatcher) {
+    paged: PageDispatcher,
+    pages: PageRegistry) {
 
   val alloc = new SegmentAllocator (config)
   val logw = new LogWriter (file, alloc, scheduler, logd)
-  val pagew = new PageWriter (id, file, config, alloc, scheduler, paged)
+  val pagew = new PageWriter (id, file, config, alloc, scheduler, paged, pages)
 
   def init (cb: Callback [Unit]) {
     alloc.init()

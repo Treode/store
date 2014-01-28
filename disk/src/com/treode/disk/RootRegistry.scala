@@ -4,9 +4,9 @@ import java.util.ArrayList
 import scala.collection.JavaConversions._
 
 import com.treode.async.{Callback, callback, delay}
-import com.treode.buffer.PagedBuffer
+import com.treode.pickle.PicklerRegistry
 
-import TagRegistry.Tagger
+import PicklerRegistry.Tagger
 
 private class RootRegistry (pages: PageDispatcher) {
 
@@ -16,7 +16,7 @@ private class RootRegistry (pages: PageDispatcher) {
     synchronized {
       checkpoints.add { cb =>
         f (callback (cb) { root =>
-          TagRegistry.tagger (desc.pblk, desc.id.id, root)
+          PicklerRegistry.tagger (desc.pblk, desc.id.id, root)
         })
       }}
 
@@ -53,5 +53,5 @@ private object RootRegistry {
 
   val page = {
     import DiskPicklers._
-    new PageDescriptor (0x6EC7584D, const (0), seq (TagRegistry.pickler))
+    new PageDescriptor (0x6EC7584D, const (0), seq (PicklerRegistry.pickler))
   }}

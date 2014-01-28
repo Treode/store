@@ -25,23 +25,27 @@ extends AsyncIterator [(Long, Unit => Any)] {
 
   def hasNext: Boolean = pos > 0
 
-  private def entryRead (cb: Callback [(Long, Unit => Any)]) =
-    new Callback [(Int, RecordHeader, Option [Unit => Any])] {
+  private def frameRead (cb: Callback [(Long, Unit => Any)]) =
+    new Callback [Int] {
 
-      def pass (v: (Int, RecordHeader, Option [Unit => Any])) {
-        v match {
-          case (len, RecordHeader.End, None) =>
+      def pass (len: Int) {
+        val start = buf.readPos
+        val hdr = RecordHeader.pickler.unpickle (buf)
+        hdr match {
+          case RecordHeader.End =>
             pos = -1L
             buf.clear()
             cb (Long.MaxValue, _ => ())
 
-          case (len, RecordHeader.Continue (num), None) =>
+          case RecordHeader.Continue (num) =>
             val seg = alloc.allocSeg (num)
             pos = seg.pos
             buf.clear()
-            records.read (file, pos, buf, this)
+            file.deframe (buf, pos, this)
 
-          case (len, RecordHeader.Entry (time, id), Some (entry)) =>
+          case RecordHeader.Entry (time, id) =>
+            val end = buf.readPos
+            val entry = records.read (id.id, buf, len - end + start)
             pos += len
             cb (time, entry)
 
@@ -54,7 +58,7 @@ extends AsyncIterator [(Long, Unit => Any)] {
     }
 
   def next (cb: Callback [(Long, Unit => Any)]): Unit =
-    records.read (file, pos, buf, entryRead (cb))
+    file.deframe (buf, pos, frameRead (cb))
 }
 
 object LogIterator {

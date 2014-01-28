@@ -64,6 +64,21 @@ class Socket (socket: AsynchronousSocketChannel, execx: Executor) {
       case t: Throwable => Socket.this.fail (cb, t)
     }
 
+  def deframe (input: PagedBuffer, cb: Callback [Int]) {
+    def body (len: Int) = new Callback [Unit] {
+      def pass (v: Unit) = cb (len)
+      def fail (t: Throwable) = cb.fail (t)
+    }
+    val header = new Callback [Unit] {
+      def pass (v: Unit) = {
+        val len = input.readInt()
+        fill (input, len, body (len))
+      }
+      def fail (t: Throwable) = cb.fail (t)
+    }
+    fill (input, 4, header)
+  }
+
   private class Flusher (output: PagedBuffer, cb: Callback [Unit])
   extends Callback [Long] {
 

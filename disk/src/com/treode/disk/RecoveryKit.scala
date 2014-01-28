@@ -5,12 +5,15 @@ import scala.collection.JavaConversions._
 
 import com.treode.async._
 import com.treode.buffer.PagedBuffer
+import com.treode.pickle.PicklerRegistry
+
+import PicklerRegistry.TaggedFunction
 
 private class RecoveryKit (scheduler: Scheduler, disks: DisksKit) extends Recovery {
 
   private val records = new RecordRegistry
+  private var loaders = PicklerRegistry [TaggedFunction [Callback [Unit], Any]] ()
   private var openers = new ArrayList [Recovery => Any]
-  private var loaders = new TagRegistry [Callback [Unit] => Any]
   private var closers = new ArrayList [Runnable]
 
   def open (f: Recovery => Any): Unit = {
@@ -20,7 +23,7 @@ private class RecoveryKit (scheduler: Scheduler, disks: DisksKit) extends Recove
 
   def reload [B] (desc: RootDescriptor [B]) (f: (B, Callback [Unit]) => Any) {
     require (loaders != null, "Recovery has already read roots.")
-    loaders.register (desc.pblk, desc.id.id) (f.curried)
+    PicklerRegistry.tupled (loaders, desc.pblk, desc.id.id) (f)
   }
 
   def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
@@ -82,7 +85,7 @@ private class RecoveryKit (scheduler: Scheduler, disks: DisksKit) extends Recove
     val buf = PagedBuffer (12)
 
     val rootsRead = delay (cb) { _: Unit =>
-      val roots = DiskPicklers.seq (loaders.unpickler) unpickle (buf)
+      val roots = DiskPicklers.seq (loaders.pickler) unpickle (buf)
       val latch = Callback.latch (roots.size, rootsLoaded)
       roots foreach (_ (latch))
     }

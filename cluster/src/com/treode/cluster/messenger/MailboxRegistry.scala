@@ -1,36 +1,45 @@
 package com.treode.cluster.messenger
 
 import com.treode.async.{Callback, Mailbox, Scheduler, callback}
-import com.treode.async.io.{Framer, Socket}
+import com.treode.async.io.Socket
 import com.treode.buffer.{Input, PagedBuffer, Output}
 import com.treode.cluster.{EphemeralMailbox, MailboxId, Peer}
-import com.treode.pickle.Pickler
+import com.treode.pickle.{InvalidTagException, Pickler, Picklers, PicklerRegistry}
+
+import PicklerRegistry.TaggedFunction
 
 class MailboxRegistry {
 
-  private type Handler = (Peer => Any)
-  private val mailboxes = new Framer [MailboxId, MailboxId, Handler] (MailboxRegistry.framer)
+  private type Handler = TaggedFunction [Peer, Any]
+
+  private val mailboxes =
+    PicklerRegistry [Handler] { id =>
+      if (MailboxId (id) .isFixed)
+        PicklerRegistry.const [Peer, Any] (())
+      else
+        throw new InvalidTagException ("mailbox", id)
+    }
 
   private [cluster] def deliver [M] (p: Pickler [M], from: Peer, mbx: MailboxId, msg: M) {
-    val (_, action) = mailboxes.read (p, mbx, msg)
-    action foreach (_ (from))
+    val handler = mailboxes.loopback (p, mbx.id, msg)
+    handler (from)
   }
 
   private [cluster] def deliver (from: Peer, socket: Socket, buffer: PagedBuffer, cb: Callback [Unit]) {
-    mailboxes.read (socket, buffer, callback [Unit, (MailboxId, Option [Handler])] (cb) {
-      case (_, Some (action)) => action (from)
-      case (_, None) => ()
+    socket.deframe (buffer, callback (cb) { len =>
+      val handler = mailboxes.unpickle (buffer, len)
+      handler (from)
     })
   }
 
   def listen [M] (p: Pickler [M], id: MailboxId) (f: (M, Peer) => Any): Unit =
-    mailboxes.register (p, id) (f.curried)
+    PicklerRegistry.tupled (mailboxes, p, id.id) (f)
 
   private class EphemeralMailboxImpl [M] (val id: MailboxId, mbx: Mailbox [(M, Peer)])
   extends EphemeralMailbox [M] {
 
     def close() =
-      mailboxes.unregister (id)
+      mailboxes.unregister (id.id)
 
     def receive (receiver: (M, Peer) => Any) =
       mbx.receive {case (msg, from) => receiver (msg, from)}
@@ -47,24 +56,16 @@ class MailboxRegistry {
 
   def open [M] (p: Pickler [M], scheduler: Scheduler): EphemeralMailbox [M] = {
     val mbx = new Mailbox [(M, Peer)] (scheduler)
-    val id = mailboxes.register (p) (Mailbox.curried2 (mbx))
+    val cmbx = Mailbox.curried2 (mbx)
+    val id = mailboxes.open (p) {
+      val id = MailboxId.newEphemeral
+      (id.id, PicklerRegistry.curried (p, id.id) (cmbx))
+    }
     new EphemeralMailboxImpl (id, mbx)
   }}
 
-object MailboxRegistry {
+private object MailboxRegistry {
 
-  val framer: Framer.Strategy [MailboxId, MailboxId] =
-    new Framer.Strategy [MailboxId, MailboxId] {
-
-      def newEphemeralId = MailboxId.newEphemeral()
-
-      def isEphemeralId (id: MailboxId) = MailboxId.isEphemeral (id)
-
-      def readHeader (in: Input) = {
-        val id = MailboxId (in.readLong())
-        (Some (id), id)
-      }
-
-      def writeHeader (hdr: MailboxId, out: Output) {
-        out.writeLong (hdr.id)
-      }}}
+  def frame [M] (p: Pickler [M], id: MailboxId, msg: M, buf: PagedBuffer): Unit =
+    Picklers.tuple (MailboxId.pickler, p) .frame ((id, msg), buf)
+}

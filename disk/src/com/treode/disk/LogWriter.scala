@@ -71,10 +71,10 @@ private class LogWriter (
         val seg = alloc.allocate()
         pos = seg.pos
         limit = seg.limit
-        RecordRegistry.framer.write (Continue (seg.num), buffer)
+        RecordHeader.pickler.frame (Continue (seg.num), buffer)
       } else {
         pos += buffer.readableBytes
-        RecordRegistry.framer.write (End, buffer)
+        RecordHeader.pickler.frame (End, buffer)
       }
 
       file.flush (buffer, _pos, finish)
@@ -85,7 +85,7 @@ private class LogWriter (
     head = seg.pos
     pos = seg.pos
     limit = seg.limit
-    RecordRegistry.framer.write (End, buffer)
+    RecordHeader.pickler.frame (End, buffer)
     file.flush (buffer, pos, new Callback [Unit] {
       def pass (v: Unit) {
         buffer.clear()

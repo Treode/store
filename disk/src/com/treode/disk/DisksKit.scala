@@ -20,12 +20,12 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
   type CheckpointsPending = List [Callback [Unit]]
 
   val fiber = new Fiber (scheduler)
-  val log = new LogDispatcher (scheduler)
-  val pages = new PageDispatcher (scheduler)
+  val logd = new LogDispatcher (scheduler)
+  val paged = new PageDispatcher (scheduler)
   val cache = new PageCache (scheduler)
   val recovery = new RecoveryKit (scheduler, this)
-  val roots = new RootRegistry (pages)
-  val cleaner = new SegmentCleaner
+  val roots = new RootRegistry (paged)
+  val pages = new PageRegistry
   var disks = Map.empty [Int, DiskDrive]
   var generation = 0
   var number = 0
@@ -192,7 +192,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
       for (read <- reads) {
         val superblock = if (useGen1) read.sb1.get else read.sb2.get
         val disk = new DiskDrive (superblock.id, read.path, read.file, superblock.config,
-            scheduler, log, pages)
+            scheduler, logd, paged, pages)
         disks += disk.id -> disk
         disk.recover (superblock, latch)
       }}
@@ -244,7 +244,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
 
     val items =
       for (((path, file, config), i) <- _items zipWithIndex) yield
-        new DiskDrive (number + i, path, file, config, scheduler, log, pages)
+        new DiskDrive (number + i, path, file, config, scheduler, logd, paged, pages)
 
     val attached = disks.values.map (_.path) .toSet
     val attaching = items.map (_.path) .toSet
@@ -415,10 +415,10 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
     roots.checkpoint (desc) (f)
 
   def handle [G, P] (desc: PageDescriptor [G, P], handler: PageHandler [G]): Unit =
-    cleaner.handle (desc, handler)
+    pages.handle (desc, handler)
 
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit]): Unit =
-    log.record (desc, entry, cb)
+    logd.record (desc, entry, cb)
 
   def fill (buf: PagedBuffer, pos: Position, cb: Callback [Unit]): Unit =
     disks (pos.disk) .fill (buf, pos.offset, pos.length, cb)
@@ -427,7 +427,7 @@ private class DisksKit (implicit scheduler: Scheduler) extends Disks {
     cache.read (desc, disks, pos, cb)
 
   def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P, cb: Callback [Position]): Unit =
-    pages.write (desc, group, page, cb)
+    paged.write (desc, group, page, cb)
 
   override def toString = state.toString
 }

@@ -8,7 +8,7 @@ private object BootBlock {
 
   val pickler = {
     import DiskPicklers._
-    wrap (int, int, set (path), roots)
+    wrap (int, int, set (path), rootMeta)
     .build ((apply _).tupled)
     .inspect (v => (v.gen, v.num, v.disks, v.roots))
   }}

@@ -1,37 +1,26 @@
 package com.treode.disk
 
-import com.treode.async.{Callback, callback}
-import com.treode.async.io.{File, Framer}
-import com.treode.buffer.{Input, PagedBuffer, Output}
-import com.treode.pickle.Pickler
+import com.treode.buffer.PagedBuffer
+import com.treode.pickle.{Pickler, Picklers, PicklerRegistry}
+
+import PicklerRegistry.TaggedFunction
 
 private class RecordRegistry {
 
-  private val records = new Framer [TypeId, RecordHeader, Unit => Any] (RecordRegistry.framer)
+  private val records = PicklerRegistry [TaggedFunction [Unit, Any]] ()
 
   def onReplay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
-    records.register (desc.prec, desc.id) (v => _ => f (v))
+    PicklerRegistry.delayed (records, desc.prec, desc.id.id) (f)
 
-  def read (file: File, pos: Long, buf: PagedBuffer, cb: Callback [records.FileFrame]): Unit =
-    records.read (file, pos, buf, cb)
+  def read (id: Long, buf: PagedBuffer, len: Int): Unit => Any =
+    records.unpickle (id, buf, len)
 }
 
 private object RecordRegistry {
 
-  val framer: Framer.Strategy [TypeId, RecordHeader] =
-    new Framer.Strategy [TypeId, RecordHeader] {
 
-      def newEphemeralId = ???
-
-      def isEphemeralId (id: TypeId) = false
-
-      def readHeader (in: Input): (Option [TypeId], RecordHeader) = {
-        val hdr = RecordHeader.pickler.unpickle (in)
-        hdr match {
-          case RecordHeader.Entry (time, id) => (Some (id), hdr)
-          case _ => (None, hdr)
-        }}
-
-      def writeHeader (hdr: RecordHeader, out: Output) {
-        RecordHeader.pickler.pickle (hdr, out)
-      }}}
+  def frame [R] (desc: RecordDescriptor [R], time: Long, entry: R, buf: PagedBuffer): Unit = {
+    import Picklers.tuple
+    import RecordHeader.{Entry, pickler}
+    tuple (pickler, desc.prec) .frame ((Entry (time, desc.id), entry), buf)
+  }}

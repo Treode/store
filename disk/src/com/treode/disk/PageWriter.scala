@@ -13,8 +13,10 @@ private class PageWriter (
     config: DiskDriveConfig,
     alloc: SegmentAllocator,
     scheduler: Scheduler,
-    dispatcher: PageDispatcher) {
+    dispatcher: PageDispatcher,
+    pages: PageRegistry) {
 
+  val segmentMap = SegmentMap.pickler (pages)
   val buffer = PagedBuffer (12)
   var base = 0L
   var pos = 0L
@@ -31,7 +33,7 @@ private class PageWriter (
   def writeMap (map: SegmentMap, pos: Long, cb: Callback [Unit]) {
     val buf = PagedBuffer (12)
     buf.writeInt (0)
-    SegmentMap.pickler.pickle (map, buf)
+    segmentMap.pickle (map, buf)
     val end = buf.writePos
     buf.writePos = 0
     buf.writeInt (end)

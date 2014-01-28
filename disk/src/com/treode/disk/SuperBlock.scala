@@ -12,7 +12,7 @@ private object SuperBlock {
 
   val pickler = {
     import DiskPicklers._
-    wrap (int, boot, config, alloc, log, pages)
+    wrap (int, boot, config, allocMeta, logMeta, pageMeta)
     .build ((SuperBlock.apply _).tupled)
     .inspect (v => (v.id, v.boot, v.config, v.alloc, v.log, v.pages))
   }}
