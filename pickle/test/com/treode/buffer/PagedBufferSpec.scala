@@ -12,7 +12,7 @@ private object PagedBufferBehaviors extends FlatSpec {
 
   def capacity (nbytes: Int, npages: Int) {
     it should (s"add the right pages for nbytes=$nbytes") in {
-      val buffer = new PagedBuffer (pageBits)
+      val buffer = PagedBuffer (pageBits)
       buffer.capacity (nbytes)
       expectResult (npages << pageBits) (buffer.capacity)
       for (i <- 0 until npages)
@@ -33,7 +33,7 @@ private object PagedBufferBehaviors extends FlatSpec {
 
   def discard (nbytes: Int, npages: Int) {
     it should (s"discard the right pages for nbytes=$nbytes") in {
-      val buffer = new PagedBuffer (pageBits)
+      val buffer = PagedBuffer (pageBits)
       buffer.writePos  = (4 << pageBits) - 1
       buffer.readPos = nbytes
       val before = (Seq (buffer.pages: _*), buffer.writePos, buffer.readPos)
@@ -61,7 +61,7 @@ private object PagedBufferBehaviors extends FlatSpec {
 
   def buffer (sbyte: Int, nbytes: Int, page: Int, first: Int, last: Int) {
     it should (s"yield the right range for sbyte=$sbyte, nbytes=$nbytes") in {
-      val buffer = new PagedBuffer (pageBits)
+      val buffer = PagedBuffer (pageBits)
       buffer.writePos = 128
       val bytebuf = buffer.buffer (sbyte, nbytes)
       expectResult (first) (bytebuf.position)
@@ -89,7 +89,7 @@ private object PagedBufferBehaviors extends FlatSpec {
 
   def buffers (sbyte: Int, nbytes: Int, spage: Int, nbufs: Int, first: Int, last: Int) {
     it should (s"yield the right range for sbyte=$sbyte, nbytes=$nbytes") in {
-      val buffer = new PagedBuffer (pageBits)
+      val buffer = PagedBuffer (pageBits)
       buffer.writePos = 128
       val bytebufs = buffer.buffers (sbyte, nbytes)
       expectResult (nbufs) (bytebufs.length)
@@ -130,7 +130,7 @@ private object PagedBufferBehaviors extends FlatSpec {
   def readWriteBytes (size: Int, srcOff: Int, dstOff: Int, len: Int) {
     it should (s"read and write bytes size=$size, srcOff=$srcOff, dstOff=$dstOff, len=$len") in {
       var bytes = Array.tabulate (size) (i => (i + 1).toByte)
-      val buffer = new PagedBuffer (pageBits)
+      val buffer = PagedBuffer (pageBits)
       buffer.writePos = dstOff
       buffer.writeBytes (bytes, srcOff, len)
       expectResult (dstOff + len) (buffer.writePos)
@@ -170,7 +170,7 @@ private object PagedBufferBehaviors extends FlatSpec {
 
   def zeroAlign (offset: Int, bits: Int, length: Int) {
     it should (s"zero align offset=$offset, bits=$bits") in {
-      val buffer = new PagedBuffer (pageBits)
+      val buffer = PagedBuffer (pageBits)
       buffer.writePos = offset
       buffer.writeZeroToAlign (bits)
       expectResult (offset + length) (buffer.writePos)

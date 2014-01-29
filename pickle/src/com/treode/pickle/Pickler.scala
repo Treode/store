@@ -1,6 +1,6 @@
 package com.treode.pickle
 
-import com.treode.buffer.{Input, PagedBuffer, Output, OutputBuffer}
+import com.treode.buffer.{ArrayBuffer, Input, PagedBuffer, Output, OutputBuffer}
 
 /** How to read and write an object of a particular type. */
 trait Pickler [A] {
@@ -30,8 +30,7 @@ trait Pickler [A] {
   }
 
   def fromByteArray (bytes: Array [Byte]): A = {
-    val buf = PagedBuffer (12)
-    buf.writeBytes (bytes, 0, bytes.length)
+    val buf = ArrayBuffer (bytes)
     val v = unpickle (buf)
     require (buf.readableBytes == 0, "Bytes remain after unpickling.")
     v

@@ -3,7 +3,7 @@ package com.treode.buffer
 import java.nio.ByteBuffer
 import java.util.Arrays
 
-class PagedBuffer (pageBits: Int) extends Buffer {
+class PagedBuffer private (pageBits: Int) extends Buffer {
 
   private [this] val InitPages = 8
   private [this] val pageSize = 1 << pageBits
@@ -832,7 +832,7 @@ class PagedBuffer (pageBits: Int) extends Buffer {
     new String (chars, 0, len)
   }
 
-  override def toString = "Buffer" + (readPos, writePos, capacity)
+  override def toString = "PagedBuffer" + (readPos, writePos, capacity)
 }
 
 object PagedBuffer {

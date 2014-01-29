@@ -7,7 +7,7 @@ import com.treode.buffer.PagedBuffer
 private class LogIterator private (file: File, alloc: SegmentAllocator, records: RecordRegistry)
 extends AsyncIterator [(Long, Unit => Any)] {
 
-  private val buf = new PagedBuffer (12)
+  private val buf = PagedBuffer (12)
   private var pos = -1L
 
   private def failed [A] (cb: Callback [A], t: Throwable) {
