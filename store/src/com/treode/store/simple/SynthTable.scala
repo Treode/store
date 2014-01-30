@@ -114,8 +114,8 @@ private class SynthTable (
       readLock.unlock()
     }}
 
-  def probe (groups: Set [Long]): Set [Long] =
-    groups intersect tiers.active
+  def probe (groups: Set [Long], cb: Callback [Set [Long]]): Unit =
+    cb (groups intersect tiers.active)
 
   def compact (groups: Set [Long], cb: Callback [Unit]) {
     checkpoint (callback (cb) (_ => ()))

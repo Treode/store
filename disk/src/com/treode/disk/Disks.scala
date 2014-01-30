@@ -14,7 +14,7 @@ trait Disks {
 
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit])
 
-  def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P])
+  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P])
 
   def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P, cb: Callback [Position])
 }

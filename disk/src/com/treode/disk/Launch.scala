@@ -6,11 +6,11 @@ trait Launch {
 
   implicit def disks: Disks
 
-  def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P])
+  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P])
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any)
 
-  def handle [G, P] (desc: PageDescriptor [G, P], handler: PageHandler [G])
+  def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G])
 
   def ready: Callback [Unit]
 }

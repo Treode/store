@@ -9,11 +9,8 @@ import com.treode.buffer.PagedBuffer
 
 import RecordHeader.{Continue, End}
 
-private class LogWriter (
-    file: File,
-    alloc: SegmentAllocator,
-    dispatcher: LogDispatcher) (
-        implicit scheduler: Scheduler) {
+private class LogWriter (disk: DiskDrive) {
+  import disk.{file, alloc, logd, scheduler}
 
   val buffer = PagedBuffer (12)
   var head = 0L
@@ -42,13 +39,13 @@ private class LogWriter (
       i += 1
     }
 
-    dispatcher.replace (rejects)
+    logd.replace (rejects)
 
     val finish = new Callback [Unit] {
       def pass (v: Unit) = {
         buffer.clear()
         entries foreach (e =>  scheduler.execute (e.cb, ()))
-        dispatcher.engage (LogWriter.this)
+        logd.engage (LogWriter.this)
       }
       def fail (t: Throwable) {
         buffer.clear()

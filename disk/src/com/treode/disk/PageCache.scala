@@ -20,7 +20,7 @@ private class PageCache (disks: DiskDrives) (implicit scheduler: Scheduler) {
       .build()
       .asInstanceOf [Cache [(Int, Long), Future [Any]]]
 
-  def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P]) {
+  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]) {
     guard (cb) {
       pages
           .get ((pos.disk, pos.offset), new Load (desc, pos))

@@ -8,7 +8,7 @@ private class ReloadAgent (
     cb: Callback [Unit]) (
         implicit scheduler: Scheduler) extends Reload {
 
-  def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P]): Unit =
+  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
     disks.fetch (desc, pos, cb)
 
   val ready = Callback.latch (roots.size, cb)

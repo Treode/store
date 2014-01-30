@@ -16,13 +16,13 @@ private class LaunchAgent (
 
   def disks: Disks = drives
 
-  def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P]): Unit =
+  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
     drives.fetch (desc, pos, cb)
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any): Unit =
     roots.checkpoint (desc) (f)
 
-  def handle [G, P] (desc: PageDescriptor [G, P], handler: PageHandler [G]): Unit =
+  def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]): Unit =
     pages.handle (desc, handler)
 
   val launched = delay (cb) { _: Unit =>

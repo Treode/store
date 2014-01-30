@@ -38,8 +38,17 @@ private class DiskDrives (
     var attachreqs = Queue.empty [AttachPending]
     var checkreqs = List.empty [Callback [Unit]]
 
-    def launch (checkpoints: CheckpointRegistry, pages: PageRegistry): Unit =
-      state = new Launched (checkpoints, pages, attachreqs, checkreqs)
+    def launch (checkpoints: CheckpointRegistry, pages: PageRegistry): Unit = {
+      val pageWritersRecovered = new Callback [Unit] {
+        def pass (v: Unit): Unit = fiber.execute {
+          state = new Launched (checkpoints, pages, attachreqs, checkreqs)
+        }
+        def fail (t: Throwable) {
+          state = new Panicked (t)
+        }}
+      val latch = Callback.latch (disks.size, pageWritersRecovered)
+      disks.values foreach (_.recover (pages, latch))
+    }
 
     def attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
       guard (cb) {
@@ -89,59 +98,38 @@ private class DiskDrives (
 
     def attach (req: AttachPending) {
       val (items, cb) = req
+      guard (cb) {
 
-      val priorPaths = disks.values.map (_.path) .toSet
-      val newPaths = items.map (_._1) .toSet
-      val newBoot = BootBlock (generation + 1, number + items.size, priorPaths ++ newPaths, roots)
+        val priorPaths = disks.values.map (_.path) .toSet
+        val newPaths = items.map (_._1) .toSet
+        val newBoot = BootBlock (generation, number+items.size, priorPaths++newPaths, roots)
 
-      def priorDisksRepaired = new Callback [Unit] {
-        def pass (v: Unit) = fiber.execute {
-          attaching = false
+        val newDisksPrimed = new Callback [Seq [DiskDrive]] {
+          def pass (newDisks: Seq [DiskDrive]): Unit = fiber.execute {
+            generation = newBoot.gen
+            number = newBoot.num
+            disks ++= DiskDrives.mapBy (newDisks) (_.id)
+            attaching = false
+            newDisks foreach (_.engage())
+            checkpoint()
+          }
+          def fail (t: Throwable): Unit = fiber.execute {
+            attaching = false
+            ready()
+            scheduler.fail (cb, t)
+          }}
+
+        if (newPaths exists (priorPaths contains _)) {
+          val already = (newPaths -- priorPaths).toSeq.sorted
           ready()
-        }
-        def fail (t: Throwable) = fiber.execute (panic (t))
-      }
-
-      def priorDisksUpdated (newDisks: Seq [DiskDrive]) = new Callback [Unit] {
-
-        def pass (v: Unit): Unit = fiber.execute {
-          generation = newBoot.gen
-          number = newBoot.num
-          disks ++= DiskDrives.mapBy (newDisks) (_.id)
-          attaching = false
-          newDisks foreach (_.engage())
-          ready()
-          scheduler.execute (cb, ())
-        }
-
-        def fail (t: Throwable): Unit = fiber.execute {
-          val oldboot = BootBlock (generation, number, priorPaths, roots)
-          val latch = Callback.latch (disks.size, priorDisksRepaired)
-          disks.values foreach (_.checkpoint (oldboot, latch))
-          scheduler.fail (cb, t)
-        }}
-
-      val newDisksPrimed = new Callback [Seq [DiskDrive]] {
-        def pass (newDisks: Seq [DiskDrive]): Unit = fiber.execute {
-          val latch = Callback.latch (disks.size, priorDisksUpdated (newDisks))
-          disks.values foreach (_.checkpoint (newBoot, latch))
-        }
-        def fail (t: Throwable): Unit = fiber.execute {
-          ready()
-          scheduler.fail (cb, t)
-        }}
-
-      if (newPaths exists (priorPaths contains _)) {
-        val already = (newPaths -- priorPaths).toSeq.sorted
-        ready()
-        scheduler.fail (cb, new AlreadyAttachedException (already))
-      } else {
-        DiskDrives.primeDisks (items, number, newBoot, logd, paged, newDisksPrimed)
-      }}
+          scheduler.fail (cb, new AlreadyAttachedException (already))
+        } else {
+          DiskDrives.primeDisks (items, number, newBoot, logd, paged, newDisksPrimed)
+        }}}
 
     def checkpoint() {
 
-      val attached = disks.values.map (_.path) .toSet
+      val newgen = generation+1
 
       def rootPageWritten (newboot: BootBlock, newroots: Position) =
         Callback.latch (disks.size, new Callback [Unit] {
@@ -159,14 +147,17 @@ private class DiskDrives (
       val rootsWritten =
         new Callback [Position] {
           def pass (newroots: Position) = fiber.execute {
-            val newboot = BootBlock (generation+1, number, attached, newroots)
+            val attached = disks.values.map (_.path) .toSet
+            val newboot = BootBlock (newgen, number, attached, newroots)
             val latch = rootPageWritten (newboot, newroots)
-            disks.values foreach (_.checkpoint (newboot, latch))
+            for (disk <- disks.values)
+              disk.checkpoint (newboot, latch)
           }
           def fail (t: Throwable) = fiber.execute (panic (t))
       }
 
-      checkpoints.checkpoint (generation+1, rootsWritten)
+      disks.values foreach (_.checkpoint (newgen))
+      checkpoints.checkpoint (newgen, rootsWritten)
     }
 
     def launch (checkpoints: CheckpointRegistry, pages: PageRegistry): Unit =
@@ -208,7 +199,7 @@ private class DiskDrives (
   def replay (records: RecordRegistry, cb: Callback [Unit]): Unit =
     LogIterator.replay (disks.values, records, cb)
 
-  def fetch [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P]): Unit =
+  def fetch [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
     disks (pos.disk) .read (desc, pos, cb)
 
   def launch (checkpoints: CheckpointRegistry, pages: PageRegistry): Unit =
@@ -232,7 +223,7 @@ private class DiskDrives (
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit]): Unit =
     logd.record (desc, entry, cb)
 
-  def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P]): Unit =
+  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
     cache.read (desc, pos, cb)
 
   def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P, cb: Callback [Position]): Unit =
@@ -350,17 +341,14 @@ private object DiskDrives {
 
   def primeDisks (items: Seq [(Path, File, DiskDriveConfig)], base: Int, boot: BootBlock,
       logd: LogDispatcher, paged: PageDispatcher, cb: Callback [Seq [DiskDrive]]) (
-          implicit scheduler: Scheduler) {
+          implicit scheduler: Scheduler): Unit =
 
-    val latch = Callback.seq (items.size, cb)
-    for (((path, file, config), i) <- items zipWithIndex) {
-      val disk = new DiskDrive (base+i, path, file, config, logd, paged)
-      disk.init (delay (latch) { _ =>
-        disk.checkpoint (boot, callback (latch) { _ =>
-          disk
-        })
-      })
-    }}
+    guard (cb) {
+      val latch = Callback.seq (items.size, cb)
+      for (((path, file, config), i) <- items zipWithIndex) {
+        val disk = new DiskDrive (base+i, path, file, config, logd, paged)
+        disk.init (boot, callback (latch) (_ => disk))
+      }}
 
   def attach (items: Seq [(Path, File, DiskDriveConfig)], recovery: RecoveryAgent): Unit =
     guard (recovery.cb) {

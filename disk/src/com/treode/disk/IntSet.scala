@@ -20,6 +20,12 @@ private class IntSet private (private val bitmap: Bitmap) {
   def remove (s: IntSet): IntSet =
     new IntSet (bitmap.andNot (s.bitmap))
 
+  def complement: IntSet = {
+    val dup = bitmap.clone()
+    dup.not
+    new IntSet (dup)
+  }
+
   def contains (i: Int): Boolean =
     bitmap.get (i)
 
@@ -33,8 +39,11 @@ private class IntSet private (private val bitmap: Bitmap) {
   def isEmpty: Boolean =
     !bitmap.iterator.hasNext
 
+  def iterator: Iterator [Int] =
+    asScalaIterator (bitmap.iterator.map (_.toInt))
+
   def toSet: Set [Int] =
-    bitmap.iterator .map (_.toInt) .toSet [Int]
+    iterator.toSet
 
   override def hashCode: Int = bitmap.hashCode
 

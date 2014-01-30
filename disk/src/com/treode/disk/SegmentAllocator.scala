@@ -21,6 +21,9 @@ private class SegmentAllocator (config: DiskDriveConfig) {
         throw new DiskFullException
     }}
 
+  def allocated: IntSet =
+    free.complement
+
   def init() {
     free = IntSet.fill (config.segmentCount)
     val superblocks = IntSet.fill (DiskLeadBytes >> config.segmentBits)

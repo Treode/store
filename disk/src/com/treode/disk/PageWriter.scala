@@ -3,17 +3,13 @@ package com.treode.disk
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, Scheduler, guard}
+import com.treode.async.{Callback, Scheduler, callback, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
+import com.treode.pickle.Pickler
 
-private class PageWriter (
-    id: Int,
-    file: File,
-    config: DiskDriveConfig,
-    alloc: SegmentAllocator,
-    dispatcher: PageDispatcher) (
-        implicit scheduler: Scheduler) {
+private class PageWriter (disk: DiskDrive) {
+  import disk.{alloc, config, file, paged, scheduler}
 
   val buffer = PagedBuffer (12)
   var base = 0L
@@ -42,7 +38,7 @@ private class PageWriter (
       val len = config.blockAlignLength (entry.byteSize)
 
       val tpos = projpos - len
-      val tmap = map.add (entry.group, len)
+      val tmap = map.add (entry.id, entry.group, len)
       val maplen = config.blockAlignLength (tmap.byteSize)
       if (tpos - maplen > base) {
         accepts.add (entry)
@@ -55,7 +51,7 @@ private class PageWriter (
       i += 1
     }
 
-    dispatcher.replace (rejects)
+    paged.replace (rejects)
 
     var callbacks = new ArrayList [Callback [Long]]
 
@@ -66,11 +62,12 @@ private class PageWriter (
           base = seg.pos
           pos = seg.limit
           map = SegmentMap.empty
+          SegmentMap.write (file, base, map, Callback.ignore)
         }
         buffer.clear()
         val _pos = pos
         callbacks foreach (scheduler.execute (_, _pos))
-        dispatcher.engage (PageWriter.this)
+        paged.engage (PageWriter.this)
       }
       def fail (t: Throwable) {
         buffer.clear()
@@ -84,7 +81,7 @@ private class PageWriter (
         page.write (buffer)
         buffer.writeZeroToAlign (config.blockBits)
         val length = buffer.writePos - start
-        callbacks.add (new PositionCallback (id, start, length, page.cb))
+        callbacks.add (new PositionCallback (disk.id, start, length, page.cb))
       }
 
       pos -= buffer.readableBytes
@@ -99,14 +96,16 @@ private class PageWriter (
     map = SegmentMap.empty
   }
 
-  def checkpoint (gen: Int): PageWriter.Meta = {
+  def checkpoint (gen: Int, cb: Callback [Unit]): PageWriter.Meta = {
+    SegmentMap.write (file, base, map, cb)
     PageWriter.Meta (pos)
   }
 
-  def recover (gen: Int, meta: PageWriter.Meta) {
+  def recover (gen: Int, meta: PageWriter.Meta, pages: PageRegistry, cb: Callback [Unit]) {
     val seg = alloc.allocPos (meta.pos)
     base = seg.pos
     pos = pos
+    SegmentMap.read (file, base, callback (cb) (map = _))
   }}
 
 private object PageWriter {

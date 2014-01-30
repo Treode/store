@@ -11,5 +11,5 @@ class ReloadRegistry {
   def reload [B] (desc: RootDescriptor [B]) (f: B => Reload => Any): Unit =
     PicklerRegistry.curried (loaders, desc.pblk, desc.id.id) (f)
 
-  def pickler = loaders.pickler
+  def pager = CheckpointRegistry.pager (loaders.pickler)
 }

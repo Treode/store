@@ -125,7 +125,7 @@ private object DiskTestTools {
       cb.passed
     }
 
-    def readAndPass [G, P] (desc: PageDescriptor [G, P], pos: Position): P = {
+    def readAndPass [P] (desc: PageDescriptor [_, P], pos: Position): P = {
       val cb = new CallbackCaptor [P]
       disks.read (desc, pos, cb)
       scheduler.runTasks()

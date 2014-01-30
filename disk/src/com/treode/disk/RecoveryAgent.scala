@@ -2,8 +2,7 @@ package com.treode.disk
 
 import java.util.ArrayList
 
-import com.treode.async.{AsyncIterator, Callback, Scheduler, delay, guard}
-import com.treode.pickle.PicklerRegistry
+import com.treode.async.{Callback, Scheduler, delay, guard}
 
 private class RecoveryAgent (
     records: RecordRegistry,
@@ -31,6 +30,5 @@ private class RecoveryAgent (
       new ReloadAgent (disks, roots, rootsReloaded)
     }
 
-    val pager = CheckpointRegistry.pager (loaders.pickler)
-    disks.fetch (pager, roots, rootsRead)
+    disks.fetch (loaders.pager, roots, rootsRead)
   }}

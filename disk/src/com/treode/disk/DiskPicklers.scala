@@ -11,6 +11,7 @@ private trait DiskPicklers extends Picklers {
   def boot = BootBlock.pickler
   def config = DiskDriveConfig.pickler
   def logMeta = LogWriter.Meta.pickler
+  def pageGroup = PageGroup.pickler
   def pageMeta = PageWriter.Meta.pickler
   def pos = Position.pickler
   def typeId = TypeId.pickler

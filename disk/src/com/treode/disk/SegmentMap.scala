@@ -1,31 +1,74 @@
 package com.treode.disk
 
+import com.treode.async.{Callback, callback}
+import com.treode.async.io.File
+import com.treode.buffer.PagedBuffer
+
+import SegmentMap.entryBytes
+
 private class SegmentMap (
-    private val m: Map [PickledPageHandler, Long],
+    private val map: Map [(TypeId, PageGroup), Long],
     val byteSize: Int) {
 
-  def add (t: PickledPageHandler, byteSize: Long): SegmentMap = {
-    m.get (t) match {
-      case Some (s) =>
-        new SegmentMap (
-            m + (t -> (s + byteSize)),
-            this.byteSize)
+  def add [P] (id: TypeId, group: PageGroup, pageBytes: Int): SegmentMap = {
+    map.get ((id, group)) match {
+      case Some (totalBytes) =>
+          new SegmentMap (
+              map + ((id, group) -> (totalBytes + pageBytes)),
+              byteSize)
+
       case None =>
         new SegmentMap (
-            m + (t -> byteSize),
-            this.byteSize + t.byteSize + SegmentMap.longByteSize)
-    }}}
+            map + ((id, group) -> pageBytes),
+            byteSize + entryBytes + group.byteSize)
+    }}
+
+  def groups: Map [TypeId, Set [PageGroup]] =
+    map.keys.groupBy (_._1) .mapValues (_.map (_._2) .toSet)
+
+  def probe (pages: PageRegistry, cb: Callback [Long]) {
+
+    val pagesProbed = callback (cb) { liveGroups: Map [TypeId, Set [PageGroup]] =>
+      var liveBytes = 0L
+      for {
+        (id, pageGroups) <- liveGroups
+        group <- pageGroups
+      } liveBytes += map ((id, group))
+      liveBytes
+    }
+
+    val groupsByType = map.keys.groupBy (_._1) .mapValues (_.map (_._2) .toSet)
+    val latch = Callback.map (groupsByType.size, pagesProbed)
+    for ((id, groups) <- groupsByType)
+      pages.probe (id, groups, latch)
+  }}
 
 private object SegmentMap {
 
-  val emptyByteSize = 5
-  val longByteSize = 9
+  val intBytes = 5
+  val longBytes = 9
+  val overheadBytes = intBytes         // count of entries
+  val entryBytes = intBytes+longBytes  // typeId, count of bytes
 
-  val empty = new SegmentMap (Map.empty, emptyByteSize)
+  val empty = new SegmentMap (Map.empty, overheadBytes)
 
-  def pickler (pages: PageRegistry) = {
+  val pickler = {
     import DiskPicklers._
-    wrap (map (pages.pickler, long), int)
-    .build (v => new SegmentMap (v._1, v._2))
-    .inspect (v => (v.m, v.byteSize))
+    tagged [SegmentMap] (
+        0x1 -> wrap (tuple (map (tuple (typeId, pageGroup), long), int))
+               .build (v => new SegmentMap (v._1, v._2))
+               .inspect (v => (v.map, v.byteSize)))
+  }
+
+  def read (file: File, pos: Long, cb: Callback [SegmentMap]) {
+    val buf = PagedBuffer (12)
+    file.deframe (buf, pos, callback (cb) { _ =>
+      pickler.unpickle (buf)
+    })
+  }
+
+  def write (file: File, pos: Long, map: SegmentMap, cb: Callback [Unit]) {
+    val buf = PagedBuffer (12)
+    pickler.frame (map, buf)
+    file.flush (buf, pos, cb)
   }}
