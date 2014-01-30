@@ -1,6 +1,6 @@
 package com.treode.disk
 
-import com.treode.async.{AsyncIterator, Callback, callback, guard}
+import com.treode.async.{AsyncIterator, Callback, delay, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
@@ -67,16 +67,18 @@ object LogIterator {
       cb: Callback [LogIterator]): Unit =
     new LogIterator (file, alloc, records) .init (head, cb)
 
-  def merge (disks: Iterable [DiskDrive], records: RecordRegistry, cb: Callback [ReplayIterator]) {
+  def replay (disks: Iterable [DiskDrive], records: RecordRegistry, cb: Callback [Unit]) {
+
+    val merged = delay (cb) { iter: ReplayIterator =>
+      AsyncIterator.foreach (iter, cb) { case ((time, replay), cb) =>
+        guard (cb) (replay())
+        cb()
+      }}
 
     val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
 
-    val allMade = new Callback [Seq [LogIterator]] {
-
-      def pass (iters: Seq [LogIterator]): Unit =
-        AsyncIterator.merge (iters.iterator, cb) (ordering)
-
-      def fail (t: Throwable): Unit = cb.fail (t)
+    val allMade = delay (cb) { iters: Seq [LogIterator] =>
+      AsyncIterator.merge (iters.iterator, merged) (ordering)
     }
 
     val oneMade = Callback.collect (disks.size, allMade)

@@ -3,14 +3,14 @@ package com.treode.store.simple
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.{AsyncIterator, Callback, callback, delay}
-import com.treode.disk.{Disks, PageHandler, Position, TypeId}
+import com.treode.disk.{Disks, PageHandler, PageDescriptor, Position, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
 import SimpleTable.Meta
 
 private class SynthTable (
 
-    val id: TypeId,
+    val pager: TierPage.Descriptor,
 
     // To lock the generation and references to the primary and secondary; this locks the references
     // only, while the skip list manages concurrent readers and writers of entries.  Writing to the
@@ -32,11 +32,8 @@ private class SynthTable (
 
 ) (implicit disks: Disks, config: StoreConfig) extends SimpleTable with PageHandler [Long] {
 
-  private val pager = TierPage.pager (id)
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
-
-  disks.handle (pager, this)
 
   private def read (key: Bytes, cb: Callback [Option [Bytes]]) {
 

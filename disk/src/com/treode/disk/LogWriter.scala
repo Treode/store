@@ -12,8 +12,8 @@ import RecordHeader.{Continue, End}
 private class LogWriter (
     file: File,
     alloc: SegmentAllocator,
-    scheduler: Scheduler,
-    dispatcher: LogDispatcher) {
+    dispatcher: LogDispatcher) (
+        implicit scheduler: Scheduler) {
 
   val buffer = PagedBuffer (12)
   var head = 0L
@@ -80,22 +80,23 @@ private class LogWriter (
       file.flush (buffer, _pos, finish)
     }}
 
-  def init (cb: Callback [Unit]) {
-    val seg = alloc.allocate()
-    head = seg.pos
-    pos = seg.pos
-    limit = seg.limit
-    RecordHeader.pickler.frame (End, buffer)
-    file.flush (buffer, pos, new Callback [Unit] {
-      def pass (v: Unit) {
-        buffer.clear()
-        scheduler.execute (cb, ())
-      }
-      def fail (t: Throwable) {
-        buffer.clear()
-        scheduler.fail (cb, t)
-      }})
-  }
+  def init (cb: Callback [Unit]): Unit =
+    guard (cb) {
+      val seg = alloc.allocate()
+      head = seg.pos
+      pos = seg.pos
+      limit = seg.limit
+      RecordHeader.pickler.frame (End, buffer)
+      file.flush (buffer, pos, new Callback [Unit] {
+        def pass (v: Unit) {
+          buffer.clear()
+          scheduler.execute (cb, ())
+        }
+        def fail (t: Throwable) {
+          buffer.clear()
+          scheduler.fail (cb, t)
+        }})
+    }
 
   def checkpoint (gen: Int): LogWriter.Meta =
     LogWriter.Meta (head)

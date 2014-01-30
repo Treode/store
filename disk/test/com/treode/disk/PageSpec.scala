@@ -5,6 +5,8 @@ import com.treode.async.io.StubFile
 import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec
 
+import DiskTestTools._
+
 class PageSpec extends FlatSpec {
 
   val config = DiskDriveConfig (16, 12, 1L<<20)
@@ -21,14 +23,14 @@ class PageSpec extends FlatSpec {
     var pos = Position (0, 0, 0)
 
     {
-      val kit = new RichDisksKit
-      kit.attachAndPass (("a", disk1, config))
-      pos = kit.writeAndPass (desc, 0, seq)
-      expectResult (seq) (kit.readAndPass (desc, pos))
+      implicit val recovery = Disks.recover()
+      implicit val disks = recovery.attachAndLaunch (("a", disk1, config))
+      pos = disks.writeAndPass (desc, 0, seq)
+      expectResult (seq) (disks.readAndPass (desc, pos))
     }
 
     {
-      val kit = new RichDisksKit
-      kit.reattachAndPass (("a", disk1))
-      expectResult (seq) (kit.readAndPass (desc, pos))
+      implicit val recovery = Disks.recover()
+      implicit val disks = recovery.reattachAndPass (("a", disk1))
+      expectResult (seq) (disks.readAndPass (desc, pos))
     }}}

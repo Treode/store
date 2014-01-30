@@ -2,7 +2,6 @@ package com.treode.disk
 
 import com.treode.async.Callback
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.{Pickler, Picklers, PicklerRegistry}
 
 private trait PickledRecord {
 

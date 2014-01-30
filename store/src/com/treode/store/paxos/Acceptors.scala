@@ -3,11 +3,12 @@ package com.treode.store.paxos
 import com.treode.async.{Callback, Scheduler, callback, delay, guard}
 import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
-import com.treode.disk.{Disks, Position}
+import com.treode.disk.{Disks, Position, RecordDescriptor}
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.store.simple.{SimpleMedic, SimpleTable}
 
 private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
+  import kit.{cluster, disks}
 
   val acceptors = newAcceptorsMap
 
@@ -15,7 +16,7 @@ private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
     var a0 = acceptors.get (key)
     if (a0 != null)
       return a0
-    val a1 = new Acceptor (key, this, kit)
+    val a1 = new Acceptor (key, kit)
     a1.state = new a1.Opening
     a0 = acceptors.putIfAbsent (key, a1)
     if (a0 != null)
@@ -31,21 +32,21 @@ private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
     val oneClosed = callback (allClosed) { a: Acceptor =>
       acceptors.put (a.key, a)
     }
-    medics foreach (_.close (this, oneClosed))
+    medics foreach (_.close (kit, oneClosed))
   }
 
-  def attach() {
-    import Acceptor.{Status, choose, statii, propose, query, root}
-    import kit.{cluster, disks}
-
-    root.checkpoint { cb =>
-      guard (cb) {
+  def checkpoint (cb: Callback [Position]) {
+    import Acceptor.{Status, statii}
+    guard (cb) {
       val as = materialize (acceptors.values)
       val latch = Callback.collect [Status] (
           as.size,
           delay (cb) (statii.write (0, _, cb)))
       as foreach (_.checkpoint (latch))
     }}
+
+  def attach() {
+    import Acceptor.{choose, propose, query}
 
     query.listen { case ((key, ballot, default), c) =>
       get (key) query (c, ballot, default)
@@ -62,70 +63,83 @@ private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
 private object Acceptors {
   import Acceptor._
 
-  def attach (kit: PaxosKit, cb: Callback [Acceptors]) {
-    import Acceptor.{ClosedTable}
-    import kit.{cluster, disks, config, proposers, random, scheduler}
+  val checkpoint = {
+    import PaxosPicklers._
+    new RecordDescriptor (0x8B97BEF0, simpleMeta)
+  }
 
-    disks.open { implicit recovery =>
+  def attach (kit: PaxosRecovery, cb: Callback [Paxos]) {
+    import Acceptor.ClosedTable
+    import kit.{cluster, config, random, recovery, scheduler}
 
-      val db = SimpleMedic (ClosedTable)
-      val medics = newMedicsMap
+    val db = SimpleMedic (ClosedTable)
+    val medics = newMedicsMap
 
-      def openByStatus (status: Status) {
-        val m1 = Medic (status, db, kit)
-        val m0 = medics.putIfAbsent (m1.key, m1)
-        require (m0 == null, "Already recovering paxos instance ${m1.key}.")
+    def openByStatus (status: Status) {
+      val m1 = Medic (status, db, kit)
+      val m0 = medics.putIfAbsent (m1.key, m1)
+      require (m0 == null, "Already recovering paxos instance ${m1.key}.")
+    }
+
+    def openWithDefault (key: Bytes, default: Bytes) {
+      var m0 = medics.get (key)
+      if (m0 != null)
+        return
+      val m1 = Medic (key, default, db, kit)
+      m0 = medics.putIfAbsent (key, m1)
+      if (m0 != null)
+        return
+    }
+
+    def get (key: Bytes): Medic = {
+      val m = medics.get (key)
+      require (m != null, s"Exepcted to be recovering paxos instance $key.")
+      m
+    }
+
+    root.reload { pos => implicit reloader =>
+      val statiiRead = callback (reloader.ready) { instances: Seq [Status] =>
+        instances foreach (openByStatus _)
       }
+      statii.read (reloader, pos, statiiRead)
+    }
 
-      def openWithDefault (key: Bytes, default: Bytes) {
-        var m0 = medics.get (key)
-        if (m0 != null)
-          return
-        val m1 = Medic (key, default, db, kit)
-        m0 = medics.putIfAbsent (key, m1)
-        if (m0 != null)
-          return
-      }
+    checkpoint.replay { case meta =>
+      db.checkpoint (meta)
+    }
 
-      def get (key: Bytes): Medic = {
-        val m = medics.get (key)
-        require (m != null, s"Exepcted to be recovering paxos instance $key.")
-        m
-      }
+    open.replay { case (key, default) =>
+      openWithDefault (key, default)
+    }
 
-      root.reload { (pos, cb) =>
-        val statiiRead = callback (cb) { instances: Seq [Status] =>
-          instances foreach (openByStatus _)
-        }
-        statii.read (pos, statiiRead)
-      }
+    promise.replay { case (key, ballot) =>
+      get (key) promised (ballot)
+    }
 
-      open.replay { case (key, default) =>
-        openWithDefault (key, default)
-      }
+    accept.replay { case (key, ballot, value) =>
+      get (key) accepted (ballot, value)
+    }
 
-      promise.replay { case (key, ballot) =>
-        get (key) promised (ballot)
-      }
+    reaccept.replay { case (key, ballot) =>
+      get (key) reaccepted (ballot)
+    }
 
-      accept.replay { case (key, ballot, value) =>
-        get (key) accepted (ballot, value)
-      }
+    close.replay { case (key, chosen, gen) =>
+      get (key) closed (chosen, gen)
+    }
 
-      reaccept.replay { case (key, ballot) =>
-        get (key) reaccepted (ballot)
-      }
+    recovery.launch { implicit launcher =>
+      import launcher.disks
 
-      close.replay { case (key, chosen, gen) =>
-        get (key) closed (chosen, gen)
-      }
+      val kit = new PaxosKit (db.close())
+      import kit.{acceptors, proposers}
 
-      recovery.close {
-        val acceptors = new Acceptors (db.close(), kit)
-        val ms = materialize (medics.values)
-        acceptors.recover (ms, callback { _ =>
-          acceptors.attach()
-          proposers.attach()
-          cb (acceptors)
-        })
-      }}}}
+      val ms = materialize (medics.values)
+      acceptors.recover (ms, callback (launcher.ready) { _ =>
+        acceptors.attach()
+        proposers.attach()
+        cb (kit)
+      })
+
+      root.checkpoint (acceptors.checkpoint _)
+    }}}

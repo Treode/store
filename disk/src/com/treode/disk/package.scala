@@ -1,8 +1,7 @@
 package com.treode
 
 import java.nio.file.Path
-import com.treode.async.{AsyncIterator, Callback}
-import com.treode.pickle.Pickler
+import com.treode.async.AsyncIterator
 
 package disk {
 

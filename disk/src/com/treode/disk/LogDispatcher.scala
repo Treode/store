@@ -2,9 +2,8 @@ package com.treode.disk
 
 import java.util.ArrayList
 import com.treode.async.{Callback, Scheduler}
-import com.treode.pickle.Pickler
 
-private class LogDispatcher (scheduler: Scheduler) {
+private class LogDispatcher (implicit scheduler: Scheduler) {
 
   private val dsp = new Dispatcher [PickledRecord] (scheduler)
 

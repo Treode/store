@@ -1,7 +1,5 @@
 package com.treode.disk
 
-import com.treode.pickle.{Pickler, PicklerRegistry}
-
 private class SegmentMap (
     private val m: Map [PickledPageHandler, Long],
     val byteSize: Int) {

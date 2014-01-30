@@ -13,7 +13,6 @@ private trait DiskPicklers extends Picklers {
   def logMeta = LogWriter.Meta.pickler
   def pageMeta = PageWriter.Meta.pickler
   def pos = Position.pickler
-  def rootMeta = RootRegistry.Meta.pickler
   def typeId = TypeId.pickler
 }
 

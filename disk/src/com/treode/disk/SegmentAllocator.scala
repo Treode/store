@@ -1,9 +1,5 @@
 package com.treode.disk
 
-import scala.collection.JavaConversions._
-
-import com.treode.pickle._
-
 private class SegmentAllocator (config: DiskDriveConfig) {
 
   var free = IntSet.fill (0)
@@ -46,7 +42,7 @@ private object Allocator {
   object Meta {
 
     val pickler = {
-      import Picklers._
+      import DiskPicklers._
       val intset = IntSet.pickle
       wrap (intset) build (Meta.apply _) inspect (_.free)
     }}

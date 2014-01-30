@@ -13,7 +13,7 @@ private class Medic (
     var proposal: Proposal,
     var chosen: Option [Bytes],
     db: SimpleMedic,
-    kit: PaxosKit) {
+    kit: PaxosRecovery) {
 
   import kit.scheduler
 
@@ -42,8 +42,8 @@ private class Medic (
     db.put (gen, key, chosen)
   }
 
-  def close (acceptors: Acceptors, cb: Callback [Acceptor]): Unit = fiber.execute {
-    val a = new Acceptor (key, acceptors, kit)
+  def close (kit: PaxosKit, cb: Callback [Acceptor]): Unit = fiber.execute {
+    val a = new Acceptor (key, kit)
     if (chosen.isDefined)
       a.state = new a.Closed (chosen.get)
     else
@@ -56,7 +56,7 @@ private class Medic (
 
 private object Medic {
 
-  def apply (status: Status, db: SimpleMedic, kit: PaxosKit): Medic = {
+  def apply (status: Status, db: SimpleMedic, kit: PaxosRecovery): Medic = {
     status match {
       case Status.Restoring (key, default) =>
         new Medic (key, default, BallotNumber.zero, Option.empty, None, db, kit)
@@ -66,6 +66,6 @@ private object Medic {
         new Medic (key, chosen, BallotNumber.zero, Option.empty, Some (chosen), db, kit)
     }}
 
-  def apply (key: Bytes, default: Bytes, db: SimpleMedic, kit: PaxosKit): Medic =
+  def apply (key: Bytes, default: Bytes, db: SimpleMedic, kit: PaxosRecovery): Medic =
     new Medic (key, default, BallotNumber.zero, Option.empty, None, db, kit)
 }

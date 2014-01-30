@@ -2,10 +2,8 @@ package com.treode.disk
 
 import java.util.ArrayList
 import com.treode.async.{Callback, Scheduler}
-import com.treode.buffer.PagedBuffer
-import com.treode.pickle.Pickler
 
-private class PageDispatcher (scheduler: Scheduler) {
+private class PageDispatcher (implicit scheduler: Scheduler) {
 
   private val dsp = new Dispatcher [PickledPage] (scheduler)
 

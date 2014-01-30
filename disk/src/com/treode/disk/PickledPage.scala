@@ -2,7 +2,6 @@ package com.treode.disk
 
 import com.treode.async.Callback
 import com.treode.buffer.Output
-import com.treode.pickle.Pickler
 
 private trait PickledPage {
 

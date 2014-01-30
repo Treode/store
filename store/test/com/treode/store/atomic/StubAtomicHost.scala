@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, CallbackCaptor}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
@@ -15,16 +15,22 @@ private class StubAtomicHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {
   import network.{random, scheduler}
 
-  implicit val disks = Disks()
-  val file = new StubFile
-  val config = DiskDriveConfig (16, 8, 1L<<20)
-  disks.attach (Seq ((Paths.get ("a"), file, config)), Callback.ignore)
-
   implicit val cluster: Cluster = this
 
+  implicit val recovery = Disks.recover()
   implicit val storeConfig = StoreConfig (1<<16)
+  val _paxos = new CallbackCaptor [Paxos]
+  Paxos.recover (_paxos)
+  val file = new StubFile
+  val config = DiskDriveConfig (16, 8, 1L<<20)
+  recovery.attach (Seq ((Paths.get ("a"), file, config)), Callback.ignore)
+  scheduler.runTasks()
+  while (!_paxos.wasInvoked)
+    Thread.sleep (1)
+
+  implicit val paxos = _paxos.passed
+
   implicit val store = TestableTempKit (2)
-  implicit val paxos = Paxos()
   val atomic = new AtomicKit
 
   def writeDeputy (xid: TxId) = atomic.WriteDeputies.get (xid)

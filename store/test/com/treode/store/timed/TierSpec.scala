@@ -26,14 +26,13 @@ class TierSpec extends WordSpec {
 
   private def setup() = {
     implicit val scheduler = StubScheduler.random()
-    implicit val disks = Disks()
+    implicit val recovery = Disks.recover()
     val file = new StubFile
     val config = DiskDriveConfig (16, 12, 1L<<20)
-    val cb = new CallbackCaptor [Unit]
-    disks.attach (Seq ((Paths.get ("a"), file, config)), cb)
+    val cb = new CallbackCaptor [Disks]
+    recovery.attach (Seq ((Paths.get ("a"), file, config)), cb)
     scheduler.runTasks()
-    cb.passed
-    (scheduler, disks)
+    (scheduler, cb.passed)
   }
 
   /** Get the depths of ValueBlocks reached from the index entries. */

@@ -11,18 +11,17 @@ private class StubPaxosHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {
   import network.{random, scheduler}
 
-  implicit val disks = Disks()
-
   implicit val cluster: Cluster = this
 
+  implicit val recovery = Disks.recover()
   implicit val storeConfig = StoreConfig (1<<16)
-
-  private val _acceptors = new CallbackCaptor [Acceptors]
-  def acceptors = _acceptors.passed
-  val paxos = new PaxosKit
-  Acceptors.attach (paxos, _acceptors)
-
+  val _paxos = new CallbackCaptor [Paxos]
+  Paxos.recover (_paxos)
   val file = new StubFile
   val config = DiskDriveConfig (16, 8, 1L<<20)
-  disks.attach (Seq ((Paths.get ("a"), file, config)), Callback.ignore)
+  recovery.attach (Seq ((Paths.get ("a"), file, config)), Callback.ignore)
+  scheduler.runTasks()
+
+  val paxos = _paxos.passed
+  val acceptors = paxos.asInstanceOf [PaxosKit] .acceptors
 }

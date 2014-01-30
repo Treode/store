@@ -8,19 +8,9 @@ import com.treode.async.io.File
 
 trait Disks {
 
-  def reattach (items: Seq [(Path, File)], cb: Callback [Unit])
-
-  def reattach (items: Seq [Path], executor: ExecutorService, cb: Callback [Unit])
-
   def attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit])
 
   def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Unit])
-
-  def open (f: Recovery => Any)
-
-  def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any)
-
-  def handle [G, P] (desc: PageDescriptor [G, P], handler: PageHandler [G])
 
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit])
 
@@ -31,6 +21,6 @@ trait Disks {
 
 object Disks {
 
-  def apply () (implicit scheduler: Scheduler): Disks =
-    new DisksKit
+  def recover () (implicit scheduler: Scheduler): Recovery =
+    new RecoveryBuilder
 }

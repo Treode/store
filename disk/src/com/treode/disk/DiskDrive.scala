@@ -1,24 +1,23 @@
 package com.treode.disk
 
 import java.nio.file.Path
-import com.treode.async.{Callback, Scheduler, guard}
+
+import com.treode.async.{Callback, Scheduler, callback, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.Pickler
 
 private class DiskDrive (
     val id: Int,
     val path: Path,
     file: File,
     config: DiskDriveConfig,
-    scheduler: Scheduler,
     logd: LogDispatcher,
-    paged: PageDispatcher,
-    pages: PageRegistry) {
+    paged: PageDispatcher) (
+        implicit scheduler: Scheduler) {
 
   val alloc = new SegmentAllocator (config)
-  val logw = new LogWriter (file, alloc, scheduler, logd)
-  val pagew = new PageWriter (id, file, config, alloc, scheduler, paged, pages)
+  val logw = new LogWriter (file, alloc, logd)
+  val pagew = new PageWriter (id, file, config, alloc, paged)
 
   def init (cb: Callback [Unit]) {
     alloc.init()
@@ -30,11 +29,15 @@ private class DiskDrive (
     paged.engage (pagew)
   }
 
-  def fill (buf: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit]): Unit =
-    file.fill (buf, pos, len, cb)
+  def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P]): Unit =
+    guard (cb) {
+      val buf = PagedBuffer (12)
+      file.fill (buf, pos.offset, pos.length, callback (cb) { _ =>
+        desc.ppag.unpickle (buf)
+      })
+    }
 
   def checkpoint (boot: BootBlock, cb: Callback [Unit]) {
-    val latch = Callback.latch (2, cb)
     val gen = boot.gen
     val superblock = SuperBlock (
         id,
@@ -42,18 +45,18 @@ private class DiskDrive (
         config,
         alloc.checkpoint (gen),
         logw.checkpoint (gen),
-        pagew.checkpoint (gen, latch))
+        pagew.checkpoint (gen))
     val buffer = PagedBuffer (12)
     SuperBlock.pickler.pickle (superblock, buffer)
     val pos = if ((boot.gen & 1) == 0) 0 else SuperBlockBytes
-    file.flush (buffer, pos, latch)
+    file.flush (buffer, pos, cb)
   }
 
-  def recover (superblock: SuperBlock, cb: Callback [Unit]) {
+  def recover (superblock: SuperBlock) {
     val gen = superblock.boot.gen
     alloc.recover (gen, superblock.alloc)
     logw.recover (gen, superblock.log)
-    pagew.recover (gen, superblock.pages, cb)
+    pagew.recover (gen, superblock.pages)
   }
 
   def logIterator (records: RecordRegistry, cb: Callback [LogIterator]): Unit =

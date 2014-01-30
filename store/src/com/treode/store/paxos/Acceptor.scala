@@ -9,10 +9,10 @@ import com.treode.disk.{PageDescriptor, RecordDescriptor, RootDescriptor}
 import com.treode.store.{Bytes, StorePicklers}
 import com.treode.store.simple.SimpleTable
 
-private class Acceptor (val key: Bytes, acceptors: Acceptors, kit: PaxosKit) {
+private class Acceptor (val key: Bytes, kit: PaxosKit) {
   import Acceptor.{NoPost, Post, Status}
-  import acceptors.db
   import kit.{cluster, disks, scheduler}
+  import kit.acceptors.db
   import kit.config.{closedLifetime, deliberatingTimeout}
 
   private val fiber = new Fiber (scheduler)

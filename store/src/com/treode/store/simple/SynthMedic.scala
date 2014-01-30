@@ -2,12 +2,12 @@ package com.treode.store.simple
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import com.treode.disk.{Disks, Position, TypeId}
+import com.treode.disk.{Launch, Position, Recovery, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
 import SimpleTable.Meta
 
-private class SynthMedic (id: TypeId) (implicit disks: Disks, config: StoreConfig)
+private class SynthMedic (id: TypeId) (implicit recovery: Recovery, config: StoreConfig)
 extends SimpleMedic {
 
   private val lock = new ReentrantReadWriteLock
@@ -24,17 +24,6 @@ extends SimpleMedic {
 
   // The position of each tier on disk.
   private var tiers = Tiers.empty
-
-  private def recover (meta: SimpleTable.Meta) {
-    writeLock.lock()
-    try {
-      generation = meta.gen+1
-      primary = newMemTier
-      secondary = newMemTier
-      tiers = meta.tiers
-    } finally {
-      writeLock.unlock()
-    }}
 
   private def replay (gen: Long, key: Bytes, value: Option [Bytes]) {
 
@@ -83,19 +72,39 @@ extends SimpleMedic {
   def delete (gen: Long, key: Bytes): Unit =
     replay (gen, key, None)
 
-  def close(): SimpleTable = {
+  def checkpoint (meta: SimpleTable.Meta) {
     writeLock.lock()
     try {
-      if (!secondary.isEmpty) {
-        secondary.addAll (primary)
-        primary = secondary
-        secondary = newMemTier
-      }
-      val t = new SynthTable (id, lock, generation, primary, secondary, tiers)
-      primary = null
-      secondary = null
-      t
+      generation = meta.gen+1
+      primary = newMemTier
+      secondary = newMemTier
+      tiers = meta.tiers
     } finally {
       writeLock.unlock()
     }}
+
+  def close () (implicit launcher: Launch): SimpleTable = {
+    import launcher.disks
+
+    writeLock.lock()
+    val (generation, primary, secondary, tiers) = try {
+      if (!this.secondary.isEmpty) {
+        this.secondary.addAll (this.primary)
+        this.primary = this.secondary
+        this.secondary = newMemTier
+      }
+      val result = (this.generation, this.primary, this.secondary, this.tiers)
+      this.primary = null
+      this.secondary = null
+      this.tiers = null
+      result
+    } finally {
+      writeLock.unlock()
+    }
+
+    val pager = TierPage.pager (id)
+    val table = new SynthTable (pager, lock, generation, primary, secondary, tiers)
+    pager.handle (table)
+    table
+  }
 }

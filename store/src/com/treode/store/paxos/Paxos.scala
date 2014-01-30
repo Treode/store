@@ -4,7 +4,7 @@ import scala.util.Random
 
 import com.treode.async.{Callback, Scheduler}
 import com.treode.cluster.Cluster
-import com.treode.disk.Disks
+import com.treode.disk.Recovery
 import com.treode.store.{Bytes, StoreConfig}
 
 trait Paxos {
@@ -15,10 +15,9 @@ trait Paxos {
 
 object Paxos {
 
-  def apply () (implicit random: Random, scheduler: Scheduler, cluster: Cluster, disks: Disks,
-      config: StoreConfig): Paxos = {
+  def recover (cb: Callback [Paxos]) (implicit random: Random, scheduler: Scheduler, cluster: Cluster,
+      recover: Recovery, config: StoreConfig) {
 
-    val kit = new PaxosKit
-    Acceptors.attach (kit, Callback.ignore)
-    kit
+    val kit = new PaxosRecovery
+    Acceptors.attach (kit, cb)
   }}

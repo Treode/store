@@ -1,6 +1,6 @@
 package com.treode.store.simple
 
-import com.treode.disk.{Disks, TypeId}
+import com.treode.disk.{Launch, Recovery, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
 trait SimpleMedic {
@@ -9,11 +9,13 @@ trait SimpleMedic {
 
   def delete (gen: Long, key: Bytes)
 
-  def close(): SimpleTable
+  def checkpoint (meta: SimpleTable.Meta)
+
+  def close () (implicit launcher: Launch): SimpleTable
 }
 
 object SimpleMedic {
 
-  def apply (id: TypeId) (implicit disks: Disks, config: StoreConfig): SimpleMedic =
+  def apply (id: TypeId) (implicit recovery: Recovery, config: StoreConfig): SimpleMedic =
     new SynthMedic (id)
 }

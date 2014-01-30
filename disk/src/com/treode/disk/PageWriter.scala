@@ -3,7 +3,7 @@ package com.treode.disk
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, Scheduler, callback, delay, guard}
+import com.treode.async.{Callback, Scheduler, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
@@ -12,11 +12,9 @@ private class PageWriter (
     file: File,
     config: DiskDriveConfig,
     alloc: SegmentAllocator,
-    scheduler: Scheduler,
-    dispatcher: PageDispatcher,
-    pages: PageRegistry) {
+    dispatcher: PageDispatcher) (
+        implicit scheduler: Scheduler) {
 
-  val segmentMap = SegmentMap.pickler (pages)
   val buffer = PagedBuffer (12)
   var base = 0L
   var pos = 0L
@@ -29,17 +27,6 @@ private class PageWriter (
   }
 
   val receiver: (ArrayList [PickledPage] => Unit) = (receive _)
-
-  def writeMap (map: SegmentMap, pos: Long, cb: Callback [Unit]) {
-    val buf = PagedBuffer (12)
-    buf.writeInt (0)
-    segmentMap.pickle (map, buf)
-    val end = buf.writePos
-    buf.writePos = 0
-    buf.writeInt (end)
-    buf.writePos = end
-    file.flush (buf, base, cb)
-  }
 
   def receive (pages: ArrayList [PickledPage]) {
 
@@ -75,7 +62,6 @@ private class PageWriter (
     val finish = new Callback [Unit] {
       def pass (v: Unit) = {
         if (realloc) {
-          writeMap (map, base, Callback.ignore)
           val seg = alloc.allocate()
           base = seg.pos
           pos = seg.limit
@@ -107,26 +93,20 @@ private class PageWriter (
       file.flush (buffer, pos, finish)
     }}
 
-  def init (cb: Callback [Unit]) {
-    val seg = alloc.allocate()
-    base = seg.pos
-    pos = seg.limit
+  def init() {
+    base = 0
+    pos = 0
     map = SegmentMap.empty
-    writeMap (map, base, cb)
   }
 
-  def checkpoint (gen: Int, cb: Callback [Unit]): PageWriter.Meta = {
-    val (map, pos, base) = (this.map, this.pos, this.base)
-    writeMap (map, base, cb)
+  def checkpoint (gen: Int): PageWriter.Meta = {
     PageWriter.Meta (pos)
   }
 
-  def recover (gen: Int, meta: PageWriter.Meta, cb: Callback [Unit]) {
+  def recover (gen: Int, meta: PageWriter.Meta) {
     val seg = alloc.allocPos (meta.pos)
     base = seg.pos
     pos = pos
-    // TODO: Read map from disk.
-    cb()
   }}
 
 private object PageWriter {

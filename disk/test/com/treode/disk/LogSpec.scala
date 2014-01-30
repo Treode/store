@@ -5,6 +5,8 @@ import com.treode.async.io.StubFile
 import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec
 
+import DiskTestTools._
+
 class LogSpec extends FlatSpec {
 
   val config = DiskDriveConfig (6, 2, 1<<20)
@@ -22,26 +24,21 @@ class LogSpec extends FlatSpec {
       cb.passed
     }}
 
-  def replay (f: String => Any) (implicit disks: Disks): Unit =
-    disks.open { implicit recovery =>
-      record.replay (f)
-    }
-
   "The logger" should "replay when reattaching disks" in {
     implicit val scheduler = StubScheduler.random()
     val disk1 = new StubFile
 
     {
-      implicit val disks = new RichDisksKit
-      replay (_ => fail ("Nothing to replay."))
-      disks.attachAndPass (("a", disk1, config))
+      implicit val recovery = Disks.recover()
+      record.replay (_ => fail ("Nothing to replay."))
+      implicit val disks = recovery.attachAndLaunch (("a", disk1, config))
       record.recordAndPass ("one")
     }
 
     {
-      implicit val disks = new RichDisksKit
+      implicit val recovery = Disks.recover()
       val replayed = Seq.newBuilder [String]
-      replay (replayed += _)
-      disks.reattachAndPass (("a", disk1))
+      record.replay (replayed += _)
+      implicit val disks = recovery.reattachAndPass (("a", disk1))
       expectResult (Seq ("one")) (replayed.result)
     }}}
