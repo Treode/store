@@ -39,7 +39,7 @@ private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
     import Acceptor.{Status, statii}
     guard (cb) {
       val as = materialize (acceptors.values)
-      val latch = Callback.collect [Status] (
+      val latch = Callback.seq [Status] (
           as.size,
           delay (cb) (statii.write (0, _, cb)))
       as foreach (_.checkpoint (latch))

@@ -40,12 +40,15 @@ object Callback {
       def fail (t: Throwable): Unit = throw t
     }
 
-  def latch (count: Int, cb: Callback [Unit]): Callback [Any] =
+  def latch [A] (count: Int, cb: Callback [Unit]): Callback [A] =
     new CountingLatch (count, cb)
 
-  def collate [A] (count: Int, cb: Callback [Array [A]]) (implicit m: Manifest [A]): Callback [(Int, A)] =
+  def array [A] (count: Int, cb: Callback [Array [A]]) (implicit m: Manifest [A]): Callback [(Int, A)] =
     new ArrayLatch (count, cb)
 
-  def collect [A] (count: Int, cb: Callback [Seq [A]]) (implicit m: Manifest [A]): Callback [A] =
+  def map [K, V] (count: Int, cb: Callback [Map [K, V]]): Callback [(K, V)] =
+    new MapLatch (count, cb)
+
+  def seq [A] (count: Int, cb: Callback [Seq [A]]) (implicit m: Manifest [A]): Callback [A] =
     new SeqLatch (count, cb)
 }

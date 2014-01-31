@@ -81,7 +81,7 @@ object LogIterator {
       AsyncIterator.merge (iters.iterator, merged) (ordering)
     }
 
-    val oneMade = Callback.collect (disks.size, allMade)
+    val oneMade = Callback.seq (disks.size, allMade)
 
     disks foreach (_.logIterator (records, oneMade))
   }}

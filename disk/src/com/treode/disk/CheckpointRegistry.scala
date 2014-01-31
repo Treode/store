@@ -26,7 +26,7 @@ private class CheckpointRegistry (implicit disks: Disks) {
     val allWritten = delay (cb) { roots: Seq [Tagger] =>
       pager.write (gen, roots, cb)
     }
-    val oneWritten = Callback.collect (checkpoints.size, allWritten)
+    val oneWritten = Callback.seq (checkpoints.size, allWritten)
     checkpoints foreach (_ (oneWritten))
   }}
 

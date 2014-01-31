@@ -70,7 +70,7 @@ private object TierIterator {
       AsyncIterator.merge (iters.iterator, cb)
     }
 
-    val oneBuilt = Callback.collate (tiers.size + 2, allBuilt)
+    val oneBuilt = Callback.array (tiers.size + 2, allBuilt)
 
     oneBuilt (0, AsyncIterator.adapt (primary))
     oneBuilt (1, AsyncIterator.adapt (secondary))

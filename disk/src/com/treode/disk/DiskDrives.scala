@@ -333,7 +333,7 @@ private object DiskDrives {
       val allRead = delay (recovery.cb) { reads: Seq [SuperBlocks] =>
         superBlocksRead (reads, recovery)
       }
-      val oneRead = Callback.collect (items.size, allRead)
+      val oneRead = Callback.seq (items.size, allRead)
       for ((path, file) <- items)
         readSuperBlocks (path, file, oneRead)
     }
@@ -352,7 +352,7 @@ private object DiskDrives {
       logd: LogDispatcher, paged: PageDispatcher, cb: Callback [Seq [DiskDrive]]) (
           implicit scheduler: Scheduler) {
 
-    val latch = Callback.collect (items.size, cb)
+    val latch = Callback.seq (items.size, cb)
     for (((path, file, config), i) <- items zipWithIndex) {
       val disk = new DiskDrive (base+i, path, file, config, logd, paged)
       disk.init (delay (latch) { _ =>
@@ -377,7 +377,7 @@ private object DiskDrives {
 
       val attaching = items.map (_._1) .toSet
       val roots = Position (0, 0, 0)
-      val latch = Callback.collect (items.size, disksPrimed)
+      val latch = Callback.seq (items.size, disksPrimed)
       val boot = BootBlock.apply (0, items.size, attaching, roots)
       primeDisks (items, 0, boot, logd, paged, disksPrimed)
   }
