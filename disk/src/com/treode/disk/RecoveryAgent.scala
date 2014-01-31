@@ -5,8 +5,6 @@ import java.util.ArrayList
 import com.treode.async.{AsyncIterator, Callback, Scheduler, delay, guard}
 import com.treode.pickle.PicklerRegistry
 
-import PicklerRegistry.TaggedFunction
-
 private class RecoveryAgent (
     records: RecordRegistry,
     loaders: ReloadRegistry,

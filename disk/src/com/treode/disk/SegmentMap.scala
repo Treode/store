@@ -13,7 +13,7 @@ private class SegmentMap (
       case None =>
         new SegmentMap (
             m + (t -> byteSize),
-            this.byteSize + t.tag.byteSize + SegmentMap.longByteSize)
+            this.byteSize + t.byteSize + SegmentMap.longByteSize)
     }}}
 
 private object SegmentMap {

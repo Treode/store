@@ -2,15 +2,13 @@ package com.treode.disk
 
 import com.treode.pickle.PicklerRegistry
 
-private trait PickledPageHandler extends PicklerRegistry.Tagged {
+import PicklerRegistry.{BaseTag, Tag}
 
-  def tag: PicklerRegistry.Tagger
-}
+private trait PickledPageHandler extends Tag
 
 private object PickledPageHandler {
 
   def apply [G, P] (desc: PageDescriptor [G, P], group: G): PickledPageHandler =
-    new PickledPageHandler {
+    new BaseTag (desc.pgrp, desc.id.id, group) with PickledPageHandler
 
-      def tag = PicklerRegistry.tagger (desc.pgrp, desc.id.id, group)
-    }}
+}

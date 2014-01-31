@@ -6,11 +6,11 @@ import com.treode.buffer.{Input, PagedBuffer, Output}
 import com.treode.cluster.{EphemeralMailbox, MailboxId, Peer}
 import com.treode.pickle.{InvalidTagException, Pickler, Picklers, PicklerRegistry}
 
-import PicklerRegistry.TaggedFunction
+import PicklerRegistry.FunctionTag
 
 class MailboxRegistry {
 
-  private type Handler = TaggedFunction [Peer, Any]
+  private type Handler = FunctionTag [Peer, Any]
 
   private val mailboxes =
     PicklerRegistry [Handler] { id =>

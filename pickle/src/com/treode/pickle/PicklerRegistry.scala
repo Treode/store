@@ -7,7 +7,7 @@ import com.treode.buffer.{PagedBuffer}
 
 import PicklerRegistry._
 
-class PicklerRegistry [T <: Tagged] private (default: Long => T) {
+class PicklerRegistry [T <: Tag] private (default: Long => T) {
 
   private val openers = new ConcurrentHashMap [Long, Opener [T]]
 
@@ -73,7 +73,7 @@ class PicklerRegistry [T <: Tagged] private (default: Long => T) {
     new Pickler [T] {
 
       def p (v: T, ctx: PickleContext): Unit =
-        v.tag.pickle (ctx)
+        v.pickle (ctx)
 
       def u (ctx: UnpickleContext): T =
         PicklerRegistry.this.unpickle (ctx)
@@ -86,15 +86,16 @@ object PicklerRegistry {
     (id => throw new InvalidTagException (name, id))
   }
 
-  def apply [T <: Tagged] (default: Long => T = error): PicklerRegistry [T] =
+  def apply [T <: Tag] (default: Long => T = error): PicklerRegistry [T] =
     new PicklerRegistry (default)
 
-  trait Tagger {
+  trait Tag {
+
     def pickle (ctx: PickleContext)
     def byteSize: Int
   }
 
-  private class TaggerImpl [P] (p: Pickler [P], val id: Long, val v: P) extends Tagger {
+  class BaseTag [P] (p: Pickler [P], val id: Long, val v: P) extends Tag {
 
     def pickle (ctx: PickleContext) {
       ctx.writeVarULong (id)
@@ -109,65 +110,59 @@ object PicklerRegistry {
 
     override def equals (other: Any): Boolean =
       other match {
-        case that: TaggerImpl [_] =>
+        case that: BaseTag [_] =>
           id == that.id && v == that.v
         case _ =>
           false
       }
 
     override def toString: String =
-      f"Tagger($id%X,$v)"
+      f"Tag($id%X,$v)"
   }
 
-  def tagger [P] (p: Pickler [P], id: Long, v: P): Tagger =
-    new TaggerImpl (p, id, v)
+  def tag [P] (p: Pickler [P], id: Long, v: P): Tag =
+    new BaseTag (p, id, v)
 
-  def pickler: Pickler [Tagger] =
-    new Pickler [Tagger] {
-      def p (v: Tagger, ctx: PickleContext): Unit = v.pickle (ctx)
-      def u (ctx: UnpickleContext): Tagger = ???
+  def pickler [T <: Tag]: Pickler [T] =
+    new Pickler [T] {
+      def p (v: T, ctx: PickleContext): Unit = v.pickle (ctx)
+      def u (ctx: UnpickleContext): T = ???
     }
 
-  trait Tagged {
-    def tag: Tagger
-  }
+  trait FunctionTag [A, B] extends (A => B) with Tag
 
-  trait TaggedFunction [A, B] extends (A => B) with Tagged
-
-  def const [A, B] (v: B): TaggedFunction [A, B] =
-    new TaggedFunction [A, B] {
+  def const [A, B] (v: B): FunctionTag [A, B] =
+    new FunctionTag [A, B] {
       def apply (v2: A): B = v
-      def tag = ???
+      def pickle (ctx: PickleContext): Unit = ???
+      def byteSize: Int = ???
     }
 
-  def curried [P, A, B] (p: Pickler [P], id: Long) (f: P => A => B): P => TaggedFunction [A, B] =
+  def curried [P, A, B] (p: Pickler [P], id: Long) (f: P => A => B): P => FunctionTag [A, B] =
     (v1 =>
-      new TaggerImpl [P] (p, id, v1) with TaggedFunction [A, B] {
+      new BaseTag (p, id, v1) with FunctionTag [A, B] {
         def apply (v2: A) = f (v1) (v2)
-        def tag = tagger (p, id, v1)
       })
 
-  def curried [P, A, B] (reg: PicklerRegistry [TaggedFunction [A, B]], p: Pickler [P], id: Long) (f: P => A => B): Unit =
+  def curried [P, A, B] (reg: PicklerRegistry [FunctionTag [A, B]], p: Pickler [P], id: Long) (f: P => A => B): Unit =
     reg.register (p, id) (curried (p, id) (f))
 
-  def tupled [P, A, B] (p: Pickler [P], id: Long) (f: (P, A) => B): P => TaggedFunction [A, B] =
+  def tupled [P, A, B] (p: Pickler [P], id: Long) (f: (P, A) => B): P => FunctionTag [A, B] =
     (v1 =>
-      new TaggerImpl [P] (p, id, v1) with TaggedFunction [A, B] {
+      new BaseTag [P] (p, id, v1) with FunctionTag [A, B] {
         def apply (v2: A) = f (v1, v2)
-        def tag = tagger (p, id, v1)
       })
 
-  def tupled [P, A, B] (reg: PicklerRegistry [TaggedFunction [A, B]], p: Pickler [P], id: Long) (f: (P, A) => B): Unit =
+  def tupled [P, A, B] (reg: PicklerRegistry [FunctionTag [A, B]], p: Pickler [P], id: Long) (f: (P, A) => B): Unit =
     reg.register (p, id) (tupled (p, id) (f))
 
-  def delayed [P, B] (p: Pickler [P], id: Long) (f: P => B): P => TaggedFunction [Unit, B] =
+  def delayed [P, B] (p: Pickler [P], id: Long) (f: P => B): P => FunctionTag [Unit, B] =
     (v1 =>
-      new TaggerImpl [P] (p, id, v1) with TaggedFunction [Unit, B] {
+      new BaseTag [P] (p, id, v1) with FunctionTag [Unit, B] {
         def apply (v2: Unit) = f (v1)
-        def tag = tagger (p, id, v1)
       })
 
-  def delayed [P, B] (reg: PicklerRegistry [TaggedFunction [Unit, B]], p: Pickler [P], id: Long) (f: P => B): Unit =
+  def delayed [P, B] (reg: PicklerRegistry [FunctionTag [Unit, B]], p: Pickler [P], id: Long) (f: P => B): Unit =
     reg.register (p, id) (delayed (p, id) (f))
 
   private trait Opener [T] {
