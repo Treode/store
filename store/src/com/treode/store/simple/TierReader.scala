@@ -10,6 +10,8 @@ private object TierReader {
       cb: Callback [Option [SimpleCell]]) (
       implicit disks: Disks) {
 
+    val epoch = disks.join (cb)
+
     val loop = new Callback [TierPage] {
 
       def pass (p: TierPage) {
@@ -17,7 +19,7 @@ private object TierReader {
           case p: IndexPage =>
             val i = p.find (key)
             if (i == p.size) {
-              cb (None)
+              epoch (None)
             } else {
               val e = p.get (i)
               pager.read (e.pos, this)
@@ -25,16 +27,16 @@ private object TierReader {
           case p: CellPage =>
             val i = p.find (key)
             if (i == p.size) {
-              cb (None)
+              epoch (None)
             } else {
               val e = p.get (i)
               if (e.key == key)
-                cb (Some (e))
+                epoch (Some (e))
               else
-                cb (None)
+                epoch (None)
             }}}
 
-      def fail (t: Throwable) = cb.fail (t)
+      def fail (t: Throwable) = epoch.fail (t)
     }
 
     pager.read (root, loop)

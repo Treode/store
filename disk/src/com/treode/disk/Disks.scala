@@ -17,6 +17,8 @@ trait Disks {
   def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P])
 
   def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P, cb: Callback [Position])
+
+  def join [A] (cb: Callback [A]): Callback [A]
 }
 
 object Disks {

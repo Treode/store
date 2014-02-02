@@ -18,12 +18,12 @@ class DiskDriveConfig private (
   def blockAlignPosition (position: Long): Long =
     position & (blockMask.toLong)
 
-  private [disk] def segment (num: Int): Segment = {
+  private [disk] def segmentBounds (num: Int): SegmentBounds = {
     require (0 <= num && num < segmentCount)
     val pos = if (num == 0) DiskLeadBytes else num << segmentBits
     val end = (num + 1) << segmentBits
     val limit = if (end > diskBytes) diskBytes else end
-    Segment (num, pos, limit)
+    SegmentBounds (num, pos, limit)
   }
 
   override def hashCode: Int =

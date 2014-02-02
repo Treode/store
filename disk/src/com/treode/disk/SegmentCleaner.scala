@@ -2,15 +2,13 @@ package com.treode.disk
 
 import com.treode.async.{Callback, callback, delay}
 
-class SegmentCleaner (disks: Map [Int, DiskDrive], pages: PageRegistry) {
+class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
+  import disks.releaser
 
   type Groups = Map [TypeId, Set [PageGroup]]
 
   val minLivePercentage = 0.9
   val liveByteRange = 1 << 12
-
-  def threshold (alloc: IntSet): Boolean =
-    disks.values.flatMap (_.allocated.iterator) .take (3) .size == 3
 
   def union (maps: Seq [Groups]): Groups = {
     var result = Map.empty [TypeId, Set [PageGroup]]
@@ -31,9 +29,9 @@ class SegmentCleaner (disks: Map [Int, DiskDrive], pages: PageRegistry) {
       pages.compact (id, gs, latch)
   }
 
-  def probe (cb: Callback [List [(Segment, SegmentMap)]]) {
+  def probe (cb: Callback [List [(SegmentPointer, SegmentMap)]]) {
 
-    var diskIter = disks.values.iterator
+    var diskIter = disks.iterator
     if (!diskIter.hasNext) {
       cb (List.empty)
       return
@@ -51,14 +49,14 @@ class SegmentCleaner (disks: Map [Int, DiskDrive], pages: PageRegistry) {
     }
     var alloc = allocIter.next
 
-    var seg: Segment = null
+    var seg: SegmentPointer = null
 
     val loop = new Callback [SegmentMap] {
 
       var map: SegmentMap = null
       var min = disk.config.segmentBytes * minLivePercentage
       var cut = min
-      var target = List.empty [(Segment, SegmentMap, Long)]
+      var target = List.empty [(SegmentPointer, SegmentMap, Long)]
 
       val pagesProbed = delay (cb) { live: Long =>
         if (live < min) {
@@ -77,8 +75,9 @@ class SegmentCleaner (disks: Map [Int, DiskDrive], pages: PageRegistry) {
         }
         if (allocIter.hasNext) {
           alloc = allocIter.next
-          seg = disk.config.segment (alloc)
-          SegmentMap.read (disk.file, seg.pos, this)
+          val bounds = disk.config.segmentBounds (alloc)
+          seg = SegmentPointer (disk.id, bounds.num)
+          SegmentMap.read (disk.file, bounds.pos, this)
         } else {
           cb (target.map (v => (v._1, v._2)))
         }}
@@ -91,15 +90,16 @@ class SegmentCleaner (disks: Map [Int, DiskDrive], pages: PageRegistry) {
       def fail (t: Throwable) = cb.fail (t)
     }
 
-    seg = disk.config.segment (alloc)
-    SegmentMap.read (disk.file, seg.pos, loop)
+    val bounds = disk.config.segmentBounds (alloc)
+        seg = SegmentPointer (disk.id, bounds.num)
+    SegmentMap.read (disk.file, bounds.pos, loop)
   }
 
   def clean (cb: Callback [Boolean]) {
     probe (delay (cb) { segments =>
       val groups = union (segments map (_._2.groups))
       compact (groups, callback (cb) { _ =>
-        // TODO: free segment via epoch
+        releaser.release (segments map (_._1))
         !groups.isEmpty
       })
     })

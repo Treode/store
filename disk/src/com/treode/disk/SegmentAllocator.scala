@@ -2,41 +2,51 @@ package com.treode.disk
 
 private class SegmentAllocator (config: DiskDriveConfig) {
 
-  var free = IntSet.fill (0)
+  private var _free = IntSet.fill (0)
 
-  def allocSeg (num: Int): Segment = {
-    free = free.remove (num)
-    config.segment (num)
+  def allocSeg (num: Int): SegmentBounds = synchronized {
+    _free = _free.remove (num)
+    config.segmentBounds (num)
   }
 
-  def allocPos (pos: Long): Segment =
+  def allocPos (pos: Long): SegmentBounds = synchronized {
     allocSeg ((pos >> config.segmentBits).toInt)
+  }
 
-  def allocate(): Segment = {
-    free.min match {
+  def allocate(): SegmentBounds = synchronized {
+    _free.min match {
       case Some (num) =>
-        free = free.remove (num)
+        _free = _free.remove (num)
         allocSeg (num)
       case None =>
         throw new DiskFullException
     }}
 
-  def allocated: IntSet =
-    free.complement
+  def allocated: IntSet = synchronized {
+    _free.complement
+  }
+
+  def free: IntSet =
+    _free
+
+  def free (nums: Seq [Int]) {
+    val _nums = IntSet (nums: _*)
+    synchronized {
+      _free = _free.add (_nums)
+    }}
 
   def init() {
-    free = IntSet.fill (config.segmentCount)
+    _free = IntSet.fill (config.segmentCount)
     val superblocks = IntSet.fill (DiskLeadBytes >> config.segmentBits)
-    free = free.remove (superblocks)
+    _free = _free.remove (superblocks)
   }
 
-  def checkpoint (gen: Int): Allocator.Meta = {
-    Allocator.Meta (free)
-  }
+  def checkpoint (gen: Int): Allocator.Meta =
+    Allocator.Meta (_free)
 
-  def recover (gen: Int, meta: Allocator.Meta) {
-    free = meta.free
-  }}
+  def recover (gen: Int, meta: Allocator.Meta): Unit =
+    _free = meta.free
+}
 
 private object Allocator {
 

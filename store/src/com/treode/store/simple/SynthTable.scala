@@ -123,6 +123,8 @@ private class SynthTable (
 
   def checkpoint (cb: Callback [Meta]) {
 
+    val epoch = disks.join (cb)
+
     writeLock.lock()
     val (generation, primary, tiers) = try {
       require (secondary.isEmpty)
@@ -136,7 +138,7 @@ private class SynthTable (
       writeLock.unlock()
     }
 
-    val built = delay (cb) { tier: Tier =>
+    val built = delay (epoch) { tier: Tier =>
       writeLock.lock()
       val meta = try {
         this.secondary = newMemTier
@@ -145,10 +147,10 @@ private class SynthTable (
       } finally {
         writeLock.unlock()
       }
-      cb (meta)
+      epoch (meta)
     }
 
-    val merged = delay (cb) { iter: SimpleIterator =>
+    val merged = delay (epoch) { iter: SimpleIterator =>
       TierBuilder.build (pager, generation, iter, built)
     }
 

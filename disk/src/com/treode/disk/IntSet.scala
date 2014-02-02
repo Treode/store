@@ -61,6 +61,9 @@ private object IntSet {
 
   val MaxValue: Int = Int.MaxValue - Bitmap.wordinbits
 
+  def apply (is: Int*): IntSet =
+    new IntSet (Bitmap.bitmapOf (is.sorted: _*))
+
   def fill (n: Int): IntSet = {
     val bitmap = Bitmap.bitmapOf()
     bitmap.setSizeInBits (n, true)

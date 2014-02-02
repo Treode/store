@@ -67,7 +67,7 @@ object LogIterator {
       cb: Callback [LogIterator]): Unit =
     new LogIterator (file, alloc, records) .init (head, cb)
 
-  def replay (disks: Iterable [DiskDrive], records: RecordRegistry, cb: Callback [Unit]) {
+  def replay (disks: DiskDrives, records: RecordRegistry, cb: Callback [Unit]) {
 
     val merged = delay (cb) { iter: ReplayIterator =>
       AsyncIterator.foreach (iter, cb) { case ((time, replay), cb) =>
@@ -83,5 +83,5 @@ object LogIterator {
 
     val oneMade = Callback.seq (disks.size, allMade)
 
-    disks foreach (_.logIterator (records, oneMade))
+    disks.iterator foreach (_.logIterator (records, oneMade))
   }}
