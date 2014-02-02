@@ -53,16 +53,16 @@ private object DiskTestTools {
     def assertLaunched (attaching: Boolean) {
       assert (
           disks.state.isInstanceOf [DiskDrives#Launched],
-          s"Expected Launched($attaching), found ${disks.state}")
+          s"Expected DiskDrives.Launched($attaching), found ${disks.state}")
       assert (
           disks.state.asInstanceOf [DiskDrives#Launched].attaching == attaching,
-          s"Expected Launched($attaching), found ${disks.state}")
+          s"Expected DiskDrives.Launched($attaching), found ${disks.state}")
     }
 
     def assertPanicked() =
       assert (
           disks.state.isInstanceOf [DiskDrives#Panicked],
-          s"Expected Panicked, found ${disks.state}")
+          s"Expected DiskDrives.Panicked, found ${disks.state}")
 
     def expectDisks (gen: Int) (items: (Int, String)*) {
       expectResult (items.size) (disks.size)

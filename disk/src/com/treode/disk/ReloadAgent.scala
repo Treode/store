@@ -1,15 +1,18 @@
 package com.treode.disk
 
-import com.treode.async.{Callback, Scheduler}
+import com.treode.async.{Callback, Scheduler, guard}
+import com.treode.async.io.File
 
 private class ReloadAgent (
-    val disks: DiskDrives,
+    files: Map [Int, File],
     roots: Seq [Reload => Any],
     cb: Callback [Unit]) (
         implicit scheduler: Scheduler) extends Reload {
 
   def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
-    disks.fetch (desc, pos, cb)
+    guard (cb) {
+      DiskDrive.read (files (pos.disk), desc, pos, cb)
+    }
 
   val ready = Callback.latch (roots.size, cb)
   roots foreach (f => scheduler.execute (f (this)))

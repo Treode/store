@@ -1,23 +1,27 @@
 package com.treode.disk
 
-import java.util.ArrayList
+import java.util.{ArrayDeque, ArrayList}
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, Scheduler, guard}
+import com.treode.async.{Callback, Scheduler, callback, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
 import RecordHeader.{Continue, End}
 
-private class LogWriter (disk: DiskDrive) {
-  import disk.{file, alloc, logd, scheduler}
-
-  val buffer = PagedBuffer (12)
-  var head = 0L
-  var pos = 0L
-  var limit = 0L
+private class LogWriter (
+    file: File,
+    alloc: SegmentAllocator,
+    logd: LogDispatcher,
+    buf: PagedBuffer,
+    past: ArrayDeque [Int],
+    var seg: SegmentBounds,
+    var pos: Long) (
+        implicit scheduler: Scheduler) {
 
   val receiver: (ArrayList [PickledRecord] => Unit) = (receive _)
+
+  logd.engage (this)
 
   def receive (entries: ArrayList [PickledRecord]) {
 
@@ -29,7 +33,7 @@ private class LogWriter (disk: DiskDrive) {
     while (i < entries.size) {
       val entry = entries.get (i)
       val len = entry.byteSize
-      if (projection + len + LogSegmentTrailerBytes < limit) {
+      if (projection + len + LogSegmentTrailerBytes < seg.limit) {
         accepts.add (entry)
         projection += len
       } else {
@@ -43,19 +47,19 @@ private class LogWriter (disk: DiskDrive) {
 
     val finish = new Callback [Unit] {
       def pass (v: Unit) = {
-        buffer.clear()
+        buf.clear()
         entries foreach (e =>  scheduler.execute (e.cb, ()))
         logd.engage (LogWriter.this)
       }
       def fail (t: Throwable) {
-        buffer.clear()
+        buf.clear()
         entries foreach (e => scheduler.execute (e.cb.fail (t)))
       }}
 
     guard (finish) {
 
       for (entry <- accepts)
-        entry.write (buffer)
+        entry.write (buf)
 
       val time =
         if (accepts.isEmpty)
@@ -65,51 +69,38 @@ private class LogWriter (disk: DiskDrive) {
 
       val _pos = pos
       if (realloc) {
-        val seg = alloc.allocate()
+        past.add (seg.num)
+        seg = alloc.allocate()
         pos = seg.pos
-        limit = seg.limit
-        RecordHeader.pickler.frame (Continue (seg.num), buffer)
+        RecordHeader.pickler.frame (Continue (seg.num), buf)
       } else {
-        pos += buffer.readableBytes
-        RecordHeader.pickler.frame (End, buffer)
+        pos += buf.readableBytes
+        RecordHeader.pickler.frame (End, buf)
       }
 
-      file.flush (buffer, _pos, finish)
+      file.flush (buf, _pos, finish)
     }}
 
-  def init (cb: Callback [Unit]): Unit =
-    guard (cb) {
-      val seg = alloc.allocate()
-      head = seg.pos
-      pos = seg.pos
-      limit = seg.limit
-      RecordHeader.pickler.frame (End, buffer)
-      file.flush (buffer, pos, new Callback [Unit] {
-        def pass (v: Unit) {
-          buffer.clear()
-          scheduler.execute (cb, ())
-        }
-        def fail (t: Throwable) {
-          buffer.clear()
-          scheduler.fail (cb, t)
-        }})
-    }
-
   def checkpoint (gen: Int): LogWriter.Meta =
-    LogWriter.Meta (head)
-
-  def recover (gen: Int, meta: LogWriter.Meta) {
-    val seg = alloc.allocPos (head)
-    head = meta.head
-    pos = head
-    limit = seg.limit
-  }
-
-  def iterator (records: RecordRegistry, cb: Callback [LogIterator]): Unit =
-    LogIterator (file, head, alloc, records, cb)
+    LogWriter.Meta (pos)
 }
 
-object LogWriter {
+private object LogWriter {
+
+  def init (
+      file: File,
+      alloc: SegmentAllocator,
+      logd: LogDispatcher,
+      cb: Callback [LogWriter]) (
+          implicit scheduler: Scheduler) {
+    guard (cb) {
+      val buf = PagedBuffer (12)
+      val seg = alloc.allocate()
+      RecordHeader.pickler.frame (End, buf)
+      file.flush (buf, seg.pos, callback (cb) { _ =>
+        new LogWriter (file, alloc, logd, buf, new ArrayDeque, seg, seg.pos)
+      })
+    }}
 
   case class Meta (head: Long)
 

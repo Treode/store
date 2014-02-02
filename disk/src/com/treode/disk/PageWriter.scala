@@ -8,21 +8,28 @@ import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Pickler
 
-private class PageWriter (disk: DiskDrive) {
-  import disk.{alloc, config, file, paged, scheduler}
+private class PageWriter (
+    id: Int,
+    file: File,
+    config: DiskDriveConfig,
+    alloc: SegmentAllocator,
+    paged: PageDispatcher,
+    var base: Long,
+    var pos: Long,
+    var map: SegmentMap) (
+        implicit scheduler: Scheduler) {
 
   val buffer = PagedBuffer (12)
-  var base = 0L
-  var pos = 0L
-  var map = SegmentMap.empty
+
+  val receiver: (ArrayList [PickledPage] => Unit) = (receive _)
+
+  paged.engage (this)
 
   class PositionCallback (id: Int, offset: Int, length: Int, cb: Callback [Position])
   extends Callback [Long] {
     def pass (base: Long) = cb (Position (id, base + offset, length))
     def fail (t: Throwable) = cb.fail (t)
   }
-
-  val receiver: (ArrayList [PickledPage] => Unit) = (receive _)
 
   def receive (pages: ArrayList [PickledPage]) {
 
@@ -81,7 +88,7 @@ private class PageWriter (disk: DiskDrive) {
         page.write (buffer)
         buffer.writeZeroToAlign (config.blockBits)
         val length = buffer.writePos - start
-        callbacks.add (new PositionCallback (disk.id, start, length, page.cb))
+        callbacks.add (new PositionCallback (id, start, length, page.cb))
       }
 
       pos -= buffer.readableBytes
@@ -90,31 +97,52 @@ private class PageWriter (disk: DiskDrive) {
       file.flush (buffer, pos, finish)
     }}
 
-  def init() {
-    base = 0
-    pos = 0
-    map = SegmentMap.empty
-  }
-
   def checkpoint (gen: Int, cb: Callback [Unit]): PageWriter.Meta = {
     SegmentMap.write (file, base, map, cb)
-    PageWriter.Meta (pos)
-  }
-
-  def recover (gen: Int, meta: PageWriter.Meta, pages: PageRegistry, cb: Callback [Unit]) {
-    val seg = alloc.allocPos (meta.pos)
-    base = seg.pos
-    pos = pos
-    SegmentMap.read (file, base, callback (cb) (map = _))
+    PageWriter.Meta (base, pos)
   }}
 
 private object PageWriter {
 
-  case class Meta (pos: Long)
+  case class Meta (base: Long, pos: Long)
 
   object Meta {
 
     val pickler = {
       import DiskPicklers._
-      wrap (long) build (Meta.apply _) inspect (_.pos)
-    }}}
+      wrap (long, long)
+      .build ((Meta.apply _).tupled)
+      .inspect (v => (v.base, v.pos))
+    }}
+
+  class Medic (file: File, alloc: SegmentAllocator, superb: SuperBlock, var map: SegmentMap) (
+      implicit scheduler: Scheduler) {
+
+    var seg = alloc.allocPos (superb.pages.pos)
+    var base = seg.pos
+    var pos = superb.pages.pos
+
+    def close (paged: PageDispatcher) =
+      new PageWriter (superb.id, file, superb.config, alloc, paged, base, pos, map)
+  }
+
+  def init (
+      id: Int,
+      file: File,
+      config: DiskDriveConfig,
+      alloc: SegmentAllocator,
+      paged: PageDispatcher) (
+          implicit scheduler: Scheduler): PageWriter = {
+    val seg = alloc.allocate()
+    new PageWriter (id, file, config, alloc, paged, seg.pos, seg.limit, SegmentMap.empty)
+  }
+
+  def recover (file: File, alloc: SegmentAllocator, superb: SuperBlock, cb: Callback [Medic]) (
+      implicit scheduler: Scheduler): Unit =
+    guard (cb) {
+      val seg = alloc.allocPos (superb.pages.base)
+      val buf = PagedBuffer (12)
+      SegmentMap.read (file, seg.pos, callback (cb) { map =>
+        new Medic (file, alloc, superb, map)
+      })
+    }}

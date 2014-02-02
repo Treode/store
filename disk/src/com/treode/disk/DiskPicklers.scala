@@ -7,7 +7,7 @@ private trait DiskPicklers extends Picklers {
 
   def path = wrap (string) build (Paths.get (_)) inspect (_.toString)
 
-  def allocMeta = Allocator.Meta.pickler
+  def allocMeta = SegmentAllocator.Meta.pickler
   def boot = BootBlock.pickler
   def config = DiskDriveConfig.pickler
   def logMeta = LogWriter.Meta.pickler

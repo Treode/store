@@ -1,7 +1,10 @@
 package com.treode
 
-import java.nio.file.Path
+import java.nio.file.{Path, StandardOpenOption}
+import java.util.concurrent.ExecutorService
+
 import com.treode.async.AsyncIterator
+import com.treode.async.io.File
 
 package disk {
 
@@ -55,4 +58,29 @@ package object disk {
   private [disk] val SuperBlockMask = SuperBlockBytes - 1
   private [disk] val DiskLeadBytes = 1 << (SuperBlockBits + 1)
   private [disk] val LogSegmentTrailerBytes = 20
-}
+
+  private [disk] implicit class RichIteratable [A] (iter: Seq [A]) {
+
+    def mapBy [K] (k: A => K): Map [K, A] = {
+      val b = Map.newBuilder [K, A]
+      iter foreach (x => b += (k (x) -> x))
+      b.result
+    }
+
+    def mapValuesBy [K, V] (k: A => K) (v: A => V): Map [K, V] = {
+      val b = Map.newBuilder [K, V]
+      iter foreach (x => b += (k (x) -> v (x)))
+      b.result
+    }}
+
+  private [disk] def openFile (item: (Path, DiskDriveConfig), exec: ExecutorService) = {
+    val (path, config) = item
+    import StandardOpenOption.{CREATE, READ, WRITE}
+    val file = File.open (path, exec, CREATE, READ, WRITE)
+    (path, file, config)
+  }
+
+  private [disk] def reopenFile (path: Path, exec: ExecutorService) = {
+    import StandardOpenOption.{READ, WRITE}
+    (path, File.open (path, exec, READ, WRITE))
+  }}

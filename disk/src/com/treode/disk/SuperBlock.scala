@@ -4,7 +4,7 @@ private case class SuperBlock (
     id: Int,
     boot: BootBlock,
     config: DiskDriveConfig,
-    alloc: Allocator.Meta,
+    alloc: SegmentAllocator.Meta,
     log: LogWriter.Meta,
     pages: PageWriter.Meta)
 

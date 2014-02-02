@@ -1,8 +1,9 @@
 package com.treode.disk
 
 import java.nio.file.Path
+import scala.language.postfixOps
 
-import com.treode.async.{Callback, Scheduler, callback, guard}
+import com.treode.async.{Callback, Scheduler, callback, delay, guard}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Pickler
@@ -12,26 +13,14 @@ private class DiskDrive (
     val path: Path,
     val file: File,
     val config: DiskDriveConfig,
-    val logd: LogDispatcher,
-    val paged: PageDispatcher) (
+    val alloc: SegmentAllocator,
+    val logw: LogWriter,
+    val pagew: PageWriter) (
         implicit val scheduler: Scheduler) {
 
-  val alloc = new SegmentAllocator (config)
-  val logw = new LogWriter (this)
-  val pagew = new PageWriter (this)
   var checkpoint: (Int, LogWriter.Meta) = null
-  var recovery: (Int, PageWriter.Meta) = null
 
   def allocated: IntSet = ???
-
-  def init (boot: BootBlock, cb: Callback [Unit]) {
-    val latch = Callback.latch (2, cb)
-    alloc.init()
-    logw.init (latch)
-    pagew.init()
-    checkpoint (boot.gen)
-    checkpoint (boot, latch)
-  }
 
   def checkpoint (gen: Int) {
     require (checkpoint == null)
@@ -57,38 +46,8 @@ private class DiskDrive (
     file.flush (buffer, pos, latch)
   }
 
-  def recover (superblock: SuperBlock) {
-    require (recovery == null)
-    val gen = superblock.boot.gen
-    alloc.recover (gen, superblock.alloc)
-    logw.recover (gen, superblock.log)
-    recovery = (gen, superblock.pages)
-  }
-
-  def recover (pages: PageRegistry, cb: Callback [Unit]) {
-    if (recovery != null) {
-      val (gen, meta) = recovery
-      recovery = null
-      pagew.recover (gen, meta, pages, cb)
-    } else {
-      cb()
-    }}
-
-  def engage() {
-    logd.engage (logw)
-    paged.engage (pagew)
-  }
-
-  def read [G, P] (desc: PageDescriptor [G, P], pos: Position, cb: Callback [P]): Unit =
-    guard (cb) {
-      val buf = PagedBuffer (12)
-      file.fill (buf, pos.offset, pos.length, callback (cb) { _ =>
-        desc.ppag.unpickle (buf)
-      })
-    }
-
-  def logIterator (records: RecordRegistry, cb: Callback [LogIterator]): Unit =
-    logw.iterator (records, cb)
+  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
+    DiskDrive.read (file, desc, pos, cb)
 
   def close() = file.close()
 
@@ -101,4 +60,47 @@ private class DiskDrive (
     }
 
   override def toString = s"DiskDrive($id, $path, $config)"
+}
+
+private object DiskDrive {
+
+  def read [P] (file: File, desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
+    guard (cb) {
+      val buf = PagedBuffer (12)
+      file.fill (buf, pos.offset, pos.length, callback (cb) { _ =>
+        desc.ppag.unpickle (buf)
+      })
+    }
+
+  def init (
+      id: Int,
+      path: Path,
+      file: File,
+      config: DiskDriveConfig,
+      boot: BootBlock,
+      logd: LogDispatcher,
+      paged: PageDispatcher, cb: Callback [DiskDrive]) (
+          implicit scheduler: Scheduler): Unit =
+
+    guard (cb) {
+      val alloc = SegmentAllocator.init (config)
+      val logw = LogWriter.init (file, alloc, logd, delay (cb) { logw =>
+        val pagew = PageWriter.init (id, file, config, alloc, paged)
+        val disk = new DiskDrive (id, path, file, config, alloc, logw, pagew)
+        disk.checkpoint (boot.gen)
+        disk.checkpoint (boot, callback (cb) { _ =>
+          disk
+        })
+      })
+    }
+
+  def init (items: Seq [(Path, File, DiskDriveConfig)], base: Int, boot: BootBlock,
+      logd: LogDispatcher, paged: PageDispatcher, cb: Callback [Seq [DiskDrive]]) (
+          implicit scheduler: Scheduler): Unit =
+
+    guard (cb) {
+      val latch = Callback.seq (items.size, cb)
+      for (((path, file, config), i) <- items zipWithIndex) {
+        DiskDrive.init (base + i, path, file, config, boot, logd, paged, latch)
+      }}
 }

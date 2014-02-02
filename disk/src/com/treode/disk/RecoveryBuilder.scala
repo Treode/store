@@ -38,14 +38,14 @@ private class RecoveryBuilder (implicit scheduler: Scheduler) extends Recovery {
   }
 
   def reattach (items: Seq [(Path, File)], cb: Callback [Disks]): Unit =
-    DiskDrives.reattach (items, close (cb))
+    close (cb) .reattach (items)
 
   def reattach (items: Seq [Path], exec: ExecutorService, cb: Callback [Disks]): Unit =
-    DiskDrives.reattach (items, exec, close (cb))
+    close (cb) .reattach (items, exec)
 
   def attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Disks]): Unit =
-    DiskDrives.attach (items, close (cb))
+    close (cb) .attach (items)
 
   def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Disks]): Unit =
-    DiskDrives.attach (items, exec, close (cb))
+    close (cb) .attach (items, exec)
 }

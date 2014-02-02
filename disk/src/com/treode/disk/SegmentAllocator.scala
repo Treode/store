@@ -1,8 +1,6 @@
 package com.treode.disk
 
-private class SegmentAllocator (config: DiskDriveConfig) {
-
-  private var _free = IntSet.fill (0)
+private class SegmentAllocator private (config: DiskDriveConfig, private var _free: IntSet) {
 
   def allocSeg (num: Int): SegmentBounds = synchronized {
     _free = _free.remove (num)
@@ -35,20 +33,11 @@ private class SegmentAllocator (config: DiskDriveConfig) {
       _free = _free.add (_nums)
     }}
 
-  def init() {
-    _free = IntSet.fill (config.segmentCount)
-    val superblocks = IntSet.fill (DiskLeadBytes >> config.segmentBits)
-    _free = _free.remove (superblocks)
-  }
-
-  def checkpoint (gen: Int): Allocator.Meta =
-    Allocator.Meta (_free)
-
-  def recover (gen: Int, meta: Allocator.Meta): Unit =
-    _free = meta.free
+  def checkpoint (gen: Int): SegmentAllocator.Meta =
+    SegmentAllocator.Meta (_free)
 }
 
-private object Allocator {
+private object SegmentAllocator {
 
   case class Meta (free: IntSet)
 
@@ -59,4 +48,14 @@ private object Allocator {
       val intset = IntSet.pickle
       wrap (intset) build (Meta.apply _) inspect (_.free)
     }}
+
+  def init (config: DiskDriveConfig): SegmentAllocator = {
+    val all = IntSet.fill (config.segmentCount)
+    val superbs = IntSet.fill (DiskLeadBytes >> config.segmentBits)
+    val free = all.remove (superbs)
+    new SegmentAllocator (config, free)
+  }
+
+  def recover (config: DiskDriveConfig, meta: Meta): SegmentAllocator =
+    new SegmentAllocator (config, meta.free)
 }
