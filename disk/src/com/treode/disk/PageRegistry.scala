@@ -25,6 +25,22 @@ private class PageRegistry {
       get (id) .probe (groups, cb)
     }
 
+  def probe (ledger: PageLedger, cb: Callback [Long]): Unit =
+    guard (cb) {
+      val pagesProbed = callback (cb) { liveGroups: Map [TypeId, Set [PageGroup]] =>
+        var liveBytes = 0L
+        for {
+          (id, pageGroups) <- liveGroups
+          group <- pageGroups
+        } liveBytes += ledger.get (id, group)
+        liveBytes
+      }
+      val groupsByType = ledger.groups
+      val latch = Callback.map (groupsByType.size, pagesProbed)
+      for ((id, groups) <- groupsByType)
+        probe (id, groups, latch)
+    }
+
   def compact (id: TypeId, groups: Set [PageGroup], cb: Callback [Unit]): Unit =
     guard (cb) {
       get (id) .compact (groups, cb)

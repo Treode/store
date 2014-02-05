@@ -16,7 +16,7 @@ private class PageWriter (
     paged: PageDispatcher,
     var base: Long,
     var pos: Long,
-    var map: SegmentMap) (
+    var ledger: PageLedger) (
         implicit scheduler: Scheduler) {
 
   val buffer = PagedBuffer (12)
@@ -36,7 +36,7 @@ private class PageWriter (
     val accepts = new ArrayList [PickledPage]
     val rejects = new ArrayList [PickledPage]
     var projpos = pos
-    var projmap = map
+    var projlgr = ledger.clone()
     var realloc = false
     var i = 0
     while (i < pages.size) {
@@ -44,13 +44,10 @@ private class PageWriter (
       val entry = pages.get (i)
       val len = config.blockAlignLength (entry.byteSize)
 
-      val tpos = projpos - len
-      val tmap = map.add (entry.id, entry.group, len)
-      val maplen = config.blockAlignLength (tmap.byteSize)
-      if (tpos - maplen > base) {
+      projpos -= len
+      projlgr.add (entry.id, entry.group, len)
+      if (projpos - config.blockAlignLength (projlgr.byteSize) > base) {
         accepts.add (entry)
-        projpos -= len
-        projmap = tmap
       } else {
         rejects.add (entry)
         realloc = true
@@ -68,8 +65,8 @@ private class PageWriter (
           val seg = alloc.allocate()
           base = seg.pos
           pos = seg.limit
-          map = SegmentMap.empty
-          SegmentMap.write (file, base, map, Callback.ignore)
+          ledger = new PageLedger
+          PageLedger.write (ledger, file, base, Callback.ignore)
         }
         buffer.clear()
         val _pos = pos
@@ -89,16 +86,16 @@ private class PageWriter (
         buffer.writeZeroToAlign (config.blockBits)
         val length = buffer.writePos - start
         callbacks.add (new PositionCallback (id, start, length, page.cb))
+        ledger.add (page.id, page.group, length)
       }
 
       pos -= buffer.readableBytes
-      map = projmap
 
       file.flush (buffer, pos, finish)
     }}
 
   def checkpoint (gen: Int, cb: Callback [Unit]): PageWriter.Meta = {
-    SegmentMap.write (file, base, map, cb)
+    PageLedger.write (ledger, file, base, cb)
     PageWriter.Meta (base, pos)
   }}
 
@@ -115,15 +112,15 @@ private object PageWriter {
       .inspect (v => (v.base, v.pos))
     }}
 
-  class Medic (file: File, alloc: SegmentAllocator, superb: SuperBlock, var map: SegmentMap) (
+  class Medic (file: File, alloc: SegmentAllocator, superb: SuperBlock, ledger: PageLedger) (
       implicit scheduler: Scheduler) {
 
-    var seg = alloc.allocPos (superb.pages.pos)
-    var base = seg.pos
-    var pos = superb.pages.pos
+    val seg = alloc.allocPos (superb.pages.pos)
+    val base = seg.pos
+    val pos = superb.pages.pos
 
     def close (paged: PageDispatcher) =
-      new PageWriter (superb.id, file, superb.config, alloc, paged, base, pos, map)
+      new PageWriter (superb.id, file, superb.config, alloc, paged, base, pos, ledger)
   }
 
   def init (
@@ -134,7 +131,7 @@ private object PageWriter {
       paged: PageDispatcher) (
           implicit scheduler: Scheduler): PageWriter = {
     val seg = alloc.allocate()
-    new PageWriter (id, file, config, alloc, paged, seg.pos, seg.limit, SegmentMap.empty)
+    new PageWriter (id, file, config, alloc, paged, seg.pos, seg.limit, new PageLedger)
   }
 
   def recover (file: File, alloc: SegmentAllocator, superb: SuperBlock, cb: Callback [Medic]) (
@@ -142,7 +139,7 @@ private object PageWriter {
     guard (cb) {
       val seg = alloc.allocPos (superb.pages.base)
       val buf = PagedBuffer (12)
-      SegmentMap.read (file, seg.pos, callback (cb) { map =>
+      PageLedger.read (file, seg.pos, callback (cb) { map =>
         new Medic (file, alloc, superb, map)
       })
     }}

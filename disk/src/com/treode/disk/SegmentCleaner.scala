@@ -29,7 +29,7 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
       pages.compact (id, gs, latch)
   }
 
-  def probe (cb: Callback [List [(SegmentPointer, SegmentMap)]]) {
+  def probe (cb: Callback [List [(SegmentPointer, PageLedger)]]) {
 
     var diskIter = disks.iterator
     if (!diskIter.hasNext) {
@@ -51,21 +51,21 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
 
     var seg: SegmentPointer = null
 
-    val loop = new Callback [SegmentMap] {
+    val loop = new Callback [PageLedger] {
 
-      var map: SegmentMap = null
+      var ledger: PageLedger = null
       var min = disk.config.segmentBytes * minLivePercentage
       var cut = min
-      var target = List.empty [(SegmentPointer, SegmentMap, Long)]
+      var target = List.empty [(SegmentPointer, PageLedger, Long)]
 
       val pagesProbed = delay (cb) { live: Long =>
         if (live < min) {
           min = live
           cut = live + liveByteRange
           target = target.filter (_._3 < cut)
-          target ::= (seg, map, live)
+          target ::= (seg, ledger, live)
         } else if (live < cut) {
-          target ::= (seg, map, live)
+          target ::= (seg, ledger, live)
         }
         while (!allocIter.hasNext && diskIter.hasNext) {
           disk = diskIter.next
@@ -77,14 +77,14 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
           alloc = allocIter.next
           val bounds = disk.config.segmentBounds (alloc)
           seg = SegmentPointer (disk.id, bounds.num)
-          SegmentMap.read (disk.file, bounds.pos, this)
+          PageLedger.read (disk.file, bounds.pos, this)
         } else {
           cb (target.map (v => (v._1, v._2)))
         }}
 
-      def pass (_map: SegmentMap) {
-        this.map = map
-        map.probe (pages, pagesProbed)
+      def pass (ledger: PageLedger) {
+        this.ledger = ledger
+        pages.probe (ledger, pagesProbed)
       }
 
       def fail (t: Throwable) = cb.fail (t)
@@ -92,7 +92,7 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
 
     val bounds = disk.config.segmentBounds (alloc)
         seg = SegmentPointer (disk.id, bounds.num)
-    SegmentMap.read (disk.file, bounds.pos, loop)
+    PageLedger.read (disk.file, bounds.pos, loop)
   }
 
   def clean (cb: Callback [Boolean]) {
