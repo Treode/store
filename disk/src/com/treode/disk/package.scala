@@ -20,10 +20,6 @@ package disk {
     override def getMessage = s"Extra disks in reattachment: ${paths mkString ", "}"
   }
 
-  class ReattachmentPendingException extends Exception {
-    override def getMessage = "Reattachment pending."
-  }
-
   class InconsistentSuperBlocksException extends Exception {
     override def getMessage = "Inconsistent superblocks."
   }
@@ -40,10 +36,6 @@ package disk {
     override def getMessage = "Panicked."
   }
 
-  class RecoveryCompletedException extends Exception {
-    override def getMessage = "Recovery completed."
-  }
-
   private case class SegmentBounds (num: Int, pos: Long, limit: Long)
 
   private case class SegmentPointer (disk: Int, num: Int)
@@ -57,7 +49,6 @@ package object disk {
   private [disk] val SuperBlockBytes = 1 << SuperBlockBits
   private [disk] val SuperBlockMask = SuperBlockBytes - 1
   private [disk] val DiskLeadBytes = 1 << (SuperBlockBits + 1)
-  private [disk] val LogSegmentTrailerBytes = 20
 
   private [disk] implicit class RichIteratable [A] (iter: Seq [A]) {
 

@@ -1,59 +1,57 @@
 package com.treode.disk
 
-import java.util.{ArrayDeque, ArrayList}
+import java.util.ArrayList
 import scala.collection.JavaConversions._
 
 import com.treode.async.{Callback, Scheduler, callback, guard}
-import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
-import RecordHeader.{Continue, End}
-
 private class LogWriter (
-    file: File,
-    alloc: SegmentAllocator,
+    disk: DiskDrive,
     logd: LogDispatcher,
-    buf: PagedBuffer,
-    past: ArrayDeque [Int],
+    var buf: PagedBuffer,
     var seg: SegmentBounds,
     var pos: Long) (
         implicit scheduler: Scheduler) {
 
   val receiver: (ArrayList [PickledRecord] => Unit) = (receive _)
 
-  logd.engage (this)
-
-  def receive (entries: ArrayList [PickledRecord]) {
-
+  def partition (entries: ArrayList [PickledRecord]) = {
     val accepts = new ArrayList [PickledRecord]
     val rejects = new ArrayList [PickledRecord]
-    var projection = pos
+    var pos = this.pos
     var realloc = false
     var i = 0
-    while (i < entries.size) {
-      val entry = entries.get (i)
-      val len = entry.byteSize
-      if (projection + len + LogSegmentTrailerBytes < seg.limit) {
+    for (entry <- entries) {
+      if (entry.disk.isDefined && entry.disk.get != disk.id) {
+        rejects.add (entry)
+      } else if (pos + entry.byteSize + RecordHeader.trailer < seg.limit) {
         accepts.add (entry)
-        projection += len
+        pos += entry.byteSize
       } else {
         rejects.add (entry)
         realloc = true
-      }
-      i += 1
-    }
+      }}
+    (accepts, rejects, realloc)
+  }
 
+  def receive (entries: ArrayList [PickledRecord]) {
+
+    val (accepts, rejects, realloc) = partition (entries)
     logd.replace (rejects)
 
     val finish = new Callback [Unit] {
+
       def pass (v: Unit) = {
         buf.clear()
-        entries foreach (e =>  scheduler.execute (e.cb, ()))
         logd.engage (LogWriter.this)
+        accepts foreach (e =>  scheduler.execute (e.cb, ()))
       }
+
       def fail (t: Throwable) {
         buf.clear()
-        entries foreach (e => scheduler.execute (e.cb.fail (t)))
+        logd.engage (LogWriter.this)
+        accepts foreach (e => scheduler.execute (e.cb.fail (t)))
       }}
 
     guard (finish) {
@@ -69,44 +67,12 @@ private class LogWriter (
 
       val _pos = pos
       if (realloc) {
-        past.add (seg.num)
-        seg = alloc.allocate()
-        pos = seg.pos
-        RecordHeader.pickler.frame (Continue (seg.num), buf)
+        disk.reallocLog (buf, callback (finish) { seg =>
+          this.seg = seg
+          pos = seg.pos
+          buf.clear()
+        })
       } else {
         pos += buf.readableBytes
-        RecordHeader.pickler.frame (End, buf)
-      }
-
-      file.flush (buf, _pos, finish)
-    }}
-
-  def checkpoint (gen: Int): LogWriter.Meta =
-    LogWriter.Meta (pos)
-}
-
-private object LogWriter {
-
-  def init (
-      file: File,
-      alloc: SegmentAllocator,
-      logd: LogDispatcher,
-      cb: Callback [LogWriter]) (
-          implicit scheduler: Scheduler) {
-    guard (cb) {
-      val buf = PagedBuffer (12)
-      val seg = alloc.allocate()
-      RecordHeader.pickler.frame (End, buf)
-      file.flush (buf, seg.pos, callback (cb) { _ =>
-        new LogWriter (file, alloc, logd, buf, new ArrayDeque, seg, seg.pos)
-      })
-    }}
-
-  case class Meta (head: Long)
-
-  object Meta {
-
-    val pickler = {
-      import DiskPicklers._
-      wrap (long) build (Meta.apply _) inspect (_.head)
-    }}}
+        disk.advanceLog (buf, finish)
+      }}}}

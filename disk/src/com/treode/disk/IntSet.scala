@@ -53,6 +53,9 @@ private class IntSet private (private val bitmap: Bitmap) {
       case _ => false
     }
 
+  override def clone(): IntSet =
+    new IntSet (bitmap.clone())
+
   override def toString: String =
     s"IntSet (size=${bitmap.cardinality}, byteSize=${bitmap.sizeInBytes})"
 }
@@ -70,7 +73,7 @@ private object IntSet {
     new IntSet (bitmap)
   }
 
-  val pickle: Pickler [IntSet] =
+  val pickler: Pickler [IntSet] =
     new Pickler [IntSet] {
       def p (v: IntSet, ctx: PickleContext) {
         v.bitmap.serialize (ctx.toDataOutput)

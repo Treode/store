@@ -38,10 +38,10 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
     }
     var disk = diskIter.next
 
-    var allocIter = disk.allocated.iterator
+    var allocIter: Iterator [Int] = ???
     while (!allocIter.hasNext && diskIter.hasNext) {
       disk = diskIter.next
-      allocIter = disk.allocated.iterator
+      allocIter = ???
     }
     if (!allocIter.hasNext) {
       cb (List.empty)
@@ -71,7 +71,7 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
           disk = diskIter.next
           min = disk.config.segmentBytes * 0.9
           cut = min
-          allocIter = disk.allocated.iterator
+          allocIter = ???
         }
         if (allocIter.hasNext) {
           alloc = allocIter.next

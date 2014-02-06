@@ -142,8 +142,14 @@ private class DiskDrives (
           def fail (t: Throwable) = fiber.execute (panic (t))
       }
 
-      disks.values foreach (_.checkpoint (newgen))
-      checkpoints.checkpoint (newgen, rootsWritten)
+      val oneLogMarked = Callback.latch (disks.size, new Callback [Unit] {
+        def pass (v: Unit) {
+          checkpoints.checkpoint (newgen, rootsWritten)
+        }
+        def fail (t: Throwable) = fiber.execute (panic (t))
+      })
+
+      disks.values foreach (_.mark (oneLogMarked))
     }
 
     def launch (checkpoints: CheckpointRegistry, pages: PageRegistry): Unit =

@@ -7,12 +7,11 @@ private trait DiskPicklers extends Picklers {
 
   def path = wrap (string) build (Paths.get (_)) inspect (_.toString)
 
-  def allocMeta = SegmentAllocator.Meta.pickler
   def boot = BootBlock.pickler
   def config = DiskDriveConfig.pickler
-  def logMeta = LogWriter.Meta.pickler
+  def intSet = IntSet.pickler
   def pageGroup = PageGroup.pickler
-  def pageMeta = PageWriter.Meta.pickler
+  def pageLedger = PageLedger.Zipped.pickler
   def pos = Position.pickler
   def typeId = TypeId.pickler
 }

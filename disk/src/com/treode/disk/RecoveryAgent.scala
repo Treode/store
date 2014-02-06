@@ -79,7 +79,6 @@ private class RecoveryAgent (
       verifyReattachment (boot.disks.toSet, reads .map (_.path) .toSet)
 
       val files = reads.mapValuesBy (_.superb (useGen1) .id) (_.file)
-      val logd = new LogDispatcher
 
       val logsReplayed = delay (cb) { disks: DiskDrives =>
         launch (disks)
@@ -97,37 +96,12 @@ private class RecoveryAgent (
       DiskDrive.read (files (roots.disk), loaders.pager, roots, rootsRead)
     }
 
-  def readSuperBlocks (path: Path, file: File, cb: Callback [SuperBlocks]): Unit =
-    guard (cb) {
-
-      val buffer = PagedBuffer (SuperBlockBits+1)
-
-      def unpickleSuperBlock (pos: Int): Option [SuperBlock] =
-        try {
-          buffer.readPos = pos
-          Some (SuperBlock.pickler.unpickle (buffer))
-        } catch {
-          case e: Throwable => None
-        }
-
-      def unpickleSuperBlocks() {
-        val sb1 = unpickleSuperBlock (0)
-        val sb2 = unpickleSuperBlock (SuperBlockBytes)
-        cb (new SuperBlocks (path, file, sb1, sb2))
-      }
-
-      file.fill (buffer, 0, DiskLeadBytes, new Callback [Unit] {
-        def pass (v: Unit) = unpickleSuperBlocks()
-        def fail (t: Throwable) = unpickleSuperBlocks()
-      })
-    }
-
   def reattach (items: Seq [(Path, File)]): Unit =
     guard (cb) {
       require (!items.isEmpty, "Must list at least one file to reaattach.")
       val oneRead = Callback.seq (items.size, delay (cb) (superBlocksRead _))
       for ((path, file) <- items)
-        readSuperBlocks (path, file, oneRead)
+        SuperBlocks.read (path, file, oneRead)
     }
 
   def reattach (items: Seq [Path], exec: ExecutorService): Unit =

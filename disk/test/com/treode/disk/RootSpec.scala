@@ -9,7 +9,7 @@ import DiskTestTools._
 
 class RootSpec extends FlatSpec {
 
-  val config = DiskDriveConfig (6, 2, 1<<20)
+  val config = DiskDriveConfig (10, 6, 1<<20)
 
   val root = new RootDescriptor (0x5FD8D9DF, Picklers.string)
 
@@ -17,6 +17,7 @@ class RootSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     val disk1 = new StubFile
 
+    try {
     {
       implicit val recovery = Disks.recover()
       recovery.launch { implicit launcher =>
@@ -36,4 +37,10 @@ class RootSpec extends FlatSpec {
       }
       implicit val disks = recovery.reattachAndPass (("a", disk1))
       expectResult ("one") (reloaded)
-    }}}
+    }
+    } catch {
+      case e: Throwable =>
+        //e.printStackTrace()
+        throw e
+    }
+    }}

@@ -7,25 +7,32 @@ import com.treode.async._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
+import RecordHeader.{Entry, LogAlloc, LogEnd, PageAlloc, PageWrite}
+
 private class LogIterator private (
     path: Path,
     file: File,
     buf: PagedBuffer,
     superb: SuperBlock,
     alloc: SegmentAllocator,
-    pagem: PageWriter.Medic,
-    records: RecordRegistry) extends AsyncIterator [(Long, Unit => Any)] {
+    records: RecordRegistry,
+    logSegs: ArrayDeque [Int],
+    private var logSeg: SegmentBounds,
+    private var pageSeg: SegmentBounds,
+    private var pageLedger: PageLedger
+) (
+    implicit scheduler: Scheduler
+) extends AsyncIterator [(Long, Unit => Any)] {
 
-  private val past = new ArrayDeque [Int]
-  private var seg = alloc.allocPos (superb.log.head)
-  private var pos = superb.log.head
+  private var logPos = superb.logHead
+  private var pagePos = superb.pagePos
 
   private def failed [A] (cb: Callback [A], t: Throwable) {
-    pos = -1L
+    logPos = -1L
     cb.fail (t)
   }
 
-  def hasNext: Boolean = pos > 0
+  def hasNext: Boolean = logPos > 0
 
   private def frameRead (cb: Callback [(Long, Unit => Any)]) =
     new Callback [Int] {
@@ -34,38 +41,55 @@ private class LogIterator private (
         val start = buf.readPos
         val hdr = RecordHeader.pickler.unpickle (buf)
         hdr match {
-          case RecordHeader.End =>
-            pos = -1L
+          case LogEnd =>
+            logPos = -1L
             buf.clear()
             cb (Long.MaxValue, _ => ())
 
-          case RecordHeader.Continue (num) =>
-            val seg = alloc.allocSeg (num)
-            pos = seg.pos
+          case LogAlloc (next) =>
+            logSeg = alloc.allocSeg (next)
+            logSegs.add (logSeg.num)
+            logPos = logSeg.pos
             buf.clear()
-            file.deframe (buf, pos, this)
+            file.deframe (buf, logPos, this)
 
-          case RecordHeader.Entry (time, id) =>
+          case PageWrite (pos, _ledger) =>
+            pagePos = pos
+            pageLedger.add (_ledger)
+            logPos += len
+            file.deframe (buf, logPos, this)
+
+          case PageAlloc (next, _ledger) =>
+            pageSeg = alloc.allocSeg (next)
+            pagePos = pageSeg.pos
+            pageLedger = _ledger.unzip
+            logPos += len
+            file.deframe (buf, logPos, this)
+
+          case Entry (time, id) =>
             val end = buf.readPos
             val entry = records.read (id.id, buf, len - end + start)
-            pos += len
+            logPos += len
             cb (time, entry)
 
           case _ =>
             cb.fail (new MatchError)
-        }
-      }
+        }}
 
       def fail (t: Throwable) = failed (cb, t)
     }
 
   def next (cb: Callback [(Long, Unit => Any)]): Unit =
-    file.deframe (buf, pos, frameRead (cb))
+    file.deframe (buf, logPos, frameRead (cb))
 
-  def close (logd: LogDispatcher, paged: PageDispatcher) (implicit scheduler: Scheduler) = {
-    val logw = new LogWriter (file, alloc, logd, buf, past, seg, pos)
-    val pagew = pagem.close (paged)
-    new DiskDrive (superb.id, path, file, superb.config, alloc, logw, pagew)
+  def close (logd: LogDispatcher, paged: PageDispatcher): DiskDrive = {
+    val disk =
+      new DiskDrive (superb.id, path, file, superb.config, alloc, logd, logSegs, superb.logHead,
+          logPos, pageSeg, superb.pagePos, pageLedger)
+    val logw = new LogWriter (disk, logd, buf, logSeg, logPos)
+    logd.engage (logw)
+    val pagew = new PageWriter (disk, paged, pageSeg, pagePos, pageLedger)
+    disk
   }}
 
 object LogIterator {
@@ -79,11 +103,17 @@ object LogIterator {
           implicit scheduler: Scheduler): Unit =
 
     guard (cb) {
-      val alloc = SegmentAllocator.recover (superb.config, superb.alloc)
-      PageWriter.recover (file, alloc, superb, delay (cb) { pagem =>
-        val buf = PagedBuffer (12)
-        file.fill (buf, superb.log.head, 4, callback (cb) { _ =>
-          (superb.id, new LogIterator (path, file, buf, superb, alloc, pagem, records))
+      val alloc = SegmentAllocator.recover (superb.config, superb.free)
+      val logSeg = alloc.allocSeg (superb.logSeg)
+      val logSegs = new ArrayDeque [Int]
+      logSegs.add (logSeg.num)
+      val pageSeg = alloc.allocSeg (superb.pageSeg)
+      val buf = PagedBuffer (12)
+      PageLedger.read (file, pageSeg.pos, delay (cb) { ledger =>
+        file.fill (buf, superb.logHead, 1, callback (cb) { _ =>
+          val iter = new LogIterator (path, file, buf, superb, alloc, records, logSegs, logSeg,
+              pageSeg, ledger)
+          (superb.id, iter)
         })
       })
     }
@@ -116,8 +146,7 @@ object LogIterator {
       val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
 
       val allMade = delay (cb) { logs: Map [Int, LogIterator] =>
-        val latch = merged (logs)
-        AsyncIterator.merge (logs.values.iterator, latch) (ordering)
+        AsyncIterator.merge (logs.values.iterator, merged (logs)) (ordering)
       }
 
       val oneMade = Callback.map (reads.size, allMade)

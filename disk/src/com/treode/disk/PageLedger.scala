@@ -1,7 +1,7 @@
 package com.treode.disk
 
 import com.treode.buffer.PagedBuffer
-import com.treode.async.{Callback, callback}
+import com.treode.async.{Callback, callback, guard}
 import com.treode.async.io.File
 
 import PageLedger.{Zipped, intBytes, longBytes}
@@ -103,21 +103,24 @@ object PageLedger {
       .inspect (_.ledger)
     }}
 
-  def read (file: File, pos: Long, cb: Callback [PageLedger]) {
-    val buf = PagedBuffer (12)
-    file.deframe (buf, pos, callback (cb) { _ =>
-      Zipped.pickler.unpickle (buf) .unzip
-    })
-  }
+  def read (file: File, pos: Long, cb: Callback [PageLedger]): Unit =
+    guard (cb) {
+      val buf = PagedBuffer (12)
+      file.deframe (buf, pos, callback (cb) { _ =>
+        Zipped.pickler.unpickle (buf) .unzip
+      })
+    }
 
-  def write (ledger: PageLedger, file: File, pos: Long, cb: Callback [Unit]) {
-    val buf = PagedBuffer (12)
-    Zipped.pickler.frame (ledger.zip, buf)
-    file.flush (buf, pos, cb)
-  }
+  def write (ledger: PageLedger, file: File, pos: Long, cb: Callback [Unit]): Unit =
+    guard (cb) {
+      val buf = PagedBuffer (12)
+      Zipped.pickler.frame (ledger.zip, buf)
+      file.flush (buf, pos, cb)
+    }
 
-  def write (ledger: Zipped, file: File, pos: Long, cb: Callback [Unit]) {
-    val buf = PagedBuffer (12)
-    Zipped.pickler.frame (ledger, buf)
-    file.flush (buf, pos, cb)
-  }}
+  def write (ledger: Zipped, file: File, pos: Long, cb: Callback [Unit]): Unit =
+    guard (cb) {
+      val buf = PagedBuffer (12)
+      Zipped.pickler.frame (ledger, buf)
+      file.flush (buf, pos, cb)
+    }}

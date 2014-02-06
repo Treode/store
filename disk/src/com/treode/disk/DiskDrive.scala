@@ -1,12 +1,16 @@
 package com.treode.disk
 
 import java.nio.file.Path
+import java.util.{ArrayDeque, PriorityQueue}
+import scala.collection.JavaConversions._
 import scala.language.postfixOps
 
-import com.treode.async.{Callback, Scheduler, callback, delay, guard}
+import com.treode.async._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Pickler
+
+import RecordHeader.{LogAlloc, LogEnd, PageAlloc, PageWrite}
 
 private class DiskDrive (
     val id: Int,
@@ -14,37 +18,229 @@ private class DiskDrive (
     val file: File,
     val config: DiskDriveConfig,
     val alloc: SegmentAllocator,
-    val logw: LogWriter,
-    val pagew: PageWriter) (
+    val logd: LogDispatcher,
+    var logSegs: ArrayDeque [Int],
+    var logHead: Long,
+    var logTail: Long,
+    var pageSeg: SegmentBounds,
+    var pagePos: Long,
+    var pageLedger: PageLedger) (
         implicit val scheduler: Scheduler) {
 
-  var checkpoint: (Int, LogWriter.Meta) = null
+  private val LogPriority = 1
+  private val PagePriority = 2
+  private val CheckpointPriority = 3
 
-  def allocated: IntSet = ???
+  private val fiber = new Fiber (scheduler)
+  private val queue = new PriorityQueue [(Int, Runnable)]
+  private var state: State = Ready
+  private var pageLedgerDirty = false
 
-  def checkpoint (gen: Int) {
-    require (checkpoint == null)
-    checkpoint = (gen, logw.checkpoint (gen))
+  trait State {
+    def advanceLog (buf: PagedBuffer, cb: Callback [Unit])
+    def reallocLog (buf: PagedBuffer, cb: Callback [SegmentBounds])
+    def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit])
+    def reallocPages (ledger: PageLedger, cb: Callback [SegmentBounds])
+    def checkpoint (boot: BootBlock, cb: Callback [Unit])
   }
 
-  def checkpoint (boot: BootBlock, cb: Callback [Unit]) {
-    require (checkpoint != null)
-    val (gen, log) = checkpoint
-    checkpoint = null
-    require (gen == boot.gen)
-    val latch = Callback.latch (2, cb)
-    val superblock = SuperBlock (
-        id,
-        boot,
-        config,
-        alloc.checkpoint (gen),
-        log,
-        pagew.checkpoint (gen, latch))
-    val buffer = PagedBuffer (12)
-    SuperBlock.pickler.pickle (superblock, buffer)
-    val pos = if ((boot.gen & 1) == 0) 0 else SuperBlockBytes
-    file.flush (buffer, pos, latch)
+  private def ready(): Unit = fiber.execute {
+    try {
+      state = Ready
+      val task = queue.poll()
+      if (task != null)
+        task._2.run()
+    } catch {
+      case t: Throwable =>
+        ready()
+        throw t
+    }}
+
+  private def ready [A, B] (cb: Callback [A], v: A): Callback [B] =
+    new Callback [B] {
+      def pass (vb: B) {
+        ready()
+        cb (v)
+      }
+      def fail (t: Throwable) {
+        ready()
+        cb.fail (t)
+      }}
+
+  private def defer (priority: Int, task: Runnable): Unit =
+    queue.add ((priority, task))
+
+  private def defer (priority: Int) (f: => Any): Unit =
+    defer (priority, toRunnable (f))
+
+  private def _advanceLog (buf: PagedBuffer, cb: Callback [Unit]): Unit =
+    guard (cb) {
+      val len = buf.readableBytes
+      RecordHeader.pickler.frame (LogEnd, buf)
+      file.flush (buf, logTail, callback (cb) { _ =>
+        logTail += len
+      })
+    }
+
+  private def _reallocLog (buf0: PagedBuffer, cb: Callback [SegmentBounds]): Unit =
+    guard (cb) {
+      state = ReallocLog
+      val buf1 = PagedBuffer (12)
+      val seg = alloc.allocate()
+      RecordHeader.pickler.frame (LogAlloc (seg.num), buf0)
+      RecordHeader.pickler.frame (LogEnd, buf1)
+      val _cb = ready (cb, seg)
+      file.flush (buf1, seg.pos, delay (_cb) { _ =>
+        file.flush (buf0, logTail, callback (_cb) { _ =>
+          logSegs.add (seg.num)
+          logTail = seg.pos
+        })
+      })
+    }
+
+  private def _advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
+    guard (cb) {
+      pagePos = pos
+      pageLedger.add (ledger)
+      pageLedgerDirty = true
+      logd.record (id, PageWrite (pos, ledger.zip), cb)
+    }
+
+  private def _reallocPages (ledger: PageLedger, cb: Callback [SegmentBounds]): Unit =
+    guard (cb) {
+      val s0 = pageSeg
+      val s1 = alloc.allocate()
+      state = ReallocPages
+      pageSeg = s1
+      pagePos = s1.limit
+      pageLedger.add (ledger)
+      pageLedgerDirty = false
+      val _cb = ready (cb, s1)
+      PageLedger.write (pageLedger, file, s0.pos, delay (_cb) { _: Unit =>
+        PageLedger.write (PageLedger.Zipped.empty, file, s1.pos, delay (_cb) { _: Unit =>
+          logd.record (id, PageAlloc (s1.num, ledger.zip), _cb)
+        })
+      })
+    }
+
+  private def _mark (cb: Callback [Unit]): Unit =
+    guard (cb) {
+      logHead = logTail
+      cb()
+    }
+
+  private def _checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
+    guard (cb) {
+      state = Checkpoint
+      val superb = SuperBlock (id, boot, config, alloc.free, logSegs.last, logTail,
+          pageSeg.num, pagePos)
+      val _cb = ready (cb, ())
+      if (pageLedgerDirty) {
+        pageLedgerDirty = false
+        PageLedger.write (pageLedger, file, pageSeg.pos, delay (_cb) { _: Unit =>
+          SuperBlock.write (boot.gen, superb, file, _cb)
+        })
+      } else {
+        SuperBlock.write (boot.gen, superb, file, _cb)
+      }}
+
+  private def _allocated (cb: Callback [IntSet]): Unit =
+    guard (cb) {
+      cb (alloc.allocated)
+    }
+
+  object Ready extends State {
+
+    def advanceLog (buf: PagedBuffer, cb: Callback [Unit]): Unit =
+      _advanceLog (buf, cb)
+
+    def reallocLog (buf: PagedBuffer, cb: Callback [SegmentBounds]): Unit =
+      _reallocLog (buf, cb)
+
+    def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
+      _advancePages (pos, ledger, cb)
+
+    def reallocPages (ledger: PageLedger, cb: Callback [SegmentBounds]): Unit =
+      _reallocPages (ledger, cb)
+
+    def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
+      _checkpoint (boot, cb)
   }
+
+  object ReallocLog extends State {
+
+    def advanceLog (buf: PagedBuffer, cb: Callback [Unit]): Unit =
+      cb.fail (new IllegalStateException)
+
+    def reallocLog (buf0: PagedBuffer, cb: Callback [SegmentBounds]): Unit =
+      cb.fail (new IllegalStateException)
+
+    def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
+      _advancePages (pos, ledger, cb)
+
+    def reallocPages (ledger: PageLedger, cb: Callback [SegmentBounds]): Unit =
+      defer (PagePriority) (state.reallocPages (ledger, cb))
+
+    def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
+      defer (CheckpointPriority) (state.checkpoint (boot, cb))
+  }
+
+  object Checkpoint extends State {
+
+    def advanceLog (buf: PagedBuffer, cb: Callback [Unit]): Unit =
+      _advanceLog (buf, cb)
+
+    def reallocLog (buf0: PagedBuffer, cb: Callback [SegmentBounds]): Unit =
+      defer (LogPriority) (state.reallocLog (buf0, cb))
+
+    def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
+      _advancePages (pos, ledger, cb)
+
+    def reallocPages (ledger: PageLedger, cb: Callback [SegmentBounds]): Unit =
+      defer (PagePriority) (state.reallocPages (ledger, cb))
+
+    def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
+      cb.fail (new IllegalStateException ("Checkpoint already in progres"))
+  }
+
+  object ReallocPages extends State {
+
+    def advanceLog (buf: PagedBuffer, cb: Callback [Unit]): Unit =
+      _advanceLog (buf, cb)
+
+    def reallocLog (buf: PagedBuffer, cb: Callback [SegmentBounds]): Unit =
+      defer (LogPriority) (state.reallocLog (buf, cb))
+
+    def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
+      cb.fail (new IllegalStateException)
+
+    def reallocPages (ledger: PageLedger, cb: Callback [SegmentBounds]): Unit =
+      cb.fail (new IllegalStateException)
+
+    def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
+      defer (CheckpointPriority) (state.checkpoint (boot, cb))
+  }
+
+  def advanceLog (buf: PagedBuffer, cb: Callback [Unit]): Unit =
+    fiber.execute (state.advanceLog (buf, cb))
+
+  def reallocLog (buf: PagedBuffer, cb: Callback [SegmentBounds]): Unit =
+    fiber.execute (state.reallocLog (buf, cb))
+
+  def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
+    fiber.execute (state.advancePages (pos, ledger, cb))
+
+  def reallocPages (ledger: PageLedger, cb: Callback [SegmentBounds]): Unit =
+    fiber.execute (state.reallocPages (ledger, cb))
+
+  def mark (cb: Callback [Unit]): Unit =
+    fiber.execute (_mark (cb))
+
+  def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
+    fiber.execute (state.checkpoint (boot, cb))
+
+  def allocated (cb: Callback [IntSet]): Unit =
+    fiber.execute (_allocated (cb))
 
   def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
     DiskDrive.read (file, desc, pos, cb)
@@ -79,19 +275,37 @@ private object DiskDrive {
       config: DiskDriveConfig,
       boot: BootBlock,
       logd: LogDispatcher,
-      paged: PageDispatcher, cb: Callback [DiskDrive]) (
+      paged: PageDispatcher,
+      cb: Callback [DiskDrive]) (
           implicit scheduler: Scheduler): Unit =
 
     guard (cb) {
+
       val alloc = SegmentAllocator.init (config)
-      val logw = LogWriter.init (file, alloc, logd, delay (cb) { logw =>
-        val pagew = PageWriter.init (id, file, config, alloc, paged)
-        val disk = new DiskDrive (id, path, file, config, alloc, logw, pagew)
-        disk.checkpoint (boot.gen)
-        disk.checkpoint (boot, callback (cb) { _ =>
-          disk
-        })
+      val logSeg = alloc.allocate()
+      val pageSeg = alloc.allocate()
+      val superb =
+        SuperBlock (id, boot, config, alloc.free, logSeg.num, logSeg.pos,
+            pageSeg.num, pageSeg.limit)
+
+      val latch = Callback.latch (3, callback (cb) { _: Unit =>
+        val logSegs = new ArrayDeque [Int]
+        logSegs.add (logSeg.num)
+        val disk =
+          new DiskDrive (id, path, file, config, alloc, logd, logSegs, logSeg.pos, logSeg.pos,
+              pageSeg, pageSeg.limit, new PageLedger)
+        val logw =
+          new LogWriter (disk, logd, PagedBuffer (12), logSeg, logSeg.pos)
+        logd.engage (logw)
+        val pagew =
+          new PageWriter (disk, paged, pageSeg, pageSeg.limit, new PageLedger)
+        paged.engage (pagew)
+        disk
       })
+
+      SuperBlock.write (0, superb, file, latch)
+      RecordHeader.write (LogEnd, file, logSeg.pos, latch)
+      PageLedger.write (PageLedger.Zipped.empty, file, pageSeg.pos, latch)
     }
 
   def init (items: Seq [(Path, File, DiskDriveConfig)], base: Int, boot: BootBlock,
