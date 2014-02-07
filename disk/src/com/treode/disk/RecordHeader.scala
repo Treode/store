@@ -1,6 +1,6 @@
 package com.treode.disk
 
-import com.treode.async.{Callback, guard}
+import com.treode.async.{Callback, defer}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
@@ -37,7 +37,7 @@ private object RecordHeader {
   val overhead = 19 // byte count, tag, time, typeId; 4 + 1 + 9 + 5
 
   def write (entry: RecordHeader, file: File, pos: Long, cb: Callback [Unit]): Unit =
-    guard (cb) {
+    defer (cb) {
       val buf = PagedBuffer (12)
       pickler.frame (entry, buf)
       file.flush (buf, pos, cb)

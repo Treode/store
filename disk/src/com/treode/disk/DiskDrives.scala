@@ -4,7 +4,7 @@ import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 import scala.collection.immutable.Queue
 
-import com.treode.async.{Callback, Fiber, Scheduler, guard}
+import com.treode.async.{Callback, Fiber, Scheduler, defer}
 import com.treode.async.io.File
 
 private class DiskDrives (
@@ -43,12 +43,12 @@ private class DiskDrives (
     }
 
     def attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
-      guard (cb) {
+      defer (cb) {
         attachreqs = attachreqs.enqueue (items, cb)
       }
 
     def checkpoint (cb: Callback [Unit]): Unit =
-      guard (cb) {
+      defer (cb) {
         checkreqs ::= cb
       }
 
@@ -85,7 +85,7 @@ private class DiskDrives (
 
     def attach (req: AttachPending) {
       val (items, cb) = req
-      guard (cb) {
+      defer (cb) {
 
         val priorPaths = disks.values.map (_.path) .toSet
         val newPaths = items.map (_._1) .toSet
@@ -156,7 +156,7 @@ private class DiskDrives (
       throw new IllegalStateException
 
     def attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
-      guard (cb) {
+      defer (cb) {
         if (attaching || !checkreqs.isEmpty)
           attachreqs = attachreqs.enqueue (items, cb)
         else {
@@ -165,7 +165,7 @@ private class DiskDrives (
         }}
 
     def checkpoint (cb: Callback [Unit]): Unit =
-      guard (cb) {
+      defer (cb) {
         val now = !attaching || checkreqs.isEmpty
         checkreqs ::= cb
         if (now) checkpoint()
@@ -222,13 +222,13 @@ private class DiskDrives (
   }
 
   def attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit]): Unit =
-    guard (cb) {
+    defer (cb) {
       require (!items.isEmpty, "Must list at least one file to attach.")
       fiber.execute (state.attach (items, cb))
     }
 
   def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Unit]): Unit =
-    guard (cb) {
+    defer (cb) {
       val files = items map (openFile (_, exec))
       attach (files, cb)
     }

@@ -2,7 +2,7 @@ package com.treode.store.simple
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import com.treode.async.{AsyncIterator, Callback, callback, delay}
+import com.treode.async.{AsyncIterator, Callback, callback, continue}
 import com.treode.disk.{Disks, PageHandler, PageDescriptor, Position, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
@@ -138,7 +138,7 @@ private class SynthTable (
       writeLock.unlock()
     }
 
-    val built = delay (epoch) { tier: Tier =>
+    val built = continue (epoch) { tier: Tier =>
       writeLock.lock()
       val meta = try {
         this.secondary = newMemTier
@@ -150,7 +150,7 @@ private class SynthTable (
       epoch (meta)
     }
 
-    val merged = delay (epoch) { iter: SimpleIterator =>
+    val merged = continue (epoch) { iter: SimpleIterator =>
       TierBuilder.build (pager, generation, iter, built)
     }
 

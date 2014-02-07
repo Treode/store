@@ -1,6 +1,6 @@
 package com.treode.store.timed
 
-import com.treode.async.{AsyncIterator, Callback, callback, delay}
+import com.treode.async.{AsyncIterator, Callback, callback, continue}
 import com.treode.store.TimedCell
 
 /** If the oldest cell for a key is a delete, then remove that cell; assumes the wrapped iterator
@@ -70,7 +70,7 @@ extends AsyncIterator [TimedCell] {
       next2 = null
       cb (t)
     } else {
-      loop (delay (cb) (_ => cb (t)))
+      loop (continue (cb) (_ => cb (t)))
     }}}
 
 private object DeletesFilter {

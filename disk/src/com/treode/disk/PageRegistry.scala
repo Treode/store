@@ -1,7 +1,7 @@
 package com.treode.disk
 
 import java.util.concurrent.ConcurrentHashMap
-import com.treode.async.{Callback, callback, guard}
+import com.treode.async.{Callback, callback, defer}
 
 import PageRegistry.Handler
 
@@ -21,12 +21,12 @@ private class PageRegistry {
   }
 
   def probe (id: TypeId, groups: Set [PageGroup], cb: Callback [(TypeId, Set [PageGroup])]): Unit =
-    guard (cb) {
+    defer (cb) {
       get (id) .probe (groups, cb)
     }
 
   def probe (ledger: PageLedger, cb: Callback [Long]): Unit =
-    guard (cb) {
+    defer (cb) {
       val pagesProbed = callback (cb) { liveGroups: Map [TypeId, Set [PageGroup]] =>
         var liveBytes = 0L
         for {
@@ -42,7 +42,7 @@ private class PageRegistry {
     }
 
   def compact (id: TypeId, groups: Set [PageGroup], cb: Callback [Unit]): Unit =
-    guard (cb) {
+    defer (cb) {
       get (id) .compact (groups, cb)
     }}
 

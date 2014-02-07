@@ -1,6 +1,6 @@
 package com.treode.disk
 
-import com.treode.async.{Callback, callback, delay}
+import com.treode.async.{Callback, callback, continue}
 
 class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
   import disks.releaser
@@ -58,7 +58,7 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
       var cut = min
       var target = List.empty [(SegmentPointer, PageLedger, Long)]
 
-      val pagesProbed = delay (cb) { live: Long =>
+      val pagesProbed = continue (cb) { live: Long =>
         if (live < min) {
           min = live
           cut = live + liveByteRange
@@ -96,7 +96,7 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
   }
 
   def clean (cb: Callback [Boolean]) {
-    probe (delay (cb) { segments =>
+    probe (continue (cb) { segments =>
       val groups = union (segments map (_._2.groups))
       compact (groups, callback (cb) { _ =>
         releaser.release (segments map (_._1))

@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import java.util.concurrent.ConcurrentHashMap
 import scala.util.Random
 
-import com.treode.async.{Scheduler, guard}
+import com.treode.async.{Scheduler, defer}
 import com.treode.cluster.Cluster
 import com.treode.store._
 import com.treode.store.paxos.Paxos
@@ -51,12 +51,12 @@ private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
   WriteDeputies
 
   def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
-    guard (cb) {
+    defer (cb) {
       new ReadDirector (rt, ops, this, cb)
     }
 
   def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
-    guard (cb) {
+    defer (cb) {
       new WriteDirector (xid, ct, ops, this) .open (cb)
     }
 

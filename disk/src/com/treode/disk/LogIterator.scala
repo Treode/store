@@ -102,14 +102,14 @@ object LogIterator {
       cb: Callback [(Int, LogIterator)]) (
           implicit scheduler: Scheduler): Unit =
 
-    guard (cb) {
+    defer (cb) {
       val alloc = SegmentAllocator.recover (superb.config, superb.free)
       val logSeg = alloc.allocSeg (superb.logSeg)
       val logSegs = new ArrayDeque [Int]
       logSegs.add (logSeg.num)
       val pageSeg = alloc.allocSeg (superb.pageSeg)
       val buf = PagedBuffer (12)
-      PageLedger.read (file, pageSeg.pos, delay (cb) { ledger =>
+      PageLedger.read (file, pageSeg.pos, continue (cb) { ledger =>
         file.fill (buf, superb.logHead, 1, callback (cb) { _ =>
           val iter = new LogIterator (path, file, buf, superb, alloc, records, logSegs, logSeg,
               pageSeg, ledger)
@@ -124,7 +124,8 @@ object LogIterator {
       records: RecordRegistry,
       cb: Callback [DiskDrives]) (
           implicit scheduler: Scheduler): Unit =
-    guard (cb) {
+
+    defer (cb) {
 
       def replayed (logs: Map [Int, LogIterator]) = callback (cb) { _: Unit =>
         val logd = new LogDispatcher
@@ -137,15 +138,14 @@ object LogIterator {
         new DiskDrives (logd, paged, disks.mapBy (_.id))
       }
 
-      def merged (logs: Map [Int, LogIterator]) = delay (cb) { iter: ReplayIterator =>
+      def merged (logs: Map [Int, LogIterator]) = continue (cb) { iter: ReplayIterator =>
         AsyncIterator.foreach (iter, replayed (logs)) { case ((time, replay), cb) =>
-          guard (cb) (replay())
-          cb()
+          invoke (cb) (replay())
         }}
 
       val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
 
-      val allMade = delay (cb) { logs: Map [Int, LogIterator] =>
+      val allMade = continue (cb) { logs: Map [Int, LogIterator] =>
         AsyncIterator.merge (logs.values.iterator, merged (logs)) (ordering)
       }
 

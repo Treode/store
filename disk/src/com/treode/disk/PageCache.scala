@@ -3,7 +3,7 @@ package com.treode.disk
 import java.util.concurrent.Callable
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, Cache}
-import com.treode.async.{Callback, Future, Scheduler, callback, guard}
+import com.treode.async.{Callback, Future, Scheduler, callback, defer}
 
 private class PageCache (disks: DiskDrives) (implicit scheduler: Scheduler) {
 
@@ -11,7 +11,7 @@ private class PageCache (disks: DiskDrives) (implicit scheduler: Scheduler) {
   extends Callable [Future [Any]] {
     def call(): Future [Any] = {
       val fut = new Future [Any] (scheduler)
-      guard (fut) (disks.fetch (desc, pos, fut))
+      defer (fut) (disks.fetch (desc, pos, fut))
       fut
     }}
 
@@ -21,7 +21,7 @@ private class PageCache (disks: DiskDrives) (implicit scheduler: Scheduler) {
       .asInstanceOf [Cache [(Int, Long), Future [Any]]]
 
   def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]) {
-    guard (cb) {
+    defer (cb) {
       pages
           .get ((pos.disk, pos.offset), new Load (desc, pos))
           .get (callback (cb) (v => desc.tpag.runtimeClass.cast (v) .asInstanceOf [P]))

@@ -1,6 +1,6 @@
 package com.treode.disk
 
-import com.treode.async.{Callback, guard}
+import com.treode.async.{Callback, defer}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
@@ -27,7 +27,7 @@ private object SuperBlock {
     if ((gen & 0x1) == 0) 0L else SuperBlockBytes
 
   def write (gen: Int, superb: SuperBlock, file: File, cb: Callback [Unit]): Unit =
-    guard (cb) {
+    defer (cb) {
       val buf = PagedBuffer (12)
       pickler.pickle (superb, buf)
       file.flush (buf, position (gen), cb)

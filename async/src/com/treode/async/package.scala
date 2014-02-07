@@ -5,6 +5,25 @@ import scala.reflect.macros.Context
 
 package object async {
 
+  def _continue [A: c.WeakTypeTag, B: c.WeakTypeTag]
+      (c: Context) (cb: c.Expr [Callback [A]]) (f: c.Expr [B => Any]): c.Expr [Callback [B]] = {
+    import c.universe._
+    reify {
+      new Callback [B] {
+        private val _cb = cb.splice
+        def pass (v: B) {
+          try {
+            f.splice.apply (v)
+          } catch {
+            case t: Throwable =>
+              _cb.fail (t)
+          }}
+        def fail (t: Throwable): Unit =
+          _cb.fail (t)
+      }}}
+
+  def continue [A, B] (cb: Callback [A]) (f: B => Any): Callback [B] = macro _continue [A, B]
+
   def _callback1 [A: c.WeakTypeTag]
       (c: Context) (f: c.Expr [A => Any]): c.Expr [Callback [A]] = {
     import c.universe._
@@ -38,26 +57,7 @@ package object async {
 
   def callback [A, B] (cb: Callback [A]) (f: B => A): Callback [B] = macro _callback2 [A, B]
 
-  def _delay [A: c.WeakTypeTag, B: c.WeakTypeTag]
-      (c: Context) (cb: c.Expr [Callback [A]]) (f: c.Expr [B => Any]): c.Expr [Callback [B]] = {
-    import c.universe._
-    reify {
-      new Callback [B] {
-        private val _cb = cb.splice
-        def pass (v: B) {
-          try {
-            f.splice.apply (v)
-          } catch {
-            case t: Throwable =>
-              _cb.fail (t)
-          }}
-        def fail (t: Throwable): Unit =
-          _cb.fail (t)
-      }}}
-
-  def delay [A, B] (cb: Callback [A]) (f: B => Any): Callback [B] = macro _delay [A, B]
-
-  def _guard [A: c.WeakTypeTag]
+  def _defer [A: c.WeakTypeTag]
       (c: Context) (cb: c.Expr [Callback [A]]) (f: c.Expr [Any]): c.Expr [Unit] = {
     import c.universe._
     reify {
@@ -68,7 +68,25 @@ package object async {
           cb.splice.fail (t)
       }}}
 
-  def guard [A] (cb: Callback [A]) (f: Any): Unit = macro _guard [A]
+  def defer [A] (cb: Callback [A]) (f: Any): Unit = macro _defer [A]
+
+  def _invoke [A: c.WeakTypeTag]
+      (c: Context) (cb: c.Expr [Callback [A]]) (f: c.Expr [A]): c.Expr [Unit] = {
+    import c.universe._
+    reify {
+      val _cb = cb.splice
+      val v = try {
+        Some (f.splice)
+      } catch {
+        case t: Throwable =>
+          _cb.fail (t)
+          None
+      }
+      if (v.isDefined)
+        _cb (v.get)
+    }}
+
+  def invoke [A] (cb: Callback [A]) (f: A): Unit = macro _invoke [A]
 
   def toRunnable (task: => Any): Runnable =
     new Runnable {

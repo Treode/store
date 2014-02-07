@@ -3,7 +3,7 @@ package com.treode.disk
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, Scheduler, delay}
+import com.treode.async.{Callback, Scheduler, continue}
 
 private class LaunchAgent (
     drives: DiskDrives,
@@ -25,7 +25,7 @@ private class LaunchAgent (
   def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]): Unit =
     pages.handle (desc, handler)
 
-  val launched = delay (cb) { _: Unit =>
+  val launched = continue (cb) { _: Unit =>
     drives.launch (roots, pages)
     scheduler.execute (cb, drives)
   }

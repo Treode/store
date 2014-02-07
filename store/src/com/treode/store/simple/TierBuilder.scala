@@ -2,7 +2,7 @@ package com.treode.store.simple
 
 import java.util.{ArrayDeque, ArrayList}
 
-import com.treode.async.{AsyncIterator, Callback, delay}
+import com.treode.async.{AsyncIterator, Callback, continue}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, StoreConfig, TxClock}
 
@@ -73,7 +73,7 @@ private class TierBuilder (pager: TierPage.Descriptor, generation: Long) (
         stack.pop()
         val page = IndexPage (node.entries)
         val last = page.last
-        pager.write (generation, page, delay (cb) { pos2 =>
+        pager.write (generation, page, continue (cb) { pos2 =>
           rpush (key, pos, height)
           add (last.key, pos2, height+1, cb)
         })
@@ -99,7 +99,7 @@ private class TierBuilder (pager: TierPage.Descriptor, generation: Long) (
       entries.add (entry)
       byteSize = entryByteSize
       val last = page.last
-      pager.write (generation, page, delay (cb) { pos =>
+      pager.write (generation, page, continue (cb) { pos =>
         add (last.key, pos, 0, cb)
       })
     }}
@@ -108,7 +108,7 @@ private class TierBuilder (pager: TierPage.Descriptor, generation: Long) (
 
     val page = CellPage (entries)
     val last = page.last
-    pager.write (generation, page, delay (cb) { _pos =>
+    pager.write (generation, page, continue (cb) { _pos =>
 
       var pos = _pos
 
@@ -130,7 +130,7 @@ private class TierBuilder (pager: TierPage.Descriptor, generation: Long) (
             val node = stack.pop()
             if (node.size > 1) {
               val page = IndexPage (node.entries)
-              pager.write (generation, page, delay (cb) { _pos =>
+              pager.write (generation, page, continue (cb) { _pos =>
                 pos = _pos
                 next (node)
               })
@@ -152,7 +152,7 @@ private object TierBuilder {
       cb: Callback [Tier]) (implicit disks: Disks, config: StoreConfig) {
 
     val builder = new TierBuilder (pager, generation)
-    val cellsAdded = delay (cb) { _: Unit =>
+    val cellsAdded = continue (cb) { _: Unit =>
       builder.result (cb)
     }
     AsyncIterator.foreach (iter, cellsAdded) { (cell, cb) =>

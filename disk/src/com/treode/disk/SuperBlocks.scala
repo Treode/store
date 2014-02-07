@@ -2,7 +2,7 @@ package com.treode.disk
 
 import java.nio.file.Path
 
-import com.treode.async.{Callback, guard}
+import com.treode.async.{Callback, defer}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
@@ -21,7 +21,7 @@ private class SuperBlocks (
 private object SuperBlocks {
 
   def read (path: Path, file: File, cb: Callback [SuperBlocks]): Unit =
-    guard (cb) {
+    defer (cb) {
 
       val buffer = PagedBuffer (SuperBlockBits+1)
 

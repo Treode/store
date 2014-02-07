@@ -1,6 +1,6 @@
 package com.treode.store.simple
 
-import com.treode.async.{AsyncIterator, Callback, callback, delay}
+import com.treode.async.{AsyncIterator, Callback, callback, continue}
 import com.treode.disk.{Disks, Position}
 
 private class TierIterator (pager: TierPage.Descriptor) (implicit disks: Disks)
@@ -66,7 +66,7 @@ private object TierIterator {
   def merge (pager: TierPage.Descriptor, primary: MemTier, secondary: MemTier, tiers: Tiers,
       cb: Callback [SimpleIterator]) (implicit disks: Disks) {
 
-    val allBuilt = delay (cb) { iters: Array [SimpleIterator] =>
+    val allBuilt = continue (cb) { iters: Array [SimpleIterator] =>
       AsyncIterator.merge (iters.iterator, cb)
     }
 
@@ -75,5 +75,5 @@ private object TierIterator {
     oneBuilt (0, AsyncIterator.adapt (primary))
     oneBuilt (1, AsyncIterator.adapt (secondary))
     for (i <- 0 until tiers.size)
-      TierIterator (pager, tiers.pos (i), delay (oneBuilt) (oneBuilt (i+2, _)))
+      TierIterator (pager, tiers.pos (i), callback (oneBuilt) ((i+2, _)))
   }}

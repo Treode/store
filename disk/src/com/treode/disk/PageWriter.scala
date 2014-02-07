@@ -3,7 +3,7 @@ package com.treode.disk
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, Scheduler, callback, guard}
+import com.treode.async.{Callback, Scheduler, callback}
 import com.treode.buffer.PagedBuffer
 
 import PageWriter.PositionCallbackList

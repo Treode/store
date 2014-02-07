@@ -1,6 +1,6 @@
 package com.treode.store
 
-import com.treode.async.{Callback, guard}
+import com.treode.async.{Callback, defer}
 import com.treode.store._
 import com.treode.store.locks.LockSpace
 
@@ -11,7 +11,7 @@ private abstract class LocalKit (bits: Int) extends LocalStore {
   def getTimedTable (id: TableId): TimedTable
 
   def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
-    guard (cb) {
+    defer (cb) {
       require (!ops.isEmpty, "Read needs at least one operation")
       val ids = ops map (op => (op.table, op.key).hashCode)
       space.read (rt, ids) {
@@ -21,7 +21,7 @@ private abstract class LocalKit (bits: Int) extends LocalStore {
       }}
 
   def prepare (ct: TxClock, ops: Seq [WriteOp], cb: PrepareCallback): Unit =
-    guard (cb) {
+    defer (cb) {
       require (!ops.isEmpty, "Prepare needs at least one operation")
       val ids = ops map (op => (op.table, op.key).hashCode)
       space.write (TxClock.now, ids) { locks =>
@@ -37,7 +37,7 @@ private abstract class LocalKit (bits: Int) extends LocalStore {
           }}}}
 
   def commit (wt: TxClock, ops: Seq [WriteOp], cb: Callback [Unit]): Unit =
-    guard (cb) {
+    defer (cb) {
       require (!ops.isEmpty, "Commit needs at least one operation")
       val c = new TimedCommitter (ops, cb)
       for (op <- ops) {

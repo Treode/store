@@ -4,7 +4,7 @@ import java.nio.file.Path
 import java.util.ArrayList
 import java.util.concurrent.ExecutorService
 
-import com.treode.async.{Callback, Scheduler, delay, guard}
+import com.treode.async.{Callback, Scheduler, continue, defer}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
@@ -16,17 +16,17 @@ private class RecoveryAgent (
         implicit val scheduler: Scheduler) {
 
   def launch (disks: DiskDrives): Unit =
-    guard (cb) {
+    defer (cb) {
       new LaunchAgent (disks, launches, cb)
     }
 
   def attach (items: Seq [(Path, File, DiskDriveConfig)]): Unit =
-    guard (cb) {
+    defer (cb) {
 
       val logd = new LogDispatcher
       val paged = new PageDispatcher
 
-      val disksPrimed = delay (cb) { drives: Seq [DiskDrive] =>
+      val disksPrimed = continue (cb) { drives: Seq [DiskDrive] =>
         val disks = new DiskDrives (logd, paged, drives.mapBy (_.id))
         launch (disks)
       }
@@ -39,7 +39,7 @@ private class RecoveryAgent (
     }
 
   def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService): Unit =
-    guard (cb) {
+    defer (cb) {
       val files = items map (openFile (_, exec))
       attach (files)
     }
@@ -72,7 +72,7 @@ private class RecoveryAgent (
     }}
 
   def superBlocksRead (reads: Seq [SuperBlocks]): Unit =
-    guard (cb) {
+    defer (cb) {
 
       val useGen1 = chooseSuperBlock (reads)
       val boot = if (useGen1) reads.head.sb1.get.boot else reads.head.sb2.get.boot
@@ -80,15 +80,15 @@ private class RecoveryAgent (
 
       val files = reads.mapValuesBy (_.superb (useGen1) .id) (_.file)
 
-      val logsReplayed = delay (cb) { disks: DiskDrives =>
+      val logsReplayed = continue (cb) { disks: DiskDrives =>
         launch (disks)
       }
 
-      val rootsReloaded = delay (cb) { _: Unit =>
+      val rootsReloaded = continue (cb) { _: Unit =>
         LogIterator.replay (useGen1, reads, records, logsReplayed)
       }
 
-      val rootsRead = delay (cb) { roots: Seq [Reload => Any] =>
+      val rootsRead = continue (cb) { roots: Seq [Reload => Any] =>
         new ReloadAgent (files, roots, rootsReloaded)
       }
 
@@ -97,14 +97,14 @@ private class RecoveryAgent (
     }
 
   def reattach (items: Seq [(Path, File)]): Unit =
-    guard (cb) {
+    defer (cb) {
       require (!items.isEmpty, "Must list at least one file to reaattach.")
-      val oneRead = Callback.seq (items.size, delay (cb) (superBlocksRead _))
+      val oneRead = Callback.seq (items.size, continue (cb) (superBlocksRead _))
       for ((path, file) <- items)
         SuperBlocks.read (path, file, oneRead)
     }
 
   def reattach (items: Seq [Path], exec: ExecutorService): Unit =
-    guard (cb) {
+    defer (cb) {
       reattach (items map (reopenFile (_, exec)))
     }}

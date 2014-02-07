@@ -3,8 +3,7 @@ package com.treode.store
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, MultiException, guard}
-import com.treode.cluster.events.Events
+import com.treode.async.{Callback, MultiException}
 import com.treode.store._
 import com.treode.store.locks.LockSet
 

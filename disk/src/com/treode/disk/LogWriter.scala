@@ -3,7 +3,7 @@ package com.treode.disk
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, Scheduler, callback, guard}
+import com.treode.async.{Callback, Scheduler, callback, defer}
 import com.treode.buffer.PagedBuffer
 
 private class LogWriter (
@@ -54,7 +54,7 @@ private class LogWriter (
         accepts foreach (e => scheduler.execute (e.cb.fail (t)))
       }}
 
-    guard (finish) {
+    defer (finish) {
 
       for (entry <- accepts)
         entry.write (buf)

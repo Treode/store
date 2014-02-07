@@ -1,7 +1,7 @@
 package com.treode.store.timed
 
 import java.util.{ArrayDeque, ArrayList}
-import com.treode.async.{Callback, delay}
+import com.treode.async.{Callback, continue}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, StoreConfig, TimedCell, TxClock}
 
@@ -71,7 +71,7 @@ private class TierBuilder (config: StoreConfig) (implicit val disks: Disks) {
         stack.pop()
         val page = IndexPage (node.entries)
         val last = page.last
-        TierPage.page.write (0, page, delay (cb) { pos2 =>
+        TierPage.page.write (0, page, continue (cb) { pos2 =>
           rpush (key, time, pos, height)
           add (last.key, last.time, pos2, height+1, cb)
         })
@@ -97,7 +97,7 @@ private class TierBuilder (config: StoreConfig) (implicit val disks: Disks) {
       entries.add (entry)
       byteSize = entryByteSize
       val last = page.last
-      TierPage.page.write (0, page, delay (cb) { pos =>
+      TierPage.page.write (0, page, continue (cb) { pos =>
         add (last.key, last.time, pos, 0, cb)
       })
     }}
@@ -106,7 +106,7 @@ private class TierBuilder (config: StoreConfig) (implicit val disks: Disks) {
 
     val page = CellPage (entries)
     val last = page.last
-    TierPage.page.write (0, page, delay (cb) { _pos =>
+    TierPage.page.write (0, page, continue (cb) { _pos =>
 
       var pos = _pos
 
@@ -128,7 +128,7 @@ private class TierBuilder (config: StoreConfig) (implicit val disks: Disks) {
             val node = stack.pop()
             if (node.size > 1) {
               val page = IndexPage (node.entries)
-              TierPage.page.write (0, page, delay (cb) { _pos =>
+              TierPage.page.write (0, page, continue (cb) { _pos =>
                 pos = _pos
                 next (node)
               })

@@ -1,6 +1,6 @@
 package com.treode.store.simple
 
-import com.treode.async.{Callback, callback, guard}
+import com.treode.async.{Callback, callback, defer}
 import com.treode.pickle.Pickler
 import com.treode.store.Bytes
 
@@ -30,7 +30,7 @@ object SimpleAccessor {
     new SimpleAccessor [K, V] {
 
       def get (k: K, cb: Callback [Option [V]]): Unit =
-        guard (cb) {
+        defer (cb) {
           t.get (Bytes (pk, k), callback (cb) (_ map (_.unpickle (pv))))
         }
 
@@ -45,7 +45,7 @@ object SimpleAccessor {
     new SimpleAccessor [K, Bytes] {
 
       def get (k: K, cb: Callback [Option [Bytes]]): Unit =
-        guard (cb) {
+        defer (cb) {
           t.get (Bytes (pk, k), cb)
         }
 
@@ -60,7 +60,7 @@ object SimpleAccessor {
     new SimpleAccessor [Bytes, V] {
 
       def get (k: Bytes, cb: Callback [Option [V]]): Unit =
-        guard (cb) {
+        defer (cb) {
           t.get (k, callback (cb) (_ map (_.unpickle (pv))))
         }
 

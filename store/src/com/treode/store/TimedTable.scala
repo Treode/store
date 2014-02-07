@@ -2,7 +2,7 @@ package com.treode.store
 
 import java.io.Closeable
 
-import com.treode.async.{Callback, guard}
+import com.treode.async.{Callback, defer}
 
 trait TimedTable extends Closeable {
 
@@ -18,7 +18,7 @@ trait TimedTable extends Closeable {
       def pass (c: TimedCell) = reader.got (n, c)
       def fail (t: Throwable) = reader.fail (t)
     }
-    guard (cb) (get (key, reader.rt, cb))
+    defer (cb) (get (key, reader.rt, cb))
   }
 
   /** Prepare a create. */
@@ -34,7 +34,7 @@ trait TimedTable extends Closeable {
       }
       def fail (t: Throwable) = writer.fail (t)
     }
-    guard (cb) (get (key, TxClock.max, cb))
+    defer (cb) (get (key, TxClock.max, cb))
   }
 
   /** Prepare a hold, update or delete. */
@@ -50,16 +50,16 @@ trait TimedTable extends Closeable {
       }
       def fail (t: Throwable) = writer.fail (t)
     }
-    guard (cb) (get (key, TxClock.max, cb))
+    defer (cb) (get (key, TxClock.max, cb))
   }
 
   /** Commit a create. */
   def create (key: Bytes, value: Bytes, wt: TxClock, cb: Callback [Unit]): Unit =
-    guard (cb) (put (key, wt, Some (value), cb))
+    defer (cb) (put (key, wt, Some (value), cb))
 
   /** Commit an update. */
   def update (key: Bytes, value: Bytes, wt: TxClock, cb: Callback [Unit]): Unit =
-    guard (cb) (put (key, wt, Some (value), cb))
+    defer (cb) (put (key, wt, Some (value), cb))
 
   /** Commit a delete. */
   def delete (key: Bytes, wt: TxClock, cb: Callback [Unit]): Unit =

@@ -1,6 +1,6 @@
 package com.treode.store.paxos
 
-import com.treode.async.{Callback, Scheduler, callback, delay, guard}
+import com.treode.async.{Callback, Scheduler, callback, continue, defer}
 import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
 import com.treode.disk.{Disks, Position, RecordDescriptor}
@@ -37,11 +37,11 @@ private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
 
   def checkpoint (cb: Callback [Position]) {
     import Acceptor.{Status, statii}
-    guard (cb) {
+    defer (cb) {
       val as = materialize (acceptors.values)
       val latch = Callback.seq [Status] (
           as.size,
-          delay (cb) (statii.write (0, _, cb)))
+          continue (cb) (statii.write (0, _, cb)))
       as foreach (_.checkpoint (latch))
     }}
 
