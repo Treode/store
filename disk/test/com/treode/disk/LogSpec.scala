@@ -9,7 +9,7 @@ import DiskTestTools._
 
 class LogSpec extends FlatSpec {
 
-  val config = DiskDriveConfig (6, 2, 1<<20)
+  val config = DiskDriveConfig (10, 6, 1<<20)
 
   val root = new RootDescriptor (0xD6BA4C18, Picklers.string)
 

@@ -86,7 +86,7 @@ private class DiskDrive (
     defer (cb) {
       state = ReallocLog
       val buf1 = PagedBuffer (12)
-      val seg = alloc.allocate()
+      val seg = alloc.alloc()
       RecordHeader.pickler.frame (LogAlloc (seg.num), buf0)
       RecordHeader.pickler.frame (LogEnd, buf1)
       val _cb = ready (cb, seg)
@@ -109,7 +109,7 @@ private class DiskDrive (
   private def _reallocPages (ledger: PageLedger, cb: Callback [SegmentBounds]): Unit =
     defer (cb) {
       val s0 = pageSeg
-      val s1 = alloc.allocate()
+      val s1 = alloc.alloc()
       state = ReallocPages
       pageSeg = s1
       pagePos = s1.limit
@@ -254,7 +254,7 @@ private class DiskDrive (
       case _ => false
     }
 
-  override def toString = s"DiskDrive($id, $path, $config)"
+  override def toString = s"DiskDrive($id, $path)"
 }
 
 private object DiskDrive {
@@ -281,8 +281,8 @@ private object DiskDrive {
     defer (cb) {
 
       val alloc = SegmentAllocator.init (config)
-      val logSeg = alloc.allocate()
-      val pageSeg = alloc.allocate()
+      val logSeg = alloc.alloc()
+      val pageSeg = alloc.alloc()
       val superb =
         SuperBlock (id, boot, config, alloc.free, logSeg.num, logSeg.pos,
             pageSeg.num, pageSeg.limit)

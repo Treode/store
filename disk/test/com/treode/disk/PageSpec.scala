@@ -9,7 +9,7 @@ import DiskTestTools._
 
 class PageSpec extends FlatSpec {
 
-  val config = DiskDriveConfig (16, 12, 1L<<20)
+  val config = DiskDriveConfig (10, 6, 1<<20)
 
   val desc = {
     import Picklers._

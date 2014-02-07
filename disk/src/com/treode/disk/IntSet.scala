@@ -26,19 +26,6 @@ private class IntSet private (private val bitmap: Bitmap) {
     new IntSet (dup)
   }
 
-  def contains (i: Int): Boolean =
-    bitmap.get (i)
-
-  def min: Option [Int] = {
-    val it = bitmap.iterator
-    if (!it.hasNext) return None
-    val i = it.next()
-    return Some (i)
-  }
-
-  def isEmpty: Boolean =
-    !bitmap.iterator.hasNext
-
   def iterator: Iterator [Int] =
     asScalaIterator (bitmap.iterator.map (_.toInt))
 

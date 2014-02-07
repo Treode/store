@@ -2,36 +2,29 @@ package com.treode.disk
 
 private class SegmentAllocator private (config: DiskDriveConfig, private var _free: IntSet) {
 
-  def allocSeg (num: Int): SegmentBounds = {
+  def alloc (num: Int): SegmentBounds = {
     _free = _free.remove (num)
     config.segmentBounds (num)
   }
 
-  def allocPos (pos: Long): SegmentBounds = {
-    allocSeg ((pos >> config.segmentBits).toInt)
+  def alloc(): SegmentBounds = {
+    val iter = _free.iterator
+    if (!iter.hasNext)
+      throw new DiskFullException
+    alloc (iter.next())
   }
 
-  def allocate(): SegmentBounds = {
-    _free.min match {
-      case Some (num) =>
-        _free = _free.remove (num)
-        allocSeg (num)
-      case None =>
-        throw new DiskFullException
-    }}
-
-  def allocated: IntSet = {
+  def allocated: IntSet =
     _free.complement
-  }
-
-  def free: IntSet = {
-    _free.clone()
-  }
 
   def free (nums: Seq [Int]) {
     val _nums = IntSet (nums: _*)
     _free = _free.add (_nums)
-  }}
+  }
+
+  def free: IntSet =
+    _free.clone()
+}
 
 private object SegmentAllocator {
 

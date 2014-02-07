@@ -34,13 +34,26 @@ class IntSetSpec extends FlatSpec {
     expectSet (0, 2) (s3)
   }
 
-  it should "find the smallest member" in {
-    var s = IntSet.fill (0)
-    expectResult (None) (s.min)
-    s = IntSet.fill (4)
-    expectResult (0) (s.min.get)
-    s = s.remove (0)
-    expectResult (1) (s.min.get)
-    s = s.remove (2)
-    expectResult (1) (s.min.get)
+  it should "complement the set" in {
+    val s0 = IntSet.fill (4)
+    val s1 = s0.remove (0)
+    val s2 = s1.complement
+    expectSet (0) (s2)
+    val s3 = s1.remove (2)
+    val s4 = s3.complement
+    expectSet (0, 2) (s4)
+  }
+
+  it should "pickle" in {
+    import IntSet.pickler.{fromByteArray, toByteArray}
+
+    def checkPickle (s: IntSet) {
+      val s2 = fromByteArray (toByteArray (s))
+      expectResult (s) (s2)
+    }
+
+    checkPickle (IntSet())
+    checkPickle (IntSet.fill (4))
+    checkPickle (IntSet.fill (1<<30))
+    checkPickle (IntSet.fill (4) .remove (0) .remove (2))
   }}

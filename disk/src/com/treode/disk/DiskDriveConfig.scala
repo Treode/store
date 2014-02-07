@@ -7,16 +7,14 @@ class DiskDriveConfig private (
 
   val segmentBytes = 1 << segmentBits
   val segmentMask = ~(segmentBytes - 1)
-  val segmentCount = ((diskBytes + segmentBytes - 1) >> segmentBits).toInt
 
   val blockBytes = 1 << blockBits
   val blockMask = ~(blockBytes - 1)
 
+  val segmentCount = ((diskBytes + segmentBytes - (blockBytes<<2)) >> segmentBits).toInt
+
   def blockAlignLength (length: Int): Int =
     (length + blockBytes - 1) & blockMask
-
-  def blockAlignPosition (position: Long): Long =
-    position & (blockMask.toLong)
 
   private [disk] def segmentBounds (num: Int): SegmentBounds = {
     require (0 <= num && num < segmentCount)
@@ -49,9 +47,11 @@ object DiskDriveConfig {
       blockBits: Int,
       diskBytes: Long): DiskDriveConfig = {
 
-    require (segmentBits > 0, "segmentBits must be greater than 0")
-    require (blockBits > 0, "blockBits must be greater than 0")
-    require (diskBytes > 0, "diskBytes must be greater than 0")
+    require (segmentBits > 0, "A segment must have more than 0 bytes")
+    require (blockBits > 0, "A block must have more than 0 bytes")
+    require (diskBytes > 0, "A disk must have more than 0 bytes")
+    require (segmentBits >= blockBits+2, "A segment must have at least 4 blocks")
+    require (diskBytes >= (1<<(segmentBits+4)), "A disk must have at least 16 segments")
 
     new DiskDriveConfig (
         segmentBits,

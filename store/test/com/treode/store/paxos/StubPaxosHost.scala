@@ -18,7 +18,7 @@ extends StubActiveHost (id, network) {
   val _paxos = new CallbackCaptor [Paxos]
   Paxos.recover (_paxos)
   val file = new StubFile
-  val config = DiskDriveConfig (16, 8, 1L<<20)
+  val config = DiskDriveConfig (10, 6, 1<<20)
   recovery.attach (Seq ((Paths.get ("a"), file, config)), Callback.ignore)
   scheduler.runTasks()
 

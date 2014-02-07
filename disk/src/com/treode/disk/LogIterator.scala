@@ -47,7 +47,7 @@ private class LogIterator private (
             cb (Long.MaxValue, _ => ())
 
           case LogAlloc (next) =>
-            logSeg = alloc.allocSeg (next)
+            logSeg = alloc.alloc (next)
             logSegs.add (logSeg.num)
             logPos = logSeg.pos
             buf.clear()
@@ -60,7 +60,7 @@ private class LogIterator private (
             file.deframe (buf, logPos, this)
 
           case PageAlloc (next, _ledger) =>
-            pageSeg = alloc.allocSeg (next)
+            pageSeg = alloc.alloc (next)
             pagePos = pageSeg.pos
             pageLedger = _ledger.unzip
             logPos += len
@@ -104,10 +104,10 @@ object LogIterator {
 
     defer (cb) {
       val alloc = SegmentAllocator.recover (superb.config, superb.free)
-      val logSeg = alloc.allocSeg (superb.logSeg)
+      val logSeg = alloc.alloc (superb.logSeg)
       val logSegs = new ArrayDeque [Int]
       logSegs.add (logSeg.num)
-      val pageSeg = alloc.allocSeg (superb.pageSeg)
+      val pageSeg = alloc.alloc (superb.pageSeg)
       val buf = PagedBuffer (12)
       PageLedger.read (file, pageSeg.pos, continue (cb) { ledger =>
         file.fill (buf, superb.logHead, 1, callback (cb) { _ =>

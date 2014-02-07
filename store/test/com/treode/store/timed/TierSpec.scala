@@ -28,7 +28,7 @@ class TierSpec extends WordSpec {
     implicit val scheduler = StubScheduler.random()
     implicit val recovery = Disks.recover()
     val file = new StubFile
-    val config = DiskDriveConfig (16, 12, 1L<<20)
+    val config = DiskDriveConfig (20, 12, 1<<30)
     val cb = new CallbackCaptor [Disks]
     recovery.attach (Seq ((Paths.get ("a"), file, config)), cb)
     scheduler.runTasks()
