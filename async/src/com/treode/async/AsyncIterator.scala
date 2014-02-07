@@ -14,9 +14,19 @@ object AsyncIterator {
   /** Transform a Scala iterator into an AsyncIterator. */
   def adapt [A] (iter: Iterator [A]): AsyncIterator [A] =
     new AsyncIterator [A] {
+
       def hasNext: Boolean = iter.hasNext
-      def next (cb: Callback [A]): Unit = cb (iter.next)
-    }
+
+      def next (cb: Callback [A]) {
+        val v = try {
+          iter.next
+        } catch {
+          case e: Throwable =>
+            cb.fail (e)
+            return
+        }
+        cb (v)
+      }}
 
   /** Transform a Scala iterable into an AsyncIterator. */
   def adapt [A] (iter: Iterable [A]): AsyncIterator [A] =
@@ -25,9 +35,19 @@ object AsyncIterator {
   /** Transform a Java iterator into an AsyncIterator. */
   def adapt [A] (iter: JIterator [A]): AsyncIterator [A] =
     new AsyncIterator [A] {
+
       def hasNext: Boolean = iter.hasNext
-      def next (cb: Callback [A]): Unit = cb (iter.next)
-    }
+
+      def next (cb: Callback [A]) {
+        val v = try {
+          iter.next
+        } catch {
+          case e: Throwable =>
+            cb.fail (e)
+            return
+        }
+        cb (v)
+      }}
 
   /** Transform a Java iterable into an AsyncIterator. */
   def adapt [A] (iter: JIterable [A]): AsyncIterator [A] =
@@ -37,12 +57,26 @@ object AsyncIterator {
     FilteredIterator (iter, pred, cb)
 
   private class Mapper [A, B] (iter: AsyncIterator [A], f: A => B) extends AsyncIterator [B] {
-    def hasNext = iter.hasNext
-    def next (cb: Callback [B]) = iter.next (new Callback [A] {
-      def pass (v: A) = cb (f (v))
-      def fail (t: Throwable) = cb.fail (t)
-    })
-  }
+
+    def hasNext: Boolean = iter.hasNext
+
+    def next (cb: Callback [B]): Unit =
+      iter.next (new Callback [A] {
+
+        def pass (v1: A) {
+          val v2 = try {
+            f (v1)
+          } catch {
+            case e: Throwable =>
+              cb.fail (e)
+              return
+          }
+          cb (v2)
+        }
+
+        def fail (t: Throwable) = cb.fail (t)
+      })
+    }
 
   def map [A, B] (iter: AsyncIterator [A]) (f: A => B): AsyncIterator [B] =
     new Mapper (iter, f)
@@ -51,12 +85,21 @@ object AsyncIterator {
   extends Callback [A] {
 
     val next = new Callback [Unit] {
+
       def pass (v: Unit) {
-        if (iter.hasNext)
-          iter.next (Looper.this)
-        else
-          cb()
+        try {
+          if (iter.hasNext) {
+            iter.next (Looper.this)
+            return
+          }
+        } catch {
+          case e: Throwable =>
+            cb.fail (e)
+            return
+        }
+        cb()
       }
+
       def fail (t: Throwable) = cb.fail (t)
     }
 
@@ -65,10 +108,7 @@ object AsyncIterator {
   }
 
   def foreach [A] (iter: AsyncIterator [A], cb: Callback [Unit]) (func: (A, Callback [Unit]) => Any): Unit =
-    if (iter.hasNext)
-      iter.next (new Looper (iter, func, cb))
-    else
-      cb()
+    new Looper (iter, func, cb) .next()
 
   /** Given asynchronous iterators of sorted items, merge them into single asynchronous iterator
     * that maintains the sort.  Keep duplicate elements, and when two or more input iterators
@@ -84,22 +124,35 @@ object AsyncIterator {
 
     val builder = Seq.newBuilder [A]
 
+    def next() {
+      try {
+        if (iter.hasNext) {
+          iter.next (this)
+          return
+        }
+      } catch {
+        case e: Throwable =>
+          cb.fail (e)
+          return
+      }
+      cb (builder.result)
+    }
+
     def pass (x: A) {
-      builder += x
-      if (iter.hasNext)
-        iter.next (this)
-      else
-        cb (builder.result)
+      try {
+        builder += x
+      } catch {
+        case e: Throwable =>
+          cb.fail (e)
+          return
+      }
+      next()
     }
 
     def fail (t: Throwable) = cb.fail (t)
   }
 
   /** Iterator the entire asynchronous iterator and build a standard sequence. */
-  def scan [A] (iter: AsyncIterator [A], cb: Callback [Seq [A]]) {
-    if (iter.hasNext)
-      iter.next (new Scanner (iter, cb))
-    else
-      cb (Seq.empty)
-  }
+  def scan [A] (iter: AsyncIterator [A], cb: Callback [Seq [A]]): Unit =
+    new Scanner (iter, cb) .next()
 }

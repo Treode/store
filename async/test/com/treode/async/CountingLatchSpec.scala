@@ -32,7 +32,7 @@ class CountingLatchSpec extends FlatSpec {
     val ltch = Callback.latch (1, cb)
     assert (!cb.wasInvoked)
     ltch.fail (new DistinguishedException)
-    assert (cb.failed.isInstanceOf [DistinguishedException])
+    cb.failed [DistinguishedException]
   }
 
   it should "release after two passes for count==2" in {
@@ -52,7 +52,7 @@ class CountingLatchSpec extends FlatSpec {
     ltch (0)
     assert (!cb.wasInvoked)
     ltch.fail (new DistinguishedException)
-    assert (cb.failed.isInstanceOf [DistinguishedException])
+    cb.failed [DistinguishedException]
   }
 
   it should "release after two fails for count==2" in {
@@ -62,5 +62,5 @@ class CountingLatchSpec extends FlatSpec {
     ltch.fail (new Exception)
     assert (!cb.wasInvoked)
     ltch.fail (new Exception)
-    assert (cb.failed.isInstanceOf [MultiException])
+    cb.failed [MultiException]
   }}

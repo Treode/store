@@ -24,7 +24,7 @@ class CallbackCaptor [T] extends Callback [T] {
   private def assertInvoked (e: Boolean) {
     if (e && _t != null)
       throw new AssertionError (_t)
-    assert (wasInvoked, "Callback was not invoked.")
+    assert (wasInvoked, "Expected callback to have been invoked, but it was not.")
   }
 
   def pass (v: T) = {
@@ -42,7 +42,7 @@ class CallbackCaptor [T] extends Callback [T] {
 
   def passed: T = {
     assertInvoked (true)
-    assert (hasPassed, "Operation failed.")
+    assert (hasPassed, "Expected operation to pass, but it failed.")
     _v
   }
 
@@ -52,10 +52,13 @@ class CallbackCaptor [T] extends Callback [T] {
   def hasTimedOut: Boolean =
     _t != null && _t.isInstanceOf [TimeoutException]
 
-  def failed: Throwable = {
+  def failed [E] (implicit m: Manifest [E]): E = {
     assertInvoked (false)
-    assert (hasFailed, "Operation passed.")
-    _t
+    assert (hasFailed, "Expected operation to fail, but it passed.")
+    assert (
+        m.runtimeClass.isInstance (_t),
+        s"Expected ${m.runtimeClass.getSimpleName}, found ${_t.getClass.getSimpleName}")
+    _t.asInstanceOf [E]
   }
 
   override def toString: String =

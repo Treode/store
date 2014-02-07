@@ -32,7 +32,7 @@ class SeqLatchSpec extends FlatSpec {
     val ltch = Callback.seq (1, cb)
     assert (!cb.wasInvoked)
     ltch.fail (new DistinguishedException)
-    assert (cb.failed.isInstanceOf [DistinguishedException])
+    cb.failed [DistinguishedException]
   }
 
   it should "release after two passes for count==2" in {
@@ -62,7 +62,7 @@ class SeqLatchSpec extends FlatSpec {
     ltch (1)
     assert (!cb.wasInvoked)
     ltch.fail (new DistinguishedException)
-    assert (cb.failed.isInstanceOf [DistinguishedException])
+    cb.failed [DistinguishedException]
   }
 
   it should "release after two fails for count==2" in {
@@ -72,5 +72,5 @@ class SeqLatchSpec extends FlatSpec {
     ltch.fail (new Exception)
     assert (!cb.wasInvoked)
     ltch.fail (new Exception)
-    assert (cb.failed.isInstanceOf [MultiException])
+    cb.failed [MultiException]
   }}
