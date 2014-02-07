@@ -4,7 +4,7 @@ import com.treode.buffer.PagedBuffer
 import com.treode.async.{Callback, callback, defer}
 import com.treode.async.io.File
 
-import PageLedger.{Zipped, intBytes, longBytes}
+import PageLedger.{Projector, Zipped, intBytes, longBytes}
 
 class PageLedger (
     private var ledger: Map [(TypeId, PageGroup), Long],
@@ -13,7 +13,7 @@ class PageLedger (
 ) extends Traversable [(TypeId, PageGroup, Long)] {
 
   def this() =
-    this (Map.empty, Set.empty, 0)
+    this (Map.empty, Set.empty, intBytes)
 
   def foreach [U] (f: ((TypeId, PageGroup, Long)) => U) {
     for (((id, group), totalBytes) <- ledger)
@@ -49,6 +49,9 @@ class PageLedger (
   def groups: Map [TypeId, Set [PageGroup]] =
     ledger.keys.groupBy (_._1) .mapValues (_.map (_._2) .toSet)
 
+  def project: Projector =
+    new Projector (ids, ledger.keySet, _byteSize)
+
   def zip: Zipped = {
     var builder = Map.empty [TypeId, Seq [(PageGroup, Long)]]
     for (((id, group), totalBytes) <- ledger) {
@@ -69,6 +72,28 @@ object PageLedger {
 
   val intBytes = 5
   val longBytes = 9
+
+  class Projector (
+      private var ids: Set [TypeId],
+      private var groups: Set [(TypeId, PageGroup)],
+      private var _byteSize: Int) {
+
+    def this() =
+      this (Set.empty, Set.empty, intBytes)
+
+    def add (id: TypeId, group: PageGroup) {
+      val key = (id, group)
+      if (!(ids contains id)) {
+        ids += id
+        _byteSize += intBytes // typeId
+      }
+      if (!(groups contains key)) {
+        groups += key
+        _byteSize += group.byteSize + longBytes // group, page bytes
+      }}
+
+    def byteSize = _byteSize
+  }
 
   class Zipped (private val ledger: Seq [(TypeId, Seq [(PageGroup, Long)])])
   extends Traversable [(TypeId, PageGroup, Long)] {

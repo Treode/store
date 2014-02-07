@@ -23,8 +23,8 @@ private class RecoveryAgent (
   def attach (items: Seq [(Path, File, DiskDriveConfig)]): Unit =
     defer (cb) {
 
-      val logd = new LogDispatcher
-      val paged = new PageDispatcher
+      val logd = new Dispatcher [PickledRecord] (scheduler)
+      val paged = new Dispatcher [PickledPage] (scheduler)
 
       val disksPrimed = continue (cb) { drives: Seq [DiskDrive] =>
         val disks = new DiskDrives (logd, paged, drives.mapBy (_.id))

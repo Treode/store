@@ -83,12 +83,12 @@ private class LogIterator private (
     file.deframe (buf, logPos, frameRead (cb))
 
   def close (logd: LogDispatcher, paged: PageDispatcher): DiskDrive = {
+    buf.clear()
     val disk =
-      new DiskDrive (superb.id, path, file, superb.config, alloc, logd, logSegs, superb.logHead,
-          logPos, pageSeg, superb.pagePos, pageLedger)
-    val logw = new LogWriter (disk, logd, buf, logSeg, logPos)
-    logd.engage (logw)
-    val pagew = new PageWriter (disk, paged, pageSeg, pagePos, pageLedger)
+      new DiskDrive (superb.id, path, file, superb.config, alloc, logd, paged, logSegs,
+          superb.logHead, logPos, logSeg.limit, buf, pageSeg, superb.pagePos, pageLedger)
+    logd.receive (disk.recordReceiver)
+    paged.receive (disk.pageReceiver)
     disk
   }}
 
@@ -128,8 +128,8 @@ object LogIterator {
     defer (cb) {
 
       def replayed (logs: Map [Int, LogIterator]) = callback (cb) { _: Unit =>
-        val logd = new LogDispatcher
-        val paged = new PageDispatcher
+        val logd = new Dispatcher [PickledRecord] (scheduler)
+        val paged = new Dispatcher [PickledPage] (scheduler)
         val disks =
           for (read <- reads) yield {
             val superb = read.superb (useGen1)

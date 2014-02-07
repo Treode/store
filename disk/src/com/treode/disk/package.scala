@@ -43,6 +43,8 @@ package disk {
 
 package object disk {
 
+  private [disk] type LogDispatcher = Dispatcher [PickledRecord]
+  private [disk] type PageDispatcher = Dispatcher [PickledPage]
   private [disk] type ReplayIterator = AsyncIterator [(Long, Unit => Any)]
 
   private [disk] val SuperBlockBits = 14

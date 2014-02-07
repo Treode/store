@@ -40,6 +40,12 @@ object Callback {
       def fail (t: Throwable): Unit = throw t
     }
 
+  def fanout [A] (cbs: Traversable [Callback [A]], scheduler: Scheduler): Callback [A] =
+    new Callback [A] {
+      def pass (v: A): Unit = cbs foreach (scheduler.execute (_, v))
+      def fail (t: Throwable): Unit = cbs foreach (scheduler.fail (_, t))
+    }
+
   def latch [A] (count: Int, cb: Callback [Unit]): Callback [A] =
     new CountingLatch (count, cb)
 

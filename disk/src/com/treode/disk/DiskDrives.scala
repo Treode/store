@@ -234,13 +234,13 @@ private class DiskDrives (
     }
 
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit]): Unit =
-    logd.record (desc, entry, cb)
+    logd.send (PickledRecord (desc, entry, cb))
 
   def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
     cache.read (desc, pos, cb)
 
   def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P, cb: Callback [Position]): Unit =
-    paged.write (desc, group, page, cb)
+    paged.send (PickledPage (desc, group, page, cb))
 
   def join [A] (cb: Callback [A]): Callback [A] =
     releaser.join (cb)
