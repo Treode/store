@@ -27,7 +27,7 @@ object SimpleTable {
 
     val pickler = {
       import StorePicklers._
-      wrap (long, Tiers.pickler)
+      wrap (ulong, Tiers.pickler)
       .build (v => new Meta (v._1, v._2))
       .inspect (v => (v.gen, v.tiers))
     }}}

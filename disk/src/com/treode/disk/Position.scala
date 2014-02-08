@@ -6,7 +6,7 @@ object Position {
 
   val pickler = {
     import DiskPicklers._
-    wrap (int, long, int)
+    wrap (uint, ulong, uint)
     .build ((Position.apply _).tupled)
     .inspect (v => (v.disk, v.offset, v.length))
   }}

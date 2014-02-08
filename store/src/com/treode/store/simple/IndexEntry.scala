@@ -29,7 +29,7 @@ private object IndexEntry extends Ordering [IndexEntry] {
 
   val pickler = {
     import StorePicklers._
-    wrap (bytes, uint, long, uint)
+    wrap (bytes, uint, ulong, uint)
     .build (v => IndexEntry (v._1, v._2, v._3, v._4))
     .inspect (v => (v.key, v.disk, v.offset, v.length))
   }}

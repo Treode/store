@@ -22,5 +22,7 @@ private object Tiers {
 
   val pickler = {
     import StorePicklers._
-    wrap (array (Tier.pickler)) .build (new Tiers (_)) .inspect (_.tiers)
+    wrap (array (Tier.pickler))
+    .build (new Tiers (_))
+    .inspect (_.tiers)
   }}

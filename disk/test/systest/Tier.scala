@@ -48,7 +48,7 @@ object Tier {
   val pickler = {
     import Picklers._
     val pos = Position.pickler
-    wrap (long, pos)
+    wrap (ulong, pos)
     .build ((Tier.apply _).tupled)
     .inspect (v => (v.gen, v.root))
   }}

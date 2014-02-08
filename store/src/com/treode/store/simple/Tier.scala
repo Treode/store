@@ -9,7 +9,7 @@ private object Tier {
 
   val pickler = {
     import StorePicklers._
-    wrap (long, pos)
+    wrap (ulong, pos)
     .build ((Tier.apply _).tupled)
     .inspect (v => (v.gen, v.pos))
   }}

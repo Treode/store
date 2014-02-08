@@ -30,5 +30,7 @@ private object SimpleCell extends Ordering [SimpleCell] {
 
   val pickler = {
     import StorePicklers._
-    wrap (bytes, option (bytes)) build ((apply _).tupled) inspect (v => (v.key, v.value))
+    wrap (bytes, option (bytes))
+    .build ((apply _).tupled)
+    .inspect (v => (v.key, v.value))
   }}

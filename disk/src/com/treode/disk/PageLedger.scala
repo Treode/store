@@ -123,7 +123,7 @@ object PageLedger {
 
     val pickler = {
       import DiskPicklers._
-      wrap (seq (tuple (typeId, seq (tuple (pageGroup, long)))))
+      wrap (seq (tuple (typeId, seq (tuple (pageGroup, ulong)))))
       .build (new Zipped (_))
       .inspect (_.ledger)
     }}

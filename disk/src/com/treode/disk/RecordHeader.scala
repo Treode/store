@@ -20,11 +20,11 @@ private object RecordHeader {
     import DiskPicklers._
     tagged [RecordHeader] (
         0x1 -> const (LogEnd),
-        0x2 -> wrap (int) .build (LogAlloc.apply _) .inspect (_.next),
-        0x3 -> wrap (long, pageLedger)
+        0x2 -> wrap (uint) .build (LogAlloc.apply _) .inspect (_.next),
+        0x3 -> wrap (ulong, pageLedger)
             .build ((PageWrite.apply _).tupled)
             .inspect (v => (v.pos, v.ledger)),
-        0x4 -> wrap (int, pageLedger)
+        0x4 -> wrap (uint, pageLedger)
             .build ((PageAlloc.apply _).tupled)
             .inspect (v => (v.next, v.ledger)),
         0x5 -> wrap (fixedLong, typeId)

@@ -17,7 +17,7 @@ private object WriteResponse {
     import AtomicPicklers._
     tagged [WriteResponse] (
         0x1 -> wrap (txClock) .build (Prepared.apply _) .inspect (_.ft),
-        0x2 -> wrap (set (int)) .build (Collisions.apply _) .inspect (_.ks),
+        0x2 -> wrap (set (uint)) .build (Collisions.apply _) .inspect (_.ks),
         0x3 -> const (Advance),
         0x4 -> const (Committed),
         0x5 -> const (Aborted),

@@ -61,7 +61,7 @@ object DiskDriveConfig {
 
   val pickler = {
     import DiskPicklers._
-    wrap (int, int, long)
+    wrap (uint, uint, ulong)
     .build ((apply _).tupled)
     .inspect (v => (v.segmentBits, v.blockBits, v.diskBytes))
   }}

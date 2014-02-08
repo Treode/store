@@ -25,5 +25,6 @@ object Tiers {
 
   val pickler = {
     import Picklers._
-    wrap (array (Tier.pickler)) .build (new Tiers (_)) .inspect (_.tiers)
+    val tier = Tier.pickler
+    wrap (array (tier)) .build (new Tiers (_)) .inspect (_.tiers)
   }}
