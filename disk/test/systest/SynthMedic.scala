@@ -23,18 +23,16 @@ class SynthMedic (implicit recovery: Recovery, config: TestConfig) {
 
   def update (gen: Long, key: Int, value: Option [Int]) {
 
-    val cell = Cell (key, value)
-
     readLock.lock()
     val needWrite = try {
       if (gen == this.generation - 1) {
-        secondary.add (cell)
-        true
-      } else if (gen == this.generation) {
-        primary.add (cell)
-        true
-      } else {
+        secondary.put (key, value)
         false
+      } else if (gen == this.generation) {
+        primary.put (key, value)
+        false
+      } else {
+        true
       }
     } finally {
       readLock.unlock()
@@ -44,19 +42,19 @@ class SynthMedic (implicit recovery: Recovery, config: TestConfig) {
       writeLock.lock()
       try {
         if (gen == this.generation - 1) {
-          secondary.add (cell)
+          secondary.put (key, value)
         } else if (gen == this.generation) {
-          primary.add (cell)
+          primary.put (key, value)
         } else if (gen == this.generation + 1) {
           this.generation = gen
           secondary = primary
           primary = newMemTier
-          primary.add (cell)
+          primary.put (key, value)
         } else if (gen > this.generation + 1) {
           this.generation = gen
           primary = newMemTier
           secondary = newMemTier
-          primary.add (cell)
+          primary.put (key, value)
         }
       } finally {
         writeLock.unlock()
@@ -81,7 +79,7 @@ class SynthMedic (implicit recovery: Recovery, config: TestConfig) {
     writeLock.lock()
     val (generation, primary, secondary, tiers) = try {
       if (!this.secondary.isEmpty) {
-        this.secondary.addAll (this.primary)
+        this.secondary.putAll (this.primary)
         this.primary = this.secondary
         this.secondary = newMemTier
       }

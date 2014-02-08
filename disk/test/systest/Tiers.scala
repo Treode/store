@@ -11,9 +11,14 @@ class Tiers (val tiers: Array [Tier]) {
   def gen: Long =
     if (tiers.size == 0) 0L else tiers (0) .gen
 
-  def active = tiers .map (_.gen) .toSet
+  def active: Set [Long] =
+    tiers .map (_.gen) .toSet
 
-  def size = tiers.length
+  def size: Int =
+    tiers.length
+
+  def isEmpty: Boolean =
+    tiers.length == 0
 }
 
 object Tiers {

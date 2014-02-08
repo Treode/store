@@ -12,12 +12,14 @@ class SynthTable (
     var primary: MemTier,
     var secondary: MemTier,
     var tiers: Tiers) (
-        implicit disks: Disks, config: TestConfig) extends Table with PageHandler [Long] {
+        implicit disk: Disks, config: TestConfig) extends Table with PageHandler [Long] {
 
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
 
   private def read (key: Int, cb: Callback [Option [Int]]) {
+
+    val epoch = disk.join (cb)
 
     readLock.lock()
     val (primary, secondary, tiers) = try {
@@ -26,17 +28,15 @@ class SynthTable (
       readLock.unlock()
     }
 
-    val keyCell = Cell (key, None)
-
-    var cell = primary.floor (keyCell)
-    if (cell != null && cell.key == key) {
-      cb (cell.value)
+    var entry = primary.floorEntry (key)
+    if (entry != null && entry.getKey == key) {
+      epoch (entry.getValue)
       return
     }
 
-    cell = secondary.floor (keyCell)
-    if (cell != null && cell.key == key) {
-      cb (cell.value)
+    entry = secondary.floorEntry (key)
+    if (entry != null && entry.getKey == key) {
+      epoch (entry.getValue)
       return
     }
 
@@ -45,43 +45,31 @@ class SynthTable (
 
       def pass (cell: Option [Cell]) {
         cell match {
-          case Some (cell) => cb (cell.value)
+          case Some (cell) => epoch (cell.value)
           case None =>
             i += 1
             if (i < tiers.size)
               tiers (i) .read (key, this)
             else
-              cb (None)
+              epoch (None)
         }}
 
-      def fail (t: Throwable) = cb.fail (t)
+      def fail (t: Throwable) = epoch.fail (t)
     }
 
     if (i < tiers.size)
       tiers (i) .read (key, loop)
     else
-      cb (None)
+      epoch (None)
   }
 
   def get (key: Int, cb: Callback [Option [Int]]): Unit =
     read (key, cb)
 
-  def iterator (cb: Callback [CellIterator]) {
-
-    readLock.lock()
-    val (primary, secondary, tiers) = try {
-      (this.primary, this.secondary, this.tiers)
-    } finally {
-      readLock.unlock()
-    }
-
-    TierIterator.merge (primary, secondary, tiers, cb)
-  }
-
   private def update (key: Int, value: Option [Int], cb: Callback [Unit]) {
     readLock.lock()
     try {
-      primary.add (Cell (key, value))
+      primary.put (key, value)
     } finally {
       readLock.unlock()
     }
@@ -94,19 +82,31 @@ class SynthTable (
   def delete (key: Int, cb: Callback [Unit]): Unit =
     update (key, None, cb)
 
+  def iterator (cb: Callback [CellIterator]) {
+    readLock.lock()
+    val (primary, secondary, tiers) = try {
+      (this.primary, this.secondary, this.tiers)
+    } finally {
+      readLock.unlock()
+    }
+    import scala.collection.JavaConversions._
+    TierIterator.merge (primary, secondary, tiers, continue (cb) { merged =>
+      OverwritesFilter (merged, cb)
+    })
+  }
+
   def probe (groups: Set [Long], cb: Callback [Set [Long]]): Unit =
     cb (groups intersect tiers.active)
 
-  def compact (groups: Set [Long], cb: Callback [Unit]) {
+  def compact (groups: Set [Long], cb: Callback [Unit]): Unit =
     checkpoint (callback (cb) (_ => ()))
-  }
 
   def checkpoint (cb: Callback [Tiers]) {
 
-    val epoch = disks.join (cb)
+    val epoch = disk.join (cb)
 
     writeLock.lock()
-    val (generation, primary, tiers) = try {
+    val (gen, primary, tiers) = try {
       require (secondary.isEmpty)
       val g = this.gen
       val p = this.primary
@@ -130,11 +130,11 @@ class SynthTable (
       epoch (meta)
     }
 
-    val merged = continue (epoch) { iter: CellIterator =>
-      TierBuilder.build (generation, iter, built)
-    }
-
-    TierIterator.merge (primary, emptyMemTier, tiers, merged)
+    TierIterator.merge (primary, emptyMemTier, tiers, continue (epoch) { iter =>
+      OverwritesFilter (iter, continue (epoch) { iter =>
+        TierBuilder.build (gen, iter, built)
+      })
+    })
   }}
 
 object SynthTable {
@@ -154,6 +154,11 @@ object SynthTable {
     import Picklers._
     val tiers = Tiers.pickler
     new RecordDescriptor (0xA67C3DD1, tiers)
+  }
+
+  def apply () (implicit disk: Disks, config: TestConfig): SynthTable = {
+    val lock = new ReentrantReadWriteLock
+    new SynthTable (lock, 0, new MemTier, new MemTier, Tiers.empty)
   }
 
   def recover (cb: Callback [Table]) (implicit recovery: Recovery, config: TestConfig) {
@@ -176,5 +181,4 @@ object SynthTable {
       TierPage.pager.handle (table)
       cb (table)
       launch.ready()
-    }}
-}
+    }}}

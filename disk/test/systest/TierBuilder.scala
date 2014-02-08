@@ -1,6 +1,7 @@
 package systest
 
 import java.util.{ArrayDeque, ArrayList}
+import scala.collection.JavaConversions._
 
 import com.treode.async.{AsyncIterator, Callback, continue}
 import com.treode.disk.{Disks, Position}
@@ -83,7 +84,7 @@ class TierBuilder (generation: Long) (implicit disks: Disks, config: TestConfig)
     val entryByteSize = entry.byteSize
 
     // Require that user adds entries in sorted order.
-    require (entries.isEmpty || entries.get (entries.size-1) < entry)
+    require (entries.isEmpty || entries.last < entry)
 
     // Ensure that a value page has at least one entry.
     if (byteSize + entryByteSize < config.targetPageBytes || entries.size < 1) {
@@ -105,7 +106,6 @@ class TierBuilder (generation: Long) (implicit disks: Disks, config: TestConfig)
   def result (cb: Callback [Tier]) {
 
     val page = CellPage (entries)
-    val last = page.last
     TierPage.pager.write (generation, page, continue (cb) { _pos =>
 
       var pos = _pos
@@ -119,7 +119,7 @@ class TierBuilder (generation: Long) (implicit disks: Disks, config: TestConfig)
 
           def next (node: IndexNode) {
             if (!stack.isEmpty)
-              add (last.key, pos, node.height+1, this)
+              add (page.last.key, pos, node.height+1, this)
             else
               cb (Tier (generation, pos))
           }
@@ -139,7 +139,7 @@ class TierBuilder (generation: Long) (implicit disks: Disks, config: TestConfig)
           def fail (t: Throwable) = cb.fail (t)
         }
 
-        add (last.key, pos, 0, loop)
+        add (page.last.key, pos, 0, loop)
 
       }})
   }}

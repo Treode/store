@@ -8,8 +8,6 @@ case class Tier (gen: Long, root: Position) {
 
   def read (key: Int, cb: Callback [Option [Cell]]) (implicit disks: Disks) {
 
-    val epoch = disks.join (cb)
-
     val loop = new Callback [TierPage] {
 
       def pass (p: TierPage) {
@@ -17,7 +15,7 @@ case class Tier (gen: Long, root: Position) {
           case p: IndexPage =>
             val i = p.find (key)
             if (i == p.size) {
-              epoch (None)
+              cb (None)
             } else {
               val e = p.get (i)
               TierPage.pager.read (e.pos, this)
@@ -25,23 +23,20 @@ case class Tier (gen: Long, root: Position) {
           case p: CellPage =>
             val i = p.find (key)
             if (i == p.size) {
-              epoch (None)
+              cb (None)
             } else {
               val e = p.get (i)
               if (e.key == key)
-                epoch (Some (e))
+                cb (Some (e))
               else
-                epoch (None)
+                cb (None)
             }}}
 
-      def fail (t: Throwable) = epoch.fail (t)
+      def fail (t: Throwable) = cb.fail (t)
     }
 
     TierPage.pager.read (root, loop)
-  }
-
-
-}
+  }}
 
 object Tier {
 

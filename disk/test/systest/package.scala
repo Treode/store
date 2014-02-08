@@ -1,4 +1,5 @@
-import java.util.concurrent.ConcurrentSkipListSet
+import java.util.concurrent.ConcurrentSkipListMap
+import scala.collection.JavaConversions._
 import com.treode.async.AsyncIterator
 
 package systest {
@@ -8,9 +9,9 @@ package systest {
 
 package object systest {
 
-  type MemTier = ConcurrentSkipListSet [Cell]
+  type MemTier = ConcurrentSkipListMap [Int, Option [Int]]
   type CellIterator = AsyncIterator [Cell]
 
-  val emptyMemTier = new ConcurrentSkipListSet [Cell] (Cell)
-  def newMemTier = new ConcurrentSkipListSet [Cell] (Cell)
+  val emptyMemTier = new ConcurrentSkipListMap [Int, Option [Int]]
+  def newMemTier = new ConcurrentSkipListMap [Int, Option [Int]]
 }

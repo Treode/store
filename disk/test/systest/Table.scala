@@ -5,6 +5,7 @@ import com.treode.disk.Recovery
 
 trait Table {
 
+  def get (key: Int, cb: Callback [Option [Int]])
   def put (key: Int, value: Int, cb: Callback [Unit])
   def delete (key: Int, cb: Callback [Unit])
   def iterator (cb: Callback [CellIterator])
