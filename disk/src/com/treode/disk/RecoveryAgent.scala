@@ -93,7 +93,10 @@ private class RecoveryAgent (
       }
 
       val roots = reads.head.superb (useGen1) .boot.roots
-      DiskDrive.read (files (roots.disk), loaders.pager, roots, rootsRead)
+      if (roots.length == 0)
+        rootsRead (Seq.empty)
+      else
+        DiskDrive.read (files (roots.disk), loaders.pager, roots, rootsRead)
     }
 
   def reattach (items: Seq [(Path, File)]): Unit =

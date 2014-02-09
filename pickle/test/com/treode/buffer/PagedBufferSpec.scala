@@ -195,7 +195,62 @@ private object PagedBufferBehaviors extends FlatSpec {
   zeroAlign (127, 7, 1)
   zeroAlign (128, 7, 0)
   zeroAlign (129, 7, 127)
-}
+
+  "An empty PagedBuffer" should "fail to read bytes" in {
+    val buffer = PagedBuffer (pageBits)
+    val bytes = Array [Byte] (15)
+    intercept [BufferUnderflowException] (buffer.readBytes (bytes, 0, 16))
+  }
+
+  it should "fail to read a byte" in {
+    val buffer = PagedBuffer (pageBits)
+    intercept [BufferUnderflowException] (buffer.readByte())
+  }
+
+  it should "fail to read a short" in {
+    val buffer = PagedBuffer (pageBits)
+    intercept [BufferUnderflowException] (buffer.readShort())
+  }
+
+  it should "fail to read an int" in {
+    val buffer = PagedBuffer (pageBits)
+    intercept [BufferUnderflowException] (buffer.readInt())
+  }
+
+  it should "fail to read a var int" in {
+    val buffer = PagedBuffer (pageBits)
+    intercept [BufferUnderflowException] (buffer.readVarInt())
+  }
+
+  it should "fail to read an unsigned var int" in {
+    val buffer = PagedBuffer (pageBits)
+    intercept [BufferUnderflowException] (buffer.readVarUInt())
+  }
+
+  it should "fail to read a long" in {
+    val buffer = PagedBuffer (pageBits)
+    intercept [BufferUnderflowException] (buffer.readLong())
+  }
+
+  it should "fail to read a var long" in {
+    val buffer = PagedBuffer (pageBits)
+    intercept [BufferUnderflowException] (buffer.readVarLong())
+  }
+
+  it should "fail to read an unsigned var long" in {
+    val buffer = PagedBuffer (pageBits)
+    intercept [BufferUnderflowException] (buffer.readVarULong())
+  }
+
+  it should "fail to read a float" in {
+    val buffer = PagedBuffer (pageBits)
+    intercept [BufferUnderflowException] (buffer.readFloat())
+  }
+
+  it should "fail to read a double" in {
+    val buffer = PagedBuffer (pageBits)
+    intercept [BufferUnderflowException] (buffer.readDouble())
+  }}
 
 private object PagedBufferProperties extends PropSpec with PropertyChecks {
 

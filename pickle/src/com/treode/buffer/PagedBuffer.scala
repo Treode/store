@@ -121,6 +121,11 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
     wpos += 1
   }
 
+  private [this] def crossesBoundry (length: Int): Boolean = {
+    val limit = if (roff == woff) wpos else pageSize
+    limit - rpos < length
+  }
+
   private [this] def requireReadable (length: Int) {
     val available = writePos - readPos
     if (available < length)
@@ -192,9 +197,9 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
     }}
 
   def readBytes (data: Array [Byte], offset: Int, length: Int) {
+    requireReadable (length)
     var segment = pageSize - rpos
     if (segment < length) {
-      requireReadable (length)
       System.arraycopy (rpage, rpos, data, offset, segment)
       var position = offset + segment
       var remaining = length - segment
@@ -253,7 +258,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
     }}
 
   def readByte(): Byte = {
-    if (pageSize - rpos < 1) {
+    if (crossesBoundry (1)) {
       requireReadable (1)
       read()
     } else {
@@ -274,7 +279,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
     }}
 
   def readShort(): Short = {
-    if (pageSize - rpos < 2) {
+    if (crossesBoundry (2)) {
       requireReadable (2)
       val v =
           (read() & 0xFF) << 8 |
@@ -304,7 +309,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
     }}
 
   def readInt(): Int = {
-    if (pageSize - rpos < 4) {
+    if (crossesBoundry (4)) {
       requireReadable (4)
       val v =
           (read() & 0xFF).toInt << 24 |
@@ -375,7 +380,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
     }}}
 
   def readVarUInt(): Int = {
-    if (pageSize - rpos < 5) {
+    if (crossesBoundry (5)) {
       requireReadable (1)
       var b = read().toInt
       var v = b & 0x7F
@@ -459,7 +464,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
     }}
 
   def readLong(): Long = {
-    if (pageSize - rpos < 8) {
+    if (crossesBoundry (8)) {
       requireReadable (8)
       val v =
           ((read() & 0xFF).toLong << 56) |
@@ -610,7 +615,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
       }}}
 
   def readVarULong(): Long = {
-    if (pageSize - rpos < 9) {
+    if (crossesBoundry (9)) {
       requireReadable (1)
       var b = read().toLong
       var v = b & 0x7F
@@ -776,7 +781,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
       }}}
 
   private [this] def readUtf8Char(): Char = {
-    if (pageSize - rpos < 3) {
+    if (crossesBoundry (3)) {
       requireReadable (1)
       val b = read() & 0xFF
       val x = b >> 4
