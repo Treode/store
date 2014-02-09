@@ -16,13 +16,6 @@ object SystestTools {
       cb.passed
     }
 
-    def putAndPass (key: Int, value: Int) {
-      val cb = new CallbackCaptor [Unit]
-      table.put (key, value, cb)
-      scheduler.runTasks()
-      cb.passed
-    }
-
     def putAndPass (kvs: (Int, Int)*) {
       val cb = new CallbackCaptor [Unit]
       val latch = Callback.latch (kvs.size, cb)
@@ -32,9 +25,10 @@ object SystestTools {
       cb.passed
     }
 
-    def deleteAndPass (key: Int) {
+    def deleteAndPass (ks: Int*) {
       val cb = new CallbackCaptor [Unit]
-      table.delete (key, cb)
+      for (key <- ks)
+        table.delete (key, cb)
       scheduler.runTasks()
       cb.passed
     }

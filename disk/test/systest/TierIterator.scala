@@ -62,7 +62,7 @@ private object TierIterator {
   def apply (root: Position, cb: Callback [CellIterator]) (implicit disks: Disks): Unit =
     new TierIterator() .find (root, cb)
 
-  def iterator (tier: MemTier): CellIterator =
+  def adapt (tier: MemTier): CellIterator =
     AsyncIterator.adapt (tier.entrySet.iterator.map (Cell.apply _))
 
   def merge (primary: MemTier, secondary: MemTier, tiers: Tiers, cb: Callback [CellIterator]) (
@@ -74,8 +74,8 @@ private object TierIterator {
 
     val oneBuilt = Callback.array (tiers.size + 2, allBuilt)
 
-    oneBuilt (0, iterator (primary))
-    oneBuilt (1, iterator (secondary))
+    oneBuilt (0, adapt (primary))
+    oneBuilt (1, adapt (secondary))
     for (i <- 0 until tiers.size)
       TierIterator (tiers (i) .root, callback (oneBuilt) ((i+2, _)))
   }}

@@ -1,5 +1,6 @@
 package com.treode.store.simple
 
+import java.util.{Map => JMap}
 import com.treode.store.{Bytes, StorePicklers}
 
 private class SimpleCell (val key: Bytes, val value: Option [Bytes])
@@ -25,12 +26,15 @@ private object SimpleCell extends Ordering [SimpleCell] {
   def apply (key: Bytes, value: Option [Bytes]): SimpleCell =
     new SimpleCell (key, value)
 
+  def apply (entry: JMap.Entry [Bytes, Option [Bytes]]): SimpleCell =
+    new SimpleCell (entry.getKey, entry.getValue)
+
   def compare (x: SimpleCell, y: SimpleCell): Int =
     x compare y
 
   val pickler = {
     import StorePicklers._
     wrap (bytes, option (bytes))
-    .build ((apply _).tupled)
+    .build (v => new SimpleCell (v._1, v._2))
     .inspect (v => (v.key, v.value))
   }}

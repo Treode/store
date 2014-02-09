@@ -89,10 +89,10 @@ class SynthTable (
     } finally {
       readLock.unlock()
     }
-    import scala.collection.JavaConversions._
-    TierIterator.merge (primary, secondary, tiers, continue (cb) { merged =>
-      OverwritesFilter (merged, cb)
-    })
+    val merged = continue (cb) { iter: CellIterator =>
+      OverwritesFilter (iter, cb)
+    }
+    TierIterator.merge (primary, secondary, tiers, merged)
   }
 
   def probe (groups: Set [Long], cb: Callback [Set [Long]]): Unit =
@@ -130,11 +130,15 @@ class SynthTable (
       epoch (meta)
     }
 
-    TierIterator.merge (primary, emptyMemTier, tiers, continue (epoch) { iter =>
-      OverwritesFilter (iter, continue (epoch) { iter =>
-        TierBuilder.build (gen, iter, built)
-      })
-    })
+    val filtered = continue (epoch) { iter: CellIterator =>
+      TierBuilder.build (gen, iter, built)
+    }
+
+    val merged = continue (epoch) { iter: CellIterator =>
+      OverwritesFilter (iter, filtered)
+    }
+
+    TierIterator.merge (primary, emptyMemTier, tiers, merged)
   }}
 
 object SynthTable {

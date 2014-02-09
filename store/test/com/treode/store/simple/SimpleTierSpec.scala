@@ -54,7 +54,7 @@ class SimpleTierSpec extends WordSpec {
     * the final index entry.
     */
   private def expectBalanced (tier: Tier) (implicit scheduler: StubScheduler, disks: Disks) {
-    pager.readAndPass (tier.pos) match {
+    pager.readAndPass (tier.root) match {
       case b: IndexPage =>
         val ds1 = getDepths (b.entries.take (b.size-1), 1)
         expectResult (1, "Expected lead ValueBlocks at the same depth.") (ds1.size)
@@ -84,7 +84,7 @@ class SimpleTierSpec extends WordSpec {
   private def read (tier: Tier, key: Bytes) (
       implicit scheduler: StubScheduler, disks: Disks): Option [SimpleCell] = {
     val cb = new CallbackCaptor [Option [SimpleCell]]
-    TierReader.read (pager, tier.pos, key, cb)
+    tier.read (pager, key, cb)
     scheduler.runTasks()
     cb.passed
   }
@@ -93,7 +93,7 @@ class SimpleTierSpec extends WordSpec {
   private def iterateTier (tier: Tier) (
       implicit scheduler: StubScheduler, disks: Disks): Seq [SimpleCell] = {
     val iter = new CallbackCaptor [SimpleIterator]
-    TierIterator (pager, tier.pos, iter)
+    TierIterator (pager, tier.root, iter)
     scheduler.runTasks()
     val seq = new CallbackCaptor [Seq [SimpleCell]]
     AsyncIterator.scan (iter.passed, seq)
@@ -114,7 +114,7 @@ class SimpleTierSpec extends WordSpec {
   private def toSeq (tier: Tier) (
       implicit scheduler: StubScheduler, disks: Disks): Seq [SimpleCell] = {
     val builder = Seq.newBuilder [SimpleCell]
-    toSeq (builder, tier.pos)
+    toSeq (builder, tier.root)
     builder.result
   }
 

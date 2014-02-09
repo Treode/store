@@ -37,6 +37,8 @@ private class SynthTable (
 
   private def read (key: Bytes, cb: Callback [Option [Bytes]]) {
 
+    val epoch = disks.join (cb)
+
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -44,17 +46,15 @@ private class SynthTable (
       readLock.unlock()
     }
 
-    val keyCell = SimpleCell (key, None)
-
-    var cell = primary.floor (keyCell)
-    if (cell != null && cell.key == key) {
-      cb (cell.value)
+    var cell = primary.floorEntry (key)
+    if (cell != null && cell.getKey == key) {
+      epoch (cell.getValue)
       return
     }
 
-    cell = secondary.floor (keyCell)
-    if (cell != null && cell.key == key) {
-      cb (cell.value)
+    cell = secondary.floorEntry (key)
+    if (cell != null && cell.getKey == key) {
+      epoch (cell.getValue)
       return
     }
 
@@ -63,43 +63,31 @@ private class SynthTable (
 
       def pass (cell: Option [SimpleCell]) {
         cell match {
-          case Some (cell) => cb (cell.value)
+          case Some (cell) => epoch (cell.value)
           case None =>
             i += 1
             if (i < tiers.size)
-              TierReader.read (pager, tiers.pos (i), key, this)
+              tiers (i) .read (pager, key, this)
             else
-              cb (None)
+              epoch (None)
         }}
 
-      def fail (t: Throwable) = cb.fail (t)
+      def fail (t: Throwable) = epoch.fail (t)
     }
 
     if (i < tiers.size)
-      TierReader.read (pager, tiers.pos (i), key, loop)
+      tiers (i) .read (pager, key, loop)
     else
-      cb (None)
+      epoch (None)
   }
 
   def get (key: Bytes, cb: Callback [Option [Bytes]]): Unit =
     read (key, cb)
 
-  def iterator (cb: Callback [SimpleIterator]) {
-
-    readLock.lock()
-    val (primary, secondary, tiers) = try {
-      (this.primary, this.secondary, this.tiers)
-    } finally {
-      readLock.unlock()
-    }
-
-    TierIterator.merge (pager, primary, secondary, tiers, cb)
-  }
-
   def put (key: Bytes, value: Bytes): Long = {
     readLock.lock()
     try {
-      primary.add (SimpleCell (key, Some (value)))
+      primary.put (key, Some (value))
       generation
     } finally {
       readLock.unlock()
@@ -108,11 +96,24 @@ private class SynthTable (
   def delete (key: Bytes): Long = {
     readLock.lock()
     try {
-      primary.add (SimpleCell (key, None))
+      primary.put (key, None)
       generation
     } finally {
       readLock.unlock()
     }}
+
+  def iterator (cb: Callback [SimpleIterator]) {
+    readLock.lock()
+    val (primary, secondary, tiers) = try {
+      (this.primary, this.secondary, this.tiers)
+    } finally {
+      readLock.unlock()
+    }
+    val merged = continue (cb) { iter: SimpleIterator =>
+      OverwritesFilter (iter, cb)
+    }
+    TierIterator.merge (pager, primary, secondary, tiers, merged)
+  }
 
   def probe (groups: Set [Long], cb: Callback [Set [Long]]): Unit =
     cb (groups intersect tiers.active)
@@ -150,9 +151,20 @@ private class SynthTable (
       epoch (meta)
     }
 
-    val merged = continue (epoch) { iter: SimpleIterator =>
+    val filtered = continue (epoch) { iter: SimpleIterator =>
       TierBuilder.build (pager, generation, iter, built)
     }
 
+    val merged = continue (epoch) { iter: SimpleIterator =>
+      OverwritesFilter (iter, filtered)
+    }
+
     TierIterator.merge (pager, primary, emptyMemTier, tiers, merged)
+  }}
+
+private object SynthTable {
+
+  def apply (id: TypeId) (implicit disk: Disks, config: StoreConfig): SynthTable = {
+    val lock = new ReentrantReadWriteLock
+    new SynthTable (TierPage.pager (id), lock, 0, new MemTier, new MemTier, Tiers.empty)
   }}

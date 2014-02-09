@@ -6,11 +6,20 @@ import com.treode.store.StorePicklers
 
  private class Tiers (val tiers: Array [Tier]) {
 
-  def pos (i: Int) = tiers (i) .pos
+  def apply (i: Int): Tier =
+    tiers (i)
 
-  def active = tiers .map (_.gen) .toSet
+  def gen: Long =
+    if (tiers.isEmpty) 0L else tiers (0) .gen
 
-  def size = tiers.length
+  def active: Set [Long] =
+    tiers .map (_.gen) .toSet
+
+  def size: Int =
+    tiers.length
+
+  def isEmpty: Boolean =
+    tiers.length == 0
 }
 
 private object Tiers {
