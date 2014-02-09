@@ -13,9 +13,9 @@ class MailboxRegistry {
   private type Handler = FunctionTag [Peer, Any]
 
   private val mailboxes =
-    PicklerRegistry [Handler] { id =>
+    PicklerRegistry [Handler] { id: Long =>
       if (MailboxId (id) .isFixed)
-        PicklerRegistry.const [Peer, Any] (())
+        PicklerRegistry.const [Peer, Any] (id, ())
       else
         throw new InvalidTagException ("mailbox", id)
     }

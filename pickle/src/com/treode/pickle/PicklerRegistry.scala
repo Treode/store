@@ -81,13 +81,11 @@ class PicklerRegistry [T <: Tag] private (default: Long => T) {
 
 object PicklerRegistry {
 
-  def error [T] (implicit tag: ClassTag [T]): Long => T = {
-    val name = s"PicklerRegistry(${tag.runtimeClass.getSimpleName})"
-    (id => throw new InvalidTagException (name, id))
-  }
-
-  def apply [T <: Tag] (default: Long => T = error): PicklerRegistry [T] =
+  def apply [T <: Tag] (default: Long => T): PicklerRegistry [T] =
     new PicklerRegistry (default)
+
+  def apply [T <: Tag] (name: String): PicklerRegistry [T] =
+    new PicklerRegistry (id => throw new InvalidTagException (name, id))
 
   trait Tag {
 
@@ -131,17 +129,19 @@ object PicklerRegistry {
 
   trait FunctionTag [A, B] extends (A => B) with Tag
 
-  def const [A, B] (v: B): FunctionTag [A, B] =
+  def const [A, B] (id: Long, v: B): FunctionTag [A, B] =
     new FunctionTag [A, B] {
       def apply (v2: A): B = v
       def pickle (ctx: PickleContext): Unit = ???
       def byteSize: Int = ???
+      override def toString: String = f"Tag($id%X,$v)"
     }
 
   def curried [P, A, B] (p: Pickler [P], id: Long) (f: P => A => B): P => FunctionTag [A, B] =
     (v1 =>
       new BaseTag (p, id, v1) with FunctionTag [A, B] {
         def apply (v2: A) = f (v1) (v2)
+        override def toString: String = f"Tag($id%X,$v1)"
       })
 
   def curried [P, A, B] (reg: PicklerRegistry [FunctionTag [A, B]], p: Pickler [P], id: Long) (f: P => A => B): Unit =
@@ -151,6 +151,7 @@ object PicklerRegistry {
     (v1 =>
       new BaseTag [P] (p, id, v1) with FunctionTag [A, B] {
         def apply (v2: A) = f (v1, v2)
+        override def toString: String = f"Tag($id%X,$v1)"
       })
 
   def tupled [P, A, B] (reg: PicklerRegistry [FunctionTag [A, B]], p: Pickler [P], id: Long) (f: (P, A) => B): Unit =
@@ -160,6 +161,7 @@ object PicklerRegistry {
     (v1 =>
       new BaseTag [P] (p, id, v1) with FunctionTag [Unit, B] {
         def apply (v2: Unit) = f (v1)
+        override def toString: String = f"Tag($id%X,$v1)"
       })
 
   def delayed [P, B] (reg: PicklerRegistry [FunctionTag [Unit, B]], p: Pickler [P], id: Long) (f: P => B): Unit =

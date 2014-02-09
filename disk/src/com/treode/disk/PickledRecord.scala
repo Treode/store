@@ -19,7 +19,7 @@ private object PickledRecord {
     val time = System.currentTimeMillis
     val byteSize = RecordHeader.pickler.byteSize (entry)
     def write (buf: PagedBuffer) = RecordHeader.pickler.frame (entry, buf)
-    override def toString = s"PickledRecord($time, $entry, $cb)"
+    override def toString = s"PickledRecord($time, $entry)"
   }
 
   def apply (disk: Int, entry: RecordHeader, cb: Callback [Unit]): PickledRecord =
@@ -31,7 +31,7 @@ private object PickledRecord {
     val byteSize = RecordHeader.overhead + desc.prec.byteSize (entry)
     def disk = None
     def write (buf: PagedBuffer) = RecordRegistry.frame (desc, time, entry, buf)
-    override def toString = s"PickledRecord(${desc.id}. $time, $entry, $cb)"
+    override def toString = s"PickledRecord(${desc.id}, $time, $entry)"
   }
 
   def apply [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit]): PickledRecord =
