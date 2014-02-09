@@ -1,6 +1,8 @@
 package systest
 
 import java.nio.file.Paths
+import scala.util.Random
+
 import com.treode.async.{CallbackCaptor, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.disk.{Disks, DiskDriveConfig}
@@ -41,18 +43,18 @@ class SystemSpec extends FlatSpec {
     implicit val testConfig = new TestConfig (1<<12)
     val diskDriveConfig = DiskDriveConfig (20, 16, 1<<30)
 
-    implicit val scheduler = StubScheduler.random()
+    implicit val random = new Random (0)
+    implicit val scheduler = StubScheduler.random (random)
     val disk = new StubFile
     val tracker = new TrackingTable
 
     {
       val _table = setup (disk, diskDriveConfig)
       val table = new TrackedTable (_table, tracker)
-      table.putAndPass (1 -> 1)
-      println (table.toMap)
+      table.putAndPass (random.nextPut (10000, 100): _*)
     }
 
     {
       val table = recover (disk)
-      println (table.toMap)
+      tracker.check (table.toMap)
     }}}

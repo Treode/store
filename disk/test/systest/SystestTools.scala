@@ -1,5 +1,6 @@
 package systest
 
+import scala.util.Random
 import com.treode.async._
 import org.scalatest.Assertions
 
@@ -7,16 +8,22 @@ import Assertions._
 
 object SystestTools {
 
-  implicit class RichTable (table: Table) (implicit scheduler: StubScheduler) {
+  implicit class RichRandom (random: Random) {
 
-    def getAndPass (key: Int): Option [Int] = {
+    def nextPut (nkeys: Int, nputs: Int): Seq [(Int, Int)] =
+      Seq.fill (nputs) (random.nextInt (nkeys), random.nextInt (Int.MaxValue))
+  }
+
+  implicit class RichTable (table: Table) {
+
+    def getAndPass (key: Int) (implicit scheduler: StubScheduler): Option [Int] = {
       val cb = new CallbackCaptor [Option [Int]]
       table.get (key, cb)
       scheduler.runTasks()
       cb.passed
     }
 
-    def putAndPass (kvs: (Int, Int)*) {
+    def putAndPass (kvs: (Int, Int)*) (implicit scheduler: StubScheduler) {
       val cb = new CallbackCaptor [Unit]
       val latch = Callback.latch (kvs.size, cb)
       for ((key, value) <- kvs)
@@ -25,7 +32,7 @@ object SystestTools {
       cb.passed
     }
 
-    def deleteAndPass (ks: Int*) {
+    def deleteAndPass (ks: Int*) (implicit scheduler: StubScheduler) {
       val cb = new CallbackCaptor [Unit]
       for (key <- ks)
         table.delete (key, cb)
@@ -33,7 +40,7 @@ object SystestTools {
       cb.passed
     }
 
-    def toMap(): Map [Int, Int] = {
+    def toMap (implicit scheduler: StubScheduler): Map [Int, Int] = {
       val builder = Map.newBuilder [Int, Int]
       val cb = new CallbackCaptor [Unit]
       table.iterator (continue (cb) { iter =>
@@ -47,7 +54,7 @@ object SystestTools {
       builder.result
     }
 
-    def toSeq(): Seq [(Int, Int)] = {
+    def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] = {
       val builder = Seq.newBuilder [(Int, Int)]
       val cb = new CallbackCaptor [Unit]
       table.iterator (continue (cb) { iter =>
@@ -61,13 +68,13 @@ object SystestTools {
       builder.result
     }
 
-    def expectNone (key: Int): Unit =
+    def expectNone (key: Int) (implicit scheduler: StubScheduler): Unit =
       expectResult (None) (getAndPass (key))
 
-    def expectValue (key: Int, value: Int): Unit =
+    def expectValue (key: Int, value: Int) (implicit scheduler: StubScheduler): Unit =
       expectResult (Some (value)) (getAndPass (key))
 
-    def expectValues (kvs: (Int, Int)*): Unit =
+    def expectValues (kvs: (Int, Int)*) (implicit scheduler: StubScheduler): Unit =
       expectResult (kvs.sorted) (toSeq)
   }
 
