@@ -56,20 +56,20 @@ private class LogIterator private (
           case PageWrite (pos, _ledger) =>
             pagePos = pos
             pageLedger.add (_ledger)
-            logPos += len
+            logPos += len + 4
             file.deframe (buf, logPos, this)
 
           case PageAlloc (next, _ledger) =>
             pageSeg = alloc.alloc (next)
             pagePos = pageSeg.pos
             pageLedger = _ledger.unzip
-            logPos += len
+            logPos += len + 4
             file.deframe (buf, logPos, this)
 
           case Entry (time, id) =>
             val end = buf.readPos
             val entry = records.read (id.id, buf, len - end + start)
-            logPos += len
+            logPos += len + 4
             cb (time, entry)
 
           case _ =>

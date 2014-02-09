@@ -2,7 +2,7 @@ package systest
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import com.treode.async.{AsyncIterator, Callback, callback, continue}
+import com.treode.async.{AsyncIterator, Callback, Scheduler, callback, continue}
 import com.treode.disk._
 import com.treode.pickle.Picklers
 
@@ -11,8 +11,12 @@ class SynthTable (
     var gen: Long,
     var primary: MemTier,
     var secondary: MemTier,
-    var tiers: Tiers) (
-        implicit disk: Disks, config: TestConfig) extends Table with PageHandler [Long] {
+    var tiers: Tiers
+) (
+    implicit scheduler: Scheduler,
+    disk: Disks,
+    config: TestConfig
+) extends Table with PageHandler [Long] {
 
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
@@ -160,12 +164,13 @@ object SynthTable {
     new RecordDescriptor (0xA67C3DD1, tiers)
   }
 
-  def apply () (implicit disk: Disks, config: TestConfig): SynthTable = {
+  def apply () (implicit scheduler: Scheduler, disk: Disks, config: TestConfig): SynthTable = {
     val lock = new ReentrantReadWriteLock
     new SynthTable (lock, 0, new MemTier, new MemTier, Tiers.empty)
   }
 
-  def recover (cb: Callback [Table]) (implicit recovery: Recovery, config: TestConfig) {
+  def recover (cb: Callback [Table]) (
+      implicit scheduler: Scheduler, recovery: Recovery, config: TestConfig) {
 
     val medic = new SynthMedic
 

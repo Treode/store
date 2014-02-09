@@ -2,7 +2,7 @@ package com.treode.store.simple
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import com.treode.async.{AsyncIterator, Callback, callback, continue}
+import com.treode.async.{AsyncIterator, Callback, Scheduler, callback, continue}
 import com.treode.disk.{Disks, PageHandler, PageDescriptor, Position, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
@@ -30,7 +30,11 @@ private class SynthTable (
     // The position of each tier on disk.
     var tiers: Tiers
 
-) (implicit disks: Disks, config: StoreConfig) extends SimpleTable with PageHandler [Long] {
+) (
+    implicit scheduler: Scheduler,
+    disks: Disks,
+    config: StoreConfig
+) extends SimpleTable with PageHandler [Long] {
 
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
@@ -164,7 +168,8 @@ private class SynthTable (
 
 private object SynthTable {
 
-  def apply (id: TypeId) (implicit disk: Disks, config: StoreConfig): SynthTable = {
+  def apply (id: TypeId) (
+      implicit scheduler: Scheduler, disk: Disks, config: StoreConfig): SynthTable = {
     val lock = new ReentrantReadWriteLock
     new SynthTable (TierPage.pager (id), lock, 0, new MemTier, new MemTier, Tiers.empty)
   }}

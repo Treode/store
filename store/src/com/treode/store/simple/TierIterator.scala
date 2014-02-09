@@ -2,7 +2,7 @@ package com.treode.store.simple
 
 import scala.collection.JavaConversions._
 
-import com.treode.async.{AsyncIterator, Callback, callback, continue}
+import com.treode.async.{AsyncIterator, Callback, Scheduler, callback, continue}
 import com.treode.disk.{Disks, Position}
 
 private class TierIterator (pager: TierPage.Descriptor) (implicit disks: Disks)
@@ -65,11 +65,11 @@ private object TierIterator {
       implicit disks: Disks): Unit =
     new TierIterator (pager) .find (pos, cb)
 
-  def adapt (tier: MemTier): SimpleIterator =
+  def adapt (tier: MemTier) (implicit scheduler: Scheduler): SimpleIterator =
     AsyncIterator.adapt (tier.entrySet.iterator.map (SimpleCell.apply _))
 
   def merge (pager: TierPage.Descriptor, primary: MemTier, secondary: MemTier, tiers: Tiers,
-      cb: Callback [SimpleIterator]) (implicit disks: Disks) {
+      cb: Callback [SimpleIterator]) (implicit scheduler: Scheduler, disks: Disks) {
 
     val allBuilt = continue (cb) { iters: Array [SimpleIterator] =>
       AsyncIterator.merge (iters.iterator, cb)

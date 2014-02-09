@@ -1,6 +1,6 @@
 package com.treode.store.timed
 
-import com.treode.async.{AsyncIterator, Callback, CallbackCaptor}
+import com.treode.async.{AsyncIterator, Callback, CallbackCaptor, Scheduler}
 import com.treode.store.{Bytes, Cardinals, Fruits, TimedCell, TimedTestTools}
 import org.scalatest.FlatSpec
 
@@ -9,6 +9,14 @@ import Fruits.{Apple, Banana}
 import TimedTestTools._
 
 class DeletesFilterSpec extends FlatSpec {
+
+  implicit val scheduler: Scheduler =
+    new Scheduler {
+      def execute (task: Runnable): Unit = task.run()
+      def delay (millis: Long, task: Runnable): Unit = task.run()
+      def at (millis: Long, task: Runnable): Unit = task.run()
+      def spawn (task: Runnable): Unit = task.run()
+    }
 
   private def expectCells (cs: TimedCell*) (actual: AsyncIterator [TimedCell]) {
     val cb = new CallbackCaptor [Seq [TimedCell]]

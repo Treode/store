@@ -88,6 +88,7 @@ private class DiskDrive (
 
   private def _reallocLog (cb: Callback [Unit]): Unit =
     defer (cb) {
+      println ("realloc log")
       state = ReallocLog
       val buf1 = PagedBuffer (12)
       val seg = alloc.alloc()

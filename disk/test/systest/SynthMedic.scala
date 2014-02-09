@@ -2,9 +2,10 @@ package systest
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
+import com.treode.async.Scheduler
 import com.treode.disk.{Disks, Position, Recovery, TypeId}
 
-class SynthMedic (implicit recovery: Recovery, config: TestConfig) {
+class SynthMedic (implicit scheduler: Scheduler, recovery: Recovery, config: TestConfig) {
 
   private val lock = new ReentrantReadWriteLock
   private val readLock = lock.readLock()

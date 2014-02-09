@@ -1,6 +1,6 @@
 package com.treode.store.simple
 
-import com.treode.async.{AsyncIterator, Callback, CallbackCaptor}
+import com.treode.async.{AsyncIterator, Callback, CallbackCaptor, Scheduler}
 import com.treode.store.{Bytes, Fruits}
 import org.scalatest.FlatSpec
 
@@ -8,6 +8,14 @@ import Fruits.{Apple, Banana, Orange}
 import SimpleTestTools._
 
 class OverwritesFilterSpec extends FlatSpec {
+
+  implicit val scheduler: Scheduler =
+    new Scheduler {
+      def execute (task: Runnable): Unit = task.run()
+      def delay (millis: Long, task: Runnable): Unit = task.run()
+      def at (millis: Long, task: Runnable): Unit = task.run()
+      def spawn (task: Runnable): Unit = task.run()
+    }
 
   private def expectCells (cs: SimpleCell*) (actual: AsyncIterator [SimpleCell]) {
     val cb = new CallbackCaptor [Seq [SimpleCell]]

@@ -51,7 +51,7 @@ class SystemSpec extends FlatSpec {
     {
       val _table = setup (disk, diskDriveConfig)
       val table = new TrackedTable (_table, tracker)
-      table.putAndPass (random.nextPut (10000, 100): _*)
+      table.putAndPass (random.nextPut (10000, 1000): _*)
     }
 
     {

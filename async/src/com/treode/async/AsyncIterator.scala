@@ -12,45 +12,39 @@ trait AsyncIterator [+A] {
 object AsyncIterator {
 
   /** Transform a Scala iterator into an AsyncIterator. */
-  def adapt [A] (iter: Iterator [A]): AsyncIterator [A] =
+  def adapt [A] (iter: Iterator [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
     new AsyncIterator [A] {
 
       def hasNext: Boolean = iter.hasNext
 
-      def next (cb: Callback [A]) {
-        val v = try {
-          iter.next
+      def next (cb: Callback [A]): Unit =
+        try {
+          scheduler.execute (cb, iter.next)
         } catch {
           case e: Throwable =>
             cb.fail (e)
-            return
-        }
-        cb (v)
-      }}
+        }}
 
   /** Transform a Scala iterable into an AsyncIterator. */
-  def adapt [A] (iter: Iterable [A]): AsyncIterator [A] =
+  def adapt [A] (iter: Iterable [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
     adapt (iter.iterator)
 
   /** Transform a Java iterator into an AsyncIterator. */
-  def adapt [A] (iter: JIterator [A]): AsyncIterator [A] =
+  def adapt [A] (iter: JIterator [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
     new AsyncIterator [A] {
 
       def hasNext: Boolean = iter.hasNext
 
-      def next (cb: Callback [A]) {
-        val v = try {
-          iter.next
+      def next (cb: Callback [A]): Unit =
+        try {
+          scheduler.execute (cb, iter.next)
         } catch {
           case e: Throwable =>
-            cb.fail (e)
-            return
-        }
-        cb (v)
-      }}
+            scheduler.execute (cb.fail (e))
+        }}
 
   /** Transform a Java iterable into an AsyncIterator. */
-  def adapt [A] (iter: JIterable [A]): AsyncIterator [A] =
+  def adapt [A] (iter: JIterable [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
     adapt (iter.iterator)
 
   def filter [A] (iter: AsyncIterator [A], cb: Callback [AsyncIterator [A]]) (pred: A => Boolean): Unit =

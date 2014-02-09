@@ -1,7 +1,7 @@
 package systest
 
 import scala.collection.JavaConversions._
-import com.treode.async.{AsyncIterator, Callback, callback, continue}
+import com.treode.async.{AsyncIterator, Callback, Scheduler, callback, continue}
 import com.treode.disk.{Disks, Position}
 
 private class TierIterator (implicit disks: Disks) extends AsyncIterator [Cell] {
@@ -62,11 +62,11 @@ private object TierIterator {
   def apply (root: Position, cb: Callback [CellIterator]) (implicit disks: Disks): Unit =
     new TierIterator() .find (root, cb)
 
-  def adapt (tier: MemTier): CellIterator =
+  def adapt (tier: MemTier) (implicit scheduler: Scheduler): CellIterator =
     AsyncIterator.adapt (tier.entrySet.iterator.map (Cell.apply _))
 
   def merge (primary: MemTier, secondary: MemTier, tiers: Tiers, cb: Callback [CellIterator]) (
-      implicit disks: Disks) {
+      implicit scheduler: Scheduler, disks: Disks) {
 
     val allBuilt = continue (cb) { iters: Array [CellIterator] =>
       AsyncIterator.merge (iters.iterator, cb)

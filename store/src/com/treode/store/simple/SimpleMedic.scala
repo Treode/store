@@ -1,5 +1,6 @@
 package com.treode.store.simple
 
+import com.treode.async.Scheduler
 import com.treode.disk.{Launch, Recovery, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
@@ -16,6 +17,7 @@ trait SimpleMedic {
 
 object SimpleMedic {
 
-  def apply (id: TypeId) (implicit recovery: Recovery, config: StoreConfig): SimpleMedic =
+  def apply (id: TypeId) (
+      implicit scheduler: Scheduler, recovery: Recovery, config: StoreConfig): SimpleMedic =
     new SynthMedic (id)
 }

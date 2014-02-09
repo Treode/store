@@ -6,6 +6,14 @@ import Assertions._
 
 object AsyncIteratorTestTools {
 
+  implicit val scheduler: Scheduler =
+    new Scheduler {
+      def execute (task: Runnable): Unit = task.run()
+      def delay (millis: Long, task: Runnable): Unit = task.run()
+      def at (millis: Long, task: Runnable): Unit = task.run()
+      def spawn (task: Runnable): Unit = task.run()
+    }
+
   class DistinguishedException extends Exception
 
   def failHasNext [A] (iter: AsyncIterator [A]) (cond: => Boolean): AsyncIterator [A] =

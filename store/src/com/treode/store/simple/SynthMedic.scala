@@ -2,13 +2,14 @@ package com.treode.store.simple
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
+import com.treode.async.Scheduler
 import com.treode.disk.{Launch, Position, Recovery, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
 import SimpleTable.Meta
 
-private class SynthMedic (id: TypeId) (implicit recovery: Recovery, config: StoreConfig)
-extends SimpleMedic {
+private class SynthMedic (id: TypeId) (
+    implicit scheduler: Scheduler, recovery: Recovery, config: StoreConfig) extends SimpleMedic {
 
   private val lock = new ReentrantReadWriteLock
   private val readLock = lock.readLock()
@@ -81,8 +82,8 @@ extends SimpleMedic {
       writeLock.unlock()
     }}
 
-  def close () (implicit launcher: Launch): SimpleTable = {
-    import launcher.disks
+  def close () (implicit launch: Launch): SimpleTable = {
+    import launch.disks
 
     writeLock.lock()
     val (generation, primary, secondary, tiers) = try {

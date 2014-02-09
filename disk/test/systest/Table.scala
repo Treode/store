@@ -1,6 +1,6 @@
 package systest
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, Scheduler}
 import com.treode.disk.Recovery
 
 trait Table {
@@ -13,6 +13,7 @@ trait Table {
 
 object Table {
 
-  def recover (cb: Callback [Table]) (implicit recovery: Recovery, config: TestConfig): Unit =
+  def recover (cb: Callback [Table]) (
+      implicit scheduler: Scheduler, recovery: Recovery, config: TestConfig): Unit =
     SynthTable.recover (cb)
 }
