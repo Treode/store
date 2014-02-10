@@ -19,13 +19,13 @@ extends StubActiveHost (id, network) {
 
   implicit val recovery = Disks.recover()
   implicit val storeConfig = StoreConfig (1<<16)
-  val _paxos = new CallbackCaptor [Paxos]
+  val _paxos = CallbackCaptor [Paxos]
   Paxos.recover (_paxos)
   val file = new StubFile
   val config = DiskDriveConfig (10, 6, 1<<20)
   recovery.attach (Seq ((Paths.get ("a"), file, config)), Callback.ignore)
   scheduler.runTasks()
-  while (!_paxos.wasInvoked)
+  while (!(_paxos.hasPassed || _paxos.hasFailed))
     Thread.sleep (1)
 
   implicit val paxos = _paxos.passed

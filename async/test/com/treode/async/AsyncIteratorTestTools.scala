@@ -50,13 +50,13 @@ object AsyncIteratorTestTools {
     AsyncIterator.adapt (xs)
 
   def expectSeq [A] (xs: A*) (actual: AsyncIterator [A]) {
-    val cb = new CallbackCaptor [Seq [A]]
+    val cb = CallbackCaptor [Seq [A]]
     AsyncIterator.scan (actual, cb)
     expectResult (xs) (cb.passed)
   }
 
   def expectFail [E] (actual: AsyncIterator [_]) (implicit m: Manifest [E]) {
-    val cb = new CallbackCaptor [Seq [_]]
+    val cb = CallbackCaptor [Seq [_]]
     AsyncIterator.scan (actual, cb)
     cb.failed [E]
   }}

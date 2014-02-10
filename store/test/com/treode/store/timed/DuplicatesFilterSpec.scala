@@ -22,13 +22,13 @@ class DuplicatesFilterSpec extends FlatSpec {
     }
 
   private def expectCells (cs: TimedCell*) (actual: AsyncIterator [TimedCell]) {
-    val cb = new CallbackCaptor [Seq [TimedCell]]
+    val cb = CallbackCaptor [Seq [TimedCell]]
     AsyncIterator.scan (actual, cb)
     expectResult (cs) (cb.passed)
   }
 
   private def newFilter (cs: TimedCell*) = {
-    val cb = new CallbackCaptor [AsyncIterator [TimedCell]]
+    val cb = CallbackCaptor [AsyncIterator [TimedCell]]
     DuplicatesFilter (AsyncIterator.adapt (cs.iterator), cb)
     cb.passed
   }

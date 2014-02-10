@@ -7,13 +7,13 @@ import AsyncIteratorTestTools._
 class MergeIteratorSpec extends FlatSpec {
 
   private def merge [A] (xss: Seq [A] *) (implicit ordering: Ordering [A]) = {
-    val cb = new CallbackCaptor [AsyncIterator [A]]
+    val cb = CallbackCaptor [AsyncIterator [A]]
     AsyncIterator.merge (xss.iterator map (AsyncIterator.adapt (_)), cb)
     cb.passed
   }
 
   private def merge [A] (iters: Iterator [AsyncIterator [A]]) (implicit ordering: Ordering [A]) = {
-    val cb = new CallbackCaptor [AsyncIterator [A]]
+    val cb = CallbackCaptor [AsyncIterator [A]]
     AsyncIterator.merge (iters, cb)
     cb.passed
   }

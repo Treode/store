@@ -31,7 +31,7 @@ object PaxosBehaviors extends WordSpec with PaxosTestTools {
     val k = Bytes (random.nextLong)
 
     "yield a value for the leader" in {
-      val cb = new CallbackCaptor [Bytes]
+      val cb = CallbackCaptor [Bytes]
       lead (k, One, cb)
       kit.runTasks()
       expectResult (One) (cb.passed)
@@ -61,8 +61,8 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
 
       // Setup.
       val k = Bytes (random.nextLong)
-      val cb1 = new CallbackCaptor [Bytes]
-      val cb2 = new CallbackCaptor [Bytes]
+      val cb1 = CallbackCaptor [Bytes]
+      val cb2 = CallbackCaptor [Bytes]
 
       // Proposed two values simultaneously, expect one choice.
       h1.paxos.propose (k, One, cb1)

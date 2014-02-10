@@ -16,9 +16,9 @@ class SystemSpec extends FlatSpec {
       implicit scheduler: StubScheduler, testConfig: TestConfig): Table = {
 
       implicit val recovery = Disks.recover()
-      val tableCb = new CallbackCaptor [Table]
+      val tableCb = CallbackCaptor [Table]
       Table.recover (tableCb)
-      val disksCb = new CallbackCaptor [Disks]
+      val disksCb = CallbackCaptor [Disks]
       recovery.attach (Seq ((Paths.get ("a"), disk, config)), disksCb)
       scheduler.runTasks()
       disksCb.passed
@@ -29,9 +29,9 @@ class SystemSpec extends FlatSpec {
       implicit scheduler: StubScheduler, testConfig: TestConfig): Table = {
 
     implicit val recovery = Disks.recover()
-    val tableCb = new CallbackCaptor [Table]
+    val tableCb = CallbackCaptor [Table]
     Table.recover (tableCb)
-    val disksCb = new CallbackCaptor [Disks]
+    val disksCb = CallbackCaptor [Disks]
     recovery.reattach (Seq ((Paths.get ("a"), disk)), disksCb)
     scheduler.runTasks()
     disksCb.passed

@@ -18,10 +18,8 @@ private object DiskTestTools {
 
     private def _attachAndPass (items: Seq [AttachItem], launch: Boolean): DiskDrives = {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
-      val cb = new CallbackCaptor [Disks]
-      recovery.attach (_items, cb)
-      scheduler.runTasks()
-      val disks = cb.passed.asInstanceOf [DiskDrives]
+      val disks =
+        CallbackCaptor.pass [Disks] (recovery.attach (_items, _)) .asInstanceOf [DiskDrives]
       if (launch)
         disks.assertLaunched (false)
       else
@@ -37,10 +35,7 @@ private object DiskTestTools {
 
     def reattachAndPass (items: (String, File)*): DiskDrives = {
       val _items = items map (v => (Paths.get (v._1), v._2))
-      val cb = new CallbackCaptor [Disks]
-      recovery.reattach (_items, cb)
-      scheduler.runTasks()
-      cb.passed.asInstanceOf [DiskDrives]
+      CallbackCaptor.pass [Disks] (recovery.reattach (_items, _)) .asInstanceOf [DiskDrives]
     }}
 
   implicit class RichDiskDrives (disks: DiskDrives) (implicit scheduler: StubScheduler) {
@@ -73,62 +68,45 @@ private object DiskTestTools {
 
     def attachAndPass (items: (String, File, DiskDriveConfig)*) {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
-      val cb = new CallbackCaptor [Unit]
-      disks.attach (_items, cb)
-      scheduler.runTasks()
-      cb.passed
+      CallbackCaptor.pass [Unit] (disks.attach (_items, _))
       assertLaunched (false)
     }
 
     def attachAndFail [E] (items: (String, File, DiskDriveConfig)*) (implicit m: Manifest [E]) {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
-      val cb = new CallbackCaptor [Unit]
-      disks.attach (_items, cb)
-      scheduler.runTasks()
-      m.runtimeClass.isInstance (cb.failed)
+      CallbackCaptor.fail [E, Unit] (disks.attach (_items, _))
       assertLaunched (false)
     }
 
     def attachAndHold (items: (String, File, DiskDriveConfig)*): CallbackCaptor [Unit] = {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
-      val cb = new CallbackCaptor [Unit]
+      val cb = CallbackCaptor [Unit]
       disks.attach (_items, cb)
       cb
     }
 
     def checkpointAndPass() {
-      val cb = new CallbackCaptor [Unit]
-      disks.checkpoint (cb)
-      scheduler.runTasks()
-      cb.passed
+      CallbackCaptor.pass [Unit] (disks.checkpoint _)
       assertLaunched (false)
     }
 
     def checkpointAndHold(): CallbackCaptor [Unit] = {
-      val cb = new CallbackCaptor [Unit]
+      val cb = CallbackCaptor [Unit]
       disks.checkpoint (cb)
       cb
     }
 
     def checkpointAndQueue(): CallbackCaptor [Unit] = {
-      val cb = new CallbackCaptor [Unit]
+      val cb = CallbackCaptor [Unit]
       disks.checkpoint (cb)
       scheduler.runTasks()
-      assert (!cb.wasInvoked)
+      cb.expectNotInvoked
       cb
     }
 
-    def writeAndPass [G, P] (desc: PageDescriptor [G, P], group: G, page: P): Position = {
-      val cb = new CallbackCaptor [Position]
-      disks.write (desc, group, page, cb)
-      scheduler.runTasks()
-      cb.passed
-    }
+    def writeAndPass [G, P] (desc: PageDescriptor [G, P], group: G, page: P): Position =
+      CallbackCaptor.pass [Position] (disks.write (desc, group, page, _))
 
-    def readAndPass [P] (desc: PageDescriptor [_, P], pos: Position): P = {
-      val cb = new CallbackCaptor [P]
-      disks.read (desc, pos, cb)
-      scheduler.runTasks()
-      cb.passed
-    }}
-}
+    def readAndPass [P] (desc: PageDescriptor [_, P], pos: Position): P =
+      CallbackCaptor.pass [P] (disks.read (desc, pos, _))
+  }}

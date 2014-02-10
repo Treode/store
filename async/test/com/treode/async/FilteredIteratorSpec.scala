@@ -7,19 +7,19 @@ import AsyncIteratorTestTools._
 class FilteredIteratorSpec extends FlatSpec {
 
   private def filter [A] (xs: A*) (pred: A => Boolean): AsyncIterator [A] = {
-    val cb = new CallbackCaptor [AsyncIterator [A]]
+    val cb = CallbackCaptor [AsyncIterator [A]]
     AsyncIterator.filter (AsyncIterator.adapt (xs), cb) (pred)
     cb.passed
   }
 
   private def filter [A] (xs: AsyncIterator [A]) (pred: A => Boolean): AsyncIterator [A] = {
-    val cb = new CallbackCaptor [AsyncIterator [A]]
+    val cb = CallbackCaptor [AsyncIterator [A]]
     AsyncIterator.filter (xs, cb) (pred)
     cb.passed
   }
 
   private def expectSeq [A] (xs: A*) (actual: AsyncIterator [A]) {
-    val cb = new CallbackCaptor [Seq [A]]
+    val cb = CallbackCaptor [Seq [A]]
     AsyncIterator.scan (actual, cb)
     expectResult (xs) (cb.passed)
   }

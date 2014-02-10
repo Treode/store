@@ -16,55 +16,45 @@ object SystestTools {
 
   implicit class RichTable (table: Table) {
 
-    def getAndPass (key: Int) (implicit scheduler: StubScheduler): Option [Int] = {
-      val cb = new CallbackCaptor [Option [Int]]
-      table.get (key, cb)
-      scheduler.runTasks()
-      cb.passed
-    }
+    def getAndPass (key: Int) (implicit scheduler: StubScheduler): Option [Int] =
+      CallbackCaptor.pass [Option [Int]] (table.get (key, _))
 
     def putAndPass (kvs: (Int, Int)*) (implicit scheduler: StubScheduler) {
-      val cb = new CallbackCaptor [Unit]
-      val latch = Callback.latch (kvs.size, cb)
-      for ((key, value) <- kvs)
-        table.put (key, value, latch)
-      scheduler.runTasks()
-      cb.passed
-    }
+      CallbackCaptor.pass [Unit] { cb =>
+        val latch = Callback.latch (kvs.size, cb)
+        for ((key, value) <- kvs)
+          table.put (key, value, latch)
+      }}
 
     def deleteAndPass (ks: Int*) (implicit scheduler: StubScheduler) {
-      val cb = new CallbackCaptor [Unit]
-      for (key <- ks)
-        table.delete (key, cb)
-      scheduler.runTasks()
-      cb.passed
-    }
+      CallbackCaptor.pass [Unit] { cb =>
+        for (key <- ks)
+          table.delete (key, cb)
+      }}
 
     def toMap (implicit scheduler: StubScheduler): Map [Int, Int] = {
       val builder = Map.newBuilder [Int, Int]
-      val cb = new CallbackCaptor [Unit]
-      table.iterator (continue (cb) { iter =>
-        AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
-          invoke (cb) {
-            if (cell.value.isDefined)
-              builder += cell.key -> cell.value.get
-          }}})
-      scheduler.runTasks()
-      cb.passed
+      CallbackCaptor.pass [Unit] { cb =>
+        table.iterator (continue (cb) { iter: CellIterator =>
+          AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
+            invoke (cb) {
+              if (cell.value.isDefined)
+                builder += cell.key -> cell.value.get
+            }}})
+      }
       builder.result
     }
 
     def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] = {
       val builder = Seq.newBuilder [(Int, Int)]
-      val cb = new CallbackCaptor [Unit]
-      table.iterator (continue (cb) { iter =>
-        AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
-          invoke (cb) {
-            if (cell.value.isDefined)
-              builder += cell.key -> cell.value.get
-          }}})
-      scheduler.runTasks()
-      cb.passed
+      CallbackCaptor.pass [Unit] { cb =>
+        table.iterator (continue (cb) { iter: CellIterator =>
+          AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
+            invoke (cb) {
+              if (cell.value.isDefined)
+                builder += cell.key -> cell.value.get
+            }}})
+      }
       builder.result
     }
 
@@ -78,14 +68,11 @@ object SystestTools {
       expectResult (kvs.sorted) (toSeq)
   }
 
-  implicit class RichSynthTable (table: SynthTable) (implicit scheduler: StubScheduler) {
+  implicit class RichSynthTable (table: SynthTable) {
 
-    def checkpointAndPass(): Tiers = {
-      val cb = new CallbackCaptor [Tiers]
-      table.checkpoint (cb)
-      scheduler.runTasks()
-      cb.passed
-    }}
+    def checkpointAndPass () (implicit scheduler: StubScheduler) : Tiers =
+      CallbackCaptor.pass [Tiers] (table.checkpoint _)
+  }
 
   class TrackedTable (table: Table, tracker: TrackingTable) extends Table {
 

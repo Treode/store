@@ -18,12 +18,8 @@ private object SimpleTestTools {
 
   implicit class RichTable (table: SimpleTable) (implicit scheduler: StubScheduler) {
 
-    def getAndPass (key: Int): Option [Int] = {
-      val cb = new CallbackCaptor [Option [Bytes]]
-      table.get (Bytes (key), cb)
-      scheduler.runTasks()
-      cb.passed map (_.int)
-    }
+    def getAndPass (key: Int): Option [Int] =
+      CallbackCaptor.pass [Option [Bytes]] (table.get (Bytes (key), _)) map (_.int)
 
     def putAll (kvs: (Int, Int)*) {
       for ((key, value) <- kvs)
@@ -39,29 +35,27 @@ private object SimpleTestTools {
 
     def toMap(): Map [Int, Int] = {
       val builder = Map.newBuilder [Int, Int]
-      val cb = new CallbackCaptor [Unit]
-      table.iterator (continue (cb) { iter =>
-        AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
-          invoke (cb) {
-            if (cell.value.isDefined)
-              builder += cell.key.int -> cell.value.get.int
-          }}})
-      scheduler.runTasks()
-      cb.passed
+      CallbackCaptor.pass [Unit] { cb =>
+        table.iterator (continue (cb) { iter =>
+          AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
+            invoke (cb) {
+              if (cell.value.isDefined)
+                builder += cell.key.int -> cell.value.get.int
+            }}})
+      }
       builder.result
     }
 
     def toSeq(): Seq [(Int, Int)] = {
       val builder = Seq.newBuilder [(Int, Int)]
-      val cb = new CallbackCaptor [Unit]
-      table.iterator (continue (cb) { iter =>
-        AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
-          invoke (cb) {
-            if (cell.value.isDefined)
-              builder += cell.key.int -> cell.value.get.int
-          }}})
-      scheduler.runTasks()
-      cb.passed
+      CallbackCaptor.pass [Unit] { cb =>
+        table.iterator (continue (cb) { iter =>
+          AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
+            invoke (cb) {
+              if (cell.value.isDefined)
+                builder += cell.key.int -> cell.value.get.int
+            }}})
+      }
       builder.result
     }
 
@@ -77,10 +71,6 @@ private object SimpleTestTools {
 
   implicit class RichSynthTable (table: SynthTable) (implicit scheduler: StubScheduler) {
 
-    def checkpointAndPass(): SimpleTable.Meta = {
-      val cb = new CallbackCaptor [SimpleTable.Meta]
-      table.checkpoint (cb)
-      scheduler.runTasks()
-      cb.passed
-    }}
-}
+    def checkpointAndPass(): SimpleTable.Meta =
+      CallbackCaptor.pass [SimpleTable.Meta] (table.checkpoint _)
+  }}

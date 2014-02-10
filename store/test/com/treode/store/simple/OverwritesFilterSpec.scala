@@ -18,13 +18,13 @@ class OverwritesFilterSpec extends FlatSpec {
     }
 
   private def expectCells (cs: SimpleCell*) (actual: AsyncIterator [SimpleCell]) {
-    val cb = new CallbackCaptor [Seq [SimpleCell]]
+    val cb = CallbackCaptor [Seq [SimpleCell]]
     AsyncIterator.scan (actual, cb)
     expectResult (cs) (cb.passed)
   }
 
   private def newFilter (cs: SimpleCell*) = {
-    val cb = new CallbackCaptor [AsyncIterator [SimpleCell]]
+    val cb = CallbackCaptor [AsyncIterator [SimpleCell]]
     OverwritesFilter (AsyncIterator.adapt (cs.iterator), cb)
     cb.passed
   }

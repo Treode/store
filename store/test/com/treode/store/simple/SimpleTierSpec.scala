@@ -19,22 +19,19 @@ class SimpleTierSpec extends WordSpec {
 
   implicit class RichPageDescriptor [G, P] (desc: PageDescriptor [G, P]) {
 
-    def readAndPass (pos: Position) (implicit scheduler: StubScheduler, disks: Disks): P = {
-      val cb = new CallbackCaptor [P]
-      desc.read (pos, cb)
-      scheduler.runTasks()
-      cb.passed
-    }}
+    def readAndPass (pos: Position) (implicit scheduler: StubScheduler, disks: Disks): P =
+      CallbackCaptor.pass [P] (desc.read (pos, _))
+  }
 
   private def setup() = {
     implicit val scheduler = StubScheduler.random()
     implicit val recovery = Disks.recover()
     val file = new StubFile
     val config = DiskDriveConfig (20, 12, 1<<30)
-    val cb = new CallbackCaptor [Disks]
-    recovery.attach (Seq ((Paths.get ("a"), file, config)), cb)
-    scheduler.runTasks()
-    (scheduler, cb.passed)
+    val disks = CallbackCaptor.pass [Disks] { cb =>
+      recovery.attach (Seq ((Paths.get ("a"), file, config)), cb)
+    }
+    (scheduler, disks)
   }
 
   /** Get the depths of ValueBlocks reached from the index entries. */
@@ -71,35 +68,25 @@ class SimpleTierSpec extends WordSpec {
     implicit val config = StoreConfig (pageBytes)
     val builder = new TierBuilder (pager, 0)
     val iter = AsyncIterator.adapt (AllFruits.iterator)
-    val added = new CallbackCaptor [Unit]
-    AsyncIterator.foreach (iter, added) (builder.add (_, Some (One), _))
-    scheduler.runTasks()
-    added.passed
-    val built = new CallbackCaptor [Tier]
-    builder.result (built)
-    scheduler.runTasks()
-    built.passed
+    CallbackCaptor.pass [Unit] { cb =>
+      AsyncIterator.foreach (iter, cb) (builder.add (_, Some (One), _))
+    }
+    CallbackCaptor.pass [Tier] (builder.result _)
   }
 
   private def read (tier: Tier, key: Bytes) (
-      implicit scheduler: StubScheduler, disks: Disks): Option [SimpleCell] = {
-    val cb = new CallbackCaptor [Option [SimpleCell]]
-    tier.read (pager, key, cb)
-    scheduler.runTasks()
-    cb.passed
-  }
+      implicit scheduler: StubScheduler, disks: Disks): Option [SimpleCell] =
+    CallbackCaptor.pass [Option [SimpleCell]] (tier.read (pager, key, _))
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier) (
       implicit scheduler: StubScheduler, disks: Disks): Seq [SimpleCell] = {
-    val iter = new CallbackCaptor [SimpleIterator]
-    TierIterator (pager, tier.root, iter)
-    scheduler.runTasks()
-    val seq = new CallbackCaptor [Seq [SimpleCell]]
-    AsyncIterator.scan (iter.passed, seq)
-    scheduler.runTasks()
-    seq.passed
-  }
+    val iter = CallbackCaptor.pass [SimpleIterator] { cb =>
+      TierIterator (pager, tier.root, cb)
+    }
+    CallbackCaptor.pass [Seq [SimpleCell]] { cb =>
+      AsyncIterator.scan (iter, cb)
+    }}
 
   private def toSeq (builder: Builder [SimpleCell, _], pos: Position) (
       implicit scheduler: StubScheduler, disks: Disks) {

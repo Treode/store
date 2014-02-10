@@ -54,12 +54,8 @@ class StubFile (implicit scheduler: StubScheduler) extends File (null, scheduler
         case t: Throwable => scheduler.fail (cb, t)
       }}
 
-  def fill (input: PagedBuffer, pos: Long, len: Int) {
-    val cb = new CallbackCaptor [Unit]
-    fill (input, pos, len, cb)
-    scheduler.runTasks()
-    cb.passed
-  }
+  def fill (input: PagedBuffer, pos: Long, len: Int): Unit =
+    CallbackCaptor.pass [Unit] (fill (input, pos, len, _))
 
   override def flush (output: PagedBuffer, pos: Long, cb: Callback [Unit]): Unit =
     _stop (cb) {
@@ -73,12 +69,8 @@ class StubFile (implicit scheduler: StubScheduler) extends File (null, scheduler
         case t: Throwable => scheduler.fail (cb, t)
       }}
 
-  def flush (output: PagedBuffer, pos: Long) {
-    val cb = new CallbackCaptor [Unit]
-    flush (output, pos, cb)
-    scheduler.runTasks()
-    cb.passed
-  }
+  def flush (output: PagedBuffer, pos: Long): Unit =
+    CallbackCaptor.pass [Unit] (flush (output, pos, _))
 
   override def toString = s"StubFile(size=${data.length})"
 }

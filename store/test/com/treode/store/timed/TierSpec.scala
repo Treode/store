@@ -18,7 +18,7 @@ class TierSpec extends WordSpec {
   implicit class RichPageDescriptor [G, P] (desc: PageDescriptor [G, P]) {
 
     def readAndPass (pos: Position) (implicit scheduler: StubScheduler, disks: Disks): P = {
-      val cb = new CallbackCaptor [P]
+      val cb = CallbackCaptor [P]
       desc.read (pos, cb)
       scheduler.runTasks()
       cb.passed
@@ -29,7 +29,7 @@ class TierSpec extends WordSpec {
     implicit val recovery = Disks.recover()
     val file = new StubFile
     val config = DiskDriveConfig (20, 12, 1<<30)
-    val cb = new CallbackCaptor [Disks]
+    val cb = CallbackCaptor [Disks]
     recovery.attach (Seq ((Paths.get ("a"), file, config)), cb)
     scheduler.runTasks()
     (scheduler, cb.passed)
@@ -68,11 +68,11 @@ class TierSpec extends WordSpec {
       implicit scheduler: StubScheduler, disks: Disks): Position = {
     val builder = new TierBuilder (StoreConfig (pageBytes))
     val iter = AsyncIterator.adapt (AllFruits.iterator)
-    val added = new CallbackCaptor [Unit]
+    val added = CallbackCaptor [Unit]
     AsyncIterator.foreach (iter, added) (builder.add (_, 7, Some (One), _))
     scheduler.runTasks()
     added.passed
-    val built = new CallbackCaptor [Position]
+    val built = CallbackCaptor [Position]
     builder.result (built)
     scheduler.runTasks()
     built.passed
@@ -80,7 +80,7 @@ class TierSpec extends WordSpec {
 
   private def read (pos: Position, key: Bytes, time: Long) (
       implicit scheduler: StubScheduler, disks: Disks): Option [TimedCell] = {
-    val cb = new CallbackCaptor [Option [TimedCell]]
+    val cb = CallbackCaptor [Option [TimedCell]]
     Tier.read (pos, key, time, cb)
     scheduler.runTasks()
     cb.passed
@@ -89,10 +89,10 @@ class TierSpec extends WordSpec {
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (pos: Position) (
       implicit scheduler: StubScheduler, disks: Disks): Seq [TimedCell] = {
-    val iter = new CallbackCaptor [TierIterator]
+    val iter = CallbackCaptor [TierIterator]
     TierIterator (pos, iter)
     scheduler.runTasks()
-    val seq = new CallbackCaptor [Seq [TimedCell]]
+    val seq = CallbackCaptor [Seq [TimedCell]]
     AsyncIterator.scan (iter.passed, seq)
     scheduler.runTasks()
     seq.passed

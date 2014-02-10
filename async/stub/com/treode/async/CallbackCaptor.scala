@@ -1,18 +1,16 @@
 package com.treode.async
 
 import java.util.concurrent.TimeoutException
+import org.scalatest.Assertions
 
-class CallbackCaptor [T] extends Callback [T] {
+class CallbackCaptor [T] protected extends Callback [T] {
 
   private var _invokation: Array [StackTraceElement] = null
   private var _v: T = null.asInstanceOf [T]
   private var _t: Throwable = null
 
-  def wasInvoked: Boolean =
-    _invokation != null
-
-  private def assertNotInvoked() {
-    if (!wasInvoked) {
+  private def invoked() {
+    if (_invokation == null) {
       _invokation = Thread.currentThread.getStackTrace
     } else {
       val _second = Thread.currentThread.getStackTrace
@@ -21,30 +19,18 @@ class CallbackCaptor [T] extends Callback [T] {
       assert (false, "Callback was already invoked.")
     }}
 
-  private def assertInvoked (e: Boolean) {
-    if (e && _t != null)
-      throw new AssertionError (_t)
-    assert (wasInvoked, "Expected callback to have been invoked, but it was not.")
-  }
-
   def pass (v: T) = {
-    assertNotInvoked()
+    invoked()
     _v = v
   }
 
   def fail (t: Throwable) {
-    assertNotInvoked()
+    invoked()
     _t = t
   }
 
   def hasPassed: Boolean =
     _v != null
-
-  def passed: T = {
-    assertInvoked (true)
-    assert (hasPassed, "Expected operation to pass, but it failed.")
-    _v
-  }
 
   def hasFailed: Boolean =
     _t != null
@@ -52,22 +38,64 @@ class CallbackCaptor [T] extends Callback [T] {
   def hasTimedOut: Boolean =
     _t != null && _t.isInstanceOf [TimeoutException]
 
+  def expectInvoked(): Unit =
+    assert (_invokation != null, "Expected callback to have been invoked, but it was not.")
+
+  def expectNotInvoked() {
+    if (_invokation != null)
+      Assertions.fail (
+          "Expected callback to not have been invoked, but it was:\n" +
+          (_invokation take (10) mkString "\n"))
+  }
+
+  def passed: T = {
+    expectInvoked()
+    if (_t != null)
+      Assertions.fail ("Expected operation to pass, but it failed.", _t)
+    _v
+  }
+
   def failed [E] (implicit m: Manifest [E]): E = {
-    assertInvoked (false)
-    assert (hasFailed, "Expected operation to fail, but it passed.")
-    assert (
+    expectInvoked()
+    if (_v != null)
+      Assertions.fail (
+          "Expected operation to fail, but it passed:\n" +
+          (_invokation take (10) mkString "\n"))
+    Assertions.assert (
         m.runtimeClass.isInstance (_t),
         s"Expected ${m.runtimeClass.getSimpleName}, found ${_t.getClass.getSimpleName}")
     _t.asInstanceOf [E]
   }
 
   override def toString: String =
-    if (!wasInvoked)
-      "CallbackCaptor:NotInvoked"
-    else if (hasPassed)
+    if (_v != null)
       s"CallbackCaptor:Passed(${_v})"
-    else if (hasFailed)
+    else if (_t != null)
       s"CallbackCaptor:Failed(${_t})"
     else
-      "CallbackCaptor:Confused"
+      s"CallbackCaptor:NotInvoked"
+}
+
+object CallbackCaptor {
+
+  def apply [T] = new CallbackCaptor [T]
+
+  def pass [T] (f: Callback [T] => Any) (implicit scheduler: StubScheduler): T = {
+    val cb = new CallbackCaptor [T]
+    f (cb)
+    scheduler.runTasks()
+    cb.passed
+  }
+
+  def fail [E, T] (f: Callback [T] => Any) (
+      implicit manifest: Manifest [E], scheduler: StubScheduler): E = {
+    val cb = new CallbackCaptor [T]
+    f (cb)
+    scheduler.runTasks()
+    cb.failed [E]
+  }
+
+  def expect [T] (expected: T) (f: Callback [T] => Any) (
+      implicit scheduler: StubScheduler): Unit =
+    Assertions.expectResult (expected) (pass (f))
 }

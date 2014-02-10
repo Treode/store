@@ -17,12 +17,9 @@ class LogSpec extends FlatSpec {
 
   implicit class RichRecordDescriptor [R] (desc: RecordDescriptor [R]) {
 
-    def recordAndPass (entry: R) (implicit scheduler: StubScheduler, disks: Disks) {
-      val cb = new CallbackCaptor [Unit]
-      desc.record (entry) (cb)
-      scheduler.runTasks()
-      cb.passed
-    }}
+    def recordAndPass (entry: R) (implicit scheduler: StubScheduler, disks: Disks): Unit =
+      CallbackCaptor.pass [Unit] (desc.record (entry) _)
+  }
 
   "The logger" should "replay when reattaching disks" in {
     implicit val scheduler = StubScheduler.random()

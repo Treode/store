@@ -30,13 +30,13 @@ private trait TimedTestTools {
   implicit class RichTimedTable (t: TimedTable) {
 
     def getAndExpect (key: Bytes, time: TxClock) (expected: TimedCell) {
-      val cb = new CallbackCaptor [TimedCell]
+      val cb = CallbackCaptor [TimedCell]
       t.get (key, time, cb)
       expectResult (expected) (cb.passed)
     }
 
     def putAndPass (key: Bytes, time: TxClock, value: Option [Bytes]) {
-      val cb = new CallbackCaptor [Unit]
+      val cb = CallbackCaptor [Unit]
       t.put (key, time, value, cb)
       cb.passed
     }}
@@ -54,7 +54,7 @@ private trait TimedTestTools {
       s.prepare (ct, ops, cb1)
       val prep = cb1.passed
       val wt = prep.ft + 7 // Add gaps to the history.
-      val cb2 = new CallbackCaptor [Unit]
+      val cb2 = CallbackCaptor [Unit]
       s.commit (wt, ops, cb2)
       cb2.passed
       prep.release()
