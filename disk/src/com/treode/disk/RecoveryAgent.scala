@@ -25,20 +25,17 @@ private class RecoveryAgent (
 
   def attach (items: Seq [(Path, File, DiskGeometry)]): Unit =
     defer (cb) {
-
-      val logd = new Dispatcher [PickledRecord] (scheduler)
-      val paged = new Dispatcher [PickledPage] (scheduler)
-
+      require (!items.isEmpty, "Must list at least one file or device to attach.")
+      val disks = new DiskDrives
       val disksPrimed = continue (cb) { drives: Seq [DiskDrive] =>
-        val disks = new DiskDrives (logd, paged, drives.mapBy (_.id))
+        disks.add (drives)
         launch (disks)
       }
-
       val attaching = items.map (_._1) .toSet
       val roots = Position (0, 0, 0)
       val latch = Callback.seq (items.size, disksPrimed)
       val boot = BootBlock.apply (0, items.size, attaching, roots)
-      DiskDrive.init (items, 0, boot, logd, paged, disksPrimed)
+      DiskDrive.init (items, 0, boot, disks, disksPrimed)
     }
 
   def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Unit =
@@ -104,7 +101,7 @@ private class RecoveryAgent (
 
   def reattach (items: Seq [(Path, File)]): Unit =
     defer (cb) {
-      require (!items.isEmpty, "Must list at least one file to reaattach.")
+      require (!items.isEmpty, "Must list at least one file or device to reaattach.")
       val oneRead = Callback.seq (items.size, continue (cb) (superBlocksRead _))
       for ((path, file) <- items)
         SuperBlocks.read (path, file, oneRead)

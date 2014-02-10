@@ -83,11 +83,11 @@ private class LogIterator private (
   def next (cb: Callback [(Long, Unit => Any)]): Unit =
     file.deframe (buf, logPos, frameRead (cb))
 
-  def close (logd: LogDispatcher, paged: PageDispatcher): DiskDrive = {
+  def close (disks: DiskDrives, logd: LogDispatcher, paged: PageDispatcher): DiskDrive = {
     buf.clear()
     val disk =
-      new DiskDrive (superb.id, path, file, superb.geometry, alloc, logd, paged, logSegs,
-          superb.logHead, logPos, logSeg.limit, buf, pageSeg, superb.pagePos, pageLedger)
+      new DiskDrive (superb.id, path, file, superb.geometry, alloc, disks, logSegs, superb.logHead,
+          logPos, logSeg.limit, buf, pageSeg, superb.pagePos, pageLedger)
     logd.receive (disk.recordReceiver)
     paged.receive (disk.pageReceiver)
     disk
@@ -134,14 +134,14 @@ object LogIterator {
     defer (cb) {
 
       def replayed (logs: Map [Int, LogIterator]) = callback (cb) { _: Unit =>
-        val logd = new Dispatcher [PickledRecord] (scheduler)
-        val paged = new Dispatcher [PickledPage] (scheduler)
-        val disks =
+        val disks = new DiskDrives
+        val drives =
           for (read <- reads) yield {
             val superb = read.superb (useGen1)
-            logs (superb.id) .close (logd, paged)
+            logs (superb.id) .close (disks, disks.logd, disks.paged)
           }
-        new DiskDrives (logd, paged, disks.mapBy (_.id))
+        disks.add (drives)
+        disks
       }
 
       def merged (logs: Map [Int, LogIterator]) = continue (cb) { iter: ReplayIterator =>

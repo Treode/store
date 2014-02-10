@@ -4,7 +4,7 @@ import org.scalatest.FlatSpec
 
 class DiskGeometrySpec extends FlatSpec {
 
-  implicit val config = DisksConfig (13)
+  implicit val config = DisksConfig (14, 1<<24, 1<<16)
 
   val block = 1<<12
   val seg = 1<<16

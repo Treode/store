@@ -13,7 +13,7 @@ import SimpleTestTools._
 class SimpleSynthTableSpec extends FreeSpec {
 
   private def mkTable (disk: File) (implicit scheduler: StubScheduler): SynthTable = {
-    implicit val disksConfig = DisksConfig (13)
+    implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16)
     implicit val recovery = Disks.recover()
     val disksCb = CallbackCaptor [Disks]
     val geometry = DiskGeometry (16, 12, 1<<30)

@@ -9,7 +9,7 @@ import DiskTestTools._
 
 class PageSpec extends FlatSpec {
 
-  implicit val config = DisksConfig (13)
+  implicit val config = DisksConfig (14, 1<<24, 1<<16)
 
   val geometry = DiskGeometry (10, 6, 1<<20)
 

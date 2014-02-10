@@ -18,8 +18,7 @@ private class DiskDrive (
     val file: File,
     val geometry: DiskGeometry,
     val alloc: SegmentAllocator,
-    val logd: LogDispatcher,
-    val paged: PageDispatcher,
+    val disks: DiskDrives,
     var logSegs: ArrayDeque [Int],
     var logHead: Long,
     var logTail: Long,
@@ -28,10 +27,8 @@ private class DiskDrive (
     var pageSeg: SegmentBounds,
     var pageHead: Long,
     var pageLedger: PageLedger
-) (implicit
-    val scheduler: Scheduler,
-    val config: DisksConfig
 ) {
+  import disks.{config, logd, paged, scheduler}
 
   private val LogPriority = 1
   private val PagePriority = 2
@@ -113,7 +110,7 @@ private class DiskDrive (
       pageHead = pos
       pageLedger.add (ledger)
       pageLedgerDirty = true
-      logd.send (PickledRecord (id, PageWrite (pos, ledger.zip), cb))
+      disks.record (id, PageWrite (pos, ledger.zip), cb)
     }
 
   private def _reallocPages (ledger: PageLedger, cb: Callback [Unit]): Unit =
@@ -128,7 +125,7 @@ private class DiskDrive (
       val _cb = ready (cb, ())
       PageLedger.write (pageLedger, file, s0.pos, continue (_cb) { _: Unit =>
         PageLedger.write (PageLedger.Zipped.empty, file, s1.pos, continue (_cb) { _: Unit =>
-          logd.send (PickledRecord (id, PageAlloc (s1.num, ledger.zip), _cb))
+          disks.record (id, PageAlloc (s1.num, ledger.zip), _cb)
         })
       })
     }
@@ -242,11 +239,11 @@ private class DiskDrive (
   def reallocPages (ledger: PageLedger, cb: Callback [Unit]): Unit =
     fiber.execute (state.reallocPages (ledger, cb))
 
-  def mark (cb: Callback [Unit]): Unit =
-    fiber.execute (_mark (cb))
-
   def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
     fiber.execute (state.checkpoint (boot, cb))
+
+  def mark (cb: Callback [Unit]): Unit =
+    fiber.execute (_mark (cb))
 
   def allocated (cb: Callback [IntSet]): Unit =
     fiber.execute (_allocated (cb))
@@ -286,6 +283,7 @@ private class DiskDrive (
     val callbacks = writeRecords (accepts)
     val flushed = Callback.fanout (callbacks, scheduler)
 
+    disks.tally (logBuf.readableBytes, accepts.size)
     if (realloc) {
       reallocLog (callback (flushed) { _ =>
         logd.receive (recordReceiver)
@@ -399,15 +397,12 @@ private object DiskDrive {
       file: File,
       geometry: DiskGeometry,
       boot: BootBlock,
-      logd: LogDispatcher,
-      paged: PageDispatcher,
+      disks: DiskDrives,
       cb: Callback [DiskDrive]
-  ) (implicit
-      scheduler: Scheduler,
-      config: DisksConfig
   ): Unit =
 
     defer (cb) {
+      import disks.{config, logd, paged}
 
       val alloc = SegmentAllocator.init (geometry)
       val logSeg = alloc.alloc()
@@ -420,7 +415,7 @@ private object DiskDrive {
         val logSegs = new ArrayDeque [Int]
         logSegs.add (logSeg.num)
         val disk =
-          new DiskDrive (id, path, file, geometry, alloc, logd, paged, logSegs, logSeg.pos,
+          new DiskDrive (id, path, file, geometry, alloc, disks, logSegs, logSeg.pos,
               logSeg.pos, logSeg.limit, PagedBuffer (12), pageSeg, pageSeg.limit, new PageLedger)
         logd.receive (disk.recordReceiver)
         paged.receive (disk.pageReceiver)
@@ -436,17 +431,13 @@ private object DiskDrive {
       items: Seq [(Path, File, DiskGeometry)],
       base: Int,
       boot: BootBlock,
-      logd: LogDispatcher,
-      paged: PageDispatcher,
+      disks: DiskDrives,
       cb: Callback [Seq [DiskDrive]]
-  ) (implicit
-      scheduler: Scheduler,
-      config: DisksConfig
   ): Unit =
 
     defer (cb) {
       val latch = Callback.seq (items.size, cb)
       for (((path, file, geometry), i) <- items zipWithIndex) {
-        DiskDrive.init (base + i, path, file, geometry, boot, logd, paged, latch)
+        DiskDrive.init (base + i, path, file, geometry, boot, disks, latch)
       }}
 }

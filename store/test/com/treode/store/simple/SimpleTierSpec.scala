@@ -25,7 +25,7 @@ class SimpleTierSpec extends WordSpec {
 
   private def setup() = {
     implicit val scheduler = StubScheduler.random()
-    implicit val disksConfig = DisksConfig (13)
+    implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16)
     implicit val recovery = Disks.recover()
     val file = new StubFile
     val geometry = DiskGeometry (20, 12, 1<<30)

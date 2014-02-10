@@ -85,25 +85,6 @@ private object DiskTestTools {
       cb
     }
 
-    def checkpointAndPass() {
-      CallbackCaptor.pass [Unit] (disks.checkpoint _)
-      assertLaunched (false)
-    }
-
-    def checkpointAndHold(): CallbackCaptor [Unit] = {
-      val cb = CallbackCaptor [Unit]
-      disks.checkpoint (cb)
-      cb
-    }
-
-    def checkpointAndQueue(): CallbackCaptor [Unit] = {
-      val cb = CallbackCaptor [Unit]
-      disks.checkpoint (cb)
-      scheduler.runTasks()
-      cb.expectNotInvoked
-      cb
-    }
-
     def writeAndPass [G, P] (desc: PageDescriptor [G, P], group: G, page: P): Position =
       CallbackCaptor.pass [Position] (disks.write (desc, group, page, _))
 

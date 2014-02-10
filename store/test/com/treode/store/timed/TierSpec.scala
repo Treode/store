@@ -25,7 +25,7 @@ class TierSpec extends WordSpec {
     }}
 
   private def setup() = {
-    implicit val disksConfig = DisksConfig (13)
+    implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16)
     implicit val scheduler = StubScheduler.random()
     implicit val recovery = Disks.recover()
     val file = new StubFile

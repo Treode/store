@@ -7,14 +7,8 @@ import scala.collection.immutable.Queue
 import com.treode.async.{Callback, Fiber, Scheduler, defer}
 import com.treode.async.io.File
 
-private class DiskDrives (
-    logd: LogDispatcher,
-    paged: PageDispatcher,
-    private var disks: Map [Int, DiskDrive]
-) (implicit
-    scheduler: Scheduler,
-    config: DisksConfig
-) extends Disks {
+private class DiskDrives (implicit val scheduler: Scheduler, val config: DisksConfig)
+extends Disks {
 
   type AttachItem = (Path, File, DiskGeometry)
   type AttachPending = (Seq [AttachItem], Callback [Unit])
@@ -23,26 +17,30 @@ private class DiskDrives (
 
   val fiber = new Fiber (scheduler)
   val cache = new PageCache (this)
+  val logd = new Dispatcher [PickledRecord] (scheduler)
+  val paged = new Dispatcher [PickledPage] (scheduler)
   val releaser = new SegmentReleaser (this)
+  var disks = Map.empty [Int, DiskDrive]
   var generation = 0
   var number = 0
   var roots = Position (0, 0, 0)
+  var loggedBytes = 0
+  var loggedEntries = 0
+  var attachreqs = Queue.empty [AttachPending]
+  var checkreqs = false
   var state: State = new Launching
 
   trait State {
     def launch (checkreqs: CheckpointRegistry, pages: PageRegistry)
     def attach (items: Seq [AttachItem], cb: Callback [Unit])
-    def checkpoint (cb: Callback [Unit])
+    def checkpoint()
     def panic (t: Throwable)
   }
 
   class Launching extends State {
 
-    var attachreqs = Queue.empty [AttachPending]
-    var checkreqs = List.empty [Callback [Unit]]
-
     def launch (checkpoints: CheckpointRegistry, pages: PageRegistry) {
-      state = new Launched (checkpoints, pages, attachreqs, checkreqs)
+      state = new Launched (checkpoints, pages)
     }
 
     def attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
@@ -50,10 +48,8 @@ private class DiskDrives (
         attachreqs = attachreqs.enqueue (items, cb)
       }
 
-    def checkpoint (cb: Callback [Unit]): Unit =
-      defer (cb) {
-        checkreqs ::= cb
-      }
+    def checkpoint(): Unit =
+      checkreqs = true
 
     def panic (t: Throwable): Unit =
       state = new Panicked (t)
@@ -61,11 +57,7 @@ private class DiskDrives (
     override def toString = "DiskDrives.Launching"
   }
 
-  class Launched (
-      checkpoints: CheckpointRegistry,
-      pages: PageRegistry,
-      var attachreqs: AttachesPending,
-      var checkreqs: CheckpointsPending) extends State {
+  class Launched (checkpoints: CheckpointRegistry, pages: PageRegistry) extends State {
 
     var attaching = false
 
@@ -82,7 +74,10 @@ private class DiskDrives (
         attaching = true
         attachreqs = rest
         attach (first)
-      } else if (!checkreqs.isEmpty) {
+      } else if (checkreqs) {
+        checkpoint()
+      } else if (config.checkpoint (loggedBytes, loggedEntries)) {
+        checkreqs = true
         checkpoint()
       }}
 
@@ -113,21 +108,21 @@ private class DiskDrives (
           ready()
           scheduler.fail (cb, new AlreadyAttachedException (already))
         } else {
-          DiskDrive.init (items, number, newBoot, logd, paged, newDisksPrimed)
+          DiskDrive.init (items, number, newBoot, DiskDrives.this, newDisksPrimed)
         }}}
 
-    def checkpoint() {
+    def _checkpoint() {
 
       val newgen = generation+1
+      loggedBytes = 0
+      loggedEntries = 0
 
       def rootPageWritten (newboot: BootBlock, newroots: Position) =
         Callback.latch (disks.size, new Callback [Unit] {
           def pass (v: Unit) = fiber.execute {
             generation = newboot.gen
             roots = newroots
-            for (cp <- checkreqs)
-              scheduler.execute (cp, ())
-            checkreqs = List.empty
+            checkreqs = false
             ready()
           }
           def fail (t: Throwable) = fiber.execute (panic (t))
@@ -160,26 +155,25 @@ private class DiskDrives (
 
     def attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
       defer (cb) {
-        if (attaching || !checkreqs.isEmpty)
+        if (attaching || checkreqs)
           attachreqs = attachreqs.enqueue (items, cb)
         else {
           attaching
           attach ((items, cb))
         }}
 
-    def checkpoint (cb: Callback [Unit]): Unit =
-      defer (cb) {
-        val now = !attaching || checkreqs.isEmpty
-        checkreqs ::= cb
-        if (now) checkpoint()
-      }
+    def checkpoint() {
+      val now = !attaching && !checkreqs
+      checkreqs = true
+      if (now) _checkpoint()
+    }
 
     def panic (t: Throwable) {
       state = new Panicked (t)
       for (attach <- attachreqs)
         scheduler.fail (attach._2, new PanickedException (t))
-      for (cp <- checkreqs)
-        scheduler.fail (cp, new PanickedException (t))
+      attachreqs = Queue.empty
+      checkreqs = false
     }
 
     override def toString = s"DiskDrives.Launched(attaching=$attaching)"
@@ -192,8 +186,7 @@ private class DiskDrives (
     def attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
       scheduler.fail (cb, new PanickedException (t))
 
-    def checkpoint (cb: Callback [Unit]): Unit =
-      scheduler.fail (cb, new PanickedException (t))
+    def checkpoint(): Unit = ()
 
     def panic (t: Throwable): Unit = ()
 
@@ -203,11 +196,15 @@ private class DiskDrives (
   def launch (checkpoints: CheckpointRegistry, pages: PageRegistry): Unit =
     fiber.execute (state.launch (checkpoints, pages))
 
-  def checkpoint (cb: Callback [Unit]): Unit =
-    fiber.execute (state.checkpoint (cb))
+  def checkpoint(): Unit =
+    fiber.execute (state.checkpoint())
 
   def panic (t: Throwable): Unit =
     fiber.execute (state.panic (t))
+
+  def add (drives: Seq [DiskDrive]): Unit = fiber.execute {
+    disks ++= drives .mapBy (_.id)
+  }
 
   def iterator: Iterator [DiskDrive] =
     disks.values.iterator
@@ -218,6 +215,13 @@ private class DiskDrives (
   def fetch [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
     disks (pos.disk) .read (desc, pos, cb)
 
+  def tally (bytes: Int, entries: Int): Unit = fiber.execute {
+    loggedBytes += bytes
+    loggedEntries += entries
+    if (config.checkpoint (loggedBytes, loggedEntries) && !checkreqs)
+      state.checkpoint()
+  }
+
   def free (segs: Seq [SegmentPointer]) {
     val byDisk = segs.groupBy (_.disk) .mapValues (_.map (_.num))
     for ((disk, nums) <- byDisk)
@@ -226,7 +230,7 @@ private class DiskDrives (
 
   def attach (items: Seq [(Path, File, DiskGeometry)], cb: Callback [Unit]): Unit =
     defer (cb) {
-      require (!items.isEmpty, "Must list at least one file to attach.")
+      require (!items.isEmpty, "Must list at least one file or device to attach.")
       fiber.execute (state.attach (items, cb))
     }
 
@@ -235,6 +239,9 @@ private class DiskDrives (
       val files = items map (openFile (_, exec))
       attach (files, cb)
     }
+
+  def record (disk: Int, entry: RecordHeader, cb: Callback [Unit]): Unit =
+    logd.send (PickledRecord (disk, entry, cb))
 
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit]): Unit =
     logd.send (PickledRecord (desc, entry, cb))
