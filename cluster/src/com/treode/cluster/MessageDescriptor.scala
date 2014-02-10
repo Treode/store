@@ -10,7 +10,7 @@ import com.treode.pickle.Pickler
  * head -c 7 /dev/urandom | hexdump -e '"0xFF" 7/1 "%02X" "L\n"'
  * '''
  */
-class MessageDescriptor [M] (val id: MailboxId, val pmsg: Pickler [M]) {
+class MessageDescriptor [M] private (val id: MailboxId, val pmsg: Pickler [M]) {
 
   private [cluster] def listen (m: MailboxRegistry) (f: (M, Peer) => Any): Unit =
     m.listen (pmsg, id) (f)
@@ -19,4 +19,10 @@ class MessageDescriptor [M] (val id: MailboxId, val pmsg: Pickler [M]) {
     c.listen (this) (f)
 
   def apply (msg: M) = MessageSender (id, pmsg, msg)
+}
+
+object MessageDescriptor {
+
+  def apply [M] (id: MailboxId, pmsg: Pickler [M]): MessageDescriptor [M] =
+    new MessageDescriptor (id, pmsg)
 }

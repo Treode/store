@@ -13,7 +13,7 @@ class RootSpec extends FlatSpec {
 
   val geometry = DiskGeometry (10, 6, 1<<20)
 
-  val root = new RootDescriptor (0x5FD8D9DF, Picklers.string)
+  val root = RootDescriptor (0x5FD8D9DF, Picklers.string)
 
   "The roots" should "work" in {
     implicit val scheduler = StubScheduler.random()

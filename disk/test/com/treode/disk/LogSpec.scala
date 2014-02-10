@@ -12,8 +12,8 @@ class LogSpec extends FlatSpec {
   implicit val config = DisksConfig (14, 1<<24, 1<<16)
 
   val geometry = DiskGeometry (10, 6, 1<<20)
-  val root = new RootDescriptor (0xD6BA4C18, Picklers.string)
-  val record = new RecordDescriptor (0x0E4F8ABF, Picklers.string)
+  val root = RootDescriptor (0xD6BA4C18, Picklers.string)
+  val record = RecordDescriptor (0x0E4F8ABF, Picklers.string)
 
   implicit class RichRecordDescriptor [R] (desc: RecordDescriptor [R]) {
 

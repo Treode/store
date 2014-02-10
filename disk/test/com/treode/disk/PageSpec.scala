@@ -15,7 +15,7 @@ class PageSpec extends FlatSpec {
 
   val desc = {
     import Picklers._
-    new PageDescriptor (0xF2D7C1E9, int, seq (int))
+    PageDescriptor (0xF2D7C1E9, int, seq (int))
   }
 
   "The pager" should "fetch after write and restart" in {

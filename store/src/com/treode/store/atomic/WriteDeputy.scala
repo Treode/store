@@ -282,7 +282,7 @@ private object WriteDeputy {
 
   val prepare = {
     import AtomicPicklers._
-    new RequestDescriptor (
+    RequestDescriptor (
         0xFFDD52697F320AD1L,
         tuple (txId, txClock, seq (writeOp)),
         writeResponse)
@@ -290,10 +290,10 @@ private object WriteDeputy {
 
   val commit = {
     import AtomicPicklers._
-    new RequestDescriptor (0xFFF9E8BCFABDFFE6L, tuple (txId, txClock), writeResponse)
+    RequestDescriptor (0xFFF9E8BCFABDFFE6L, tuple (txId, txClock), writeResponse)
   }
 
   val abort = {
     import AtomicPicklers._
-    new RequestDescriptor (0xFF2D9D46D1F3A7F9L, txId, writeResponse)
+    RequestDescriptor (0xFF2D9D46D1F3A7F9L, txId, writeResponse)
   }}

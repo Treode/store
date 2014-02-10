@@ -65,7 +65,7 @@ private object Acceptors {
 
   val checkpoint = {
     import PaxosPicklers._
-    new RecordDescriptor (0x8B97BEF0, simpleMeta)
+    RecordDescriptor (0x8B97BEF0, simpleMeta)
   }
 
   def attach (kit: PaxosRecovery, cb: Callback [Paxos]) {

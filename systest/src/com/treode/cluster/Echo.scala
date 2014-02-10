@@ -11,7 +11,7 @@ object Echo {
 
   private val _echo = {
     import Picklers._
-    new RequestDescriptor (0xFF9F76CB490BE8A8L, string, string)
+    RequestDescriptor (0xFF9F76CB490BE8A8L, string, string)
   }
 
   def attach (localId: HostId) (implicit random: Random, scheduler: Scheduler, cluster: Cluster) {

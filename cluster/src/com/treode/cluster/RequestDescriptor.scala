@@ -4,12 +4,12 @@ import com.treode.async.{Fiber, Scheduler}
 import com.treode.pickle.{Pickler, Picklers}
 import com.treode.cluster.misc.BackoffTimer
 
-class RequestDescriptor [Req, Rsp] (id: MailboxId, preq: Pickler [Req], prsp: Pickler [Rsp]) {
+class RequestDescriptor [Q, A] private (id: MailboxId, preq: Pickler [Q], prsp: Pickler [A]) {
 
-  type Mailbox = EphemeralMailbox [Rsp]
-  type Mediator = RequestMediator [Rsp]
+  type Mailbox = EphemeralMailbox [A]
+  type Mediator = RequestMediator [A]
 
-  abstract class QuorumCollector (req: Req) (acks: Acknowledgements, backoff: BackoffTimer) (
+  abstract class QuorumCollector (req: Q) (acks: Acknowledgements, backoff: BackoffTimer) (
       implicit scheduler: Scheduler, cluster: Cluster) {
 
     private val fiber = new Fiber (scheduler)
@@ -26,7 +26,7 @@ class RequestDescriptor [Req, Rsp] (id: MailboxId, preq: Pickler [Req], prsp: Pi
           timeout()
         }}}
 
-    private def receive (f: Rsp => Any) {
+    private def receive (f: A => Any) {
       mbx.receive { case (rsp, from) =>
         f (rsp)
         acks += from
@@ -38,7 +38,7 @@ class RequestDescriptor [Req, Rsp] (id: MailboxId, preq: Pickler [Req], prsp: Pi
             receive (f)
           }}}}
 
-    def process (f: Rsp => Any) {
+    def process (f: A => Any) {
       receive (f)
       _send()
     }
@@ -52,13 +52,19 @@ class RequestDescriptor [Req, Rsp] (id: MailboxId, preq: Pickler [Req], prsp: Pi
     tuple (MailboxId.pickler, preq)
   }
 
-  def listen (f: (Req, Mediator) => Any) (implicit c: Cluster): Unit =
-    c.listen (new MessageDescriptor (id, _preq)) { case ((mbx, req), c) =>
+  def listen (f: (Q, Mediator) => Any) (implicit c: Cluster): Unit =
+    c.listen (MessageDescriptor (id, _preq)) { case ((mbx, req), c) =>
       f (req, new RequestMediator (prsp, mbx, c))
     }
 
-  def apply (req: Req) = RequestSender [Req, Rsp] (id, _preq, req)
+  def apply (req: Q) = RequestSender [Q, A] (id, _preq, req)
 
   def open (s: Scheduler) (implicit c: Cluster): Mailbox =
     c.open (prsp, s)
+}
+
+object RequestDescriptor {
+
+  def apply [Q, A] (id: MailboxId, preq: Pickler [Q], pans: Pickler [A]): RequestDescriptor [Q, A] =
+    new RequestDescriptor (id, preq, pans)
 }

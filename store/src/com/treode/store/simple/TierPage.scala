@@ -18,5 +18,5 @@ private object TierPage {
 
   def pager (id: TypeId) = {
     import Picklers._
-    new PageDescriptor (id, ulong, pickler)
+    PageDescriptor (id, ulong, pickler)
   }}

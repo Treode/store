@@ -195,20 +195,20 @@ private object Proposer {
 
   val refuse = {
     import PaxosPicklers._
-    new MessageDescriptor (0xFF3725D9448D98D0L, tuple (bytes, long))
+    MessageDescriptor (0xFF3725D9448D98D0L, tuple (bytes, long))
   }
 
   val promise = {
     import PaxosPicklers._
-    new MessageDescriptor (0xFF52232E0CCEE1D2L, tuple (bytes, long, proposal))
+    MessageDescriptor (0xFF52232E0CCEE1D2L, tuple (bytes, long, proposal))
   }
 
   val accept = {
     import PaxosPicklers._
-    new MessageDescriptor (0xFFB799D0E495804BL, tuple (bytes, long))
+    MessageDescriptor (0xFFB799D0E495804BL, tuple (bytes, long))
   }
 
   val chosen = {
     import PaxosPicklers._
-    new MessageDescriptor (0xFF3D8DDECF0F6CBEL, tuple (bytes, bytes))
+    MessageDescriptor (0xFF3D8DDECF0F6CBEL, tuple (bytes, bytes))
   }}

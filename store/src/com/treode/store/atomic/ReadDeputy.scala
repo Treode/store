@@ -19,5 +19,5 @@ private object ReadDeputy {
 
   val read = {
     import AtomicPicklers._
-    new RequestDescriptor (0xFFC4651219C779C3L, tuple (txClock, seq (readOp)), readResponse)
+    RequestDescriptor (0xFFC4651219C779C3L, tuple (txClock, seq (readOp)), readResponse)
   }}

@@ -150,18 +150,18 @@ object SynthTable {
   val root = {
     import Picklers._
     val tiers = Tiers.pickler
-    new RootDescriptor (0x2B30D8AF, tiers)
+    RootDescriptor (0x2B30D8AF, tiers)
   }
 
   val update = {
     import Picklers._
-    new RecordDescriptor (0x6AC99D09, tuple (ulong, int, option (int)))
+    RecordDescriptor (0x6AC99D09, tuple (ulong, int, option (int)))
   }
 
   val compact = {
     import Picklers._
     val tiers = Tiers.pickler
-    new RecordDescriptor (0xA67C3DD1, tiers)
+    RecordDescriptor (0xA67C3DD1, tiers)
   }
 
   def apply () (implicit scheduler: Scheduler, disk: Disks, config: TestConfig): SynthTable = {

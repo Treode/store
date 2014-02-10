@@ -16,5 +16,5 @@ object TierPage {
 
   val pager = {
     import Picklers._
-    new PageDescriptor (0x3A801319, ulong, pickler)
+    PageDescriptor (0x3A801319, ulong, pickler)
   }}

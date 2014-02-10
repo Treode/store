@@ -289,52 +289,52 @@ private object Acceptor {
 
   val query = {
     import PaxosPicklers._
-    new MessageDescriptor (0xFF14D4F00908FB59L, tuple (bytes, long, bytes))
+    MessageDescriptor (0xFF14D4F00908FB59L, tuple (bytes, long, bytes))
   }
 
   val propose = {
     import PaxosPicklers._
-    new MessageDescriptor (0xFF09AFD4F9B688D9L, tuple (bytes, long, bytes))
+    MessageDescriptor (0xFF09AFD4F9B688D9L, tuple (bytes, long, bytes))
   }
 
   val choose = {
     import PaxosPicklers._
-    new MessageDescriptor (0xFF761FFCDF5DEC8BL, tuple (bytes, bytes))
+    MessageDescriptor (0xFF761FFCDF5DEC8BL, tuple (bytes, bytes))
   }
 
   val root = {
     import PaxosPicklers._
-    new RootDescriptor (0xBFD4F3D3, position)
+    RootDescriptor (0xBFD4F3D3, position)
   }
 
   val statii = {
     import PaxosPicklers._
-    new PageDescriptor (0x7C71E2AF, const (0), seq (acceptorStatus))
+    PageDescriptor (0x7C71E2AF, const (0), seq (acceptorStatus))
   }
 
   val open = {
     import PaxosPicklers._
-    new RecordDescriptor (0x77784AB1, tuple (bytes, bytes))
+    RecordDescriptor (0x77784AB1, tuple (bytes, bytes))
   }
 
   val promise = {
     import PaxosPicklers._
-    new RecordDescriptor (0x32A1544B, tuple (bytes, ballotNumber))
+    RecordDescriptor (0x32A1544B, tuple (bytes, ballotNumber))
   }
 
   val accept = {
     import PaxosPicklers._
-    new RecordDescriptor (0xD6CCC0BE, tuple (bytes, ballotNumber, bytes))
+    RecordDescriptor (0xD6CCC0BE, tuple (bytes, ballotNumber, bytes))
   }
 
   val reaccept = {
     import PaxosPicklers._
-    new RecordDescriptor (0x52720640, tuple (bytes, ballotNumber))
+    RecordDescriptor (0x52720640, tuple (bytes, ballotNumber))
   }
 
   val close = {
     import PaxosPicklers._
-    new RecordDescriptor (0xAE980885, tuple (bytes, bytes, long))
+    RecordDescriptor (0xAE980885, tuple (bytes, bytes, long))
   }
 
   trait Post {

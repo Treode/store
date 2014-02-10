@@ -4,8 +4,11 @@ import scala.reflect.ClassTag
 import com.treode.async.Callback
 import com.treode.pickle.Pickler
 
-class PageDescriptor [G, P] (val id: TypeId, val pgrp: Pickler [G], val ppag: Pickler [P]) (
-    implicit val tpag: ClassTag [P]) {
+class PageDescriptor [G, P] private (
+    val id: TypeId,
+    val pgrp: Pickler [G],
+    val ppag: Pickler [P]) (
+        implicit val tpag: ClassTag [P]) {
 
   def read (reload: Reload, pos: Position, cb: Callback [P]): Unit =
     reload.read (this, pos, cb)
@@ -23,4 +26,11 @@ class PageDescriptor [G, P] (val id: TypeId, val pgrp: Pickler [G], val ppag: Pi
     disks.write (this, group, page, cb)
 
   override def toString = s"PageDescriptor($id)"
+}
+
+object PageDescriptor {
+
+  def apply [G, P] (id: TypeId, pgrp: Pickler [G], ppag: Pickler [P]) (
+      implicit tpag: ClassTag [P]): PageDescriptor [G, P] =
+    new PageDescriptor (id, pgrp, ppag)
 }
