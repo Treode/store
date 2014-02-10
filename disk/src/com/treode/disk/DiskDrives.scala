@@ -10,10 +10,13 @@ import com.treode.async.io.File
 private class DiskDrives (
     logd: LogDispatcher,
     paged: PageDispatcher,
-    private var disks: Map [Int, DiskDrive]) (
-        implicit scheduler: Scheduler) extends Disks {
+    private var disks: Map [Int, DiskDrive]
+) (implicit
+    scheduler: Scheduler,
+    config: DisksConfig
+) extends Disks {
 
-  type AttachItem = (Path, File, DiskDriveConfig)
+  type AttachItem = (Path, File, DiskGeometry)
   type AttachPending = (Seq [AttachItem], Callback [Unit])
   type AttachesPending = Queue [AttachPending]
   type CheckpointsPending = List [Callback [Unit]]
@@ -221,13 +224,13 @@ private class DiskDrives (
       disks (disk) .alloc.free (nums)
   }
 
-  def attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit]): Unit =
+  def attach (items: Seq [(Path, File, DiskGeometry)], cb: Callback [Unit]): Unit =
     defer (cb) {
       require (!items.isEmpty, "Must list at least one file to attach.")
       fiber.execute (state.attach (items, cb))
     }
 
-  def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Unit]): Unit =
+  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService, cb: Callback [Unit]): Unit =
     defer (cb) {
       val files = items map (openFile (_, exec))
       attach (files, cb)

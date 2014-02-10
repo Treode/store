@@ -24,12 +24,12 @@ package disk {
     override def getMessage = "Inconsistent superblocks."
   }
 
-  class NoSuperBlocksException extends Exception {
-    override def getMessage = "No superblocks."
-  }
-
   class MissingDisksException (paths: Seq [Path]) extends Exception {
     override def getMessage = s"Missing disks in reattachment: ${paths mkString ", "}"
+  }
+
+  class NoSuperBlocksException extends Exception {
+    override def getMessage = "No superblocks."
   }
 
   class PanickedException (t: Throwable) extends Exception (t) {
@@ -47,11 +47,6 @@ package object disk {
   private [disk] type PageDispatcher = Dispatcher [PickledPage]
   private [disk] type ReplayIterator = AsyncIterator [(Long, Unit => Any)]
 
-  private [disk] val SuperBlockBits = 14
-  private [disk] val SuperBlockBytes = 1 << SuperBlockBits
-  private [disk] val SuperBlockMask = SuperBlockBytes - 1
-  private [disk] val DiskLeadBytes = 1 << (SuperBlockBits + 1)
-
   private [disk] implicit class RichIteratable [A] (iter: Seq [A]) {
 
     def mapBy [K] (k: A => K): Map [K, A] = {
@@ -66,7 +61,7 @@ package object disk {
       b.result
     }}
 
-  private [disk] def openFile (item: (Path, DiskDriveConfig), exec: ExecutorService) = {
+  private [disk] def openFile (item: (Path, DiskGeometry), exec: ExecutorService) = {
     val (path, config) = item
     import StandardOpenOption.{CREATE, READ, WRITE}
     val file = File.open (path, exec, CREATE, READ, WRITE)

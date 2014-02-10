@@ -9,7 +9,9 @@ import DiskTestTools._
 
 class RootSpec extends FlatSpec {
 
-  val config = DiskDriveConfig (10, 6, 1<<20)
+  implicit val config = DisksConfig (13)
+
+  val geometry = DiskGeometry (10, 6, 1<<20)
 
   val root = new RootDescriptor (0x5FD8D9DF, Picklers.string)
 
@@ -24,7 +26,7 @@ class RootSpec extends FlatSpec {
         root.checkpoint (_ ("one"))
         launcher.ready()
       }
-      implicit val disks = recovery.attachAndLaunch (("a", disk1, config))
+      implicit val disks = recovery.attachAndLaunch (("a", disk1, geometry))
       disks.checkpointAndPass()
     }
 

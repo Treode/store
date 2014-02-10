@@ -7,7 +7,7 @@ import com.treode.buffer.PagedBuffer
 private case class SuperBlock (
     id: Int,
     boot: BootBlock,
-    config: DiskDriveConfig,
+    geometry: DiskGeometry,
     free: IntSet,
     logSeg: Int,
     logHead: Long,
@@ -18,15 +18,15 @@ private object SuperBlock {
 
   val pickler = {
     import DiskPicklers._
-    wrap (uint, boot, config, intSet, uint, ulong, uint, ulong)
+    wrap (uint, boot, geometry, intSet, uint, ulong, uint, ulong)
     .build ((SuperBlock.apply _).tupled)
-    .inspect (v => (v.id, v.boot, v.config, v.free, v.logSeg, v.logHead, v.pageSeg, v.pagePos))
+    .inspect (v => (v.id, v.boot, v.geometry, v.free, v.logSeg, v.logHead, v.pageSeg, v.pagePos))
   }
 
-  def position (gen: Int): Long =
-    if ((gen & 0x1) == 0) 0L else SuperBlockBytes
+  def position (gen: Int) (implicit config: DisksConfig): Long =
+    if ((gen & 0x1) == 0) 0L else config.superBlockBytes
 
-  def write (gen: Int, superb: SuperBlock, file: File, cb: Callback [Unit]): Unit =
+  def write (gen: Int, superb: SuperBlock, file: File, cb: Callback [Unit]) (implicit config: DisksConfig): Unit =
     defer (cb) {
       val buf = PagedBuffer (12)
       pickler.pickle (superb, buf)

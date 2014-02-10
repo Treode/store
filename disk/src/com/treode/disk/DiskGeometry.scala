@@ -1,9 +1,12 @@
 package com.treode.disk
 
-class DiskDriveConfig private (
+class DiskGeometry private (
     val segmentBits: Int,
     val blockBits: Int,
     val diskBytes: Long) {
+
+  if (segmentBits == 0)
+    Thread.dumpStack()
 
   val segmentBytes = 1 << segmentBits
   val segmentMask = ~(segmentBytes - 1)
@@ -16,9 +19,9 @@ class DiskDriveConfig private (
   def blockAlignLength (length: Int): Int =
     (length + blockBytes - 1) & blockMask
 
-  private [disk] def segmentBounds (num: Int): SegmentBounds = {
+  private [disk] def segmentBounds (num: Int) (implicit config: DisksConfig): SegmentBounds = {
     require (0 <= num && num < segmentCount)
-    val pos = if (num == 0) DiskLeadBytes else num << segmentBits
+    val pos = if (num == 0) config.diskLeadBytes else num << segmentBits
     val end = (num + 1) << segmentBits
     val limit = if (end > diskBytes) diskBytes else end
     SegmentBounds (num, pos, limit)
@@ -29,7 +32,7 @@ class DiskDriveConfig private (
 
   override def equals (other: Any): Boolean =
     other match {
-      case that: DiskDriveConfig =>
+      case that: DiskGeometry =>
         segmentBits == that.segmentBits &&
         blockBits == that.blockBits &&
         diskBytes == that.diskBytes
@@ -37,23 +40,27 @@ class DiskDriveConfig private (
         false
     }
 
-  override def toString = s"DiskDriveConfig($segmentBits, $blockBits, $diskBytes)"
+  override def toString = s"DiskGeometry($segmentBits, $blockBits, $diskBytes)"
 }
 
-object DiskDriveConfig {
+object DiskGeometry {
 
   def apply (
       segmentBits: Int,
       blockBits: Int,
-      diskBytes: Long): DiskDriveConfig = {
+      diskBytes: Long
+  ) (implicit
+      config: DisksConfig
+  ): DiskGeometry = {
 
     require (segmentBits > 0, "A segment must have more than 0 bytes")
     require (blockBits > 0, "A block must have more than 0 bytes")
     require (diskBytes > 0, "A disk must have more than 0 bytes")
     require (segmentBits >= blockBits+2, "A segment must have at least 4 blocks")
     require (diskBytes >= (1<<(segmentBits+4)), "A disk must have at least 16 segments")
+    require (config.superBlockBits >= blockBits, "A superblock must be at least one disk block.")
 
-    new DiskDriveConfig (
+    new DiskGeometry (
         segmentBits,
         blockBits,
         diskBytes)
@@ -62,6 +69,10 @@ object DiskDriveConfig {
   val pickler = {
     import DiskPicklers._
     wrap (uint, uint, ulong)
-    .build ((apply _).tupled)
+    .build { v =>
+      val (s, b, d) = v
+      require (s > 0 && b > 0 && d > 0)
+      new DiskGeometry (s, b, d)
+    }
     .inspect (v => (v.segmentBits, v.blockBits, v.diskBytes))
   }}

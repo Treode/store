@@ -7,7 +7,7 @@ import java.util.concurrent.ExecutorService
 import com.treode.async.{Callback, Scheduler}
 import com.treode.async.io.File
 
-private class RecoveryBuilder (implicit scheduler: Scheduler) extends Recovery {
+private class RecoveryBuilder (implicit scheduler: Scheduler, config: DisksConfig) extends Recovery {
 
   private val records = new RecordRegistry
   private val loaders = new ReloadRegistry
@@ -43,9 +43,9 @@ private class RecoveryBuilder (implicit scheduler: Scheduler) extends Recovery {
   def reattach (items: Seq [Path], exec: ExecutorService, cb: Callback [Disks]): Unit =
     close (cb) .reattach (items, exec)
 
-  def attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Disks]): Unit =
+  def attach (items: Seq [(Path, File, DiskGeometry)], cb: Callback [Disks]): Unit =
     close (cb) .attach (items)
 
-  def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Disks]): Unit =
+  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService, cb: Callback [Disks]): Unit =
     close (cb) .attach (items, exec)
 }

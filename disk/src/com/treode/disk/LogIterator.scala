@@ -20,8 +20,9 @@ private class LogIterator private (
     private var logSeg: SegmentBounds,
     private var pageSeg: SegmentBounds,
     private var pageLedger: PageLedger
-) (
-    implicit scheduler: Scheduler
+) (implicit
+    scheduler: Scheduler,
+    config: DisksConfig
 ) extends AsyncIterator [(Long, Unit => Any)] {
 
   private var logPos = superb.logHead
@@ -85,7 +86,7 @@ private class LogIterator private (
   def close (logd: LogDispatcher, paged: PageDispatcher): DiskDrive = {
     buf.clear()
     val disk =
-      new DiskDrive (superb.id, path, file, superb.config, alloc, logd, paged, logSegs,
+      new DiskDrive (superb.id, path, file, superb.geometry, alloc, logd, paged, logSegs,
           superb.logHead, logPos, logSeg.limit, buf, pageSeg, superb.pagePos, pageLedger)
     logd.receive (disk.recordReceiver)
     paged.receive (disk.pageReceiver)
@@ -99,11 +100,13 @@ object LogIterator {
       file: File,
       superb: SuperBlock,
       records: RecordRegistry,
-      cb: Callback [(Int, LogIterator)]) (
-          implicit scheduler: Scheduler): Unit =
+      cb: Callback [(Int, LogIterator)]
+  ) (implicit
+      scheduler: Scheduler,
+      config: DisksConfig): Unit =
 
     defer (cb) {
-      val alloc = SegmentAllocator.recover (superb.config, superb.free)
+      val alloc = SegmentAllocator.recover (superb.geometry, superb.free)
       val logSeg = alloc.alloc (superb.logSeg)
       val logSegs = new ArrayDeque [Int]
       logSegs.add (logSeg.num)
@@ -122,8 +125,11 @@ object LogIterator {
       useGen1: Boolean,
       reads: Seq [SuperBlocks],
       records: RecordRegistry,
-      cb: Callback [DiskDrives]) (
-          implicit scheduler: Scheduler): Unit =
+      cb: Callback [DiskDrives]
+  ) (implicit
+      scheduler: Scheduler,
+      config: DisksConfig
+  ): Unit =
 
     defer (cb) {
 

@@ -9,7 +9,9 @@ import DiskTestTools._
 
 class PageSpec extends FlatSpec {
 
-  val config = DiskDriveConfig (10, 6, 1<<20)
+  implicit val config = DisksConfig (13)
+
+  val geometry = DiskGeometry (10, 6, 1<<20)
 
   val desc = {
     import Picklers._
@@ -24,7 +26,7 @@ class PageSpec extends FlatSpec {
 
     {
       implicit val recovery = Disks.recover()
-      implicit val disks = recovery.attachAndLaunch (("a", disk1, config))
+      implicit val disks = recovery.attachAndLaunch (("a", disk1, geometry))
       pos = disks.writeAndPass (desc, 0, seq)
       expectResult (seq) (disks.readAndPass (desc, pos))
     }

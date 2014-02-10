@@ -16,7 +16,7 @@ private class DiskDrive (
     val id: Int,
     val path: Path,
     val file: File,
-    val config: DiskDriveConfig,
+    val geometry: DiskGeometry,
     val alloc: SegmentAllocator,
     val logd: LogDispatcher,
     val paged: PageDispatcher,
@@ -27,8 +27,11 @@ private class DiskDrive (
     var logBuf: PagedBuffer,
     var pageSeg: SegmentBounds,
     var pageHead: Long,
-    var pageLedger: PageLedger) (
-        implicit val scheduler: Scheduler) {
+    var pageLedger: PageLedger
+) (implicit
+    val scheduler: Scheduler,
+    val config: DisksConfig
+) {
 
   private val LogPriority = 1
   private val PagePriority = 2
@@ -139,7 +142,7 @@ private class DiskDrive (
     defer (cb) {
       state = Checkpoint
       val superb =
-        SuperBlock (id, boot, config, alloc.free, logSegs.peek, logHead, pageSeg.num, pageHead)
+        SuperBlock (id, boot, geometry, alloc.free, logSegs.peek, logHead, pageSeg.num, pageHead)
       val _cb = ready (cb, ())
       if (pageLedgerDirty) {
         pageLedgerDirty = false
@@ -304,8 +307,8 @@ private class DiskDrive (
     var realloc = false
     for (page <- pages) {
       projector.add (page.id, page.group)
-      val pageBytes = config.blockAlignLength (page.byteSize)
-      val ledgerBytes = config.blockAlignLength (projector.byteSize)
+      val pageBytes = geometry.blockAlignLength (page.byteSize)
+      val ledgerBytes = geometry.blockAlignLength (projector.byteSize)
       if (ledgerBytes + pageBytes < limit) {
         accepts.add (page)
         totalBytes += pageBytes
@@ -323,7 +326,7 @@ private class DiskDrive (
     for (page <- pages) {
       val start = buffer.writePos
       page.write (buffer)
-      buffer.writeZeroToAlign (config.blockBits)
+      buffer.writeZeroToAlign (geometry.blockBits)
       val length = buffer.writePos - start
       callbacks.add (DiskDrive.offset (id, start, length, page.cb))
       ledger.add (page.id, page.group, length)
@@ -394,27 +397,30 @@ private object DiskDrive {
       id: Int,
       path: Path,
       file: File,
-      config: DiskDriveConfig,
+      geometry: DiskGeometry,
       boot: BootBlock,
       logd: LogDispatcher,
       paged: PageDispatcher,
-      cb: Callback [DiskDrive]) (
-          implicit scheduler: Scheduler): Unit =
+      cb: Callback [DiskDrive]
+  ) (implicit
+      scheduler: Scheduler,
+      config: DisksConfig
+  ): Unit =
 
     defer (cb) {
 
-      val alloc = SegmentAllocator.init (config)
+      val alloc = SegmentAllocator.init (geometry)
       val logSeg = alloc.alloc()
       val pageSeg = alloc.alloc()
       val superb =
-        SuperBlock (id, boot, config, alloc.free, logSeg.num, logSeg.pos,
+        SuperBlock (id, boot, geometry, alloc.free, logSeg.num, logSeg.pos,
             pageSeg.num, pageSeg.limit)
 
       val latch = Callback.latch (3, callback (cb) { _: Unit =>
         val logSegs = new ArrayDeque [Int]
         logSegs.add (logSeg.num)
         val disk =
-          new DiskDrive (id, path, file, config, alloc, logd, paged, logSegs, logSeg.pos,
+          new DiskDrive (id, path, file, geometry, alloc, logd, paged, logSegs, logSeg.pos,
               logSeg.pos, logSeg.limit, PagedBuffer (12), pageSeg, pageSeg.limit, new PageLedger)
         logd.receive (disk.recordReceiver)
         paged.receive (disk.pageReceiver)
@@ -426,13 +432,21 @@ private object DiskDrive {
       PageLedger.write (PageLedger.Zipped.empty, file, pageSeg.pos, latch)
     }
 
-  def init (items: Seq [(Path, File, DiskDriveConfig)], base: Int, boot: BootBlock,
-      logd: LogDispatcher, paged: PageDispatcher, cb: Callback [Seq [DiskDrive]]) (
-          implicit scheduler: Scheduler): Unit =
+  def init (
+      items: Seq [(Path, File, DiskGeometry)],
+      base: Int,
+      boot: BootBlock,
+      logd: LogDispatcher,
+      paged: PageDispatcher,
+      cb: Callback [Seq [DiskDrive]]
+  ) (implicit
+      scheduler: Scheduler,
+      config: DisksConfig
+  ): Unit =
 
     defer (cb) {
       val latch = Callback.seq (items.size, cb)
-      for (((path, file, config), i) <- items zipWithIndex) {
-        DiskDrive.init (base + i, path, file, config, boot, logd, paged, latch)
+      for (((path, file, geometry), i) <- items zipWithIndex) {
+        DiskDrive.init (base + i, path, file, geometry, boot, logd, paged, latch)
       }}
 }

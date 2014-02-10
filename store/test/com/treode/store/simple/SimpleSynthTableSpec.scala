@@ -4,7 +4,7 @@ import java.nio.file.Paths
 
 import com.treode.async.{CallbackCaptor, StubScheduler}
 import com.treode.async.io.{File, StubFile}
-import com.treode.disk.{Disks, DiskDriveConfig}
+import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.StoreConfig
 import org.scalatest.FreeSpec
 
@@ -13,10 +13,11 @@ import SimpleTestTools._
 class SimpleSynthTableSpec extends FreeSpec {
 
   private def mkTable (disk: File) (implicit scheduler: StubScheduler): SynthTable = {
+    implicit val disksConfig = DisksConfig (13)
     implicit val recovery = Disks.recover()
     val disksCb = CallbackCaptor [Disks]
-    val diskDriveConfig = DiskDriveConfig (16, 12, 1<<30)
-    recovery.attach (Seq ((Paths.get ("a"), disk, diskDriveConfig)), disksCb)
+    val geometry = DiskGeometry (16, 12, 1<<30)
+    recovery.attach (Seq ((Paths.get ("a"), disk, geometry)), disksCb)
     scheduler.runTasks()
     implicit val disks = disksCb.passed
     implicit val storeConfig = StoreConfig (1<<12)

@@ -7,7 +7,7 @@ import com.treode.async.{AsyncIterator, Callback, CallbackCaptor, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.pickle.Picklers
 import com.treode.store._
-import com.treode.disk.{Disks, DiskDriveConfig, PageDescriptor, Position}
+import com.treode.disk.{Disks, DisksConfig, DiskGeometry, PageDescriptor, Position}
 import org.scalatest.WordSpec
 
 import Cardinals.One
@@ -25,12 +25,13 @@ class TierSpec extends WordSpec {
     }}
 
   private def setup() = {
+    implicit val disksConfig = DisksConfig (13)
     implicit val scheduler = StubScheduler.random()
     implicit val recovery = Disks.recover()
     val file = new StubFile
-    val config = DiskDriveConfig (20, 12, 1<<30)
+    val geometry = DiskGeometry (20, 12, 1<<30)
     val cb = CallbackCaptor [Disks]
-    recovery.attach (Seq ((Paths.get ("a"), file, config)), cb)
+    recovery.attach (Seq ((Paths.get ("a"), file, geometry)), cb)
     scheduler.runTasks()
     (scheduler, cb.passed)
   }

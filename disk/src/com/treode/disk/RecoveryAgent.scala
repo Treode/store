@@ -12,15 +12,18 @@ private class RecoveryAgent (
     records: RecordRegistry,
     loaders: ReloadRegistry,
     launches: ArrayList [Launch => Any],
-    val cb: Callback [Disks]) (
-        implicit val scheduler: Scheduler) {
+    val cb: Callback [Disks]
+) (implicit
+    val scheduler: Scheduler,
+    val config: DisksConfig
+) {
 
   def launch (disks: DiskDrives): Unit =
     defer (cb) {
       new LaunchAgent (disks, launches, cb)
     }
 
-  def attach (items: Seq [(Path, File, DiskDriveConfig)]): Unit =
+  def attach (items: Seq [(Path, File, DiskGeometry)]): Unit =
     defer (cb) {
 
       val logd = new Dispatcher [PickledRecord] (scheduler)
@@ -38,7 +41,7 @@ private class RecoveryAgent (
       DiskDrive.init (items, 0, boot, logd, paged, disksPrimed)
     }
 
-  def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService): Unit =
+  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Unit =
     defer (cb) {
       val files = items map (openFile (_, exec))
       attach (files)

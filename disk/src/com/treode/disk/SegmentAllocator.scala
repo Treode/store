@@ -1,10 +1,11 @@
 package com.treode.disk
 
-private class SegmentAllocator private (config: DiskDriveConfig, private var _free: IntSet) {
+private class SegmentAllocator private (geometry: DiskGeometry, private var _free: IntSet) (
+        implicit config: DisksConfig) {
 
   def alloc (num: Int): SegmentBounds = {
     _free = _free.remove (num)
-    config.segmentBounds (num)
+    geometry.segmentBounds (num)
   }
 
   def alloc(): SegmentBounds = {
@@ -28,13 +29,13 @@ private class SegmentAllocator private (config: DiskDriveConfig, private var _fr
 
 private object SegmentAllocator {
 
-  def init (config: DiskDriveConfig): SegmentAllocator = {
-    val all = IntSet.fill (config.segmentCount)
-    val superbs = IntSet.fill (DiskLeadBytes >> config.segmentBits)
+  def init (geometry: DiskGeometry) (implicit config: DisksConfig): SegmentAllocator = {
+    val all = IntSet.fill (geometry.segmentCount)
+    val superbs = IntSet.fill (config.diskLeadBytes >> geometry.segmentBits)
     val free = all.remove (superbs)
-    new SegmentAllocator (config, free)
+    new SegmentAllocator (geometry, free)
   }
 
-  def recover (config: DiskDriveConfig, free: IntSet): SegmentAllocator =
-    new SegmentAllocator (config, free)
+  def recover (geometry: DiskGeometry, free: IntSet) (implicit config: DisksConfig) : SegmentAllocator =
+    new SegmentAllocator (geometry, free)
 }

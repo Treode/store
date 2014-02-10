@@ -20,10 +20,10 @@ private class SuperBlocks (
 
 private object SuperBlocks {
 
-  def read (path: Path, file: File, cb: Callback [SuperBlocks]): Unit =
+  def read (path: Path, file: File, cb: Callback [SuperBlocks]) (implicit config: DisksConfig) {
     defer (cb) {
 
-      val buffer = PagedBuffer (SuperBlockBits+1)
+      val buffer = PagedBuffer (config.superBlockBits+1)
 
       def unpickleSuperBlock (pos: Int): Option [SuperBlock] =
         try {
@@ -35,12 +35,12 @@ private object SuperBlocks {
 
       def unpickleSuperBlocks() {
         val sb1 = unpickleSuperBlock (0)
-        val sb2 = unpickleSuperBlock (SuperBlockBytes)
+        val sb2 = unpickleSuperBlock (config.superBlockBytes)
         cb (new SuperBlocks (path, file, sb1, sb2))
       }
 
-      file.fill (buffer, 0, DiskLeadBytes, new Callback [Unit] {
+      file.fill (buffer, 0, config.diskLeadBytes, new Callback [Unit] {
         def pass (v: Unit) = unpickleSuperBlocks()
         def fail (t: Throwable) = unpickleSuperBlocks()
       })
-    }}
+    }}}

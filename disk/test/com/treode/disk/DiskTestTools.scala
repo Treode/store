@@ -14,7 +14,7 @@ private object DiskTestTools {
 
   implicit class RichRecovery (recovery: Recovery) (implicit scheduler: StubScheduler) {
 
-    type AttachItem = (String, File, DiskDriveConfig)
+    type AttachItem = (String, File, DiskGeometry)
 
     private def _attachAndPass (items: Seq [AttachItem], launch: Boolean): DiskDrives = {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
@@ -27,10 +27,10 @@ private object DiskTestTools {
       disks
     }
 
-    def attachHoldLaunch (items: (String, File, DiskDriveConfig)*): DiskDrives =
+    def attachHoldLaunch (items: (String, File, DiskGeometry)*): DiskDrives =
       _attachAndPass (items, false)
 
-    def attachAndLaunch (items: (String, File, DiskDriveConfig)*): DiskDrives =
+    def attachAndLaunch (items: (String, File, DiskGeometry)*): DiskDrives =
       _attachAndPass (items, true)
 
     def reattachAndPass (items: (String, File)*): DiskDrives = {
@@ -66,19 +66,19 @@ private object DiskTestTools {
         expectResult (id) (disk.id)
       }}
 
-    def attachAndPass (items: (String, File, DiskDriveConfig)*) {
+    def attachAndPass (items: (String, File, DiskGeometry)*) {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
       CallbackCaptor.pass [Unit] (disks.attach (_items, _))
       assertLaunched (false)
     }
 
-    def attachAndFail [E] (items: (String, File, DiskDriveConfig)*) (implicit m: Manifest [E]) {
+    def attachAndFail [E] (items: (String, File, DiskGeometry)*) (implicit m: Manifest [E]) {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
       CallbackCaptor.fail [E, Unit] (disks.attach (_items, _))
       assertLaunched (false)
     }
 
-    def attachAndHold (items: (String, File, DiskDriveConfig)*): CallbackCaptor [Unit] = {
+    def attachAndHold (items: (String, File, DiskGeometry)*): CallbackCaptor [Unit] = {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
       val cb = CallbackCaptor [Unit]
       disks.attach (_items, cb)

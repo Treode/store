@@ -8,7 +8,7 @@ import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
 import com.treode.store.paxos.Paxos
-import com.treode.disk.{Disks, DiskDriveConfig}
+import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.temp.TestableTempKit
 
 private class StubAtomicHost (id: HostId, network: StubNetwork)
@@ -17,13 +17,14 @@ extends StubActiveHost (id, network) {
 
   implicit val cluster: Cluster = this
 
+  implicit val disksConfig = DisksConfig (13)
   implicit val recovery = Disks.recover()
   implicit val storeConfig = StoreConfig (1<<16)
   val _paxos = CallbackCaptor [Paxos]
   Paxos.recover (_paxos)
   val file = new StubFile
-  val config = DiskDriveConfig (10, 6, 1<<20)
-  recovery.attach (Seq ((Paths.get ("a"), file, config)), Callback.ignore)
+  val geometry = DiskGeometry (10, 6, 1<<20)
+  recovery.attach (Seq ((Paths.get ("a"), file, geometry)), Callback.ignore)
   scheduler.runTasks()
   while (!(_paxos.hasPassed || _paxos.hasFailed))
     Thread.sleep (1)

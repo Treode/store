@@ -2,7 +2,9 @@ package com.treode.disk
 
 import org.scalatest.FlatSpec
 
-class DiskDriveConfigSpec extends FlatSpec {
+class DiskGeometrySpec extends FlatSpec {
+
+  implicit val config = DisksConfig (13)
 
   val block = 1<<12
   val seg = 1<<16
@@ -10,10 +12,10 @@ class DiskDriveConfigSpec extends FlatSpec {
   def expectBounds (id: Int, pos: Long, limit: Long) (actual: SegmentBounds): Unit =
     expectResult (SegmentBounds (id, pos, limit)) (actual)
 
-  "The DiskDriveConfig" should "compute the segment count" in {
+  "DiskGeometry" should "compute the segment count" in {
     val disk1 = 1<<20
     val disk2 = 1<<21
-    def c (diskBytes: Long) = DiskDriveConfig (16, 12, diskBytes).segmentCount
+    def c (diskBytes: Long) = DiskGeometry (16, 12, diskBytes).segmentCount
     expectResult (16) (c (disk1))
     expectResult (17) (c (disk1 + 4*block))
     expectResult (32) (c (disk2))
@@ -24,7 +26,7 @@ class DiskDriveConfigSpec extends FlatSpec {
   }
 
   it should "align block length" in {
-    val c = DiskDriveConfig (16, 12, 1<<20)
+    val c = DiskGeometry (16, 12, 1<<20)
     expectResult (0) (c.blockAlignLength (0))
     expectResult (block) (c.blockAlignLength (1))
     expectResult (block) (c.blockAlignLength (4095))
@@ -33,8 +35,8 @@ class DiskDriveConfigSpec extends FlatSpec {
   }
 
   it should "compute the segment bounds" in {
-    val c = DiskDriveConfig (16, 12, (1<<20) + 6*block)
-    expectBounds (0, DiskLeadBytes, seg) (c.segmentBounds (0))
+    val c = DiskGeometry (16, 12, (1<<20) + 6*block)
+    expectBounds (0, config.diskLeadBytes, seg) (c.segmentBounds (0))
     expectBounds (1, seg, 2*seg) (c.segmentBounds (1))
     expectBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))
     expectBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))

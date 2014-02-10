@@ -8,9 +8,9 @@ import com.treode.async.io.File
 
 trait Disks {
 
-  def attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Unit])
+  def attach (items: Seq [(Path, File, DiskGeometry)], cb: Callback [Unit])
 
-  def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Unit])
+  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService, cb: Callback [Unit])
 
   def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit])
 
@@ -23,6 +23,6 @@ trait Disks {
 
 object Disks {
 
-  def recover () (implicit scheduler: Scheduler): Recovery =
+  def recover () (implicit scheduler: Scheduler, config: DisksConfig): Recovery =
     new RecoveryBuilder
 }

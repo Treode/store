@@ -18,7 +18,7 @@ trait Recovery {
 
   def reattach (items: Seq [Path], executor: ExecutorService, cb: Callback [Disks])
 
-  def attach (items: Seq [(Path, File, DiskDriveConfig)], cb: Callback [Disks])
+  def attach (items: Seq [(Path, File, DiskGeometry)], cb: Callback [Disks])
 
-  def attach (items: Seq [(Path, DiskDriveConfig)], exec: ExecutorService, cb: Callback [Disks])
+  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService, cb: Callback [Disks])
 }

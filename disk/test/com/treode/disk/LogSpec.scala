@@ -9,10 +9,10 @@ import DiskTestTools._
 
 class LogSpec extends FlatSpec {
 
-  val config = DiskDriveConfig (10, 6, 1<<20)
+  implicit val config = DisksConfig (13)
 
+  val geometry = DiskGeometry (10, 6, 1<<20)
   val root = new RootDescriptor (0xD6BA4C18, Picklers.string)
-
   val record = new RecordDescriptor (0x0E4F8ABF, Picklers.string)
 
   implicit class RichRecordDescriptor [R] (desc: RecordDescriptor [R]) {
@@ -28,7 +28,7 @@ class LogSpec extends FlatSpec {
     {
       implicit val recovery = Disks.recover()
       record.replay (_ => fail ("Nothing to replay."))
-      implicit val disks = recovery.attachAndLaunch (("a", disk1, config))
+      implicit val disks = recovery.attachAndLaunch (("a", disk1, geometry))
       record.recordAndPass ("one")
     }
 

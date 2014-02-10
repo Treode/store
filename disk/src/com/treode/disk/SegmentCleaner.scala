@@ -2,7 +2,7 @@ package com.treode.disk
 
 import com.treode.async.{Callback, callback, continue}
 
-class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
+class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) (implicit config: DisksConfig) {
   import disks.releaser
 
   type Groups = Map [TypeId, Set [PageGroup]]
@@ -54,7 +54,7 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
     val loop = new Callback [PageLedger] {
 
       var ledger: PageLedger = null
-      var min = disk.config.segmentBytes * minLivePercentage
+      var min = disk.geometry.segmentBytes * minLivePercentage
       var cut = min
       var target = List.empty [(SegmentPointer, PageLedger, Long)]
 
@@ -69,13 +69,13 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
         }
         while (!allocIter.hasNext && diskIter.hasNext) {
           disk = diskIter.next
-          min = disk.config.segmentBytes * 0.9
+          min = disk.geometry.segmentBytes * 0.9
           cut = min
           allocIter = ???
         }
         if (allocIter.hasNext) {
           alloc = allocIter.next
-          val bounds = disk.config.segmentBounds (alloc)
+          val bounds = disk.geometry.segmentBounds (alloc)
           seg = SegmentPointer (disk.id, bounds.num)
           PageLedger.read (disk.file, bounds.pos, this)
         } else {
@@ -90,7 +90,7 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
       def fail (t: Throwable) = cb.fail (t)
     }
 
-    val bounds = disk.config.segmentBounds (alloc)
+    val bounds = disk.geometry.segmentBounds (alloc)
         seg = SegmentPointer (disk.id, bounds.num)
     PageLedger.read (disk.file, bounds.pos, loop)
   }
