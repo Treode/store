@@ -3,6 +3,7 @@ package com.treode.disk
 import java.nio.file.Path
 import java.util.{ArrayDeque, ArrayList, PriorityQueue}
 import scala.collection.JavaConversions._
+import scala.collection.mutable.ArrayBuffer
 import scala.language.postfixOps
 
 import com.treode.async._
@@ -130,11 +131,6 @@ private class DiskDrive (
       })
     }
 
-  private def _mark (cb: Callback [Unit]): Unit =
-    invoke (cb) {
-      logHead = logTail
-    }
-
   private def _checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
     defer (cb) {
       state = Checkpoint
@@ -149,11 +145,6 @@ private class DiskDrive (
       } else {
         SuperBlock.write (boot.gen, superb, file, _cb)
       }}
-
-  private def _allocated (cb: Callback [IntSet]): Unit =
-    defer (cb) {
-      cb (alloc.allocated)
-    }
 
   object Ready extends State {
 
@@ -242,11 +233,22 @@ private class DiskDrive (
   def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
     fiber.execute (state.checkpoint (boot, cb))
 
-  def mark (cb: Callback [Unit]): Unit =
-    fiber.execute (_mark (cb))
+  def mark (cb: Callback [Unit]): Unit = fiber.execute {
+    invoke (cb) {
+      logHead = logTail
+    }}
 
-  def allocated (cb: Callback [IntSet]): Unit =
-    fiber.execute (_allocated (cb))
+  def cleanable (cb: Callback [(DiskDrive, IntSet)]): Unit = fiber.execute {
+    defer (cb) {
+      val skip = new ArrayBuffer [Int] (logSegs.size + 1)
+      skip ++= logSegs
+      skip += pageSeg.num
+      cb (this, alloc.cleanable (skip))
+    }}
+
+  def free (segs: Seq [Int]): Unit = fiber.execute {
+    alloc.free (segs)
+  }
 
   def splitRecords (entries: ArrayList [PickledRecord]) = {
     val accepts = new ArrayList [PickledRecord]
@@ -283,7 +285,7 @@ private class DiskDrive (
     val callbacks = writeRecords (accepts)
     val flushed = Callback.fanout (callbacks, scheduler)
 
-    disks.tally (logBuf.readableBytes, accepts.size)
+    disks.tallyLog (logBuf.readableBytes, accepts.size)
     if (realloc) {
       reallocLog (callback (flushed) { _ =>
         logd.receive (recordReceiver)
@@ -343,6 +345,7 @@ private class DiskDrive (
 
     val flushed = continue (logged) { _: Unit =>
       if (realloc) {
+        disks.tallyPages (1)
         reallocPages (ledger, callback (logged) { _ =>
           paged.receive (pageReceiver)
           pos

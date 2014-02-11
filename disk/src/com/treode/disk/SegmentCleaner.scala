@@ -1,14 +1,80 @@
 package com.treode.disk
 
+import java.util.PriorityQueue
+import scala.collection.JavaConversions._
+
 import com.treode.async.{Callback, callback, continue}
 
-class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) (implicit config: DisksConfig) {
-  import disks.releaser
+class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
+  import SegmentCleaner.{Groups, union}
+  import disks.{config, releaser}
+
+  val threshold = 0.9
+
+  def compact (groups: Groups, cb: Callback [Unit]) {
+    val latch = Callback.latch (groups.size, cb)
+    for ((id, gs) <- groups)
+      pages.compact (id, gs, latch)
+  }
+
+  def probe (iter: Iterator [SegmentPointer], cb: Callback [Seq [(SegmentPointer, PageLedger)]]) {
+
+    val candidates = new PriorityQueue [(Double, SegmentPointer, PageLedger)]
+    var seg: SegmentPointer = null
+    var bounds: SegmentBounds = null
+
+    val loop = new Callback [PageLedger] {
+
+      var ledger: PageLedger = null
+
+      val pagesProbed = continue (cb) { live: Long =>
+        if (live == 0) {
+          disks.free (Seq (seg))
+        } else {
+          val util = live.toDouble / (bounds.limit - bounds.pos).toDouble
+          if (util < threshold)
+            candidates.add ((1D - util, seg, ledger))
+          if (candidates.size >= config.cleaningLoad)
+            candidates.remove()
+        }
+        if (iter.hasNext) {
+          seg = iter.next
+          bounds = seg.disk.geometry.segmentBounds (seg.num)
+          PageLedger.read (seg.disk.file, bounds.pos, this)
+        } else {
+          cb (candidates.map (v => (v._2, v._3)) .toSeq)
+        }}
+
+      def pass (ledger: PageLedger) {
+        this.ledger = ledger
+        pages.probe (ledger, pagesProbed)
+      }
+
+      def fail (t: Throwable) = cb.fail (t)
+    }
+
+    if (iter.hasNext) {
+      seg = iter.next
+      bounds = seg.disk.geometry.segmentBounds (seg.num)
+      PageLedger.read (seg.disk.file, bounds.pos, loop)
+    } else {
+      cb (List.empty)
+    }}
+
+  def clean (iter: Iterator [SegmentPointer], cb: Callback [Boolean]) {
+    probe (iter, continue (cb) { segments =>
+      val groups = union (segments map (_._2.groups))
+      compact (groups, callback (cb) { _ =>
+        releaser.release (segments map (_._1))
+        !groups.isEmpty
+      })
+    })
+  }
+}
+
+object SegmentCleaner {
 
   type Groups = Map [TypeId, Set [PageGroup]]
-
-  val minLivePercentage = 0.9
-  val liveByteRange = 1 << 12
 
   def union (maps: Seq [Groups]): Groups = {
     var result = Map.empty [TypeId, Set [PageGroup]]
@@ -21,88 +87,4 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) (implicit config: 
         case None => result += (id -> gs1)
       }}
     result
-  }
-
-  def compact (groups: Groups, cb: Callback [Unit]) {
-    val latch = Callback.latch (groups.size, cb)
-    for ((id, gs) <- groups)
-      pages.compact (id, gs, latch)
-  }
-
-  def probe (cb: Callback [List [(SegmentPointer, PageLedger)]]) {
-
-    var diskIter = disks.iterator
-    if (!diskIter.hasNext) {
-      cb (List.empty)
-      return
-    }
-    var disk = diskIter.next
-
-    var allocIter: Iterator [Int] = ???
-    while (!allocIter.hasNext && diskIter.hasNext) {
-      disk = diskIter.next
-      allocIter = ???
-    }
-    if (!allocIter.hasNext) {
-      cb (List.empty)
-      return
-    }
-    var alloc = allocIter.next
-
-    var seg: SegmentPointer = null
-
-    val loop = new Callback [PageLedger] {
-
-      var ledger: PageLedger = null
-      var min = disk.geometry.segmentBytes * minLivePercentage
-      var cut = min
-      var target = List.empty [(SegmentPointer, PageLedger, Long)]
-
-      val pagesProbed = continue (cb) { live: Long =>
-        if (live < min) {
-          min = live
-          cut = live + liveByteRange
-          target = target.filter (_._3 < cut)
-          target ::= (seg, ledger, live)
-        } else if (live < cut) {
-          target ::= (seg, ledger, live)
-        }
-        while (!allocIter.hasNext && diskIter.hasNext) {
-          disk = diskIter.next
-          min = disk.geometry.segmentBytes * 0.9
-          cut = min
-          allocIter = ???
-        }
-        if (allocIter.hasNext) {
-          alloc = allocIter.next
-          val bounds = disk.geometry.segmentBounds (alloc)
-          seg = SegmentPointer (disk.id, bounds.num)
-          PageLedger.read (disk.file, bounds.pos, this)
-        } else {
-          cb (target.map (v => (v._1, v._2)))
-        }}
-
-      def pass (ledger: PageLedger) {
-        this.ledger = ledger
-        pages.probe (ledger, pagesProbed)
-      }
-
-      def fail (t: Throwable) = cb.fail (t)
-    }
-
-    val bounds = disk.geometry.segmentBounds (alloc)
-        seg = SegmentPointer (disk.id, bounds.num)
-    PageLedger.read (disk.file, bounds.pos, loop)
-  }
-
-  def clean (cb: Callback [Boolean]) {
-    probe (continue (cb) { segments =>
-      val groups = union (segments map (_._2.groups))
-      compact (groups, callback (cb) { _ =>
-        releaser.release (segments map (_._1))
-        !groups.isEmpty
-      })
-    })
-  }
-
-}
+  }}

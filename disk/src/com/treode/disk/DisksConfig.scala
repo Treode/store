@@ -3,7 +3,9 @@ package com.treode.disk
 class DisksConfig private (
     val superBlockBits: Int,
     val checkpointBytes: Int,
-    val checkpointEntries: Int
+    val checkpointEntries: Int,
+    val cleaningFrequency: Int,
+    val cleaningLoad: Int
 ) {
 
   val superBlockBytes = 1 << superBlockBits
@@ -32,19 +34,30 @@ object DisksConfig {
   def apply (
       superBlockBits: Int,
       checkpointBytes: Int,
-      checkpointEntries: Int
+      checkpointEntries: Int,
+      cleaningFrequency: Int,
+      cleaningLoad: Int
   ): DisksConfig = {
 
     require (superBlockBits > 0, "A superblock must have more than 0 bytes")
     require (checkpointBytes > 0, "The checkpoint interval must be more than 0 bytes")
     require (checkpointEntries > 0, "The checkpoint interval must be more than 0 entries")
+    require (cleaningFrequency > 0, "The cleaning frequency must be more than 0 segments")
+    require (cleaningLoad > 0, "The cleaning load must be more than 0 segemnts")
 
-    new DisksConfig (superBlockBits, checkpointBytes, checkpointEntries)
+    new DisksConfig (
+        superBlockBits,
+        checkpointBytes,
+        checkpointEntries,
+        cleaningFrequency,
+        cleaningLoad)
   }
 
   val pickler = {
     import DiskPicklers._
-    wrap (uint, uint, uint)
+    wrap (uint, uint, uint, uint, uint)
     .build ((apply _).tupled)
-    .inspect (v => (v.superBlockBits, v.checkpointBytes, v.checkpointEntries))
+    .inspect (v => (
+        v.superBlockBits, v.checkpointBytes, v.checkpointEntries, v.cleaningFrequency,
+        v.cleaningLoad))
   }}

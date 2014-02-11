@@ -15,13 +15,13 @@ private class SegmentAllocator private (geometry: DiskGeometry, private var _fre
     alloc (iter.next())
   }
 
-  def allocated: IntSet =
-    _free.complement
-
   def free (nums: Seq [Int]) {
     val _nums = IntSet (nums: _*)
     _free = _free.add (_nums)
   }
+
+  def cleanable (skip: Seq [Int]): IntSet =
+    _free.complement.remove (IntSet (skip: _*))
 
   def free: IntSet =
     _free.clone()

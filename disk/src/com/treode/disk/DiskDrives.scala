@@ -4,7 +4,7 @@ import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 import scala.collection.immutable.Queue
 
-import com.treode.async.{Callback, Fiber, Scheduler, defer}
+import com.treode.async.{Callback, Fiber, Scheduler, callback, continue, defer}
 import com.treode.async.io.File
 
 private class DiskDrives (implicit val scheduler: Scheduler, val config: DisksConfig)
@@ -12,8 +12,6 @@ extends Disks {
 
   type AttachItem = (Path, File, DiskGeometry)
   type AttachPending = (Seq [AttachItem], Callback [Unit])
-  type AttachesPending = Queue [AttachPending]
-  type CheckpointsPending = List [Callback [Unit]]
 
   val fiber = new Fiber (scheduler)
   val cache = new PageCache (this)
@@ -26,14 +24,17 @@ extends Disks {
   var roots = Position (0, 0, 0)
   var loggedBytes = 0
   var loggedEntries = 0
+  var allocedSegments = 0
   var attachreqs = Queue.empty [AttachPending]
   var checkreqs = false
+  var cleanreqs = false
   var state: State = new Launching
 
   trait State {
     def launch (checkreqs: CheckpointRegistry, pages: PageRegistry)
     def attach (items: Seq [AttachItem], cb: Callback [Unit])
     def checkpoint()
+    def clean()
     def panic (t: Throwable)
   }
 
@@ -50,6 +51,9 @@ extends Disks {
 
     def checkpoint(): Unit =
       checkreqs = true
+
+    def clean(): Unit =
+      cleanreqs = true
 
     def panic (t: Throwable): Unit =
       state = new Panicked (t)
@@ -150,6 +154,32 @@ extends Disks {
       disks.values foreach (_.mark (oneLogMarked))
     }
 
+    def _cleanable (cb: Callback [Iterator [SegmentPointer]]) {
+      val latch = Callback.map (disks.size, callback (cb) { disks: Map [DiskDrive, IntSet] =>
+        for ((disk, segs) <- disks.iterator; seg <- segs.iterator)
+          yield SegmentPointer (disk, seg)
+      })
+      disks.values foreach (_.cleanable (latch))
+    }
+
+    def _clean() {
+      val cleaner = new SegmentCleaner (DiskDrives.this, pages)
+      val loop = new Callback [Boolean] {
+        def pass (v: Boolean) {
+          if (v || allocedSegments >= config.cleaningFrequency) {
+            allocedSegments = 0
+            _cleanable (continue (this) { iter =>
+              cleaner.clean (iter, this)
+            })
+          } else {
+            cleanreqs = false
+          }}
+        def fail (t: Throwable): Unit = fiber.execute {
+          panic (t)
+        }}
+      loop (true)
+    }
+
     def launch (checkpoints: CheckpointRegistry, pages: PageRegistry): Unit =
       throw new IllegalStateException
 
@@ -166,6 +196,12 @@ extends Disks {
       val now = !attaching && !checkreqs
       checkreqs = true
       if (now) _checkpoint()
+    }
+
+    def clean() {
+      val now = !cleanreqs
+      cleanreqs = true
+      if (now) _clean()
     }
 
     def panic (t: Throwable) {
@@ -188,6 +224,8 @@ extends Disks {
 
     def checkpoint(): Unit = ()
 
+    def clean(): Unit = ()
+
     def panic (t: Throwable): Unit = ()
 
     override def toString = s"DiskDrives.Panicked(${t})"
@@ -199,6 +237,9 @@ extends Disks {
   def checkpoint(): Unit =
     fiber.execute (state.checkpoint())
 
+  def clean(): Unit =
+    fiber.execute (state.clean())
+
   def panic (t: Throwable): Unit =
     fiber.execute (state.panic (t))
 
@@ -206,26 +247,26 @@ extends Disks {
     disks ++= drives .mapBy (_.id)
   }
 
-  def iterator: Iterator [DiskDrive] =
-    disks.values.iterator
-
-  def size: Int =
-    disks.size
-
   def fetch [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
     disks (pos.disk) .read (desc, pos, cb)
 
-  def tally (bytes: Int, entries: Int): Unit = fiber.execute {
+  def free (segs: Seq [SegmentPointer]): Unit = fiber.execute {
+    val byDisk = segs.groupBy (_.disk) .mapValues (_.map (_.num))
+    for ((disk, nums) <- byDisk)
+      disk.free (nums)
+  }
+
+  def tallyLog (bytes: Int, entries: Int): Unit = fiber.execute {
     loggedBytes += bytes
     loggedEntries += entries
     if (config.checkpoint (loggedBytes, loggedEntries) && !checkreqs)
       state.checkpoint()
   }
 
-  def free (segs: Seq [SegmentPointer]) {
-    val byDisk = segs.groupBy (_.disk) .mapValues (_.map (_.num))
-    for ((disk, nums) <- byDisk)
-      disks (disk) .alloc.free (nums)
+  def tallyPages (segments: Int): Unit = fiber.execute {
+    allocedSegments += 1
+    if (allocedSegments >= config.cleaningFrequency && !cleanreqs)
+      state.clean()
   }
 
   def attach (items: Seq [(Path, File, DiskGeometry)], cb: Callback [Unit]): Unit =

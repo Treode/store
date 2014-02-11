@@ -60,9 +60,9 @@ private object DiskTestTools {
           s"Expected DiskDrives.Panicked, found ${disks.state}")
 
     def expectDisks (gen: Int) (items: (Int, String)*) {
-      expectResult (items.size) (disks.size)
+      expectResult (items.size) (disks.disks.size)
       for ((id, path) <- items) {
-        val disk = disks.iterator.find (_.path == Paths.get (path)) .get
+        val disk = disks.disks.valuesIterator.find (_.path == Paths.get (path)) .get
         expectResult (id) (disk.id)
       }}
 

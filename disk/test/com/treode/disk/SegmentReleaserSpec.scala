@@ -7,7 +7,7 @@ class SegmentReleaserSpec extends FlatSpec {
   private implicit class RichSegmentReleaser (releaser: SegmentReleaser) {
 
     def ptrs (ns: Seq [Int]): Seq [SegmentPointer] =
-        ns map (SegmentPointer (0, _))
+        ns map (SegmentPointer (null, _))
 
     def leaveAndExpect (epoch: Int) (fs: Int*): Unit =
       expectResult (ptrs (fs)) (releaser._leave (epoch))

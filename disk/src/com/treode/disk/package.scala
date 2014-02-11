@@ -38,7 +38,7 @@ package disk {
 
   private case class SegmentBounds (num: Int, pos: Long, limit: Long)
 
-  private case class SegmentPointer (disk: Int, num: Int)
+  private case class SegmentPointer (disk: DiskDrive, num: Int)
 }
 
 package object disk {
