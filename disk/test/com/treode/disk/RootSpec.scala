@@ -19,7 +19,6 @@ class RootSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     val disk1 = new StubFile
 
-    try {
     {
       implicit val recovery = Disks.recover()
       recovery.launch { implicit launcher =>
@@ -27,9 +26,9 @@ class RootSpec extends FlatSpec {
         launcher.ready()
       }
       implicit val disks = recovery.attachAndLaunch (("a", disk1, geometry))
-      disks.checkpoint()
+      disks.checkpointer.checkpoint()
       scheduler.runTasks()
-      disks.assertLaunched (false)
+      disks.assertLaunched()
     }
 
     {
@@ -41,10 +40,4 @@ class RootSpec extends FlatSpec {
       }
       implicit val disks = recovery.reattachAndPass (("a", disk1))
       expectResult ("one") (reloaded)
-    }
-    } catch {
-      case e: Throwable =>
-        //e.printStackTrace()
-        throw e
-    }
-    }}
+    }}}

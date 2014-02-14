@@ -11,8 +11,8 @@ private class LaunchAgent (
     cb: Callback [Disks]) (
         implicit scheduler: Scheduler) extends Launch {
 
-  val roots = new CheckpointRegistry () (disks)
-  val pages = new PageRegistry
+  val roots = new CheckpointRegistry () (drives)
+  val pages = new PageRegistry (drives)
 
   def disks: Disks = drives
 

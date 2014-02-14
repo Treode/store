@@ -2,34 +2,38 @@ package com.treode.disk
 
 import org.scalatest.FlatSpec
 
-class SegmentReleaserSpec extends FlatSpec {
+class ReleaserSpec extends FlatSpec {
 
-  private implicit class RichSegmentReleaser (releaser: SegmentReleaser) {
+  implicit val config = DisksConfig (14, 1<<24, 1<<16, 10, 1)
+
+  val geometry = DiskGeometry (10, 6, 1<<20)
+
+  private implicit class RichSegmentReleaser (releaser: Releaser) {
 
     def ptrs (ns: Seq [Int]): Seq [SegmentPointer] =
-        ns map (SegmentPointer (null, _))
+        ns map (n => SegmentPointer (null, geometry.segmentBounds (n)))
 
     def leaveAndExpect (epoch: Int) (fs: Int*): Unit =
-      expectResult (ptrs (fs)) (releaser._leave (epoch))
+      expectResult (fs) (releaser._leave (epoch) .map (_.num))
 
     def releaseAndExpect (ns: Int*) (fs: Int*): Unit =
-      expectResult (ptrs (fs)) (releaser._release (ptrs (ns)))
+      expectResult (fs) (releaser._release (ptrs (ns)) .map (_.num))
   }
 
   "The SegmentReleaser" should "free immediately when there are no parties" in {
-    val releaser = new SegmentReleaser (null)
+    val releaser = new Releaser
     releaser.releaseAndExpect (0) (0)
   }
 
   it should "not free until the party leaves" in {
-    val releaser = new SegmentReleaser (null)
+    val releaser = new Releaser
     val e1 = releaser.join()
     releaser.releaseAndExpect (0) ()
     releaser.leaveAndExpect (e1) (0)
   }
 
   it should "not free until previous epoch is freed" in {
-    val releaser = new SegmentReleaser (null)
+    val releaser = new Releaser
     val e1 = releaser.join()
     releaser.releaseAndExpect (0) ()
     releaser.releaseAndExpect (1) ()
@@ -37,7 +41,7 @@ class SegmentReleaserSpec extends FlatSpec {
   }
 
   it should "not free until the previous epoch is free and the party leaves" in {
-    val releaser = new SegmentReleaser (null)
+    val releaser = new Releaser
     val e1 = releaser.join()
     releaser.releaseAndExpect (0) ()
     val e2 = releaser.join()
@@ -47,7 +51,7 @@ class SegmentReleaserSpec extends FlatSpec {
   }
 
   it should "not free until the parties leave the previous epoch is free" in {
-    val releaser = new SegmentReleaser (null)
+    val releaser = new Releaser
     val e1 = releaser.join()
     releaser.releaseAndExpect (0) ()
     val e2 = releaser.join()

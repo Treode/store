@@ -65,13 +65,30 @@ class PageLedger (
   }
 
   override def clone(): PageLedger =
-    new PageLedger (ledger, ids, byteSize)
+    new PageLedger (ledger, ids, _byteSize)
 }
 
 object PageLedger {
 
   val intBytes = 5
   val longBytes = 9
+
+  type Groups = Map [TypeId, Set [PageGroup]]
+
+  class Merger {
+
+    private var _groups = Map.empty [TypeId, Set [PageGroup]]
+
+    def add (groups: Groups) {
+      for ((id, gs1) <- groups)
+        _groups.get (id) match {
+          case Some (gs0) => _groups += (id -> (gs0 ++ gs1))
+          case None       => _groups += (id -> gs1)
+      }}
+
+    def result: Groups =
+      _groups
+  }
 
   class Projector (
       private var ids: Set [TypeId],
@@ -127,6 +144,12 @@ object PageLedger {
       .build (new Zipped (_))
       .inspect (_.ledger)
     }}
+
+  def merge (groups: Seq [Groups]): Groups = {
+    val merger = new Merger
+    groups foreach (merger.add _)
+    merger.result
+  }
 
   def read (file: File, pos: Long, cb: Callback [PageLedger]): Unit =
     defer (cb) {

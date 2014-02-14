@@ -5,7 +5,8 @@ import java.util.concurrent.Callable
 import com.google.common.cache.{CacheBuilder, CacheLoader, Cache}
 import com.treode.async.{Callback, Future, Scheduler, callback, defer}
 
-private class PageCache (disks: DiskDrives) (implicit scheduler: Scheduler) {
+private class PageCache (disks: DiskDrives) {
+  import disks.scheduler
 
   class Load (desc: PageDescriptor [_, _], pos: Position)
   extends Callable [Future [Any]] {

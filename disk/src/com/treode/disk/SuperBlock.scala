@@ -8,6 +8,7 @@ private case class SuperBlock (
     id: Int,
     boot: BootBlock,
     geometry: DiskGeometry,
+    draining: Boolean,
     free: IntSet,
     logSeg: Int,
     logHead: Long,
@@ -18,9 +19,10 @@ private object SuperBlock {
 
   val pickler = {
     import DiskPicklers._
-    wrap (uint, boot, geometry, intSet, uint, ulong, uint, ulong)
+    wrap (uint, boot, geometry, boolean, intSet, uint, ulong, uint, ulong)
     .build ((SuperBlock.apply _).tupled)
-    .inspect (v => (v.id, v.boot, v.geometry, v.free, v.logSeg, v.logHead, v.pageSeg, v.pagePos))
+    .inspect (v => (
+        v.id, v.boot, v.geometry, v.draining, v.free, v.logSeg, v.logHead, v.pageSeg, v.pagePos))
   }
 
   def position (gen: Int) (implicit config: DisksConfig): Long =

@@ -3,6 +3,7 @@ package com.treode.disk
 import java.nio.file.Path
 import java.util.ArrayList
 import java.util.concurrent.ExecutorService
+import scala.language.postfixOps
 
 import com.treode.async.{Callback, Latch, Scheduler, continue, defer}
 import com.treode.async.io.File
@@ -26,16 +27,23 @@ private class RecoveryAgent (
   def attach (items: Seq [(Path, File, DiskGeometry)]): Unit =
     defer (cb) {
       require (!items.isEmpty, "Must list at least one file or device to attach.")
+
       val disks = new DiskDrives
-      val disksPrimed = continue (cb) { drives: Seq [DiskDrive] =>
-        disks.add (drives)
-        launch (disks)
-      }
       val attaching = items.map (_._1) .toSet
       val roots = Position (0, 0, 0)
-      val latch = Latch.seq (items.size, disksPrimed)
-      val boot = BootBlock.apply (0, items.size, attaching, roots)
-      DiskDrive.init (items, 0, boot, disks, disksPrimed)
+      val boot = BootBlock.apply (0, items.size, attaching, 0, roots)
+
+      val added = continue (cb) { _: Unit =>
+        launch (disks)
+      }
+
+      val allPrimed = continue (cb) { drives: Seq [DiskDrive] =>
+        disks.add (drives, added)
+      }
+
+      val onePrimed = Latch.seq (items.size, allPrimed)
+      for (((path, file, geometry), i) <- items zipWithIndex)
+        DiskDrive.init (i, path, file, geometry, boot, disks, onePrimed)
     }
 
   def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Unit =
@@ -51,10 +59,10 @@ private class RecoveryAgent (
     if (sb1.size == 0 && sb2.size == 0)
       throw new NoSuperBlocksException
 
-    val gen1 = if (sb1.isEmpty) -1 else sb1.map (_.boot.gen) .max
-    val n1 = sb1 count (_.boot.gen == gen1)
-    val gen2 = if (sb2.isEmpty) -1 else sb2.map (_.boot.gen) .max
-    val n2 = sb2 count (_.boot.gen == gen2)
+    val gen1 = if (sb1.isEmpty) -1 else sb1.map (_.boot.bootgen) .max
+    val n1 = sb1 count (_.boot.bootgen == gen1)
+    val gen2 = if (sb2.isEmpty) -1 else sb2.map (_.boot.bootgen) .max
+    val n2 = sb2 count (_.boot.bootgen == gen2)
     if (n1 != reads.size && n2 != reads.size)
       throw new InconsistentSuperBlocksException
 

@@ -1,262 +1,127 @@
 package com.treode.disk
 
 import java.nio.file.Path
-import java.util.{ArrayDeque, ArrayList, PriorityQueue}
 import scala.collection.JavaConversions._
-import scala.collection.mutable.ArrayBuffer
-import scala.language.postfixOps
+import scala.collection.mutable.{ArrayBuffer, UnrolledBuffer}
 
-import com.treode.async._
+import com.treode.async
+import com.treode.async.{Callback, Fiber, Latch}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.Pickler
 
-import RecordHeader.{LogAlloc, LogEnd, PageAlloc, PageWrite}
+import DiskDrive.offset
+import RecordHeader._
 
 private class DiskDrive (
     val id: Int,
     val path: Path,
     val file: File,
     val geometry: DiskGeometry,
-    val alloc: SegmentAllocator,
+    val alloc: Allocator,
     val disks: DiskDrives,
-    var logSegs: ArrayDeque [Int],
+    var draining: Boolean,
+    var logSegs: ArrayBuffer [Int],
     var logHead: Long,
     var logTail: Long,
     var logLimit: Long,
     var logBuf: PagedBuffer,
     var pageSeg: SegmentBounds,
     var pageHead: Long,
-    var pageLedger: PageLedger
+    var pageLedger: PageLedger,
+    var pageLedgerDirty: Boolean
 ) {
-  import disks.{config, logd, paged, scheduler}
+  import disks.{checkpointer, compactor, config, scheduler}
 
-  private val LogPriority = 1
-  private val PagePriority = 2
-  private val CheckpointPriority = 3
+  val fiber = new Fiber (scheduler)
+  val logmp = new Multiplexer [PickledRecord] (disks.logd)
+  val logr: UnrolledBuffer [PickledRecord] => Unit = (receiveRecords _)
+  val pagemp = new Multiplexer [PickledPage] (disks.paged)
+  val pager: UnrolledBuffer [PickledPage] => Unit = (receivePages _)
 
-  private val fiber = new Fiber (scheduler)
-  private val queue = new PriorityQueue [(Int, Runnable)]
-  private var state: State = Ready
-  private var pageLedgerDirty = false
+  def record (entry: RecordHeader, cb: Callback [Unit]): Unit =
+    logmp.send (PickledRecord (id, entry, cb))
 
-  trait State {
-    def advanceLog (cb: Callback [Unit])
-    def reallocLog (cb: Callback [Unit])
-    def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit])
-    def reallocPages (ledger: PageLedger, cb: Callback [Unit])
-    def checkpoint (boot: BootBlock, cb: Callback [Unit])
+  def added() {
+    logmp.receive (logr)
+    pagemp.receive (pager)
   }
 
-  private def ready(): Unit = fiber.execute {
-    try {
-      state = Ready
-      val task = queue.poll()
-      if (task != null)
-        task._2.run()
-    } catch {
-      case t: Throwable =>
-        ready()
-        throw t
-    }}
-
-  private def ready [A, B] (cb: Callback [A], v: A): Callback [B] =
-    new Callback [B] {
-      def pass (vb: B) {
-        ready()
-        scheduler.pass (cb, v)
-      }
-      def fail (t: Throwable) {
-        ready()
-        scheduler.fail (cb, t)
-      }}
-
-  private def enque (priority: Int, task: Runnable): Unit =
-    queue.add ((priority, task))
-
-  private def enque (priority: Int) (f: => Any): Unit =
-    enque (priority, Scheduler.toRunnable (f))
-
-  private def _advanceLog (cb: Callback [Unit]): Unit =
-    defer (cb) {
-      val len = logBuf.readableBytes
-      RecordHeader.pickler.frame (LogEnd, logBuf)
-      file.flush (logBuf, logTail, callback (cb) { _ =>
-        logTail += len
-        logBuf.clear()
-      })
+  def mark (cb: Callback [Unit]): Unit =
+    fiber.invoke (cb) {
+      logHead = logTail
     }
-
-  private def _reallocLog (cb: Callback [Unit]): Unit =
-    defer (cb) {
-      println ("realloc log")
-      state = ReallocLog
-      val buf1 = PagedBuffer (12)
-      val seg = alloc.alloc()
-      RecordHeader.pickler.frame (LogAlloc (seg.num), logBuf)
-      RecordHeader.pickler.frame (LogEnd, buf1)
-      val _cb = ready (cb, ())
-      file.flush (buf1, seg.pos, continue (_cb) { _ =>
-        file.flush (logBuf, logTail, callback (_cb) { _ =>
-          logSegs.add (seg.num)
-          logTail = seg.pos
-          logLimit = seg.limit
-          logBuf.clear()
-        })
-      })
-    }
-
-  private def _advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
-    defer (cb) {
-      pageHead = pos
-      pageLedger.add (ledger)
-      pageLedgerDirty = true
-      disks.record (id, PageWrite (pos, ledger.zip), cb)
-    }
-
-  private def _reallocPages (ledger: PageLedger, cb: Callback [Unit]): Unit =
-    defer (cb) {
-      val s0 = pageSeg
-      val s1 = alloc.alloc()
-      state = ReallocPages
-      pageSeg = s1
-      pageHead = s1.limit
-      pageLedger.add (ledger)
-      pageLedgerDirty = false
-      val _cb = ready (cb, ())
-      PageLedger.write (pageLedger, file, s0.pos, continue (_cb) { _: Unit =>
-        PageLedger.write (PageLedger.Zipped.empty, file, s1.pos, continue (_cb) { _: Unit =>
-          disks.record (id, PageAlloc (s1.num, ledger.zip), _cb)
-        })
-      })
-    }
-
-  private def _checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
-    defer (cb) {
-      state = Checkpoint
-      val superb =
-        SuperBlock (id, boot, geometry, alloc.free, logSegs.peek, logHead, pageSeg.num, pageHead)
-      val _cb = ready (cb, ())
-      if (pageLedgerDirty) {
-        pageLedgerDirty = false
-        PageLedger.write (pageLedger, file, pageSeg.pos, continue (_cb) { _: Unit =>
-          SuperBlock.write (boot.gen, superb, file, _cb)
-        })
-      } else {
-        SuperBlock.write (boot.gen, superb, file, _cb)
-      }}
-
-  object Ready extends State {
-
-    def advanceLog (cb: Callback [Unit]): Unit =
-      _advanceLog (cb)
-
-    def reallocLog (cb: Callback [Unit]): Unit =
-      _reallocLog (cb)
-
-    def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
-      _advancePages (pos, ledger, cb)
-
-    def reallocPages (ledger: PageLedger, cb: Callback [Unit]): Unit =
-      _reallocPages (ledger, cb)
-
-    def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
-      _checkpoint (boot, cb)
-  }
-
-  object ReallocLog extends State {
-
-    def advanceLog (cb: Callback [Unit]): Unit =
-      cb.fail (new IllegalStateException)
-
-    def reallocLog (cb: Callback [Unit]): Unit =
-      cb.fail (new IllegalStateException)
-
-    def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
-      _advancePages (pos, ledger, cb)
-
-    def reallocPages (ledger: PageLedger, cb: Callback [Unit]): Unit =
-      enque (PagePriority) (state.reallocPages (ledger, cb))
-
-    def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
-      enque (CheckpointPriority) (state.checkpoint (boot, cb))
-  }
-
-  object Checkpoint extends State {
-
-    def advanceLog (cb: Callback [Unit]): Unit =
-      _advanceLog (cb)
-
-    def reallocLog (cb: Callback [Unit]): Unit =
-      enque (LogPriority) (state.reallocLog (cb))
-
-    def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
-      _advancePages (pos, ledger, cb)
-
-    def reallocPages (ledger: PageLedger, cb: Callback [Unit]): Unit =
-      enque (PagePriority) (state.reallocPages (ledger, cb))
-
-    def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
-      cb.fail (new IllegalStateException ("Checkpoint already in progres"))
-  }
-
-  object ReallocPages extends State {
-
-    def advanceLog (cb: Callback [Unit]): Unit =
-      _advanceLog (cb)
-
-    def reallocLog (cb: Callback [Unit]): Unit =
-      enque (LogPriority) (state.reallocLog (cb))
-
-    def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
-      cb.fail (new IllegalStateException)
-
-    def reallocPages (ledger: PageLedger, cb: Callback [Unit]): Unit =
-      cb.fail (new IllegalStateException)
-
-    def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
-      enque (CheckpointPriority) (state.checkpoint (boot, cb))
-  }
-
-  def advanceLog (cb: Callback [Unit]): Unit =
-    fiber.execute (state.advanceLog (cb))
-
-  def reallocLog (cb: Callback [Unit]): Unit =
-    fiber.execute (state.reallocLog (cb))
-
-  def advancePages (pos: Long, ledger: PageLedger, cb: Callback [Unit]): Unit =
-    fiber.execute (state.advancePages (pos, ledger, cb))
-
-  def reallocPages (ledger: PageLedger, cb: Callback [Unit]): Unit =
-    fiber.execute (state.reallocPages (ledger, cb))
 
   def checkpoint (boot: BootBlock, cb: Callback [Unit]): Unit =
-    fiber.execute (state.checkpoint (boot, cb))
+    fiber.defer (cb) {
+      val superb = SuperBlock (
+          id, boot, geometry, draining, alloc.free, logSegs.head, logHead, pageSeg.num, pageHead)
+      if (pageLedgerDirty) {
+        pageLedgerDirty = false
+        PageLedger.write (pageLedger.clone(), file, pageSeg.pos, async.continue (cb) { _: Unit =>
+          SuperBlock.write (boot.bootgen, superb, file, cb)
+        })
+      } else {
+        SuperBlock.write (boot.bootgen, superb, file, cb)
+      }}
 
-  def mark (cb: Callback [Unit]): Unit = fiber.execute {
-    invoke (cb) {
-      logHead = logTail
-    }}
-
-  def cleanable (cb: Callback [(DiskDrive, IntSet)]): Unit = fiber.execute {
-    defer (cb) {
+  private def _cleanable: Iterator [SegmentPointer] = {
       val skip = new ArrayBuffer [Int] (logSegs.size + 1)
       skip ++= logSegs
-      skip += pageSeg.num
-      cb (this, alloc.cleanable (skip))
-    }}
-
-  def free (segs: Seq [Int]): Unit = fiber.execute {
-    alloc.free (segs)
+      if (!draining)
+        skip += pageSeg.num
+      for (seg <- alloc.cleanable (skip))
+        yield SegmentPointer (this, geometry.segmentBounds (seg))
   }
 
-  def splitRecords (entries: ArrayList [PickledRecord]) = {
-    val accepts = new ArrayList [PickledRecord]
-    val rejects = new ArrayList [PickledRecord]
+  def cleanable (cb: Callback [Iterator [SegmentPointer]]): Unit =
+    fiber.invoke (cb) {
+      _cleanable
+    }
+
+  def free (segs: Seq [SegmentPointer]): Unit =
+    fiber.execute {
+      val nums = IntSet (segs.map (_.num) .sorted: _*)
+      alloc.free (nums)
+      record (SegmentFree (nums), Callback.ignore)
+      if (draining && alloc.drained (logSegs))
+        disks.detach (this)
+    }
+
+  def drain (cb: Callback [Iterator [SegmentPointer]]): Unit =
+    fiber.defer (cb) {
+      draining = true
+      val ready = fiber.callback (cb) { _: Unit =>
+        _cleanable
+      }
+      val latch = Latch.unit (2, ready)
+      val pagesClosed = fiber.continue (latch) { _: Unit =>
+        if (pageLedgerDirty) {
+          pageLedgerDirty = false
+          PageLedger.write (pageLedger, file, pageSeg.pos, latch)
+        } else {
+          latch()
+        }}
+      pagemp.close (pagesClosed)
+      record (DiskDrain, latch)
+    }
+
+  def detach(): Unit =
+    fiber.execute {
+      val recordsClosed = fiber.callback (Callback.ignore) { _: Unit =>
+        file.close()
+      }
+      logmp.close (recordsClosed)
+    }
+
+  private def splitRecords (entries: UnrolledBuffer [PickledRecord]) = {
+    val accepts = new UnrolledBuffer [PickledRecord]
+    val rejects = new UnrolledBuffer [PickledRecord]
     var pos = logHead
     var realloc = false
     for (entry <- entries) {
       if (entry.disk.isDefined && entry.disk.get != id) {
+        rejects.add (entry)
+      } else if (draining && entry.disk.isEmpty) {
         rejects.add (entry)
       } else if (pos + entry.byteSize + RecordHeader.trailer < logLimit) {
         accepts.add (entry)
@@ -268,41 +133,66 @@ private class DiskDrive (
     (accepts, rejects, realloc)
   }
 
-  def writeRecords (entries: ArrayList [PickledRecord]) = {
-    val callbacks = new ArrayList [Callback [Unit]]
+  private def writeRecords (buf: PagedBuffer, entries: UnrolledBuffer [PickledRecord]) = {
+    val callbacks = new UnrolledBuffer [Callback [Unit]]
     for (entry <- entries) {
-      entry.write (logBuf)
+      entry.write (buf)
       callbacks.add (entry.cb)
     }
     callbacks
   }
 
-  def receiveRecords (entries: ArrayList [PickledRecord]) {
+  def receiveRecords (entries: UnrolledBuffer [PickledRecord]): Unit =
+    fiber.execute {
 
-    val (accepts, rejects, realloc) = splitRecords (entries)
-    logd.replace (rejects)
+      val (accepts, rejects, realloc) = splitRecords (entries)
+      logmp.replace (rejects)
+      if (accepts.isEmpty) {
+        logmp.receive (logr)
+        return
+      }
 
-    val callbacks = writeRecords (accepts)
-    val flushed = Callback.fanout (callbacks, scheduler)
+      val callbacks = writeRecords (logBuf, accepts)
+      val cb = Callback.fanout (callbacks, scheduler)
 
-    disks.tallyLog (logBuf.readableBytes, accepts.size)
-    if (realloc) {
-      reallocLog (callback (flushed) { _ =>
-        logd.receive (recordReceiver)
-      })
-    } else {
-      advanceLog (callback (flushed) { _ =>
-        logd.receive (recordReceiver)
-      })
-    }}
+      checkpointer.tally (logBuf.readableBytes, accepts.size)
 
-  val recordReceiver: ArrayList [PickledRecord] => Unit = (receiveRecords _)
+      if (realloc) {
 
-  def splitPages (pages: ArrayList [PickledPage]) = {
+        val newBuf = PagedBuffer (12)
+        val newSeg = alloc.alloc (geometry, config)
+        RecordHeader.pickler.frame (LogEnd, newBuf)
+        RecordHeader.pickler.frame (LogAlloc (newSeg.num), logBuf)
+        val oldFlushed = fiber.callback (cb) { _: Unit =>
+          logSegs.add (newSeg.num)
+          logTail = newSeg.pos
+          logLimit = newSeg.limit
+          logBuf.clear()
+          logmp.receive (logr)
+        }
+        val newFlushed = fiber.continue (cb) { _: Unit =>
+          file.flush (logBuf, logTail, oldFlushed)
+        }
+        file.flush (newBuf, newSeg.pos,  newFlushed)
+
+      } else {
+
+        val len = logBuf.readableBytes
+        RecordHeader.pickler.frame (LogEnd, logBuf)
+        val flushed = fiber.callback (cb) { _: Unit =>
+          logTail += len
+          logBuf.clear()
+          logmp.receive (logr)
+        }
+        file.flush (logBuf, logTail, flushed)
+      }}
+
+  private def splitPages (pages: UnrolledBuffer [PickledPage]) = {
+
     val projector = pageLedger.project
     val limit = (pageHead - pageSeg.pos).toInt
-    val accepts = new ArrayList [PickledPage]
-    val rejects = new ArrayList [PickledPage]
+    val accepts = new UnrolledBuffer [PickledPage]
+    val rejects = new UnrolledBuffer [PickledPage]
     var totalBytes = 0
     var realloc = false
     for (page <- pages) {
@@ -319,64 +209,70 @@ private class DiskDrive (
     (accepts, rejects, realloc)
   }
 
-  def writePages (pages: ArrayList [PickledPage]) = {
+  private def writePages (pages: UnrolledBuffer [PickledPage]) = {
     val buffer = PagedBuffer (12)
-    val callbacks = new ArrayList [Callback [Long]]
+    val callbacks = new UnrolledBuffer [Callback [Long]]
     val ledger = new PageLedger
     for (page <- pages) {
       val start = buffer.writePos
       page.write (buffer)
       buffer.writeZeroToAlign (geometry.blockBits)
       val length = buffer.writePos - start
-      callbacks.add (DiskDrive.offset (id, start, length, page.cb))
+      callbacks.add (offset (id, start, length, page.cb))
       ledger.add (page.id, page.group, length)
     }
     (buffer, callbacks, ledger)
   }
 
-  def receivePages (pages: ArrayList [PickledPage]) {
+  def receivePages (pages: UnrolledBuffer [PickledPage]) {
 
     val (accepts, rejects, realloc) = splitPages (pages)
-    paged.replace (rejects)
+    pagemp.replace (rejects)
+    if (accepts.isEmpty) {
+      pagemp.receive (pager)
+      return
+    }
 
     val (buffer, callbacks, ledger) = writePages (pages)
     val pos = pageHead - buffer.readableBytes
-    val logged = Callback.fanout (callbacks, scheduler)
+    val cb = Callback.fanout (callbacks, scheduler)
 
-    val flushed = continue (logged) { _: Unit =>
+    val flushed = fiber.continue (cb) { _: Unit =>
       if (realloc) {
-        disks.tallyPages (1)
-        reallocPages (ledger, callback (logged) { _ =>
-          paged.receive (pageReceiver)
+
+        compactor.tally (1)
+        val logged = fiber.callback (cb) { _: Unit =>
+          pagemp.receive (pager)
           pos
-        })
+        }
+        val newWritten = fiber.continue (cb) { _: Unit =>
+          pageLedgerDirty = false
+          record (PageAlloc (pageSeg.num, ledger.zip), logged)
+        }
+        val oldWritten = fiber.continue (cb) { _: Unit =>
+          pageSeg = alloc.alloc (geometry, config)
+          pageHead = pageSeg.limit
+          pageLedger = new PageLedger
+          pageLedgerDirty = true
+        }
+        pageLedger.add (ledger)
+        pageLedgerDirty = true
+        PageLedger.write (pageLedger, file, pageSeg.pos, oldWritten)
+
       } else {
-        advancePages (pos, ledger, callback (logged) { _ =>
-          paged.receive (pageReceiver)
+
+        val logged = fiber.callback (cb) { _: Unit =>
+          pageHead = pos
+          pageLedger.add (ledger)
+          pageLedgerDirty = true
+          pagemp.receive (pager)
           pos
-        })
+        }
+        record (PageWrite (pos, ledger.zip), logged)
       }}
 
     file.flush (buffer, pos, flushed)
-  }
-
-  val pageReceiver: ArrayList [PickledPage] => Unit = (receivePages _)
-
-  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
-    DiskDrive.read (file, desc, pos, cb)
-
-  def close() = file.close()
-
-  override def hashCode: Int = id.hashCode
-
-  override def equals (other: Any): Boolean =
-    other match {
-      case that: DiskDrive => id == that.id
-      case _ => false
-    }
-
-  override def toString = s"DiskDrive($id, $path)"
-}
+  }}
 
 private object DiskDrive {
 
@@ -387,9 +283,9 @@ private object DiskDrive {
     }
 
   def read [P] (file: File, desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
-    defer (cb) {
+    async.defer (cb) {
       val buf = PagedBuffer (12)
-      file.fill (buf, pos.offset, pos.length, callback (cb) { _ =>
+      file.fill (buf, pos.offset, pos.length, async.callback (cb) { _ =>
         desc.ppag.unpickle (buf)
       })
     }
@@ -404,43 +300,25 @@ private object DiskDrive {
       cb: Callback [DiskDrive]
   ): Unit =
 
-    defer (cb) {
-      import disks.{config, logd, paged}
+    async.defer (cb) {
+      import disks.{config}
 
-      val alloc = SegmentAllocator.init (geometry)
-      val logSeg = alloc.alloc()
-      val pageSeg = alloc.alloc()
-      val superb =
-        SuperBlock (id, boot, geometry, alloc.free, logSeg.num, logSeg.pos,
-            pageSeg.num, pageSeg.limit)
+      val alloc = Allocator (geometry, config)
+      val logSeg = alloc.alloc (geometry, config)
+      val pageSeg = alloc.alloc (geometry, config)
+      val logSegs = new ArrayBuffer [Int]
+      logSegs += logSeg.num
 
-      val latch = Latch.unit (3, callback (cb) { _: Unit =>
-        val logSegs = new ArrayDeque [Int]
-        logSegs.add (logSeg.num)
-        val disk =
-          new DiskDrive (id, path, file, geometry, alloc, disks, logSegs, logSeg.pos,
-              logSeg.pos, logSeg.limit, PagedBuffer (12), pageSeg, pageSeg.limit, new PageLedger)
-        logd.receive (disk.recordReceiver)
-        paged.receive (disk.pageReceiver)
-        disk
+      val superb = SuperBlock (
+          id, boot, geometry, false, alloc.free, logSeg.num, logSeg.pos, pageSeg.num, pageSeg.limit)
+
+      val latch = Latch.unit (3, async.callback (cb) { _: Unit =>
+        new DiskDrive (
+            id, path, file, geometry, alloc, disks, false, logSegs, logSeg.pos, logSeg.pos,
+            logSeg.limit, PagedBuffer (12), pageSeg, pageSeg.limit, new PageLedger, false)
       })
 
       SuperBlock.write (0, superb, file, latch)
       RecordHeader.write (LogEnd, file, logSeg.pos, latch)
       PageLedger.write (PageLedger.Zipped.empty, file, pageSeg.pos, latch)
-    }
-
-  def init (
-      items: Seq [(Path, File, DiskGeometry)],
-      base: Int,
-      boot: BootBlock,
-      disks: DiskDrives,
-      cb: Callback [Seq [DiskDrive]]
-  ): Unit =
-
-    defer (cb) {
-      val latch = Latch.seq (items.size, cb)
-      for (((path, file, geometry), i) <- items zipWithIndex) {
-        DiskDrive.init (base + i, path, file, geometry, boot, disks, latch)
-      }}
-}
+    }}

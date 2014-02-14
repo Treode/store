@@ -20,15 +20,9 @@ private object DiskTestTools {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
       val disks =
         CallbackCaptor.pass [Disks] (recovery.attach (_items, _)) .asInstanceOf [DiskDrives]
-      if (launch)
-        disks.assertLaunched (false)
-      else
-        disks.assertLaunching()
+      disks.assertLaunched()
       disks
     }
-
-    def attachHoldLaunch (items: (String, File, DiskGeometry)*): DiskDrives =
-      _attachAndPass (items, false)
 
     def attachAndLaunch (items: (String, File, DiskGeometry)*): DiskDrives =
       _attachAndPass (items, true)
@@ -40,49 +34,14 @@ private object DiskTestTools {
 
   implicit class RichDiskDrives (disks: DiskDrives) (implicit scheduler: StubScheduler) {
 
-    def assertLaunching() =
-      assert (
-          disks.state.isInstanceOf [DiskDrives#Launching],
-          s"Expected Ready, found ${disks.state}")
-
-    def assertLaunched (attaching: Boolean) {
-      assert (
-          disks.state.isInstanceOf [DiskDrives#Launched],
-          s"Expected DiskDrives.Launched($attaching), found ${disks.state}")
-      assert (
-          disks.state.asInstanceOf [DiskDrives#Launched].attaching == attaching,
-          s"Expected DiskDrives.Launched($attaching), found ${disks.state}")
-    }
-
-    def assertPanicked() =
-      assert (
-          disks.state.isInstanceOf [DiskDrives#Panicked],
-          s"Expected DiskDrives.Panicked, found ${disks.state}")
-
-    def expectDisks (gen: Int) (items: (Int, String)*) {
-      expectResult (items.size) (disks.disks.size)
-      for ((id, path) <- items) {
-        val disk = disks.disks.valuesIterator.find (_.path == Paths.get (path)) .get
-        expectResult (id) (disk.id)
-      }}
-
-    def attachAndPass (items: (String, File, DiskGeometry)*) {
-      val _items = items map (v => (Paths.get (v._1), v._2, v._3))
-      CallbackCaptor.pass [Unit] (disks.attach (_items, _))
-      assertLaunched (false)
-    }
-
-    def attachAndFail [E] (items: (String, File, DiskGeometry)*) (implicit m: Manifest [E]) {
-      val _items = items map (v => (Paths.get (v._1), v._2, v._3))
-      CallbackCaptor.fail [E, Unit] (disks.attach (_items, _))
-      assertLaunched (false)
-    }
-
-    def attachAndHold (items: (String, File, DiskGeometry)*): CallbackCaptor [Unit] = {
-      val _items = items map (v => (Paths.get (v._1), v._2, v._3))
-      val cb = CallbackCaptor [Unit]
-      disks.attach (_items, cb)
-      cb
+    def assertLaunched() {
+      assert (!disks.engaged, "Expected disks to be disengaged.")
+      val cp = disks.checkpointer
+      assert (cp.checkpoints != null, "Expected checkpointer to have a registry.")
+      assert (!cp.engaged, "Expected checkpointer to be disengaged.")
+      val c = disks.compactor
+      assert (c.pages != null, "Expected compactor to have a page registry.")
+      assert (!c.engaged, "Expected compactor to be disengaged.")
     }
 
     def writeAndPass [G, P] (desc: PageDescriptor [G, P], group: G, page: P): Position =

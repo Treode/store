@@ -8,17 +8,20 @@ class PageGroup private (val bytes: Array [Byte]) {
   def unpickle [A] (p: Pickler [A]): A =
     p.fromByteArray (bytes)
 
-  def byteSize = bytes.length + 5
+  def byteSize: Int =
+    bytes.length + 5
 
-  override def equals (other: Any) =
+  override def equals (other: Any): Boolean =
     other match {
       case that: PageGroup => Arrays.equals (this.bytes, that.bytes)
       case _ => false
     }
 
-  override def hashCode = Arrays.hashCode (bytes)
+  override def hashCode: Int =
+    Arrays.hashCode (bytes)
 
-  override def toString = "PageGroup:%08X" format hashCode
+  override def toString: String =
+    "PageGroup:%08X" format hashCode
 }
 
 object PageGroup {

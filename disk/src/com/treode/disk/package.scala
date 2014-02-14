@@ -12,8 +12,12 @@ package disk {
     override def getMessage = s"Disks already attached: ${paths mkString ", "}"
   }
 
+  class CannotDrainAllException extends Exception {
+    override def getMessage = "Cannot drain all disks."
+  }
+
   class DiskFullException extends Exception {
-    override def getMessage = "DiskFull."
+    override def getMessage = "Disk full."
   }
 
   class ExtraDisksException (paths: Seq [Path]) extends Exception {
@@ -32,13 +36,15 @@ package disk {
     override def getMessage = "No superblocks."
   }
 
+  class NotAttachedException (paths: Seq [Path]) extends Exception {
+    override def getMessage = s"No such disks are attached: ${paths mkString ", "}"
+  }
+
   class PanickedException (t: Throwable) extends Exception (t) {
     override def getMessage = "Panicked."
   }
 
   private case class SegmentBounds (num: Int, pos: Long, limit: Long)
-
-  private case class SegmentPointer (disk: DiskDrive, num: Int)
 }
 
 package object disk {
@@ -47,7 +53,7 @@ package object disk {
   private [disk] type PageDispatcher = Dispatcher [PickledPage]
   private [disk] type ReplayIterator = AsyncIterator [(Long, Unit => Any)]
 
-  private [disk] implicit class RichIteratable [A] (iter: Seq [A]) {
+  private [disk] implicit class RichIteratable [A] (iter: Iterable [A]) {
 
     def mapBy [K] (k: A => K): Map [K, A] = {
       val b = Map.newBuilder [K, A]
@@ -58,6 +64,12 @@ package object disk {
     def mapValuesBy [K, V] (k: A => K) (v: A => V): Map [K, V] = {
       val b = Map.newBuilder [K, V]
       iter foreach (x => b += (k (x) -> v (x)))
+      b.result
+    }
+
+    def setBy [B] (f: A => B): Set [B] = {
+      val b = Set.newBuilder [B]
+      iter foreach (x => b += f (x))
       b.result
     }}
 

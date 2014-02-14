@@ -15,6 +15,9 @@ class DisksConfig private (
   def checkpoint (bytes: Int, entries: Int): Boolean =
     bytes > checkpointBytes || entries > checkpointEntries
 
+  def clean (segments: Int): Boolean =
+    segments >= cleaningFrequency
+
   override def hashCode: Int =
     superBlockBits.hashCode
 

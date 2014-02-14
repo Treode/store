@@ -3,7 +3,7 @@ package com.treode.disk
 import scala.collection.mutable.Builder
 import com.treode.async.Callback
 
-private class SegmentReleaser (disks: DiskDrives) {
+private class Releaser {
 
   private class Epoch (var parties: Int, val segments: Seq [SegmentPointer]) {
     override def toString = s"Epoch($parties, $segments)"
@@ -34,17 +34,19 @@ private class SegmentReleaser (disks: DiskDrives) {
           throw new AssertionError ("Party left forgotten epoch")
       }}}
 
+  private def free (released: Seq [SegmentPointer]) {
+    for ((disk, segs) <- released groupBy (_.disk))
+      disk.free (segs)
+  }
+
   def _leave (epoch: Int): Seq [SegmentPointer] = synchronized {
     val builder = Seq.newBuilder [SegmentPointer]
     leave (epoch, builder)
     builder.result
   }
 
-  def leave (epoch: Int) {
-    val releases = _leave (epoch)
-    if (!releases.isEmpty)
-      disks.free (releases)
-  }
+  def leave (epoch: Int): Unit =
+    free (_leave (epoch))
 
   def join [A] (cb: Callback [A]): Callback [A] =
     new Callback [A] {
@@ -68,8 +70,6 @@ private class SegmentReleaser (disks: DiskDrives) {
       Seq.empty [SegmentPointer]
     }}
 
-  def release (segments: Seq [SegmentPointer]) {
-    val releases = _release (segments)
-    if (!releases.isEmpty)
-      disks.free (releases)
-  }}
+  def release (segments: Seq [SegmentPointer]): Unit =
+    free (_release (segments))
+}

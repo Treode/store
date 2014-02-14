@@ -3,12 +3,13 @@ package com.treode.disk
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, Latch, callback, continue}
+import com.treode.async.{Callback, Fiber, Latch, callback, continue, defer}
 import com.treode.pickle.{Pickler, PicklerRegistry}
 
 import PicklerRegistry.{Tag, tag}
 
-private class CheckpointRegistry (implicit disks: Disks) {
+private class CheckpointRegistry (implicit disks: DiskDrives) {
+  import disks.{config}
 
   private val checkpoints = new ArrayList [Callback [Tag] => Unit]
 
@@ -18,13 +19,16 @@ private class CheckpointRegistry (implicit disks: Disks) {
         f (callback (cb) (tag (desc.pblk, desc.id.id, _)))
       }}
 
-  def checkpoint (gen: Int, cb: Callback [Position]) = synchronized {
-    val allWritten = continue (cb) { roots: Seq [Tag] =>
-      CheckpointRegistry.writer.write (gen, roots, cb)
-    }
-    val oneWritten = Latch.seq (checkpoints.size, allWritten)
-    checkpoints foreach (_ (oneWritten))
-  }}
+  def checkpoint (rootgen: Int, cb: Callback [Position]): Unit =
+    defer (cb) {
+      synchronized {
+        val allWritten = continue (cb) { roots: Seq [Tag] =>
+          CheckpointRegistry.writer.write (rootgen, roots, cb)
+        }
+        val oneWritten = Latch.seq (checkpoints.size, allWritten)
+        checkpoints foreach (_ (oneWritten))
+      }}
+}
 
 private object CheckpointRegistry {
 

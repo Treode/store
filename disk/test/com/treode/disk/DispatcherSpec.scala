@@ -1,22 +1,20 @@
 package com.treode.disk
 
-import java.util.ArrayList
-import scala.collection.JavaConversions._
+import scala.collection.mutable.UnrolledBuffer
+import scala.reflect.ClassTag
+
 import com.treode.async.StubScheduler
 import org.scalatest.FlatSpec
 
 class DispatcherSpec extends FlatSpec {
 
-  def list [M] (messages: M*): ArrayList [M] = {
-    val a = new ArrayList [M]
-    a.addAll (messages)
-    a
-  }
+  def list [M] (messages: M*) (implicit mtag: ClassTag [M]): UnrolledBuffer [M] =
+    UnrolledBuffer [M] (messages: _*)
 
-  class Receptor [M] extends (ArrayList [M] => Unit) {
+  class Receptor [M] (implicit mtag: ClassTag [M]) extends (UnrolledBuffer [M] => Unit) {
 
     private var _invokation: Array [StackTraceElement] = null
-    private var _messages: ArrayList [M] = null
+    private var _messages: UnrolledBuffer [M] = null
 
     def wasInvoked: Boolean =
       _invokation != null
@@ -31,7 +29,7 @@ class DispatcherSpec extends FlatSpec {
         assert (false, "Receiver was already invoked.")
       }}
 
-    def apply (messages: ArrayList [M]): Unit = {
+    def apply (messages: UnrolledBuffer [M]): Unit = {
       assertNotInvoked()
       _messages = messages
     }

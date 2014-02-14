@@ -26,6 +26,12 @@ private class IntSet private (private val bitmap: Bitmap) {
     new IntSet (dup)
   }
 
+  def min: Int =
+    bitmap.iterator.next
+
+  def size: Int =
+    bitmap.cardinality()
+
   def iterator: Iterator [Int] =
     asScalaIterator (bitmap.iterator.map (_.toInt))
 
@@ -52,7 +58,7 @@ private object IntSet {
   val MaxValue: Int = Int.MaxValue - Bitmap.wordinbits
 
   def apply (is: Int*): IntSet =
-    new IntSet (Bitmap.bitmapOf (is.sorted: _*))
+    new IntSet (Bitmap.bitmapOf (is: _*))
 
   def fill (n: Int): IntSet = {
     val bitmap = Bitmap.bitmapOf()

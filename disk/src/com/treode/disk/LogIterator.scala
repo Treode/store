@@ -1,7 +1,7 @@
 package com.treode.disk
 
 import java.nio.file.Path
-import java.util.ArrayDeque
+import scala.collection.mutable.ArrayBuffer
 
 import com.treode.async._
 import com.treode.async.io.File
@@ -10,13 +10,13 @@ import com.treode.buffer.PagedBuffer
 import RecordHeader.{Entry, LogAlloc, LogEnd, PageAlloc, PageWrite}
 
 private class LogIterator private (
+    records: RecordRegistry,
     path: Path,
     file: File,
     buf: PagedBuffer,
     superb: SuperBlock,
-    alloc: SegmentAllocator,
-    records: RecordRegistry,
-    logSegs: ArrayDeque [Int],
+    alloc: Allocator,
+    logSegs: ArrayBuffer [Int],
     private var logSeg: SegmentBounds,
     private var pageSeg: SegmentBounds,
     private var pageLedger: PageLedger
@@ -48,8 +48,8 @@ private class LogIterator private (
             cb (Long.MaxValue, _ => ())
 
           case LogAlloc (next) =>
-            logSeg = alloc.alloc (next)
-            logSegs.add (logSeg.num)
+            logSeg = alloc.alloc (next, superb.geometry, config)
+            logSegs += logSeg.num
             logPos = logSeg.pos
             buf.clear()
             file.deframe (buf, logPos, this)
@@ -61,7 +61,7 @@ private class LogIterator private (
             file.deframe (buf, logPos, this)
 
           case PageAlloc (next, _ledger) =>
-            pageSeg = alloc.alloc (next)
+            pageSeg = alloc.alloc (next, superb.geometry, config)
             pagePos = pageSeg.pos
             pageLedger = _ledger.unzip
             logPos += len + 4
@@ -85,11 +85,9 @@ private class LogIterator private (
 
   def close (disks: DiskDrives, logd: LogDispatcher, paged: PageDispatcher): DiskDrive = {
     buf.clear()
-    val disk =
-      new DiskDrive (superb.id, path, file, superb.geometry, alloc, disks, logSegs, superb.logHead,
-          logPos, logSeg.limit, buf, pageSeg, superb.pagePos, pageLedger)
-    logd.receive (disk.recordReceiver)
-    paged.receive (disk.pageReceiver)
+    val disk = new DiskDrive (
+        superb.id, path, file, superb.geometry, alloc, disks, superb.draining, logSegs,
+        superb.logHead, logPos, logSeg.limit, buf, pageSeg, superb.pagePos, pageLedger, false)
     disk
   }}
 
@@ -106,16 +104,17 @@ object LogIterator {
       config: DisksConfig): Unit =
 
     defer (cb) {
-      val alloc = SegmentAllocator.recover (superb.geometry, superb.free)
-      val logSeg = alloc.alloc (superb.logSeg)
-      val logSegs = new ArrayDeque [Int]
-      logSegs.add (logSeg.num)
-      val pageSeg = alloc.alloc (superb.pageSeg)
+
+      val alloc = Allocator (superb.free)
+      val logSeg = alloc.alloc (superb.logSeg, superb.geometry, config)
+      val logSegs = new ArrayBuffer [Int]
+      logSegs += logSeg.num
+      val pageSeg = alloc.alloc (superb.pageSeg, superb.geometry, config)
       val buf = PagedBuffer (12)
       PageLedger.read (file, pageSeg.pos, continue (cb) { ledger =>
         file.fill (buf, superb.logHead, 1, callback (cb) { _ =>
-          val iter = new LogIterator (path, file, buf, superb, alloc, records, logSegs, logSeg,
-              pageSeg, ledger)
+          val iter = new LogIterator (
+              records, path, file, buf, superb, alloc, logSegs, logSeg, pageSeg, ledger)
           (superb.id, iter)
         })
       })
@@ -133,15 +132,18 @@ object LogIterator {
 
     defer (cb) {
 
-      def replayed (logs: Map [Int, LogIterator]) = callback (cb) { _: Unit =>
+      def added (disks: DiskDrives) = callback (cb) { _: Unit =>
+        disks
+      }
+
+      def replayed (logs: Map [Int, LogIterator]) = continue (cb) { _: Unit =>
         val disks = new DiskDrives
         val drives =
           for (read <- reads) yield {
             val superb = read.superb (useGen1)
             logs (superb.id) .close (disks, disks.logd, disks.paged)
           }
-        disks.add (drives)
-        disks
+        disks.add (drives, added (disks))
       }
 
       def merged (logs: Map [Int, LogIterator]) = continue (cb) { iter: ReplayIterator =>
