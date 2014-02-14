@@ -21,7 +21,7 @@ object SystestTools {
 
     def putAndPass (kvs: (Int, Int)*) (implicit scheduler: StubScheduler) {
       CallbackCaptor.pass [Unit] { cb =>
-        val latch = Callback.latch (kvs.size, cb)
+        val latch = Latch.unit (kvs.size, cb)
         for ((key, value) <- kvs)
           table.put (key, value, latch)
       }}

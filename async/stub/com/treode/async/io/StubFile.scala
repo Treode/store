@@ -36,9 +36,9 @@ class StubFile (implicit scheduler: StubScheduler) extends File (null, scheduler
       try {
         require (pos + len < Int.MaxValue)
         if (len <= input.readableBytes) {
-          scheduler.execute (cb, ())
+          scheduler.pass (cb, ())
         } else if (data.length < pos) {
-          scheduler.execute (cb.fail (new EOFException))
+          scheduler.fail (cb, new EOFException)
         } else  {
           input.capacity (input.readPos + len)
           val p = pos.toInt + input.readableBytes
@@ -46,9 +46,9 @@ class StubFile (implicit scheduler: StubScheduler) extends File (null, scheduler
           input.writeBytes (data, pos.toInt + input.readableBytes, n)
           if (data.length < pos + len) {
             val e = new EOFException
-            scheduler.execute (cb.fail (e))
+            scheduler.fail (cb, e)
           } else {
-            scheduler.execute (cb, ())
+            scheduler.pass (cb, ())
           }}
       } catch {
         case t: Throwable => scheduler.fail (cb, t)
@@ -64,7 +64,7 @@ class StubFile (implicit scheduler: StubScheduler) extends File (null, scheduler
         if (data.length < pos + output.readableBytes)
           data = Arrays.copyOf (data, pos.toInt + output.readableBytes)
         output.readBytes (data, pos.toInt, output.readableBytes)
-        scheduler.execute (cb, ())
+        scheduler.pass (cb, ())
       } catch {
         case t: Throwable => scheduler.fail (cb, t)
       }}

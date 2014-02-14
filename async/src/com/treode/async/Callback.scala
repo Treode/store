@@ -42,19 +42,6 @@ object Callback {
 
   def fanout [A] (cbs: Traversable [Callback [A]], scheduler: Scheduler): Callback [A] =
     new Callback [A] {
-      def pass (v: A): Unit = cbs foreach (scheduler.execute (_, v))
+      def pass (v: A): Unit = cbs foreach (scheduler.pass (_, v))
       def fail (t: Throwable): Unit = cbs foreach (scheduler.fail (_, t))
-    }
-
-  def latch [A] (count: Int, cb: Callback [Unit]): Callback [A] =
-    new CountingLatch (count, cb)
-
-  def array [A] (count: Int, cb: Callback [Array [A]]) (implicit m: Manifest [A]): Callback [(Int, A)] =
-    new ArrayLatch (count, cb)
-
-  def map [K, V] (count: Int, cb: Callback [Map [K, V]]): Callback [(K, V)] =
-    new MapLatch (count, cb)
-
-  def seq [A] (count: Int, cb: Callback [Seq [A]]) (implicit m: Manifest [A]): Callback [A] =
-    new SeqLatch (count, cb)
-}
+    }}

@@ -3,7 +3,7 @@ package com.treode.disk
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, callback, continue}
+import com.treode.async.{Callback, Latch, callback, continue}
 import com.treode.pickle.{Pickler, PicklerRegistry}
 
 import PicklerRegistry.{Tag, tag}
@@ -22,7 +22,7 @@ private class CheckpointRegistry (implicit disks: Disks) {
     val allWritten = continue (cb) { roots: Seq [Tag] =>
       CheckpointRegistry.writer.write (gen, roots, cb)
     }
-    val oneWritten = Callback.seq (checkpoints.size, allWritten)
+    val oneWritten = Latch.seq (checkpoints.size, allWritten)
     checkpoints foreach (_ (oneWritten))
   }}
 

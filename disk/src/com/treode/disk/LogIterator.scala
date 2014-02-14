@@ -155,7 +155,7 @@ object LogIterator {
         AsyncIterator.merge (logs.values.iterator, merged (logs)) (ordering)
       }
 
-      val oneMade = Callback.map (reads.size, allMade)
+      val oneMade = Latch.map (reads.size, allMade)
       reads foreach { read =>
         val superb =
         apply (read.path, read.file, read.superb (useGen1), records, oneMade)

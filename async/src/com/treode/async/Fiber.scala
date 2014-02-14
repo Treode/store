@@ -1,11 +1,11 @@
 package com.treode.async
 
-import java.util
+import java.util.ArrayDeque
 
 class Fiber (scheduler: Scheduler) extends Scheduler {
 
-  private [this] val tasks = new util.ArrayDeque [Runnable]
-  private [this] var engaged: Boolean = false
+  private [this] val tasks = new ArrayDeque [Runnable]
+  private [this] var engaged = false
 
   private [this] def disengage(): Unit = synchronized {
     if (!tasks.isEmpty)
@@ -37,6 +37,56 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
   def at (millis: Long, task: Runnable): Unit =
     scheduler.at (millis) (execute (task))
 
+  def defer [A] (cb: Callback [A]) (f: => Any): Unit =
+    execute {
+      try {
+        f
+      } catch {
+        case t: Throwable =>
+          scheduler.fail (cb, t)
+      }}
+
+  def invoke [A] (cb: Callback [A]) (f: => A): Unit =
+    execute {
+      try {
+        scheduler.pass (cb, f)
+      } catch {
+        case t: Throwable =>
+          scheduler.fail (cb, t)
+      }}
+
+  def callback [A, B] (cb: Callback [A]) (f: B => A): Callback [B] =
+    new Callback [B] {
+      def pass (v: B): Unit = execute {
+        try {
+          scheduler.pass (cb, f (v))
+        } catch {
+          case t: Throwable =>
+            scheduler.fail (cb, t)
+        }}
+      def fail (t: Throwable): Unit =
+        scheduler.fail (cb, t)
+    }
+
+  def continue [A] (cb: Callback [_]) (f: A => Any): Callback [A] =
+    new Callback [A] {
+      def pass (v: A): Unit = execute {
+        try {
+          f (v)
+        } catch {
+          case t: Throwable =>
+            scheduler.fail (cb, t)
+        }}
+      def fail (t: Throwable): Unit =
+        scheduler.fail (cb, t)
+    }
+
   def spawn (task: Runnable): Unit =
     scheduler.execute (task)
+
+  def spawn (task: => Any): Unit =
+    scheduler.execute (task)
+
+  def spawn [A] (cb: Callback [A]): Callback [A] =
+    scheduler.take (cb)
 }

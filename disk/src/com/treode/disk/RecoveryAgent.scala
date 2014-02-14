@@ -4,7 +4,7 @@ import java.nio.file.Path
 import java.util.ArrayList
 import java.util.concurrent.ExecutorService
 
-import com.treode.async.{Callback, Scheduler, continue, defer}
+import com.treode.async.{Callback, Latch, Scheduler, continue, defer}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
@@ -33,7 +33,7 @@ private class RecoveryAgent (
       }
       val attaching = items.map (_._1) .toSet
       val roots = Position (0, 0, 0)
-      val latch = Callback.seq (items.size, disksPrimed)
+      val latch = Latch.seq (items.size, disksPrimed)
       val boot = BootBlock.apply (0, items.size, attaching, roots)
       DiskDrive.init (items, 0, boot, disks, disksPrimed)
     }
@@ -102,7 +102,7 @@ private class RecoveryAgent (
   def reattach (items: Seq [(Path, File)]): Unit =
     defer (cb) {
       require (!items.isEmpty, "Must list at least one file or device to reaattach.")
-      val oneRead = Callback.seq (items.size, continue (cb) (superBlocksRead _))
+      val oneRead = Latch.seq (items.size, continue (cb) (superBlocksRead _))
       for ((path, file) <- items)
         SuperBlocks.read (path, file, oneRead)
     }

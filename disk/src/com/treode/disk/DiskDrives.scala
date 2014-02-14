@@ -4,7 +4,7 @@ import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 import scala.collection.immutable.Queue
 
-import com.treode.async.{Callback, Fiber, Scheduler, callback, continue, defer}
+import com.treode.async.{Callback, Fiber, Latch, Scheduler, callback, continue, defer}
 import com.treode.async.io.File
 
 private class DiskDrives (implicit val scheduler: Scheduler, val config: DisksConfig)
@@ -122,7 +122,7 @@ extends Disks {
       loggedEntries = 0
 
       def rootPageWritten (newboot: BootBlock, newroots: Position) =
-        Callback.latch (disks.size, new Callback [Unit] {
+        Latch.unit (disks.size, new Callback [Unit] {
           def pass (v: Unit) = fiber.execute {
             generation = newboot.gen
             roots = newroots
@@ -144,7 +144,7 @@ extends Disks {
           def fail (t: Throwable) = fiber.execute (panic (t))
       }
 
-      val oneLogMarked = Callback.latch (disks.size, new Callback [Unit] {
+      val oneLogMarked = Latch.unit (disks.size, new Callback [Unit] {
         def pass (v: Unit) {
           checkpoints.checkpoint (newgen, rootsWritten)
         }
@@ -155,7 +155,7 @@ extends Disks {
     }
 
     def _cleanable (cb: Callback [Iterator [SegmentPointer]]) {
-      val latch = Callback.map (disks.size, callback (cb) { disks: Map [DiskDrive, IntSet] =>
+      val latch = Latch.map (disks.size, callback (cb) { disks: Map [DiskDrive, IntSet] =>
         for ((disk, segs) <- disks.iterator; seg <- segs.iterator)
           yield SegmentPointer (disk, seg)
       })

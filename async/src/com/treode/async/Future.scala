@@ -14,7 +14,7 @@ class Future [A] (scheduler: Scheduler) extends Callback [A] {
     value = v
     val callbacks = this.callbacks
     this.callbacks = null
-    callbacks foreach (scheduler.execute (_, v))
+    callbacks foreach (scheduler.pass (_, v))
   }
 
   def fail (t: Throwable): Unit = synchronized {

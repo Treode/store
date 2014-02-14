@@ -2,6 +2,8 @@ package com.treode.async
 
 import java.util.concurrent.{Executor, TimeUnit, ScheduledExecutorService}
 
+import Scheduler.toRunnable
+
 trait Scheduler extends Executor {
 
   def execute (task: Runnable)
@@ -9,8 +11,6 @@ trait Scheduler extends Executor {
   def delay (millis: Long, task: Runnable)
 
   def at (millis: Long, task: Runnable)
-
-  def spawn (task: Runnable)
 
   def execute (task: => Any): Unit =
     execute (toRunnable (task))
@@ -21,21 +21,40 @@ trait Scheduler extends Executor {
   def at (millis: Long) (task: => Any): Unit =
     at (millis, toRunnable (task))
 
-  def spawn (task: => Any): Unit =
-    spawn (toRunnable (task))
-
-  def execute [A] (cb: Callback [A], v: A): Unit =
+  def pass [A] (cb: Callback [A], v: A): Unit =
     execute (toRunnable (cb, v))
 
-  def spawn [A] (cb: Callback [A], v: A): Unit =
-    spawn (toRunnable (cb, v))
+  def fail (cb: Callback [_], t: Throwable): Unit =
+    execute (toRunnable (cb, t))
 
-  def fail [A] (cb: Callback [A], t: Throwable): Unit =
-    spawn (toRunnable (cb, t))
-}
+  def take [A] (cb: Callback [A]): Callback [A] =
+    new Callback [A] {
+      def pass (v: A): Unit = execute (toRunnable (cb, v))
+      def fail (t: Throwable): Unit = execute (toRunnable (cb, t))
+    }}
 
 object Scheduler {
 
   def apply (executor: ScheduledExecutorService): Scheduler =
     new ExecutorAdaptor (executor)
+
+  def toRunnable (task: => Any): Runnable =
+    new Runnable {
+      def run() = task
+    }
+
+  def toRunnable [A] (f: A => Any, v: A): Runnable =
+    new Runnable {
+      def run() = f (v)
+    }
+
+  def toRunnable [A] (cb: Callback [A], v: A): Runnable =
+    new Runnable {
+      def run() = cb (v)
+    }
+
+  def toRunnable [A] (cb: Callback [A], t: Throwable): Runnable =
+    new Runnable {
+      def run() = cb.fail (t)
+    }
 }

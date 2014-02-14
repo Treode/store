@@ -5,13 +5,13 @@ import scala.reflect.macros.Context
 
 package object async {
 
-  def _continue [A: c.WeakTypeTag, B: c.WeakTypeTag]
-      (c: Context) (cb: c.Expr [Callback [A]]) (f: c.Expr [B => Any]): c.Expr [Callback [B]] = {
+  def _continue1 [A: c.WeakTypeTag]
+      (c: Context) (cb: c.Expr [Callback [_]]) (f: c.Expr [A => Any]): c.Expr [Callback [A]] = {
     import c.universe._
     reify {
-      new Callback [B] {
+      new Callback [A] {
         private val _cb = cb.splice
-        def pass (v: B) {
+        def pass (v: A) {
           try {
             f.splice.apply (v)
           } catch {
@@ -22,7 +22,8 @@ package object async {
           _cb.fail (t)
       }}}
 
-  def continue [A, B] (cb: Callback [A]) (f: B => Any): Callback [B] = macro _continue [A, B]
+  def continue [A] (cb: Callback [_]) (f: A => Any): Callback [A] =
+    macro _continue1 [A]
 
   def _callback1 [A: c.WeakTypeTag]
       (c: Context) (f: c.Expr [A => Any]): c.Expr [Callback [A]] = {
@@ -33,7 +34,8 @@ package object async {
         def fail (t: Throwable): Unit = throw t
       }}}
 
-  def callback [A] (f: A => Any): Callback [A] = macro _callback1 [A]
+  def callback [A] (f: A => Any): Callback [A] =
+    macro _callback1 [A]
 
   def _callback2 [A: c.WeakTypeTag, B: c.WeakTypeTag]
       (c: Context) (cb: c.Expr [Callback [A]]) (f: c.Expr [B => A]): c.Expr [Callback [B]] = {
@@ -55,9 +57,10 @@ package object async {
           _cb.fail (t)
       }}}
 
-  def callback [A, B] (cb: Callback [A]) (f: B => A): Callback [B] = macro _callback2 [A, B]
+  def callback [A, B] (cb: Callback [A]) (f: B => A): Callback [B] =
+    macro _callback2 [A, B]
 
-  def _defer [A: c.WeakTypeTag]
+  def _defer1 [A: c.WeakTypeTag]
       (c: Context) (cb: c.Expr [Callback [A]]) (f: c.Expr [Any]): c.Expr [Unit] = {
     import c.universe._
     reify {
@@ -68,9 +71,10 @@ package object async {
           cb.splice.fail (t)
       }}}
 
-  def defer [A] (cb: Callback [A]) (f: Any): Unit = macro _defer [A]
+  def defer [A] (cb: Callback [A]) (f: Any): Unit =
+    macro _defer1 [A]
 
-  def _invoke [A: c.WeakTypeTag]
+  def _invoke1 [A: c.WeakTypeTag]
       (c: Context) (cb: c.Expr [Callback [A]]) (f: c.Expr [A]): c.Expr [Unit] = {
     import c.universe._
     reify {
@@ -86,19 +90,6 @@ package object async {
         _cb (v.get)
     }}
 
-  def invoke [A] (cb: Callback [A]) (f: A): Unit = macro _invoke [A]
-
-  def toRunnable (task: => Any): Runnable =
-    new Runnable {
-      def run() = task
-    }
-
-  def toRunnable [A] (cb: Callback [A], v: A): Runnable =
-    new Runnable {
-      def run() = cb (v)
-    }
-
-  def toRunnable [A] (cb: Callback [A], t: Throwable): Runnable =
-    new Runnable {
-      def run() = cb.fail (t)
-    }}
+  def invoke [A] (cb: Callback [A]) (f: A): Unit =
+    macro _invoke1 [A]
+}

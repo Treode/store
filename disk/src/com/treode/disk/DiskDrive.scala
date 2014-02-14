@@ -64,7 +64,7 @@ private class DiskDrive (
     new Callback [B] {
       def pass (vb: B) {
         ready()
-        scheduler.execute (cb, v)
+        scheduler.pass (cb, v)
       }
       def fail (t: Throwable) {
         ready()
@@ -75,7 +75,7 @@ private class DiskDrive (
     queue.add ((priority, task))
 
   private def enque (priority: Int) (f: => Any): Unit =
-    enque (priority, toRunnable (f))
+    enque (priority, Scheduler.toRunnable (f))
 
   private def _advanceLog (cb: Callback [Unit]): Unit =
     defer (cb) {
@@ -414,7 +414,7 @@ private object DiskDrive {
         SuperBlock (id, boot, geometry, alloc.free, logSeg.num, logSeg.pos,
             pageSeg.num, pageSeg.limit)
 
-      val latch = Callback.latch (3, callback (cb) { _: Unit =>
+      val latch = Latch.unit (3, callback (cb) { _: Unit =>
         val logSegs = new ArrayDeque [Int]
         logSegs.add (logSeg.num)
         val disk =
@@ -439,7 +439,7 @@ private object DiskDrive {
   ): Unit =
 
     defer (cb) {
-      val latch = Callback.seq (items.size, cb)
+      val latch = Latch.seq (items.size, cb)
       for (((path, file, geometry), i) <- items zipWithIndex) {
         DiskDrive.init (base + i, path, file, geometry, boot, disks, latch)
       }}

@@ -1,7 +1,7 @@
 package com.treode.disk
 
 import java.util.concurrent.ConcurrentHashMap
-import com.treode.async.{Callback, callback, defer}
+import com.treode.async.{Callback, Latch, callback, defer}
 
 import PageRegistry.Handler
 
@@ -36,7 +36,7 @@ private class PageRegistry {
         liveBytes
       }
       val groupsByType = ledger.groups
-      val latch = Callback.map (groupsByType.size, pagesProbed)
+      val latch = Latch.map (groupsByType.size, pagesProbed)
       for ((id, groups) <- groupsByType)
         probe (id, groups, latch)
     }

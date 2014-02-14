@@ -5,7 +5,7 @@ import java.nio.channels.{AsynchronousChannelGroup, AsynchronousSocketChannel}
 import java.net.SocketAddress
 import java.util.concurrent.{Executor, TimeUnit}
 
-import com.treode.async.{Callback, toRunnable}
+import com.treode.async.{Callback, Scheduler}
 import com.treode.buffer.PagedBuffer
 
 import TimeUnit.MILLISECONDS
@@ -14,10 +14,10 @@ import TimeUnit.MILLISECONDS
 class Socket (socket: AsynchronousSocketChannel, execx: Executor) {
 
   private def execute (cb: Callback [Unit]): Unit =
-    execx.execute (toRunnable (cb, ()))
+    execx.execute (Scheduler.toRunnable (cb, ()))
 
   private def fail (cb: Callback [Unit], t: Throwable): Unit =
-    execx.execute (toRunnable (cb, t))
+    execx.execute (Scheduler.toRunnable (cb, t))
 
   def connect (addr: SocketAddress, cb: Callback [Unit]): Unit =
     try {

@@ -3,7 +3,7 @@ package com.treode.disk
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, Scheduler, continue}
+import com.treode.async.{Callback, Latch, Scheduler, continue}
 
 private class LaunchAgent (
     drives: DiskDrives,
@@ -27,8 +27,8 @@ private class LaunchAgent (
 
   val launched = continue (cb) { _: Unit =>
     drives.launch (roots, pages)
-    scheduler.execute (cb, drives)
+    scheduler.pass (cb, drives)
   }
-  val ready = Callback.latch (launches.size, launched)
+  val ready = Latch.unit (launches.size, launched)
   launches foreach (f => scheduler.execute (f (this)))
 }

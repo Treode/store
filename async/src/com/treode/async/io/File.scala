@@ -7,17 +7,17 @@ import java.nio.file.attribute.FileAttribute
 import java.util.concurrent.{Executor, ExecutorService}
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, toRunnable}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.buffer.PagedBuffer
 
 /** A file that has useful behavior (flush/fill) and that can be mocked. */
 class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 
   private def execute (cb: Callback [Unit]): Unit =
-    exec.execute (toRunnable (cb, ()))
+    exec.execute (Scheduler.toRunnable (cb, ()))
 
   private def fail (cb: Callback [Unit], t: Throwable): Unit =
-    exec.execute (toRunnable (cb, t))
+    exec.execute (Scheduler.toRunnable (cb, t))
 
   private class Filler (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit])
   extends Callback [Int] {
@@ -55,7 +55,20 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
         new Filler (input, pos, len, cb) .fill()
       }
     } catch {
-      case t: Throwable => File.this.fail (cb, t)
+      case t: Throwable => fail (cb, t)
+    }
+
+  def fillA (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
+    try {
+      if (len <= input.readableBytes) {
+        Async (execute (_))
+      } else {
+        input.capacity (input.readPos + len)
+        Async (cb => new Filler (input, pos, len, cb) .fill())
+      }
+    } catch {
+      case t: Throwable =>
+        Async (fail (_, t))
     }
 
   def deframe (input: PagedBuffer, pos: Long, cb: Callback [Int]) {
@@ -71,6 +84,14 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
       def fail (t: Throwable) = cb.fail (t)
     }
     fill (input, pos, 4, header)
+  }
+
+  def deframe (input: PagedBuffer, pos: Long): Async [Int] = {
+    for {
+      _ <- fillA (input, pos, 4)
+      len = input.readInt()
+      _ <- fillA (input, pos+4, len)
+    } yield len
   }
 
   private class Flusher (output: PagedBuffer, pos: Long, cb: Callback [Unit])
@@ -108,7 +129,7 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
       else
         new Flusher (output, pos, cb) .flush()
     } catch {
-      case t: Throwable => File.this.fail (cb, t)
+      case t: Throwable => fail (cb, t)
     }
 
   def close(): Unit = file.close()

@@ -3,7 +3,7 @@ package com.treode.store.locks
 import scala.collection.SortedSet
 import scala.language.postfixOps
 
-import com.treode.async.toRunnable
+import com.treode.async.Scheduler
 import com.treode.store.TxClock
 
 private [store] class LockSpace (bits: Int) {
@@ -27,7 +27,7 @@ private [store] class LockSpace (bits: Int) {
     locks (id) .release (w)
 
   def read (rt: TxClock, ids: Seq [Int]) (cb: => Any): Unit =
-    new LockReader (rt, toRunnable (cb)) .init (this, ids map (_ & mask) toSet)
+    new LockReader (rt, Scheduler.toRunnable (cb)) .init (this, ids map (_ & mask) toSet)
 
   def write (ft: TxClock, ids: Seq [Int]) (cb: LockSet => Any): Unit =
     new LockWriter (this, ft, SortedSet (ids map (_ & mask): _*), cb) .init()

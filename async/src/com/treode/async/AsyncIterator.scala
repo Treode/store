@@ -19,10 +19,10 @@ object AsyncIterator {
 
       def next (cb: Callback [A]): Unit =
         try {
-          scheduler.execute (cb, iter.next)
+          scheduler.pass (cb, iter.next)
         } catch {
           case e: Throwable =>
-            cb.fail (e)
+            scheduler.fail (cb, e)
         }}
 
   /** Transform a Scala iterable into an AsyncIterator. */
@@ -37,10 +37,10 @@ object AsyncIterator {
 
       def next (cb: Callback [A]): Unit =
         try {
-          scheduler.execute (cb, iter.next)
+          scheduler.pass (cb, iter.next)
         } catch {
           case e: Throwable =>
-            scheduler.execute (cb.fail (e))
+            scheduler.fail (cb, e)
         }}
 
   /** Transform a Java iterable into an AsyncIterator. */

@@ -3,7 +3,7 @@ package com.treode.disk
 import java.util.PriorityQueue
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, callback, continue}
+import com.treode.async.{Callback, Latch, callback, continue}
 
 class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
   import SegmentCleaner.{Groups, union}
@@ -12,7 +12,7 @@ class SegmentCleaner (disks: DiskDrives, pages: PageRegistry) {
   val threshold = 0.9
 
   def compact (groups: Groups, cb: Callback [Unit]) {
-    val latch = Callback.latch (groups.size, cb)
+    val latch = Latch.unit (groups.size, cb)
     for ((id, gs) <- groups)
       pages.compact (id, gs, latch)
   }

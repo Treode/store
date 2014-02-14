@@ -1,6 +1,6 @@
 package com.treode.store.paxos
 
-import com.treode.async.{Callback, Scheduler, callback, continue, defer}
+import com.treode.async.{Callback, Latch, Scheduler, callback, continue, defer}
 import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
 import com.treode.disk.{Disks, Position, RecordDescriptor}
@@ -28,7 +28,7 @@ private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
     acceptors.remove (key, a)
 
   def recover (medics: Seq [Medic], cb: Callback [Unit]) {
-    val allClosed = Callback.latch (medics.size, cb)
+    val allClosed = Latch.unit (medics.size, cb)
     val oneClosed = callback (allClosed) { a: Acceptor =>
       acceptors.put (a.key, a)
     }
@@ -39,7 +39,7 @@ private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
     import Acceptor.{Status, statii}
     defer (cb) {
       val as = materialize (acceptors.values)
-      val latch = Callback.seq [Status] (
+      val latch = Latch.seq [Status] (
           as.size,
           continue (cb) (statii.write (0, _, cb)))
       as foreach (_.checkpoint (latch))
