@@ -8,7 +8,7 @@ trait TierTable {
 
   def get (key: Bytes, cb: Callback [Option [Bytes]])
 
-  def iterator (cb: Callback [CellIterator])
+  def iterator: CellIterator
 
   def put (key: Bytes, value: Bytes): Long
 

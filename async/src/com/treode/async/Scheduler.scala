@@ -15,6 +15,9 @@ trait Scheduler extends Executor {
   def execute (task: => Any): Unit =
     execute (toRunnable (task))
 
+  def execute [A] (f: A => Any, v: A): Unit =
+    execute (toRunnable (f, v))
+
   def delay (millis: Long) (task: => Any): Unit =
     delay (millis, toRunnable (task))
 
@@ -56,5 +59,4 @@ object Scheduler {
   def toRunnable [A] (cb: Callback [A], t: Throwable): Runnable =
     new Runnable {
       def run() = cb.fail (t)
-    }
-}
+    }}

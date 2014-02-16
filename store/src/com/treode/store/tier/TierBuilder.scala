@@ -7,7 +7,7 @@ import com.treode.async.{AsyncIterator, Callback, continue}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, StoreConfig, TxClock}
 
-private class TierBuilder [K, V] (desc: TierDescriptor [K, V], generation: Long) (
+private class TierBuilder (desc: TierDescriptor [_, _], generation: Long) (
     implicit disks: Disks, config: StoreConfig) {
 
   import desc.pager
@@ -157,6 +157,6 @@ private object TierBuilder {
     val cellsAdded = continue (cb) { _: Unit =>
       builder.result (cb)
     }
-    AsyncIterator.foreach (iter, cellsAdded) { (cell, cb) =>
+    iter.foreach (cellsAdded) { (cell, cb) =>
       builder.add (cell.key, cell.value, cb)
     }}}

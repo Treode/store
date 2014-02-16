@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-import com.treode.async.{Callback, callback}
+import com.treode.async.{AsyncIterator, Callback, callback}
 import com.treode.disk.Disks
 import com.treode.store.Bytes
 
@@ -11,10 +11,8 @@ private class LoggedTable (table: TierTable) (implicit disks: Disks) extends Tes
       bytes.map (_.int)
     })
 
-  def iterator (cb: Callback [TestIterator]): Unit =
-    table.iterator (callback (cb) { iter =>
-      new TestIterator (iter)
-    })
+  def iterator: AsyncIterator [TestCell] =
+    table.iterator.map (new TestCell (_))
 
   def put (key: Int, value: Int, cb: Callback [Unit]) {
     val gen = table.put (Bytes (key), Bytes (value))

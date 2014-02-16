@@ -51,11 +51,7 @@ class CallbackCaptor [T] protected extends Callback [T] {
   def passed: T = {
     expectInvoked()
     if (_t != null)
-      // You'd think that `fail(message, thrown)` will include helpful information about thrown,
-      // like the stack trace, but you'd be wrong.  It includes NOTHING about thrown.
-      Assertions.fail (
-          "Expected operation to pass, but it failed:\n" +
-          (_t.getStackTrace take (10) mkString "\n"))
+      throw _t
     _v
   }
 

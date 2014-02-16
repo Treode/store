@@ -69,7 +69,7 @@ class TierSpec extends WordSpec {
     val builder = new TierBuilder (descriptor, 0)
     val iter = AsyncIterator.adapt (AllFruits.iterator)
     CallbackCaptor.pass [Unit] { cb =>
-      AsyncIterator.foreach (iter, cb) (builder.add (_, Some (One), _))
+      iter.foreach (cb) (builder.add (_, Some (One), _))
     }
     CallbackCaptor.pass [Tier] (builder.result _)
   }
@@ -81,11 +81,9 @@ class TierSpec extends WordSpec {
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier) (
       implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] = {
-    val iter = CallbackCaptor.pass [CellIterator] { cb =>
-      TierIterator (descriptor, tier.root, cb)
-    }
+    val iter = TierIterator (descriptor, tier.root)
     CallbackCaptor.pass [Seq [Cell]] { cb =>
-      AsyncIterator.scan (iter, cb)
+      iter.toSeq (cb)
     }}
 
   private def toSeq (builder: Builder [Cell, _], pos: Position) (

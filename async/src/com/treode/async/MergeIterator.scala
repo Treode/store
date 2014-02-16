@@ -1,16 +1,17 @@
 package com.treode.async
 
 import scala.collection.mutable.PriorityQueue
+import scala.language.postfixOps
 
-private class MergeIterator [A] private (implicit order: Ordering [A])
+private class MergeIterator [A] (iters: Seq [AsyncIterator [A]]) (implicit order: Ordering [A])
 extends AsyncIterator [A] {
 
-  private case class Element (next: A, tier: Int, iter: AsyncIterator [A])
+  private case class Element (x: A, tier: Int, cb: Callback [Unit])
   extends Ordered [Element] {
 
     // Reverse the sort for the PriorityQueue.
     def compare (that: Element): Int = {
-      val r = order.compare (that.next, next)
+      val r = order.compare (that.x, x)
       if (r != 0) r else that.tier compare tier
     }}
 
@@ -20,69 +21,56 @@ extends AsyncIterator [A] {
       x compare y
   }
 
-  private val pq = new PriorityQueue [Element]
+  def foreach (cb: Callback [Unit]) (f: (A, Callback [Unit]) => Any) {
 
-  private def enqueue (iters: Iterator [AsyncIterator [A]], cb: Callback [AsyncIterator [A]]) {
+    val pq = new PriorityQueue [Element]
+    var count = iters.size
+    var thrown = List.empty [Throwable]
 
-    if (iters.hasNext) {
+    val next: Callback [Unit] =
+      new Callback [Unit] {
 
-      var iter = iters.next
-      while (!iter.hasNext && iters.hasNext)
-        iter = iters.next
-
-      val loop = new Callback [A] {
-
-        def pass (x: A) {
-          pq.enqueue (Element (x, pq.length, iter))
-          if (iters.hasNext) {
-            iter = iters.next
-            while (!iter.hasNext && iters.hasNext)
-              iter = iters.next
-            if (iter.hasNext)
-              iter.next (this)
-            else
-              cb (MergeIterator.this)
-          } else {
-            cb (MergeIterator.this)
-          }}
-
-        def fail (t: Throwable) = cb.fail (t)
-      }
-
-      if (iter.hasNext)
-        iter.next (loop)
-      else
-        cb (MergeIterator.this)
-
-    } else {
-      cb (MergeIterator.this)
-    }}
-
-  def hasNext: Boolean = !pq.isEmpty
-
-  def next (cb: Callback [A]) {
-
-    val Element (next, tier, iter) = pq.dequeue()
-
-    if (iter.hasNext) {
-
-      iter.next (new Callback [A] {
-
-        def pass (x: A) {
-          pq.enqueue (Element (x, tier, iter))
-          cb (next)
+        def pass (v: Unit): Unit = pq.synchronized {
+          val elem = pq.dequeue()
+          elem.cb()
         }
 
-        def fail (t: Throwable) = cb.fail (t)
-      })
+        def fail (t: Throwable): Unit = pq.synchronized {
+          val elem = pq.dequeue()
+          elem.cb.fail (t)
+        }}
 
-    } else {
-      cb (next)
-    }}}
+    def _close() {
+      require (count > 0, "MergeIterator was already closed.")
+      count -= 1
+      if (count > 0 && thrown.isEmpty && count == pq.size)
+        f (pq.head.x, next)
+      else if (count == pq.size && !thrown.isEmpty)
+        cb.fail (MultiException.fit (thrown))
+      else if (count == 0 && thrown.isEmpty)
+        cb()
+    }
 
-private object MergeIterator {
+    val close: Callback [Unit] =
+      new Callback [Unit] {
 
-  def apply [A] (iters: Iterator [AsyncIterator [A]], cb: Callback [AsyncIterator [A]]) (
-      implicit ordering: Ordering [A]): Unit =
-    new MergeIterator() .enqueue (iters, cb)
-}
+        def pass (v: Unit): Unit = pq.synchronized {
+          _close()
+        }
+
+        def fail (t: Throwable): Unit = pq.synchronized {
+          thrown ::= t
+          _close()
+        }}
+
+    def loop (n: Int) (x: A, cb: Callback [Unit]): Unit = pq.synchronized {
+      pq.enqueue (Element (x, n, cb))
+      if (thrown.isEmpty && count == pq.size)
+        f (pq.head.x, next)
+    }
+
+    if (count == 0)
+      cb()
+    for ((iter, n) <- iters zipWithIndex)
+      iter.foreach (close) (loop (n) _)
+  }}

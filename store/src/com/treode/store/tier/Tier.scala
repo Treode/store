@@ -6,7 +6,7 @@ import com.treode.store.{Bytes, StorePicklers}
 
 private case class Tier (gen: Long, root: Position) {
 
-  def read [K, V] (desc: TierDescriptor [K, V], key: Bytes, cb: Callback [Option [Cell]]) (
+  def read (desc: TierDescriptor [_, _], key: Bytes, cb: Callback [Option [Cell]]) (
       implicit disks: Disks) {
 
     import desc.pager

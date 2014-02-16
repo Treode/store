@@ -6,17 +6,8 @@ import AsyncIteratorTestTools._
 
 class MergeIteratorSpec extends FlatSpec {
 
-  private def merge [A] (xss: Seq [A] *) (implicit ordering: Ordering [A]) = {
-    val cb = CallbackCaptor [AsyncIterator [A]]
-    AsyncIterator.merge (xss.iterator map (AsyncIterator.adapt (_)), cb)
-    cb.passed
-  }
-
-  private def merge [A] (iters: Iterator [AsyncIterator [A]]) (implicit ordering: Ordering [A]) = {
-    val cb = CallbackCaptor [AsyncIterator [A]]
-    AsyncIterator.merge (iters, cb)
-    cb.passed
-  }
+  private def merge [A] (xss: Seq [A] *) (implicit ordering: Ordering [A]) =
+    AsyncIterator.merge (xss map (_.async))
 
   "The MergeIterator" should "yield nothing for []" in {
     val iter = merge [Int] ()
@@ -133,34 +124,48 @@ class MergeIteratorSpec extends FlatSpec {
     expectSeq (1 -> "b", 1 -> "c", 2 -> "a") (iter)
   }
 
-  it should "stop at the first exception from hasNext" in {
-    var count = 0
+  it should "stop at an exception in the first iterator" in {
     var c1 = Set.empty [Int]
     var c2 = Set.empty [Int]
     var provided = Set.empty [Int]
     expectFail [DistinguishedException] {
-      val i1 = trackNext (adapt (1, 3, 5, 7)) (c1 += _)
-      val i2 = failHasNext (i1) {count+=1; count != 4}
-      val j1 = trackNext (adapt (2, 4, 6, 8)) (c2 += _)
-      trackNext (merge (Iterator (i2, j1))) (provided += _)
+      val i1 = track (adapt (1, 3, 5, 7)) (c1 += _)
+      val i2 = failWhen (i1) (_ == 5)
+      val j1 = track (adapt (2, 4, 6, 8)) (c2 += _)
+      track (AsyncIterator.merge (Seq (i2, j1))) (provided += _)
     }
-    expectResult (Set (1, 3)) (c1)
+    expectResult (Set (1, 3, 5)) (c1)
     expectResult (Set (2, 4)) (c2)
-    expectResult (Set (1, 2)) (provided)
+    expectResult (Set (1, 2, 3)) (provided)
   }
 
-  it should "stop at the first exception from next" in {
-    var count = 0
+  it should "stop at an exception in the second iterator" in {
     var c1 = Set.empty [Int]
     var c2 = Set.empty [Int]
     var provided = Set.empty [Int]
     expectFail [DistinguishedException] {
-      val i1 = trackNext (adapt (1, 3, 5, 7)) (c1 += _)
-      val i2 = failNext (i1) {count+=1; count != 3}
-      val j1 = trackNext (adapt (2, 4, 6, 8)) (c2 += _)
-      trackNext (merge (Iterator (i2, j1))) (provided += _)
+      val i1 = track (adapt (1, 3, 5, 7)) (c1 += _)
+      val j1 = track (adapt (2, 4, 6, 8)) (c2 += _)
+      val j2 = failWhen (j1) (_ == 6)
+      track (AsyncIterator.merge (Seq (i1, j2))) (provided += _)
     }
-    expectResult (Set (1, 3)) (c1)
-    expectResult (Set (2, 4)) (c2)
-    expectResult (Set (1, 2)) (provided)
+    expectResult (Set (1, 3, 5)) (c1)
+    expectResult (Set (2, 4, 6)) (c2)
+    expectResult (Set (1, 2, 3, 4)) (provided)
+  }
+
+  it should "get exceptions from both iterators" in {
+    var c1 = Set.empty [Int]
+    var c2 = Set.empty [Int]
+    var provided = Set.empty [Int]
+    expectFail [MultiException] {
+      val i1 = track (adapt (1, 3, 5, 7)) (c1 += _)
+      val i2 = failWhen (i1) (_ => true)
+      val j1 = track (adapt (2, 4, 6, 8)) (c2 += _)
+      val j2 = failWhen (j1) (_ => true)
+      track (AsyncIterator.merge (Seq (i2, j2))) (provided += _)
+    }
+    expectResult (Set (1)) (c1)
+    expectResult (Set (2)) (c2)
+    expectResult (Set.empty) (provided)
   }}

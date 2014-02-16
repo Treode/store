@@ -1,9 +1,35 @@
 package com.treode
 
+import java.lang.{Iterable => JIterable}
+import java.util.{Iterator => JIterator}
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 
 package object async {
+
+  implicit class RichIterator [A] (iter: Iterator [A]) {
+
+    def async (implicit scheduler: Scheduler): AsyncIterator [A] =
+      AsyncIterator.adapt (iter)
+  }
+
+  implicit class RichIterable [A] (iter: Iterable [A]) {
+
+    def async (implicit scheduler: Scheduler): AsyncIterator [A] =
+      AsyncIterator.adapt (iter.iterator)
+  }
+
+  implicit class RichJavaIterator [A] (iter: JIterator [A]) {
+
+    def async (implicit scheduler: Scheduler): AsyncIterator [A] =
+      AsyncIterator.adapt (iter)
+  }
+
+  implicit class RichJavaIterable [A] (iter: JIterable [A]) {
+
+    def async (implicit scheduler: Scheduler): AsyncIterator [A] =
+      AsyncIterator.adapt (iter.iterator)
+  }
 
   def _continue1 [A: c.WeakTypeTag]
       (c: Context) (cb: c.Expr [Callback [_]]) (f: c.Expr [A => Any]): c.Expr [Callback [A]] = {

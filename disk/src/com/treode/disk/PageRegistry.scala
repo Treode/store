@@ -59,7 +59,7 @@ private class PageRegistry (disks: DiskDrives) {
       (segs, groups)
     }
 
-    AsyncIterator.foreach (AsyncIterator.adapt (iter), allProbed) { case (seg, cb) =>
+    iter.async.foreach (allProbed) { case (seg, cb) =>
       val oneRead = continue (cb) { ledger: PageLedger =>
         val oneProbed = callback (cb) { live: Long =>
           if (live == 0) {
@@ -86,7 +86,7 @@ private class PageRegistry (disks: DiskDrives) {
       chooseByMargin (candidates.result, config.cleaningLoad)
     }
 
-    AsyncIterator.foreach (AsyncIterator.adapt (iter), allProbed) { case (seg, cb) =>
+    iter.async.foreach (allProbed) { case (seg, cb) =>
       val oneRead = continue (cb) { ledger: PageLedger =>
         val oneProbed = callback (cb) { live: Long =>
           if (live == 0) {
@@ -110,7 +110,7 @@ private class PageRegistry (disks: DiskDrives) {
       merger.result
     }
 
-    AsyncIterator.foreach (AsyncIterator.adapt (iter), allRead) { case (seg, cb) =>
+    iter.async.foreach (allRead) { case (seg, cb) =>
       val oneRead = callback (cb) { ledger: PageLedger =>
         merger.add (ledger.groups)
       }

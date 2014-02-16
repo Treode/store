@@ -28,60 +28,68 @@ private class LogIterator private (
   private var logPos = superb.logHead
   private var pagePos = superb.pagePos
 
-  private def failed [A] (cb: Callback [A], t: Throwable) {
-    logPos = -1L
-    cb.fail (t)
-  }
+  class Foreach (f: ((Long, Unit => Any), Callback [Unit]) => Any, cb: Callback [Unit]) {
 
-  def hasNext: Boolean = logPos > 0
-
-  private def frameRead (cb: Callback [(Long, Unit => Any)]) =
-    new Callback [Int] {
-
-      def pass (len: Int) {
-        val start = buf.readPos
-        val hdr = RecordHeader.pickler.unpickle (buf)
-        hdr match {
-          case LogEnd =>
-            logPos = -1L
-            buf.clear()
-            cb (Long.MaxValue, _ => ())
-
-          case LogAlloc (next) =>
-            logSeg = alloc.alloc (next, superb.geometry, config)
-            logSegs += logSeg.num
-            logPos = logSeg.pos
-            buf.clear()
-            file.deframe (buf, logPos, this)
-
-          case PageWrite (pos, _ledger) =>
-            pagePos = pos
-            pageLedger.add (_ledger)
-            logPos += len + 4
-            file.deframe (buf, logPos, this)
-
-          case PageAlloc (next, _ledger) =>
-            pageSeg = alloc.alloc (next, superb.geometry, config)
-            pagePos = pageSeg.pos
-            pageLedger = _ledger.unzip
-            logPos += len + 4
-            file.deframe (buf, logPos, this)
-
-          case Entry (time, id) =>
-            val end = buf.readPos
-            val entry = records.read (id.id, buf, len - end + start)
-            logPos += len + 4
-            cb (time, entry)
-
-          case _ =>
-            cb.fail (new MatchError)
-        }}
-
-      def fail (t: Throwable) = failed (cb, t)
+    val _read = new Callback [Int] {
+      def pass (v: Int): Unit = read (v)
+      def fail (t: Throwable): Unit = Foreach.this.fail (t)
     }
 
-  def next (cb: Callback [(Long, Unit => Any)]): Unit =
-    file.deframe (buf, logPos, frameRead (cb))
+    val _next = new Callback [Unit] {
+      def pass (v: Unit): Unit = next()
+      def fail (t: Throwable): Unit = Foreach.this.fail (t)
+    }
+
+    def fail (t: Throwable) {
+      logPos = -1L
+      cb.fail (t)
+    }
+
+    def read (len: Int) {
+      val start = buf.readPos
+      val hdr = RecordHeader.pickler.unpickle (buf)
+      hdr match {
+        case LogEnd =>
+          logPos = -1L
+          buf.clear()
+          scheduler.execute (cb, ())
+
+        case LogAlloc (next) =>
+          logSeg = alloc.alloc (next, superb.geometry, config)
+          logSegs += logSeg.num
+          logPos = logSeg.pos
+          buf.clear()
+          file.deframe (buf, logPos, _read)
+
+        case PageWrite (pos, _ledger) =>
+          pagePos = pos
+          pageLedger.add (_ledger)
+          logPos += len + 4
+          file.deframe (buf, logPos, _read)
+
+        case PageAlloc (next, _ledger) =>
+          pageSeg = alloc.alloc (next, superb.geometry, config)
+          pagePos = pageSeg.pos
+          pageLedger = _ledger.unzip
+          logPos += len + 4
+          file.deframe (buf, logPos, _read)
+
+        case Entry (time, id) =>
+          val end = buf.readPos
+          val entry = records.read (id.id, buf, len - end + start)
+          logPos += len + 4
+          f ((time, entry), _next)
+
+        case _ =>
+          fail (new MatchError)
+      }}
+
+    def next() {
+      file.deframe (buf, logPos, _read)
+    }}
+
+  def foreach (cb: Callback [Unit]) (f: ((Long, Unit => Any), Callback [Unit]) => Any): Unit =
+    new Foreach (f, cb) .next()
 
   def close (disks: DiskDrives, logd: LogDispatcher, paged: PageDispatcher): DiskDrive = {
     buf.clear()
@@ -146,16 +154,13 @@ object LogIterator {
         disks.add (drives, added (disks))
       }
 
-      def merged (logs: Map [Int, LogIterator]) = continue (cb) { iter: ReplayIterator =>
-        AsyncIterator.foreach (iter, replayed (logs)) { case ((time, replay), cb) =>
-          invoke (cb) (replay())
-        }}
-
       val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
 
       val allMade = continue (cb) { logs: Map [Int, LogIterator] =>
-        AsyncIterator.merge (logs.values.iterator, merged (logs)) (ordering)
-      }
+        val iter = AsyncIterator.merge (logs.values.toSeq) (ordering)
+        iter.foreach (replayed (logs)) { case ((time, replay), cb) =>
+          invoke (cb) (replay())
+        }}
 
       val oneMade = Latch.map (reads.size, allMade)
       reads foreach { read =>

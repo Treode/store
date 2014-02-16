@@ -1,14 +1,14 @@
 package com.treode.store.tier
 
-import com.treode.async.{Callback, callback}
+import com.treode.async.{AsyncIterator, Callback, callback}
 
 private class TrackedTable (table: TestTable, tracker: TrackingTable) extends TestTable {
 
   def get (key: Int, cb: Callback [Option [Int]]): Unit =
     table.get (key, cb)
 
-  def iterator (cb: Callback [TestIterator]): Unit =
-    table.iterator (cb)
+  def iterator: AsyncIterator [TestCell] =
+    table.iterator
 
   def put (key: Int, value: Int, cb: Callback [Unit]) {
     tracker.putting (key, value)

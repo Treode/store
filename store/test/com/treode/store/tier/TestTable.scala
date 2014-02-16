@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-import com.treode.async.{Callback, Scheduler, callback}
+import com.treode.async.{AsyncIterator, Callback, Scheduler, callback}
 import com.treode.disk.{Disks, RecordDescriptor, Recovery, RootDescriptor}
 import com.treode.store.{Bytes, StoreConfig, StorePicklers}
 
@@ -8,7 +8,7 @@ private trait TestTable {
 
   def get (key: Int, cb: Callback [Option [Int]])
 
-  def iterator (cb: Callback [TestIterator])
+  def iterator: AsyncIterator [TestCell]
 
   def put (key: Int, value: Int, cb: Callback [Unit])
 

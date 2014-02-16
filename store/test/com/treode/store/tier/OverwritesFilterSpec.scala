@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-import com.treode.async.{AsyncIterator, Callback, CallbackCaptor, Scheduler}
+import com.treode.async._
 import com.treode.store.{Bytes, Fruits}
 import org.scalatest.FlatSpec
 
@@ -19,15 +19,12 @@ class OverwritesFilterSpec extends FlatSpec {
 
   private def expectCells (cs: Cell*) (actual: AsyncIterator [Cell]) {
     val cb = CallbackCaptor [Seq [Cell]]
-    AsyncIterator.scan (actual, cb)
+    actual.toSeq (cb)
     expectResult (cs) (cb.passed)
   }
 
-  private def newFilter (cs: Cell*) = {
-    val cb = CallbackCaptor [AsyncIterator [Cell]]
-    OverwritesFilter (AsyncIterator.adapt (cs.iterator), cb)
-    cb.passed
-  }
+  private def newFilter (cs: Cell*) =
+    OverwritesFilter (cs.iterator.async)
 
   "The OverwritesFilter" should "handle []" in {
     expectCells () (newFilter ())

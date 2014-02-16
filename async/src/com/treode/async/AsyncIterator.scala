@@ -5,8 +5,33 @@ import java.util.{Iterator => JIterator}
 
 trait AsyncIterator [+A] {
 
-  def hasNext: Boolean
-  def next (cb: Callback [A])
+  def foreach (cb: Callback [Unit]) (f: (A, Callback [Unit]) => Any)
+
+  def map [B] (f: A => B): AsyncIterator [B] = {
+    val self = this
+    new AsyncIterator [B] {
+      def foreach (cb: Callback [Unit]) (g: (B, Callback [Unit]) => Any): Unit =
+        self.foreach (cb) { case (x, cb) => g (f (x), cb) }
+    }}
+
+  def filter (p: A => Boolean): AsyncIterator [A] = {
+    val self = this
+    new AsyncIterator [A] {
+      def foreach (cb: Callback [Unit]) (g: (A, Callback [Unit]) => Any): Unit =
+        self.foreach (cb) { case (x, cb) => if (p (x)) g (x, cb) else cb() }
+    }}
+
+  /** Iterate the entire asynchronous iterator and build a standard sequence. */
+  def toSeq (cb: Callback [Seq [A]]): Unit = {
+    val builder = Seq.newBuilder [A]
+    val ready = new Callback [Unit] {
+      def pass (v: Unit): Unit = cb (builder.result)
+      def fail (t: Throwable): Unit = cb.fail (t)
+    }
+    foreach (ready) { case (x, cb) =>
+      builder += x
+      cb()
+    }}
 }
 
 object AsyncIterator {
@@ -15,138 +40,61 @@ object AsyncIterator {
   def adapt [A] (iter: Iterator [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
     new AsyncIterator [A] {
 
-      def hasNext: Boolean = iter.hasNext
+      def foreach (cb: Callback [Unit]) (f: (A, Callback [Unit]) => Any) {
 
-      def next (cb: Callback [A]): Unit =
-        try {
-          scheduler.pass (cb, iter.next)
-        } catch {
-          case e: Throwable =>
-            scheduler.fail (cb, e)
-        }}
+        val loop = new Callback [Unit] {
 
-  /** Transform a Scala iterable into an AsyncIterator. */
-  def adapt [A] (iter: Iterable [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
-    adapt (iter.iterator)
+          def pass (v: Unit): Unit = scheduler.execute {
+            if (iter.hasNext)
+              try {
+                f (iter.next, this)
+              } catch {
+                case t: Throwable =>
+                  scheduler.fail (cb, t)
+              }
+            else
+              scheduler.pass (cb, ())
+          }
+
+          def fail (t: Throwable): Unit =
+            scheduler.fail (cb, t)
+        }
+
+        loop()
+      }}
 
   /** Transform a Java iterator into an AsyncIterator. */
   def adapt [A] (iter: JIterator [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
     new AsyncIterator [A] {
 
-      def hasNext: Boolean = iter.hasNext
+      def foreach (cb: Callback [Unit]) (f: (A, Callback [Unit]) => Any) {
 
-      def next (cb: Callback [A]): Unit =
-        try {
-          scheduler.pass (cb, iter.next)
-        } catch {
-          case e: Throwable =>
-            scheduler.fail (cb, e)
-        }}
+        val loop = new Callback [Unit] {
 
-  /** Transform a Java iterable into an AsyncIterator. */
-  def adapt [A] (iter: JIterable [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
-    adapt (iter.iterator)
-
-  def filter [A] (iter: AsyncIterator [A], cb: Callback [AsyncIterator [A]]) (pred: A => Boolean): Unit =
-    FilteredIterator (iter, pred, cb)
-
-  private class Mapper [A, B] (iter: AsyncIterator [A], f: A => B) extends AsyncIterator [B] {
-
-    def hasNext: Boolean = iter.hasNext
-
-    def next (cb: Callback [B]): Unit =
-      iter.next (new Callback [A] {
-
-        def pass (v1: A) {
-          val v2 = try {
-            f (v1)
-          } catch {
-            case e: Throwable =>
-              cb.fail (e)
-              return
+          def pass (v: Unit): Unit = scheduler.execute {
+            if (iter.hasNext)
+              try {
+                f (iter.next, this)
+              } catch {
+                case t: Throwable =>
+                  scheduler.fail (cb, t)
+              }
+            else
+              scheduler.pass (cb, ())
           }
-          cb (v2)
+
+          def fail (t: Throwable): Unit =
+            scheduler.fail (cb, t)
         }
 
-        def fail (t: Throwable) = cb.fail (t)
-      })
-    }
-
-  def map [A, B] (iter: AsyncIterator [A]) (f: A => B): AsyncIterator [B] =
-    new Mapper (iter, f)
-
-  private class Looper [A] (iter: AsyncIterator [A], func: (A, Callback [Unit]) => Any, cb: Callback [Unit])
-  extends Callback [A] {
-
-    val next = new Callback [Unit] {
-
-      def pass (v: Unit) {
-        try {
-          if (iter.hasNext) {
-            iter.next (Looper.this)
-            return
-          }
-        } catch {
-          case e: Throwable =>
-            cb.fail (e)
-            return
-        }
-        cb()
-      }
-
-      def fail (t: Throwable) = cb.fail (t)
-    }
-
-    def pass (v: A) = func (v, next)
-    def fail (t: Throwable) = cb.fail (t)
-  }
-
-  def foreach [A] (iter: AsyncIterator [A], cb: Callback [Unit]) (func: (A, Callback [Unit]) => Any): Unit =
-    new Looper (iter, func, cb) .next()
+        loop()
+      }}
 
   /** Given asynchronous iterators of sorted items, merge them into single asynchronous iterator
     * that maintains the sort.  Keep duplicate elements, and when two or more input iterators
     * duplicate an element, first list the element from the earlier iterator (that is, by position
     * in `iters`).
     */
-  def merge [A] (iters: Iterator [AsyncIterator [A]], cb: Callback [AsyncIterator [A]]) (
-      implicit ordering: Ordering [A]): Unit =
-    MergeIterator (iters, cb)
-
-  private class Scanner [A] (iter: AsyncIterator [A], cb: Callback [Seq [A]])
-  extends Callback [A] {
-
-    val builder = Seq.newBuilder [A]
-
-    def next() {
-      try {
-        if (iter.hasNext) {
-          iter.next (this)
-          return
-        }
-      } catch {
-        case e: Throwable =>
-          cb.fail (e)
-          return
-      }
-      cb (builder.result)
-    }
-
-    def pass (x: A) {
-      try {
-        builder += x
-      } catch {
-        case e: Throwable =>
-          cb.fail (e)
-          return
-      }
-      next()
-    }
-
-    def fail (t: Throwable) = cb.fail (t)
-  }
-
-  /** Iterator the entire asynchronous iterator and build a standard sequence. */
-  def scan [A] (iter: AsyncIterator [A], cb: Callback [Seq [A]]): Unit =
-    new Scanner (iter, cb) .next()
+  def merge [A] (iters: Seq [AsyncIterator [A]]) (implicit ordering: Ordering [A]): AsyncIterator [A] =
+    new MergeIterator (iters)
 }

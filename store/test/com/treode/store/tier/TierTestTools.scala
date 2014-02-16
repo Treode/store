@@ -36,26 +36,22 @@ private object TierTestTools {
     def toMap(): Map [Int, Int] = {
       val builder = Map.newBuilder [Int, Int]
       CallbackCaptor.pass [Unit] { cb =>
-        table.iterator (continue (cb) { iter =>
-          AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
-            invoke (cb) {
-              if (cell.value.isDefined)
-                builder += cell.key.int -> cell.value.get.int
-            }}})
-      }
+        table.iterator.foreach (cb) { case (cell, cb) =>
+          invoke (cb) {
+            if (cell.value.isDefined)
+              builder += cell.key.int -> cell.value.get.int
+          }}}
       builder.result
     }
 
     def toSeq(): Seq [(Int, Int)] = {
       val builder = Seq.newBuilder [(Int, Int)]
       CallbackCaptor.pass [Unit] { cb =>
-        table.iterator (continue (cb) { iter =>
-          AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
-            invoke (cb) {
-              if (cell.value.isDefined)
-                builder += cell.key.int -> cell.value.get.int
-            }}})
-      }
+        table.iterator.foreach (cb) { case (cell, cb) =>
+          invoke (cb) {
+            if (cell.value.isDefined)
+              builder += cell.key.int -> cell.value.get.int
+          }}}
       builder.result
     }
 

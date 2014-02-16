@@ -106,17 +106,15 @@ private class SynthTable [K, V] (
       readLock.unlock()
     }}
 
-  def iterator (cb: Callback [CellIterator]) {
+  def iterator: CellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
     } finally {
       readLock.unlock()
     }
-    val merged = continue (cb) { iter: CellIterator =>
-      OverwritesFilter (iter, cb)
-    }
-    TierIterator.merge (desc, primary, secondary, tiers, merged)
+    val merged = TierIterator.merge (desc, primary, secondary, tiers)
+    OverwritesFilter (merged)
   }
 
   def probe (groups: Set [Long], cb: Callback [Set [Long]]): Unit =
@@ -155,15 +153,9 @@ private class SynthTable [K, V] (
       epoch (meta)
     }
 
-    val filtered = continue (epoch) { iter: CellIterator =>
-      TierBuilder.build (desc, generation, iter, built)
-    }
-
-    val merged = continue (epoch) { iter: CellIterator =>
-      OverwritesFilter (iter, filtered)
-    }
-
-    TierIterator.merge (desc, primary, emptyMemTier, tiers, merged)
+    val merged = TierIterator.merge (desc, primary, emptyMemTier, tiers)
+    val filtered = OverwritesFilter (merged)
+    TierBuilder.build (desc, generation, filtered, built)
   }}
 
 private object SynthTable {

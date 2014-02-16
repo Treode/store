@@ -38,26 +38,22 @@ class SystemSpec extends FlatSpec {
     def toMap (implicit scheduler: StubScheduler): Map [Int, Int] = {
       val builder = Map.newBuilder [Int, Int]
       CallbackCaptor.pass [Unit] { cb =>
-        table.iterator (continue (cb) { iter: TestIterator =>
-          AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
-            invoke (cb) {
-              if (cell.value.isDefined)
-                builder += cell.key -> cell.value.get
-            }}})
-      }
+        table.iterator.foreach (cb) { case (cell, cb) =>
+          invoke (cb) {
+            if (cell.value.isDefined)
+              builder += cell.key -> cell.value.get
+          }}}
       builder.result
     }
 
     def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] = {
       val builder = Seq.newBuilder [(Int, Int)]
       CallbackCaptor.pass [Unit] { cb =>
-        table.iterator (continue (cb) { iter: TestIterator =>
-          AsyncIterator.foreach (iter, cb) { case (cell, cb) =>
-            invoke (cb) {
-              if (cell.value.isDefined)
-                builder += cell.key -> cell.value.get
-            }}})
-      }
+        table.iterator.foreach (cb) { case (cell, cb) =>
+          invoke (cb) {
+            if (cell.value.isDefined)
+              builder += cell.key -> cell.value.get
+          }}}
       builder.result
     }
 
