@@ -5,9 +5,9 @@ import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
 import com.treode.disk.{Disks, Position, RecordDescriptor}
 import com.treode.store.{Bytes, StoreConfig}
-import com.treode.store.simple.{SimpleMedic, SimpleTable}
+import com.treode.store.tier.{TierMedic, TierTable}
 
-private class Acceptors (val db: SimpleTable, kit: PaxosKit) {
+private class Acceptors (val db: TierTable, kit: PaxosKit) {
   import kit.{cluster, disks}
 
   val acceptors = newAcceptorsMap
@@ -65,14 +65,13 @@ private object Acceptors {
 
   val checkpoint = {
     import PaxosPicklers._
-    RecordDescriptor (0x8B97BEF0, simpleMeta)
+    RecordDescriptor (0x8B97BEF0, tierMeta)
   }
 
   def attach (kit: PaxosRecovery, cb: Callback [Paxos]) {
-    import Acceptor.ClosedTable
     import kit.{cluster, config, random, recovery, scheduler}
 
-    val db = SimpleMedic (ClosedTable)
+    val db = TierMedic (Acceptor.db)
     val medics = newMedicsMap
 
     def openByStatus (status: Status) {

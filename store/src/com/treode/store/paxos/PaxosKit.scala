@@ -8,9 +8,9 @@ import com.treode.async.{Callback, Scheduler, defer}
 import com.treode.cluster.{Acknowledgements, Cluster}
 import com.treode.disk.{Disks, Recovery}
 import com.treode.store.{Bytes, StoreConfig}
-import com.treode.store.simple.SimpleTable
+import com.treode.store.tier.TierTable
 
-private class PaxosKit (db: SimpleTable) (implicit val random: Random, val scheduler: Scheduler,
+private class PaxosKit (db: TierTable) (implicit val random: Random, val scheduler: Scheduler,
     val cluster: Cluster, val disks: Disks, val config: StoreConfig) extends Paxos {
 
   val acceptors = new Acceptors (db, this)

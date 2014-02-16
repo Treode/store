@@ -7,7 +7,7 @@ import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.disk.{PageDescriptor, RecordDescriptor, RootDescriptor}
 import com.treode.store.{Bytes, StorePicklers}
-import com.treode.store.simple.SimpleTable
+import com.treode.store.tier.TierDescriptor
 
 private class Acceptor (val key: Bytes, kit: PaxosKit) {
   import Acceptor.{NoPost, Post, Status}
@@ -285,7 +285,10 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
 private object Acceptor {
 
-  val ClosedTable = 0xDD683792
+  val db = {
+    import PaxosPicklers._
+    TierDescriptor (0xDD683792, bytes, const (true))
+  }
 
   val query = {
     import PaxosPicklers._
