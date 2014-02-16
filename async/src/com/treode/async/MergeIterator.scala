@@ -3,6 +3,8 @@ package com.treode.async
 import scala.collection.mutable.PriorityQueue
 import scala.language.postfixOps
 
+import Async.async
+
 private class MergeIterator [A] (iters: Seq [AsyncIterator [A]]) (implicit order: Ordering [A])
 extends AsyncIterator [A] {
 
@@ -21,7 +23,7 @@ extends AsyncIterator [A] {
       x compare y
   }
 
-  def foreach (cb: Callback [Unit]) (f: (A, Callback [Unit]) => Any) {
+  private def _foreach (f: (A, Callback [Unit]) => Any, cb: Callback [Unit]) {
 
     val pq = new PriorityQueue [Element]
     var count = iters.size
@@ -72,5 +74,9 @@ extends AsyncIterator [A] {
     if (count == 0)
       cb()
     for ((iter, n) <- iters zipWithIndex)
-      iter.foreach (close) (loop (n) _)
-  }}
+      iter.foreach.cb (loop (n) _) run (close)
+  }
+
+  def _foreach (f: (A, Callback [Unit]) => Any): Async [Unit] =
+    async (_foreach (f, _))
+}

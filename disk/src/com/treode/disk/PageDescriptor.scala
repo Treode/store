@@ -1,8 +1,10 @@
 package com.treode.disk
 
 import scala.reflect.ClassTag
-import com.treode.async.Callback
+import com.treode.async.{Async, Callback}
 import com.treode.pickle.Pickler
+
+import Async.async
 
 class PageDescriptor [G, P] private (
     val id: TypeId,
@@ -10,20 +12,20 @@ class PageDescriptor [G, P] private (
     val ppag: Pickler [P]) (
         implicit val tpag: ClassTag [P]) {
 
-  def read (reload: Reload, pos: Position, cb: Callback [P]): Unit =
-    reload.read (this, pos, cb)
+  def read (reload: Reload, pos: Position): Async [P] =
+    async (reload.read (this, pos, _))
 
-  def read (launch: Launch, pos: Position, cb: Callback [P]): Unit =
-    launch.read (this, pos, cb)
+  def read (launch: Launch, pos: Position): Async [P] =
+    async (launch.read (this, pos, _))
 
   def handle (handler: PageHandler [G]) (implicit launch: Launch): Unit =
     launch.handle (this, handler)
 
-  def read (pos: Position, cb: Callback [P]) (implicit disks: Disks): Unit =
-    disks.read (this, pos, cb)
+  def read (pos: Position) (implicit disks: Disks): Async [P] =
+    disks.read (this, pos)
 
-  def write (group: G, page: P, cb: Callback [Position]) (implicit disks: Disks): Unit =
-    disks.write (this, group, page, cb)
+  def write (group: G, page: P) (implicit disks: Disks): Async [Position] =
+    disks.write (this, group, page)
 
   override def toString = s"PageDescriptor($id)"
 }

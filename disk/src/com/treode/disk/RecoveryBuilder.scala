@@ -4,8 +4,10 @@ import java.nio.file.Path
 import java.util.ArrayList
 import java.util.concurrent.ExecutorService
 
-import com.treode.async.{Callback, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.io.File
+
+import Async.async
 
 private class RecoveryBuilder (implicit scheduler: Scheduler, config: DisksConfig) extends Recovery {
 
@@ -37,15 +39,15 @@ private class RecoveryBuilder (implicit scheduler: Scheduler, config: DisksConfi
     new RecoveryAgent (records, loaders, launches, cb)
   }
 
-  def reattach (items: Seq [(Path, File)], cb: Callback [Disks]): Unit =
-    close (cb) .reattach (items)
+  def reattach (items: Seq [(Path, File)]): Async [Disks] =
+    async (close (_) .reattach (items))
 
-  def reattach (items: Seq [Path], exec: ExecutorService, cb: Callback [Disks]): Unit =
-    close (cb) .reattach (items, exec)
+  def reattach (items: Seq [Path], exec: ExecutorService): Async [Disks] =
+    async (close (_) .reattach (items, exec))
 
-  def attach (items: Seq [(Path, File, DiskGeometry)], cb: Callback [Disks]): Unit =
-    close (cb) .attach (items)
+  def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Disks] =
+    async (close (_) .attach (items))
 
-  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService, cb: Callback [Disks]): Unit =
-    close (cb) .attach (items, exec)
+  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Disks] =
+    async (close (_) .attach (items, exec))
 }

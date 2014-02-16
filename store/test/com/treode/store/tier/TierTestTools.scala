@@ -1,12 +1,13 @@
 package com.treode.store.tier
 
-import com.treode.async._
+import com.treode.async.{Async, AsyncTestTools, StubScheduler}
 import com.treode.store.Bytes
 import org.scalatest.Assertions
 
-import Assertions._
+import Assertions.expectResult
+import Async.async
 
-private object TierTestTools {
+private object TierTestTools extends AsyncTestTools {
 
   implicit class RichInt (v: Int) {
     def :: (k: Bytes): Cell = Cell (k, Some (Bytes (v)))
@@ -18,8 +19,8 @@ private object TierTestTools {
 
   implicit class RichTable (table: TierTable) (implicit scheduler: StubScheduler) {
 
-    def getAndPass (key: Int): Option [Int] =
-      CallbackCaptor.pass [Option [Bytes]] (table.get (Bytes (key), _)) map (_.int)
+    def get (key: Int) (implicit scheduler: StubScheduler): Option [Int] =
+      table.get (Bytes (key)) .pass.map (_.int)
 
     def putAll (kvs: (Int, Int)*) {
       for ((key, value) <- kvs)
@@ -33,33 +34,18 @@ private object TierTestTools {
       scheduler.runTasks()
     }
 
-    def toMap(): Map [Int, Int] = {
-      val builder = Map.newBuilder [Int, Int]
-      CallbackCaptor.pass [Unit] { cb =>
-        table.iterator.foreach (cb) { case (cell, cb) =>
-          invoke (cb) {
-            if (cell.value.isDefined)
-              builder += cell.key.int -> cell.value.get.int
-          }}}
-      builder.result
-    }
+    def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] =
+      for (c <- table.iterator.toSeq; if c.value.isDefined)
+        yield (c.key.int, c.value.get.int)
 
-    def toSeq(): Seq [(Int, Int)] = {
-      val builder = Seq.newBuilder [(Int, Int)]
-      CallbackCaptor.pass [Unit] { cb =>
-        table.iterator.foreach (cb) { case (cell, cb) =>
-          invoke (cb) {
-            if (cell.value.isDefined)
-              builder += cell.key.int -> cell.value.get.int
-          }}}
-      builder.result
-    }
+    def toMap (implicit scheduler: StubScheduler): Map [Int, Int] =
+      toSeq.toMap
 
     def expectNone (key: Int): Unit =
-      expectResult (None) (getAndPass (key))
+      expectResult (None) (get (key))
 
     def expectValue (key: Int, value: Int): Unit =
-      expectResult (Some (value)) (getAndPass (key))
+      expectResult (Some (value)) (get (key))
 
     def expectValues (kvs: (Int, Int)*): Unit =
       expectResult (kvs.sorted) (toSeq)
@@ -68,5 +54,5 @@ private object TierTestTools {
   implicit class RichSynthTable [K, V] (table: SynthTable [K, V]) {
 
     def checkpointAndPass() (implicit scheduler: StubScheduler): TierTable.Meta =
-      CallbackCaptor.pass [TierTable.Meta] (table.checkpoint _)
+      async [TierTable.Meta] (table.checkpoint (_)) .pass
   }}

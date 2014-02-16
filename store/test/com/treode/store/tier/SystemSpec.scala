@@ -9,6 +9,9 @@ import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Bytes, StoreConfig}
 import org.scalatest.FlatSpec
 
+import Async.async
+import AsyncTestTools._
+
 class SystemSpec extends FlatSpec {
 
   implicit class RichRandom (random: Random) {
@@ -19,49 +22,25 @@ class SystemSpec extends FlatSpec {
 
   implicit class RichTestTable (table: TestTable) {
 
-    def getAndPass (key: Int) (implicit scheduler: StubScheduler): Option [Int] =
-      CallbackCaptor.pass [Option [Int]] (table.get (key, _))
-
-    def putAndPass (kvs: (Int, Int)*) (implicit scheduler: StubScheduler) {
-      CallbackCaptor.pass [Unit] { cb =>
+    def put (kvs: (Int, Int)*): Async [Unit] = {
+      async [Unit] { cb =>
         val latch = Latch.unit (kvs.size, cb)
         for ((key, value) <- kvs)
-          table.put (key, value, latch)
+          table.put (key, value) .run (latch)
       }}
 
-    def deleteAndPass (ks: Int*) (implicit scheduler: StubScheduler) {
-      CallbackCaptor.pass [Unit] { cb =>
-        for (key <- ks)
-          table.delete (key, cb)
-      }}
+    def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] =
+      for (c <- table.iterator.toSeq; if c.value.isDefined)
+        yield (c.key, c.value.get)
 
-    def toMap (implicit scheduler: StubScheduler): Map [Int, Int] = {
-      val builder = Map.newBuilder [Int, Int]
-      CallbackCaptor.pass [Unit] { cb =>
-        table.iterator.foreach (cb) { case (cell, cb) =>
-          invoke (cb) {
-            if (cell.value.isDefined)
-              builder += cell.key -> cell.value.get
-          }}}
-      builder.result
-    }
-
-    def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] = {
-      val builder = Seq.newBuilder [(Int, Int)]
-      CallbackCaptor.pass [Unit] { cb =>
-        table.iterator.foreach (cb) { case (cell, cb) =>
-          invoke (cb) {
-            if (cell.value.isDefined)
-              builder += cell.key -> cell.value.get
-          }}}
-      builder.result
-    }
+    def toMap (implicit scheduler: StubScheduler): Map [Int, Int] =
+      toSeq.toMap
 
     def expectNone (key: Int) (implicit scheduler: StubScheduler): Unit =
-      expectResult (None) (getAndPass (key))
+      expectPass (None) (table.get (key))
 
     def expectValue (key: Int, value: Int) (implicit scheduler: StubScheduler): Unit =
-      expectResult (Some (value)) (getAndPass (key))
+      expectPass (Some (value)) (table.get (key))
 
     def expectValues (kvs: (Int, Int)*) (implicit scheduler: StubScheduler): Unit =
       expectResult (kvs.sorted) (toSeq)
@@ -74,10 +53,7 @@ class SystemSpec extends FlatSpec {
       implicit val recovery = Disks.recover()
       val tableCb = CallbackCaptor [TestTable]
       TestTable.recover (tableCb)
-      val disksCb = CallbackCaptor [Disks]
-      recovery.attach (Seq ((Paths.get ("a"), disk, geometry)), disksCb)
-      scheduler.runTasks()
-      disksCb.passed
+      recovery.attach (Seq ((Paths.get ("a"), disk, geometry))) .pass
       tableCb.passed
   }
 
@@ -88,10 +64,7 @@ class SystemSpec extends FlatSpec {
     implicit val recovery = Disks.recover()
     val tableCb = CallbackCaptor [TestTable]
     TestTable.recover (tableCb)
-    val disksCb = CallbackCaptor [Disks]
-    recovery.reattach (Seq ((Paths.get ("a"), disk)), disksCb)
-    scheduler.runTasks()
-    disksCb.passed
+    recovery.reattach (Seq ((Paths.get ("a"), disk))) .pass
     tableCb.passed
   }
 
@@ -109,7 +82,7 @@ class SystemSpec extends FlatSpec {
     {
       val _table = setup (disk, geometry)
       val table = new TrackedTable (_table, tracker)
-      table.putAndPass (random.nextPut (10000, 1000): _*)
+      table.put (random.nextPut (10000, 1000): _*)
     }
 
     {

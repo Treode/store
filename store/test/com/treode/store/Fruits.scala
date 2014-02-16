@@ -81,7 +81,7 @@ object Fruits {
   val UgliFruit  = Bytes ("ugli fruit")
   val Watermelon = Bytes ("watermelon")
 
-  val AllFruits = Array (Apple, Apricot, Avocado, Banana, Bilberry, Blackberry, Blackcurrant,
+  val AllFruits = Seq (Apple, Apricot, Avocado, Banana, Bilberry, Blackberry, Blackcurrant,
       Blueberry, Boysenberry, CanaryMelon, Cantaloupe, Cherimoya, Cherry, Chili, Clementine,
       Cloudberry, Coconut, Damson, Date, Dragonfruit, Durian, Elderberry, Feijoa, Fig, Gooseberry,
       Grape, Grapefruit, Honeydew, Huckleberry, Jackfruit, Jambul, Jettamelon, Jujube, Kiwi,

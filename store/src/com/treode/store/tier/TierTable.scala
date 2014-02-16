@@ -1,8 +1,10 @@
 package com.treode.store.tier
 
-import com.treode.async.Callback
+import com.treode.async.{Async, Callback}
 import com.treode.disk.{PageDescriptor, TypeId}
 import com.treode.store.{Bytes, StorePicklers}
+
+import Async.async
 
 trait TierTable {
 
@@ -15,6 +17,12 @@ trait TierTable {
   def delete (key: Bytes): Long
 
   def checkpoint (cb: Callback [TierTable.Meta])
+
+  def get (key: Bytes): Async [Option [Bytes]] =
+    async (get (key, _))
+
+  def checkpoint(): Async [TierTable.Meta] =
+    async (checkpoint (_))
 }
 
 object TierTable {

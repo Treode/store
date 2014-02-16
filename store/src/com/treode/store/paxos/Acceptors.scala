@@ -41,7 +41,7 @@ private class Acceptors (val db: TierTable, kit: PaxosKit) {
       val as = materialize (acceptors.values)
       val latch = Latch.seq [Status] (
           as.size,
-          continue (cb) (statii.write (0, _, cb)))
+          continue (cb) (statii.write (0, _) .run (cb)))
       as foreach (_.checkpoint (latch))
     }}
 
@@ -100,7 +100,7 @@ private object Acceptors {
       val statiiRead = callback (reloader.ready) { instances: Seq [Status] =>
         instances foreach (openByStatus _)
       }
-      statii.read (reloader, pos, statiiRead)
+      statii.read (reloader, pos) .run (statiiRead)
     }
 
     checkpoint.replay { case meta =>

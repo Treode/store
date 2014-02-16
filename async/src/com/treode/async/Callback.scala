@@ -5,7 +5,7 @@ import java.nio.channels.CompletionHandler
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 
-trait Callback [-T] extends (T => Unit) {
+trait Callback [-T] {
 
   protected def pass (v: T)
 

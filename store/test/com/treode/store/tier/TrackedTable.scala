@@ -1,25 +1,23 @@
 package com.treode.store.tier
 
-import com.treode.async.{AsyncIterator, Callback, callback}
+import com.treode.async.{Async, AsyncIterator, Callback, callback}
+
+import Async.async
 
 private class TrackedTable (table: TestTable, tracker: TrackingTable) extends TestTable {
 
-  def get (key: Int, cb: Callback [Option [Int]]): Unit =
-    table.get (key, cb)
+  def get (key: Int): Async [Option [Int]] =
+    table.get (key)
 
   def iterator: AsyncIterator [TestCell] =
     table.iterator
 
-  def put (key: Int, value: Int, cb: Callback [Unit]) {
+  def put (key: Int, value: Int): Async [Unit] = {
     tracker.putting (key, value)
-    table.put (key, value, callback (cb) { _ =>
-      tracker.put (key, value)
-    })
+    table.put (key, value) .map (_ => tracker.put (key, value))
   }
 
-  def delete (key: Int, cb: Callback [Unit]) {
+  def delete (key: Int): Async [Unit] = {
     tracker.deleting (key)
-    table.delete (key, callback (cb) { _ =>
-      tracker.deleted (key)
-    })
+    table.delete (key) .map (_ => tracker.deleted (key))
   }}

@@ -1,8 +1,10 @@
 package com.treode.store.tier
 
-import com.treode.async.Callback
+import com.treode.async.{Async, Callback}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, StorePicklers}
+
+import Async.async
 
 private case class Tier (gen: Long, root: Position) {
 
@@ -21,7 +23,7 @@ private case class Tier (gen: Long, root: Position) {
               cb (None)
             } else {
               val e = p.get (i)
-              pager.read (e.pos, this)
+              pager.read (e.pos) .run (this)
             }
           case p: CellPage =>
             val i = p.find (key)
@@ -38,8 +40,12 @@ private case class Tier (gen: Long, root: Position) {
       def fail (t: Throwable) = cb.fail (t)
     }
 
-    pager.read (root, loop)
-  }}
+    pager.read (root) .run (loop)
+  }
+
+  def read (desc: TierDescriptor [_, _], key: Bytes) (implicit disks: Disks): Async [Option [Cell]] =
+    async (read (desc, key, _))
+}
 
 private object Tier {
 

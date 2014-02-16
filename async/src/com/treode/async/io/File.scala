@@ -10,6 +10,8 @@ import scala.collection.JavaConversions._
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.buffer.PagedBuffer
 
+import Async.async
+
 /** A file that has useful behavior (flush/fill) and that can be mocked. */
 class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 
@@ -61,14 +63,14 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
   def fillA (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
     try {
       if (len <= input.readableBytes) {
-        Async (execute (_))
+        async (execute (_))
       } else {
         input.capacity (input.readPos + len)
-        Async (cb => new Filler (input, pos, len, cb) .fill())
+        async (cb => new Filler (input, pos, len, cb) .fill())
       }
     } catch {
       case t: Throwable =>
-        Async (fail (_, t))
+        async (fail (_, t))
     }
 
   def deframe (input: PagedBuffer, pos: Long, cb: Callback [Int]) {

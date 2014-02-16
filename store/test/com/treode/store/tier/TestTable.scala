@@ -1,18 +1,20 @@
 package com.treode.store.tier
 
-import com.treode.async.{AsyncIterator, Callback, Scheduler, callback}
+import com.treode.async.{Async, AsyncIterator, Callback, Scheduler, callback}
 import com.treode.disk.{Disks, RecordDescriptor, Recovery, RootDescriptor}
 import com.treode.store.{Bytes, StoreConfig, StorePicklers}
 
+import Async.async
+
 private trait TestTable {
 
-  def get (key: Int, cb: Callback [Option [Int]])
+  def get (key: Int): Async [Option [Int]]
 
   def iterator: AsyncIterator [TestCell]
 
-  def put (key: Int, value: Int, cb: Callback [Unit])
+  def put (key: Int, value: Int): Async [Unit]
 
-  def delete (key: Int, cb: Callback [Unit])
+  def delete (key: Int): Async [Unit]
 }
 
 private object TestTable {

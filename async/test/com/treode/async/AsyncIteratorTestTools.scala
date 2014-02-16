@@ -2,49 +2,34 @@ package com.treode.async
 
 import org.scalatest.Assertions
 
-import Assertions._
+import Assertions.expectResult
 
-object AsyncIteratorTestTools {
-
-  implicit val scheduler: Scheduler =
-    new Scheduler {
-      def execute (task: Runnable): Unit = task.run()
-      def delay (millis: Long, task: Runnable): Unit = task.run()
-      def at (millis: Long, task: Runnable): Unit = task.run()
-      def spawn (task: Runnable): Unit = task.run()
-    }
+object AsyncIteratorTestTools extends AsyncTestTools {
 
   class DistinguishedException extends Exception
 
-  def adapt [A] (xs: A*): AsyncIterator [A] =
+  def adapt [A] (xs: A*) (implicit scheduler: StubScheduler): AsyncIterator [A] =
     AsyncIterator.adapt (xs.iterator)
 
   def track [A] (iter: AsyncIterator [A]) (f: A => Any): AsyncIterator [A] =
     new AsyncIterator [A] {
-
-      def foreach (cb: Callback [Unit]) (g: (A, Callback [Unit]) => Any) {
-        iter.foreach (cb) { case (x, cb) =>
+      def _foreach (g: (A, Callback [Unit]) => Any): Async [Unit] = {
+        iter._foreach { case (x, cb) =>
           f (x)
           g (x, cb)
         }}}
 
   def failWhen [A] (iter: AsyncIterator [A]) (p: A => Boolean): AsyncIterator [A] =
     new AsyncIterator [A] {
-
-      def foreach (cb: Callback [Unit]) (g: (A, Callback [Unit]) => Any) {
-        iter.foreach (cb) { case (x, cb) =>
+      def _foreach (g: (A, Callback [Unit]) => Any): Async [Unit] = {
+        iter._foreach { case (x, cb) =>
           if (p (x)) throw new DistinguishedException
           g (x, cb)
         }}}
 
-  def expectSeq [A] (xs: A*) (actual: AsyncIterator [A]) {
-    val cb = CallbackCaptor [Seq [A]]
-    actual.toSeq (cb)
-    expectResult (xs) (cb.passed)
-  }
+  def expectSeq [A] (expected: A*) (actual: AsyncIterator [A]) (implicit s: StubScheduler): Unit =
+    expectResult (expected) (actual.toSeq)
 
-  def expectFail [E] (actual: AsyncIterator [_]) (implicit m: Manifest [E]) {
-    val cb = CallbackCaptor [Seq [_]]
-    actual.toSeq (cb)
-    cb.failed [E]
-  }}
+  def expectFail [E] (iter: AsyncIterator [_]) (implicit s: StubScheduler, m: Manifest [E]): Unit =
+    iter.foreach.f (_ => ()) .fail [E]
+}

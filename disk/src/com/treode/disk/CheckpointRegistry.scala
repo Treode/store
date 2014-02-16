@@ -6,6 +6,7 @@ import scala.collection.JavaConversions._
 import com.treode.async.{Callback, Fiber, Latch, callback, continue, defer}
 import com.treode.pickle.{Pickler, PicklerRegistry}
 
+import CheckpointRegistry.writer
 import PicklerRegistry.{Tag, tag}
 
 private class CheckpointRegistry (implicit disks: DiskDrives) {
@@ -23,7 +24,7 @@ private class CheckpointRegistry (implicit disks: DiskDrives) {
     defer (cb) {
       synchronized {
         val allWritten = continue (cb) { roots: Seq [Tag] =>
-          CheckpointRegistry.writer.write (rootgen, roots, cb)
+          writer.write (rootgen, roots) .run (cb)
         }
         val oneWritten = Latch.seq (checkpoints.size, allWritten)
         checkpoints foreach (_ (oneWritten))

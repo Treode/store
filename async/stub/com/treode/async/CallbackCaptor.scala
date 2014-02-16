@@ -79,23 +79,4 @@ class CallbackCaptor [T] protected extends Callback [T] {
 object CallbackCaptor {
 
   def apply [T] = new CallbackCaptor [T]
-
-  def pass [T] (f: Callback [T] => Any) (implicit scheduler: StubScheduler): T = {
-    val cb = new CallbackCaptor [T]
-    f (cb)
-    scheduler.runTasks()
-    cb.passed
-  }
-
-  def fail [E, T] (f: Callback [T] => Any) (
-      implicit manifest: Manifest [E], scheduler: StubScheduler): E = {
-    val cb = new CallbackCaptor [T]
-    f (cb)
-    scheduler.runTasks()
-    cb.failed [E]
-  }
-
-  def expect [T] (expected: T) (f: Callback [T] => Any) (
-      implicit scheduler: StubScheduler): Unit =
-    Assertions.expectResult (expected) (pass (f))
 }

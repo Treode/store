@@ -38,6 +38,6 @@ class RootSpec extends FlatSpec {
         reloaded = s
         reloader.ready()
       }
-      implicit val disks = recovery.reattachAndPass (("a", disk1))
+      implicit val disks = recovery.reattachAndLaunch (("a", disk1))
       expectResult ("one") (reloaded)
     }}}

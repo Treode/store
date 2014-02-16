@@ -59,7 +59,7 @@ private class PageRegistry (disks: DiskDrives) {
       (segs, groups)
     }
 
-    iter.async.foreach (allProbed) { case (seg, cb) =>
+    iter.async.foreach.cb { case (seg, cb) =>
       val oneRead = continue (cb) { ledger: PageLedger =>
         val oneProbed = callback (cb) { live: Long =>
           if (live == 0) {
@@ -73,7 +73,8 @@ private class PageRegistry (disks: DiskDrives) {
         probe (ledger, oneProbed)
       }
       seg.probe (oneRead)
-    }}
+    } .run (allProbed)
+  }
 
   def probeByMargin (
       iter: Iterator [SegmentPointer],
@@ -86,7 +87,7 @@ private class PageRegistry (disks: DiskDrives) {
       chooseByMargin (candidates.result, config.cleaningLoad)
     }
 
-    iter.async.foreach (allProbed) { case (seg, cb) =>
+    iter.async.foreach.cb { case (seg, cb) =>
       val oneRead = continue (cb) { ledger: PageLedger =>
         val oneProbed = callback (cb) { live: Long =>
           if (live == 0) {
@@ -100,7 +101,8 @@ private class PageRegistry (disks: DiskDrives) {
         probe (ledger, oneProbed)
       }
       seg.probe (oneRead)
-    }}
+    } .run (allProbed)
+  }
 
   def probeForDrain (iter: Iterator [SegmentPointer], cb: Callback [Groups]) {
 
@@ -110,12 +112,13 @@ private class PageRegistry (disks: DiskDrives) {
       merger.result
     }
 
-    iter.async.foreach (allRead) { case (seg, cb) =>
+    iter.async.foreach.cb { case (seg, cb) =>
       val oneRead = callback (cb) { ledger: PageLedger =>
         merger.add (ledger.groups)
       }
       seg.probe (oneRead)
-    }}
+    } .run (allRead)
+  }
 
   def compact (id: TypeId, groups: Set [PageGroup], cb: Callback [Unit]): Unit =
     defer (cb) {

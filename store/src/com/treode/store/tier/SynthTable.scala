@@ -2,10 +2,11 @@ package com.treode.store.tier
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import com.treode.async.{AsyncIterator, Callback, Scheduler, callback, continue}
+import com.treode.async.{Async, AsyncIterator, Callback, Scheduler, callback, continue}
 import com.treode.disk.{Disks, PageHandler, PageDescriptor, Position, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
+import Async.async
 import TierTable.Meta
 
 private class SynthTable [K, V] (
@@ -155,7 +156,7 @@ private class SynthTable [K, V] (
 
     val merged = TierIterator.merge (desc, primary, emptyMemTier, tiers)
     val filtered = OverwritesFilter (merged)
-    TierBuilder.build (desc, generation, filtered, built)
+    TierBuilder.build (desc, generation, filtered) .run (built)
   }}
 
 private object SynthTable {

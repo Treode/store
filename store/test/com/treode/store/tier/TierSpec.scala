@@ -3,24 +3,20 @@ package com.treode.store.tier
 import java.nio.file.Paths
 import scala.collection.mutable.Builder
 
-import com.treode.async.{AsyncIterator, Callback, CallbackCaptor, StubScheduler}
+import com.treode.async.{Async, Callback, RichIterable, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.pickle.Picklers
 import com.treode.store._
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry, PageDescriptor, Position}
 import org.scalatest.WordSpec
 
+import Async.async
 import Cardinals.One
 import Fruits.{AllFruits, Apple, Orange, Watermelon}
 import TestTable.descriptor
+import TierTestTools._
 
 class TierSpec extends WordSpec {
-
-  implicit class RichPageDescriptor [G, P] (desc: PageDescriptor [G, P]) {
-
-    def readAndPass (pos: Position) (implicit scheduler: StubScheduler, disks: Disks): P =
-      CallbackCaptor.pass [P] (desc.read (pos, _))
-  }
 
   private def setup() = {
     implicit val scheduler = StubScheduler.random()
@@ -28,9 +24,8 @@ class TierSpec extends WordSpec {
     implicit val recovery = Disks.recover()
     val file = new StubFile
     val geometry = DiskGeometry (20, 12, 1<<30)
-    val disks = CallbackCaptor.pass [Disks] { cb =>
-      recovery.attach (Seq ((Paths.get ("a"), file, geometry)), cb)
-    }
+    val item = (Paths.get ("a"), file, geometry)
+    val disks = recovery.attach (Seq (item)) .pass
     (scheduler, disks)
   }
 
@@ -42,7 +37,7 @@ class TierSpec extends WordSpec {
   /** Get the depths of ValueBlocks for the tree root at `pos`. */
   private def getDepths (pos: Position, depth: Int) (
       implicit scheduler: StubScheduler, disks: Disks): Set [Int] = {
-    descriptor.pager.readAndPass (pos) match {
+    descriptor.pager.read (pos) .pass match {
       case b: IndexPage => getDepths (b.entries, depth+1)
       case b: CellPage => Set (depth)
     }}
@@ -51,7 +46,7 @@ class TierSpec extends WordSpec {
     * the final index entry.
     */
   private def expectBalanced (tier: Tier) (implicit scheduler: StubScheduler, disks: Disks) {
-    descriptor.pager.readAndPass (tier.root) match {
+    descriptor.pager.read (tier.root) .pass match {
       case b: IndexPage =>
         val ds1 = getDepths (b.entries.take (b.size-1), 1)
         expectResult (1, "Expected lead ValueBlocks at the same depth.") (ds1.size)
@@ -67,28 +62,18 @@ class TierSpec extends WordSpec {
       implicit scheduler: StubScheduler, disks: Disks): Tier = {
     implicit val config = StoreConfig (pageBytes)
     val builder = new TierBuilder (descriptor, 0)
-    val iter = AsyncIterator.adapt (AllFruits.iterator)
-    CallbackCaptor.pass [Unit] { cb =>
-      iter.foreach (cb) (builder.add (_, Some (One), _))
-    }
-    CallbackCaptor.pass [Tier] (builder.result _)
+    AllFruits.async.foreach (builder.add (_, Some (One))) .pass
+    builder.result.pass
   }
-
-  private def read (tier: Tier, key: Bytes) (
-      implicit scheduler: StubScheduler, disks: Disks): Option [Cell] =
-    CallbackCaptor.pass [Option [Cell]] (tier.read (descriptor, key, _))
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier) (
-      implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] = {
-    val iter = TierIterator (descriptor, tier.root)
-    CallbackCaptor.pass [Seq [Cell]] { cb =>
-      iter.toSeq (cb)
-    }}
+      implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] =
+    TierIterator (descriptor, tier.root) .toSeq
 
   private def toSeq (builder: Builder [Cell, _], pos: Position) (
       implicit scheduler: StubScheduler, disks: Disks) {
-    descriptor.pager.readAndPass (pos) match {
+    descriptor.pager.read (pos) .pass match {
       case page: IndexPage =>
         page.entries foreach (e => toSeq (builder, e.pos))
       case page: CellPage =>
@@ -109,36 +94,33 @@ class TierSpec extends WordSpec {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (1 << 16)
       val builder = new TierBuilder (descriptor, 0)
-      builder.add (Apple, None, Callback.ignore)
-      intercept [IllegalArgumentException] {
-        builder.add (Apple, None, Callback.ignore)
-      }}
+      builder.add (Apple, None) .pass
+      builder.add (Apple, None) .fail [IllegalArgumentException]
+    }
 
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (1 << 16)
       val builder = new TierBuilder (descriptor, 0)
-      builder.add (Orange, None, Callback.ignore)
-      intercept [IllegalArgumentException] {
-        builder.add (Apple, None, Callback.ignore)
-      }}
+      builder.add (Orange, None) .pass
+      builder.add (Apple, None) .fail [IllegalArgumentException]
+    }
 
     "require that added entries are reverse sorted by time" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (1 << 16)
       val builder = new TierBuilder (descriptor, 0)
-      builder.add (Apple, None, Callback.ignore)
-      intercept [IllegalArgumentException] {
-        builder.add (Apple, None, Callback.ignore)
-      }}
+      builder.add (Apple, None) .pass
+      builder.add (Apple, None) .fail [IllegalArgumentException]
+    }
 
     "allow properly sorted entries" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (1 << 16)
       val builder = new TierBuilder (descriptor, 0)
-      builder.add (Apple, None, Callback.ignore)
-      builder.add (Orange, None, Callback.ignore)
-      builder.add (Watermelon, None, Callback.ignore)
+      builder.add (Apple, None) .pass
+      builder.add (Orange, None) .pass
+      builder.add (Watermelon, None) .pass
     }
 
     "build a blanced tree with all keys" when {
@@ -189,12 +171,17 @@ class TierSpec extends WordSpec {
     "find the key" when {
 
       def checkFind (pageBytes: Int) {
+
         implicit val (scheduler, disks) = setup()
         val tier = buildTier (pageBytes)
-        expectResult (Some (One)) (read (tier, Apple) .get.value)
-        expectResult (Some (One)) (read (tier, Orange) .get.value)
-        expectResult (Some (One)) (read (tier, Watermelon) .get.value)
-        expectResult (None) (read (tier, One))
+
+        def read (key: Bytes): Option [Bytes] =
+          tier.read (descriptor, key) .pass.flatMap (_.value)
+
+        expectResult (Some (One)) (read (Apple))
+        expectResult (Some (One)) (read (Orange))
+        expectResult (Some (One)) (read (Watermelon))
+        expectResult (None) (read (One))
       }
 
       "the pages are limited to one byte" in {

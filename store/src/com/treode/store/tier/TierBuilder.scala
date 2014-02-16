@@ -3,12 +3,14 @@ package com.treode.store.tier
 import java.util.{ArrayDeque, ArrayList}
 import scala.collection.JavaConversions._
 
-import com.treode.async.{AsyncIterator, Callback, continue}
+import com.treode.async.{Async, AsyncIterator, Callback, Scheduler, continue}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, StoreConfig, TxClock}
 
+import Async.{async, cond, guard, supply, whilst}
+
 private class TierBuilder (desc: TierDescriptor [_, _], generation: Long) (
-    implicit disks: Disks, config: StoreConfig) {
+    implicit scheduler: Scheduler, disks: Disks, config: StoreConfig) {
 
   import desc.pager
 
@@ -52,111 +54,100 @@ private class TierBuilder (desc: TierDescriptor [_, _], generation: Long) (
       stack.push (rstack.pop())
   }
 
-  private def add (key: Bytes, pos: Position, height: Int, cb: Callback [Unit]) {
+  private def add (key: Bytes, pos: Position, height: Int): Async [Unit] =
+    guard {
 
-    val node = stack.peek
+      val node = stack.peek
 
-    if (stack.isEmpty || height < node.height) {
-      push (key, pos, height)
-      rpop()
-      cb()
+      if (stack.isEmpty || height < node.height) {
+        push (key, pos, height)
+        rpop()
+        Async.supply ()
 
-    } else {
+      } else {
 
-      val entry = IndexEntry (key, pos)
+        val entry = IndexEntry (key, pos)
+        val entryByteSize = entry.byteSize
+
+        // Ensure that an index page has at least two entries.
+        if (node.byteSize + entryByteSize < config.targetPageBytes || node.size < 2) {
+          node.add (entry, entryByteSize)
+          rpop()
+          supply()
+
+        } else {
+          stack.pop()
+          val page = IndexPage (node.entries)
+          val last = page.last
+          for {
+            pos2 <- pager.write (generation, page)
+            _ = rpush (key, pos, height)
+            _ <- add (last.key, pos2, height+1)
+          } yield ()
+        }}}
+
+  def add (key: Bytes, value: Option [Bytes]): Async [Unit] =
+    guard {
+
+      val entry = Cell (key, value)
       val entryByteSize = entry.byteSize
 
-      // Ensure that an index page has at least two entries.
-      if (node.byteSize + entryByteSize < config.targetPageBytes || node.size < 2) {
-        node.add (entry, entryByteSize)
-        rpop()
-        cb()
+      // Require that user adds entries in sorted order.
+      require (entries.isEmpty || entries.last < entry)
+
+      // Ensure that a value page has at least one entry.
+      if (byteSize + entryByteSize < config.targetPageBytes || entries.size < 1) {
+        entries.add (entry)
+        byteSize += entryByteSize
+        supply()
 
       } else {
-        stack.pop()
-        val page = IndexPage (node.entries)
+        val page = CellPage (entries)
+        entries = newCellEntries
+        entries.add (entry)
+        byteSize = entryByteSize
         val last = page.last
-        pager.write (generation, page, continue (cb) { pos2 =>
-          rpush (key, pos, height)
-          add (last.key, pos2, height+1, cb)
-        })
-      }}}
+        for {
+          pos <- pager.write (generation, page)
+          _ <- add (last.key, pos, 0)
+        } yield ()
+      }}
 
-  def add (key: Bytes, value: Option [Bytes], cb: Callback [Unit]) {
-
-    val entry = Cell (key, value)
-    val entryByteSize = entry.byteSize
-
-    // Require that user adds entries in sorted order.
-    require (entries.isEmpty || entries.last < entry)
-
-    // Ensure that a value page has at least one entry.
-    if (byteSize + entryByteSize < config.targetPageBytes || entries.size < 1) {
-      entries.add (entry)
-      byteSize += entryByteSize
-      cb()
-
-    } else {
-      val page = CellPage (entries)
-      entries = newCellEntries
-      entries.add (entry)
-      byteSize = entryByteSize
-      val last = page.last
-      pager.write (generation, page, continue (cb) { pos =>
-        add (last.key, pos, 0, cb)
-      })
-    }}
-
-  def result (cb: Callback [Tier]) {
-
-    val page = CellPage (entries)
-    pager.write (generation, page, continue (cb) { _pos =>
-
-      var pos = _pos
-
-      if (stack.isEmpty) {
-        cb (Tier (generation, pos))
-
-      } else {
-
-        val loop = new Callback [Unit] {
-
-          def next (node: IndexNode) {
-            if (!stack.isEmpty)
-              add (page.last.key, pos, node.height+1, this)
-            else
-              cb (Tier (generation, pos))
-          }
-
-          def pass (v: Unit) {
-            val node = stack.pop()
-            if (node.size > 1) {
-              val page = IndexPage (node.entries)
-              pager.write (generation, page, continue (cb) { _pos =>
-                pos = _pos
-                next (node)
-              })
-            } else {
-              next (node)
-            }}
-
-          def fail (t: Throwable) = cb.fail (t)
+  private def pop (page: CellPage, pos0: Position): Async [Position] = {
+    val node = stack.pop()
+    for {
+      pos1 <-
+        if (node.size > 1) {
+          val page = IndexPage (node.entries)
+          pager.write (generation, page)
+        } else {
+          supply (pos0)
         }
+      _ <-
+        if (!stack.isEmpty)
+          add (page.last.key, pos1, node.height+1)
+        else
+          supply()
+    } yield pos1
+  }
 
-        add (page.last.key, pos, 0, loop)
-
-      }})
+  def result(): Async [Tier] = {
+    val page = CellPage (entries)
+    var pos: Position = null
+    for {
+      _ <- pager.write (generation, page) .map (pos = _)
+      _ <- cond (entries.size > 0) (add (page.last.key, pos, 0))
+      _ <- whilst (!stack.isEmpty) (pop (page, pos) .map (pos = _))
+    } yield Tier (generation, pos)
   }}
 
 private object TierBuilder {
 
-  def build [K, V] (desc: TierDescriptor [K, V], generation: Long, iter: CellIterator,
-      cb: Callback [Tier]) (implicit disks: Disks, config: StoreConfig) {
-
+  def build [K, V] (desc: TierDescriptor [K, V], generation: Long, iter: CellIterator) (
+      implicit scheduler: Scheduler, disks: Disks, config: StoreConfig): Async [Tier] = {
     val builder = new TierBuilder (desc, generation)
-    val cellsAdded = continue (cb) { _: Unit =>
-      builder.result (cb)
-    }
-    iter.foreach (cellsAdded) { (cell, cb) =>
-      builder.add (cell.key, cell.value, cb)
-    }}}
+    for {
+      _ <- iter.foreach (cell => builder.add (cell.key, cell.value))
+      tier <- builder.result()
+    } yield tier
+  }}

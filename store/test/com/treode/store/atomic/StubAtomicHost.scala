@@ -24,7 +24,7 @@ extends StubActiveHost (id, network) {
   Paxos.recover (_paxos)
   val file = new StubFile
   val geometry = DiskGeometry (10, 6, 1<<20)
-  recovery.attach (Seq ((Paths.get ("a"), file, geometry)), Callback.ignore)
+  recovery.attach (Seq ((Paths.get ("a"), file, geometry))) .run (Callback.ignore)
   scheduler.runTasks()
   while (!(_paxos.hasPassed || _paxos.hasFailed))
     Thread.sleep (1)

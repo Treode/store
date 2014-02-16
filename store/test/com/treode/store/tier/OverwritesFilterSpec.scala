@@ -9,62 +9,61 @@ import TierTestTools._
 
 class OverwritesFilterSpec extends FlatSpec {
 
-  implicit val scheduler: Scheduler =
-    new Scheduler {
-      def execute (task: Runnable): Unit = task.run()
-      def delay (millis: Long, task: Runnable): Unit = task.run()
-      def at (millis: Long, task: Runnable): Unit = task.run()
-      def spawn (task: Runnable): Unit = task.run()
-    }
+  private def expectCells (expected: Cell*) (actual: CellIterator) (implicit s: StubScheduler): Unit =
+    expectResult (expected) (actual.toSeq)
 
-  private def expectCells (cs: Cell*) (actual: AsyncIterator [Cell]) {
-    val cb = CallbackCaptor [Seq [Cell]]
-    actual.toSeq (cb)
-    expectResult (cs) (cb.passed)
-  }
-
-  private def newFilter (cs: Cell*) =
+  private def newFilter (cs: Cell*) (implicit s: StubScheduler) =
     OverwritesFilter (cs.iterator.async)
 
   "The OverwritesFilter" should "handle []" in {
+    implicit val scheduler = StubScheduler.random()
     expectCells () (newFilter ())
   }
 
   it should "handle [Apple::1]" in {
+    implicit val scheduler = StubScheduler.random()
     expectCells (Apple::1) (newFilter (Apple::1))
   }
 
   it should "handle [Apple::2, Apple::1]" in {
+    implicit val scheduler = StubScheduler.random()
     expectCells (Apple::2) (newFilter (Apple::2, Apple::1))
   }
 
   it should "handle [Apple::1, Banana::1]" in {
+    implicit val scheduler = StubScheduler.random()
     expectCells (Apple::1, Banana::1) (newFilter (Apple::1, Banana::1))
   }
 
   it should "handle [Apple::2, Apple::1, Banana::1]" in {
+    implicit val scheduler = StubScheduler.random()
     expectCells (Apple::2, Banana::1) (newFilter (Apple::2, Apple::1, Banana::1))
   }
 
   it should "handle [Apple::1, Banana::2, Banana::2]" in {
+    implicit val scheduler = StubScheduler.random()
     expectCells (Apple::1, Banana::2) (newFilter (Apple::1, Banana::2, Banana::1))
   }
 
   it should "handle [Apple::1, Banana::1, Orange::1]" in {
+    implicit val scheduler = StubScheduler.random()
     expectCells (Apple::1, Banana::1, Orange::1) (newFilter (Apple::1, Banana::1, Orange::1))
   }
 
   it should "handle [Apple::2, Apple::1, Banana::1, Orange::1]" in {
+    implicit val scheduler = StubScheduler.random()
     expectCells (Apple::2, Banana::1, Orange::1) (
         newFilter (Apple::2, Apple::1, Banana::1, Orange::1))
   }
 
   it should "handle [Apple::1, Banana, Banana::1, Orange::1]" in {
+    implicit val scheduler = StubScheduler.random()
     expectCells (Apple::1, Banana::2, Orange::1) (
         newFilter (Apple::1, Banana::2, Banana::1, Orange::1))
   }
 
   it should "handle [Apple::1, Banana::1, Orange, Orange::1]" in {
+    implicit val scheduler = StubScheduler.random()
     expectCells (Apple::1, Banana::1, Orange::2) (
         newFilter (Apple::1, Banana::1, Orange::2, Orange::1))
   }}

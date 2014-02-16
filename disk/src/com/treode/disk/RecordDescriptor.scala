@@ -1,12 +1,12 @@
 package com.treode.disk
 
-import com.treode.async.Callback
+import com.treode.async.{Async, Callback}
 import com.treode.pickle.Pickler
 
 class RecordDescriptor [R] private (val id: TypeId, val prec: Pickler [R]) {
 
-  def record (entry: R) (cb: Callback [Unit]) (implicit disks: Disks): Unit =
-    disks.record (this, entry, cb)
+  def record (entry: R) (implicit disks: Disks): Async [Unit] =
+    disks.record (this, entry)
 
   def replay (f: R => Any) (implicit recovery: Recovery): Unit =
     recovery.replay (this) (f)

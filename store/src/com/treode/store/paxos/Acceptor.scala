@@ -110,7 +110,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     def choose (chosen: Bytes) {
       state = new Closed (chosen)
       val gen  = db.put (key, chosen)
-      Acceptor.close.record (key, chosen, gen) (Callback.ignore)
+      Acceptor.close.record (key, chosen, gen) .run (Callback.ignore)
       Proposer.chosen (key, chosen) (proposers)
     }
 
@@ -163,25 +163,25 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
     def open (ballot: Long, default: Bytes, proposer: Peer): Unit =
       post (new Post {
-        def record = Acceptor.open.record (key, default) (posted)
+        def record = Acceptor.open.record (key, default) .run (posted)
         def reply() = Proposer.promise (key, ballot, None) (proposer)
       })
 
     def promise (ballot: BallotNumber, proposal: Proposal, proposer: Peer): Unit =
       post (new Post {
-        def record = Acceptor.promise.record (key, ballot) (posted)
+        def record = Acceptor.promise.record (key, ballot) .run (posted)
         def reply() = Proposer.promise (key, ballot.number, proposal) (proposer)
       })
 
     def accept (ballot: BallotNumber, value: Bytes, proposer: Peer): Unit =
       post (new Post {
-        def record() = Acceptor.accept.record (key, ballot, value) (posted)
+        def record() = Acceptor.accept.record (key, ballot, value) .run (posted)
         def reply() = Proposer.accept (key, ballot.number) (proposer)
       })
 
     def reaccept (ballot: BallotNumber, proposer: Peer): Unit =
       post (new Post {
-        def record() = Acceptor.reaccept.record (key, ballot) (posted)
+        def record() = Acceptor.reaccept.record (key, ballot) .run (posted)
         def reply() = Proposer.accept (key, ballot.number) (proposer)
       })
 
@@ -212,7 +212,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     def choose (chosen: Bytes) {
       state = new Closed (chosen)
       val gen  = db.put (key, chosen)
-      Acceptor.close.record (key, chosen, gen) (Callback.ignore)
+      Acceptor.close.record (key, chosen, gen) .run (Callback.ignore)
     }
 
     def checkpoint (cb: Callback [Status]): Unit =

@@ -3,10 +3,11 @@ package com.treode.disk
 import java.nio.file.Path
 import scala.collection.mutable.ArrayBuffer
 
-import com.treode.async._
+import com.treode.async.{Async, AsyncIterator, Callback, Latch, Scheduler, callback, continue, defer, invoke}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
+import Async.async
 import RecordHeader.{Entry, LogAlloc, LogEnd, PageAlloc, PageWrite}
 
 private class LogIterator private (
@@ -52,7 +53,7 @@ private class LogIterator private (
         case LogEnd =>
           logPos = -1L
           buf.clear()
-          scheduler.execute (cb, ())
+          scheduler.pass (cb, ())
 
         case LogAlloc (next) =>
           logSeg = alloc.alloc (next, superb.geometry, config)
@@ -88,8 +89,8 @@ private class LogIterator private (
       file.deframe (buf, logPos, _read)
     }}
 
-  def foreach (cb: Callback [Unit]) (f: ((Long, Unit => Any), Callback [Unit]) => Any): Unit =
-    new Foreach (f, cb) .next()
+  def _foreach (f: ((Long, Unit => Any), Callback [Unit]) => Any): Async [Unit] =
+    async (new Foreach (f, _) .next())
 
   def close (disks: DiskDrives, logd: LogDispatcher, paged: PageDispatcher): DiskDrive = {
     buf.clear()
@@ -158,9 +159,10 @@ object LogIterator {
 
       val allMade = continue (cb) { logs: Map [Int, LogIterator] =>
         val iter = AsyncIterator.merge (logs.values.toSeq) (ordering)
-        iter.foreach (replayed (logs)) { case ((time, replay), cb) =>
+        iter.foreach.cb { case ((time, replay), cb) =>
           invoke (cb) (replay())
-        }}
+        } .run (replayed (logs))
+      }
 
       val oneMade = Latch.map (reads.size, allMade)
       reads foreach { read =>

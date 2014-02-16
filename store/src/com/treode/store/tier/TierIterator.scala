@@ -1,8 +1,10 @@
 package com.treode.store.tier
 
 import scala.collection.JavaConversions._
-import com.treode.async.{AsyncIterator, Callback, RichIterator, Scheduler, continue}
+import com.treode.async.{Async, AsyncIterator, Callback, RichIterator, Scheduler, continue}
 import com.treode.disk.{Disks, Position}
+
+import Async.async
 
 private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
     implicit disks: Disks) extends CellIterator {
@@ -24,7 +26,7 @@ private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
     }
 
     def start() {
-      pager.read (root, _push)
+      pager.read (root) .run (_push)
     }
 
     def push (p: TierPage) {
@@ -32,7 +34,7 @@ private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
         case p: IndexPage =>
           val e = p.get (0)
           stack ::= (p, 0)
-          pager.read (e.pos, _push)
+          pager.read (e.pos) .run (_push)
         case p: CellPage =>
           page = p
           index = 0
@@ -55,7 +57,7 @@ private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
         }
         if (i < b.size) {
           stack ::= (b, i)
-          pager.read (b.get (i) .pos, _push)
+          pager.read (b.get (i) .pos) .run (_push)
         } else {
           cb()
         }
@@ -63,8 +65,8 @@ private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
         cb()
       }}}
 
-  def foreach (cb: Callback [Unit]) (f: (Cell, Callback [Unit]) => Any): Unit =
-    new Foreach (f, cb) .start()
+  def _foreach (f: (Cell, Callback [Unit]) => Any): Async [Unit] =
+    async (new Foreach (f, _) .start())
 }
 
 private object TierIterator {

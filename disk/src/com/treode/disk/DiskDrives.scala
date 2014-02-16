@@ -5,9 +5,10 @@ import java.util.concurrent.ExecutorService
 import scala.collection.immutable.Queue
 import scala.language.postfixOps
 
-import com.treode.async
-import com.treode.async.{Callback, Fiber, Latch, Scheduler}
+import com.treode.async.{Async, Callback, Fiber, Latch, Scheduler, callback, defer}
 import com.treode.async.io.File
+
+import Async.async
 
 private class DiskDrives (implicit
     val scheduler: Scheduler,
@@ -93,7 +94,7 @@ private class DiskDrives (implicit
     val items = req._1
     val cb = leave (req._2)
     engaged = true
-    async.defer (cb) {
+    defer (cb) {
 
       val priorDisks = disks.values
       val priorPaths = priorDisks.setBy (_.path)
@@ -134,14 +135,14 @@ private class DiskDrives (implicit
     }
 
   def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService, cb: Callback [Unit]): Unit =
-    async.defer (cb) {
+    defer (cb) {
       val files = items map (openFile (_, exec))
       attach (files, cb)
     }
 
   private def _detach (items: List [DiskDrive]) {
     engaged = true
-    async.defer (panic) {
+    defer (panic) {
 
       val paths = items map (_.path)
       val disks = this.disks -- (items map (_.id))
@@ -172,7 +173,7 @@ private class DiskDrives (implicit
     val (items, _cb) = req
     val cb = leave (_cb)
     engaged = true
-    async.defer (cb) {
+    defer (cb) {
 
       val byPath = disks.values.mapBy (_.path)
       if (!(items forall (byPath contains _))) {
@@ -247,7 +248,7 @@ private class DiskDrives (implicit
 
   def cleanable (cb: Callback [Iterator [SegmentPointer]]): Unit =
     fiber.defer (cb) {
-      val allGathered = async.callback (cb) { segs: Seq [Iterator [SegmentPointer]] =>
+      val allGathered = callback (cb) { segs: Seq [Iterator [SegmentPointer]] =>
         segs.iterator.flatten
       }
       val oneGathered = Latch.seq (disks.size, allGathered)
@@ -257,15 +258,15 @@ private class DiskDrives (implicit
   def join [A] (cb: Callback [A]): Callback [A] =
     releaser.join (cb)
 
-  def record [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit]): Unit =
-    logd.send (PickledRecord (desc, entry, cb))
+  def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit] =
+    async (cb => logd.send (PickledRecord (desc, entry, cb)))
 
-  def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P, cb: Callback [Position]): Unit =
-    paged.send (PickledPage (desc, group, page, cb))
+  def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P): Async [Position] =
+    async (cb => paged.send (PickledPage (desc, group, page, cb)))
 
   def fetch [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
     DiskDrive.read (disks (pos.disk) .file, desc, pos, cb)
 
-  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
-    cache.read (desc, pos, cb)
+  def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
+    async (cache.read (desc, pos, _))
 }
