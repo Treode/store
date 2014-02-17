@@ -3,7 +3,7 @@ package com.treode.async
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-class Future [A] (scheduler: Scheduler) extends Callback [A] {
+class Future [A] (implicit scheduler: Scheduler) extends Callback [A] {
 
   private var callbacks = new ArrayList [Callback [A]]
   private var value = null.asInstanceOf [A]

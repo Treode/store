@@ -1,5 +1,7 @@
 package com.treode.async
 
+import java.util.concurrent.{Future => JFuture, Callable, FutureTask, SynchronousQueue}
+
 trait Async [A] {
 
   def run (cb: Callback [A])
@@ -33,6 +35,28 @@ trait Async [A] {
           def fail (t: Throwable): Unit = cb.fail (t)
         })
       }}}
+
+  def toFuture (implicit scheduler: Scheduler): Future [A] = {
+    val f = new Future [A]
+    run (f)
+    f
+  }
+
+  def run(): A = {
+    val q = new SynchronousQueue [Either [Throwable, A]]
+    run (new Callback [A] {
+      def pass (v: A): Unit = q.offer (Right (v))
+      def fail (t: Throwable): Unit = q.offer (Left (t))
+    })
+    q.take() match {
+      case Right (v) => v
+      case Left (e) => throw e
+    }}
+
+  def toJavaFuture: JFuture [A] =
+    new FutureTask (new Callable [A] {
+      def call(): A = run()
+    })
 }
 
 object Async {

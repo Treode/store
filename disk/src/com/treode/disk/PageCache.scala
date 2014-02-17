@@ -11,7 +11,7 @@ private class PageCache (disks: DiskDrives) {
   class Load (desc: PageDescriptor [_, _], pos: Position)
   extends Callable [Future [Any]] {
     def call(): Future [Any] = {
-      val fut = new Future [Any] (scheduler)
+      val fut = new Future [Any]
       defer (fut) (disks.fetch (desc, pos, fut))
       fut
     }}
