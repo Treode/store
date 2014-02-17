@@ -16,14 +16,14 @@ class MapLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Map [Int, Int]]
     val ltch = Latch.map (0, cb)
     expectResult (Map [Int, Int] ()) (cb.passed)
-    intercept [Exception] (ltch (0, 0))
+    intercept [Exception] (ltch.pass (0, 0))
   }
 
   it should "release after one pass for count==1" in {
     val cb = CallbackCaptor [Map [Int, Int]]
     val ltch = Latch.map (1, cb)
     cb.expectNotInvoked()
-    ltch (0, 1)
+    ltch.pass (0, 1)
     expectResult (Map ((0, 1))) (cb.passed)
   }
 
@@ -39,9 +39,9 @@ class MapLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Map [Int, Int]]
     val ltch = Latch.map (2, cb)
     cb.expectNotInvoked()
-    ltch (0, 1)
+    ltch.pass (0, 1)
     cb.expectNotInvoked()
-    ltch (1, 2)
+    ltch.pass (1, 2)
     expectResult (Map ((0, 1), (1, 2))) (cb.passed)
   }
 
@@ -49,9 +49,9 @@ class MapLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Map [Int, Int]]
     val ltch = Latch.map (2, cb)
     cb.expectNotInvoked()
-    ltch (1, 2)
+    ltch.pass (1, 2)
     cb.expectNotInvoked()
-    ltch (0, 1)
+    ltch.pass (0, 1)
     expectResult (Map ((0, 1), (1, 2))) (cb.passed)
   }
 
@@ -59,7 +59,7 @@ class MapLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Map [Int, Int]]
     val ltch = Latch.map (2, cb)
     cb.expectNotInvoked()
-    ltch (0, 0)
+    ltch.pass (0, 0)
     cb.expectNotInvoked()
     ltch.fail (new DistinguishedException)
     cb.failed [DistinguishedException]

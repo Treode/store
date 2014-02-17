@@ -9,7 +9,7 @@ trait Async [A] {
     new Async [B] {
       def run (cb: Callback [B]) {
         self.run (new Callback [A] {
-          def pass (v: A): Unit = cb.pass (f (v))
+          def pass (v: A): Unit = cb (f (v))
           def fail (t: Throwable): Unit = cb.fail (t)
         })
       }}}
@@ -29,7 +29,7 @@ trait Async [A] {
     new Async [A] {
       def run (cb: Callback [A]) {
         self.run (new Callback [A] {
-          def pass (v: A): Unit = if (p (v)) cb.pass (v)
+          def pass (v: A): Unit = if (p (v)) cb (v)
           def fail (t: Throwable): Unit = cb.fail (t)
         })
       }}}
@@ -61,14 +61,14 @@ object Async {
 
   def supply [A] (v: A): Async [A] =
     new Async [A] {
-      def run (cb: Callback [A]): Unit = cb.pass (v)
+      def run (cb: Callback [A]): Unit = cb (v)
     }
 
   def cond (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
     new Async [Unit] {
       def run (cb: Callback [Unit]): Unit =
         try {
-          if (p) f run cb else cb.pass()
+          if (p) f run cb else cb()
         } catch {
           case e: Throwable => cb.fail (e)
         }}
@@ -90,11 +90,11 @@ object Async {
               }}
             def fail (t: Throwable): Unit = s.fail (cb, t)
           }
-          loop.pass()
+          loop()
         }}
 
     def f (p: => Boolean) (f: => Any) (implicit s: Scheduler): Async [Unit] =
-      cb (p) {cb => f; cb.pass()}
+      cb (p) {cb => f; cb()}
 
     def apply [A] (p: => Boolean) (f: => Async [Unit]) (implicit s: Scheduler): Async [Unit] =
       cb (p) {cb => f run cb}

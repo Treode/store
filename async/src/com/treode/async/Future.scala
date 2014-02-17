@@ -27,7 +27,7 @@ class Future [A] (scheduler: Scheduler) extends Callback [A] {
 
   def get (cb: Callback [A]): Unit = synchronized {
     if (value != null)
-      cb (value)
+      cb.pass (value)
     else if (thrown != null)
       cb.fail (thrown)
     else

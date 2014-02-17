@@ -48,7 +48,7 @@ private class Medic (
       a.state = new a.Closed (chosen.get)
     else
       a.state = new a.Deliberating (default, ballot, proposal, Set.empty)
-    cb (a)
+    cb.pass (a)
   }
 
   override def toString = s"Acceptor.Medic($key, $default, $proposal, $chosen)"

@@ -16,14 +16,14 @@ class ArrayLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Array [Int]]
     val ltch = Latch.array (0, cb)
     expectResult (Seq [Int] ()) (cb.passed.toSeq)
-    intercept [Exception] (ltch (0, 0))
+    intercept [Exception] (ltch.pass (0, 0))
   }
 
   it should "release after one pass for count==1" in {
     val cb = CallbackCaptor [Array [Int]]
     val ltch = Latch.array (1, cb)
     cb.expectNotInvoked()
-    ltch (0, 1)
+    ltch.pass (0, 1)
     expectResult (Seq (1)) (cb.passed.toSeq)
   }
 
@@ -39,9 +39,9 @@ class ArrayLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Array [Int]]
     val ltch = Latch.array (2, cb)
     cb.expectNotInvoked()
-    ltch (0, 1)
+    ltch.pass (0, 1)
     cb.expectNotInvoked()
-    ltch (1, 2)
+    ltch.pass (1, 2)
     expectResult (Seq (1, 2)) (cb.passed.toSeq)
   }
 
@@ -49,9 +49,9 @@ class ArrayLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Array [Int]]
     val ltch = Latch.array (2, cb)
     cb.expectNotInvoked()
-    ltch (1, 2)
+    ltch.pass (1, 2)
     cb.expectNotInvoked()
-    ltch (0, 1)
+    ltch.pass (0, 1)
     expectResult (Seq (1, 2)) (cb.passed.toSeq)
   }
 
@@ -59,7 +59,7 @@ class ArrayLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Array [Int]]
     val ltch = Latch.array (2, cb)
     cb.expectNotInvoked()
-    ltch (0, 0)
+    ltch.pass (0, 0)
     cb.expectNotInvoked()
     ltch.fail (new DistinguishedException)
     cb.failed [DistinguishedException]

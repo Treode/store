@@ -32,7 +32,7 @@ private class ReadDirector (
     val _cb = cb
     cb = null
     if (gots.quorum) {
-      _cb (vs)
+      _cb.pass (vs)
     } else {
       cb.fail (new Exception)
     }}

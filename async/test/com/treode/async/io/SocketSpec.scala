@@ -22,7 +22,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   "The flush method" should "handle an empty buffer" in {
     val (async, socket, buffer) = mkSocket
     val cb = mock [Callback [Unit]]
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     socket.flush (buffer, cb)
   }
 
@@ -32,7 +32,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
     async.expectWrite (0, 4)
     val cb = mock [Callback [Unit]]
     socket.flush (buffer, cb)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (4)
   }
 
@@ -45,7 +45,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
     async.expectWrite (2, 4)
     socket.flush (output, cb)
     async.completeLast (2)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (2)
   }
 
@@ -62,7 +62,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
   "The fill method for a socket" should "handle a request for 0 bytes" in {
     val (async, socket, input) = mkSocket
     val cb = mock [Callback [Unit]]
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     socket.fill (input, 0, cb)
   }
 
@@ -70,7 +70,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
     val (async, socket, input) = mkSocket
     input.writePos = 4
     val cb = mock [Callback [Unit]]
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     socket.fill (input, 4, cb)
   }
 
@@ -79,7 +79,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
     val cb = mock [Callback [Unit]]
     async.expectRead (0, 32)
     socket.fill (input, 4, cb)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (4)
   }
 
@@ -90,7 +90,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
     async.expectRead (2, 32)
     socket.fill (input, 4, cb)
     async.completeLast (2)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (2)
   }
 
@@ -100,7 +100,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
     val cb = mock [Callback [Unit]]
     async.expectRead (2, 32)
     socket.fill (input, 4, cb)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (2)
   }
 
@@ -110,7 +110,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
     input.readPos = 4
     val cb = mock [Callback [Unit]]
     async.expectRead (4, 32)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     socket.fill (input, 4, cb)
     async.completeLast (4)
   }
@@ -122,7 +122,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
     val cb = mock [Callback [Unit]]
     async.expectRead (6, 32)
     socket.fill (input, 4, cb)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (2)
   }
 
@@ -135,7 +135,7 @@ object SocketBehaviors extends FlatSpec with MockFactory {
     async.expectRead (0, 32)
     socket.fill (input, 8, cb)
     async.completeLast (2)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (6)
   }
 

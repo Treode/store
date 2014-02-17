@@ -14,15 +14,15 @@ private class TempTimedTable extends TimedTable {
     defer (cb) {
       val c = memtable.ceiling (TimedCell (key, time, None))
       if (c == null)
-        cb (TimedCell (key, TxClock.zero, None))
+        cb.pass (TimedCell (key, TxClock.zero, None))
       else
-        cb (c)
+        cb.pass (c)
     }
 
   def put (key: Bytes, time: TxClock, value: Option [Bytes], cb: Callback [Unit]): Unit =
     defer (cb) {
       memtable.add (TimedCell (key, time, value))
-      cb()
+      cb.pass()
     }
 
   def close() = ()

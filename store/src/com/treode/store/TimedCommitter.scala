@@ -15,7 +15,7 @@ private class TimedCommitter (ops: Seq [WriteOp], cb: Callback [Unit]) extends C
     if (!_failures.isEmpty) {
       cb.fail (MultiException.fit (_failures.toSeq))
     } else {
-      cb.apply()
+      cb.pass()
     }}
 
   def pass (v: Unit) {

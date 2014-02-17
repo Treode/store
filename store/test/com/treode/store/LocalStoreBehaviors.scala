@@ -24,7 +24,7 @@ trait LocalStoreBehaviors extends StoreBehaviors {
           s.commit (wt, ops, new Callback [Unit] {
             def pass (v: Unit) {
               prep.release()
-              cb (wt)
+              cb.pass (wt)
             }
             def fail (t: Throwable) {
               prep.release()

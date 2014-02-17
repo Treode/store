@@ -232,7 +232,7 @@ trait StoreBehaviors {
               countAuditsPassed.incrementAndGet()
             else
               countAuditsFailed.incrementAndGet()
-            cb()
+            cb.pass()
           }})
       }
 
@@ -252,11 +252,11 @@ trait StoreBehaviors {
             store.write (ct, wops, new StubWriteCallback {
               override def pass (wt: TxClock): Unit = {
                 countTransferPassed.incrementAndGet()
-                cb()
+                cb.pass()
               }
               override def advance() = {
                 countTransferAdvanced.incrementAndGet()
-                cb()
+                cb.pass()
               }
             })
           }})

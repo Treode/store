@@ -77,7 +77,7 @@ package object async {
               _cb.fail (t)
               return
           }
-          _cb.apply (a)
+          _cb.pass (a)
         }
         def fail (t: Throwable): Unit =
           _cb.fail (t)
@@ -113,7 +113,7 @@ package object async {
           None
       }
       if (v.isDefined)
-        _cb (v.get)
+        _cb.pass (v.get)
     }}
 
   def invoke [A] (cb: Callback [A]) (f: A): Unit =

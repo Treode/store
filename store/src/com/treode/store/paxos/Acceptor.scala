@@ -115,7 +115,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     }
 
     def checkpoint (cb: Callback [Status]): Unit =
-      cb (Status.Restoring (key, default))
+      cb.pass (Status.Restoring (key, default))
 
     def shutdown(): Unit =
       state = new Shutdown (Status.Restoring (key, default))
@@ -216,7 +216,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     }
 
     def checkpoint (cb: Callback [Status]): Unit =
-      cb (Status.Deliberating (key, default, ballot, proposal))
+      cb.pass (Status.Deliberating (key, default, ballot, proposal))
 
     def shutdown(): Unit =
       state = new Shutdown (Status.Deliberating (key, default, ballot, proposal))
@@ -239,7 +239,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       require (chosen == this.chosen, "Paxos disagreement")
 
     def checkpoint (cb: Callback [Status]): Unit =
-      cb (Status.Closed (key, chosen))
+      cb.pass (Status.Closed (key, chosen))
 
     def shutdown(): Unit =
       state = new Shutdown (Status.Closed (key, chosen))
@@ -250,7 +250,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
   class Shutdown (status: Status) extends State {
 
     def checkpoint (cb: Callback [Status]): Unit =
-      cb (status)
+      cb.pass (status)
 
     def query (proposer: Peer, ballot: Long, abort: Bytes): Unit = ()
     def propose (proposer: Peer, ballot: Long, value: Bytes): Unit = ()

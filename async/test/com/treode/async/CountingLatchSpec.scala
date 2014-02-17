@@ -16,14 +16,14 @@ class CountingLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Unit]
     val ltch = Latch.unit (0, cb)
     cb.passed
-    intercept [Exception] (ltch (0))
+    intercept [Exception] (ltch.pass (0))
   }
 
   it should "release after one pass for count==1" in {
     val cb = CallbackCaptor [Unit]
     val ltch = Latch.unit (1, cb)
     cb.expectNotInvoked()
-    ltch (0)
+    ltch.pass (0)
     cb.passed
   }
 
@@ -39,9 +39,9 @@ class CountingLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Unit]
     val ltch = Latch.unit (2, cb)
     cb.expectNotInvoked()
-    ltch (0)
+    ltch.pass (0)
     cb.expectNotInvoked()
-    ltch (0)
+    ltch.pass (0)
     cb.passed
   }
 
@@ -49,7 +49,7 @@ class CountingLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Unit]
     val ltch = Latch.unit (2, cb)
     cb.expectNotInvoked()
-    ltch (0)
+    ltch.pass (0)
     cb.expectNotInvoked()
     ltch.fail (new DistinguishedException)
     cb.failed [DistinguishedException]

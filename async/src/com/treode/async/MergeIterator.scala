@@ -34,7 +34,7 @@ extends AsyncIterator [A] {
 
         def pass (v: Unit): Unit = pq.synchronized {
           val elem = pq.dequeue()
-          elem.cb()
+          elem.cb.pass()
         }
 
         def fail (t: Throwable): Unit = pq.synchronized {
@@ -50,7 +50,7 @@ extends AsyncIterator [A] {
       else if (count == pq.size && !thrown.isEmpty)
         cb.fail (MultiException.fit (thrown))
       else if (count == 0 && thrown.isEmpty)
-        cb()
+        cb.pass()
     }
 
     val close: Callback [Unit] =
@@ -72,7 +72,7 @@ extends AsyncIterator [A] {
     }
 
     if (count == 0)
-      cb()
+      cb.pass()
     for ((iter, n) <- iters zipWithIndex)
       iter.foreach.cb (loop (n) _) run (close)
   }

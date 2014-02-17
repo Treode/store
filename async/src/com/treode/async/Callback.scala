@@ -7,30 +7,27 @@ import scala.reflect.macros.Context
 
 trait Callback [-T] {
 
-  protected def pass (v: T)
-
+  def pass (v: T)
   def fail (t: Throwable)
-
-  def apply (v: T): Unit = pass (v)
 }
 
 object Callback {
 
   /** Adapts Callback to Java's NIO CompletionHandler. */
   object IntHandler extends CompletionHandler [JavaInt, Callback [Int]] {
-    def completed (v: JavaInt, cb: Callback [Int]) = cb (v)
+    def completed (v: JavaInt, cb: Callback [Int]) = cb.pass (v)
     def failed (t: Throwable, cb: Callback [Int]) = cb.fail (t)
   }
 
   /** Adapts Callback to Java's NIO CompletionHandler. */
   object LongHandler extends CompletionHandler [JavaLong, Callback [Long]] {
-    def completed (v: JavaLong, cb: Callback [Long]) = cb (v)
+    def completed (v: JavaLong, cb: Callback [Long]) = cb.pass (v)
     def failed (t: Throwable, cb: Callback [Long]) = cb.fail (t)
   }
 
   /** Adapts Callback to Java's NIO CompletionHandler. */
   object UnitHandler extends CompletionHandler [Void, Callback [Unit]] {
-    def completed (v: Void, cb: Callback [Unit]) = cb()
+    def completed (v: Void, cb: Callback [Unit]) = cb.pass()
     def failed (t: Throwable, cb: Callback [Unit]) = cb.fail (t)
   }
 

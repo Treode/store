@@ -15,7 +15,7 @@ private class TimedReader (val rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback)
     if (!_failures.isEmpty)
       cb.fail (MultiException.fit (_failures.toSeq))
     else
-      cb.apply (_got.toSeq)
+      cb.pass (_got.toSeq)
   }
 
   def got (n: Int, c: TimedCell) {

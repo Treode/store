@@ -53,7 +53,7 @@ object Scheduler {
 
   def toRunnable [A] (cb: Callback [A], v: A): Runnable =
     new Runnable {
-      def run() = cb (v)
+      def run() = cb.pass (v)
     }
 
   def toRunnable [A] (cb: Callback [A], t: Throwable): Runnable =

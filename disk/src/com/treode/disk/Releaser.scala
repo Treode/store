@@ -53,7 +53,7 @@ private class Releaser {
       val epoch = join()
       def pass (v: A) {
         leave (epoch)
-        cb (v)
+        cb.pass (v)
       }
       def fail (t: Throwable) {
         leave (epoch)

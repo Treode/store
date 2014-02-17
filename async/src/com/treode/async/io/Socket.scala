@@ -66,7 +66,7 @@ class Socket (socket: AsynchronousSocketChannel, execx: Executor) {
 
   def deframe (input: PagedBuffer, cb: Callback [Int]) {
     def body (len: Int) = new Callback [Unit] {
-      def pass (v: Unit) = cb (len)
+      def pass (v: Unit) = cb.pass (len)
       def fail (t: Throwable) = cb.fail (t)
     }
     val header = new Callback [Unit] {

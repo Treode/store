@@ -20,7 +20,7 @@ private case class Tier (gen: Long, root: Position) {
           case p: IndexPage =>
             val i = p.find (key)
             if (i == p.size) {
-              cb (None)
+              cb.pass (None)
             } else {
               val e = p.get (i)
               pager.read (e.pos) .run (this)
@@ -28,13 +28,13 @@ private case class Tier (gen: Long, root: Position) {
           case p: CellPage =>
             val i = p.find (key)
             if (i == p.size) {
-              cb (None)
+              cb.pass (None)
             } else {
               val e = p.get (i)
               if (e.key == key)
-                cb (Some (e))
+                cb.pass (Some (e))
               else
-                cb (None)
+                cb.pass (None)
             }}}
 
       def fail (t: Throwable) = cb.fail (t)

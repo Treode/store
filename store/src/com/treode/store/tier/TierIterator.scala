@@ -59,10 +59,10 @@ private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
           stack ::= (b, i)
           pager.read (b.get (i) .pos) .run (_push)
         } else {
-          cb()
+          cb.pass()
         }
       } else {
-        cb()
+        cb.pass()
       }}}
 
   def _foreach (f: (Cell, Callback [Unit]) => Any): Async [Unit] =

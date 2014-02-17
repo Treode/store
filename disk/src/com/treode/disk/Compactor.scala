@@ -45,7 +45,7 @@ private class Compactor (disks: DiskDrives) {
 
       def pass (v: Unit) {
         fiber.execute (reengage())
-        cb (v)
+        cb.pass (v)
       }
 
       def fail (t: Throwable) {

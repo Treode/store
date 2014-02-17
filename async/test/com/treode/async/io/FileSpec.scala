@@ -22,7 +22,7 @@ object FileBehaviors extends FlatSpec with MockFactory {
     val (async, file) = mkFile
     val buffer = PagedBuffer (5)
     val cb = mock [Callback [Unit]]
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     file.flush (buffer, 0, cb)
   }
 
@@ -33,7 +33,7 @@ object FileBehaviors extends FlatSpec with MockFactory {
     async.expectWrite (0, 0, 4)
     val cb = mock [Callback [Unit]]
     file.flush (buffer, 0, cb)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (4)
   }
 
@@ -47,7 +47,7 @@ object FileBehaviors extends FlatSpec with MockFactory {
     async.expectWrite (2, 2, 4)
     file.flush (output, 0, cb)
     async.completeLast (2)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (2)
   }
 
@@ -66,7 +66,7 @@ object FileBehaviors extends FlatSpec with MockFactory {
     val (async, file) = mkFile
     val input = PagedBuffer (5)
     val cb = mock [Callback [Unit]]
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     file.fill (input, 0, 0, cb)
   }
 
@@ -75,7 +75,7 @@ object FileBehaviors extends FlatSpec with MockFactory {
     val input = PagedBuffer (5)
     input.writePos = 4
     val cb = mock [Callback [Unit]]
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     file.fill (input, 0, 4, cb)
   }
 
@@ -85,7 +85,7 @@ object FileBehaviors extends FlatSpec with MockFactory {
     val cb = mock [Callback [Unit]]
     async.expectRead (0, 0, 32)
     file.fill (input, 0, 4, cb)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (4)
   }
 
@@ -97,7 +97,7 @@ object FileBehaviors extends FlatSpec with MockFactory {
     async.expectRead (2, 2, 32)
     file.fill (input, 0, 4, cb)
     async.completeLast (2)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (2)
   }
 
@@ -108,7 +108,7 @@ object FileBehaviors extends FlatSpec with MockFactory {
     val cb = mock [Callback [Unit]]
     async.expectRead (0, 2, 32)
     file.fill (input, 0, 4, cb)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (2)
   }
 
@@ -119,7 +119,7 @@ object FileBehaviors extends FlatSpec with MockFactory {
     input.readPos = 4
     val cb = mock [Callback [Unit]]
     async.expectRead (0, 4, 32)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     file.fill (input, 0, 4, cb)
     async.completeLast (4)
   }
@@ -132,7 +132,7 @@ object FileBehaviors extends FlatSpec with MockFactory {
     val cb = mock [Callback [Unit]]
     async.expectRead (0, 6, 32)
     file.fill (input, 0, 4, cb)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (2)
   }
 
@@ -146,7 +146,7 @@ object FileBehaviors extends FlatSpec with MockFactory {
     async.expectRead (2, 0, 32)
     file.fill (input, 0, 8, cb)
     async.completeLast (2)
-    (cb.apply _) .expects() .once()
+    (cb.pass _) .expects() .once()
     async.completeLast (6)
   }
 

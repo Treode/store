@@ -16,14 +16,14 @@ class SeqLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.seq (0, cb)
     expectResult (Seq [Int] ()) (cb.passed)
-    intercept [Exception] (ltch (1))
+    intercept [Exception] (ltch.pass (1))
   }
 
   it should "release after one pass for count==1" in {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.seq (1, cb)
     cb.expectNotInvoked()
-    ltch (1)
+    ltch.pass (1)
     expectResult (Seq (1)) (cb.passed)
   }
 
@@ -39,9 +39,9 @@ class SeqLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.seq (2, cb)
     cb.expectNotInvoked()
-    ltch (1)
+    ltch.pass (1)
     cb.expectNotInvoked()
-    ltch (2)
+    ltch.pass (2)
     expectResult (Seq (1, 2)) (cb.passed)
   }
 
@@ -49,9 +49,9 @@ class SeqLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.seq (2, cb)
     cb.expectNotInvoked()
-    ltch (2)
+    ltch.pass (2)
     cb.expectNotInvoked()
-    ltch (1)
+    ltch.pass (1)
     expectResult (Seq (2, 1)) (cb.passed)
   }
 
@@ -59,7 +59,7 @@ class SeqLatchSpec extends FlatSpec {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.seq (2, cb)
     cb.expectNotInvoked()
-    ltch (1)
+    ltch.pass (1)
     cb.expectNotInvoked()
     ltch.fail (new DistinguishedException)
     cb.failed [DistinguishedException]

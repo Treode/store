@@ -137,7 +137,7 @@ private object Acceptors {
       acceptors.recover (ms, callback (launcher.ready) { _ =>
         acceptors.attach()
         proposers.attach()
-        cb (kit)
+        cb.pass (kit)
       })
 
       root.checkpoint (acceptors.checkpoint _)

@@ -34,7 +34,7 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) {
 
   private var callback: Callback [Int] = null
 
-  def completeLast (v: Int) = callback (v)
+  def completeLast (v: Int) = callback.pass (v)
 
   def failLast (t: Throwable) = callback.fail (t)
 

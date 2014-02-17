@@ -15,7 +15,7 @@ trait AsyncIterator [+A] {
       _foreach ((x, cb) => f (x) run (cb))
 
     def f (f: A => Any): Async [Unit] =
-      _foreach { (x, cb) => f (x); cb() }
+      _foreach { (x, cb) => f (x); cb.pass() }
 
     def cb (f: (A, Callback [Unit]) => Any): Async [Unit] =
       _foreach (f)
@@ -32,7 +32,7 @@ trait AsyncIterator [+A] {
     val self = this
     new AsyncIterator [A] {
       def _foreach (g: (A, Callback [Unit]) => Any): Async [Unit] =
-        self._foreach { case (x, cb) => if (p (x)) g (x, cb) else cb() }
+        self._foreach { case (x, cb) => if (p (x)) g (x, cb) else cb.pass() }
     }}}
 
 object AsyncIterator {

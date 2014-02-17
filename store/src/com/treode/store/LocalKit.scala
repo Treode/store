@@ -45,7 +45,7 @@ private abstract class LocalKit (bits: Int) extends LocalStore {
         val t = getTimedTable (op.table)
         op match {
           case op: Create => t.create (op.key, op.value, wt, c)
-          case op: Hold   => c()
+          case op: Hold   => c.pass()
           case op: Update => t.update (op.key, op.value, wt, c)
           case op: Delete => t.delete (op.key, wt, c)
         }}}

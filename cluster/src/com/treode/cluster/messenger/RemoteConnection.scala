@@ -180,7 +180,7 @@ private class RemoteConnection (
         disconnect (socket)
       }}
 
-    fiber.spawn (loop())
+    fiber.spawn (loop.pass())
   }
 
   private def hearHello (socket: Socket) {

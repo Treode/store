@@ -134,7 +134,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
         status match {
           case Committed (wt) =>
             state = new Committing (wt)
-            cb (wt)
+            cb.pass (wt)
           case Aborted =>
             state = new Aborting (false)
             cb.fail (new TimeoutException)

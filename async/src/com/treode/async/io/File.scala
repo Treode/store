@@ -75,7 +75,7 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 
   def deframe (input: PagedBuffer, pos: Long, cb: Callback [Int]) {
     def body (len: Int) = new Callback [Unit] {
-      def pass (v: Unit) = cb (len)
+      def pass (v: Unit) = cb.pass (len)
       def fail (t: Throwable) = cb.fail (t)
     }
     val header = new Callback [Unit] {

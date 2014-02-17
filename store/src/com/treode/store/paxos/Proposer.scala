@@ -112,12 +112,12 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
         if (accepted.quorum) {
           val v = agreement (proposed, value)
           Acceptor.choose (key, v) (locate (key))
-          learners foreach (_ (v))
+          learners foreach (_.pass (v))
           state = new Closed (v)
         }}}
 
     def chosen (v: Bytes) {
-      learners foreach (_ (v))
+      learners foreach (_.pass (v))
       state = new Closed (v)
     }
 
@@ -142,7 +142,7 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
     fiber.delay (closedLifetime) (remove (key, Proposer.this))
 
     def learn (k: Learner) =
-      k (value)
+      k.pass (value)
 
     def chosen (v: Bytes) =
       require (v == value, "Paxos disagreement")

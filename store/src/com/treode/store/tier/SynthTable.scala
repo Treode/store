@@ -53,13 +53,13 @@ private class SynthTable [K, V] (
 
     var cell = primary.floorEntry (key)
     if (cell != null && cell.getKey == key) {
-      epoch (cell.getValue)
+      epoch.pass (cell.getValue)
       return
     }
 
     cell = secondary.floorEntry (key)
     if (cell != null && cell.getKey == key) {
-      epoch (cell.getValue)
+      epoch.pass (cell.getValue)
       return
     }
 
@@ -68,13 +68,13 @@ private class SynthTable [K, V] (
 
       def pass (cell: Option [Cell]) {
         cell match {
-          case Some (cell) => epoch (cell.value)
+          case Some (cell) => epoch.pass (cell.value)
           case None =>
             i += 1
             if (i < tiers.size)
               tiers (i) .read (desc, key, this)
             else
-              epoch (None)
+              epoch.pass (None)
         }}
 
       def fail (t: Throwable) = epoch.fail (t)
@@ -83,7 +83,7 @@ private class SynthTable [K, V] (
     if (i < tiers.size)
       tiers (i) .read (desc, key, loop)
     else
-      epoch (None)
+      epoch.pass (None)
   }
 
   def get (key: Bytes, cb: Callback [Option [Bytes]]): Unit =
@@ -119,7 +119,7 @@ private class SynthTable [K, V] (
   }
 
   def probe (groups: Set [Long], cb: Callback [Set [Long]]): Unit =
-    cb (groups intersect tiers.active)
+    cb.pass (groups intersect tiers.active)
 
   def compact (groups: Set [Long], cb: Callback [Unit]) {
     checkpoint (callback (cb) (_ => ()))
@@ -151,7 +151,7 @@ private class SynthTable [K, V] (
       } finally {
         writeLock.unlock()
       }
-      epoch (meta)
+      epoch.pass (meta)
     }
 
     val merged = TierIterator.merge (desc, primary, emptyMemTier, tiers)

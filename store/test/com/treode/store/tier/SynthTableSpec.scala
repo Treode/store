@@ -168,7 +168,7 @@ class SynthTableSpec extends FreeSpec {
     "it should finish the checkpoint" in {
       implicit val scheduler = StubScheduler.random()
       val (disk, table, cb) = setup()
-      disk.last()
+      disk.last.pass()
       scheduler.runTasks()
       cb.passed
       assert (table.primary.isEmpty)
@@ -244,7 +244,7 @@ class SynthTableSpec extends FreeSpec {
     "it should finish the checkpoint" in {
       implicit val scheduler = StubScheduler.random()
       val (disk, table, cb) = setup()
-      disk.last()
+      disk.last.pass()
       scheduler.runTasks()
       cb.passed
       assert (!table.primary.isEmpty)

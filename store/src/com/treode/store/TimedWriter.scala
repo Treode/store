@@ -31,7 +31,7 @@ private class TimedWriter (
       locks.release()
       cb.fail (MultiException.fit (_failures.toSeq))
     } else {
-      cb.apply (new Preparation (ct, _version, locks))
+      cb.pass (new Preparation (ct, _version, locks))
     }}
 
   def advance (t: TxClock): Unit = synchronized {

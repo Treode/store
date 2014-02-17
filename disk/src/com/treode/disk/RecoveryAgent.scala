@@ -102,7 +102,7 @@ private class RecoveryAgent (
 
       val roots = reads.head.superb (useGen1) .boot.roots
       if (roots.length == 0)
-        rootsRead (Seq.empty)
+        rootsRead.pass (Seq.empty)
       else
         DiskDrive.read (files (roots.disk), loaders.pager, roots, rootsRead)
     }

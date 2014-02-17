@@ -6,7 +6,7 @@ private abstract class AbstractLatch [A] (private var count: Int, cb: Callback [
 
   def init() {
     if (count == 0)
-      cb (value)
+      cb.pass (value)
   }
 
   def release() {
@@ -17,7 +17,7 @@ private abstract class AbstractLatch [A] (private var count: Int, cb: Callback [
     if (!thrown.isEmpty)
       cb.fail (MultiException.fit (thrown))
     else
-      cb (value)
+      cb.pass (value)
   }
 
   def fail (t: Throwable): Unit = synchronized {

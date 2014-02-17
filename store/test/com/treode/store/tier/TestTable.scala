@@ -51,7 +51,7 @@ private object TestTable {
 
     root.reload { tiers => implicit reload =>
       medic.checkpoint (tiers)
-      reload.ready()
+      reload.ready.pass()
     }
 
     put.replay { case (gen, key, value) =>
@@ -67,7 +67,7 @@ private object TestTable {
       val table = medic.close()
       root.checkpoint (table.checkpoint _)
       //pager.handle (table)
-      cb (new LoggedTable (table))
-      launch.ready()
+      cb.pass (new LoggedTable (table))
+      launch.ready.pass()
     }}
 }

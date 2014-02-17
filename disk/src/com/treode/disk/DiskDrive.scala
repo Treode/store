@@ -99,7 +99,7 @@ private class DiskDrive (
           pageLedgerDirty = false
           PageLedger.write (pageLedger, file, pageSeg.pos, latch)
         } else {
-          latch()
+          latch.pass()
         }}
       pagemp.close (pagesClosed)
       record (DiskDrain, latch)
@@ -278,7 +278,7 @@ private object DiskDrive {
 
   def offset (id: Int, offset: Long, length: Int, cb: Callback [Position]): Callback [Long] =
     new Callback [Long] {
-      def pass (base: Long) = cb (Position (id, base + offset, length))
+      def pass (base: Long) = cb.pass (Position (id, base + offset, length))
       def fail (t: Throwable) = cb.fail (t)
     }
 

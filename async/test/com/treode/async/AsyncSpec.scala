@@ -18,7 +18,7 @@ class AsyncSpec extends FlatSpec {
   "Async.async" should "inovke the body" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false
-    async [Unit] { cb => flag = true; cb() } .pass
+    async [Unit] { cb => flag = true; cb.pass() } .pass
     expectResult (true) (flag)
   }
 
@@ -30,17 +30,17 @@ class AsyncSpec extends FlatSpec {
   it should "thrown an exception from the callback" in {
     implicit val scheduler = StubScheduler.random()
     intercept [DistinguishedException] {
-      async [Unit] (_ ()) run (exceptional)
+      async [Unit] (_.pass ()) run (exceptional)
     }}
 
   "Async.map" should "apply the function" in {
     implicit val scheduler = StubScheduler.random()
-    expectPass (2) (async [Int] (_ (1)) .map (_ * 2))
+    expectPass (2) (async [Int] (_.pass (1)) .map (_ * 2))
   }
 
   it should "pass an exception from the function to the callback" in {
     implicit val scheduler = StubScheduler.random()
-    async [Int] (_ (1))
+    async [Int] (_.pass (1))
         .map (_ => throw new DistinguishedException)
         .fail [DistinguishedException]
   }
@@ -48,24 +48,24 @@ class AsyncSpec extends FlatSpec {
   it should "thrown an exception from the callback" in {
     implicit val scheduler = StubScheduler.random()
     intercept [DistinguishedException] {
-      async [Int] (_ (1)) .map (_ * 2) .run (exceptional)
+      async [Int] (_.pass (1)) .map (_ * 2) .run (exceptional)
     }}
 
   "Async.filter" should "continue when the predicate is true" in {
     implicit val scheduler = StubScheduler.random()
-    expectPass (1) (async [Int] (_ (1)) .filter (_ == 1))
+    expectPass (1) (async [Int] (_.pass (1)) .filter (_ == 1))
   }
 
   it should "stop when the predicate is false" in {
     implicit val scheduler = StubScheduler.random()
-    val cb = async [Int] (_ (1)) .filter (_ != 1) .capture()
+    val cb = async [Int] (_.pass (1)) .filter (_ != 1) .capture()
     scheduler.runTasks()
     cb.expectNotInvoked()
   }
 
   it should "pass an exception from the predicate to the callback" in {
     implicit val scheduler = StubScheduler.random()
-    async [Int] (_ (1))
+    async [Int] (_.pass (1))
         .filter (_ => throw new DistinguishedException)
         .fail [DistinguishedException]
   }
@@ -73,7 +73,7 @@ class AsyncSpec extends FlatSpec {
   it should "thrown an exception from the callback" in {
     implicit val scheduler = StubScheduler.random()
     intercept [DistinguishedException] {
-      async [Int] (_ (1)) .filter (_ == 1) .run (exceptional)
+      async [Int] (_.pass (1)) .filter (_ == 1) .run (exceptional)
     }}
 
   "Async.whilst" should "handle zero iterations" in {

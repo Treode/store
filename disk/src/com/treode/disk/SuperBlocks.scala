@@ -36,7 +36,7 @@ private object SuperBlocks {
       def unpickleSuperBlocks() {
         val sb1 = unpickleSuperBlock (0)
         val sb2 = unpickleSuperBlock (config.superBlockBytes)
-        cb (new SuperBlocks (path, file, sb1, sb2))
+        cb.pass (new SuperBlocks (path, file, sb1, sb2))
       }
 
       file.fill (buffer, 0, config.diskLeadBytes, new Callback [Unit] {
