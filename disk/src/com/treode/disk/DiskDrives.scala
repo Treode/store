@@ -8,7 +8,7 @@ import scala.language.postfixOps
 import com.treode.async.{Async, Callback, Fiber, Latch, Scheduler, callback, defer}
 import com.treode.async.io.File
 
-import Async.async
+import Async.{async, guard}
 
 private class DiskDrives (implicit
     val scheduler: Scheduler,
@@ -267,9 +267,11 @@ private class DiskDrives (implicit
   def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P): Async [Position] =
     async (cb => paged.send (PickledPage (desc, group, page, cb)))
 
-  def fetch [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
-    DiskDrive.read (disks (pos.disk) .file, desc, pos, cb)
+  def fetch [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
+    guard {
+      DiskDrive.read (disks (pos.disk) .file, desc, pos)
+    }
 
   def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
-    async (cache.read (desc, pos, _))
+    cache.read (desc, pos)
 }

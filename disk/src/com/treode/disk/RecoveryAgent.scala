@@ -104,7 +104,7 @@ private class RecoveryAgent (
       if (roots.length == 0)
         rootsRead.pass (Seq.empty)
       else
-        DiskDrive.read (files (roots.disk), loaders.pager, roots, rootsRead)
+        DiskDrive.read (files (roots.disk), loaders.pager, roots) run (rootsRead)
     }
 
   def reattach (items: Seq [(Path, File)]): Unit =

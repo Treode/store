@@ -6,7 +6,7 @@ trait Launch {
 
   implicit def disks: Disks
 
-  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P])
+  def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P]
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: => Async [B])
 

@@ -3,6 +3,8 @@ package com.treode.async
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
+import Async.async
+
 class Future [A] (implicit scheduler: Scheduler) extends Callback [A] {
 
   private var callbacks = new ArrayList [Callback [A]]
@@ -32,4 +34,8 @@ class Future [A] (implicit scheduler: Scheduler) extends Callback [A] {
       cb.fail (thrown)
     else
       callbacks.add (cb)
-  }}
+  }
+
+  def get(): Async [A] =
+    async (get (_))
+}

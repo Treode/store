@@ -16,8 +16,8 @@ private class LaunchAgent (
 
   def disks: Disks = drives
 
-  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
-    drives.fetch (desc, pos, cb)
+  def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
+    drives.fetch (desc, pos)
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: => Async [B]): Unit =
     roots.checkpoint (desc) (f)

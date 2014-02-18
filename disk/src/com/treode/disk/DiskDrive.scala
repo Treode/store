@@ -5,10 +5,11 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.{ArrayBuffer, UnrolledBuffer}
 
 import com.treode.async
-import com.treode.async.{Callback, Fiber, Latch}
+import com.treode.async.{Async, Callback, Fiber, Latch}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
+import Async.guard
 import DiskDrive.offset
 import RecordHeader._
 
@@ -282,12 +283,11 @@ private object DiskDrive {
       def fail (t: Throwable) = cb.fail (t)
     }
 
-  def read [P] (file: File, desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
-    async.defer (cb) {
+  def read [P] (file: File, desc: PageDescriptor [_, P], pos: Position): Async [P] =
+    guard {
       val buf = PagedBuffer (12)
-      file.fill (buf, pos.offset, pos.length, async.callback (cb) { _ =>
-        desc.ppag.unpickle (buf)
-      })
+      for (_ <- file.fill (buf, pos.offset, pos.length))
+        yield desc.ppag.unpickle (buf)
     }
 
   def init (

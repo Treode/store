@@ -1,10 +1,10 @@
 package com.treode.disk
 
-import com.treode.async.Callback
+import com.treode.async.{Async, Callback}
 
 trait Reload {
 
-  def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P])
+  def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P]
 
   def ready: Callback [Unit]
 }

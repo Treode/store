@@ -1,10 +1,8 @@
 package com.treode.disk
 
 import scala.reflect.ClassTag
-import com.treode.async.{Async, Callback}
+import com.treode.async.Async
 import com.treode.pickle.Pickler
-
-import Async.async
 
 class PageDescriptor [G, P] private (
     val id: TypeId,
@@ -13,10 +11,10 @@ class PageDescriptor [G, P] private (
         implicit val tpag: ClassTag [P]) {
 
   def read (reload: Reload, pos: Position): Async [P] =
-    async (reload.read (this, pos, _))
+    reload.read (this, pos)
 
   def read (launch: Launch, pos: Position): Async [P] =
-    async (launch.read (this, pos, _))
+    launch.read (this, pos)
 
   def handle (handler: PageHandler [G]) (implicit launch: Launch): Unit =
     launch.handle (this, handler)
