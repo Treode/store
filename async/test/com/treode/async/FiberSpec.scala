@@ -2,6 +2,8 @@ package com.treode.async
 
 import org.scalatest.FlatSpec
 
+import AsyncTestTools._
+
 class FiberSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
@@ -60,6 +62,48 @@ class FiberSpec extends FlatSpec {
     intercept [DistinguishedException] (s.runTasks())
     s.runTasks()
     expectResult (true) (a)
+  }
+
+  "Fiber.async" should "not invoke the callback" in {
+    val s = StubScheduler.random()
+    val f = new Fiber (s)
+    var a = false
+    val cb = f.async [Unit] (cb => a = true) .capture()
+    expectResult (false) (a)
+    cb.expectNotInvoked()
+    s.runTasks()
+    expectResult (true) (a)
+    cb.expectNotInvoked()
+  }
+
+  it should "report an exception through the callback" in {
+    val s = StubScheduler.random()
+    val f = new Fiber (s)
+    val cb = f.async [Unit] (cb => throw new DistinguishedException) .capture()
+    cb.expectNotInvoked()
+    s.runTasks()
+    cb.failed [DistinguishedException]
+  }
+
+  "Fiber.supply" should "invoke the callback" in {
+    val s = StubScheduler.random()
+    val f = new Fiber (s)
+    var a = false
+    val cb = f.supply (a = true) .capture()
+    expectResult (false) (a)
+    cb.expectNotInvoked()
+    s.runTasks()
+    expectResult (true) (a)
+    cb.expectInvoked()
+  }
+
+  it should "report an exception through the callback" in {
+    val s = StubScheduler.random()
+    val f = new Fiber (s)
+    val cb = f.supply (throw new DistinguishedException) .capture()
+    cb.expectNotInvoked()
+    s.runTasks()
+    cb.failed [DistinguishedException]
   }
 
   "Fiber.defer" should "not invoke the callback" in {

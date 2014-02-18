@@ -2,8 +2,9 @@ package com.treode.disk
 
 import java.util.concurrent.ConcurrentHashMap
 
-import com.treode.async._
+import com.treode.async.{AsyncConversions, Callback, Latch, callback, continue, defer}
 
+import AsyncConversions._
 import PageLedger.{Groups, Merger}
 import PageRegistry.{Handler, chooseByMargin}
 

@@ -36,11 +36,8 @@ trait Async [A] {
         })
       }}}
 
-  def toFuture (implicit scheduler: Scheduler): Future [A] = {
-    val f = new Future [A]
-    run (f)
-    f
-  }
+  def flatten [B] (implicit cb: A <:< Async [B]): Async [B] =
+    flatMap (x => x)
 
   def run(): A = {
     val q = new SynchronousQueue [Either [Throwable, A]]
@@ -52,6 +49,12 @@ trait Async [A] {
       case Right (v) => v
       case Left (e) => throw e
     }}
+
+  def toFuture (implicit scheduler: Scheduler): Future [A] = {
+    val f = new Future [A]
+    run (f)
+    f
+  }
 
   def toJavaFuture: JFuture [A] =
     new FutureTask (new Callable [A] {
@@ -122,4 +125,19 @@ object Async {
 
     def apply [A] (p: => Boolean) (f: => Async [Unit]) (implicit s: Scheduler): Async [Unit] =
       cb (p) {cb => f run cb}
-  }}
+  }
+
+  def latch [A, B] (a: Async [A], b: Async [B]): Async [(A, B)] =
+    async { cb =>
+      val latch = new PairLatch (cb)
+      a run latch.cbA
+      b run latch.cbB
+    }
+
+  def latch [A, B, C] (a: Async [A], b: Async [B], c: Async [C]): Async [(A, B, C)] =
+    async { cb =>
+      val latch = new TripleLatch (cb)
+      a run latch.cbA
+      b run latch.cbB
+      c run latch.cbC
+    }}

@@ -1,9 +1,10 @@
 package com.treode.store.tier
 
-import com.treode.async._
+import com.treode.async.{AsyncConversions, StubScheduler}
 import com.treode.store.{Bytes, Fruits}
 import org.scalatest.FlatSpec
 
+import AsyncConversions._
 import Fruits.{Apple, Banana, Orange}
 import TierTestTools._
 

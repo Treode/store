@@ -37,6 +37,34 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
   def at (millis: Long, task: Runnable): Unit =
     scheduler.at (millis) (execute (task))
 
+  def async [A] (f: Callback [A] => Any): Async [A] =
+    Async.async { cb =>
+      execute {
+        try {
+          f (cb)
+        } catch {
+          case t: Throwable => scheduler.fail (cb, t)
+        }}}
+
+  def supply [A] (f: => A): Async [A] =
+    Async.async { cb =>
+      execute {
+        try {
+          scheduler.pass (cb, f)
+        } catch {
+          case t: Throwable => scheduler.fail (cb, t)
+        }}}
+
+  def flatten [A] (f: => Async [A]): Async [A] =
+    Async.async [Async [A]] { cb =>
+      execute {
+        try {
+          scheduler.pass (cb, f)
+        } catch {
+          case t: Throwable => scheduler.fail (cb, t)
+        }}} .flatten
+
+
   def defer [A] (cb: Callback [A]) (f: => Any): Unit =
     execute {
       try {

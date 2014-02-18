@@ -3,7 +3,7 @@ package com.treode.store.tier
 import java.nio.file.Paths
 import scala.collection.mutable.Builder
 
-import com.treode.async.{Async, Callback, RichIterable, StubScheduler}
+import com.treode.async.{AsyncConversions, Async, Callback, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.pickle.Picklers
 import com.treode.store._
@@ -11,6 +11,7 @@ import com.treode.disk.{Disks, DisksConfig, DiskGeometry, PageDescriptor, Positi
 import org.scalatest.WordSpec
 
 import Async.async
+import AsyncConversions._
 import Cardinals.One
 import Fruits.{AllFruits, Apple, Orange, Watermelon}
 import TestTable.descriptor
