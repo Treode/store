@@ -24,7 +24,7 @@ class RootSpec extends FlatSpec {
       implicit val recovery = Disks.recover()
       recovery.launch { implicit launcher =>
         root.checkpoint (supply ("one"))
-        launcher.ready.pass()
+        supply (())
       }
       implicit val disks = recovery.attachAndLaunch (("a", disk1, geometry))
       scheduler.runTasks()
@@ -39,7 +39,7 @@ class RootSpec extends FlatSpec {
       var reloaded: String = null
       root.reload { s => implicit reloader =>
         reloaded = s
-        reloader.ready.pass()
+        supply()
       }
       implicit val disks = recovery.reattachAndLaunch (("a", disk1))
       expectResult ("one") (reloaded)

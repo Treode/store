@@ -1,13 +1,14 @@
 package com.treode.disk
 
-import com.treode.async.{Async, Callback, Latch, Scheduler}
+import com.treode.async.{Async, AsyncConversions, Callback, Latch, Scheduler}
 import com.treode.async.io.File
 
-import Async.guard
+import Async.{async, guard}
+import AsyncConversions._
 
 private class ReloadAgent (
     files: Map [Int, File],
-    roots: Seq [Reload => Any],
+    roots: Seq [Reload => Async [Unit]],
     cb: Callback [Unit]
 ) (implicit
     scheduler: Scheduler
@@ -18,6 +19,5 @@ private class ReloadAgent (
       DiskDrive.read (files (pos.disk), desc, pos)
     }
 
-  val ready = Latch.unit (roots.size, cb)
-  roots foreach (f => scheduler.execute (f (this)))
+  roots.latch.unit (_ (this)) run (cb)
 }

@@ -101,10 +101,8 @@ private object Acceptors {
     }
 
     root.reload { pos => implicit reloader =>
-      val task = for {
-        ss <- statii.read (reloader, pos)
-      } yield (ss foreach openByStatus)
-      task run (reloader.ready)
+      for (ss <- statii.read (reloader, pos))
+        yield (ss foreach openByStatus)
     }
 
     checkpoint.replay { case meta =>
@@ -139,11 +137,10 @@ private object Acceptors {
 
       root.checkpoint (acceptors.checkpoint())
 
-      val ms = materialize (medics.values)
-      val task = for (_ <- acceptors.recover (ms)) yield {
+      for {
+        _ <- acceptors.recover (materialize (medics.values))
+      } yield {
         acceptors.attach()
         proposers.attach()
         cb.pass (kit)
-      }
-      task run (launcher.ready)
-    }}}
+      }}}}

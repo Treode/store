@@ -16,7 +16,7 @@ import Callback.defer
 private class RecoveryAgent (
     records: RecordRegistry,
     loaders: ReloadRegistry,
-    launches: ArrayList [Launch => Any],
+    launches: ArrayList [Launch => Async [Unit]],
     val cb: Callback [Disks]
 ) (implicit
     val scheduler: Scheduler,
@@ -85,15 +85,15 @@ private class RecoveryAgent (
       val useGen1 = chooseSuperBlock (reads)
       val boot = if (useGen1) reads.head.sb1.get.boot else reads.head.sb2.get.boot
       verifyReattachment (boot.disks.toSet, reads .map (_.path) .toSet)
-      val roots = reads.head.superb (useGen1) .boot.roots
+      val rootpos = reads.head.superb (useGen1) .boot.roots
       val files = reads.mapValuesBy (_.superb (useGen1) .id) (_.file)
 
       val task = for {
         roots <-
-            if (roots.length == 0)
-              supply (Seq.empty [Reload => Any])
+            if (rootpos.length == 0)
+              supply (Seq.empty [Reload => Async [Unit]])
             else
-              DiskDrive.read (files (roots.disk), loaders.pager, roots)
+              DiskDrive.read (files (rootpos.disk), loaders.pager, rootpos)
         _ <- async [Unit] (new ReloadAgent (files, roots, _))
         disks <- LogIterator.replay (useGen1, reads, records)
       } yield launch (disks)

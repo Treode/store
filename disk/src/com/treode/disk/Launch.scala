@@ -11,6 +11,4 @@ trait Launch {
   def checkpoint [B] (desc: RootDescriptor [B]) (f: => Async [B])
 
   def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G])
-
-  def ready: Callback [Unit]
 }

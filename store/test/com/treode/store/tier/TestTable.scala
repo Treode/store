@@ -4,7 +4,7 @@ import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.disk.{Disks, RecordDescriptor, Recovery, RootDescriptor}
 import com.treode.store.{Bytes, StoreConfig, StorePicklers}
 
-import Async.async
+import Async.{async, supply}
 
 private trait TestTable {
 
@@ -51,7 +51,7 @@ private object TestTable {
 
     root.reload { tiers => implicit reload =>
       medic.checkpoint (tiers)
-      reload.ready.pass()
+      supply(())
     }
 
     put.replay { case (gen, key, value) =>
@@ -68,6 +68,5 @@ private object TestTable {
       root.checkpoint (table.checkpoint())
       //pager.handle (table)
       cb.pass (new LoggedTable (table))
-      launch.ready.pass()
-    }}
-}
+      supply (())
+    }}}

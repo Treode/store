@@ -13,13 +13,13 @@ private class RecoveryBuilder (implicit scheduler: Scheduler, config: DisksConfi
 
   private val records = new RecordRegistry
   private val loaders = new ReloadRegistry
-  private val launches = new ArrayList [Launch => Any]
+  private val launches = new ArrayList [Launch => Async [Unit]]
   private var open = true
 
   def requireOpen(): Unit =
     require (open, "Recovery has already begun.")
 
-  def reload [B] (desc: RootDescriptor [B]) (f: B => Reload => Any) {
+  def reload [B] (desc: RootDescriptor [B]) (f: B => Reload => Async [Unit]) {
     requireOpen()
     loaders.reload (desc) (f)
   }
@@ -29,7 +29,7 @@ private class RecoveryBuilder (implicit scheduler: Scheduler, config: DisksConfi
     records.replay (desc) (f)
   }
 
-  def launch (f: Launch => Any): Unit = synchronized {
+  def launch (f: Launch => Async [Unit]): Unit = synchronized {
     requireOpen()
     launches.add (f)
   }

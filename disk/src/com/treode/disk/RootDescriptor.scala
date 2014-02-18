@@ -5,7 +5,7 @@ import com.treode.pickle.Pickler
 
 class RootDescriptor [B] private (val id: TypeId, val pblk: Pickler [B]) {
 
-  def reload (f: B => Reload => Any) (implicit recovery: Recovery): Unit =
+  def reload (f: B => Reload => Async [Unit]) (implicit recovery: Recovery): Unit =
     recovery.reload (this) (f)
 
   def checkpoint (f: => Async [B]) (implicit launch: Launch): Unit =

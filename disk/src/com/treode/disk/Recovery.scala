@@ -8,11 +8,11 @@ import com.treode.async.io.File
 
 trait Recovery {
 
-  def reload [B] (desc: RootDescriptor [B]) (f: B => Reload => Any)
+  def reload [B] (desc: RootDescriptor [B]) (f: B => Reload => Async [Unit])
 
   def replay [R] (desc: RecordDescriptor [R]) (f: R => Any)
 
-  def launch (f: Launch => Any)
+  def launch (f: Launch => Async [Unit])
 
   def reattach (items: Seq [(Path, File)]): Async [Disks]
 
