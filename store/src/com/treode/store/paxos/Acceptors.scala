@@ -1,13 +1,13 @@
 package com.treode.store.paxos
 
-import com.treode.async.{Async, AsyncConversions, Callback, Latch, Scheduler}
+import com.treode.async.{Async, AsyncConversions, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
 import com.treode.disk.{Disks, Position, RecordDescriptor}
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.store.tier.{TierMedic, TierTable}
 
-import Async.guard
+import Async.{async, guard}
 import AsyncConversions._
 
 private class Acceptors (val db: TierTable, kit: PaxosKit) {
@@ -72,7 +72,7 @@ private object Acceptors {
     RecordDescriptor (0x8B97BEF0, tierMeta)
   }
 
-  def attach (kit: PaxosRecovery, cb: Callback [Paxos]) {
+  def attach (kit: PaxosRecovery): Async [Paxos] = async { cb =>
     import kit.{cluster, config, random, recovery, scheduler}
 
     val db = TierMedic (Acceptor.db)

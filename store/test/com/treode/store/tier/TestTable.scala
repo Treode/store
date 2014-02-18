@@ -44,29 +44,30 @@ private object TestTable {
     RecordDescriptor (0xA67C3DD1, tierMeta)
   }
 
-  def recover (cb: Callback [TestTable]) (
-      implicit scheduler: Scheduler, recovery: Recovery, config: StoreConfig) {
+  def recover() (implicit scheduler: Scheduler, recovery: Recovery, config: StoreConfig):
+      Async [TestTable] =
+    async { cb =>
 
-    val medic = TierMedic (descriptor)
+      val medic = TierMedic (descriptor)
 
-    root.reload { tiers => implicit reload =>
-      medic.checkpoint (tiers)
-      supply(())
-    }
+      root.reload { tiers => implicit reload =>
+        medic.checkpoint (tiers)
+        supply(())
+      }
 
-    put.replay { case (gen, key, value) =>
-      medic.put (gen, Bytes (key), Bytes (value))
-    }
+      put.replay { case (gen, key, value) =>
+        medic.put (gen, Bytes (key), Bytes (value))
+      }
 
-    delete.replay { case (gen, key) =>
-      medic.delete (gen, Bytes (key))
-    }
+      delete.replay { case (gen, key) =>
+        medic.delete (gen, Bytes (key))
+      }
 
-    recovery.launch { implicit launch =>
-      import launch.disks
-      val table = medic.close()
-      root.checkpoint (table.checkpoint())
-      //pager.handle (table)
-      cb.pass (new LoggedTable (table))
-      supply (())
-    }}}
+      recovery.launch { implicit launch =>
+        import launch.disks
+        val table = medic.close()
+        root.checkpoint (table.checkpoint())
+        //pager.handle (table)
+        cb.pass (new LoggedTable (table))
+        supply (())
+      }}}

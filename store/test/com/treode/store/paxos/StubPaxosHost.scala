@@ -1,7 +1,7 @@
 package com.treode.store.paxos
 
 import java.nio.file.Paths
-import com.treode.async.{AsyncTestTools, CallbackCaptor}
+import com.treode.async.AsyncTestTools
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
@@ -18,8 +18,7 @@ extends StubActiveHost (id, network) {
   implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
   implicit val recovery = Disks.recover()
   implicit val storeConfig = StoreConfig (1<<16)
-  val _paxos = CallbackCaptor [Paxos]
-  Paxos.recover (_paxos)
+  val _paxos = Paxos.recover() .capture()
   val file = new StubFile
   val geometry = DiskGeometry (10, 6, 1<<20)
   recovery.attach (Seq ((Paths.get ("a"), file, geometry))) .pass

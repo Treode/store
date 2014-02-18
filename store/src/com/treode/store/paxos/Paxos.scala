@@ -15,9 +15,7 @@ trait Paxos {
 
 object Paxos {
 
-  def recover (cb: Callback [Paxos]) (implicit random: Random, scheduler: Scheduler, cluster: Cluster,
-      recover: Recovery, config: StoreConfig) {
-
-    val kit = new PaxosRecovery
-    Acceptors.attach (kit, cb)
-  }}
+  def recover() (implicit random: Random, scheduler: Scheduler, cluster: Cluster,
+      recover: Recovery, config: StoreConfig): Async [Paxos] =
+    Acceptors.attach (new PaxosRecovery)
+}

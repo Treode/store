@@ -3,13 +3,16 @@ package com.treode.store.atomic
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async.{Callback, CallbackCaptor}
+import com.treode.async.{AsyncTestTools, Callback}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
 import com.treode.store.paxos.Paxos
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.temp.TestableTempKit
+
+import AsyncTestTools._
+import Callback.ignore
 
 private class StubAtomicHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {
@@ -20,11 +23,10 @@ extends StubActiveHost (id, network) {
   implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
   implicit val recovery = Disks.recover()
   implicit val storeConfig = StoreConfig (1<<16)
-  val _paxos = CallbackCaptor [Paxos]
-  Paxos.recover (_paxos)
+  val _paxos = Paxos.recover() .capture()
   val file = new StubFile
   val geometry = DiskGeometry (10, 6, 1<<20)
-  recovery.attach (Seq ((Paths.get ("a"), file, geometry))) .run (Callback.ignore)
+  recovery.attach (Seq ((Paths.get ("a"), file, geometry))) .run (ignore)
   scheduler.runTasks()
   while (!(_paxos.hasPassed || _paxos.hasFailed))
     Thread.sleep (1)

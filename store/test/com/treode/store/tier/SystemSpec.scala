@@ -3,13 +3,14 @@ package com.treode.store.tier
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async._
+import com.treode.async.{Async, AsyncConversions, AsyncTestTools, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Bytes, StoreConfig}
 import org.scalatest.FlatSpec
 
 import Async.async
+import AsyncConversions._
 import AsyncTestTools._
 
 class SystemSpec extends FlatSpec {
@@ -22,12 +23,8 @@ class SystemSpec extends FlatSpec {
 
   implicit class RichTestTable (table: TestTable) {
 
-    def put (kvs: (Int, Int)*): Async [Unit] = {
-      async [Unit] { cb =>
-        val latch = Latch.unit (kvs.size, cb)
-        for ((key, value) <- kvs)
-          table.put (key, value) .run (latch)
-      }}
+    def put (kvs: (Int, Int)*): Async [Unit] =
+      kvs.latch.unit { case (key, value) => table.put (key, value) }
 
     def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] =
       for (c <- table.iterator.toSeq; if c.value.isDefined)
@@ -51,8 +48,7 @@ class SystemSpec extends FlatSpec {
 
       implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
       implicit val recovery = Disks.recover()
-      val tableCb = CallbackCaptor [TestTable]
-      TestTable.recover (tableCb)
+      val tableCb = TestTable.recover() .capture()
       recovery.attach (Seq ((Paths.get ("a"), disk, geometry))) .pass
       tableCb.passed
   }
@@ -62,8 +58,7 @@ class SystemSpec extends FlatSpec {
 
     implicit val config = DisksConfig (14, 1<<24, 1<<16, 10, 1)
     implicit val recovery = Disks.recover()
-    val tableCb = CallbackCaptor [TestTable]
-    TestTable.recover (tableCb)
+    val tableCb = TestTable.recover() .capture()
     recovery.reattach (Seq ((Paths.get ("a"), disk))) .pass
     tableCb.passed
   }
