@@ -4,7 +4,9 @@ import java.nio.channels._
 import java.net.SocketAddress
 import java.util.concurrent.Executor
 
-import com.treode.async.Callback
+import com.treode.async.{Async, Callback}
+
+import Async.async
 
 /** Something that can be mocked in tests. */
 class ServerSocket (socket: AsynchronousServerSocketChannel, exec: Executor) {
@@ -18,12 +20,13 @@ class ServerSocket (socket: AsynchronousServerSocketChannel, exec: Executor) {
   def bind (addr: SocketAddress): Unit =
     socket.bind (addr)
 
-  def accept (cb: Callback [Socket]): Unit =
-    try {
-      socket.accept (cb, SocketHandler)
-    } catch {
-      case t: Throwable => cb.fail (t)
-    }
+  def accept(): Async [Socket] =
+    async { cb =>
+      try {
+        socket.accept (cb, SocketHandler)
+      } catch {
+        case t: Throwable => cb.fail (t)
+      }}
 
   def close(): Unit =
     socket.close()

@@ -172,7 +172,7 @@ private class RemoteConnection (
     val loop = new Callback [Unit] {
 
       def pass (v: Unit) {
-        mailboxes.deliver (RemoteConnection.this, socket, input, this)
+        mailboxes.deliver (RemoteConnection.this, socket, input) run (this)
       }
 
       def fail (t: Throwable) {
@@ -214,7 +214,7 @@ private class RemoteConnection (
   }
 
   private def greet (socket: Socket) {
-    socket.connect (address, new Callback [Unit] {
+    socket.connect (address) run (new Callback [Unit] {
       def pass (v: Unit) {
         sayHello (socket)
       }

@@ -1,6 +1,6 @@
 package com.treode.cluster.messenger
 
-import com.treode.async.{Callback, Mailbox, Scheduler, callback}
+import com.treode.async.{Async, Mailbox, Scheduler, callback}
 import com.treode.async.io.Socket
 import com.treode.buffer.{Input, PagedBuffer, Output}
 import com.treode.cluster.{EphemeralMailbox, MailboxId, Peer}
@@ -25,11 +25,9 @@ class MailboxRegistry {
     handler (from)
   }
 
-  private [cluster] def deliver (from: Peer, socket: Socket, buffer: PagedBuffer, cb: Callback [Unit]) {
-    socket.deframe (buffer, callback (cb) { len =>
-      val handler = mailboxes.unpickle (buffer, len)
-      handler (from)
-    })
+  private [cluster] def deliver (from: Peer, socket: Socket, buffer: PagedBuffer): Async [Unit] = {
+    for (len <- socket.deframe (buffer))
+      yield mailboxes.unpickle (buffer, len) (from)
   }
 
   def listen [M] (p: Pickler [M], id: MailboxId) (f: (M, Peer) => Any): Unit =

@@ -46,7 +46,7 @@ class Listener (
   }
 
   private def loop() {
-    server.accept (new Callback [Socket] {
+    server.accept() run (new Callback [Socket] {
       def pass (socket: Socket) {
         scheduler.execute (hearHello (socket))
         loop()

@@ -20,12 +20,13 @@ class Socket (socket: AsynchronousSocketChannel) (implicit exec: Executor) {
   private def fail (cb: Callback [Unit], t: Throwable): Unit =
     exec.execute (Scheduler.toRunnable (cb, t))
 
-  def connect (addr: SocketAddress, cb: Callback [Unit]): Unit =
-    try {
-      socket.connect (addr, cb, Callback.UnitHandler)
-    } catch {
-      case t: Throwable => cb.fail (t)
-    }
+  def connect (addr: SocketAddress): Async [Unit] =
+    async { cb =>
+      try {
+        socket.connect (addr, cb, Callback.UnitHandler)
+      } catch {
+        case t: Throwable => cb.fail (t)
+      }}
 
   def close(): Unit =
     socket.close()
