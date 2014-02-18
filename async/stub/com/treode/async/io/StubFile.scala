@@ -3,10 +3,12 @@ package com.treode.async.io
 import java.io.EOFException
 import java.util.Arrays
 
-import com.treode.async.{Callback, CallbackCaptor, StubScheduler}
+import com.treode.async.{Async, Callback, CallbackCaptor, StubScheduler}
 import com.treode.buffer.PagedBuffer
 
-class StubFile (implicit scheduler: StubScheduler) extends File (null, scheduler) {
+import Async.async
+
+class StubFile (implicit scheduler: StubScheduler) extends File (null) {
 
   private var data = new Array [Byte] (0)
   private var _last: Callback [Unit] = null
@@ -54,6 +56,9 @@ class StubFile (implicit scheduler: StubScheduler) extends File (null, scheduler
         case t: Throwable => scheduler.fail (cb, t)
       }}
 
+  override def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
+    async (fill (input, pos, len, _))
+
   override def flush (output: PagedBuffer, pos: Long, cb: Callback [Unit]): Unit =
     _stop (cb) {
       try {
@@ -65,6 +70,9 @@ class StubFile (implicit scheduler: StubScheduler) extends File (null, scheduler
       } catch {
         case t: Throwable => scheduler.fail (cb, t)
       }}
+
+  override def flush (output: PagedBuffer, pos: Long): Async [Unit] =
+    async (flush (output, pos, _))
 
   override def toString = s"StubFile(size=${data.length})"
 }

@@ -1,6 +1,8 @@
 package com.treode.async
 
-import java.util.concurrent.{Future => JFuture, Callable, FutureTask, SynchronousQueue}
+import java.util.concurrent.{Future => JFuture, Callable, Executor, FutureTask, SynchronousQueue}
+
+import Scheduler.toRunnable
 
 trait Async [A] {
 
@@ -11,7 +13,16 @@ trait Async [A] {
     new Async [B] {
       def run (cb: Callback [B]) {
         self.run (new Callback [A] {
-          def pass (v: A): Unit = cb.pass (f (v))
+          def pass (a: A) {
+            val b = try {
+              f (a)
+            } catch {
+              case t: Throwable =>
+                cb.fail (t)
+                return
+            }
+            cb.pass (b)
+          }
           def fail (t: Throwable): Unit = cb.fail (t)
         })
       }}}
@@ -21,7 +32,16 @@ trait Async [A] {
     new Async [B] {
       def run (cb: Callback [B]) {
         self.run (new Callback [A] {
-          def pass (v: A): Unit = f (v) run (cb)
+          def pass (v: A) {
+            val a = try {
+              f (v)
+            } catch {
+              case t: Throwable =>
+                cb.fail (t)
+                return
+            }
+            a run (cb)
+          }
           def fail (t: Throwable): Unit = cb.fail (t)
         })
       }}}
@@ -31,7 +51,16 @@ trait Async [A] {
     new Async [A] {
       def run (cb: Callback [A]) {
         self.run (new Callback [A] {
-          def pass (v: A): Unit = if (p (v)) cb.pass (v)
+          def pass (v: A) {
+            val c = try {
+              p (v)
+            } catch {
+              case t: Throwable =>
+                cb.fail (t)
+                return
+            }
+            if (c) cb.pass (v)
+          }
           def fail (t: Throwable): Unit = cb.fail (t)
         })
       }}}
@@ -70,7 +99,7 @@ object Async {
         try {
           f (cb)
         } catch {
-          case e: Throwable => cb.fail (e)
+          case t: Throwable => cb.fail (t)
         }}}
 
   def guard [A] (f: => Async [A]): Async [A] =
@@ -79,8 +108,8 @@ object Async {
         val v = try {
           f
         } catch {
-          case e: Throwable =>
-            cb.fail (e)
+          case t: Throwable =>
+            cb.fail (t)
             return
         }
         v run cb
@@ -102,28 +131,28 @@ object Async {
 
   object whilst {
 
-    def cb (p: => Boolean) (f: Callback [Unit] => Any) (implicit s: Scheduler): Async [Unit] =
+    def cb (p: => Boolean) (f: Callback [Unit] => Any) (implicit e: Executor): Async [Unit] =
       new Async [Unit] {
         def run (cb: Callback [Unit]) {
           val loop = new Callback [Unit] {
-            def pass (v: Unit): Unit = s.execute {
+            def pass (v: Unit): Unit = e.execute (toRunnable {
               try {
                 if (p)
                   f (this)
                 else
-                  s.pass (cb, ())
+                  e.execute (toRunnable (cb, ()))
               } catch {
-                case t: Throwable => s.fail (cb, t)
-              }}
-            def fail (t: Throwable): Unit = s.fail (cb, t)
+                case t: Throwable => e.execute (toRunnable (cb, t))
+              }})
+            def fail (t: Throwable): Unit = e.execute (toRunnable (cb, t))
           }
           loop.pass()
         }}
 
-    def f (p: => Boolean) (f: => Any) (implicit s: Scheduler): Async [Unit] =
+    def f (p: => Boolean) (f: => Any) (implicit e: Executor): Async [Unit] =
       cb (p) {cb => f; cb.pass()}
 
-    def apply [A] (p: => Boolean) (f: => Async [Unit]) (implicit s: Scheduler): Async [Unit] =
+    def apply [A] (p: => Boolean) (f: => Async [Unit]) (implicit e: Executor): Async [Unit] =
       cb (p) {cb => f run cb}
   }
 

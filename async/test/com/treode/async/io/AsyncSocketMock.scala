@@ -8,7 +8,7 @@ import java.util.{Set => JavaSet, ArrayDeque}
 import java.util.concurrent.{Future, TimeUnit}
 import scala.collection.JavaConversions._
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, StubScheduler}
 import org.scalatest.Assertions.assert
 
 /** ScalaMock refuses to mock AsynchronousSocketChannel. */
@@ -34,9 +34,15 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) {
 
   private var callback: Callback [Int] = null
 
-  def completeLast (v: Int) = callback.pass (v)
+  def completeLast (v: Int) (implicit scheduler: StubScheduler) = {
+    callback.pass (v)
+    scheduler.runTasks()
+  }
 
-  def failLast (t: Throwable) = callback.fail (t)
+  def failLast (t: Throwable) (implicit scheduler: StubScheduler) = {
+    callback.fail (t)
+    scheduler.runTasks()
+  }
 
   def expectRead (bufPos: Int, bufLimit: Int) {
     expectations.add (new Expectation {
@@ -53,7 +59,7 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) {
     require (offset == 0, "This mock is not that sophisticated.")
     require (callback == null, "Pending callback on socket.")
     require (!expectations.isEmpty, "No expectations.")
-    val dst = dsts (0)
+    val dst = dsts .find (_.remaining > 0) .get
     expectations.remove().read (dst)
     callback = new Callback [Int] {
       def pass (result: Int) = {
@@ -130,5 +136,5 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) {
   def getOption [T] (name: SocketOption [T]): T = ???
   def supportedOptions(): JavaSet [SocketOption[_]] = ???
 
-  override def toString = "AsyncSocketStub" + (expectations mkString ("[", ",", "]"), callback)
+  override def toString = "AsyncSocketMock" + (expectations mkString ("[", ",", "]"), callback)
 }

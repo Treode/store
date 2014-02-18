@@ -7,9 +7,9 @@ import java.util.Arrays
 import java.util.concurrent.Future
 import scala.util.Random
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, StubScheduler}
 
-class AsyncFileStub (random: Random) extends AsynchronousFileChannel {
+class AsyncFileStub (implicit random: Random, scheduler: StubScheduler) extends AsynchronousFileChannel {
 
   private var data = new Array [Byte] (0)
 
@@ -17,11 +17,13 @@ class AsyncFileStub (random: Random) extends AsynchronousFileChannel {
     require (position <= Int.MaxValue)
     if (position > data.length) {
       handler.completed (-1, attachment)
+      scheduler.runTasks()
     } else {
       val length = random.nextInt (math.min (dst.remaining, data.size - position.toInt)) + 1
       System.arraycopy (data, position.toInt, dst.array, dst.position, length)
       dst.position (dst.position + length)
       handler.completed (length, attachment)
+      scheduler.runTasks()
     }}
 
   def write [A] (src: ByteBuffer, position: Long, attachment: A, handler: CompletionHandler [JavaInt, _ >: A]) {
@@ -32,6 +34,7 @@ class AsyncFileStub (random: Random) extends AsynchronousFileChannel {
     System.arraycopy (src.array, src.position, data, position.toInt, length)
     src.position (src.position + length)
     handler.completed (length, attachment)
+    scheduler.runTasks()
   }
 
   def close(): Unit = ???

@@ -7,7 +7,7 @@ import java.util.ArrayDeque
 import java.util.concurrent.Future
 import scala.collection.JavaConversions._
 
-import com.treode.async.Callback
+import com.treode.async.{Callback, StubScheduler}
 import org.scalatest.Assertions.assert
 
 /** ScalaMock refuses to mock AsynchronousFileChannel. */
@@ -29,9 +29,15 @@ class AsyncFileMock extends AsynchronousFileChannel {
 
   private var callback: Callback [Int] = null
 
-  def completeLast (v: Int) = callback.pass (v)
+  def completeLast (v: Int) (implicit scheduler: StubScheduler) {
+    callback.pass (v)
+    scheduler.runTasks()
+  }
 
-  def failLast (t: Throwable) = callback.fail (t)
+  def failLast (t: Throwable) (implicit scheduler: StubScheduler) {
+    callback.fail (t)
+    scheduler.runTasks()
+  }
 
   def expectRead (filePos: Long, bufPos: Int, bufLimit: Int) {
     expectations.add (new Expectation {

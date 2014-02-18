@@ -11,7 +11,7 @@ class ServerSocket (socket: AsynchronousServerSocketChannel, exec: Executor) {
 
   /** Adapts Callback to Java's NIO CompletionHandler. */
   object SocketHandler extends CompletionHandler [AsynchronousSocketChannel, Callback [Socket]] {
-    def completed (v: AsynchronousSocketChannel, cb: Callback [Socket]) = cb.pass (new Socket (v, exec))
+    def completed (v: AsynchronousSocketChannel, cb: Callback [Socket]) = cb.pass (new Socket (v) (exec))
     def failed (t: Throwable, cb: Callback [Socket]) = cb.fail (t)
   }
 

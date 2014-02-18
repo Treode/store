@@ -10,129 +10,61 @@ import scala.collection.JavaConversions._
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.buffer.PagedBuffer
 
-import Async.async
+import Async.{async, whilst}
+import Scheduler.toRunnable
 
 /** A file that has useful behavior (flush/fill) and that can be mocked. */
-class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
+class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor) {
 
-  private def execute (cb: Callback [Unit]): Unit =
-    exec.execute (Scheduler.toRunnable (cb, ()))
+  private def read (dst: ByteBuffer, pos: Long): Async [Int] =
+    async (file.read (dst, pos, _, Callback.IntHandler))
 
-  private def fail (cb: Callback [Unit], t: Throwable): Unit =
-    exec.execute (Scheduler.toRunnable (cb, t))
+  private def write (src: ByteBuffer, pos: Long): Async [Int] =
+    async (file.write (src, pos, _, Callback.IntHandler))
 
-  private class Filler (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit])
-  extends Callback [Int] {
-
-    private [this] var bytebuf = input.buffer (input.writePos, input.writeableBytes)
-    private [this] var _pos = pos
-
-    def fill() {
-      if (len <= input.readableBytes)
-        execute (cb)
-      else {
-        if (bytebuf.remaining == 0)
-          bytebuf = input.buffer (input.writePos, input.writeableBytes)
-        file.read (bytebuf, _pos, this, Callback.IntHandler)
-      }}
-
-    def pass (result: Int) {
-      if (result < 0) {
-        File.this.fail (cb, new Exception ("End of file reached."))
-      } else {
+  def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] = {
+    input.capacity (input.readPos + len)
+    var _pos = pos
+    var _buf = input.buffer (input.writePos, input.writeableBytes)
+    whilst (input.readableBytes < len) {
+      for (result <- read (_buf, _pos)) yield {
+        if (result < 0)
+          throw new Exception ("End of file reached.")
         input.writePos = input.writePos + result
         _pos += result
-        fill()
-      }}
+        if (_buf.remaining == 0)
+          _buf = input.buffer (input.writePos, input.writeableBytes)
+      }}}
 
-    def fail (t: Throwable) = File.this.fail (cb, t)
-  }
-
-  def fill (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit]): Unit =
-    try {
-      if (len <= input.readableBytes) {
-        execute (cb)
-      } else {
-        input.capacity (input.readPos + len)
-        new Filler (input, pos, len, cb) .fill()
-      }
-    } catch {
-      case t: Throwable => fail (cb, t)
-    }
-
-  def fillA (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
-    try {
-      if (len <= input.readableBytes) {
-        async (execute (_))
-      } else {
-        input.capacity (input.readPos + len)
-        async (cb => new Filler (input, pos, len, cb) .fill())
-      }
-    } catch {
-      case t: Throwable =>
-        async (fail (_, t))
-    }
-
-  def deframe (input: PagedBuffer, pos: Long, cb: Callback [Int]) {
-    def body (len: Int) = new Callback [Unit] {
-      def pass (v: Unit) = cb.pass (len)
-      def fail (t: Throwable) = cb.fail (t)
-    }
-    val header = new Callback [Unit] {
-      def pass (v: Unit) = {
-        val len = input.readInt()
-        fill (input, pos+4, len, body (len))
-      }
-      def fail (t: Throwable) = cb.fail (t)
-    }
-    fill (input, pos, 4, header)
-  }
+  def fill (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit]): Unit = // TODO: remove
+    fill (input, pos, len) run (cb)
 
   def deframe (input: PagedBuffer, pos: Long): Async [Int] = {
     for {
-      _ <- fillA (input, pos, 4)
+      _ <- fill (input, pos, 4)
       len = input.readInt()
-      _ <- fillA (input, pos+4, len)
+      _ <- fill (input, pos+4, len)
     } yield len
   }
 
-  private class Flusher (output: PagedBuffer, pos: Long, cb: Callback [Unit])
-  extends Callback [Int] {
+  def deframe (input: PagedBuffer, pos: Long, cb: Callback [Int]): Unit =
+    deframe (input, pos) run (cb)
 
-    private [this] var bytebuf = output.buffer (output.readPos, output.readableBytes)
-    private [this] var _pos = pos
-
-    def flush() {
-      if (output.readableBytes == 0) {
-        //buffer.release()
-        execute (cb)
-      } else {
-        if (bytebuf.remaining == 0)
-          bytebuf = output.buffer (output.readPos, output.readableBytes)
-        file.write (bytebuf, _pos, this, Callback.IntHandler)
-      }}
-
-    def pass (result: Int) {
-      if (result < 0) {
-        File.this.fail (cb, new Exception ("File write failed."))
-      } else {
+  def flush (output: PagedBuffer, pos: Long): Async [Unit] = {
+    var _pos = pos
+    var _buf = output.buffer (output.readPos, output.readableBytes)
+    whilst (output.readableBytes > 0) {
+      for (result <- write (_buf, _pos)) yield {
+        if (result < 0)
+          throw new Exception ("File write failed.")
         output.readPos = output.readPos + result
         _pos += result
-        flush()
-      }}
+        if (_buf.remaining == 0)
+          _buf = output.buffer (output.readPos, output.readableBytes)
+      }}}
 
-    def fail (t: Throwable) = File.this.fail (cb, t)
-  }
-
-  def flush (output: PagedBuffer, pos: Long, cb: Callback [Unit]): Unit =
-    try {
-      if (output.readableBytes == 0)
-        execute (cb)
-      else
-        new Flusher (output, pos, cb) .flush()
-    } catch {
-      case t: Throwable => fail (cb, t)
-    }
+  def flush (output: PagedBuffer, pos: Long, cb: Callback [Unit]): Unit = // TODO: remove
+    flush (output, pos) run (cb)
 
   def close(): Unit = file.close()
 }
@@ -140,5 +72,5 @@ class File private [io] (file: AsynchronousFileChannel, exec: Executor) {
 object File {
 
   def open (path: Path, exec: ExecutorService, opts: OpenOption*): File =
-    new File (AsynchronousFileChannel.open (path, opts.toSet, exec, null), exec)
+    new File (AsynchronousFileChannel.open (path, opts.toSet, exec, null)) (exec)
 }

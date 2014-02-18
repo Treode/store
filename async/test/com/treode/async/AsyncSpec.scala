@@ -9,6 +9,18 @@ class AsyncSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
 
+  class ScheduledAsync [A] (async: Async [A], scheduler: Scheduler) extends Async [A] {
+
+    def run (cb: Callback [A]): Unit =
+      async.run (scheduler.take (cb))
+  }
+
+  implicit class ExtraRichAsync [A] (async: Async [A]) {
+
+    def on (scheduler: Scheduler): Async [A] =
+      new ScheduledAsync (async, scheduler)
+  }
+
   def exceptional [A]: Callback [A] =
     new Callback [A] {
       def pass (v: A) = throw new DistinguishedException
@@ -41,6 +53,7 @@ class AsyncSpec extends FlatSpec {
   it should "pass an exception from the function to the callback" in {
     implicit val scheduler = StubScheduler.random()
     async [Int] (_.pass (1))
+        .on (scheduler)
         .map (_ => throw new DistinguishedException)
         .fail [DistinguishedException]
   }
@@ -66,6 +79,7 @@ class AsyncSpec extends FlatSpec {
   it should "pass an exception from the predicate to the callback" in {
     implicit val scheduler = StubScheduler.random()
     async [Int] (_.pass (1))
+        .on (scheduler)
         .filter (_ => throw new DistinguishedException)
         .fail [DistinguishedException]
   }

@@ -2,178 +2,184 @@ package com.treode.async.io
 
 import scala.util.Random
 
-import com.treode.async.Callback
+import com.treode.async.{AsyncTestTools, Callback, StubScheduler}
 import com.treode.buffer.PagedBuffer
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FlatSpec, PropSpec, Specs}
 import org.scalatest.prop.PropertyChecks
 
+import AsyncTestTools._
+
 class FileSpec extends Specs (FileBehaviors, FileProperties)
 
-object FileBehaviors extends FlatSpec with MockFactory {
+object FileBehaviors extends FlatSpec {
 
   def mkFile = {
+    implicit val scheduler = StubScheduler.random()
     val async = new AsyncFileMock
-    val file = new File (async, ExecutorMock)
-    (async, file)
+    val file = new File (async)
+    (scheduler, async, file)
   }
 
   "The flush method" should "handle an empty buffer" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val buffer = PagedBuffer (5)
-    val cb = mock [Callback [Unit]]
-    (cb.pass _) .expects() .once()
-    file.flush (buffer, 0, cb)
+    file.flush (buffer, 0) .pass
   }
 
   it should "flush an int" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val buffer = PagedBuffer (5)
     buffer.writeInt (0)
     async.expectWrite (0, 0, 4)
-    val cb = mock [Callback [Unit]]
-    file.flush (buffer, 0, cb)
-    (cb.pass _) .expects() .once()
+    val cb = file.flush (buffer, 0) .capture()
+    scheduler.runTasks()
+    cb.expectNotInvoked()
     async.completeLast (4)
+    cb.passed
   }
 
   it should "loop to flush an int" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val output = PagedBuffer (5)
     output.writeInt (0)
-    val cb = mock [Callback [Unit]]
     var _pos = 0
     async.expectWrite (0, 0, 4)
     async.expectWrite (2, 2, 4)
-    file.flush (output, 0, cb)
+    val cb = file.flush (output, 0) .capture()
+    scheduler.runTasks()
+    cb.expectNotInvoked()
     async.completeLast (2)
-    (cb.pass _) .expects() .once()
+    cb.expectNotInvoked()
     async.completeLast (2)
+    cb.passed
   }
 
   it should "handle file close" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val output = PagedBuffer (5)
     output.writeInt (0)
-    val cb = mock [Callback [Unit]]
     async.expectWrite (0, 0, 4)
-    file.flush (output, 0, cb)
-    (cb.fail _) .expects (*) .once()
+    val cb = file.flush (output, 0) .capture()
+    scheduler.runTasks()
+    cb.expectNotInvoked()
     async.completeLast (-1)
+    cb.failed [Exception]
   }
 
   "The fill method for a file" should "handle a request for 0 bytes" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
-    val cb = mock [Callback [Unit]]
-    (cb.pass _) .expects() .once()
-    file.fill (input, 0, 0, cb)
+    file.fill (input, 0, 0) .pass
   }
 
   it should "handle a request for bytes available at the beginning" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
     input.writePos = 4
-    val cb = mock [Callback [Unit]]
-    (cb.pass _) .expects() .once()
-    file.fill (input, 0, 4, cb)
+    file.fill (input, 0, 4) .pass
   }
 
   it should "fill needed bytes with an empty buffer" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
-    val cb = mock [Callback [Unit]]
     async.expectRead (0, 0, 32)
-    file.fill (input, 0, 4, cb)
-    (cb.pass _) .expects() .once()
+    val cb = file.fill (input, 0, 4) .capture()
+    scheduler.runTasks()
+    cb.expectNotInvoked()
     async.completeLast (4)
+    cb.passed
   }
 
   it should "loop to fill needed bytes within a page" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
-    val cb = mock [Callback [Unit]]
     async.expectRead (0, 0, 32)
     async.expectRead (2, 2, 32)
-    file.fill (input, 0, 4, cb)
+    val cb = file.fill (input, 0, 4) .capture()
+    scheduler.runTasks()
+    cb.expectNotInvoked()
     async.completeLast (2)
-    (cb.pass _) .expects() .once()
+    cb.expectNotInvoked()
     async.completeLast (2)
+    cb.passed
   }
 
   it should "fill needed bytes with some at the beginning" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
     input.writePos = 2
-    val cb = mock [Callback [Unit]]
     async.expectRead (0, 2, 32)
-    file.fill (input, 0, 4, cb)
-    (cb.pass _) .expects() .once()
+    val cb = file.fill (input, 0, 4) .capture()
+    scheduler.runTasks()
+    cb.expectNotInvoked()
     async.completeLast (2)
+    cb.passed
   }
 
   it should "handle a request for bytes available in the middle" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
     input.writePos = 4
-    input.readPos = 4
-    val cb = mock [Callback [Unit]]
+    input.readPos = 0
     async.expectRead (0, 4, 32)
-    (cb.pass _) .expects() .once()
-    file.fill (input, 0, 4, cb)
-    async.completeLast (4)
+    file.fill (input, 0, 4) .pass
   }
 
   it should "fill needed bytes with some in the middle and space after" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
     input.writePos = 6
     input.readPos = 4
-    val cb = mock [Callback [Unit]]
     async.expectRead (0, 6, 32)
-    file.fill (input, 0, 4, cb)
-    (cb.pass _) .expects() .once()
+    val cb = file.fill (input, 0, 4) .capture()
+    scheduler.runTasks()
+    cb.expectNotInvoked()
     async.completeLast (2)
+    cb.passed
   }
 
   it should "repeat to fill needed bytes across pages" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
     input.writePos = 30
     input.readPos = 26
-    val cb = mock [Callback [Unit]]
     async.expectRead (0, 30, 32)
     async.expectRead (2, 0, 32)
-    file.fill (input, 0, 8, cb)
+    val cb = file.fill (input, 0, 8) .capture()
+    scheduler.runTasks()
+    cb.expectNotInvoked()
     async.completeLast (2)
-    (cb.pass _) .expects() .once()
+    cb.expectNotInvoked()
     async.completeLast (6)
+    cb.passed
   }
 
   it should "handle file close" in {
-    val (async, file) = mkFile
+    implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
-    val cb = mock [Callback [Unit]]
     async.expectRead (0, 0, 32)
-    file.fill (input, 0, 4, cb)
-    (cb.fail _) .expects (*) .once()
+    val cb = file.fill (input, 0, 4) .capture()
+    scheduler.runTasks()
+    cb.expectNotInvoked()
     async.completeLast (-1)
+    cb.failed [Exception]
   }}
 
 object FileProperties extends PropSpec with PropertyChecks {
 
   property ("It should work") {
     forAll ("seed") { seed: Int =>
-      val random = new Random (seed)
-      val file = new File (new AsyncFileStub (random), ExecutorMock)
+      implicit val random = new Random (seed)
+      implicit val scheduler = StubScheduler.random (random)
+      val file = new File (new AsyncFileStub)
       val data = Array.fill (100) (random.nextInt)
       val buffer = PagedBuffer (5)
       for (i <- data)
         buffer.writeVarInt (i)
       val length = buffer.writePos
-      file.flush (buffer, 0, Callback.ignore)
+      file.flush (buffer, 0) .pass
       buffer.clear()
-      file.fill (buffer, 0, length, Callback.ignore)
+      file.fill (buffer, 0, length) .pass
       for (i <- data)
         expectResult (i) (buffer.readVarInt())
     }}}
