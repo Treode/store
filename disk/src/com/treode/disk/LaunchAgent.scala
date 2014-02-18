@@ -3,7 +3,7 @@ package com.treode.disk
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, Latch, Scheduler, continue}
+import com.treode.async.{Async, Callback, Latch, Scheduler, continue}
 
 private class LaunchAgent (
     drives: DiskDrives,
@@ -19,7 +19,7 @@ private class LaunchAgent (
   def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P]): Unit =
     drives.fetch (desc, pos, cb)
 
-  def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any): Unit =
+  def checkpoint [B] (desc: RootDescriptor [B]) (f: => Async [B]): Unit =
     roots.checkpoint (desc) (f)
 
   def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]): Unit =

@@ -44,7 +44,7 @@ class SynthTableSpec extends FreeSpec {
     "it should handle a checkpoint" in {
       implicit val scheduler = StubScheduler.random()
       val table = setup()
-      table.checkpointAndPass()
+      table.checkpoint() .pass
       assert (table.primary.isEmpty)
       assert (table.secondary.isEmpty)
       assert (!table.tiers.isEmpty)
@@ -96,7 +96,7 @@ class SynthTableSpec extends FreeSpec {
     "it should handle a checkpoint" in {
       implicit val scheduler = StubScheduler.random()
       val table = setup()
-      table.checkpointAndPass()
+      table.checkpoint() .pass
       assert (table.primary.isEmpty)
       assert (table.secondary.isEmpty)
       assert (!table.tiers.isEmpty)
@@ -145,8 +145,7 @@ class SynthTableSpec extends FreeSpec {
       val table = mkTable (disk)
       table.putAll (1 -> 2, 2 -> 4, 3 -> 6)
       disk.stop = true
-      val cb = CallbackCaptor [TierTable.Meta]
-      table.checkpoint (cb)
+      val cb = table.checkpoint() .capture()
       scheduler.runTasks()
       cb.expectNotInvoked()
       assert (table.primary.isEmpty)
@@ -219,8 +218,7 @@ class SynthTableSpec extends FreeSpec {
       val table = mkTable (disk)
       table.putAll (1 -> 2, 2 -> 4, 3 -> 6)
       disk.stop = true
-      val cb = CallbackCaptor [TierTable.Meta]
-      table.checkpoint (cb)
+      val cb = table.checkpoint() .capture()
       scheduler.runTasks()
       cb.expectNotInvoked()
       disk.stop = false
@@ -295,7 +293,7 @@ class SynthTableSpec extends FreeSpec {
       val disk = new StubFile
       val table = mkTable (disk)
       table.putAll (1 -> 2, 2 -> 4, 3 -> 6)
-      table.checkpointAndPass()
+      table.checkpoint() .pass
       assert (table.primary.isEmpty)
       assert (table.secondary.isEmpty)
       assert (!table.tiers.isEmpty)
@@ -314,7 +312,7 @@ class SynthTableSpec extends FreeSpec {
     "it should handle a checkpoint" in {
       implicit val scheduler = StubScheduler.random()
       val table = setup()
-      table.checkpointAndPass()
+      table.checkpoint() .pass
       assert (table.primary.isEmpty)
       assert (table.secondary.isEmpty)
       assert (!table.tiers.isEmpty)
@@ -362,7 +360,7 @@ class SynthTableSpec extends FreeSpec {
       val disk = new StubFile
       val table = mkTable (disk)
       table.putAll (1 -> 2, 2 -> 4, 3 -> 6)
-      table.checkpointAndPass()
+      table.checkpoint() .pass
       table.putAll (2 -> 14, 4 -> 18)
       assert (!table.primary.isEmpty)
       assert (table.secondary.isEmpty)
@@ -383,7 +381,7 @@ class SynthTableSpec extends FreeSpec {
     "it should handle a checkpoint" in {
       implicit val scheduler = StubScheduler.random()
       val table = setup()
-      table.checkpointAndPass()
+      table.checkpoint() .pass
       assert (table.primary.isEmpty)
       assert (table.secondary.isEmpty)
       assert (!table.tiers.isEmpty)

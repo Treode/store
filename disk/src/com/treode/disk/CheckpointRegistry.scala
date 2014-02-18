@@ -3,33 +3,32 @@ package com.treode.disk
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Callback, Fiber, Latch, callback, continue, defer}
+import com.treode.async.{Async, AsyncConversions}
 import com.treode.pickle.{Pickler, PicklerRegistry}
 
+import Async.{async, guard}
+import AsyncConversions._
 import CheckpointRegistry.writer
 import PicklerRegistry.{Tag, tag}
 
 private class CheckpointRegistry (implicit disks: DiskDrives) {
   import disks.{config}
 
-  private val checkpoints = new ArrayList [Callback [Tag] => Unit]
+  private val checkpoints = new ArrayList [Unit => Async [Tag]]
 
-  def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any): Unit =
+  def checkpoint [B] (desc: RootDescriptor [B]) (f: => Async [B]): Unit =
     synchronized {
-      checkpoints.add { cb =>
-        f (callback (cb) (tag (desc.pblk, desc.id.id, _)))
+      checkpoints.add {
+        _ => f map (tag (desc.pblk, desc.id.id, _))
       }}
 
-  def checkpoint (rootgen: Int, cb: Callback [Position]): Unit =
-    defer (cb) {
-      synchronized {
-        val allWritten = continue (cb) { roots: Seq [Tag] =>
-          writer.write (rootgen, roots) .run (cb)
-        }
-        val oneWritten = Latch.seq (checkpoints.size, allWritten)
-        checkpoints foreach (_ (oneWritten))
-      }}
-}
+  def checkpoint (rootgen: Int): Async [Position] =
+    guard {
+      for {
+        roots <- checkpoints.latch.seq (_())
+        pos <- writer.write (rootgen, roots)
+      } yield pos
+    }}
 
 private object CheckpointRegistry {
 

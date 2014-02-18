@@ -65,7 +65,7 @@ private object TestTable {
     recovery.launch { implicit launch =>
       import launch.disks
       val table = medic.close()
-      root.checkpoint (table.checkpoint _)
+      root.checkpoint (table.checkpoint())
       //pager.handle (table)
       cb.pass (new LoggedTable (table))
       launch.ready.pass()

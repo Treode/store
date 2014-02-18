@@ -1,11 +1,14 @@
 package com.treode.store.paxos
 
-import com.treode.async.{Callback, Latch, Scheduler, callback, continue, defer}
+import com.treode.async.{Async, AsyncConversions, Callback, Latch, Scheduler, callback, continue, defer}
 import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
 import com.treode.disk.{Disks, Position, RecordDescriptor}
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.store.tier.{TierMedic, TierTable}
+
+import Async.guard
+import AsyncConversions._
 
 private class Acceptors (val db: TierTable, kit: PaxosKit) {
   import kit.{cluster, disks}
@@ -35,14 +38,14 @@ private class Acceptors (val db: TierTable, kit: PaxosKit) {
     medics foreach (_.close (kit, oneClosed))
   }
 
-  def checkpoint (cb: Callback [Position]) {
+  def checkpoint(): Async [Position] = {
     import Acceptor.{Status, statii}
-    defer (cb) {
+    guard {
       val as = materialize (acceptors.values)
-      val latch = Latch.seq [Status] (
-          as.size,
-          continue (cb) (statii.write (0, _) .run (cb)))
-      as foreach (_.checkpoint (latch))
+      for {
+        ss <- as.latch.seq (_.checkpoint())
+        pos <- statii.write (0, ss)
+      } yield pos
     }}
 
   def attach() {
@@ -140,5 +143,5 @@ private object Acceptors {
         cb.pass (kit)
       })
 
-      root.checkpoint (acceptors.checkpoint _)
+      root.checkpoint (acceptors.checkpoint())
     }}}

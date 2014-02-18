@@ -217,6 +217,9 @@ private class DiskDrives (implicit
       disks.values foreach (_.mark (latch))
     }
 
+  def mark(): Async [Unit] =
+    async (mark (_))
+
   private def _checkpoint (req: CheckpointRequest) {
     val (rootgen, rootpos, _cb) = req
     val cb = leave (_cb)
@@ -236,8 +239,8 @@ private class DiskDrives (implicit
         disk.checkpoint (newBoot, oneWritten)
     }}
 
-  def checkpoint (rootgen: Int, rootpos: Position, cb: Callback [Unit]): Unit =
-    fiber.defer (cb) {
+  def checkpoint (rootgen: Int, rootpos: Position): Async [Unit] =
+    fiber.async { cb =>
       require (checkreqs.isEmpty, "A checkpoint is already in progress.")
       if (engaged)
         checkreqs = Some ((rootgen, rootpos, cb))

@@ -2,7 +2,7 @@ package com.treode.store.paxos
 
 import scala.language.postfixOps
 
-import com.treode.async.{Callback, Fiber, callback}
+import com.treode.async.{Async, Callback, Fiber, callback}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.disk.{PageDescriptor, RecordDescriptor, RootDescriptor}
@@ -274,8 +274,8 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
   def choose (chosen: Bytes): Unit =
     fiber.execute (state.choose (chosen))
 
-  def checkpoint (cb: Callback [Status]) =
-    fiber.execute (state.checkpoint (cb))
+  def checkpoint(): Async [Status] =
+    fiber.async (state.checkpoint (_))
 
   def shutdown(): Unit =
     fiber.execute (state.shutdown())

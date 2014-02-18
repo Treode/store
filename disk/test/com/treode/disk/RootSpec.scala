@@ -1,10 +1,11 @@
 package com.treode.disk
 
-import com.treode.async.StubScheduler
+import com.treode.async.{Async, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec
 
+import Async.supply
 import DiskTestTools._
 
 class RootSpec extends FlatSpec {
@@ -22,7 +23,7 @@ class RootSpec extends FlatSpec {
     {
       implicit val recovery = Disks.recover()
       recovery.launch { implicit launcher =>
-        root.checkpoint (_.pass ("one"))
+        root.checkpoint (supply ("one"))
         launcher.ready.pass()
       }
       implicit val disks = recovery.attachAndLaunch (("a", disk1, geometry))

@@ -49,10 +49,4 @@ private object TierTestTools extends AsyncTestTools {
 
     def expectValues (kvs: (Int, Int)*): Unit =
       expectResult (kvs.sorted) (toSeq)
-  }
-
-  implicit class RichSynthTable [K, V] (table: SynthTable [K, V]) {
-
-    def checkpointAndPass() (implicit scheduler: StubScheduler): TierTable.Meta =
-      async [TierTable.Meta] (table.checkpoint (_)) .pass
   }}

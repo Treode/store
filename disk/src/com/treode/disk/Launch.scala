@@ -1,6 +1,6 @@
 package com.treode.disk
 
-import com.treode.async.Callback
+import com.treode.async.{Async, Callback}
 
 trait Launch {
 
@@ -8,7 +8,7 @@ trait Launch {
 
   def read [P] (desc: PageDescriptor [_, P], pos: Position, cb: Callback [P])
 
-  def checkpoint [B] (desc: RootDescriptor [B]) (f: Callback [B] => Any)
+  def checkpoint [B] (desc: RootDescriptor [B]) (f: => Async [B])
 
   def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G])
 

@@ -15,43 +15,32 @@ private class Checkpointer (disks: DiskDrives) {
 
   private def reengage() {
     if (checkreq || config.checkpoint (bytes, entries))
-      _checkpoint (disks.panic)
+      _checkpoint()
     else
       engaged = false
   }
 
   private val completed: Callback [Unit] =
     new Callback [Unit] {
+      def pass (v: Unit): Unit = fiber.execute (reengage())
+      def fail (t: Throwable): Unit = disks.panic (t)
+    }
 
-      def pass (v: Unit) {
-        fiber.execute (reengage())
-      }
-
-      def fail (t: Throwable) {
-        disks.panic (t)
-      }}
-
-  private def _checkpoint (cb: Callback [Unit]) {
-
+  private def _checkpoint() {
     bytes = 0
     entries = 0
     checkreq = false
     engaged = true
-
-    val superblockWritten = fiber.callback (cb) { _: Unit =>
-      rootgen += 1
-      reengage()
-    }
-
-    val rootsWritten = fiber.continue (cb) { pos: Position =>
-      disks.checkpoint (rootgen+1, pos, superblockWritten)
-    }
-
-    val logsMarked = fiber.continue (cb) { _: Unit =>
-      checkpoints.checkpoint (rootgen+1, rootsWritten)
-    }
-
-    disks.mark (logsMarked)
+    val task = for {
+      _ <- disks.mark()
+      pos <- fiber.flatten (checkpoints.checkpoint (rootgen+1))
+      _ <- fiber.flatten (disks.checkpoint (rootgen+1, pos))
+      _ <- fiber.supply {
+          rootgen+=1;
+          reengage()
+      }
+    } yield ()
+    task run completed
   }
 
   def launch (checkpoints: CheckpointRegistry): Unit =
@@ -63,7 +52,7 @@ private class Checkpointer (disks: DiskDrives) {
   def checkpoint(): Unit =
     fiber.execute {
       if (!engaged)
-        _checkpoint (disks.panic)
+        _checkpoint()
       else
         checkreq = true
     }
@@ -73,5 +62,5 @@ private class Checkpointer (disks: DiskDrives) {
       this.bytes += bytes
       this.entries += entries
       if (!engaged && config.checkpoint (this.bytes, this.entries))
-        _checkpoint (disks.panic)
+        _checkpoint()
     }}

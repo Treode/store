@@ -16,13 +16,10 @@ trait TierTable {
 
   def delete (key: Bytes): Long
 
-  def checkpoint (cb: Callback [TierTable.Meta])
+  def checkpoint(): Async [TierTable.Meta]
 
   def get (key: Bytes): Async [Option [Bytes]] =
     async (get (key, _))
-
-  def checkpoint(): Async [TierTable.Meta] =
-    async (checkpoint (_))
 }
 
 object TierTable {

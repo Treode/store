@@ -122,10 +122,10 @@ private class SynthTable [K, V] (
     cb.pass (groups intersect tiers.active)
 
   def compact (groups: Set [Long], cb: Callback [Unit]) {
-    checkpoint (callback (cb) (_ => ()))
+    checkpoint() .map (_ => ()) .run (cb)
   }
 
-  def checkpoint (cb: Callback [Meta]) {
+  def checkpoint(): Async [Meta] = async { cb =>
 
     val epoch = disks.join (cb)
 
