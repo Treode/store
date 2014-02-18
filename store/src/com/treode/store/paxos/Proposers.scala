@@ -1,7 +1,9 @@
 package com.treode.store.paxos
 
-import com.treode.async.{Callback, defer}
+import com.treode.async.Async
 import com.treode.store.Bytes
+
+import Async.async
 
 private class Proposers (kit: PaxosKit) {
 
@@ -21,8 +23,8 @@ private class Proposers (kit: PaxosKit) {
   def remove (key: Bytes, p: Proposer): Unit =
     proposers.remove (key, p)
 
-  def propose (ballot: Long, key: Bytes, value: Bytes, cb: Callback [Bytes]): Unit =
-    defer (cb) {
+  def propose (ballot: Long, key: Bytes, value: Bytes): Async [Bytes] =
+    async { cb =>
       val p = get (key)
       p.open (ballot, value)
       p.learn (cb)

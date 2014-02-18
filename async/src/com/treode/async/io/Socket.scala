@@ -48,9 +48,6 @@ class Socket (socket: AsynchronousSocketChannel) (implicit exec: Executor) {
         input.writePos = input.writePos + result.toInt
       }}}
 
-  def fill (input: PagedBuffer, len: Int, cb: Callback [Unit]): Unit = // TODO: remove
-    fill (input, len) run (cb)
-
   def deframe (input: PagedBuffer): Async [Int] = {
     for {
       _ <- fill (input, 4)
@@ -58,9 +55,6 @@ class Socket (socket: AsynchronousSocketChannel) (implicit exec: Executor) {
       _ <- fill (input, len)
     } yield len
   }
-
-  def deframe (input: PagedBuffer, cb: Callback [Int]): Unit =
-    deframe (input) run (cb)
 
   def flush (output: PagedBuffer): Async [Unit] = {
     val bufs = output.buffers (output.readPos, output.readableBytes)
@@ -70,11 +64,7 @@ class Socket (socket: AsynchronousSocketChannel) (implicit exec: Executor) {
         if (result < 0)
           throw new Exception ("File write failed.")
         output.readPos = output.readPos + result.toInt
-      }}}
-
-  def flush (output: PagedBuffer, cb: Callback [Unit]): Unit = // TODO: remove
-    flush (output) run (cb)
-}
+      }}}}
 
 object Socket {
 

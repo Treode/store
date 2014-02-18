@@ -4,13 +4,14 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
-import com.treode.async.CallbackCaptor
+import com.treode.async.AsyncTestTools
 import com.treode.cluster.StubNetwork
 import com.treode.store.{Bytes, Cardinals, LargeTest}
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, PropSpec, Specs, WordSpec}
 import org.scalatest.prop.PropertyChecks
 
+import AsyncTestTools._
 import Cardinals.{Zero, One, Two}
 
 class PaxosSpec extends Specs (PaxosBehaviors, PaxosProperties)
@@ -31,10 +32,7 @@ object PaxosBehaviors extends WordSpec with PaxosTestTools {
     val k = Bytes (random.nextLong)
 
     "yield a value for the leader" in {
-      val cb = CallbackCaptor [Bytes]
-      lead (k, One, cb)
-      kit.runTasks()
-      expectResult (One) (cb.passed)
+      expectPass (One) (lead (k, One))
     }
 
     "leave all acceptors closed and consistent" in {
@@ -59,14 +57,11 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
 
     try {
 
-      // Setup.
       val k = Bytes (random.nextLong)
-      val cb1 = CallbackCaptor [Bytes]
-      val cb2 = CallbackCaptor [Bytes]
 
       // Proposed two values simultaneously, expect one choice.
-      h1.paxos.propose (k, One, cb1)
-      h2.paxos.propose (k, Two, cb2)
+      val cb1 = h1.paxos.propose (k, One) .capture()
+      val cb2 = h2.paxos.propose (k, Two) .capture()
       kit.messageFlakiness = mf
       scheduler.runTasks (true)
       val v = cb1.passed

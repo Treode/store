@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-import com.treode.async.{Async, AsyncIterator, Callback, Scheduler, callback}
+import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.disk.{Disks, RecordDescriptor, Recovery, RootDescriptor}
 import com.treode.store.{Bytes, StoreConfig, StorePicklers}
 

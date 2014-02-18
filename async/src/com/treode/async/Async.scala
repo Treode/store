@@ -126,6 +126,9 @@ object Async {
         v run cb
       }}
 
+  def run [A] (cb: Callback [A]) (f: => Async [A]): Unit =
+    guard (f) run (cb)
+
   def supply [A] (v: A): Async [A] =
     new Async [A] {
       def run (cb: Callback [A]): Unit = cb.pass (v)

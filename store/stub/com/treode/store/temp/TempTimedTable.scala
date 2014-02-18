@@ -2,8 +2,10 @@ package com.treode.store.temp
 
 import java.util.concurrent.ConcurrentSkipListSet
 
-import com.treode.async.{Callback, defer}
+import com.treode.async.Callback
 import com.treode.store._
+
+import Callback.defer
 
 private class TempTimedTable extends TimedTable {
 

@@ -31,14 +31,32 @@ object Callback {
     def failed (t: Throwable, cb: Callback [Unit]) = cb.fail (t)
   }
 
-  def ignore [A]: Callback [A] =
+  def continue [A] (cb: Callback [_]) (f: A => Any): Callback [A] =
     new Callback [A] {
-      def pass (v: A): Unit = ()
-      def fail (t: Throwable): Unit = throw t
+      def pass (v: A) {
+        try {
+          f (v)
+        } catch {
+          case t: Throwable => cb.fail (t)
+        }}
+      def fail (t: Throwable): Unit = cb.fail (t)
+    }
+
+  def defer [A] (cb: Callback [A]) (f: => Any): Unit =
+    try {
+      f
+    } catch {
+      case t: Throwable => cb.fail (t)
     }
 
   def fanout [A] (cbs: Traversable [Callback [A]], scheduler: Scheduler): Callback [A] =
     new Callback [A] {
       def pass (v: A): Unit = cbs foreach (scheduler.pass (_, v))
       def fail (t: Throwable): Unit = cbs foreach (scheduler.fail (_, t))
+    }
+
+  def ignore [A]: Callback [A] =
+    new Callback [A] {
+      def pass (v: A): Unit = ()
+      def fail (t: Throwable): Unit = throw t
     }}

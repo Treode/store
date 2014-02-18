@@ -128,7 +128,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
   class Deliberating (wt: TxClock, cb: WriteCallback) extends State {
     import TxStatus._
 
-    WriteDirector.deliberate.lead (xid.id, Committed (wt), new Callback [TxStatus] {
+    WriteDirector.deliberate.lead (xid.id, Committed (wt)) run (new Callback [TxStatus] {
 
       def pass (status: TxStatus) = fiber.execute {
         status match {
@@ -191,7 +191,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     val aborts = cluster.locate (0)
 
     if (lead)
-      WriteDirector.deliberate.lead (xid.id, TxStatus.Aborted, Callback.ignore)
+      WriteDirector.deliberate.lead (xid.id, TxStatus.Aborted) run (Callback.ignore)
     WriteDeputy.abort (xid) (aborts, mbx)
 
     override def aborted (from: Peer) {

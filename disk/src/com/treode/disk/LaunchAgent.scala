@@ -1,9 +1,12 @@
 package com.treode.disk
 
 import java.util.ArrayList
-import scala.collection.JavaConversions._
+import scala.collection.JavaConversions
 
-import com.treode.async.{Async, Callback, Latch, Scheduler, continue}
+import com.treode.async.{Async, Callback, Latch, Scheduler}
+
+import Callback.continue
+import JavaConversions._
 
 private class LaunchAgent (
     drives: DiskDrives,

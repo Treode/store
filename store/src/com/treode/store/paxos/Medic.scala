@@ -1,6 +1,6 @@
 package com.treode.store.paxos
 
-import com.treode.async.{Callback, Fiber}
+import com.treode.async.{Async, Fiber}
 import com.treode.store.Bytes
 import com.treode.store.tier.TierMedic
 
@@ -42,13 +42,13 @@ private class Medic (
     db.put (gen, key, chosen)
   }
 
-  def close (kit: PaxosKit, cb: Callback [Acceptor]): Unit = fiber.execute {
+  def close (kit: PaxosKit): Async [Acceptor] = fiber.supply {
     val a = new Acceptor (key, kit)
     if (chosen.isDefined)
       a.state = new a.Closed (chosen.get)
     else
       a.state = new a.Deliberating (default, ballot, proposal, Set.empty)
-    cb.pass (a)
+    a
   }
 
   override def toString = s"Acceptor.Medic($key, $default, $proposal, $chosen)"

@@ -1,8 +1,9 @@
 package com.treode.store
 
 import java.io.Closeable
+import com.treode.async.Callback
 
-import com.treode.async.{Callback, defer}
+import Callback.defer
 
 trait TimedTable extends Closeable {
 

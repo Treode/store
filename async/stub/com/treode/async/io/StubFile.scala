@@ -17,24 +17,25 @@ class StubFile (implicit scheduler: StubScheduler) extends File (null) {
 
   var stop: Boolean = false
 
-  private def _stop (cb: Callback [Unit]) (f: => Unit) {
-    if (stop) {
-      require (_last == null)
-      _last = new Callback [Unit] {
-        def pass (v: Unit): Unit = {
-          _last = null
-          f
-        }
-        def fail (t: Throwable): Unit = {
-          _last = null
-          cb.fail (t)
-        }}
-    } else {
-      f
-    }}
+  private def _stop (f: Callback [Unit] => Any): Async [Unit] =
+    async { cb =>
+      if (stop) {
+        require (_last == null)
+        _last = new Callback [Unit] {
+          def pass (v: Unit): Unit = {
+            _last = null
+            f (cb)
+          }
+          def fail (t: Throwable): Unit = {
+            _last = null
+            cb.fail (t)
+          }}
+      } else {
+        f (cb)
+      }}
 
-  override def fill (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit]): Unit =
-    _stop (cb) {
+  override def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
+    _stop { cb =>
       try {
         require (pos + len < Int.MaxValue)
         if (len <= input.readableBytes) {
@@ -56,11 +57,8 @@ class StubFile (implicit scheduler: StubScheduler) extends File (null) {
         case t: Throwable => scheduler.fail (cb, t)
       }}
 
-  override def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
-    async (fill (input, pos, len, _))
-
-  override def flush (output: PagedBuffer, pos: Long, cb: Callback [Unit]): Unit =
-    _stop (cb) {
+  override def flush (output: PagedBuffer, pos: Long): Async [Unit] =
+    _stop { cb =>
       try {
         require (pos + output.readableBytes < Int.MaxValue)
         if (data.length < pos + output.readableBytes)
@@ -70,9 +68,6 @@ class StubFile (implicit scheduler: StubScheduler) extends File (null) {
       } catch {
         case t: Throwable => scheduler.fail (cb, t)
       }}
-
-  override def flush (output: PagedBuffer, pos: Long): Async [Unit] =
-    async (flush (output, pos, _))
 
   override def toString = s"StubFile(size=${data.length})"
 }

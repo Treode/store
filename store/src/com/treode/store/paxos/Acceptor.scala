@@ -2,12 +2,14 @@ package com.treode.store.paxos
 
 import scala.language.postfixOps
 
-import com.treode.async.{Async, Callback, Fiber, callback}
+import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.disk.{PageDescriptor, RecordDescriptor, RootDescriptor}
 import com.treode.store.{Bytes, StorePicklers}
 import com.treode.store.tier.TierDescriptor
+
+import Callback.ignore
 
 private class Acceptor (val key: Bytes, kit: PaxosKit) {
   import Acceptor.{NoPost, Post, Status}
@@ -67,7 +69,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       postable = (_.accept (ballot, value, proposer))
 
     def restore (f: State => Unit) {
-      db.get (key, new Callback [Option [Bytes]] {
+      db.get (key) run (new Callback [Option [Bytes]] {
 
         def pass (chosen: Option [Bytes]): Unit = fiber.execute {
           if (state == Restoring.this) {
@@ -158,7 +160,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
     fiber.delay (deliberatingTimeout) {
       if (state == Deliberating.this)
-        kit.propose (key, default, callback (Acceptor.this.choose (_)))
+        kit.propose (key, default) .map (Acceptor.this.choose (_)) .run (ignore)
     }
 
     def open (ballot: Long, default: Bytes, proposer: Peer): Unit =

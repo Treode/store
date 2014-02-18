@@ -5,12 +5,13 @@ import java.util.ArrayList
 import java.util.concurrent.ExecutorService
 import scala.language.postfixOps
 
-import com.treode.async.{Async, AsyncConversions, Callback, Scheduler, defer}
+import com.treode.async.{Async, AsyncConversions, Callback, Scheduler}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
 import Async.{async, supply}
 import AsyncConversions._
+import Callback.defer
 
 private class RecoveryAgent (
     records: RecordRegistry,

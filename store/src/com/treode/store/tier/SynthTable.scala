@@ -2,11 +2,11 @@ package com.treode.store.tier
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
-import com.treode.async.{Async, AsyncIterator, Callback, Scheduler, callback, continue}
+import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.disk.{Disks, PageHandler, PageDescriptor, Position, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
-import Async.{async, supply}
+import Async.{async, supply, whilst}
 import TierTable.Meta
 
 private class SynthTable [K, V] (
@@ -40,9 +40,7 @@ private class SynthTable [K, V] (
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
 
-  private def read (key: Bytes, cb: Callback [Option [Bytes]]) {
-
-    val epoch = disks.join (cb)
+  private def read (key: Bytes): Async [Option [Bytes]] = {
 
     readLock.lock()
     val (primary, secondary, tiers) = try {
@@ -51,43 +49,32 @@ private class SynthTable [K, V] (
       readLock.unlock()
     }
 
-    var cell = primary.floorEntry (key)
-    if (cell != null && cell.getKey == key) {
-      epoch.pass (cell.getValue)
-      return
-    }
+    var entry = primary.floorEntry (key)
+    if (entry != null && entry.getKey == key)
+      return supply (entry.getValue)
 
-    cell = secondary.floorEntry (key)
-    if (cell != null && cell.getKey == key) {
-      epoch.pass (cell.getValue)
-      return
-    }
+    entry = secondary.floorEntry (key)
+    if (entry != null && entry.getKey == key)
+      return supply (entry.getValue)
 
+    var cell = Option.empty [Cell]
     var i = 0
-    val loop = new Callback [Option [Cell]] {
-
-      def pass (cell: Option [Cell]) {
-        cell match {
-          case Some (cell) => epoch.pass (cell.value)
-          case None =>
+    for {
+      _ <-
+        whilst (i < tiers.size && (cell.isEmpty || cell.get.key != key)) {
+          for (c <- tiers (i) .read (desc, key)) yield {
+            cell = c
             i += 1
-            if (i < tiers.size)
-              tiers (i) .read (desc, key, this)
-            else
-              epoch.pass (None)
-        }}
+          }}
+    } yield {
+      if (cell.isDefined && cell.get.key == key)
+        cell.get.value
+      else
+        None
+    }}
 
-      def fail (t: Throwable) = epoch.fail (t)
-    }
-
-    if (i < tiers.size)
-      tiers (i) .read (desc, key, loop)
-    else
-      epoch.pass (None)
-  }
-
-  def get (key: Bytes, cb: Callback [Option [Bytes]]): Unit =
-    read (key, cb)
+  def get (key: Bytes): Async [Option [Bytes]] =
+    read (key)
 
   def put (key: Bytes, value: Bytes): Long = {
     readLock.lock()
@@ -124,9 +111,7 @@ private class SynthTable [K, V] (
   def compact (groups: Set [Long]): Async [Unit] =
     checkpoint() .map (_ => ())
 
-  def checkpoint(): Async [Meta] = async { cb =>
-
-    val epoch = disks.join (cb)
+  def checkpoint(): Async [Meta] = disks.join {
 
     writeLock.lock()
     val (generation, primary, tiers) = try {
@@ -141,7 +126,11 @@ private class SynthTable [K, V] (
       writeLock.unlock()
     }
 
-    val built = continue (epoch) { tier: Tier =>
+    val merged = TierIterator.merge (desc, primary, emptyMemTier, tiers)
+    val filtered = OverwritesFilter (merged)
+    for {
+      tier <- TierBuilder.build (desc, generation, filtered)
+    } yield {
       writeLock.lock()
       val meta = try {
         this.secondary = newMemTier
@@ -150,13 +139,8 @@ private class SynthTable [K, V] (
       } finally {
         writeLock.unlock()
       }
-      epoch.pass (meta)
-    }
-
-    val merged = TierIterator.merge (desc, primary, emptyMemTier, tiers)
-    val filtered = OverwritesFilter (merged)
-    TierBuilder.build (desc, generation, filtered) .run (built)
-  }}
+      meta
+    }}}
 
 private object SynthTable {
 

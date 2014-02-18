@@ -2,7 +2,7 @@ package com.treode.disk
 
 import java.util.concurrent.ConcurrentHashMap
 
-import com.treode.async.{Async, AsyncConversions, Callback, Latch, callback, continue, defer}
+import com.treode.async.{Async, AsyncConversions, Callback, Latch}
 
 import Async.guard
 import AsyncConversions._

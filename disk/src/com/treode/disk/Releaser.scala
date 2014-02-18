@@ -1,7 +1,7 @@
 package com.treode.disk
 
 import scala.collection.mutable.Builder
-import com.treode.async.Callback
+import com.treode.async.{Async, Callback}
 
 private class Releaser {
 
@@ -59,6 +59,11 @@ private class Releaser {
         leave (epoch)
         cb.fail (t)
       }}
+
+  def join [A] (task: Async [A]): Async [A] =
+    new Async [A] {
+      def run (cb: Callback [A]): Unit = task.run (join (cb))
+    }
 
   def _release (segments: Seq [SegmentPointer]): Seq [SegmentPointer] = synchronized {
     if (epochs.isEmpty && parties == 0) {

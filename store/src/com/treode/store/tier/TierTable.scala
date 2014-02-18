@@ -8,7 +8,7 @@ import Async.async
 
 trait TierTable {
 
-  def get (key: Bytes, cb: Callback [Option [Bytes]])
+  def get (key: Bytes): Async [Option [Bytes]]
 
   def iterator: CellIterator
 
@@ -17,9 +17,6 @@ trait TierTable {
   def delete (key: Bytes): Long
 
   def checkpoint(): Async [TierTable.Meta]
-
-  def get (key: Bytes): Async [Option [Bytes]] =
-    async (get (key, _))
 }
 
 object TierTable {

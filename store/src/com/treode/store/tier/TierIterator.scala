@@ -1,11 +1,12 @@
 package com.treode.store.tier
 
 import scala.collection.JavaConversions._
-import com.treode.async.{Async, AsyncConversions, AsyncIterator, Callback, Scheduler, continue}
+import com.treode.async.{Async, AsyncConversions, AsyncIterator, Callback, Scheduler}
 import com.treode.disk.{Disks, Position}
 
 import Async.async
 import AsyncConversions._
+import Callback.continue
 
 private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
     implicit disks: Disks) extends CellIterator {

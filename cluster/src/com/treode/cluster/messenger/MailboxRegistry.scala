@@ -1,6 +1,6 @@
 package com.treode.cluster.messenger
 
-import com.treode.async.{Async, Mailbox, Scheduler, callback}
+import com.treode.async.{Async, Mailbox, Scheduler}
 import com.treode.async.io.Socket
 import com.treode.buffer.{Input, PagedBuffer, Output}
 import com.treode.cluster.{EphemeralMailbox, MailboxId, Peer}

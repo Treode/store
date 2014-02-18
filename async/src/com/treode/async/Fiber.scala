@@ -74,41 +74,6 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
           scheduler.fail (cb, t)
       }}
 
-  def invoke [A] (cb: Callback [A]) (f: => A): Unit =
-    execute {
-      try {
-        scheduler.pass (cb, f)
-      } catch {
-        case t: Throwable =>
-          scheduler.fail (cb, t)
-      }}
-
-  def callback [A, B] (cb: Callback [A]) (f: B => A): Callback [B] =
-    new Callback [B] {
-      def pass (v: B): Unit = execute {
-        try {
-          scheduler.pass (cb, f (v))
-        } catch {
-          case t: Throwable =>
-            scheduler.fail (cb, t)
-        }}
-      def fail (t: Throwable): Unit =
-        scheduler.fail (cb, t)
-    }
-
-  def continue [A] (cb: Callback [_]) (f: A => Any): Callback [A] =
-    new Callback [A] {
-      def pass (v: A): Unit = execute {
-        try {
-          f (v)
-        } catch {
-          case t: Throwable =>
-            scheduler.fail (cb, t)
-        }}
-      def fail (t: Throwable): Unit =
-        scheduler.fail (cb, t)
-    }
-
   def spawn (task: Runnable): Unit =
     scheduler.execute (task)
 

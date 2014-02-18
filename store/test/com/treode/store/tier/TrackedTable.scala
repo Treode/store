@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-import com.treode.async.{Async, AsyncIterator, Callback, callback}
+import com.treode.async.{Async, AsyncIterator}
 
 import Async.async
 

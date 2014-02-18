@@ -70,7 +70,7 @@ private class RemoteConnection (
       }}
 
     def flush(): Unit = fiber.spawn {
-      socket.flush (buffer, Flushed)
+      socket.flush (buffer) run (Flushed)
     }
 
     def enque (message: PickledMessage) {
@@ -185,7 +185,7 @@ private class RemoteConnection (
 
   private def hearHello (socket: Socket) {
     val input = PagedBuffer (12)
-    socket.fill (input, 9, new Callback [Unit] {
+    socket.fill (input, 9) run (new Callback [Unit] {
       def pass (v: Unit) {
         val Hello (clientId) = Hello.pickler.unpickle (input)
         if (clientId == id) {
@@ -203,7 +203,7 @@ private class RemoteConnection (
   private def sayHello (socket: Socket) {
     val buffer = PagedBuffer (12)
     Hello.pickler.pickle (Hello (localId), buffer)
-    socket.flush (buffer, new Callback [Unit] {
+    socket.flush (buffer) run (new Callback [Unit] {
       def pass (v: Unit) {
         hearHello (socket)
       }

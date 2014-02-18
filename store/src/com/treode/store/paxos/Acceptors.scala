@@ -1,6 +1,6 @@
 package com.treode.store.paxos
 
-import com.treode.async.{Async, AsyncConversions, Callback, Latch, Scheduler, callback, continue, defer}
+import com.treode.async.{Async, AsyncConversions, Callback, Latch, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
 import com.treode.disk.{Disks, Position, RecordDescriptor}
@@ -30,23 +30,24 @@ private class Acceptors (val db: TierTable, kit: PaxosKit) {
   def remove (key: Bytes, a: Acceptor): Unit =
     acceptors.remove (key, a)
 
-  def recover (medics: Seq [Medic], cb: Callback [Unit]) {
-    val allClosed = Latch.unit (medics.size, cb)
-    val oneClosed = callback (allClosed) { a: Acceptor =>
-      acceptors.put (a.key, a)
-    }
-    medics foreach (_.close (kit, oneClosed))
+  def recover (medics: Seq [Medic]): Async [Unit] = {
+    for {
+      _ <- medics.latch.unit { m =>
+        for (a <- m.close (kit))
+          yield acceptors.put (m.key, a)
+      }
+    } yield ()
   }
 
-  def checkpoint(): Async [Position] = {
-    import Acceptor.{Status, statii}
+  def checkpoint(): Async [Position] =
     guard {
+      import Acceptor.{Status, statii}
       val as = materialize (acceptors.values)
       for {
         ss <- as.latch.seq (_.checkpoint())
         pos <- statii.write (0, ss)
       } yield pos
-    }}
+    }
 
   def attach() {
     import Acceptor.{choose, propose, query}
@@ -100,10 +101,10 @@ private object Acceptors {
     }
 
     root.reload { pos => implicit reloader =>
-      val statiiRead = callback (reloader.ready) { instances: Seq [Status] =>
-        instances foreach (openByStatus _)
-      }
-      statii.read (reloader, pos) .run (statiiRead)
+      val task = for {
+        ss <- statii.read (reloader, pos)
+      } yield (ss foreach openByStatus)
+      task run (reloader.ready)
     }
 
     checkpoint.replay { case meta =>
@@ -136,12 +137,13 @@ private object Acceptors {
       val kit = new PaxosKit (db.close())
       import kit.{acceptors, proposers}
 
+      root.checkpoint (acceptors.checkpoint())
+
       val ms = materialize (medics.values)
-      acceptors.recover (ms, callback (launcher.ready) { _ =>
+      val task = for (_ <- acceptors.recover (ms)) yield {
         acceptors.attach()
         proposers.attach()
         cb.pass (kit)
-      })
-
-      root.checkpoint (acceptors.checkpoint())
+      }
+      task run (launcher.ready)
     }}}

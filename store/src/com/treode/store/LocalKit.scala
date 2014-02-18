@@ -1,8 +1,10 @@
 package com.treode.store
 
-import com.treode.async.{Callback, defer}
+import com.treode.async.Callback
 import com.treode.store._
 import com.treode.store.locks.LockSpace
+
+import Callback.defer
 
 private abstract class LocalKit (bits: Int) extends LocalStore {
 

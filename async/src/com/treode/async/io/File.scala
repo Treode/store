@@ -36,9 +36,6 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
           _buf = input.buffer (input.writePos, input.writeableBytes)
       }}}
 
-  def fill (input: PagedBuffer, pos: Long, len: Int, cb: Callback [Unit]): Unit = // TODO: remove
-    fill (input, pos, len) run (cb)
-
   def deframe (input: PagedBuffer, pos: Long): Async [Int] = {
     for {
       _ <- fill (input, pos, 4)
@@ -46,9 +43,6 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
       _ <- fill (input, pos+4, len)
     } yield len
   }
-
-  def deframe (input: PagedBuffer, pos: Long, cb: Callback [Int]): Unit =
-    deframe (input, pos) run (cb)
 
   def flush (output: PagedBuffer, pos: Long): Async [Unit] = {
     var _pos = pos
@@ -62,9 +56,6 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
         if (_buf.remaining == 0)
           _buf = output.buffer (output.readPos, output.readableBytes)
       }}}
-
-  def flush (output: PagedBuffer, pos: Long, cb: Callback [Unit]): Unit = // TODO: remove
-    flush (output, pos) run (cb)
 
   def close(): Unit = file.close()
 }

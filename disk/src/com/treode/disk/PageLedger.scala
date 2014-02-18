@@ -1,7 +1,7 @@
 package com.treode.disk
 
 import com.treode.buffer.PagedBuffer
-import com.treode.async.{Async, Callback, callback, defer}
+import com.treode.async.{Async, Callback}
 import com.treode.async.io.File
 
 import Async.guard

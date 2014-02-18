@@ -18,7 +18,7 @@ trait Disks {
 
   def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P): Async [Position]
 
-  def join [A] (cb: Callback [A]): Callback [A]
+  def join [A] (task: Async [A]): Async [A]
 }
 
 object Disks {

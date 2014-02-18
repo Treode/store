@@ -3,10 +3,12 @@ package com.treode.store.atomic
 import java.util.concurrent.ConcurrentHashMap
 import scala.util.Random
 
-import com.treode.async.{Scheduler, defer}
+import com.treode.async.{Callback, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.store._
 import com.treode.store.paxos.Paxos
+
+import Callback.defer
 
 private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
     val cluster: Cluster, val store: LocalStore, val paxos: Paxos) extends Store {

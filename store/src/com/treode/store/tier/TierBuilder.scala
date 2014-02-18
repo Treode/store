@@ -3,7 +3,7 @@ package com.treode.store.tier
 import java.util.{ArrayDeque, ArrayList}
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Async, AsyncIterator, Callback, Scheduler, continue}
+import com.treode.async.{Async, Scheduler}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, StoreConfig, TxClock}
 

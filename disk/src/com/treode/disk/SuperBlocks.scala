@@ -2,7 +2,7 @@ package com.treode.disk
 
 import java.nio.file.Path
 
-import com.treode.async.{Async, Callback, defer}
+import com.treode.async.Async
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 

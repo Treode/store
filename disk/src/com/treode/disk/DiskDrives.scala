@@ -5,10 +5,10 @@ import java.util.concurrent.ExecutorService
 import scala.collection.immutable.Queue
 import scala.language.postfixOps
 
-import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch, Scheduler, defer}
+import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch, Scheduler}
 import com.treode.async.io.File
 
-import Async.{async, guard}
+import Async.{async, guard, run}
 import AsyncConversions._
 
 private class DiskDrives (implicit
@@ -95,7 +95,7 @@ private class DiskDrives (implicit
     val items = req._1
     val cb = leave (req._2)
     engaged = true
-    defer (cb) {
+    run (cb) {
 
       val priorDisks = disks.values
       val priorPaths = priorDisks.setBy (_.path)
@@ -110,7 +110,7 @@ private class DiskDrives (implicit
         throw new AlreadyAttachedException (already)
       }
 
-      val task = for {
+      for {
         newDisks <- items.zipWithIndex.latch.seq { case ((path, file, geometry), i) =>
           DiskDrive.init (this.number + i, path, file, geometry, newBoot, this)
         }
@@ -120,9 +120,7 @@ private class DiskDrives (implicit
         disks ++= newDisks.mapBy (_.id)
         this.bootgen = bootgen
         this.number = number
-      }
-      task run (cb)
-    }}
+      }}}
 
   def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit] =
     fiber.async { cb =>
@@ -141,7 +139,7 @@ private class DiskDrives (implicit
 
   private def _detach (items: List [DiskDrive]) {
     engaged = true
-    defer (panic) {
+    run (panic) {
 
       val paths = items map (_.path)
       val disks = this.disks -- (items map (_.id))
@@ -149,16 +147,14 @@ private class DiskDrives (implicit
       val attached = disks.values.setBy (_.path)
       val newboot = BootBlock (bootgen, number, attached, rootgen, rootpos)
 
-      val task = for {
+      for {
         _ <- disks.latch.unit (_._2.checkpoint (newboot))
       } yield {
         this.disks = disks
         this.bootgen = bootgen
         items foreach (_.detach())
         println ("Detached " + (paths mkString ","))
-      }
-      task run (panic)
-    }}
+      }}}
 
   def detach (disk: DiskDrive) {
     fiber.execute {
@@ -172,7 +168,7 @@ private class DiskDrives (implicit
     val (items, _cb) = req
     val cb = leave (_cb)
     engaged = true
-    defer (cb) {
+    run (cb) {
 
       val byPath = disks.values.mapBy (_.path)
       if (!(items forall (byPath contains _))) {
@@ -185,14 +181,12 @@ private class DiskDrives (implicit
       }
 
       val draining = items map (byPath.apply _)
-      val task = for {
+      for {
         segs <- draining.latch.seq (_.drain())
       } yield {
         checkpointer.checkpoint()
         compactor.drain (segs.iterator.flatten)
-      }
-      task run (cb)
-    }}
+      }}}
 
   def drain (items: Seq [Path]): Async [Unit] =
     fiber.async { cb =>
@@ -250,8 +244,8 @@ private class DiskDrives (implicit
       } yield segs.iterator.flatten
     }}
 
-  def join [A] (cb: Callback [A]): Callback [A] =
-    releaser.join (cb)
+  def join [A] (task: Async [A]): Async [A] =
+    releaser.join (task)
 
   def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit] =
     async (cb => logd.send (PickledRecord (desc, entry, cb)))

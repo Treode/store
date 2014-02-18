@@ -61,20 +61,20 @@ private class LogIterator private (
           logSegs += logSeg.num
           logPos = logSeg.pos
           buf.clear()
-          file.deframe (buf, logPos, _read)
+          file.deframe (buf, logPos) run (_read)
 
         case PageWrite (pos, _ledger) =>
           pagePos = pos
           pageLedger.add (_ledger)
           logPos += len + 4
-          file.deframe (buf, logPos, _read)
+          file.deframe (buf, logPos) run (_read)
 
         case PageAlloc (next, _ledger) =>
           pageSeg = alloc.alloc (next, superb.geometry, config)
           pagePos = pageSeg.pos
           pageLedger = _ledger.unzip
           logPos += len + 4
-          file.deframe (buf, logPos, _read)
+          file.deframe (buf, logPos) run (_read)
 
         case Entry (time, id) =>
           val end = buf.readPos
@@ -87,7 +87,7 @@ private class LogIterator private (
       }}
 
     def next() {
-      file.deframe (buf, logPos, _read)
+      file.deframe (buf, logPos) run (_read)
     }}
 
   def _foreach (f: ((Long, Unit => Any), Callback [Unit]) => Any): Async [Unit] =
