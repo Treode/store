@@ -6,7 +6,7 @@ import com.treode.async.{Async, AsyncIterator, Callback, Scheduler, callback, co
 import com.treode.disk.{Disks, PageHandler, PageDescriptor, Position, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
-import Async.async
+import Async.{async, supply}
 import TierTable.Meta
 
 private class SynthTable [K, V] (
@@ -118,12 +118,11 @@ private class SynthTable [K, V] (
     OverwritesFilter (merged)
   }
 
-  def probe (groups: Set [Long], cb: Callback [Set [Long]]): Unit =
-    cb.pass (groups intersect tiers.active)
+  def probe (groups: Set [Long]): Async [Set [Long]] =
+    supply (groups intersect tiers.active)
 
-  def compact (groups: Set [Long], cb: Callback [Unit]) {
-    checkpoint() .map (_ => ()) .run (cb)
-  }
+  def compact (groups: Set [Long]): Async [Unit] =
+    checkpoint() .map (_ => ())
 
   def checkpoint(): Async [Meta] = async { cb =>
 

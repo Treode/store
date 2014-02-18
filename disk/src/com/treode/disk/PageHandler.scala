@@ -1,11 +1,11 @@
 package com.treode.disk
 
-import com.treode.async.Callback
+import com.treode.async.Async
 
 trait PageHandler [G] {
 
   /** Returns those groups which are still referenced. */
-  def probe (groups: Set [G], cb: Callback [Set [G]])
+  def probe (groups: Set [G]): Async [Set [G]]
 
-  def compact (groups: Set [G], cb: Callback [Unit])
+  def compact (groups: Set [G]): Async [Unit]
 }

@@ -1,10 +1,11 @@
 package com.treode.disk
 
 import com.treode.buffer.PagedBuffer
-import com.treode.async.{Callback, callback, defer}
+import com.treode.async.{Async, Callback, callback, defer}
 import com.treode.async.io.File
 
-import PageLedger.{Projector, Zipped, intBytes, longBytes}
+import Async.guard
+import PageLedger.{Groups, Projector, Zipped, intBytes, longBytes}
 
 class PageLedger (
     private var ledger: Map [(TypeId, PageGroup), Long],
@@ -48,6 +49,15 @@ class PageLedger (
 
   def groups: Map [TypeId, Set [PageGroup]] =
     ledger.keys.groupBy (_._1) .mapValues (_.map (_._2) .toSet)
+
+  def liveBytes (liveGroups: Groups): Long = {
+    var liveBytes = 0L
+    for {
+      (id, pageGroups) <- liveGroups
+      group <- pageGroups
+    } liveBytes += get (id, group)
+    liveBytes
+  }
 
   def project: Projector =
     new Projector (ids, ledger.keySet, _byteSize)
@@ -151,13 +161,15 @@ object PageLedger {
     merger.result
   }
 
-  def read (file: File, pos: Long, cb: Callback [PageLedger]): Unit =
-    defer (cb) {
+  def read (file: File, pos: Long): Async [PageLedger] =
+    guard {
       val buf = PagedBuffer (12)
-      file.deframe (buf, pos, callback (cb) { _ =>
-        Zipped.pickler.unpickle (buf) .unzip
-      })
+      for (_ <- file.deframe (buf, pos))
+        yield Zipped.pickler.unpickle (buf) .unzip
     }
+
+  def read (file: File, pos: Long, cb: Callback [PageLedger]): Unit = // TODO: remove
+    read (file, pos) run (cb)
 
   def write (ledger: PageLedger, file: File, pos: Long, cb: Callback [Unit]): Unit =
     defer (cb) {

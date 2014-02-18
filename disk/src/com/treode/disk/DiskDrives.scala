@@ -5,10 +5,11 @@ import java.util.concurrent.ExecutorService
 import scala.collection.immutable.Queue
 import scala.language.postfixOps
 
-import com.treode.async.{Async, Callback, Fiber, Latch, Scheduler, callback, defer}
+import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch, Scheduler, callback, defer}
 import com.treode.async.io.File
 
 import Async.{async, guard}
+import AsyncConversions._
 
 private class DiskDrives (implicit
     val scheduler: Scheduler,
@@ -185,14 +186,12 @@ private class DiskDrives (implicit
         throw new CannotDrainAllException
       }
 
-      val allMarked = fiber.callback (cb) { segs: Seq [Iterator [SegmentPointer]] =>
+      val draining = items map (byPath.apply _)
+      val x = for (segs <- draining.latch.seq (_.drain())) yield {
         checkpointer.checkpoint()
         compactor.drain (segs.iterator.flatten)
       }
-
-      val draining = items map (byPath.apply _)
-      val oneMarked = Latch.seq (draining.size, allMarked)
-      draining foreach (_.drain (oneMarked))
+      x run (cb)
     }}
 
   def drain (items: Seq [Path], cb: Callback [Unit]): Unit =
@@ -211,14 +210,10 @@ private class DiskDrives (implicit
         disk.added()
       }}
 
-  def mark (cb: Callback [Unit]): Unit =
-    fiber.defer (cb) {
-      val latch = Latch.unit (disks.size, cb)
-      disks.values foreach (_.mark (latch))
-    }
-
   def mark(): Async [Unit] =
-    async (mark (_))
+    fiber.flatten {
+      disks.latch.unit (_._2.mark())
+  }
 
   private def _checkpoint (req: CheckpointRequest) {
     val (rootgen, rootpos, _cb) = req
@@ -249,14 +244,12 @@ private class DiskDrives (implicit
         _checkpoint (rootgen, rootpos, cb)
     }
 
-  def cleanable (cb: Callback [Iterator [SegmentPointer]]): Unit =
-    fiber.defer (cb) {
-      val allGathered = callback (cb) { segs: Seq [Iterator [SegmentPointer]] =>
-        segs.iterator.flatten
-      }
-      val oneGathered = Latch.seq (disks.size, allGathered)
-      disks.values.foreach (_.cleanable (oneGathered))
-    }
+  def cleanable(): Async [Iterator [SegmentPointer]] =  {
+    fiber.flatten {
+      for {
+        segs <- disks.latch.seq (_._2.cleanable())
+      } yield segs.iterator.flatten
+    }}
 
   def join [A] (cb: Callback [A]): Callback [A] =
     releaser.join (cb)

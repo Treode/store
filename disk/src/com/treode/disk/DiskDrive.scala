@@ -47,8 +47,8 @@ private class DiskDrive (
     pagemp.receive (pager)
   }
 
-  def mark (cb: Callback [Unit]): Unit =
-    fiber.invoke (cb) {
+  def mark(): Async [Unit] =
+    fiber.supply {
       logHead = logTail
     }
 
@@ -74,8 +74,8 @@ private class DiskDrive (
         yield SegmentPointer (this, geometry.segmentBounds (seg))
   }
 
-  def cleanable (cb: Callback [Iterator [SegmentPointer]]): Unit =
-    fiber.invoke (cb) {
+  def cleanable(): Async [Iterator [SegmentPointer]] =
+    fiber.supply {
       _cleanable
     }
 
@@ -88,8 +88,8 @@ private class DiskDrive (
         disks.detach (this)
     }
 
-  def drain (cb: Callback [Iterator [SegmentPointer]]): Unit =
-    fiber.defer (cb) {
+  def drain(): Async [Iterator [SegmentPointer]] = // TODO: async
+    fiber.async { cb =>
       draining = true
       val ready = fiber.callback (cb) { _: Unit =>
         _cleanable

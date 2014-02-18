@@ -1,6 +1,6 @@
 package com.treode.disk
 
-import com.treode.async.Callback
+import com.treode.async.Async
 
 private class SegmentPointer private (val disk: DiskDrive, val bounds: SegmentBounds) {
 
@@ -8,8 +8,8 @@ private class SegmentPointer private (val disk: DiskDrive, val bounds: SegmentBo
   def pos = bounds.pos
   def limit = bounds.limit
 
-  def probe (cb: Callback [PageLedger]): Unit =
-    PageLedger.read (disk.file, bounds.pos, cb)
+  def probe(): Async [PageLedger] =
+    PageLedger.read (disk.file, bounds.pos)
 
   override def equals (other: Any): Boolean =
     other match {

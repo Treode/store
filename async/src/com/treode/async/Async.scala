@@ -65,6 +65,9 @@ trait Async [A] {
         })
       }}}
 
+  def withFilter (p: A => Boolean): Async [A] =
+    filter (p)
+
   def flatten [B] (implicit cb: A <:< Async [B]): Async [B] =
     flatMap (x => x)
 
