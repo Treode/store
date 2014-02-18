@@ -203,8 +203,8 @@ private class DiskDrives (implicit
         _drain (items, cb)
     }
 
-  def add (disks: Seq [DiskDrive], cb: Callback [Unit]): Unit =
-    fiber.invoke (cb) {
+  def add (disks: Seq [DiskDrive]): Async [Unit] =
+    fiber.supply {
       for (disk <- disks) {
         this.disks += disk.id -> disk
         disk.added()

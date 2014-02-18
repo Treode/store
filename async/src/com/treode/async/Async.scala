@@ -8,6 +8,14 @@ trait Async [A] {
 
   def run (cb: Callback [A])
 
+  def defer (cb: Callback [_]) {
+    val self = this
+    run (new Callback [A] {
+      def pass (v: A): Unit = ()
+      def fail (t: Throwable) = cb.fail (t)
+    })
+  }
+
   def map [B] (f: A => B): Async [B] = {
     val self = this
     new Async [B] {
@@ -27,7 +35,7 @@ trait Async [A] {
         })
       }}}
 
-  def flatMap [B] (f: A => Async [B] ): Async [B] = {
+  def flatMap [B] (f: A => Async [B]): Async [B] = {
     val self = this
     new Async [B] {
       def run (cb: Callback [B]) {
@@ -68,8 +76,8 @@ trait Async [A] {
   def withFilter (p: A => Boolean): Async [A] =
     filter (p)
 
-  def flatten [B] (implicit cb: A <:< Async [B]): Async [B] =
-    flatMap (x => x)
+  def flatten [B] (implicit witness: A <:< Async [B]): Async [B] =
+    flatMap (task => task)
 
   def run(): A = {
     val q = new SynchronousQueue [Either [Throwable, A]]

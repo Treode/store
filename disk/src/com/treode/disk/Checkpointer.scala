@@ -36,7 +36,7 @@ private class Checkpointer (disks: DiskDrives) {
       pos <- fiber.flatten (checkpoints.checkpoint (rootgen+1))
       _ <- fiber.flatten (disks.checkpoint (rootgen+1, pos))
       _ <- fiber.supply {
-          rootgen+=1;
+          rootgen += 1
           reengage()
       }
     } yield ()
@@ -49,13 +49,13 @@ private class Checkpointer (disks: DiskDrives) {
       reengage()
     }
 
-  def checkpoint(): Unit =
+  def checkpoint(): Unit = {
     fiber.execute {
       if (!engaged)
         _checkpoint()
       else
         checkreq = true
-    }
+    }}
 
   def tally (bytes: Int, entries: Int): Unit =
     fiber.execute {

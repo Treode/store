@@ -2,9 +2,11 @@ package com.treode.disk
 
 import java.nio.file.Path
 
-import com.treode.async.{Callback, defer}
+import com.treode.async.{Async, Callback, defer}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
+
+import Async.guard
 
 private class SuperBlocks (
     val path: Path,
@@ -20,8 +22,8 @@ private class SuperBlocks (
 
 private object SuperBlocks {
 
-  def read (path: Path, file: File, cb: Callback [SuperBlocks]) (implicit config: DisksConfig) {
-    defer (cb) {
+  def read (path: Path, file: File) (implicit config: DisksConfig): Async [SuperBlocks] =
+    guard {
 
       val buffer = PagedBuffer (config.superBlockBits+1)
 
@@ -33,14 +35,10 @@ private object SuperBlocks {
           case e: Throwable => None
         }
 
-      def unpickleSuperBlocks() {
+      for {
+        _ <- file.fill (buffer, 0, config.diskLeadBytes)
+      } yield {
         val sb1 = unpickleSuperBlock (0)
         val sb2 = unpickleSuperBlock (config.superBlockBytes)
-        cb.pass (new SuperBlocks (path, file, sb1, sb2))
-      }
-
-      file.fill (buffer, 0, config.diskLeadBytes, new Callback [Unit] {
-        def pass (v: Unit) = unpickleSuperBlocks()
-        def fail (t: Throwable) = unpickleSuperBlocks()
-      })
-    }}}
+        new SuperBlocks (path, file, sb1, sb2)
+      }}}

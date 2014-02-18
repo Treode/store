@@ -8,8 +8,10 @@ import Async.guard
 private class ReloadAgent (
     files: Map [Int, File],
     roots: Seq [Reload => Any],
-    cb: Callback [Unit]) (
-        implicit scheduler: Scheduler) extends Reload {
+    cb: Callback [Unit]
+) (implicit
+    scheduler: Scheduler
+) extends Reload {
 
   def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
     guard {

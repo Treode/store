@@ -5,9 +5,12 @@ import java.util.ArrayList
 import java.util.concurrent.ExecutorService
 import scala.language.postfixOps
 
-import com.treode.async.{Callback, Latch, Scheduler, continue, defer}
+import com.treode.async.{Async, AsyncConversions, Callback, Scheduler, defer}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
+
+import Async.{async, supply}
+import AsyncConversions._
 
 private class RecoveryAgent (
     records: RecordRegistry,
@@ -33,17 +36,13 @@ private class RecoveryAgent (
       val roots = Position (0, 0, 0)
       val boot = BootBlock.apply (0, items.size, attaching, 0, roots)
 
-      val added = continue (cb) { _: Unit =>
-        launch (disks)
-      }
-
-      val allPrimed = continue (cb) { drives: Seq [DiskDrive] =>
-        disks.add (drives, added)
-      }
-
-      val onePrimed = Latch.seq (items.size, allPrimed)
-      for (((path, file, geometry), i) <- items zipWithIndex)
-        DiskDrive.init (i, path, file, geometry, boot, disks, onePrimed)
+      val task = for {
+        drives <- items.zipWithIndex.latch.seq { case ((path, file, geometry), i) =>
+            DiskDrive.init (i, path, file, geometry, boot, disks)
+        }
+        _ <- disks.add (drives)
+      } yield launch (disks)
+      task run (disks.panic)
     }
 
   def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Unit =
@@ -85,34 +84,28 @@ private class RecoveryAgent (
       val useGen1 = chooseSuperBlock (reads)
       val boot = if (useGen1) reads.head.sb1.get.boot else reads.head.sb2.get.boot
       verifyReattachment (boot.disks.toSet, reads .map (_.path) .toSet)
-
+      val roots = reads.head.superb (useGen1) .boot.roots
       val files = reads.mapValuesBy (_.superb (useGen1) .id) (_.file)
 
-      val logsReplayed = continue (cb) { disks: DiskDrives =>
-        launch (disks)
-      }
-
-      val rootsReloaded = continue (cb) { _: Unit =>
-        LogIterator.replay (useGen1, reads, records, logsReplayed)
-      }
-
-      val rootsRead = continue (cb) { roots: Seq [Reload => Any] =>
-        new ReloadAgent (files, roots, rootsReloaded)
-      }
-
-      val roots = reads.head.superb (useGen1) .boot.roots
-      if (roots.length == 0)
-        rootsRead.pass (Seq.empty)
-      else
-        DiskDrive.read (files (roots.disk), loaders.pager, roots) run (rootsRead)
+      val task = for {
+        roots <-
+            if (roots.length == 0)
+              supply (Seq.empty [Reload => Any])
+            else
+              DiskDrive.read (files (roots.disk), loaders.pager, roots)
+        _ <- async [Unit] (new ReloadAgent (files, roots, _))
+        disks <- LogIterator.replay (useGen1, reads, records)
+      } yield launch (disks)
+      task defer (cb)
     }
 
   def reattach (items: Seq [(Path, File)]): Unit =
     defer (cb) {
       require (!items.isEmpty, "Must list at least one file or device to reaattach.")
-      val oneRead = Latch.seq (items.size, continue (cb) (superBlocksRead _))
-      for ((path, file) <- items)
-        SuperBlocks.read (path, file, oneRead)
+      val task = for {
+        reads <- items.latch.seq { case (path, file) => SuperBlocks.read (path, file) }
+      } yield superBlocksRead (reads)
+      task defer (cb)
     }
 
   def reattach (items: Seq [Path], exec: ExecutorService): Unit =

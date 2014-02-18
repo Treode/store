@@ -3,11 +3,12 @@ package com.treode.disk
 import java.nio.file.Path
 import scala.collection.mutable.ArrayBuffer
 
-import com.treode.async.{Async, AsyncIterator, Callback, Latch, Scheduler, callback, continue, defer, invoke}
+import com.treode.async.{Async, AsyncConversions, AsyncIterator, Callback, Scheduler}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
 import Async.async
+import AsyncConversions._
 import RecordHeader.{Entry, LogAlloc, LogEnd, PageAlloc, PageWrite}
 
 private class LogIterator private (
@@ -100,72 +101,57 @@ private class LogIterator private (
     disk
   }}
 
-object LogIterator {
+private object LogIterator {
 
   def apply (
-      path: Path,
-      file: File,
-      superb: SuperBlock,
-      records: RecordRegistry,
-      cb: Callback [(Int, LogIterator)]
+      useGen1: Boolean,
+      read: SuperBlocks,
+      records: RecordRegistry
   ) (implicit
       scheduler: Scheduler,
-      config: DisksConfig): Unit =
+      config: DisksConfig
+  ): Async [(Int, LogIterator)] = {
 
-    defer (cb) {
+    val path = read.path
+    val file = read.file
+    val superb = read.superb (useGen1)
+    val alloc = Allocator (superb.free)
+    val logSeg = alloc.alloc (superb.logSeg, superb.geometry, config)
+    val logSegs = new ArrayBuffer [Int]
+    logSegs += logSeg.num
+    val pageSeg = alloc.alloc (superb.pageSeg, superb.geometry, config)
+    val buf = PagedBuffer (12)
 
-      val alloc = Allocator (superb.free)
-      val logSeg = alloc.alloc (superb.logSeg, superb.geometry, config)
-      val logSegs = new ArrayBuffer [Int]
-      logSegs += logSeg.num
-      val pageSeg = alloc.alloc (superb.pageSeg, superb.geometry, config)
-      val buf = PagedBuffer (12)
-      PageLedger.read (file, pageSeg.pos, continue (cb) { ledger =>
-        file.fill (buf, superb.logHead, 1, callback (cb) { _ =>
-          val iter = new LogIterator (
-              records, path, file, buf, superb, alloc, logSegs, logSeg, pageSeg, ledger)
-          (superb.id, iter)
-        })
-      })
-    }
+    for {
+      ledger <- PageLedger.read (file, pageSeg.pos)
+      _ <- file.fill (buf, superb.logHead, 1)
+    } yield {
+      val iter = new LogIterator (
+          records, path, file, buf, superb, alloc, logSegs, logSeg, pageSeg, ledger)
+      (superb.id, iter)
+    }}
 
   def replay (
       useGen1: Boolean,
       reads: Seq [SuperBlocks],
-      records: RecordRegistry,
-      cb: Callback [DiskDrives]
+      records: RecordRegistry
   ) (implicit
       scheduler: Scheduler,
       config: DisksConfig
-  ): Unit =
+  ): Async [DiskDrives] = {
 
-    defer (cb) {
+    val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
 
-      def added (disks: DiskDrives) = callback (cb) { _: Unit =>
-        disks
-      }
-
-      def replayed (logs: Map [Int, LogIterator]) = continue (cb) { _: Unit =>
-        val disks = new DiskDrives
-        val drives =
-          for (read <- reads) yield {
-            val superb = read.superb (useGen1)
-            logs (superb.id) .close (disks, disks.logd, disks.paged)
-          }
-        disks.add (drives, added (disks))
-      }
-
-      val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
-
-      val allMade = continue (cb) { logs: Map [Int, LogIterator] =>
-        val iter = AsyncIterator.merge (logs.values.toSeq) (ordering)
-        iter.foreach.cb { case ((time, replay), cb) =>
-          invoke (cb) (replay())
-        } .run (replayed (logs))
-      }
-
-      val oneMade = Latch.map (reads.size, allMade)
-      reads foreach { read =>
-        val superb =
-        apply (read.path, read.file, read.superb (useGen1), records, oneMade)
-      }}}
+    for {
+      logs <- reads.latch.map (apply (useGen1, _, records))
+      iter = AsyncIterator.merge (logs.values.toSeq) (ordering)
+      _ <- iter.foreach.f (_._2())
+      disks = new DiskDrives
+      drives =
+        for (read <- reads) yield {
+          val superb = read.superb (useGen1)
+          logs (superb.id) .close (disks, disks.logd, disks.paged)
+        }
+      _ <- disks.add (drives)
+    } yield disks
+  }}

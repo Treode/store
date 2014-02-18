@@ -4,12 +4,12 @@ import java.nio.file.Path
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{ArrayBuffer, UnrolledBuffer}
 
-import com.treode.async
+import com.treode.{async => xasync}
 import com.treode.async.{Async, Callback, Fiber, Latch}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
-import Async.guard
+import Async.{async, guard}
 import DiskDrive.offset
 import RecordHeader._
 
@@ -58,7 +58,7 @@ private class DiskDrive (
           id, boot, geometry, draining, alloc.free, logSegs.head, logHead, pageSeg.num, pageHead)
       if (pageLedgerDirty) {
         pageLedgerDirty = false
-        PageLedger.write (pageLedger.clone(), file, pageSeg.pos, async.continue (cb) { _: Unit =>
+        PageLedger.write (pageLedger.clone(), file, pageSeg.pos, xasync.continue (cb) { _: Unit =>
           SuperBlock.write (boot.bootgen, superb, file, cb)
         })
       } else {
@@ -300,7 +300,7 @@ private object DiskDrive {
       cb: Callback [DiskDrive]
   ): Unit =
 
-    async.defer (cb) {
+    xasync.defer (cb) {
       import disks.{config}
 
       val alloc = Allocator (geometry, config)
@@ -312,7 +312,7 @@ private object DiskDrive {
       val superb = SuperBlock (
           id, boot, geometry, false, alloc.free, logSeg.num, logSeg.pos, pageSeg.num, pageSeg.limit)
 
-      val latch = Latch.unit (3, async.callback (cb) { _: Unit =>
+      val latch = Latch.unit (3, xasync.callback (cb) { _: Unit =>
         new DiskDrive (
             id, path, file, geometry, alloc, disks, false, logSegs, logSeg.pos, logSeg.pos,
             logSeg.limit, PagedBuffer (12), pageSeg, pageSeg.limit, new PageLedger, false)
@@ -321,4 +321,15 @@ private object DiskDrive {
       SuperBlock.write (0, superb, file, latch)
       RecordHeader.write (LogEnd, file, logSeg.pos, latch)
       PageLedger.write (PageLedger.Zipped.empty, file, pageSeg.pos, latch)
-    }}
+    }
+
+  def init (
+      id: Int,
+      path: Path,
+      file: File,
+      geometry: DiskGeometry,
+      boot: BootBlock,
+      disks: DiskDrives
+  ): Async [DiskDrive] = // TODO: async
+    async (init (id, path, file, geometry, boot, disks, _))
+}
