@@ -3,7 +3,7 @@ package com.treode.disk
 import scala.collection.mutable.UnrolledBuffer
 import scala.reflect.ClassTag
 
-import com.treode.async.{Fiber, Callback, Scheduler}
+import com.treode.async.{Async, Callback, Fiber, Scheduler}
 
 class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     implicit scheduler: Scheduler, mtag: ClassTag [M]) {
@@ -46,7 +46,7 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
       messages += message
     }}
 
-  def close (cb: Callback [Unit]): Unit = fiber.defer (cb) {
+  def close(): Async [Unit] = fiber.async { cb =>
     require (!closed, "Multiplexer has been closed.")
     closed = true
     if (!receivers.isEmpty) {

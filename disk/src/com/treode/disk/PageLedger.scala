@@ -168,19 +168,14 @@ object PageLedger {
         yield Zipped.pickler.unpickle (buf) .unzip
     }
 
-  def read (file: File, pos: Long, cb: Callback [PageLedger]): Unit = // TODO: remove
-    read (file, pos) run (cb)
-
-  def write (ledger: PageLedger, file: File, pos: Long, cb: Callback [Unit]): Unit =
-    defer (cb) {
-      val buf = PagedBuffer (12)
-      Zipped.pickler.frame (ledger.zip, buf)
-      file.flush (buf, pos, cb)
-    }
-
-  def write (ledger: Zipped, file: File, pos: Long, cb: Callback [Unit]): Unit =
-    defer (cb) {
+  def write (ledger: Zipped, file: File, pos: Long): Async [Unit] =
+    guard {
       val buf = PagedBuffer (12)
       Zipped.pickler.frame (ledger, buf)
-      file.flush (buf, pos, cb)
+      file.flush (buf, pos)
+    }
+
+  def write (ledger: PageLedger, file: File, pos: Long): Async [Unit] =
+    guard {
+      write (ledger.zip, file, pos)
     }}

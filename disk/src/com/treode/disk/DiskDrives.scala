@@ -5,7 +5,7 @@ import java.util.concurrent.ExecutorService
 import scala.collection.immutable.Queue
 import scala.language.postfixOps
 
-import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch, Scheduler, callback, defer}
+import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch, Scheduler, defer}
 import com.treode.async.io.File
 
 import Async.{async, guard}
@@ -110,24 +110,22 @@ private class DiskDrives (implicit
         throw new AlreadyAttachedException (already)
       }
 
-      def allUpdated (newDisks: Seq [DiskDrive]) = fiber.callback (cb) { _: Unit =>
+      val task = for {
+        newDisks <- items.zipWithIndex.latch.seq { case ((path, file, geometry), i) =>
+          DiskDrive.init (this.number + i, path, file, geometry, newBoot, this)
+        }
+        _ <- priorDisks.latch.unit (_.checkpoint (newBoot))
+
+      } yield {
         disks ++= newDisks.mapBy (_.id)
         this.bootgen = bootgen
         this.number = number
       }
-
-      val allPrimed = fiber.continue (cb) { newDisks: Seq [DiskDrive] =>
-        val oneUpdated = Latch.unit (priorDisks.size, allUpdated (newDisks))
-        priorDisks foreach (_.checkpoint (newBoot, oneUpdated))
-      }
-
-      val onePrimed = Latch.seq (items.size, allPrimed)
-      for (((path, file, geometry), i) <- items zipWithIndex)
-        DiskDrive.init (this.number + i, path, file, geometry, newBoot, this, onePrimed)
+      task run (cb)
     }}
 
-  def attach (items: Seq [(Path, File, DiskGeometry)], cb: Callback [Unit]): Unit =
-    fiber.defer (cb) {
+  def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit] =
+    fiber.async { cb =>
       require (!items.isEmpty, "Must list at least one file or device to attach.")
       if (engaged)
         attachreqs = attachreqs.enqueue (items, cb)
@@ -135,10 +133,10 @@ private class DiskDrives (implicit
         _attach (items, cb)
     }
 
-  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService, cb: Callback [Unit]): Unit =
-    defer (cb) {
+  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Unit] =
+    guard {
       val files = items map (openFile (_, exec))
-      attach (files, cb)
+      attach (files)
     }
 
   private def _detach (items: List [DiskDrive]) {
@@ -151,15 +149,15 @@ private class DiskDrives (implicit
       val attached = disks.values.setBy (_.path)
       val newboot = BootBlock (bootgen, number, attached, rootgen, rootpos)
 
-      val allWritten = fiber.callback (panic) { _: Unit =>
+      val task = for {
+        _ <- disks.latch.unit (_._2.checkpoint (newboot))
+      } yield {
         this.disks = disks
         this.bootgen = bootgen
         items foreach (_.detach())
         println ("Detached " + (paths mkString ","))
       }
-
-      val oneWritten = Latch.unit (disks.size, allWritten)
-      disks.values foreach (_.checkpoint (newboot, oneWritten))
+      task run (panic)
     }}
 
   def detach (disk: DiskDrive) {
@@ -187,15 +185,17 @@ private class DiskDrives (implicit
       }
 
       val draining = items map (byPath.apply _)
-      val x = for (segs <- draining.latch.seq (_.drain())) yield {
+      val task = for {
+        segs <- draining.latch.seq (_.drain())
+      } yield {
         checkpointer.checkpoint()
         compactor.drain (segs.iterator.flatten)
       }
-      x run (cb)
+      task run (cb)
     }}
 
-  def drain (items: Seq [Path], cb: Callback [Unit]): Unit =
-    fiber.defer (cb) {
+  def drain (items: Seq [Path]): Async [Unit] =
+    fiber.async { cb =>
       require (!items.isEmpty, "Must list at least one file or device to attach.")
       if (engaged)
         drainreqs = drainreqs.enqueue (items, cb)
@@ -224,14 +224,13 @@ private class DiskDrives (implicit
       val attached = disks.values.map (_.path) .toSet
       val newBoot = BootBlock (bootgen, number, attached, rootgen, rootpos)
 
-      val allWritten = fiber.callback (cb) { _: Unit =>
+      val task = for {
+        _ <- disks.latch.unit (_._2.checkpoint (newBoot))
+      } yield {
         this.rootgen = rootgen
         this.rootpos = rootpos
       }
-
-      val oneWritten = Latch.unit (disks.size, allWritten)
-      for (disk <- disks.values)
-        disk.checkpoint (newBoot, oneWritten)
+      task run (cb)
     }}
 
   def checkpoint (rootgen: Int, rootpos: Position): Async [Unit] =
