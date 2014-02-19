@@ -1,6 +1,5 @@
-package com.treode.cluster.messenger
+package com.treode.cluster
 
-import com.treode.cluster.HostId
 import com.treode.pickle.Picklers
 
 private case class Hello (id: HostId)

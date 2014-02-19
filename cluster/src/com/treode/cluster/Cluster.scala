@@ -1,7 +1,6 @@
 package com.treode.cluster
 
 import com.treode.async.Scheduler
-import com.treode.cluster.messenger.{MailboxRegistry, PeerRegistry}
 import com.treode.pickle.Pickler
 
 trait Cluster {

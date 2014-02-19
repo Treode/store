@@ -1,6 +1,5 @@
 package com.treode.cluster
 
-import com.treode.cluster.messenger.MailboxRegistry
 import com.treode.pickle.Pickler
 
 /**

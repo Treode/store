@@ -1,4 +1,4 @@
-package com.treode.cluster.messenger
+package com.treode.cluster
 
 import java.nio.channels.AsynchronousChannelGroup
 import java.util.concurrent.ConcurrentHashMap
@@ -6,7 +6,6 @@ import scala.collection.JavaConversions._
 import scala.util.Random
 
 import com.treode.async.{Fiber, Scheduler}
-import com.treode.cluster.{HostId, Peer}
 
 class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit random: Random) {
 

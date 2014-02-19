@@ -1,9 +1,8 @@
-package com.treode.cluster.messenger
+package com.treode.cluster
 
 import com.treode.async.{Async, Mailbox, Scheduler}
 import com.treode.async.io.Socket
 import com.treode.buffer.{Input, PagedBuffer, Output}
-import com.treode.cluster.{EphemeralMailbox, MailboxId, Peer}
 import com.treode.pickle.{InvalidTagException, Pickler, Picklers, PicklerRegistry}
 
 import PicklerRegistry.FunctionTag

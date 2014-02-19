@@ -1,4 +1,4 @@
-package com.treode.cluster.messenger
+package com.treode.cluster
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.channels.{AsynchronousChannelGroup, AsynchronousCloseException}
@@ -6,7 +6,6 @@ import java.nio.channels.{AsynchronousChannelGroup, AsynchronousCloseException}
 import com.treode.async.{Callback, Scheduler}
 import com.treode.async.io.{Socket, ServerSocket}
 import com.treode.buffer.PagedBuffer
-import com.treode.cluster.{HostId, log, messenger}
 
 class Listener (
   localId: HostId,

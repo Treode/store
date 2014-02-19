@@ -1,4 +1,4 @@
-package com.treode.cluster.messenger
+package com.treode.cluster
 
 import java.nio.channels.AsynchronousChannelGroup
 import java.util
@@ -9,7 +9,6 @@ import scala.util.Random
 import com.treode.async.{Scheduler, Callback, Fiber}
 import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
-import com.treode.cluster.{HostId, MailboxId, Peer, log, messenger}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.pickle.Pickler
 

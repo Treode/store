@@ -1,8 +1,7 @@
-package com.treode.cluster.messenger
+package com.treode.cluster
 
 import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
-import com.treode.cluster.{HostId, MailboxId, Peer}
 import com.treode.pickle.Pickler
 
 private class LocalConnection (val id: HostId, mbxs: MailboxRegistry) extends Peer {
