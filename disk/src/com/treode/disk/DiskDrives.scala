@@ -8,7 +8,7 @@ import scala.language.postfixOps
 import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch, Scheduler}
 import com.treode.async.io.File
 
-import Async.{async, guard, run}
+import Async.{async, guard}
 import AsyncConversions._
 
 private class DiskDrives (implicit
@@ -95,7 +95,7 @@ private class DiskDrives (implicit
     val items = req._1
     val cb = leave (req._2)
     engaged = true
-    run (cb) {
+    fiber.run (cb) {
 
       val priorDisks = disks.values
       val priorPaths = priorDisks.setBy (_.path)
@@ -139,7 +139,7 @@ private class DiskDrives (implicit
 
   private def _detach (items: List [DiskDrive]) {
     engaged = true
-    run (panic) {
+    fiber.run (panic) {
 
       val paths = items map (_.path)
       val disks = this.disks -- (items map (_.id))
@@ -168,7 +168,7 @@ private class DiskDrives (implicit
     val (items, _cb) = req
     val cb = leave (_cb)
     engaged = true
-    run (cb) {
+    fiber.run (cb) {
 
       val byPath = disks.values.mapBy (_.path)
       if (!(items forall (byPath contains _))) {
@@ -205,7 +205,7 @@ private class DiskDrives (implicit
       }}
 
   def mark(): Async [Unit] =
-    fiber.flatten {
+    fiber.guard {
       disks.latch.unit (_._2.mark())
   }
 
@@ -213,19 +213,17 @@ private class DiskDrives (implicit
     val (rootgen, rootpos, _cb) = req
     val cb = leave (_cb)
     engaged = true
-    fiber.defer (cb) {
+    fiber.run (cb) {
 
       val attached = disks.values.map (_.path) .toSet
       val newBoot = BootBlock (bootgen, number, attached, rootgen, rootpos)
 
-      val task = for {
+      for {
         _ <- disks.latch.unit (_._2.checkpoint (newBoot))
       } yield {
         this.rootgen = rootgen
         this.rootpos = rootpos
-      }
-      task run (cb)
-    }}
+      }}}
 
   def checkpoint (rootgen: Int, rootpos: Position): Async [Unit] =
     fiber.async { cb =>
@@ -238,7 +236,7 @@ private class DiskDrives (implicit
     }
 
   def cleanable(): Async [Iterator [SegmentPointer]] =  {
-    fiber.flatten {
+    fiber.guard {
       for {
         segs <- disks.latch.seq (_._2.cleanable())
       } yield segs.iterator.flatten

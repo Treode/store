@@ -46,16 +46,7 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
           case t: Throwable => scheduler.fail (cb, t)
         }}}
 
-  def supply [A] (f: => A): Async [A] =
-    Async.async { cb =>
-      execute {
-        try {
-          scheduler.pass (cb, f)
-        } catch {
-          case t: Throwable => scheduler.fail (cb, t)
-        }}}
-
-  def flatten [A] (f: => Async [A]): Async [A] =
+  def guard [A] (f: => Async [A]): Async [A] =
     Async.async [Async [A]] { cb =>
       execute {
         try {
@@ -64,15 +55,31 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
           case t: Throwable => scheduler.fail (cb, t)
         }}} .flatten
 
+  def run [A] (cb: Callback [A]) (f: => Async [A]): Unit =
+    execute {
+      try {
+        f run (spawn (cb))
+      } catch {
+        case t: Throwable =>
+          scheduler.fail (cb, t)
+      }}
 
   def defer [A] (cb: Callback [A]) (f: => Any): Unit =
     execute {
       try {
         f
       } catch {
-        case t: Throwable =>
-          scheduler.fail (cb, t)
+        case t: Throwable => scheduler.fail (cb, t)
       }}
+
+  def supply [A] (f: => A): Async [A] =
+    Async.async { cb =>
+      execute {
+        try {
+          scheduler.pass (cb, f)
+        } catch {
+          case t: Throwable => scheduler.fail (cb, t)
+        }}}
 
   def spawn (task: Runnable): Unit =
     scheduler.execute (task)

@@ -43,7 +43,7 @@ private class RecoveryAgent (
         }
         _ <- disks.add (drives)
       } yield launch (disks)
-      task run (disks.panic)
+      task run disks.panic
     }
 
   def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Unit =

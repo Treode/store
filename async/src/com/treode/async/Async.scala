@@ -8,14 +8,6 @@ trait Async [A] {
 
   def run (cb: Callback [A])
 
-  def defer (cb: Callback [_]) {
-    val self = this
-    run (new Callback [A] {
-      def pass (v: A): Unit = ()
-      def fail (t: Throwable) = cb.fail (t)
-    })
-  }
-
   def map [B] (f: A => B): Async [B] = {
     val self = this
     new Async [B] {
@@ -79,7 +71,15 @@ trait Async [A] {
   def flatten [B] (implicit witness: A <:< Async [B]): Async [B] =
     flatMap (task => task)
 
-  def run(): A = {
+  def defer (cb: Callback [_]) {
+    val self = this
+    run (new Callback [A] {
+      def pass (v: A): Unit = ()
+      def fail (t: Throwable) = cb.fail (t)
+    })
+  }
+
+  def await(): A = {
     val q = new SynchronousQueue [Either [Throwable, A]]
     run (new Callback [A] {
       def pass (v: A): Unit = q.offer (Right (v))
@@ -98,7 +98,7 @@ trait Async [A] {
 
   def toJavaFuture: JFuture [A] =
     new FutureTask (new Callable [A] {
-      def call(): A = run()
+      def call(): A = await()
     })
 }
 
@@ -106,8 +106,11 @@ object Async {
 
   def async [A] (f: Callback [A] => Any): Async [A] =
     new Async [A] {
+      private var ran = false
       def run (cb: Callback [A]) {
         try {
+          require (!ran, "Async was already run.")
+          ran = true
           f (cb)
         } catch {
           case t: Throwable => cb.fail (t)
@@ -115,7 +118,10 @@ object Async {
 
   def guard [A] (f: => Async [A]): Async [A] =
     new Async [A] {
+      private var ran = false
       def run (cb: Callback [A]) {
+        require (!ran, "Async was already run.")
+        ran = true
         val v = try {
           f
         } catch {
@@ -136,8 +142,11 @@ object Async {
 
   def cond (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
     new Async [Unit] {
+      private var ran = false
       def run (cb: Callback [Unit]): Unit =
         try {
+          require (!ran, "Async was already run.")
+          ran = true
           if (p) f run cb else cb.pass()
         } catch {
           case e: Throwable => cb.fail (e)
@@ -147,12 +156,14 @@ object Async {
 
     def cb (p: => Boolean) (f: Callback [Unit] => Any) (implicit e: Executor): Async [Unit] =
       new Async [Unit] {
+        private var ran = false
         def run (cb: Callback [Unit]) {
+          require (!ran, "Async was already run.")
+          ran = true
           val loop = new Callback [Unit] {
             def pass (v: Unit): Unit = e.execute (toRunnable {
               try {
-                if (p)
-                  f (this)
+                if (p) f (this)
                 else
                   e.execute (toRunnable (cb, ()))
               } catch {

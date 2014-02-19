@@ -26,22 +26,22 @@ private class Checkpointer (disks: DiskDrives) {
       def fail (t: Throwable): Unit = disks.panic (t)
     }
 
-  private def _checkpoint() {
-    bytes = 0
-    entries = 0
-    checkreq = false
-    engaged = true
-    val task = for {
-      _ <- disks.mark()
-      pos <- fiber.flatten (checkpoints.checkpoint (rootgen+1))
-      _ <- fiber.flatten (disks.checkpoint (rootgen+1, pos))
-      _ <- fiber.supply {
-          rootgen += 1
-          reengage()
-      }
-    } yield ()
-    task run completed
-  }
+  private def _checkpoint(): Unit =
+    fiber.run (completed) {
+      bytes = 0
+      entries = 0
+      checkreq = false
+      engaged = true
+      for {
+        _ <- disks.mark()
+        pos <- fiber.guard (checkpoints.checkpoint (rootgen+1))
+        _ <- fiber.guard (disks.checkpoint (rootgen+1, pos))
+        _ <- fiber.supply {
+            rootgen += 1
+            reengage()
+        }
+      } yield ()
+    }
 
   def launch (checkpoints: CheckpointRegistry): Unit =
     fiber.execute {

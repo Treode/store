@@ -59,7 +59,7 @@ private class DiskDrive (
     }}
 
   def checkpoint (boot: BootBlock): Async [Unit] =
-    fiber.flatten {
+    fiber.guard {
       val superb = SuperBlock (
           id, boot, geometry, draining, alloc.free, logSegs.head, logHead, pageSeg.num, pageHead)
       for {
@@ -92,7 +92,7 @@ private class DiskDrive (
     }
 
   def drain(): Async [Iterator [SegmentPointer]] =
-    fiber.flatten {
+    fiber.guard {
       draining = true
       for {
         _ <- pagemp.close()
@@ -232,14 +232,14 @@ private class DiskDrive (
     pageLedgerDirty = true
     for {
       _ <- PageLedger.write (pageLedger, file, pageSeg.pos)
-      _ <- fiber.flatten {
+      _ <- fiber.guard {
           pageSeg = alloc.alloc (geometry, config)
           pageHead = pageSeg.limit
           pageLedger = new PageLedger
           pageLedgerDirty = true
           PageLedger.write (pageLedger, file, pageSeg.pos)
       }
-      _ <- fiber.flatten {
+      _ <- fiber.guard {
           pageLedgerDirty = false
           record (PageAlloc (pageSeg.num, ledger.zip))
       }
@@ -258,28 +258,29 @@ private class DiskDrive (
     } yield ()
   }
 
-  def receivePages (pages: UnrolledBuffer [PickledPage]) {
+  def receivePages (pages: UnrolledBuffer [PickledPage]): Unit =
+    fiber.execute {
 
-    val (accepts, rejects, realloc) = splitPages (pages)
-    pagemp.replace (rejects)
-    if (accepts.isEmpty) {
-      pagemp.receive (pager)
-      return
-    }
+      val (accepts, rejects, realloc) = splitPages (pages)
+      pagemp.replace (rejects)
+      if (accepts.isEmpty) {
+        pagemp.receive (pager)
+        return
+      }
 
-    val (buffer, callbacks, ledger) = writePages (pages)
-    val pos = pageHead - buffer.readableBytes
-    val cb = Callback.fanout (callbacks, scheduler)
+      val (buffer, callbacks, ledger) = writePages (pages)
+      val pos = pageHead - buffer.readableBytes
+      val cb = Callback.fanout (callbacks, scheduler)
 
-    val task = for {
-      _ <- file.flush (buffer, pos)
-      _ <- if (realloc)
-            reallocPages (ledger)
-          else
-            advancePages (pos, ledger)
-    } yield pos
-    task run cb
-  }}
+      val task = for {
+        _ <- file.flush (buffer, pos)
+        _ <- if (realloc)
+              reallocPages (ledger)
+            else
+              advancePages (pos, ledger)
+      } yield pos
+      task run cb
+    }}
 
 private object DiskDrive {
 

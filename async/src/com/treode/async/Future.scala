@@ -38,4 +38,7 @@ class Future [A] (implicit scheduler: Scheduler) extends Callback [A] {
 
   def get(): Async [A] =
     async (get (_))
+
+  def await(): A =
+    get() .await()
 }
