@@ -1,23 +1,27 @@
 package com.treode
 
-import com.treode.cluster.events.Events
+import java.util.logging.{Level, Logger}
+
+import Level.WARNING
 
 package object cluster {
 
-  private [cluster] implicit class ClusterEvents (events: Events) {
+  private [cluster] object log {
+
+    val logger = Logger.getLogger ("com.treode.cluster")
 
     def errorWhileGreeting (expected: HostId, found: HostId): Unit =
-      events.warning (s"Error while greeting: expected remote host $expected but found $found")
+      logger.log (WARNING, s"Error while greeting: expected remote host $expected but found $found")
 
     def exceptionWhileGreeting (e: Throwable): Unit =
-      events.warning (s"Error while greeting", e)
+      logger.log (WARNING, s"Error while greeting", e)
 
     def exceptionReadingMessage (e: Throwable): Unit =
-      events.warning (s"Exception reading message", e)
+      logger.log (WARNING, s"Exception reading message", e)
 
     def exceptionWritingMessage (e: Throwable): Unit =
-      events.warning (s"Exception writing message", e)
+      logger.log (WARNING, s"Exception writing message", e)
 
     def recyclingMessengerSocket (e: Throwable): Unit =
-      events.warning (s"Recycling messenger socket", e)
+      logger.log (WARNING, s"Recycling messenger socket", e)
   }}

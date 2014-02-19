@@ -1,11 +1,13 @@
 package com.treode
 
 import java.io.Closeable
+import java.util.logging.{Level, Logger}
 
 import com.treode.async.Callback
-import com.treode.cluster.events.Events
 import com.treode.pickle.Pickler
 import com.treode.store.locks.LockSet
+
+import Level.WARNING
 
 package store {
 
@@ -34,14 +36,3 @@ package store {
 
   private trait LocalStore extends PreparableStore with Closeable
 }
-
-package object store {
-
-  private [store] implicit class StoreEvents (events: Events) {
-
-    def exceptionAbortedRead (e: Throwable): Unit =
-      events.warning (s"Aborting read due to exception", e)
-
-    def exceptionAbortedAudit (id: TxId, e: Throwable): Unit =
-      events.warning (s"Aborting audit $id due to exception", e)
-  }}

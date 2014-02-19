@@ -9,8 +9,7 @@ import scala.util.Random
 import com.treode.async.{Scheduler, Callback, Fiber}
 import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
-import com.treode.cluster.{ClusterEvents, HostId, MailboxId, Peer, messenger}
-import com.treode.cluster.events.Events
+import com.treode.cluster.{HostId, MailboxId, Peer, log, messenger}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.pickle.Pickler
 
@@ -19,9 +18,9 @@ private class RemoteConnection (
   localId: HostId,
   fiber: Fiber,
   group: AsynchronousChannelGroup,
-  mailboxes: MailboxRegistry) (
-    implicit scheduler: Scheduler,
-    events: Events
+  mailboxes: MailboxRegistry
+) (implicit
+    scheduler: Scheduler
 ) extends Peer {
 
   require (id != localId)
@@ -65,7 +64,7 @@ private class RemoteConnection (
 
       def fail (t: Throwable) {
         //buffer.release()
-        events.exceptionWritingMessage (t)
+        log.exceptionWritingMessage (t)
         RemoteConnection.this.disconnect (socket)
       }}
 
@@ -176,7 +175,7 @@ private class RemoteConnection (
       }
 
       def fail (t: Throwable) {
-        events.exceptionReadingMessage (t)
+        log.exceptionReadingMessage (t)
         disconnect (socket)
       }}
 
@@ -191,11 +190,11 @@ private class RemoteConnection (
         if (clientId == id) {
           connect (socket, input, localId)
         } else {
-          events.errorWhileGreeting (id, clientId)
+          log.errorWhileGreeting (id, clientId)
           disconnect (socket)
         }}
       def fail (t: Throwable) {
-        events.exceptionWhileGreeting (t)
+        log.exceptionWhileGreeting (t)
         disconnect (socket)
       }})
   }
@@ -208,7 +207,7 @@ private class RemoteConnection (
         hearHello (socket)
       }
       def fail (t: Throwable) {
-        events.exceptionWhileGreeting (t)
+        log.exceptionWhileGreeting (t)
         disconnect (socket)
       }})
   }
@@ -219,7 +218,7 @@ private class RemoteConnection (
         sayHello (socket)
       }
       def fail (t: Throwable) {
-        events.exceptionWhileGreeting (t)
+        log.exceptionWhileGreeting (t)
         disconnect (socket)
       }})
   }

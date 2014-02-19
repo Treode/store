@@ -7,7 +7,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.util.Random
 
 import com.treode.async.Scheduler
-import com.treode.cluster.events.Events
 import com.treode.cluster.messenger.{MailboxRegistry, Listener, PeerRegistry}
 import com.treode.cluster.misc.{RichBoolean, RichOption, parseInetSocketAddress, parseInt}
 import com.treode.pickle.Pickler
@@ -92,11 +91,11 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
     _group = AsynchronousChannelGroup.withFixedThreadPool (1, Executors.defaultThreadFactory)
 
-    _peers = PeerRegistry.live (localId, _group, _mailboxes) (_random, _scheduler, Events.live)
+    _peers = PeerRegistry.live (localId, _group, _mailboxes) (_random, _scheduler)
     for ((a, i) <- addresses.zipWithIndex)
       _peers.get (i) .address = a
 
-    _listener = new Listener (localId, addresses (localId.id.toInt), _group, _peers) (_scheduler, Events.live)
+    _listener = new Listener (localId, addresses (localId.id.toInt), _group, _peers) (_scheduler)
     _listener.startup()
 
     val cluster = new Cluster {

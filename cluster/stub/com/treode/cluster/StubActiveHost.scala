@@ -3,7 +3,6 @@ package com.treode.cluster
 import scala.util.Random
 
 import com.treode.async.Scheduler
-import com.treode.cluster.events.StubEvents
 import com.treode.cluster.messenger.{MailboxRegistry, PeerRegistry}
 import com.treode.pickle.Pickler
 

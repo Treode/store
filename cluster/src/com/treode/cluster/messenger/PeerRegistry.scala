@@ -7,7 +7,6 @@ import scala.util.Random
 
 import com.treode.async.{Fiber, Scheduler}
 import com.treode.cluster.{HostId, Peer}
-import com.treode.cluster.events.Events
 
 class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit random: Random) {
 
@@ -46,7 +45,7 @@ class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit random: 
 object PeerRegistry {
 
   def live (localId: HostId, group: AsynchronousChannelGroup, mailboxes: MailboxRegistry) (
-      implicit random: Random, scheduler: Scheduler, events: Events): PeerRegistry = {
+      implicit random: Random, scheduler: Scheduler): PeerRegistry = {
 
     def newPeer (remoteId: HostId): Peer =
       if (remoteId == localId)

@@ -6,16 +6,16 @@ import java.nio.channels.{AsynchronousChannelGroup, AsynchronousCloseException}
 import com.treode.async.{Callback, Scheduler}
 import com.treode.async.io.{Socket, ServerSocket}
 import com.treode.buffer.PagedBuffer
-import com.treode.cluster.{ClusterEvents, HostId, messenger}
-import com.treode.cluster.events.Events
+import com.treode.cluster.{HostId, log, messenger}
 
 class Listener (
   localId: HostId,
   localAddr: SocketAddress,
   group: AsynchronousChannelGroup,
-  peers: PeerRegistry) (
-    implicit scheduler: Scheduler,
-    events: Events) {
+  peers: PeerRegistry
+) (implicit
+    scheduler: Scheduler
+) {
 
   private var server: ServerSocket = null
 
@@ -27,7 +27,7 @@ class Listener (
         peers.get (remoteId) connect (socket, input, remoteId)
       }
       def fail (t: Throwable) {
-        events.exceptionWhileGreeting (t)
+        log.exceptionWhileGreeting (t)
         socket.close()
       }})
   }
@@ -40,7 +40,7 @@ class Listener (
         sayHello (socket, buffer, remoteId)
       }
       def fail (t: Throwable) {
-        events.exceptionWhileGreeting (t)
+        log.exceptionWhileGreeting (t)
         socket.close()
       }})
   }
@@ -56,7 +56,7 @@ class Listener (
           case e: AsynchronousCloseException =>
             server.close()
           case e: Throwable =>
-            events.recyclingMessengerSocket (e)
+            log.recyclingMessengerSocket (e)
             server.close()
             scheduler.delay (200) (startup())
             throw e
