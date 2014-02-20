@@ -2,7 +2,8 @@ package com.treode.async
 
 private case class StubTimer (time: Long, task: Runnable) extends Ordered [StubTimer] {
 
-  def compare (that: StubTimer) = this.time compare that.time
+  // Reverse the sort for the PriorityQueue.
+  def compare (that: StubTimer) = that.time compare time
 }
 
 private object StubTimer extends Ordering [StubTimer] {

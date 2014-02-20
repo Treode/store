@@ -45,8 +45,8 @@ class StubNetwork (implicit val random: Random, val scheduler: StubScheduler) {
     h.deliver (p, from, mbx, msg)
   }
 
-  def runTasks (timers: Boolean = false): Unit =
-    scheduler.runTasks (timers)
+  def runTasks (timers: Boolean = false, count: Int = Int.MaxValue): Unit =
+    scheduler.runTasks (timers, count)
 }
 
 object StubNetwork {

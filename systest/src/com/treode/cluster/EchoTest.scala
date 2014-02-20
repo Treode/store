@@ -1,6 +1,6 @@
 package com.treode.cluster
 
-import java.net.InetSocketAddress
+import java.net.{SocketAddress, InetSocketAddress}
 import java.nio.channels.AsynchronousChannelGroup
 import java.util.concurrent._
 import java.util.concurrent.atomic.AtomicBoolean
@@ -99,14 +99,26 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
     val cluster = new Cluster {
 
+      private val scuttlebutt: Scuttlebutt =
+        new Scuttlebutt (localId, _peers) (_scheduler)
+
       def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
         _mailboxes.listen (desc.pmsg, desc.id) (f)
+
+      def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
+        scuttlebutt.listen (desc) (f)
+
+      def peer (id: HostId): Peer =
+        _peers.get (id)
+
+      def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
+        _peers.get (remoteId) .address = remoteAddr
 
       def open [M] (p: Pickler [M], s: Scheduler): EphemeralMailbox [M] =
         _mailboxes.open (p, s)
 
-      def peer (id: HostId): Peer =
-        _peers.get (id)
+      def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
+      scuttlebutt.spread (desc) (msg)
 
       def locate (id: Int) = Acknowledgements.settled (0, 1, 2)
     }

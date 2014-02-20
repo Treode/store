@@ -44,6 +44,7 @@ private class RandomScheduler (random: Random) extends StubScheduler {
       else
         nextTask()
       n += 1
+      time += 1
     }
     n
   }

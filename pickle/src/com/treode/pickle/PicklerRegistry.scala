@@ -36,7 +36,8 @@ class PicklerRegistry [T <: Tag] private (default: Long => T) {
     val u = openers.get (id)
     if (u == null)
       default (id)
-    u.read (ctx)
+    else
+      u.read (ctx)
   }
 
   def unpickle (ctx: UnpickleContext): T =
@@ -48,7 +49,7 @@ class PicklerRegistry [T <: Tag] private (default: Long => T) {
     if (u == null) {
       buf.readPos = end
       buf.discard (buf.readPos)
-      default (id)
+      return default (id)
     }
     val v = u.read (buf)
     if (buf.readPos != end) {
@@ -89,6 +90,7 @@ object PicklerRegistry {
 
   trait Tag {
 
+    def id: Long
     def pickle (ctx: PickleContext)
     def byteSize: Int
   }
@@ -129,8 +131,9 @@ object PicklerRegistry {
 
   trait FunctionTag [A, B] extends (A => B) with Tag
 
-  def const [A, B] (id: Long, v: B): FunctionTag [A, B] =
+  def const [A, B] (_id: Long, v: B): FunctionTag [A, B] =
     new FunctionTag [A, B] {
+      def id: Long = _id
       def apply (v2: A): B = v
       def pickle (ctx: PickleContext): Unit = ???
       def byteSize: Int = ???

@@ -30,7 +30,7 @@ object TreodeBuild extends Build {
     unmanagedSourceDirectories in CustomTest <<=
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
-    scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked"),
+    scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", "-Yinline-warnings"),
 
     testFrameworks += new TestFramework ("org.scalameter.ScalaMeterFramework"),
 
