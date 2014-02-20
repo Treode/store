@@ -5,7 +5,7 @@ import scala.language.postfixOps
 import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
-import com.treode.disk.{PageDescriptor, RecordDescriptor, RootDescriptor}
+import com.treode.disk.{PageDescriptor, RecordDescriptor}
 import com.treode.store.{Bytes, StorePicklers}
 import com.treode.store.tier.TierDescriptor
 
@@ -305,11 +305,6 @@ private object Acceptor {
   val choose = {
     import PaxosPicklers._
     MessageDescriptor (0xFF761FFCDF5DEC8BL, tuple (bytes, bytes))
-  }
-
-  val root = {
-    import PaxosPicklers._
-    RootDescriptor (0xBFD4F3D3, position)
   }
 
   val statii = {

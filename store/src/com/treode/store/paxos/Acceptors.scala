@@ -3,10 +3,11 @@ package com.treode.store.paxos
 import com.treode.async.{Async, AsyncConversions, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
-import com.treode.disk.{Disks, Position, RecordDescriptor}
+import com.treode.disk.{Disks, Position, RootDescriptor}
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.store.tier.{TierMedic, TierTable}
 
+import Acceptors.Root
 import Async.{async, guard}
 import AsyncConversions._
 
@@ -39,14 +40,15 @@ private class Acceptors (val db: TierTable, kit: PaxosKit) {
     } yield ()
   }
 
-  def checkpoint(): Async [Position] =
+  def checkpoint(): Async [Root] =
     guard {
       import Acceptor.{Status, statii}
       val as = materialize (acceptors.values)
       for {
         ss <- as.latch.seq (_.checkpoint())
-        pos <- statii.write (0, ss)
-      } yield pos
+        _statii <- statii.write (0, ss)
+        _db <- db.checkpoint()
+      } yield new Root (_statii, _db)
     }
 
   def attach() {
@@ -67,9 +69,22 @@ private class Acceptors (val db: TierTable, kit: PaxosKit) {
 private object Acceptors {
   import Acceptor._
 
-  val checkpoint = {
+  class Root (
+      private [paxos] val statii: Position,
+      private [paxos] val db: TierTable.Meta)
+
+  object Root {
+
+    val pickler = {
+      import PaxosPicklers._
+      wrap (pos, tierMeta)
+      .build (v => new Root (v._1, v._2))
+      .inspect (v => (v.statii, v.db))
+    }}
+
+  val root = {
     import PaxosPicklers._
-    RecordDescriptor (0x8B97BEF0, tierMeta)
+    RootDescriptor (0xBFD4F3D3, Root.pickler)
   }
 
   def attach (kit: PaxosRecovery): Async [Paxos] = async { cb =>
@@ -100,13 +115,10 @@ private object Acceptors {
       m
     }
 
-    root.reload { pos => implicit reloader =>
-      for (ss <- statii.read (reloader, pos))
+    root.reload { root => implicit reloader =>
+      db.checkpoint (root.db)
+      for (ss <- statii.read (reloader, root.statii))
         yield (ss foreach openByStatus)
-    }
-
-    checkpoint.replay { case meta =>
-      db.checkpoint (meta)
     }
 
     open.replay { case (key, default) =>
