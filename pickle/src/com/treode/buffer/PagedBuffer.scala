@@ -329,22 +329,26 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
 
   def writeVarUInt (v: Int) {
     if (pageSize - wpos < 5) {
-      requireWritable (5)
       if (v >>> 7 == 0) {
+        requireWritable (1)
         write (v)
       } else if (v >>> 14 == 0) {
+        requireWritable (2)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7)
       } else if (v >>> 21 == 0) {
+        requireWritable (3)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7 | 0x80)
         write (v >>> 14)
       } else if (v >>> 28 == 0) {
+        requireWritable (4)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7 | 0x80)
         write (v >>> 14 | 0x80)
         write (v >>> 21)
       } else {
+        requireWritable (5)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7 | 0x80)
         write (v >>> 14 | 0x80)
@@ -492,28 +496,33 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
 
   def writeVarULong (v: Long) {
     if (pageSize - wpos < 9) {
-      requireWritable (9)
       if (v >>> 7 == 0) {
+        requireWritable (1)
         write (v)
       } else if (v >>> 14 == 0) {
+        requireWritable (2)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7)
       } else if (v >>> 21 == 0) {
+        requireWritable (3)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7 | 0x80)
         write (v >>> 14)
       } else if (v >>> 28 == 0) {
+        requireWritable (4)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7 | 0x80)
         write (v >>> 14 | 0x80)
         write (v >>> 21)
       } else if (v >>> 35 == 0) {
+        requireWritable (5)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7 | 0x80)
         write (v >>> 14 | 0x80)
         write (v >>> 21 | 0x80)
         write (v >>> 28)
       } else if (v >>> 42 == 0) {
+        requireWritable (6)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7 | 0x80)
         write (v >>> 14 | 0x80)
@@ -521,6 +530,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
         write (v >>> 28 | 0x80)
         write (v >>> 35)
       } else if (v >>> 49 == 0) {
+        requireWritable (7)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7 | 0x80)
         write (v >>> 14 | 0x80)
@@ -529,6 +539,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
         write (v >>> 35 | 0x80)
         write (v >>> 42)
       } else if (v >>> 56 == 0) {
+        requireWritable (8)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7 | 0x80)
         write (v >>> 14 | 0x80)
@@ -538,6 +549,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
         write (v >>> 42 | 0x80)
         write (v >>> 49)
       } else {
+        requireWritable (9)
         write ((v & 0x7F) | 0x80)
         write (v >>> 7 | 0x80)
         write (v >>> 14 | 0x80)
@@ -726,16 +738,6 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
 
   def readDouble(): Double =
     java.lang.Double.longBitsToDouble (readLong())
-
-  private [this] def isAscii (v: String): Boolean = {
-    var i = 0
-    while (i < v.length) {
-      if (v.charAt(i) > 127)
-        return false
-      i += 1
-    }
-    return true
-  }
 
   private [this] def writeUtf8Char (c: Char) {
     if (pageSize - wpos < 3) {
