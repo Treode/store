@@ -5,7 +5,7 @@ import scala.util.Random
 
 trait StubScheduler extends Scheduler {
 
-  def runTasks (timers: Boolean = false)
+  def runTasks (timers: Boolean = false, count: Int = Int.MaxValue): Int
   def shutdown (timeout: Long)
 }
 
