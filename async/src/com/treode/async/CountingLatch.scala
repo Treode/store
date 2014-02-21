@@ -1,7 +1,7 @@
 package com.treode.async
 
-private class CountingLatch (count: Int, cb: Callback [Unit])
-extends AbstractLatch [Unit] (count, cb) with Callback [Any] {
+private class CountingLatch [A] (count: Int, cb: Callback [Unit])
+extends AbstractLatch [Unit] (count, cb) with Callback [A] {
 
   private var thrown = List.empty [Throwable]
 
@@ -9,6 +9,6 @@ extends AbstractLatch [Unit] (count, cb) with Callback [Any] {
 
   def value = ()
 
-  def pass (v: Any): Unit = synchronized {
+  def pass (v: A): Unit = synchronized {
     release()
   }}

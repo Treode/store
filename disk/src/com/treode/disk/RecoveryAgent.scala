@@ -38,8 +38,8 @@ private class RecoveryAgent (
       val boot = BootBlock.apply (0, items.size, attaching, 0, roots)
 
       val task = for {
-        drives <- items.zipWithIndex.latch.seq { case ((path, file, geometry), i) =>
-            DiskDrive.init (i, path, file, geometry, boot, disks)
+        drives <- items.latch.indexed { case ((path, file, geometry), i) =>
+          DiskDrive.init (i, path, file, geometry, boot, disks)
         }
         _ <- disks.add (drives)
       } yield launch (disks)

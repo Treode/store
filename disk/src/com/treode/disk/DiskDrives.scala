@@ -111,7 +111,7 @@ private class DiskDrives (implicit
       }
 
       for {
-        newDisks <- items.zipWithIndex.latch.seq { case ((path, file, geometry), i) =>
+        newDisks <- items.latch.indexed { case ((path, file, geometry), i) =>
           DiskDrive.init (this.number + i, path, file, geometry, newBoot, this)
         }
         _ <- priorDisks.latch.unit (_.checkpoint (newBoot))
