@@ -9,6 +9,8 @@ import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 
 class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
 
+  def length = bytes.length
+
   def unpickle [A] (p: Pickler [A]): A =
     p.fromByteArray (bytes)
 

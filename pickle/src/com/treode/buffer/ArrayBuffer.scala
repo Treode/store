@@ -3,7 +3,7 @@ package com.treode.buffer
 import java.nio.ByteBuffer
 import java.util.Arrays
 
-class ArrayBuffer private (data: Array [Byte]) extends Buffer {
+class ArrayBuffer private (val data: Array [Byte]) extends Buffer {
 
   private [this] var wpos = 0
   private [this] var rpos = 0
