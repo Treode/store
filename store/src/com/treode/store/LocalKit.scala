@@ -6,9 +6,9 @@ import com.treode.store.locks.LockSpace
 
 import Callback.defer
 
-private abstract class LocalKit (bits: Int) extends LocalStore {
+private abstract class LocalKit (implicit config: StoreConfig) extends LocalStore {
 
-  private val space = new LockSpace (bits)
+  private val space = new LockSpace
 
   def getTimedTable (id: TableId): TimedTable
 

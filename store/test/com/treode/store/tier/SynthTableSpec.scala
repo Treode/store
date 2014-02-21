@@ -20,7 +20,7 @@ class SynthTableSpec extends FreeSpec {
     implicit val recovery = Disks.recover()
     val geometry = DiskGeometry (16, 12, 1<<30)
     implicit val disks = recovery.attach (Seq ((Paths.get ("a"), disk, geometry))) .pass
-    implicit val storeConfig = StoreConfig (1<<12)
+    implicit val storeConfig = StoreConfig (4, 1<<12)
     SynthTable (TierDescriptor (0x62C8FE56, Picklers.string, Picklers.int))
   }
 

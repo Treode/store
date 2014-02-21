@@ -4,14 +4,13 @@ import scala.collection.SortedSet
 import scala.language.postfixOps
 
 import com.treode.async.Scheduler
-import com.treode.store.TxClock
+import com.treode.store.{StoreConfig, TxClock}
 
-private [store] class LockSpace (bits: Int) {
+private [store] class LockSpace (implicit config: StoreConfig) {
+  import config.lockSpaceBits
 
-  require (bits < 32)
-
-  private val mask = (1 << bits) - 1
-  private val locks = Array.fill (1 << bits) (new Lock)
+  private val mask = (1 << lockSpaceBits) - 1
+  private val locks = Array.fill (1 << lockSpaceBits) (new Lock)
 
   // Returns true if the lock was granted immediately.  Queues the acquisition to be called back
   // later otherwise.

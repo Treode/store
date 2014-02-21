@@ -66,7 +66,7 @@ class SystemSpec extends FlatSpec {
   "It" should "work" in {
 
     implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
-    implicit val storeConfig = new StoreConfig (1 << 12)
+    implicit val storeConfig = StoreConfig (4, 1 << 12)
     val geometry = DiskGeometry (20, 13, 1<<30)
 
     implicit val random = new Random (0)

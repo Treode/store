@@ -3,7 +3,7 @@ package com.treode.store.locks
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.WordSpec
 
-import com.treode.store.{Bytes,TxClock}
+import com.treode.store.{Bytes, StoreConfig, TxClock}
 import com.treode.pickle.Picklers
 
 class LockSpec extends WordSpec with MockFactory {
@@ -138,7 +138,8 @@ class LockSpec extends WordSpec with MockFactory {
     val Orange = "orange"
 
     "acquire all locks before proceeding" in {
-      val locks = new LockSpace (8)
+      implicit val config = StoreConfig (8, 1<<16)
+      val locks = new LockSpace
       var w1: LockSet = null
       locks.write (1, Apple, Banana) (w1 = _)
       assert (w1 != null)

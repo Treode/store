@@ -61,7 +61,7 @@ class TierSpec extends WordSpec {
   /** Build a tier from fruit. */
   private def buildTier (pageBytes: Int) (
       implicit scheduler: StubScheduler, disks: Disks): Tier = {
-    implicit val config = StoreConfig (pageBytes)
+    implicit val config = StoreConfig (4, pageBytes)
     val builder = new TierBuilder (descriptor, 0)
     AllFruits.async.foreach (builder.add (_, Some (One))) .pass
     builder.result.pass
@@ -93,7 +93,7 @@ class TierSpec extends WordSpec {
 
     "require that added entries are not duplicated" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = StoreConfig (1 << 16)
+      implicit val config = StoreConfig (4, 1 << 16)
       val builder = new TierBuilder (descriptor, 0)
       builder.add (Apple, None) .pass
       builder.add (Apple, None) .fail [IllegalArgumentException]
@@ -101,7 +101,7 @@ class TierSpec extends WordSpec {
 
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = StoreConfig (1 << 16)
+      implicit val config = StoreConfig (4, 1 << 16)
       val builder = new TierBuilder (descriptor, 0)
       builder.add (Orange, None) .pass
       builder.add (Apple, None) .fail [IllegalArgumentException]
@@ -109,7 +109,7 @@ class TierSpec extends WordSpec {
 
     "require that added entries are reverse sorted by time" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = StoreConfig (1 << 16)
+      implicit val config = StoreConfig (4, 1 << 16)
       val builder = new TierBuilder (descriptor, 0)
       builder.add (Apple, None) .pass
       builder.add (Apple, None) .fail [IllegalArgumentException]
@@ -117,7 +117,7 @@ class TierSpec extends WordSpec {
 
     "allow properly sorted entries" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = StoreConfig (1 << 16)
+      implicit val config = StoreConfig (4, 1 << 16)
       val builder = new TierBuilder (descriptor, 0)
       builder.add (Apple, None) .pass
       builder.add (Orange, None) .pass

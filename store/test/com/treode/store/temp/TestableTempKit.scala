@@ -5,7 +5,8 @@ import org.scalatest.Assertions
 
 import Assertions.expectResult
 
-private [store] class TestableTempKit (bits: Int) extends LocalKit (bits) with TestableLocalKit {
+private [store] class TestableTempKit (implicit config: StoreConfig)
+extends LocalKit with TestableLocalKit {
 
   private val timedTables = new TableCache [TestableTempTimedTable] {
     def make (id: TableId) = new TestableTempTimedTable
@@ -18,10 +19,4 @@ private [store] class TestableTempKit (bits: Int) extends LocalKit (bits) with T
     expectResult (cs) (timedTables.get (id) .toSeq)
 
   def close() = ()
-}
-
-private [store] object TestableTempKit {
-
-  def apply (bits: Int): TestableLocalStore =
-    new TestableTempKit (bits)
 }

@@ -17,7 +17,7 @@ extends StubActiveHost (id, network) {
 
   implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
   implicit val recovery = Disks.recover()
-  implicit val storeConfig = StoreConfig (1<<16)
+  implicit val storeConfig = StoreConfig (4, 1<<16)
   val _paxos = Paxos.recover() .capture()
   val file = new StubFile
   val geometry = DiskGeometry (10, 6, 1<<20)

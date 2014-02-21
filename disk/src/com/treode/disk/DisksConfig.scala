@@ -17,19 +17,6 @@ class DisksConfig private (
 
   def clean (segments: Int): Boolean =
     segments >= cleaningFrequency
-
-  override def hashCode: Int =
-    superBlockBits.hashCode
-
-  override def equals (other: Any): Boolean =
-    other match {
-      case that: DisksConfig =>
-        superBlockBits == that.superBlockBits
-      case _ =>
-        false
-    }
-
-  override def toString = s"DisksConfig($superBlockBits)"
 }
 
 object DisksConfig {
