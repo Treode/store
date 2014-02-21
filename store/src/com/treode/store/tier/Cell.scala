@@ -3,7 +3,7 @@ package com.treode.store.tier
 import java.util.{Map => JMap}
 import com.treode.store.{Bytes, StorePicklers}
 
-private class Cell (val key: Bytes, val value: Option [Bytes])
+class Cell (val key: Bytes, val value: Option [Bytes])
 extends Ordered [Cell] {
 
   def byteSize = Cell.pickler.byteSize (this)
@@ -21,7 +21,7 @@ extends Ordered [Cell] {
   override def toString = "Cell" + (key, value)
 }
 
-private object Cell extends Ordering [Cell] {
+object Cell extends Ordering [Cell] {
 
   def apply (key: Bytes, value: Option [Bytes]): Cell =
     new Cell (key, value)

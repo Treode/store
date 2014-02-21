@@ -8,7 +8,7 @@ import Async.async
 
 private case class Tier (gen: Long, root: Position) {
 
-  def read (desc: TierDescriptor [_, _], key: Bytes, cb: Callback [Option [Cell]]) (
+  private def ceiling (desc: TierDescriptor [_, _], key: Bytes, cb: Callback [Option [Cell]]) (
       implicit disks: Disks) {
 
     import desc.pager
@@ -18,7 +18,7 @@ private case class Tier (gen: Long, root: Position) {
       def pass (p: TierPage) {
         p match {
           case p: IndexPage =>
-            val i = p.find (key)
+            val i = p.ceiling (key)
             if (i == p.size) {
               cb.pass (None)
             } else {
@@ -26,16 +26,12 @@ private case class Tier (gen: Long, root: Position) {
               pager.read (e.pos) .run (this)
             }
           case p: CellPage =>
-            val i = p.find (key)
-            if (i == p.size) {
+            val i = p.ceiling (key)
+            if (i == p.size)
               cb.pass (None)
-            } else {
-              val e = p.get (i)
-              if (e.key == key)
-                cb.pass (Some (e))
-              else
-                cb.pass (None)
-            }}}
+            else
+              cb.pass (Some (p.get (i)))
+        }}
 
       def fail (t: Throwable) = cb.fail (t)
     }
@@ -43,8 +39,8 @@ private case class Tier (gen: Long, root: Position) {
     pager.read (root) .run (loop)
   }
 
-  def read (desc: TierDescriptor [_, _], key: Bytes) (implicit disks: Disks): Async [Option [Cell]] =
-    async (read (desc, key, _))
+  def ceiling (desc: TierDescriptor [_, _], key: Bytes) (implicit disks: Disks): Async [Option [Cell]] =
+    async (ceiling (desc, key, _))
 }
 
 private object Tier {

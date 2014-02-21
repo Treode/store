@@ -11,7 +11,7 @@ private class IndexPage (val entries: Array [IndexEntry]) extends TierPage {
   def get (i: Int): IndexEntry =
     entries (i)
 
-  def find (key: Bytes): Int = {
+  def ceiling (key: Bytes): Int = {
     val i = Arrays.binarySearch (entries, IndexEntry (key, 0, 0, 0), IndexEntry)
     if (i < 0) -i-1 else i
   }

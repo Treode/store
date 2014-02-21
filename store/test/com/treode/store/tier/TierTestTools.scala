@@ -19,6 +19,11 @@ private object TierTestTools extends AsyncTestTools {
 
   implicit class RichTable (table: TierTable) (implicit scheduler: StubScheduler) {
 
+    def ceiling (key: Int, limit: Int) (implicit scheduler: StubScheduler): (Int, Option [Int]) = {
+      val c = table.ceiling (Bytes (key), Bytes (limit)) .pass
+      (c.key.int, c.value.map (_.int))
+    }
+
     def get (key: Int) (implicit scheduler: StubScheduler): Option [Int] =
       table.get (Bytes (key)) .pass.map (_.int)
 
@@ -46,6 +51,12 @@ private object TierTestTools extends AsyncTestTools {
 
     def expectValue (key: Int, value: Int): Unit =
       expectResult (Some (value)) (get (key))
+
+    def expectCeiling (key: Int, limit: Int, found: Int, value: Int): Unit =
+      expectResult (found -> Some (value)) (ceiling (key, limit))
+
+    def expectNoCeiling (key: Int, limit: Int, found: Int): Unit =
+      expectResult (found -> None) (ceiling (key, limit))
 
     def expectValues (kvs: (Int, Int)*): Unit =
       expectResult (kvs.sorted) (toSeq)

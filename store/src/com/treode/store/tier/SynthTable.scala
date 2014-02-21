@@ -40,7 +40,7 @@ private class SynthTable [K, V] (
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
 
-  private def read (key: Bytes): Async [Option [Bytes]] = {
+  private def read (key: Bytes, limit: Bytes): Async [Cell] = {
 
     readLock.lock()
     val (primary, secondary, tiers) = try {
@@ -49,32 +49,35 @@ private class SynthTable [K, V] (
       readLock.unlock()
     }
 
-    var entry = primary.floorEntry (key)
-    if (entry != null && entry.getKey == key)
-      return supply (entry.getValue)
+    var entry = primary.ceilingEntry (key)
+    if (entry != null && entry.getKey <= limit)
+      return supply (Cell (entry.getKey, entry.getValue))
 
-    entry = secondary.floorEntry (key)
-    if (entry != null && entry.getKey == key)
-      return supply (entry.getValue)
+    entry = secondary.ceilingEntry (key)
+    if (entry != null && entry.getKey <= limit)
+      return supply (Cell (entry.getKey, entry.getValue))
 
     var cell = Option.empty [Cell]
     var i = 0
     for {
       _ <-
-        whilst (i < tiers.size && (cell.isEmpty || cell.get.key != key)) {
-          for (c <- tiers (i) .read (desc, key)) yield {
+        whilst (i < tiers.size && (cell.isEmpty || cell.get.key > limit)) {
+          for (c <- tiers (i) .ceiling (desc, key)) yield {
             cell = c
             i += 1
           }}
     } yield {
-      if (cell.isDefined && cell.get.key == key)
-        cell.get.value
+      if (cell.isDefined && cell.get.key <= limit)
+        Cell (cell.get.key, cell.get.value)
       else
-        None
+        Cell (limit, None)
     }}
 
+  def ceiling (key: Bytes, limit: Bytes): Async [Cell] =
+    read (key, limit)
+
   def get (key: Bytes): Async [Option [Bytes]] =
-    read (key)
+    read (key, key) .map (_.value)
 
   def put (key: Bytes, value: Bytes): Long = {
     readLock.lock()

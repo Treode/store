@@ -11,7 +11,7 @@ private class CellPage (val entries: Array [Cell]) extends TierPage {
   def get (i: Int): Cell =
     entries (i)
 
-  def find (key: Bytes): Int = {
+  def ceiling (key: Bytes): Int = {
     val i = Arrays.binarySearch (entries, Cell (key, None), Cell)
     if (i < 0) -i-1 else i
   }

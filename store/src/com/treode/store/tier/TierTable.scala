@@ -8,6 +8,8 @@ import Async.async
 
 trait TierTable {
 
+  def ceiling (key: Bytes, limit: Bytes): Async [Cell]
+
   def get (key: Bytes): Async [Option [Bytes]]
 
   def iterator: CellIterator

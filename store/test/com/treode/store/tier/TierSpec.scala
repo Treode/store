@@ -13,7 +13,7 @@ import org.scalatest.WordSpec
 import Async.async
 import AsyncConversions._
 import Cardinals.One
-import Fruits.{AllFruits, Apple, Orange, Watermelon}
+import Fruits._
 import TestTable.descriptor
 import TierTestTools._
 
@@ -173,16 +173,22 @@ class TierSpec extends WordSpec {
 
       def checkFind (pageBytes: Int) {
 
+        val AppleX = Bytes ("applex")
+        val OrangeX = Bytes ("orangex")
+        val WatermelonX = Bytes ("watermelonx")
+
         implicit val (scheduler, disks) = setup()
         val tier = buildTier (pageBytes)
 
-        def read (key: Bytes): Option [Bytes] =
-          tier.read (descriptor, key) .pass.flatMap (_.value)
+        def ceiling (key: Bytes): Option [Bytes] =
+          tier.ceiling (descriptor, key) .pass.map (_.key)
 
-        expectResult (Some (One)) (read (Apple))
-        expectResult (Some (One)) (read (Orange))
-        expectResult (Some (One)) (read (Watermelon))
-        expectResult (None) (read (One))
+        expectResult (Apple) (ceiling (Apple) .get)
+        expectResult (Apricot) (ceiling (AppleX) .get)
+        expectResult (Orange) (ceiling (Orange) .get)
+        expectResult (Papaya) (ceiling (OrangeX) .get)
+        expectResult (Watermelon) (ceiling (Watermelon). get)
+        expectResult (None) (ceiling (WatermelonX))
       }
 
       "the pages are limited to one byte" in {

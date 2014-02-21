@@ -38,7 +38,7 @@ class IndexPageSpec extends WordSpec {
       val page = newPage ()
 
       "find nothing" in {
-        expectResult (0) (page.find (Apple))
+        expectResult (0) (page.ceiling (Apple))
       }
 
       "pickle and unpickle to the same value" in {
@@ -50,15 +50,15 @@ class IndexPageSpec extends WordSpec {
       val page = newPage (entry (Kiwi))
 
       "find apple before kiwi" in {
-        expectResult (0) (page.find (Apple))
+        expectResult (0) (page.ceiling (Apple))
       }
 
       "find kiwi using kiwi" in {
-        expectResult (0) (page.find (Kiwi))
+        expectResult (0) (page.ceiling (Kiwi))
       }
 
       "find orange after kiwi" in {
-        expectResult (1) (page.find (Orange))
+        expectResult (1) (page.ceiling (Orange))
       }
 
       "pickle and unpickle to the same value" in {
@@ -73,23 +73,23 @@ class IndexPageSpec extends WordSpec {
           entry (Orange))
 
       "find apple using apple" in {
-        expectResult (0) (page.find (Apple))
+        expectResult (0) (page.ceiling (Apple))
       }
 
       "find kiwi using banana" in {
-        expectResult (1) (page.find (Banana))
+        expectResult (1) (page.ceiling (Banana))
       }
 
       "find kiwi using kiwi" in {
-        expectResult (1) (page.find (Kiwi))
+        expectResult (1) (page.ceiling (Kiwi))
       }
 
       "find orange using kumquat" in {
-        expectResult (2) (page.find (Kumquat))
+        expectResult (2) (page.ceiling (Kumquat))
       }
 
       "find orange using orange" in {
-        expectResult (2) (page.find (Orange))
+        expectResult (2) (page.ceiling (Orange))
       }
 
       "pickle and unpickle to the same value" in {
