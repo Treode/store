@@ -1,13 +1,9 @@
 package com.treode.store.paxos
 
-import scala.language.postfixOps
-
 import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
-import com.treode.cluster.misc.{BackoffTimer, RichInt}
-import com.treode.disk.{PageDescriptor, RecordDescriptor}
-import com.treode.store.{Bytes, StorePicklers}
-import com.treode.store.tier.TierDescriptor
+import com.treode.disk.RecordDescriptor
+import com.treode.store.Bytes
 
 import Callback.ignore
 
@@ -287,11 +283,6 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
 private object Acceptor {
 
-  val db = {
-    import PaxosPicklers._
-    TierDescriptor (0xDD683792, bytes, const (true))
-  }
-
   val query = {
     import PaxosPicklers._
     MessageDescriptor (0xFF14D4F00908FB59L, tuple (bytes, long, bytes))
@@ -305,11 +296,6 @@ private object Acceptor {
   val choose = {
     import PaxosPicklers._
     MessageDescriptor (0xFF761FFCDF5DEC8BL, tuple (bytes, bytes))
-  }
-
-  val statii = {
-    import PaxosPicklers._
-    PageDescriptor (0x7C71E2AF, const (0), seq (acceptorStatus))
   }
 
   val open = {

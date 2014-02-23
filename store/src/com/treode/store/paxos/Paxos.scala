@@ -26,5 +26,5 @@ object Paxos {
       recover: Disks.Recovery,
       config: StoreConfig
   ): Recovery =
-    Acceptors.attach (new RecoveryKit)
+    new RecoveryKit
 }

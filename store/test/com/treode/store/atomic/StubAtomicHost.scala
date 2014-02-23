@@ -24,7 +24,9 @@ extends StubActiveHost (id, network) {
   implicit val storeConfig = StoreConfig (8, 1<<16)
 
   implicit val recovery = Disks.recover()
+  implicit val store = new TestableTempKit
   val _paxos = Paxos.recover()
+  val _atomic = AtomicKit.recover()
 
   val file = new StubFile
   val geometry = DiskGeometry (10, 6, 1<<20)
@@ -34,19 +36,17 @@ extends StubActiveHost (id, network) {
     for {
       launch <- recovery.attach (files)
       paxos <- _paxos.launch (launch)
+      atomic <- _atomic.launch (launch, paxos)
     } yield {
       launch.launch()
-      (launch.disks, paxos)
+      (launch.disks, paxos, atomic)
     }
 
   val captor = _launch.capture()
   scheduler.runTasks()
   while (!captor.wasInvoked)
     Thread.sleep (10)
-  implicit val (disks, paxos) = captor.passed
-
-  implicit val store = new TestableTempKit
-  val atomic = new AtomicKit
+  implicit val (disks, paxos, atomic) = captor.passed
 
   def writeDeputy (xid: TxId) = atomic.WriteDeputies.get (xid)
 

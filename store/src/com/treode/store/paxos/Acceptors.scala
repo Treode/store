@@ -1,14 +1,13 @@
 package com.treode.store.paxos
 
-import com.treode.async.{Async, AsyncConversions, Scheduler}
-import com.treode.cluster.Cluster
+import com.treode.async.{Async, AsyncConversions}
 import com.treode.cluster.misc.materialize
-import com.treode.disk.{Disks, Position, RootDescriptor}
-import com.treode.store.{Bytes, StoreConfig}
-import com.treode.store.tier.{TierMedic, TierTable}
+import com.treode.disk.{PageDescriptor, Position, RootDescriptor}
+import com.treode.store.Bytes
+import com.treode.store.tier.{TierDescriptor, TierTable}
 
-import Acceptors.Root
-import Async.{async, guard}
+import Acceptors.{Root, statii}
+import Async.guard
 import AsyncConversions._
 
 private class Acceptors (val db: TierTable, kit: PaxosKit) {
@@ -42,7 +41,6 @@ private class Acceptors (val db: TierTable, kit: PaxosKit) {
 
   def checkpoint(): Async [Root] =
     guard {
-      import Acceptor.{Status, statii}
       val as = materialize (acceptors.values)
       for {
         ss <- as.latch.seq (_.checkpoint())
@@ -87,75 +85,12 @@ private object Acceptors {
     RootDescriptor (0xBFD4F3D3, Root.pickler)
   }
 
-  def attach (kit: RecoveryKit): Paxos.Recovery = {
-    import kit.{cluster, config, random, recovery, scheduler}
+  val statii = {
+    import PaxosPicklers._
+    PageDescriptor (0x7C71E2AF, const (0), seq (acceptorStatus))
+  }
 
-    val db = TierMedic (Acceptor.db)
-    val medics = newMedicsMap
-
-    def openByStatus (status: Status) {
-      val m1 = Medic (status, db, kit)
-      val m0 = medics.putIfAbsent (m1.key, m1)
-      require (m0 == null, "Already recovering paxos instance ${m1.key}.")
-    }
-
-    def openWithDefault (key: Bytes, default: Bytes) {
-      var m0 = medics.get (key)
-      if (m0 != null)
-        return
-      val m1 = Medic (key, default, db, kit)
-      m0 = medics.putIfAbsent (key, m1)
-      if (m0 != null)
-        return
-    }
-
-    def get (key: Bytes): Medic = {
-      val m = medics.get (key)
-      require (m != null, s"Exepcted to be recovering paxos instance $key.")
-      m
-    }
-
-    root.reload { root => implicit reloader =>
-      db.checkpoint (root.db)
-      for (ss <- statii.read (reloader, root.statii))
-        yield (ss foreach openByStatus)
-    }
-
-    open.replay { case (key, default) =>
-      openWithDefault (key, default)
-    }
-
-    promise.replay { case (key, ballot) =>
-      get (key) promised (ballot)
-    }
-
-    accept.replay { case (key, ballot, value) =>
-      get (key) accepted (ballot, value)
-    }
-
-    reaccept.replay { case (key, ballot) =>
-      get (key) reaccepted (ballot)
-    }
-
-    close.replay { case (key, chosen, gen) =>
-      get (key) closed (chosen, gen)
-    }
-
-    new Paxos.Recovery {
-
-      def launch (implicit launch: Disks.Launch): Async [Paxos] = {
-        import launch.disks
-
-        val kit = new PaxosKit (db.close())
-        import kit.{acceptors, proposers}
-
-        root.checkpoint (acceptors.checkpoint())
-
-        for {
-          _ <- acceptors.recover (materialize (medics.values))
-        } yield {
-          acceptors.attach()
-          proposers.attach()
-          kit
-        }}}
+  val db = {
+    import PaxosPicklers._
+    TierDescriptor (0xDD683792, bytes, const (true))
   }}

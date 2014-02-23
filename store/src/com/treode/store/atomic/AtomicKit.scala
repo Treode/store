@@ -5,14 +5,20 @@ import scala.util.Random
 
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.cluster.Cluster
+import com.treode.disk.Disks
 import com.treode.store._
 import com.treode.store.paxos.Paxos
 
 import Async.async
 import Callback.defer
 
-private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
-    val cluster: Cluster, val store: LocalStore, val paxos: Paxos) extends Store {
+private class AtomicKit (detector: Int) (implicit
+    val random: Random,
+    val scheduler: Scheduler,
+    val cluster: Cluster,
+    val store: LocalStore,
+    val paxos: Paxos
+) extends Store {
 
   object ReadDeputies {
 
@@ -75,4 +81,21 @@ private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
     async (write (xid, ct, ops, _))
 
   def close() = ()
+}
+
+private object AtomicKit {
+
+  trait Recovery {
+    def launch (implicit launch: Disks.Launch, paxos: Paxos): Async [AtomicKit]
+  }
+
+  def recover() (implicit
+      random: Random,
+      scheduler: Scheduler,
+      cluster: Cluster,
+      recover: Disks.Recovery,
+      store: LocalStore,
+      config: StoreConfig
+  ): Recovery =
+    new RecoveryKit
 }

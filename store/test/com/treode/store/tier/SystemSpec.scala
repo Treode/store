@@ -48,7 +48,7 @@ class SystemSpec extends FlatSpec {
 
       implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
       implicit val recovery = Disks.recover()
-      val _table = TestTable.recover()
+      val _table = new TestRecovery
       val files = Seq ((Paths.get ("a"), disk, geometry))
       val launch = recovery.attach (files) .pass
       _table.launch (launch) .pass
@@ -59,7 +59,7 @@ class SystemSpec extends FlatSpec {
 
     implicit val config = DisksConfig (14, 1<<24, 1<<16, 10, 1)
     implicit val recovery = Disks.recover()
-    val _table = TestTable.recover()
+    val _table = new TestRecovery
     val files = Seq ((Paths.get ("a"), disk))
     val launch = recovery.reattach (files) .pass
     _table.launch (launch) .pass
