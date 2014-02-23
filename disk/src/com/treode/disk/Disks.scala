@@ -23,6 +23,39 @@ trait Disks {
 
 object Disks {
 
+  trait Launch {
+
+    implicit def disks: Disks
+
+    def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P]
+
+    def checkpoint [B] (desc: RootDescriptor [B]) (f: => Async [B])
+
+    def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G])
+
+    def launch()
+  }
+
+  trait Reload {
+
+    def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P]
+  }
+
+  trait Recovery {
+
+    def reload [B] (desc: RootDescriptor [B]) (f: B => Reload => Async [Unit])
+
+    def replay [R] (desc: RecordDescriptor [R]) (f: R => Any)
+
+    def reattach (items: Seq [(Path, File)]): Async [Launch]
+
+    def reattach (items: Seq [Path], executor: ExecutorService): Async [Launch]
+
+    def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Launch]
+
+    def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Launch]
+  }
+
   def recover () (implicit scheduler: Scheduler, config: DisksConfig): Recovery =
     new RecoveryBuilder
 }

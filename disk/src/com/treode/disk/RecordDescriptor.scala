@@ -8,7 +8,7 @@ class RecordDescriptor [R] private (val id: TypeId, val prec: Pickler [R]) {
   def record (entry: R) (implicit disks: Disks): Async [Unit] =
     disks.record (this, entry)
 
-  def replay (f: R => Any) (implicit recovery: Recovery): Unit =
+  def replay (f: R => Any) (implicit recovery: Disks.Recovery): Unit =
     recovery.replay (this) (f)
 
   override def toString = s"RecordDescriptor($id)"

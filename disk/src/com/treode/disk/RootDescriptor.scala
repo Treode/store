@@ -5,10 +5,10 @@ import com.treode.pickle.Pickler
 
 class RootDescriptor [B] private (val id: TypeId, val pblk: Pickler [B]) {
 
-  def reload (f: B => Reload => Async [Unit]) (implicit recovery: Recovery): Unit =
+  def reload (f: B => Disks.Reload => Async [Unit]) (implicit recovery: Disks.Recovery): Unit =
     recovery.reload (this) (f)
 
-  def checkpoint (f: => Async [B]) (implicit launch: Launch): Unit =
+  def checkpoint (f: => Async [B]) (implicit launch: Disks.Launch): Unit =
     launch.checkpoint (this) (f)
 
   override def toString = s"RootDescriptor($id)"

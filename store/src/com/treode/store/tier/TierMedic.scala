@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.async.Scheduler
-import com.treode.disk.{Launch, Recovery, TypeId}
+import com.treode.disk.{Disks, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
 trait TierMedic {
@@ -12,12 +12,17 @@ trait TierMedic {
 
   def checkpoint (meta: TierTable.Meta)
 
-  def close () (implicit launcher: Launch): TierTable
+  def close () (implicit launch: Disks.Launch): TierTable
 }
 
 object TierMedic {
 
-  def apply [K, V] (desc: TierDescriptor [K, V]) (
-      implicit scheduler: Scheduler, recovery: Recovery, config: StoreConfig): TierMedic =
+  def apply [K, V] (
+      desc: TierDescriptor [K, V]
+  ) (implicit
+      scheduler: Scheduler,
+      recovery: Disks.Recovery,
+      config: StoreConfig
+  ): TierMedic =
     new SynthMedic (desc)
 }

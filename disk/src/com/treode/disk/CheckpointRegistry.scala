@@ -17,10 +17,9 @@ private class CheckpointRegistry (implicit disks: DiskDrives) {
   private val checkpoints = new ArrayList [Unit => Async [Tag]]
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: => Async [B]): Unit =
-    synchronized {
-      checkpoints.add {
-        _ => f map (tag (desc.pblk, desc.id.id, _))
-      }}
+    checkpoints.add {
+      _ => f map (tag (desc.pblk, desc.id.id, _))
+    }
 
   def checkpoint (rootgen: Int): Async [Position] =
     guard {

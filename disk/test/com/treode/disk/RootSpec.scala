@@ -22,13 +22,10 @@ class RootSpec extends FlatSpec {
 
     {
       implicit val recovery = Disks.recover()
-      recovery.launch { implicit launcher =>
-        root.checkpoint (supply ("one"))
-        supply (())
-      }
-      implicit val disks = recovery.attachAndLaunch (("a", disk1, geometry))
+      implicit val (launch, disks) = recovery.attach (("a", disk1, geometry))
+      root.checkpoint (supply ("one"))
+      launch.launch()
       scheduler.runTasks()
-      disks.assertLaunched()
       disks.checkpointer.checkpoint()
       scheduler.runTasks()
       assert (!disks.checkpointer.engaged)

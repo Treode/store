@@ -240,7 +240,7 @@ trait StoreBehaviors {
       object Accounts extends Accessor (1, Picklers.fixedInt, Picklers.fixedInt)
 
       val threads = 8
-      val transfers = 1000
+      val transfers = 100
       val opening = 1000
 
       val executor = Executors.newScheduledThreadPool (threads)

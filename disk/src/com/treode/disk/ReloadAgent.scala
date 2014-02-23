@@ -8,11 +8,11 @@ import AsyncConversions._
 
 private class ReloadAgent (
     files: Map [Int, File],
-    roots: Seq [Reload => Async [Unit]],
+    roots: Seq [Disks.Reload => Async [Unit]],
     cb: Callback [Unit]
 ) (implicit
     scheduler: Scheduler
-) extends Reload {
+) extends Disks.Reload {
 
   def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
     guard {

@@ -9,14 +9,14 @@ import AsyncConversions._
 import Callback.continue
 import JavaConversions._
 
-private class LaunchAgent (
-    drives: DiskDrives,
-    launches: ArrayList [Launch => Async [Unit]],
-    cb: Callback [Disks]) (
-        implicit scheduler: Scheduler) extends Launch {
+private class LaunchAgent (drives: DiskDrives) extends Disks.Launch {
 
   val roots = new CheckpointRegistry () (drives)
   val pages = new PageRegistry (drives)
+  private var open = true
+
+  def requireOpen(): Unit =
+    require (open, "Disks have already launched.")
 
   def disks: Disks = drives
 
@@ -24,16 +24,20 @@ private class LaunchAgent (
     drives.fetch (desc, pos)
 
   def checkpoint [B] (desc: RootDescriptor [B]) (f: => Async [B]): Unit =
-    roots.checkpoint (desc) (f)
+    synchronized {
+      requireOpen()
+      roots.checkpoint (desc) (f)
+    }
 
   def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]): Unit =
-    pages.handle (desc, handler)
+    synchronized {
+      requireOpen()
+      pages.handle (desc, handler)
+    }
 
-  val task = for {
-    _ <- launches.latch.unit (_ (this))
-  } yield {
-    drives.launch (roots, pages)
-    scheduler.pass (cb, drives)
-  }
-  task defer cb
-}
+  def launch(): Unit =
+    synchronized {
+      requireOpen()
+      open = false
+      drives.launch (roots, pages)
+    }}

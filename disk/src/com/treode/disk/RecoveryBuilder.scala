@@ -8,18 +8,19 @@ import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.io.File
 
 import Async.async
+import Disks.Launch
 
-private class RecoveryBuilder (implicit scheduler: Scheduler, config: DisksConfig) extends Recovery {
+private class RecoveryBuilder (implicit scheduler: Scheduler, config: DisksConfig)
+extends Disks.Recovery {
 
   private val records = new RecordRegistry
   private val loaders = new ReloadRegistry
-  private val launches = new ArrayList [Launch => Async [Unit]]
   private var open = true
 
   def requireOpen(): Unit =
     require (open, "Recovery has already begun.")
 
-  def reload [B] (desc: RootDescriptor [B]) (f: B => Reload => Async [Unit]) {
+  def reload [B] (desc: RootDescriptor [B]) (f: B => Disks.Reload => Async [Unit]) {
     requireOpen()
     loaders.reload (desc) (f)
   }
@@ -29,25 +30,20 @@ private class RecoveryBuilder (implicit scheduler: Scheduler, config: DisksConfi
     records.replay (desc) (f)
   }
 
-  def launch (f: Launch => Async [Unit]): Unit = synchronized {
-    requireOpen()
-    launches.add (f)
-  }
-
-  def close (cb: Callback [Disks]): RecoveryAgent = {
+  def close (cb: Callback [Launch]): RecoveryAgent = {
     open = false
-    new RecoveryAgent (records, loaders, launches, cb)
+    new RecoveryAgent (records, loaders, cb)
   }
 
-  def reattach (items: Seq [(Path, File)]): Async [Disks] =
+  def reattach (items: Seq [(Path, File)]): Async [Launch] =
     async (close (_) .reattach (items))
 
-  def reattach (items: Seq [Path], exec: ExecutorService): Async [Disks] =
+  def reattach (items: Seq [Path], exec: ExecutorService): Async [Launch] =
     async (close (_) .reattach (items, exec))
 
-  def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Disks] =
+  def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Launch] =
     async (close (_) .attach (items))
 
-  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Disks] =
+  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Launch] =
     async (close (_) .attach (items, exec))
 }

@@ -11,21 +11,20 @@ import com.treode.buffer.PagedBuffer
 
 import Async.{async, supply}
 import AsyncConversions._
-import Callback.defer
+import Callback.{defer, invoke}
 
 private class RecoveryAgent (
     records: RecordRegistry,
     loaders: ReloadRegistry,
-    launches: ArrayList [Launch => Async [Unit]],
-    val cb: Callback [Disks]
+    val cb: Callback [Disks.Launch]
 ) (implicit
     val scheduler: Scheduler,
     val config: DisksConfig
 ) {
 
   def launch (disks: DiskDrives): Unit =
-    defer (cb) {
-      new LaunchAgent (disks, launches, cb)
+    invoke (cb) {
+      new LaunchAgent (disks)
     }
 
   def attach (items: Seq [(Path, File, DiskGeometry)]): Unit =
@@ -91,7 +90,7 @@ private class RecoveryAgent (
       val task = for {
         roots <-
             if (rootpos.length == 0)
-              supply (Seq.empty [Reload => Async [Unit]])
+              supply (Seq.empty [Disks.Reload => Async [Unit]])
             else
               DiskDrive.read (files (rootpos.disk), loaders.pager, rootpos)
         _ <- async [Unit] (new ReloadAgent (files, roots, _))

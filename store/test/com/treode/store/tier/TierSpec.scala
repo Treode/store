@@ -19,15 +19,16 @@ import TierTestTools._
 
 class TierSpec extends WordSpec {
 
-  private def setup() = {
+  private def setup(): (StubScheduler, Disks) = {
     implicit val scheduler = StubScheduler.random()
     implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
     implicit val recovery = Disks.recover()
     val file = new StubFile
     val geometry = DiskGeometry (20, 12, 1<<30)
     val item = (Paths.get ("a"), file, geometry)
-    val disks = recovery.attach (Seq (item)) .pass
-    (scheduler, disks)
+    val launch = recovery.attach (Seq (item)) .pass
+    launch.launch()
+    (scheduler, launch.disks)
   }
 
   /** Get the depths of ValueBlocks reached from the index entries. */

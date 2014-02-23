@@ -31,6 +31,21 @@ object Callback {
     def failed (t: Throwable, cb: Callback [Unit]) = cb.fail (t)
   }
 
+  def callback [A, B] (cb: Callback [B]) (f: A => B): Callback [A] =
+    new Callback [A] {
+      def pass (va: A) {
+        val vb = try {
+          f (va)
+        } catch {
+          case t: Throwable =>
+            cb.fail (t)
+            return
+        }
+        cb.pass (vb)
+      }
+      def fail (t: Throwable): Unit = cb.fail (t)
+    }
+
   def continue [A] (cb: Callback [_]) (f: A => Any): Callback [A] =
     new Callback [A] {
       def pass (v: A) {
@@ -42,12 +57,23 @@ object Callback {
       def fail (t: Throwable): Unit = cb.fail (t)
     }
 
-  def defer [A] (cb: Callback [A]) (f: => Any): Unit =
+  def defer (cb: Callback [_]) (f: => Any): Unit =
     try {
       f
     } catch {
       case t: Throwable => cb.fail (t)
     }
+
+  def invoke [A] (cb: Callback [A]) (f: => A) {
+    val v = try {
+      f
+    } catch {
+      case t: Throwable =>
+        cb.fail (t)
+        return
+    }
+    cb.pass (v)
+  }
 
   def fanout [A] (cbs: Traversable [Callback [A]], scheduler: Scheduler): Callback [A] =
     new Callback [A] {

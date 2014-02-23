@@ -5,30 +5,44 @@ import java.nio.file.Paths
 import com.treode.async.{Async, AsyncTestTools, StubScheduler}
 import com.treode.async.io.File
 
+import Disks.Launch
+
 private object DiskTestTools extends AsyncTestTools {
 
-  implicit class RichRecovery (recovery: Recovery) (implicit scheduler: StubScheduler) {
+  implicit class RichRecovery (recovery: Disks.Recovery) (implicit scheduler: StubScheduler) {
 
     type AttachItem = (String, File, DiskGeometry)
 
-    private def _attach (items: Seq [AttachItem]): Async [DiskDrives] = {
+    private def _attach (items: Seq [AttachItem]): Async [Launch] = {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
-      recovery.attach (_items) .map (_.asInstanceOf [DiskDrives])
+      recovery.attach (_items)
     }
 
     def attachAndLaunch (items: (String, File, DiskGeometry)*): DiskDrives = {
-      val disks = _attach (items) .pass
+      val launch = _attach (items) .pass
+      launch.launch()
+      scheduler.runTasks()
+      val disks = launch.disks.asInstanceOf [DiskDrives]
       disks.assertLaunched()
       disks
     }
 
-    private def _reattach (items: Seq [(String, File)]): Async [DiskDrives] = {
+    def attach (item: (String, File, DiskGeometry)): (Launch, DiskDrives) = {
+      val launch = _attach (Seq (item)) .pass
+      val disks = launch.disks.asInstanceOf [DiskDrives]
+      (launch, disks)
+    }
+
+    private def _reattach (items: Seq [(String, File)]): Async [Launch] = {
       val _items = items map (v => (Paths.get (v._1), v._2))
-      recovery.reattach (_items) .map (_.asInstanceOf [DiskDrives])
+      recovery.reattach (_items)
     }
 
     def reattachAndLaunch (items: (String, File)*): DiskDrives = {
-      val disks = _reattach (items) .pass
+      val launch = _reattach (items) .pass
+      launch.launch()
+      scheduler.runTasks()
+      val disks = launch.disks.asInstanceOf [DiskDrives]
       disks.assertLaunched()
       disks
     }}

@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncTestTools, Callback}
+import com.treode.async.{Async, AsyncTestTools, Callback, CallbackCaptor}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
@@ -21,17 +21,29 @@ extends StubActiveHost (id, network) {
   implicit val cluster: Cluster = this
 
   implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
-  implicit val recovery = Disks.recover()
   implicit val storeConfig = StoreConfig (8, 1<<16)
-  val _paxos = Paxos.recover() .capture()
+
+  implicit val recovery = Disks.recover()
+  val _paxos = Paxos.recover()
+
   val file = new StubFile
   val geometry = DiskGeometry (10, 6, 1<<20)
-  recovery.attach (Seq ((Paths.get ("a"), file, geometry))) .run (ignore)
-  scheduler.runTasks()
-  while (!(_paxos.hasPassed || _paxos.hasFailed))
-    Thread.sleep (1)
+  val files = Seq ((Paths.get ("a"), file, geometry))
 
-  implicit val paxos = _paxos.passed
+  val _launch =
+    for {
+      launch <- recovery.attach (files)
+      paxos <- _paxos.launch (launch)
+    } yield {
+      launch.launch()
+      (launch.disks, paxos)
+    }
+
+  val captor = _launch.capture()
+  scheduler.runTasks()
+  while (!captor.wasInvoked)
+    Thread.sleep (10)
+  implicit val (disks, paxos) = captor.passed
 
   implicit val store = new TestableTempKit
   val atomic = new AtomicKit

@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
-import com.treode.disk.{Disks, RecordDescriptor, Recovery, RootDescriptor}
+import com.treode.disk.{Disks, RecordDescriptor, RootDescriptor}
 import com.treode.store.{Bytes, StoreConfig, StorePicklers}
 
 import Async.{async, supply}
@@ -18,6 +18,10 @@ private trait TestTable {
 }
 
 private object TestTable {
+
+  trait Recovery {
+    def launch (implicit launch: Disks.Launch): Async [TestTable]
+  }
 
   val descriptor = {
     import StorePicklers._
@@ -44,9 +48,7 @@ private object TestTable {
     RecordDescriptor (0xA67C3DD1, tierMeta)
   }
 
-  def recover() (implicit scheduler: Scheduler, recovery: Recovery, config: StoreConfig):
-      Async [TestTable] =
-    async { cb =>
+  def recover() (implicit scheduler: Scheduler, recovery: Disks.Recovery, config: StoreConfig): Recovery = {
 
       val medic = TierMedic (descriptor)
 
@@ -63,11 +65,12 @@ private object TestTable {
         medic.delete (gen, Bytes (key))
       }
 
-      recovery.launch { implicit launch =>
-        import launch.disks
-        val table = medic.close()
-        root.checkpoint (table.checkpoint())
-        //pager.handle (table)
-        cb.pass (new LoggedTable (table))
-        supply (())
-      }}}
+      new Recovery {
+
+        def launch (implicit launch: Disks.Launch): Async [TestTable] = {
+          import launch.disks
+          val table = medic.close()
+          root.checkpoint (table.checkpoint())
+          //pager.handle (table)
+          supply (new LoggedTable (table))
+        }}}}

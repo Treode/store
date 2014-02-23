@@ -10,13 +10,13 @@ class PageDescriptor [G, P] private (
     val ppag: Pickler [P]) (
         implicit val tpag: ClassTag [P]) {
 
-  def read (reload: Reload, pos: Position): Async [P] =
+  def read (reload: Disks.Reload, pos: Position): Async [P] =
     reload.read (this, pos)
 
-  def read (launch: Launch, pos: Position): Async [P] =
+  def read (launch: Disks.Launch, pos: Position): Async [P] =
     launch.read (this, pos)
 
-  def handle (handler: PageHandler [G]) (implicit launch: Launch): Unit =
+  def handle (handler: PageHandler [G]) (implicit launch: Disks.Launch): Unit =
     launch.handle (this, handler)
 
   def read (pos: Position) (implicit disks: Disks): Async [P] =

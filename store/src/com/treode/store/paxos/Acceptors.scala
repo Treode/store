@@ -87,7 +87,7 @@ private object Acceptors {
     RootDescriptor (0xBFD4F3D3, Root.pickler)
   }
 
-  def attach (kit: PaxosRecovery): Async [Paxos] = async { cb =>
+  def attach (kit: RecoveryKit): Paxos.Recovery = {
     import kit.{cluster, config, random, recovery, scheduler}
 
     val db = TierMedic (Acceptor.db)
@@ -141,18 +141,21 @@ private object Acceptors {
       get (key) closed (chosen, gen)
     }
 
-    recovery.launch { implicit launcher =>
-      import launcher.disks
+    new Paxos.Recovery {
 
-      val kit = new PaxosKit (db.close())
-      import kit.{acceptors, proposers}
+      def launch (implicit launch: Disks.Launch): Async [Paxos] = {
+        import launch.disks
 
-      root.checkpoint (acceptors.checkpoint())
+        val kit = new PaxosKit (db.close())
+        import kit.{acceptors, proposers}
 
-      for {
-        _ <- acceptors.recover (materialize (medics.values))
-      } yield {
-        acceptors.attach()
-        proposers.attach()
-        cb.pass (kit)
-      }}}}
+        root.checkpoint (acceptors.checkpoint())
+
+        for {
+          _ <- acceptors.recover (materialize (medics.values))
+        } yield {
+          acceptors.attach()
+          proposers.attach()
+          kit
+        }}}
+  }}

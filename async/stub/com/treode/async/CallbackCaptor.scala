@@ -29,6 +29,9 @@ class CallbackCaptor [T] protected extends Callback [T] {
     _t = t
   }
 
+  def wasInvoked: Boolean =
+    _invokation != null
+
   def hasPassed: Boolean =
     _v != null
 

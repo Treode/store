@@ -13,7 +13,7 @@ private class Medic (
     var proposal: Proposal,
     var chosen: Option [Bytes],
     db: TierMedic,
-    kit: PaxosRecovery) {
+    kit: RecoveryKit) {
 
   import kit.scheduler
 
@@ -56,7 +56,7 @@ private class Medic (
 
 private object Medic {
 
-  def apply (status: Status, db: TierMedic, kit: PaxosRecovery): Medic = {
+  def apply (status: Status, db: TierMedic, kit: RecoveryKit): Medic = {
     status match {
       case Status.Restoring (key, default) =>
         new Medic (key, default, BallotNumber.zero, Option.empty, None, db, kit)
@@ -66,6 +66,6 @@ private object Medic {
         new Medic (key, chosen, BallotNumber.zero, Option.empty, Some (chosen), db, kit)
     }}
 
-  def apply (key: Bytes, default: Bytes, db: TierMedic, kit: PaxosRecovery): Medic =
+  def apply (key: Bytes, default: Bytes, db: TierMedic, kit: RecoveryKit): Medic =
     new Medic (key, default, BallotNumber.zero, Option.empty, None, db, kit)
 }
