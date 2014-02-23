@@ -1,14 +1,16 @@
 package com.treode.store.atomic
 
 import java.util.concurrent.TimeoutException
+import scala.util.Random
 
-import com.treode.async.CallbackCaptor
+import com.treode.async.{AsyncTestTools, CallbackCaptor}
 import com.treode.cluster.StubNetwork
 import com.treode.store._
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, PropSpec, Specs}
 import org.scalatest.prop.PropertyChecks
 
+import AsyncTestTools._
 import Cardinals.{One, Two}
 import WriteOp._
 import TimedTestTools._
@@ -40,23 +42,23 @@ object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors
     val xid = TxId (Bytes (random.nextLong))
     val t = TableId (random.nextLong)
     val k = Bytes (random.nextLong)
-    val cb = new WriteCaptor
 
     "commit a write" in {
-      write (xid, TxClock.zero, Seq (Create (t, k, One)), cb)
-      kit.runTasks()
-      cb.passed
-    }
-
-    "leave deputies closed and tables consistent" in {
-      val ts = cb.passed
+      val ts =
+        write (xid, TxClock.zero, Seq (Create (t, k, One)))
+            .pass.asInstanceOf [WriteResult.Written] .vt
       val ds = hs map (_.writeDeputy (k))
       hs foreach (_.expectCells (t) (k##ts::One))
     }}
 
   "The AtomicKit should" - {
 
-    behave like aStore (new TestableCluster (hs, kit))
+    behave like aStore { scheduler =>
+      val kit = StubNetwork (new Random (0), scheduler)
+      val hs = kit.install (3, new StubAtomicHost (_, kit))
+      kit.runTasks()
+      new TestableCluster (hs, kit)
+    }
 
     val threaded = {
       val kit = StubNetwork (0, true)
@@ -71,6 +73,19 @@ object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTool
 
   val seeds = Gen.choose (0L, Long.MaxValue)
 
+  implicit class RichWriteResult (cb: CallbackCaptor [WriteResult]) {
+    import WriteResult._
+
+    def hasWritten: Boolean =
+      cb.hasPassed && cb.passed.isInstanceOf [Written]
+
+    def written: TxClock =
+      cb.passed.asInstanceOf [Written] .vt
+
+    def hasCollided: Boolean =
+      cb.hasPassed && cb.passed.isInstanceOf [Collided]
+  }
+
   def checkConsensus (seed: Long, mf: Double) {
     val kit = StubNetwork (seed)
     val hs = kit.install (3, new StubAtomicHost (_, kit))
@@ -84,23 +99,21 @@ object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTool
     val xid2 = TxId (Bytes (random.nextLong))
     val t = TableId (random.nextLong)
     val k = Bytes (random.nextLong)
-    val cb1 = new WriteCaptor
-    val cb2 = new WriteCaptor
 
     // Write two values simultaneously.
-    h1.write (xid1, TxClock.zero, Seq (Create (t, k, One)), cb1)
-    h2.write (xid2, TxClock.zero, Seq (Create (t, k, Two)), cb2)
+    val cb1 = h1.write (xid1, TxClock.zero, Seq (Create (t, k, One))) .capture()
+    val cb2 = h2.write (xid2, TxClock.zero, Seq (Create (t, k, Two))) .capture()
     kit.messageFlakiness = mf
     scheduler.runTasks (true)
 
-    // One write might pass and the other collide or timeout, or both might timeout.
-    if (cb1.hasPassed) {
+    // One host might write and the other collide or timeout, or both might timeout.
+    if (cb1.hasWritten) {
       assert (cb2.hasCollided || cb2.hasTimedOut)
-      val ts = cb1.passed
+      val ts = cb1.written
       hs foreach (_.expectCells (t) (k##ts::One))
-    } else if (cb2.hasPassed) {
+    } else if (cb2.hasWritten) {
       assert (cb1.hasCollided || cb1.hasTimedOut)
-      val ts = cb2.passed
+      val ts = cb2.written
       hs foreach (_.expectCells (t) (k##ts::Two))
     } else {
       assert (cb1.hasCollided || cb1.hasTimedOut)

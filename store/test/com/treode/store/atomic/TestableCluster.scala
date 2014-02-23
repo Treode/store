@@ -1,5 +1,6 @@
 package com.treode.store.atomic
 
+import com.treode.async.Async
 import com.treode.cluster.StubNetwork
 import com.treode.store._
 
@@ -10,14 +11,12 @@ extends TestableStore {
   private def randomHost: StubAtomicHost =
     hosts (random.nextInt (hosts.size))
 
-  def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
-    randomHost.read (rt, ops, cb)
+  def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
+    randomHost.read (rt, ops)
 
-  def write (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
-    randomHost.write (TxId (random.nextLong), ct, ops, cb)
+  def write (ct: TxClock, ops: WriteOp*): Async [WriteResult] =
+    randomHost.write (TxId (random.nextLong), ct, ops)
 
   def expectCells (t: TableId) (expected: TimedCell*): Unit =
     hosts foreach (_.expectCells (t) (expected: _*))
-
-  def runTasks() = network.runTasks()
 }

@@ -3,11 +3,12 @@ package com.treode.store.atomic
 import java.util.concurrent.ConcurrentHashMap
 import scala.util.Random
 
-import com.treode.async.{Callback, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.store._
 import com.treode.store.paxos.Paxos
 
+import Async.async
 import Callback.defer
 
 private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
@@ -52,15 +53,26 @@ private class AtomicKit (implicit val random: Random, val scheduler: Scheduler,
   ReadDeputies
   WriteDeputies
 
-  def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
+  private def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
     defer (cb) {
       new ReadDirector (rt, ops, this, cb)
     }
 
-  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
+  def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] =
+    async { cb =>
+      read (rt, ops, new ReadCallback {
+        def pass (vs: Seq [Value]) = cb.pass (vs)
+        def fail (t: Throwable) = cb.fail (t)
+      })
+    }
+
+  private def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: Callback [WriteResult]): Unit =
     defer (cb) {
       new WriteDirector (xid, ct, ops, this) .open (cb)
     }
+
+  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult] =
+    async (write (xid, ct, ops, _))
 
   def close() = ()
 }

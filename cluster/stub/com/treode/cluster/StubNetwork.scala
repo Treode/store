@@ -51,15 +51,18 @@ class StubNetwork (implicit val random: Random, val scheduler: StubScheduler) {
 
 object StubNetwork {
 
+  def apply (random: Random, scheduler: StubScheduler): StubNetwork =
+    new StubNetwork () (random, scheduler)
+
   def apply (seed: Long = 0, multithreaded: Boolean = false): StubNetwork = {
 
-    implicit val random = new Random (seed)
+    val random = new Random (seed)
 
-    implicit val scheduler =
+    val scheduler =
       if (multithreaded)
         StubScheduler.multithreaded (Executors.newScheduledThreadPool (8))
       else
         StubScheduler.random (random)
 
-    new StubNetwork
+    new StubNetwork () (random, scheduler)
   }}

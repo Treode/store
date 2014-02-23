@@ -5,10 +5,13 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.language.postfixOps
 import scala.util.Random
 
-import com.treode.async.{Callback, Scheduler}
+import com.treode.async._
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
+import Async.{async, whilst}
+import AsyncConversions._
+import AsyncTestTools._
 import Cardinals.{One, Two}
 import Fruits.Apple
 import TimedTestTools._
@@ -17,180 +20,217 @@ import WriteOp._
 trait StoreBehaviors {
   this: FreeSpec =>
 
-  def aStore (s: TestableStore) {
+  def expectSeq [A] (expected: A*) (actual: Async [Seq [A]]) (implicit s: StubScheduler): Unit =
+    expectPass (expected) (actual)
+
+  def aStore (newStore: StubScheduler => TestableStore) {
 
     "behave like a Store; when" - {
 
       "the table is empty" - {
 
+        def setup() (implicit scheduler: StubScheduler) = {
+          val s = newStore (scheduler)
+          val t = nextTable
+          (s, t)
+        }
+
         "reading shoud" - {
 
           "find 0::None for Apple##1" in {
-            val t = nextTable
-            s.readAndExpect (1, Get (t, Apple)) (0::None)
+            implicit val scheduler = StubScheduler.random()
+            val (s, t) = setup()
+            expectSeq (0::None) (s.read (1, Get (t, Apple)))
           }}
 
         "writing should" - {
 
           "allow create Apple::One at ts=0" in {
-            val t = nextTable
-            val ts = s.writeExpectPass (0, Create (t, Apple, One))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t) = setup()
+            val ts = s.write (0, Create (t, Apple, One)) .expectWritten
             s.expectCells (t) (Apple##ts::One)
           }
 
           "allow hold Apple at ts=0" in {
-            val t = nextTable
-            s.writeExpectPass (0, Hold (t, Apple))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t) = setup()
+            s.write (0, Hold (t, Apple)) .expectWritten
             s.expectCells (t) ()
           }
 
           "allow update Apple::One at ts=0" in {
-            val t = nextTable
-            val ts = s.writeExpectPass (0, Update (t, Apple, One))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t) = setup()
+            val ts = s.write (0, Update (t, Apple, One)) .expectWritten
             s.expectCells (t) (Apple##ts::One)
           }
 
           "allow delete Apple at ts=0" in {
-            val t = nextTable
-            val ts = s.writeExpectPass (0, Delete (t, Apple))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t) = setup()
+            val ts = s.write (0, Delete (t, Apple)) .expectWritten
             s.expectCells (t) (Apple##ts)
           }}}
 
       "the table has Apple##ts::One" - {
 
-        def newTableWithData = {
+        def setup() (implicit scheduler: StubScheduler) = {
+          val s = newStore (scheduler)
           val t = nextTable
-          val ts = s.writeExpectPass (0, Create (t, Apple, One))
-          (t, ts)
+          val ts = s.write (0, Create (t, Apple, One)) .expectWritten
+          (s, t, ts)
         }
 
         "reading should" -  {
 
           "find ts::One for Apple##ts+1" in {
-            val (t, ts) = newTableWithData
-            s.readAndExpect (ts+1, Get (t, Apple)) (ts::One)
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts) = setup()
+            expectSeq (ts::One) (s.read (ts+1, Get (t, Apple)))
           }
 
           "find ts::One for Apple##ts" in {
-            val (t, ts) = newTableWithData
-            s.readAndExpect (ts, Get (t, Apple)) (ts::One)
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts) = setup()
+            expectSeq (ts::One) (s.read (ts, Get (t, Apple)))
           }
 
           "find 0::None for Apple##ts-1" in {
-            val (t, ts) = newTableWithData
-            s.readAndExpect (ts-1, Get (t, Apple)) (0::None)
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts) = setup()
+            expectSeq (0::None) (s.read (ts-1, Get (t, Apple)))
           }}
 
         "writing should" - {
 
           "reject create Apple##ts-1" in {
-            val (t, ts) = newTableWithData
-            s.writeExpectCollisions (ts-1, Create (t, Apple, One)) (0)
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts) = setup()
+            s.write (ts-1, Create (t, Apple, One)) .expectCollided (0)
           }
 
           "reject hold Apple##ts-1" in {
-            val (t, ts) = newTableWithData
-            s.writeExpectAdvance (ts-1, Hold (t, Apple))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts) = setup()
+            s.write (ts-1, Hold (t, Apple)) .expectStale
           }
 
           "reject update Apple##ts-1" in {
-            val (t, ts) = newTableWithData
-            s.writeExpectAdvance (ts-1, Update (t, Apple, One))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts) = setup()
+            s.write (ts-1, Update (t, Apple, One)) .expectStale
           }
 
           "reject delete Apple##ts-1" in {
-            val (t, ts) = newTableWithData
-            s.writeExpectAdvance (ts-1, Delete (t, Apple))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts) = setup()
+            s.write (ts-1, Delete (t, Apple)) .expectStale
           }
 
           "allow hold Apple at ts+1" in {
-            val (t, ts) = newTableWithData
-            s.writeExpectPass (ts+1, Hold (t, Apple))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts) = setup()
+            s.write (ts+1, Hold (t, Apple)) .expectWritten
             s.expectCells (t) (Apple##ts::One)
           }
 
           "allow hold Apple at ts" in {
-            val (t, ts) = newTableWithData
-            s.writeExpectPass (ts, Hold (t, Apple))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts) = setup()
+            s.write (ts, Hold (t, Apple)) .expectWritten
             s.expectCells (t) (Apple##ts::One)
           }
 
           "allow update Apple::Two at ts+1" taggedAs (com.treode.store.LargeTest) in {
-            val (t, ts1) = newTableWithData
-            val ts2 = s.writeExpectPass (ts1+1, Update (t, Apple, Two))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1) = setup()
+            val ts2 = s.write (ts1+1, Update (t, Apple, Two)) .expectWritten
             s.expectCells (t) (Apple##ts2::Two, Apple##ts1::One)
           }
 
           "allow update Apple::Two at ts" in {
-            val (t, ts1) = newTableWithData
-            val ts2 = s.writeExpectPass (ts1, Update (t, Apple, Two))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1) = setup()
+            val ts2 = s.write (ts1, Update (t, Apple, Two)) .expectWritten
             s.expectCells (t) (Apple##ts2::Two, Apple##ts1::One)
           }
 
           "allow update Apple::One at ts+1" in {
-            val (t, ts1) = newTableWithData
-            val ts2 = s.writeExpectPass (ts1+1, Update (t, Apple, One))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1) = setup()
+            val ts2 = s.write (ts1+1, Update (t, Apple, One)) .expectWritten
             s.expectCells (t) (Apple##ts2::One, Apple##ts1::One)
           }
 
           "allow update Apple::One at ts" in {
-            val (t, ts1) = newTableWithData
-            val ts2 = s.writeExpectPass (ts1, Update (t, Apple, One))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1) = setup()
+            val ts2 = s.write (ts1, Update (t, Apple, One)) .expectWritten
             s.expectCells (t) (Apple##ts2::One, Apple##ts1::One)
           }
 
           "allow delete Apple at ts+1" in {
-            val (t, ts1) = newTableWithData
-            val ts2 = s.writeExpectPass (ts1+1, Delete (t, Apple))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1) = setup()
+            val ts2 = s.write (ts1+1, Delete (t, Apple)) .expectWritten
             s.expectCells (t) (Apple##ts2, Apple##ts1::One)
           }
 
           "allow delete Apple at ts" in {
-            val (t, ts1) = newTableWithData
-            val ts2 = s.writeExpectPass (ts1, Delete (t, Apple))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1) = setup()
+            val ts2 = s.write (ts1, Delete (t, Apple)) .expectWritten
             s.expectCells (t) (Apple##ts2, Apple##ts1::One)
           }}}
 
       "the table has Apple##ts2::Two and Apple##ts1::One" -  {
 
-        def newTableWithData = {
+        def setup() (implicit scheduler: StubScheduler) = {
+          val s = newStore (scheduler)
           val t = nextTable
-          val ts1 = s.writeExpectPass (0, Create (t, Apple, One))
-          val ts2 = s.writeExpectPass (ts1, Update (t, Apple, Two))
+          val ts1 = s.write (0, Create (t, Apple, One)) .expectWritten
+          val ts2 = s.write (ts1, Update (t, Apple, Two)) .expectWritten
           s.expectCells (t) (Apple##ts2::Two, Apple##ts1::One)
-          (t, ts1, ts2)
+          (s, t, ts1, ts2)
         }
 
         "a read should" - {
 
           "find ts2::Two for Apple##ts2+1" in {
-            val (t, ts1, ts2) = newTableWithData
-            s.readAndExpect (ts2+1, Get (t, Apple)) (ts2::Two)
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1, ts2) = setup()
+            expectSeq (ts2::Two) (s.read (ts2+1, Get (t, Apple)))
           }
 
           "find ts2::Two for Apple##ts2" in {
-            val (t, ts1, ts2) = newTableWithData
-            s.readAndExpect (ts2, Get (t, Apple)) (ts2::Two)
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1, ts2) = setup()
+            expectSeq (ts2::Two) (s.read (ts2, Get (t, Apple)))
           }
 
           "find ts1::One for Apple##ts2-1" in {
-            val (t, ts1, ts2) = newTableWithData
-            s.readAndExpect (ts2-1, Get (t, Apple)) (ts1::One)
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1, ts2) = setup()
+            expectSeq (ts1::One) (s.read (ts2-1, Get (t, Apple)))
           }
 
           "find ts1::One for Apple##ts1+1" in {
-            val (t, ts1, ts2) = newTableWithData
-            s.readAndExpect (ts1+1, Get (t, Apple)) (ts1::One)
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1, ts2) = setup()
+            expectSeq (ts1::One) (s.read (ts1+1, Get (t, Apple)))
           }
 
           "find ts1::One for Apple##ts1" in {
-            val (t, ts1, ts2) = newTableWithData
-            s.readAndExpect (ts1, Get (t, Apple)) (ts1::One)
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1, ts2) = setup()
+            expectSeq (ts1::One) (s.read (ts1, Get (t, Apple)))
           }
 
           "find 0::None for Apple##ts1-1" in {
-            val (t, ts1, ts2) = newTableWithData
-            s.readAndExpect (ts1-1, Get (t, Apple)) (0::None)
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1, ts2) = setup()
+            expectSeq (0::None) (s.read (ts1-1, Get (t, Apple)))
           }}}}}
 
   def aMultithreadableStore (size: Int, store: TestableStore) {
@@ -200,101 +240,85 @@ trait StoreBehaviors {
       object Accounts extends Accessor (1, Picklers.fixedInt, Picklers.fixedInt)
 
       val threads = 8
-      val transfers = 10000
+      val transfers = 1000
       val opening = 1000
 
-      val createLatch = new CountDownLatch (1)
+      val executor = Executors.newScheduledThreadPool (threads)
+      implicit val scheduler = Scheduler (executor)
 
       val supply = size * opening
       val create =
         for (i <- 0 until size) yield Accounts.create (i, opening)
-      store.write (0, create, new StubWriteCallback {
-        override def pass (wt: TxClock) = createLatch.countDown()
-      })
+      store.write (0, create: _*) .await()
 
-      createLatch.await (200, TimeUnit.MILLISECONDS)
-
-      val executor = Executors.newScheduledThreadPool (threads)
-      val scheduler = Scheduler (executor)
       val brokerLatch = new CountDownLatch (threads)
       val countAuditsPassed = new AtomicInteger (0)
       val countAuditsFailed = new AtomicInteger (0)
       val countTransferPassed = new AtomicInteger (0)
       val countTransferAdvanced = new AtomicInteger (0)
 
+      var running = true
+
       // Check that the sum of the account balances equals the supply
-      def audit (cb: Callback [Unit]): Unit = scheduler.execute {
+      def audit(): Async [Unit] = {
         val ops = for (i <- 0 until size) yield Accounts.read (i)
-        store.read (TxClock.now, ops, new StubReadCallback {
-          override def pass (vs: Seq [Value]): Unit = scheduler.execute {
-            val total = vs .map (Accounts.value (_) .get) .sum
-            if (supply == total)
-              countAuditsPassed.incrementAndGet()
-            else
-              countAuditsFailed.incrementAndGet()
-            cb.pass()
-          }})
-      }
+        for {
+          accounts <- store.read (TxClock.now, ops: _*)
+          total = accounts.map (Accounts.value (_) .get) .sum
+        } yield {
+          if (supply == total)
+            countAuditsPassed.incrementAndGet()
+          else
+            countAuditsFailed.incrementAndGet()
+        }}
 
       // Transfer a random amount between two random accounts.
-      def transfer (num: Int, cb: Callback [Unit]): Unit = scheduler.execute {
+      def transfer(): Async [Unit] = {
         val x = Random.nextInt (size)
         var y = Random.nextInt (size)
         while (x == y)
           y = Random.nextInt (size)
         val rops = Seq (Accounts.read (x), Accounts.read (y))
-        store.read (TxClock.now, rops, new StubReadCallback {
-          override def pass (vs: Seq [Value]): Unit = scheduler.execute {
-            val ct = vs map (_.time) max
-            val Seq (b1, b2) = vs map (Accounts.value (_) .get)
-            val n = Random.nextInt (b1)
-            val wops = Seq (Accounts.update (x, b1-n), Accounts.update (y, b2+n))
-            store.write (ct, wops, new StubWriteCallback {
-              override def pass (wt: TxClock): Unit = {
-                countTransferPassed.incrementAndGet()
-                cb.pass()
-              }
-              override def advance() = {
-                countTransferAdvanced.incrementAndGet()
-                cb.pass()
-              }
-            })
-          }})
-      }
+        for {
+          vs <- store.read (TxClock.now, rops: _*)
+          ct = vs.map (_.time) .max
+          Seq (b1, b2) = vs map (Accounts.value (_) .get)
+          n = Random.nextInt (b1)
+          wops = Seq (Accounts.update (x, b1-n), Accounts.update (y, b2+n))
+          result <- store.write (ct, wops: _*)
+        } yield {
+          import WriteResult._
+          result match {
+            case Written (_) => countTransferPassed.incrementAndGet()
+            case Collided (_) => throw new IllegalArgumentException
+            case Stale => countTransferAdvanced.incrementAndGet()
+          }}}
 
       // Conduct many transfers.
-      def broker (num: Int): Unit = scheduler.execute {
+      def broker (num: Int): Async [Unit] = {
         var i = 0
-        val loop = new Callback [Unit] {
-          def pass (v: Unit): Unit = {
-            if (i < transfers) {
-              i += 1
-              transfer (num, this)
-            } else {
-              brokerLatch.countDown()
-            }}
-          def fail (t: Throwable) = throw t
-        }
-        transfer (num, loop)
-      }
+        whilst (i < transfers) {
+          i += 1
+          transfer()
+        }}
+
+      val brokers = {
+        for {
+          _ <- (0 until threads) .latch.unit (broker (_))
+        } yield {
+          running = false
+        }}
+
+      def sleep (millis: Int): Async [Unit] =
+        async (cb => scheduler.delay (millis) (cb.pass()))
 
       // Conduct many audits.
-      def auditor(): Unit = scheduler.execute {
-        val loop = new Callback [Unit] {
-          def pass (v: Unit) {
-            if (brokerLatch.getCount > 0)
-              audit (this)
-          }
-          def fail (t: Throwable) = throw t
-        }
-        audit (loop)
-      }
+      val auditor = {
+        whilst (running) {
+          audit() .flatMap (_ => sleep (100))
+        }}
 
-      for (i <- 0 until threads)
-        broker (i)
-      auditor()
-
-      brokerLatch.await (2, TimeUnit.SECONDS)
+      Latch.pair (brokers, auditor) .await()
       executor.shutdown()
 
       assert (countAuditsPassed.get > 0, "Expected at least one audit to pass.")

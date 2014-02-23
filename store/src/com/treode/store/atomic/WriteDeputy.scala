@@ -2,7 +2,8 @@ package com.treode.store.atomic
 
 import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{RequestDescriptor, RequestMediator}
-import com.treode.store.{Preparation, PrepareCallback, TxClock, TxId, WriteOp}
+import com.treode.store.{PrepareResult, TxClock, TxId, WriteOp}
+import com.treode.store.locks.LockSet
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   import kit.{scheduler, store}
@@ -70,33 +71,36 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Preparing (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]) extends State {
 
-    store.prepare (ct, ops, new PrepareCallback {
+    store.prepare (ct, ops) run (new Callback [PrepareResult] {
 
-      def pass (prep: Preparation): Unit = fiber.execute {
-        if (state == Preparing.this) {
-          state = new Prepared (ops, prep)
-          mdtr.respond (WriteResponse.Prepared (prep.ft))
-        } else {
-          prep.release()
-        }}
+      def pass (result: PrepareResult): Unit = fiber.execute {
+
+        result match {
+          case PrepareResult.Prepared (vt, locks) =>
+            if (state == Preparing.this) {
+              state = new Prepared (ops, vt, locks)
+              mdtr.respond (WriteResponse.Prepared (vt))
+            } else {
+              locks.release()
+            }
+
+          case PrepareResult.Collided (ks) =>
+            if (state == Preparing.this) {
+              val rsp = WriteResponse.Collisions (ks.toSet)
+              state = new Deliberating (ops, rsp)
+              mdtr.respond (rsp)
+            }
+
+          case PrepareResult.Stale =>
+            if (state == Preparing.this) {
+              state = new Deliberating (ops, WriteResponse.Advance)
+              mdtr.respond (WriteResponse.Advance)
+            }}}
 
       def fail (t: Throwable): Unit = fiber.execute {
         if (state == Preparing.this) {
           state = new Deliberating (ops, WriteResponse.Failed)
           mdtr.respond (WriteResponse.Failed)
-        }}
-
-      def collisions (ks: Set [Int]): Unit = fiber.execute {
-        if (state == Preparing.this) {
-          val rsp = WriteResponse.Collisions (ks)
-          state = new Deliberating (ops, rsp)
-          mdtr.respond (rsp)
-        }}
-
-      def advance(): Unit = fiber.execute {
-        if (state == Preparing.this) {
-          state = new Deliberating (ops, WriteResponse.Advance)
-          mdtr.respond (WriteResponse.Advance)
         }}})
 
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit = ()
@@ -116,17 +120,17 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       state = new Shutdown
   }
 
-  class Prepared (ops: Seq [WriteOp], prep: Preparation) extends State {
+  class Prepared (ops: Seq [WriteOp], vt: TxClock, locks: LockSet) extends State {
 
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit =
-      mdtr.respond (WriteResponse.Prepared (prep.ft))
+      mdtr.respond (WriteResponse.Prepared (vt))
 
     def commit (mdtr: WriteMediator, wt: TxClock): Unit =
-      state = new Committing (mdtr, wt, ops, Some (prep))
+      state = new Committing (mdtr, wt, ops, Some (locks))
 
     def abort (mdtr: WriteMediator) {
       state = new Aborted
-      prep.release()
+      locks.release()
       mdtr.respond (WriteResponse.Aborted)
     }
 
@@ -135,7 +139,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     def shutdown() {
       state = new Shutdown
-      prep.release()
+      locks.release()
     }}
 
   class Deliberating (ops: Seq [WriteOp], rsp: WriteResponse) extends State {
@@ -179,19 +183,19 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       mdtr: WriteMediator,
       wt: TxClock,
       ops: Seq [WriteOp],
-      prep: Option [Preparation]) extends State {
+      locks: Option [LockSet]) extends State {
 
-    store.commit (wt, ops, new Callback [Unit] {
+    store.commit (wt, ops) run (new Callback [Unit] {
 
       def pass (v: Unit) = fiber.execute {
-        prep foreach (_.release())
+        locks foreach (_.release())
         if (state == Committing.this) {
           state = new Committed
           mdtr.respond (WriteResponse.Committed)
         }}
 
       def fail (t: Throwable) = fiber.execute {
-        prep foreach (_.release())
+        locks foreach (_.release())
         if (state == Committing.this) {
           state = new Panicked
           throw t

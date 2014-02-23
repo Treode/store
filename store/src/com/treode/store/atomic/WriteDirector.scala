@@ -7,7 +7,7 @@ import scala.language.postfixOps
 import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{Cluster, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
-import com.treode.store.{TxClock, TxId, WriteCallback, WriteOp}
+import com.treode.store.{TxClock, TxId, WriteOp, WriteResult}
 import com.treode.store.paxos.PaxosAccessor
 
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
@@ -28,7 +28,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     def isOpen = true
 
-    def open (cb: WriteCallback): Unit =
+    def open (cb: Callback [WriteResult]): Unit =
       throw new IllegalStateException
 
     def prepared (ft: TxClock, from: Peer) = ()
@@ -51,7 +51,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
   class Opening extends State {
 
-    override def open (cb: WriteCallback): Unit =
+    override def open (cb: Callback [WriteResult]): Unit =
       state = new Preparing (cb)
 
     override def prepared (ft: TxClock, from: Peer): Unit =
@@ -64,7 +64,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
       throw new IllegalStateException
   }
 
-  class Preparing (cb: WriteCallback) extends State {
+  class Preparing (cb: Callback [WriteResult]) extends State {
 
     val acks = cluster.locate (0)
     var advance = false
@@ -80,10 +80,10 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
           state = new Deliberating (ft+1, cb)
         } else if (advance) {
           state = new Aborting (true)
-          cb.advance()
+          cb.pass (WriteResult.Stale)
         } else if (!ks.isEmpty) {
           state = new Aborting (true)
-          cb.collisions (ks)
+          cb.pass (WriteResult.Collided (ks.toSeq))
         } else {
           state = new Aborting (true)
           cb.fail (new Exception)
@@ -125,7 +125,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     override def toString = "Director.Preparing"
   }
 
-  class Deliberating (wt: TxClock, cb: WriteCallback) extends State {
+  class Deliberating (wt: TxClock, cb: Callback [WriteResult]) extends State {
     import TxStatus._
 
     WriteDirector.deliberate.lead (xid.id, Committed (wt)) run (new Callback [TxStatus] {
@@ -134,7 +134,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
         status match {
           case Committed (wt) =>
             state = new Committing (wt)
-            cb.pass (wt)
+            cb.pass (WriteResult.Written (wt))
           case Aborted =>
             state = new Aborting (false)
             cb.fail (new TimeoutException)
@@ -231,7 +231,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
       case Failed          => state.failed (from)
     }}
 
-  def open (cb: WriteCallback): Unit =
+  def open (cb: Callback [WriteResult]): Unit =
     fiber.execute (state.open (cb))
 }
 

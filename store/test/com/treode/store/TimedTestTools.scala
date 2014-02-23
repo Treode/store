@@ -2,10 +2,12 @@ package com.treode.store
 
 import scala.util.Random
 
-import com.treode.async.CallbackCaptor
+import com.treode.async.{Async, AsyncTestTools, CallbackCaptor, StubScheduler}
+import com.treode.store.locks.LockSet
 import org.scalatest.Assertions
 
-import Assertions.expectResult
+import AsyncTestTools._
+import Assertions.{expectResult, fail}
 
 private trait TimedTestTools {
 
@@ -41,44 +43,47 @@ private trait TimedTestTools {
       cb.passed
     }}
 
-  implicit class RichPreparableStore (s: PreparableStore) {
+  implicit class RichPrepareResult (actual: Async [PrepareResult]) {
+    import PrepareResult._
 
-    def readAndExpect (rt: TxClock, ops: ReadOp*) (expected: Value*) {
-      val cb = new ReadCaptor
-      s.read (rt, ops, cb)
-      expectResult (expected) (cb.passed)
-    }
+    def expectPrepared (implicit s: StubScheduler): (TxClock, LockSet) =
+      actual.pass match {
+        case Prepared (vt, locks) =>
+          (vt, locks)
+        case _ =>
+          fail (s"Expected Written, found ${actual}")
+          throw new Exception
+      }
 
-    def prepareAndCommit (ct: TxClock, ops: WriteOp*): TxClock = {
-      val cb1 = new PrepareCaptor
-      s.prepare (ct, ops, cb1)
-      val prep = cb1.passed
-      val wt = prep.ft + 7 // Add gaps to the history.
-      val cb2 = CallbackCaptor [Unit]
-      s.commit (wt, ops, cb2)
-      cb2.passed
-      prep.release()
-      wt
-    }
+    def expectCollided (ks: Int*) (implicit s: StubScheduler): Unit =
+      expectPass (Collided (ks)) (actual)
 
-    def prepareAndAbort (ct: TxClock, ops: WriteOp*) {
-      val cb = new PrepareCaptor
-      s.prepare (ct, ops, cb)
-      val prep = cb.passed
-      prep.release()
-    }
+    def expectStale (implicit s: StubScheduler): Unit =
+      expectPass (Stale) (actual)
 
-    def prepareExpectAdvance (ct: TxClock, ops: WriteOp*) = {
-      val cb = new PrepareCaptor
-      s.prepare (ct, ops, cb)
-      cb.advanced
-    }
-
-    def prepareExpectCollisions (ct: TxClock, ops: WriteOp*) (expected: Int*) = {
-      val cb = new PrepareCaptor
-      s.prepare (ct, ops, cb)
-      expectResult (expected.toSet) (cb.collided)
+    def abort() (implicit s: StubScheduler) {
+      val (vt, locks) = expectPrepared
+      locks.release()
     }}
+
+  implicit class RichWriteResult (actual: Async [WriteResult]) {
+    import WriteResult._
+
+    def expectWritten (implicit s: StubScheduler): TxClock =
+      actual.pass match {
+        case Written (wt) =>
+          wt
+        case _ =>
+          fail (s"Expected Written, found ${actual}")
+          throw new Exception
+      }
+
+    def expectCollided (ks: Int*) (implicit s: StubScheduler): Unit =
+      expectPass (Collided (ks)) (actual)
+
+    def expectStale (implicit s: StubScheduler): Unit =
+      expectPass (Stale) (actual)
+  }
 
   def nextTable = TableId (Random.nextLong)
 

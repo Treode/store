@@ -1,9 +1,11 @@
 package com.treode.store
 
-import com.treode.async.Callback
+import com.treode.async.{Async, AsyncTestTools, Callback, StubScheduler}
 import com.treode.store.locks.LockSet
 import org.scalatest.FreeSpec
 
+import Async.{async, guard, supply}
+import AsyncTestTools._
 import Cardinals.{One, Two}
 import Fruits.Apple
 import TimedTestTools._
@@ -14,29 +16,32 @@ trait LocalStoreBehaviors extends StoreBehaviors {
 
   class Adaptor (s: TestableLocalStore) extends TestableStore {
 
-    def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
-      s.read (rt, ops, cb)
+    def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
+      s.read (rt, ops)
 
-    def write (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback) {
-      s.prepare (ct, ops, new PrepareCallback {
-        def pass (prep: Preparation) {
-          val wt = prep.ft + 7 // Add gaps to the history.
-          s.commit (wt, ops, new Callback [Unit] {
-            def pass (v: Unit) {
-              prep.release()
-              cb.pass (wt)
-            }
-            def fail (t: Throwable) {
-              prep.release()
-              cb.fail (t)
-            }
-          })
-        }
-        def fail (t: Throwable) = cb.fail (t)
-        def collisions (ks: Set [Int]) = cb.collisions (ks)
-        def advance() = cb.advance()
-      })
-    }
+    private def commit (wt: TxClock, ops: Seq [WriteOp], locks: LockSet): Async [WriteResult] =
+      guard {
+        for {
+          _ <- s.commit (wt, ops)
+        } yield {
+          locks.release()
+          WriteResult.Written (wt)
+        }}
+
+    def write (ct: TxClock, ops: WriteOp*): Async [WriteResult] =
+      guard {
+        for {
+          prepare <- s.prepare (ct, ops)
+          write <- prepare match {
+            case PrepareResult.Prepared (vt, locks) =>
+              commit (vt + 7, ops, locks) // Add gaps to the history.
+            case PrepareResult.Collided (ks) =>
+              supply (WriteResult.Collided (ks))
+            case PrepareResult.Stale =>
+              supply (WriteResult.Stale)
+          }
+        } yield write
+      }
 
     def expectCells (t: TableId) (expected: TimedCell*): Unit =
       s.expectCells (t) (expected: _*)
@@ -44,58 +49,75 @@ trait LocalStoreBehaviors extends StoreBehaviors {
     def runTasks() = ()
   }
 
-  def aLocalStore (s: TestableLocalStore) {
+  def aLocalStore (newStore: StubScheduler => TestableLocalStore) {
 
-    aStore (new Adaptor (s))
+    aStore (scheduler => new Adaptor (newStore (scheduler)))
 
     "behave like a LocalStore; when" - {
 
       "the table is empty" - {
 
+        def setup() (implicit scheduler: StubScheduler) = {
+          val s = newStore (scheduler)
+          val t = nextTable
+          (s, t)
+        }
+
         "and a write aborts should" - {
 
           "ignore create Apple::1 at ts=0" in {
-            val t = nextTable
-            s.prepareAndAbort (0, Create (t, Apple, One))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t) = setup()
+            s.prepare (0, Seq (Create (t, Apple, One))) .abort()
             s.expectCells (t) ()
           }
 
           "ignore hold Apple at ts=0" in {
-            val t = nextTable
-            s.prepareAndAbort (0, Hold (t, Apple))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t) = setup()
+            s.prepare (0, Seq (Hold (t, Apple))) .abort()
             s.expectCells (t) ()
           }
 
           "ignore update Apple::1 at ts=0" in {
-            val t = nextTable
-            s.prepareAndAbort (0, Update (t, Apple, One))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t) = setup()
+            s.prepare (0, Seq (Update (t, Apple, One))) .abort()
             s.expectCells (t) ()
           }
 
           "ignore delete Apple at ts=0" in {
-            val t = nextTable
-            s.prepareAndAbort (0, Delete (t, Apple))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t) = setup()
+            s.prepare (0, Seq (Delete (t, Apple))) .abort()
             s.expectCells (t) ()
           }}}
 
       "when the table has Apple##ts::1" - {
 
-        def newTableWithData = {
+        def setup() (implicit scheduler: StubScheduler) = {
+          val s = newStore (scheduler)
           val t = nextTable
-          val ts = s.prepareAndCommit (0, Create (t, Apple, One))
-          (t, ts)
+          val ops = Seq (Create (t, Apple, One))
+          val (vt, locks) = s.prepare (0, ops) .expectPrepared
+          val ts = vt + 7
+          s.commit (ts, ops) .pass
+          locks.release()
+          (s, t, ts)
         }
 
         "and a write aborts should" -  {
 
           "ignore update Apple::2 at ts+1" in {
-            val (t, ts1) = newTableWithData
-            s.prepareAndAbort (ts1+1, Update (t, Apple, Two))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1) = setup()
+            s.prepare (ts1+1, Seq (Update (t, Apple, Two))) .abort()
             s.expectCells (t) (Apple##ts1::One)
           }
 
           "ignore delete Apple at ts+1" in {
-            val (t, ts1) = newTableWithData
-            s.prepareAndAbort (ts1+1, Delete (t, Apple))
+            implicit val scheduler = StubScheduler.random()
+            val (s, t, ts1) = setup()
+            s.prepare (ts1+1, Seq (Delete (t, Apple))) .abort()
             s.expectCells (t) (Apple##ts1::One)
           }}}}}}

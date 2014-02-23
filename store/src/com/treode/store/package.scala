@@ -3,7 +3,7 @@ package com.treode
 import java.io.Closeable
 import java.util.logging.{Level, Logger}
 
-import com.treode.async.Callback
+import com.treode.async.{Async, Callback}
 import com.treode.pickle.Pickler
 import com.treode.store.locks.LockSet
 
@@ -13,14 +13,25 @@ package store {
 
   trait ReadCallback extends Callback [Seq [Value]]
 
-  trait WriteCallback extends Callback [TxClock] {
-    def collisions (ks: Set [Int])
-    def advance()
+  sealed abstract class WriteResult
+
+  object WriteResult {
+    case class Written (vt: TxClock) extends WriteResult
+    case class Collided (ks: Seq [Int]) extends WriteResult
+    case object Stale extends WriteResult
   }
 
   trait Store {
-    def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback)
-    def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback)
+    def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]]
+    def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult]
+  }
+
+  private sealed abstract class PrepareResult
+
+  private object PrepareResult {
+    case class Prepared (vt: TxClock, locks: LockSet) extends PrepareResult
+    case class Collided (ks: Seq [Int]) extends PrepareResult
+    case object Stale extends PrepareResult
   }
 
   private trait PrepareCallback extends Callback [Preparation] {
@@ -29,9 +40,9 @@ package store {
   }
 
   private trait PreparableStore {
-    def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback)
-    def prepare (ct: TxClock, ops: Seq [WriteOp], cb: PrepareCallback)
-    def commit (wt: TxClock, ops: Seq [WriteOp], cb: Callback [Unit])
+    def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]]
+    def prepare (ct: TxClock, ops: Seq [WriteOp]): Async [PrepareResult]
+    def commit (wt: TxClock, ops: Seq [WriteOp]): Async [Unit]
   }
 
   private trait LocalStore extends PreparableStore with Closeable

@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async.{AsyncTestTools, Callback}
+import com.treode.async.{Async, AsyncTestTools, Callback}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
@@ -22,7 +22,7 @@ extends StubActiveHost (id, network) {
 
   implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
   implicit val recovery = Disks.recover()
-  implicit val storeConfig = StoreConfig (4, 1<<16)
+  implicit val storeConfig = StoreConfig (8, 1<<16)
   val _paxos = Paxos.recover() .capture()
   val file = new StubFile
   val geometry = DiskGeometry (10, 6, 1<<20)
@@ -38,11 +38,11 @@ extends StubActiveHost (id, network) {
 
   def writeDeputy (xid: TxId) = atomic.WriteDeputies.get (xid)
 
-  def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback) =
-    atomic.read (rt, ops, cb)
+  def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] =
+    atomic.read (rt, ops)
 
-  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback) =
-    atomic.write (xid, ct, ops, cb)
+  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult] =
+    atomic.write (xid, ct, ops)
 
   def expectCells (id: TableId) (cs: TimedCell*) = store.expectCells (id) (cs: _*)
 }

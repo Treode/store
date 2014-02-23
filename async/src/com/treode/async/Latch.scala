@@ -16,10 +16,25 @@ object Latch {
     (t.cbA, t.cbB)
   }
 
+  def pair [A, B] (a: Async [A], b: Async [B]): Async [(A, B)] =
+    Async.async { cb =>
+      val t = new PairLatch (cb)
+      a run t.cbA
+      b run t.cbB
+    }
+
   def triple [A, B, C] (cb: Callback [(A, B, C)]): (Callback [A], Callback [B], Callback [C]) = {
     val t = new TripleLatch (cb)
     (t.cbA, t.cbB, t.cbC)
   }
+
+  def triple [A, B, C] (a: Async [A], b: Async [B], c: Async [C]): Async [(A, B, C)] =
+    Async.async { cb =>
+      val t = new TripleLatch (cb)
+      a run t.cbA
+      b run t.cbB
+      c run t.cbC
+    }
 
   def unit [A] (count: Int, cb: Callback [Unit]): Callback [A] =
     new CountingLatch [A] (count, cb)
