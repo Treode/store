@@ -4,7 +4,6 @@ import java.util.{Arrays, ArrayList}
 
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 import com.treode.store.{Bytes, TxClock}
-import com.treode.store.disk.AbstractPagePickler
 
 private class CellPage (val entries: Array [Cell]) extends TierPage {
 
