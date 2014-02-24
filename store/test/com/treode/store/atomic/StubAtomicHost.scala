@@ -10,7 +10,9 @@ import com.treode.store._
 import com.treode.store.paxos.Paxos
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.temp.TestableTempKit
+import org.scalatest.Assertions
 
+import Assertions.expectResult
 import AsyncTestTools._
 import Callback.ignore
 
@@ -24,7 +26,6 @@ extends StubActiveHost (id, network) {
   implicit val storeConfig = StoreConfig (8, 1<<16)
 
   implicit val recovery = Disks.recover()
-  implicit val store = new TestableTempKit
   val _paxos = Paxos.recover()
   val _atomic = AtomicKit.recover()
 
@@ -48,7 +49,7 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, paxos, atomic) = captor.passed
 
-  def writeDeputy (xid: TxId) = atomic.WriteDeputies.get (xid)
+  def writer (xid: TxId) = atomic.writers.get (xid)
 
   def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] =
     atomic.read (rt, ops)
@@ -56,5 +57,7 @@ extends StubActiveHost (id, network) {
   def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult] =
     atomic.write (xid, ct, ops)
 
-  def expectCells (id: TableId) (cs: TimedCell*) = store.expectCells (id) (cs: _*)
-}
+  def expectCells (id: TableId) (cs: TimedCell*) {
+    val t = atomic.store.tables.get (id)
+    expectResult (cs) (t.iterator.toSeq)
+  }}

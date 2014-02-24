@@ -47,3 +47,13 @@ package store {
 
   private trait LocalStore extends PreparableStore with Closeable
 }
+
+package object store {
+
+  private [store] object log {
+
+    val logger = Logger.getLogger ("com.treode.store")
+
+    def exceptionPreparingWrite (e: Throwable): Unit =
+      logger.log (WARNING, s"Exception preparing write", e)
+  }}

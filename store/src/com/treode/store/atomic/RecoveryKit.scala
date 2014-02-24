@@ -15,10 +15,12 @@ private class RecoveryKit (implicit
     val scheduler: Scheduler,
     val cluster: Cluster,
     val recovery: Disks.Recovery,
-    val store: LocalStore,
     val config: StoreConfig
 ) extends AtomicKit.Recovery {
 
-  def launch (implicit launch: Disks.Launch, paxos: Paxos): Async [AtomicKit] =
-    supply (new AtomicKit (0))
-}
+  def launch (implicit launch: Disks.Launch, paxos: Paxos): Async [AtomicKit] = {
+    import launch.disks
+    val kit = new AtomicKit
+    kit.attach()
+    supply (kit)
+  }}

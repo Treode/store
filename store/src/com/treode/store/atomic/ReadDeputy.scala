@@ -5,7 +5,7 @@ import com.treode.cluster.RequestDescriptor
 import com.treode.store.{ReadCallback, ReadOp, TxClock, Value}
 
 private class ReadDeputy (kit: AtomicKit) {
-  import kit.store
+  import kit.{cluster, store}
 
   type ReadMediator = ReadDeputy.read.Mediator
 
@@ -18,7 +18,12 @@ private class ReadDeputy (kit: AtomicKit) {
       def fail (t: Throwable): Unit =
         mdtr.respond (ReadResponse.Failed)
     })
-  }}
+  }
+
+  def attach() {
+    ReadDeputy.read.listen { case ((rt, ops), mdtr) =>
+      read (mdtr, rt, ops)
+    }}}
 
 private object ReadDeputy {
 

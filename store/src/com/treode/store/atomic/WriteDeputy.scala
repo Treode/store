@@ -2,7 +2,7 @@ package com.treode.store.atomic
 
 import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{RequestDescriptor, RequestMediator}
-import com.treode.store.{PrepareResult, TxClock, TxId, WriteOp}
+import com.treode.store.{PrepareResult, TxClock, TxId, WriteOp, log}
 import com.treode.store.locks.LockSet
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
@@ -76,10 +76,10 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       def pass (result: PrepareResult): Unit = fiber.execute {
 
         result match {
-          case PrepareResult.Prepared (vt, locks) =>
+          case PrepareResult.Prepared (ft, locks) =>
             if (state == Preparing.this) {
-              state = new Prepared (ops, vt, locks)
-              mdtr.respond (WriteResponse.Prepared (vt))
+              state = new Prepared (ops, ft, locks)
+              mdtr.respond (WriteResponse.Prepared (ft))
             } else {
               locks.release()
             }
@@ -99,6 +99,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
       def fail (t: Throwable): Unit = fiber.execute {
         if (state == Preparing.this) {
+          log.exceptionPreparingWrite (t)
           state = new Deliberating (ops, WriteResponse.Failed)
           mdtr.respond (WriteResponse.Failed)
         }}})
@@ -185,21 +186,17 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       ops: Seq [WriteOp],
       locks: Option [LockSet]) extends State {
 
-    store.commit (wt, ops) run (new Callback [Unit] {
-
-      def pass (v: Unit) = fiber.execute {
-        locks foreach (_.release())
-        if (state == Committing.this) {
-          state = new Committed
-          mdtr.respond (WriteResponse.Committed)
-        }}
-
-      def fail (t: Throwable) = fiber.execute {
-        locks foreach (_.release())
-        if (state == Committing.this) {
-          state = new Panicked
-          throw t
-        }}})
+    try {
+      store.commit (wt, ops)
+      state = new Committed
+      mdtr.respond (WriteResponse.Committed)
+    } catch {
+      case t: Throwable =>
+        state = new Panicked
+        throw t
+    } finally {
+      locks foreach (_.release())
+    }
 
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit = ()
 
@@ -213,7 +210,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def shutdown(): Unit =
       state = new Shutdown
 
-    override def toString = "Deputy.Committing2"
+    override def toString = "Deputy.Committing"
   }
 
   class Committed extends State {

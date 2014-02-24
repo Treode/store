@@ -14,9 +14,9 @@ class MailboxRegistry {
   private val mailboxes =
     PicklerRegistry [Handler] { id: Long =>
       if (MailboxId (id) .isFixed)
-        PicklerRegistry.const [Peer, Any] (id, ())
-      else
         throw new InvalidTagException ("mailbox", id)
+      else
+        PicklerRegistry.const [Peer, Any] (id, ())
     }
 
   private [cluster] def deliver [M] (p: Pickler [M], from: Peer, mbx: MailboxId, msg: M) {

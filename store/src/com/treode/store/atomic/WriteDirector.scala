@@ -174,6 +174,8 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
         state = new Closed
     }
 
+    override def failed (from: Peer) = ()
+
     override def timeout() {
       if (backoff.hasNext) {
         WriteDeputy.prepare (xid, ct, ops) (prepares, mbx)
@@ -200,6 +202,8 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
         state = new Closed
     }
 
+    override def failed (from: Peer) = ()
+
     override def timeout() {
       if (backoff.hasNext) {
         WriteDeputy.abort (xid) (aborts, mbx)
@@ -216,6 +220,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     override def isOpen = false
     override def committed (from: Peer) = ()
     override def aborted (from: Peer) = ()
+    override def failed (from: Peer) = ()
 
     override def toString = "Director.Closed"
   }

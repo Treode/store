@@ -1,8 +1,8 @@
 package com.treode.store.tier
 
-import com.treode.async.{Async, Callback}
-import com.treode.disk.{PageDescriptor, TypeId}
-import com.treode.store.{Bytes, StorePicklers}
+import com.treode.async.{Async, Callback, Scheduler}
+import com.treode.disk.Disks
+import com.treode.store.{Bytes, StoreConfig, StorePicklers}
 
 import Async.async
 
@@ -34,4 +34,9 @@ object TierTable {
       wrap (ulong, Tiers.pickler)
       .build (v => new Meta (v._1, v._2))
       .inspect (v => (v.gen, v.tiers))
-    }}}
+    }}
+
+  def apply (desc: TierDescriptor [_, _]) (
+      implicit scheduler: Scheduler, disk: Disks, config: StoreConfig): TierTable =
+    SynthTable (desc)
+}

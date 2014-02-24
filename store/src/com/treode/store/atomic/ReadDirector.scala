@@ -34,7 +34,7 @@ private class ReadDirector (
     if (gots.quorum) {
       _cb.pass (vs)
     } else {
-      cb.fail (new Exception)
+      _cb.fail (new Exception)
     }}
 
   def got (_vs: Seq [Value], from: Peer) {

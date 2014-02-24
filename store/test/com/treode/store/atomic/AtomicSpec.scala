@@ -23,7 +23,7 @@ object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors
   private val hs = kit.install (3, new StubAtomicHost (_, kit))
   private val host = hs.head
   import kit.{random, scheduler}
-  import host.{writeDeputy, write}
+  import host.{write, writer}
 
   kit.runTasks()
 
@@ -33,7 +33,7 @@ object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors
     var d: WriteDeputy = null
 
     "be restoring when first opened" in {
-      d = writeDeputy (xid)
+      d = writer (xid)
       assert (d.isRestoring)
     }}
 
@@ -47,7 +47,7 @@ object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors
       val ts =
         write (xid, TxClock.zero, Seq (Create (t, k, One)))
             .pass.asInstanceOf [WriteResult.Written] .vt
-      val ds = hs map (_.writeDeputy (k))
+      val ds = hs map (_.writer (k))
       hs foreach (_.expectCells (t) (k##ts::One))
     }}
 
