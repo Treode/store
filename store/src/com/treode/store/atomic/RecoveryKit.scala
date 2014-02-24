@@ -5,7 +5,7 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
-import com.treode.store.{LocalStore, StoreConfig}
+import com.treode.store.StoreConfig
 import com.treode.store.paxos.Paxos
 
 import Async.supply

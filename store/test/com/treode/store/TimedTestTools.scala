@@ -3,13 +3,11 @@ package com.treode.store
 import scala.util.Random
 
 import com.treode.async.{Async, AsyncTestTools, CallbackCaptor, StubScheduler}
-import com.treode.store.locks.LockSet
 import org.scalatest.Assertions
 
-import AsyncTestTools._
 import Assertions.{expectResult, fail}
 
-private trait TimedTestTools {
+private trait TimedTestTools extends AsyncTestTools {
 
   implicit class RichBytes (v: Bytes) {
     def ## (time: Int) = TimedCell (v, TxClock (time), None)
@@ -29,43 +27,6 @@ private trait TimedTestTools {
     def - (n: Int) = TxClock (v.time - n)
   }
 
-  implicit class RichTimedTable (t: TimedTable) {
-
-    def getAndExpect (key: Bytes, time: TxClock) (expected: TimedCell) {
-      val cb = CallbackCaptor [TimedCell]
-      t.get (key, time, cb)
-      expectResult (expected) (cb.passed)
-    }
-
-    def putAndPass (key: Bytes, time: TxClock, value: Option [Bytes]) {
-      val cb = CallbackCaptor [Unit]
-      t.put (key, time, value, cb)
-      cb.passed
-    }}
-
-  implicit class RichPrepareResult (actual: Async [PrepareResult]) {
-    import PrepareResult._
-
-    def expectPrepared (implicit s: StubScheduler): (TxClock, LockSet) =
-      actual.pass match {
-        case Prepared (vt, locks) =>
-          (vt, locks)
-        case _ =>
-          fail (s"Expected Written, found ${actual}")
-          throw new Exception
-      }
-
-    def expectCollided (ks: Int*) (implicit s: StubScheduler): Unit =
-      actual.expect (Collided (ks))
-
-    def expectStale (implicit s: StubScheduler): Unit =
-      actual.expect (Stale)
-
-    def abort() (implicit s: StubScheduler) {
-      val (vt, locks) = expectPrepared
-      locks.release()
-    }}
-
   implicit class RichWriteResult (actual: Async [WriteResult]) {
     import WriteResult._
 
@@ -84,8 +45,6 @@ private trait TimedTestTools {
     def expectStale (implicit s: StubScheduler): Unit =
       actual.expect (Stale)
   }
-
-  def nextTable = TableId (Random.nextLong)
 
   def Get (id: TableId, key: Bytes): ReadOp =
     ReadOp (id, key)

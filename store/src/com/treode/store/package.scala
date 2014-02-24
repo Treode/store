@@ -11,8 +11,6 @@ import Level.WARNING
 
 package store {
 
-  trait ReadCallback extends Callback [Seq [Value]]
-
   sealed abstract class WriteResult
 
   object WriteResult {
@@ -24,29 +22,7 @@ package store {
   trait Store {
     def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]]
     def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult]
-  }
-
-  private sealed abstract class PrepareResult
-
-  private object PrepareResult {
-    case class Prepared (vt: TxClock, locks: LockSet) extends PrepareResult
-    case class Collided (ks: Seq [Int]) extends PrepareResult
-    case object Stale extends PrepareResult
-  }
-
-  private trait PrepareCallback extends Callback [Preparation] {
-    def collisions (ks: Set [Int])
-    def advance()
-  }
-
-  private trait PreparableStore {
-    def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]]
-    def prepare (ct: TxClock, ops: Seq [WriteOp]): Async [PrepareResult]
-    def commit (wt: TxClock, ops: Seq [WriteOp]): Async [Unit]
-  }
-
-  private trait LocalStore extends PreparableStore with Closeable
-}
+  }}
 
 package object store {
 

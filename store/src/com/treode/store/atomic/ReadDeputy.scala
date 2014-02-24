@@ -2,7 +2,7 @@ package com.treode.store.atomic
 
 import com.treode.async.Callback
 import com.treode.cluster.RequestDescriptor
-import com.treode.store.{ReadCallback, ReadOp, TxClock, Value}
+import com.treode.store.{ReadOp, TxClock, Value}
 
 private class ReadDeputy (kit: AtomicKit) {
   import kit.{cluster, store}

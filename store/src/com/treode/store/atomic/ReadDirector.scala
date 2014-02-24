@@ -3,16 +3,16 @@ package com.treode.store.atomic
 import java.util.concurrent.TimeoutException
 import scala.language.postfixOps
 
-import com.treode.async.Fiber
+import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.Peer
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
-import com.treode.store.{ReadCallback, ReadOp, TxClock, Value}
+import com.treode.store.{ReadOp, TxClock, Value}
 
 private class ReadDirector (
     rt: TxClock,
     ops: Seq [ReadOp],
     kit: AtomicKit,
-    private var cb: ReadCallback) {
+    private var cb: Callback [Seq [Value]]) {
 
   import kit.{cluster, random, scheduler}
 

@@ -24,18 +24,8 @@ private class AtomicKit (implicit
   val reader = new ReadDeputy (this)
   val writers = new WriteDeputies (this)
 
-  private def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
-    cb.defer {
-      new ReadDirector (rt, ops, this, cb)
-    }
-
   def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] =
-    async { cb =>
-      read (rt, ops, new ReadCallback {
-        def pass (vs: Seq [Value]) = cb.pass (vs)
-        def fail (t: Throwable) = cb.fail (t)
-      })
-    }
+    async (new ReadDirector (rt, ops, this, _))
 
   private def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: Callback [WriteResult]): Unit =
     cb.defer {

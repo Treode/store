@@ -2,7 +2,7 @@ package com.treode.store.atomic
 
 import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{RequestDescriptor, RequestMediator}
-import com.treode.store.{PrepareResult, TxClock, TxId, WriteOp, log}
+import com.treode.store.{TxClock, TxId, WriteOp, log}
 import com.treode.store.locks.LockSet
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {

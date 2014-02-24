@@ -3,21 +3,20 @@ package com.treode.store.atomic
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
-import com.treode.async.{AsyncTestTools, CallbackCaptor}
+import com.treode.async.CallbackCaptor
 import com.treode.cluster.StubNetwork
 import com.treode.store._
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, PropSpec, Specs}
 import org.scalatest.prop.PropertyChecks
 
-import AsyncTestTools._
+import AtomicTestTools._
 import Cardinals.{One, Two}
 import WriteOp._
-import TimedTestTools._
 
 class AtomicSpec extends Specs (AtomicBehaviors, AtomicProperties)
 
-object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors {
+object AtomicBehaviors extends FreeSpec with StoreBehaviors {
 
   private val kit = StubNetwork()
   private val hs = kit.install (3, new StubAtomicHost (_, kit))
@@ -69,7 +68,7 @@ object AtomicBehaviors extends FreeSpec with AtomicTestTools with StoreBehaviors
     behave like aMultithreadableStore (100, threaded)
   }}
 
-object AtomicProperties extends PropSpec with PropertyChecks with AtomicTestTools {
+object AtomicProperties extends PropSpec with PropertyChecks {
 
   val seeds = Gen.choose (0L, Long.MaxValue)
 

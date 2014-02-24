@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentHashMap
 import com.treode.async.{Async, AsyncConversions, Callback, Latch}
 import com.treode.cluster.misc.materialize
 import com.treode.disk.{PageDescriptor, Position}
-import com.treode.store.{PrepareResult, ReadOp, TableId, TxClock, TxId, Value, WriteOp}
+import com.treode.store.{ReadOp, TableId, TxClock, TxId, Value, WriteOp}
 import com.treode.store.locks.{LockSet, LockSpace}
 import com.treode.store.tier.TierTable
 

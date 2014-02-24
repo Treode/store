@@ -9,7 +9,6 @@ import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
 import com.treode.store.paxos.Paxos
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.temp.TestableTempKit
 import org.scalatest.Assertions
 
 import Assertions.expectResult
