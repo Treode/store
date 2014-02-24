@@ -3,18 +3,21 @@ package com.treode.store.locks
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.WordSpec
 
+import com.treode.async.{Async, AsyncTestTools, StubScheduler}
 import com.treode.store.{Bytes, StoreConfig, TxClock}
 import com.treode.pickle.Picklers
+
+import AsyncTestTools._
 
 class LockSpec extends WordSpec with MockFactory {
 
   private implicit class RichLockSpace (space: LockSpace) {
 
-    def read (rt: Int, k1: String, ks: String*) (cb: => Any): Unit =
-      space.read (rt, (k1 +: ks) .map (_.hashCode)) (cb)
+    def read (rt: Int, k1: String, ks: String*): Async [Unit] =
+      space.read (rt, (k1 +: ks) .map (_.hashCode))
 
-    def write (ft: Int, k1: String, ks: String*) (cb: LockSet => Any): Unit =
-      space.write (ft, (k1 +: ks) .map (_.hashCode)) (cb)
+    def write (ft: Int, k1: String, ks: String*): Async [LockSet] =
+      space.write (ft, (k1 +: ks) .map (_.hashCode))
   }
 
   "A Lock" when {
@@ -138,18 +141,17 @@ class LockSpec extends WordSpec with MockFactory {
     val Orange = "orange"
 
     "acquire all locks before proceeding" in {
+      implicit val scheduler = StubScheduler.random()
       implicit val config = StoreConfig (8, 1<<16)
       val locks = new LockSpace
-      var w1: LockSet = null
-      locks.write (1, Apple, Banana) (w1 = _)
-      assert (w1 != null)
-      var w2: LockSet = null
-      locks.write (2, Banana, Orange) (w2 = _)
-      assert (w2 == null)
-      val cb3 = mock [Unit => Unit]
-      val r3 = locks.read (3, Apple, Orange) (cb3())
+      val w1 = locks.write (1, Apple, Banana) .pass
+      val w2 = locks.write (2, Banana, Orange) .capture()
+      w2.expectNotInvoked()
+      val r3 = locks.read (3, Apple, Orange) .capture()
+      w2.expectNotInvoked()
+      r3.expectNotInvoked()
       w1.release()
-      assert (w2 != null)
-      (cb3.apply _) .expects() .once()
-      w2.release()
+      r3.expectNotInvoked()
+      w2.passed.release()
+      r3.passed
     }}}

@@ -1,7 +1,7 @@
 package com.treode.store.locks
 
 import scala.collection.SortedSet
-
+import com.treode.async.Callback
 import com.treode.store.TxClock
 
 // Tracks the acquisition of locks and invokes the callback when they have all been granted.
@@ -9,10 +9,10 @@ private class LockWriter (
     space: LockSpace,
     _ft: TxClock,
     private var ids: SortedSet [Int],
-    private var cb: LockSet => Any) extends LockSet {
+    private var cb: Callback [LockSet]) extends LockSet {
 
   // For testing mocks.
-  def this() = this (null, TxClock.zero, SortedSet.empty, _ => ())
+  def this() = this (null, TxClock.zero, SortedSet.empty, Callback.ignore)
 
   private var iter = ids.iterator
   private var max = _ft
@@ -20,7 +20,7 @@ private class LockWriter (
   private def finish() {
     val cb = this.cb
     this.cb = null
-    cb (this)
+    cb.pass (this)
   }
 
   // Attempt to acquire the locks.  Some of them will be granted immediately, then we will need

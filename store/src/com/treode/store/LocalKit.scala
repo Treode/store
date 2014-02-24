@@ -13,11 +13,23 @@ private abstract class LocalKit (implicit config: StoreConfig) extends LocalStor
 
   def getTimedTable (id: TableId): TimedTable
 
+  private def read (rt: TxClock, ids: Seq [Int]) (cb: => Any): Unit =
+    space.read (rt, ids) run (new Callback [Unit] {
+      def pass (v: Unit) = cb
+      def fail (t: Throwable) = throw t
+    })
+
+  private def write (rt: TxClock, ids: Seq [Int]) (cb: LockSet => Any): Unit =
+    space.write (rt, ids) run (new Callback [LockSet] {
+      def pass (v: LockSet) = cb (v)
+      def fail (t: Throwable) = throw t
+    })
+
   private def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
     defer (cb) {
       require (!ops.isEmpty, "Read needs at least one operation")
       val ids = ops map (op => (op.table, op.key).hashCode)
-      space.read (rt, ids) {
+      read (rt, ids) {
         val r = new TimedReader (rt, ops, cb)
         for ((op, i) <- ops.zipWithIndex)
           getTimedTable (op.table) .read (op.key, i, r)
@@ -35,7 +47,7 @@ private abstract class LocalKit (implicit config: StoreConfig) extends LocalStor
     defer (cb) {
       require (!ops.isEmpty, "Prepare needs at least one operation")
       val ids = ops map (op => (op.table, op.key).hashCode)
-      space.write (TxClock.now, ids) { locks =>
+      write (TxClock.now, ids) { locks =>
         val w = new TimedWriter (ct, ops.size, locks, cb)
         for ((op, i) <- ops.zipWithIndex) {
           import WriteOp._

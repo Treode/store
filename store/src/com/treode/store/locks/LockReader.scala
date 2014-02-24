@@ -1,19 +1,18 @@
 package com.treode.store.locks
 
-import com.treode.async.Scheduler
+import com.treode.async.{Callback, Scheduler}
 import com.treode.store.TxClock
 
 // Tracks the acquisition of locks and invokes the callback when they have all been granted.
-private class LockReader (_rt: TxClock, cb: Runnable) {
+private class LockReader (_rt: TxClock, cb: Callback [Unit]) {
 
   // For testing mocks.
-  def this() = this (TxClock.zero, Scheduler.toRunnable(()))
+  def this() = this (TxClock.zero, Callback.ignore)
 
   private var needed = 0
 
-  private def finish() {
-    cb.run()
-  }
+  private def finish(): Unit =
+    cb.pass()
 
   // Attempt to acquire the locks.  Some of them will be granted immediately.  For others, we
   // will receive a callback via grant().
