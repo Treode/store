@@ -24,7 +24,14 @@ trait AsyncTestTools {
       val cb = capture()
       scheduler.runTasks()
       cb.failed [E]
-    }}
+    }
+
+    def expect (expected: A) (implicit scheduler: StubScheduler): Unit =
+      expectResult (expected) (pass)
+
+    def expectSeq [B] (xs: B*) (implicit s: StubScheduler, w: A <:< Seq [B]): Unit =
+      expectResult (xs) (pass)
+  }
 
   implicit class RichAsyncIterator [A] (iter: AsyncIterator [A]) {
 
@@ -33,10 +40,6 @@ trait AsyncTestTools {
       val builder = Seq.newBuilder [A]
       iter.foreach.f (builder += _) .pass
       builder.result
-    }}
-
-  def expectPass [A] (expected: Any) (actual: Async [A]) (implicit scheduler: StubScheduler): Unit =
-    expectResult (expected) (actual.pass)
-}
+    }}}
 
 object AsyncTestTools extends AsyncTestTools

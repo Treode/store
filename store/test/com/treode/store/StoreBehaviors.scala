@@ -20,9 +20,6 @@ import WriteOp._
 trait StoreBehaviors {
   this: FreeSpec =>
 
-  def expectSeq [A] (expected: A*) (actual: Async [Seq [A]]) (implicit s: StubScheduler): Unit =
-    expectPass (expected) (actual)
-
   def aStore (newStore: StubScheduler => TestableStore) {
 
     "behave like a Store; when" - {
@@ -40,7 +37,7 @@ trait StoreBehaviors {
           "find 0::None for Apple##1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, t) = setup()
-            expectSeq (0::None) (s.read (1, Get (t, Apple)))
+            s.read (1, Get (t, Apple)) .expectSeq (0::None)
           }}
 
         "writing should" - {
@@ -87,19 +84,19 @@ trait StoreBehaviors {
           "find ts::One for Apple##ts+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, t, ts) = setup()
-            expectSeq (ts::One) (s.read (ts+1, Get (t, Apple)))
+            s.read (ts+1, Get (t, Apple)) .expectSeq (ts::One)
           }
 
           "find ts::One for Apple##ts" in {
             implicit val scheduler = StubScheduler.random()
             val (s, t, ts) = setup()
-            expectSeq (ts::One) (s.read (ts, Get (t, Apple)))
+            s.read (ts, Get (t, Apple)) .expectSeq (ts::One)
           }
 
           "find 0::None for Apple##ts-1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, t, ts) = setup()
-            expectSeq (0::None) (s.read (ts-1, Get (t, Apple)))
+            s.read (ts-1, Get (t, Apple)) .expectSeq (0::None)
           }}
 
         "writing should" - {
@@ -200,37 +197,37 @@ trait StoreBehaviors {
           "find ts2::Two for Apple##ts2+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, t, ts1, ts2) = setup()
-            expectSeq (ts2::Two) (s.read (ts2+1, Get (t, Apple)))
+            s.read (ts2+1, Get (t, Apple)) .expectSeq (ts2::Two)
           }
 
           "find ts2::Two for Apple##ts2" in {
             implicit val scheduler = StubScheduler.random()
             val (s, t, ts1, ts2) = setup()
-            expectSeq (ts2::Two) (s.read (ts2, Get (t, Apple)))
+            s.read (ts2, Get (t, Apple)) .expectSeq (ts2::Two)
           }
 
           "find ts1::One for Apple##ts2-1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, t, ts1, ts2) = setup()
-            expectSeq (ts1::One) (s.read (ts2-1, Get (t, Apple)))
+            s.read (ts2-1, Get (t, Apple)) .expectSeq (ts1::One)
           }
 
           "find ts1::One for Apple##ts1+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, t, ts1, ts2) = setup()
-            expectSeq (ts1::One) (s.read (ts1+1, Get (t, Apple)))
+            s.read (ts1+1, Get (t, Apple)) .expectSeq (ts1::One)
           }
 
           "find ts1::One for Apple##ts1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, t, ts1, ts2) = setup()
-            expectSeq (ts1::One) (s.read (ts1, Get (t, Apple)))
+            s.read (ts1, Get (t, Apple)) .expectSeq (ts1::One)
           }
 
           "find 0::None for Apple##ts1-1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, t, ts1, ts2) = setup()
-            expectSeq (0::None) (s.read (ts1-1, Get (t, Apple)))
+            s.read (ts1-1, Get (t, Apple)) .expectSeq (0::None)
           }}}}}
 
   def aMultithreadableStore (size: Int, store: TestableStore) {

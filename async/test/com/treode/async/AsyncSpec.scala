@@ -30,7 +30,7 @@ class AsyncSpec extends FlatSpec {
 
   "Async.map" should "apply the function" in {
     implicit val scheduler = StubScheduler.random()
-    expectPass (2) (async [Int] (_.pass (1)) .map (_ * 2))
+    async [Int] (_.pass (1)) .map (_ * 2) .expect (2)
   }
 
   it should "pass an exception from the function to the callback" in {
@@ -49,7 +49,7 @@ class AsyncSpec extends FlatSpec {
 
   "Async.filter" should "continue when the predicate is true" in {
     implicit val scheduler = StubScheduler.random()
-    expectPass (1) (async [Int] (_.pass (1)) .filter (_ == 1))
+    async [Int] (_.pass (1)) .filter (_ == 1) .expect (1)
   }
 
   it should "stop when the predicate is false" in {

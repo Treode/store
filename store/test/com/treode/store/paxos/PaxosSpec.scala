@@ -32,7 +32,7 @@ object PaxosBehaviors extends WordSpec with PaxosTestTools {
     val k = Bytes (random.nextLong)
 
     "yield a value for the leader" in {
-      expectPass (One) (lead (k, One))
+      lead (k, One) .expect (One)
     }
 
     "leave all acceptors closed and consistent" in {

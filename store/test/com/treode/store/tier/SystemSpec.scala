@@ -34,10 +34,10 @@ class SystemSpec extends FlatSpec {
       toSeq.toMap
 
     def expectNone (key: Int) (implicit scheduler: StubScheduler): Unit =
-      expectPass (None) (table.get (key))
+      table.get (key) .expect (None)
 
     def expectValue (key: Int, value: Int) (implicit scheduler: StubScheduler): Unit =
-      expectPass (Some (value)) (table.get (key))
+      table.get (key) .expect (Some (value))
 
     def expectValues (kvs: (Int, Int)*) (implicit scheduler: StubScheduler): Unit =
       expectResult (kvs.sorted) (toSeq)

@@ -56,10 +56,10 @@ private trait TimedTestTools {
       }
 
     def expectCollided (ks: Int*) (implicit s: StubScheduler): Unit =
-      expectPass (Collided (ks)) (actual)
+      actual.expect (Collided (ks))
 
     def expectStale (implicit s: StubScheduler): Unit =
-      expectPass (Stale) (actual)
+      actual.expect (Stale)
 
     def abort() (implicit s: StubScheduler) {
       val (vt, locks) = expectPrepared
@@ -79,10 +79,10 @@ private trait TimedTestTools {
       }
 
     def expectCollided (ks: Int*) (implicit s: StubScheduler): Unit =
-      expectPass (Collided (ks)) (actual)
+       actual.expect (Collided (ks))
 
     def expectStale (implicit s: StubScheduler): Unit =
-      expectPass (Stale) (actual)
+      actual.expect (Stale)
   }
 
   def nextTable = TableId (Random.nextLong)
