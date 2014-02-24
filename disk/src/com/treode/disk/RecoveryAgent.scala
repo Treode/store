@@ -11,7 +11,6 @@ import com.treode.buffer.PagedBuffer
 
 import Async.{async, supply}
 import AsyncConversions._
-import Callback.{defer, invoke}
 
 private class RecoveryAgent (
     records: RecordRegistry,
@@ -23,12 +22,12 @@ private class RecoveryAgent (
 ) {
 
   def launch (disks: DiskDrives): Unit =
-    invoke (cb) {
+    cb.invoke {
       new LaunchAgent (disks)
     }
 
   def attach (items: Seq [(Path, File, DiskGeometry)]): Unit =
-    defer (cb) {
+    cb.defer {
       require (!items.isEmpty, "Must list at least one file or device to attach.")
 
       val disks = new DiskDrives
@@ -46,7 +45,7 @@ private class RecoveryAgent (
     }
 
   def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Unit =
-    defer (cb) {
+    cb.defer {
       val files = items map (openFile (_, exec))
       attach (files)
     }
@@ -79,7 +78,7 @@ private class RecoveryAgent (
     }}
 
   def superBlocksRead (reads: Seq [SuperBlocks]): Unit =
-    defer (cb) {
+    cb.defer {
 
       val useGen1 = chooseSuperBlock (reads)
       val boot = if (useGen1) reads.head.sb1.get.boot else reads.head.sb2.get.boot
@@ -100,7 +99,7 @@ private class RecoveryAgent (
     }
 
   def reattach (items: Seq [(Path, File)]): Unit =
-    defer (cb) {
+    cb.defer {
       require (!items.isEmpty, "Must list at least one file or device to reaattach.")
       val task = for {
         reads <- items.latch.seq { case (path, file) => SuperBlocks.read (path, file) }
@@ -109,6 +108,6 @@ private class RecoveryAgent (
     }
 
   def reattach (items: Seq [Path], exec: ExecutorService): Unit =
-    defer (cb) {
+    cb.defer {
       reattach (items map (reopenFile (_, exec)))
     }}

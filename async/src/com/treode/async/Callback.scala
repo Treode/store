@@ -5,10 +5,78 @@ import java.nio.channels.CompletionHandler
 import scala.language.experimental.macros
 import scala.reflect.macros.Context
 
-trait Callback [-T] {
+trait Callback [-A] {
 
-  def pass (v: T)
+  def pass (v: A)
+
   def fail (t: Throwable)
+
+  def callback [B] (f: B => A): Callback [B] = {
+    val self = this
+    new Callback [B] {
+      def pass (b: B) {
+        val a = try {
+          f (b)
+        } catch {
+          case t: Throwable =>
+            self.fail (t)
+            return
+        }
+        self.pass (a)
+      }
+      def fail (t: Throwable): Unit = self.fail (t)
+    }}
+
+  def continue [B] (f: B => Any): Callback [B] = {
+    val self = this
+    new Callback [B] {
+      def pass (b: B) {
+        try {
+          f (b)
+        } catch {
+          case t: Throwable => self.fail (t)
+        }}
+      def fail (t: Throwable): Unit = self.fail (t)
+    }}
+
+  def defer (f: => Any) {
+    try {
+      f
+    } catch {
+      case t: Throwable => fail (t)
+    }}
+
+  def invoke (f: => A) {
+    val v = try {
+      f
+    } catch {
+      case t: Throwable =>
+        fail (t)
+        return
+    }
+    pass (v)
+  }
+
+  def onError (f: => Any): Callback [A] = {
+    val self = this
+    new Callback [A] {
+      def pass (v: A): Unit = self.pass (v)
+      def fail (t: Throwable) {
+        f
+        self.fail (t)
+      }}}
+
+  def onLeave (f: => Any): Callback [A] = {
+    val self = this
+    new Callback [A] {
+      def pass (v: A) {
+        f
+        self.pass (v)
+      }
+      def fail (t: Throwable) {
+        f
+        self.fail (t)
+      }}}
 }
 
 object Callback {
@@ -29,50 +97,6 @@ object Callback {
   object UnitHandler extends CompletionHandler [Void, Callback [Unit]] {
     def completed (v: Void, cb: Callback [Unit]) = cb.pass()
     def failed (t: Throwable, cb: Callback [Unit]) = cb.fail (t)
-  }
-
-  def callback [A, B] (cb: Callback [B]) (f: A => B): Callback [A] =
-    new Callback [A] {
-      def pass (va: A) {
-        val vb = try {
-          f (va)
-        } catch {
-          case t: Throwable =>
-            cb.fail (t)
-            return
-        }
-        cb.pass (vb)
-      }
-      def fail (t: Throwable): Unit = cb.fail (t)
-    }
-
-  def continue [A] (cb: Callback [_]) (f: A => Any): Callback [A] =
-    new Callback [A] {
-      def pass (v: A) {
-        try {
-          f (v)
-        } catch {
-          case t: Throwable => cb.fail (t)
-        }}
-      def fail (t: Throwable): Unit = cb.fail (t)
-    }
-
-  def defer (cb: Callback [_]) (f: => Any): Unit =
-    try {
-      f
-    } catch {
-      case t: Throwable => cb.fail (t)
-    }
-
-  def invoke [A] (cb: Callback [A]) (f: => A) {
-    val v = try {
-      f
-    } catch {
-      case t: Throwable =>
-        cb.fail (t)
-        return
-    }
-    cb.pass (v)
   }
 
   def fanout [A] (cbs: Traversable [Callback [A]], scheduler: Scheduler): Callback [A] =

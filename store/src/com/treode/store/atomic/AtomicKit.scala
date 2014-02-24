@@ -10,7 +10,6 @@ import com.treode.store._
 import com.treode.store.paxos.Paxos
 
 import Async.async
-import Callback.defer
 
 private class AtomicKit (detector: Int) (implicit
     val random: Random,
@@ -60,7 +59,7 @@ private class AtomicKit (detector: Int) (implicit
   WriteDeputies
 
   private def read (rt: TxClock, ops: Seq [ReadOp], cb: ReadCallback): Unit =
-    defer (cb) {
+    cb.defer {
       new ReadDirector (rt, ops, this, cb)
     }
 
@@ -73,7 +72,7 @@ private class AtomicKit (detector: Int) (implicit
     }
 
   private def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: Callback [WriteResult]): Unit =
-    defer (cb) {
+    cb.defer {
       new WriteDirector (xid, ct, ops, this) .open (cb)
     }
 

@@ -31,16 +31,15 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) {
   }
 
   private var expectations = new ArrayDeque [Expectation] ()
-
-  private var callback: Callback [Int] = null
+  private var completion: Callback [Int] = null
 
   def completeLast (v: Int) (implicit scheduler: StubScheduler) = {
-    callback.pass (v)
+    completion.pass (v)
     scheduler.runTasks()
   }
 
   def failLast (t: Throwable) (implicit scheduler: StubScheduler) = {
-    callback.fail (t)
+    completion.fail (t)
     scheduler.runTasks()
   }
 
@@ -57,19 +56,19 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) {
   def read [A] (dsts: Array [ByteBuffer], offset: Int, length: Int, timeout: Long, unit: TimeUnit,
       attachment: A, handler: CompletionHandler [JavaLong, _ >: A]) {
     require (offset == 0, "This mock is not that sophisticated.")
-    require (callback == null, "Pending callback on socket.")
+    require (completion == null, "Pending callback on socket.")
     require (!expectations.isEmpty, "No expectations.")
     val dst = dsts .find (_.remaining > 0) .get
     expectations.remove().read (dst)
-    callback = new Callback [Int] {
+    completion = new Callback [Int] {
       def pass (result: Int) = {
-        callback = null;
+        completion = null;
         if (result > 0)
           dst.position (dst.position + result)
         handler.completed (result, attachment)
       }
       def fail (thrown: Throwable) = {
-        callback = null
+        completion = null
         handler.failed (thrown, attachment)
       }
       override def toString = s"Pending read($dst)"
@@ -88,19 +87,19 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) {
   def write [A] (srcs: Array [ByteBuffer], offset: Int, length: Int, timout: Long, unit: TimeUnit,
       attachment: A, handler: CompletionHandler [JavaLong, _ >: A]) {
     require (offset == 0, "This mock is not that sophisticated.")
-    require (callback == null, "Pending callback on socket.")
+    require (completion == null, "Pending callback on socket.")
     require (!expectations.isEmpty, "No expectations.")
     val src = srcs (0)
     expectations.remove().write (src)
-    callback = new Callback [Int] {
+    completion = new Callback [Int] {
       def pass (result: Int) = {
-        callback = null
+        completion = null
         if (result > 0)
           src.position (src.position + result)
         handler.completed (result, attachment)
       }
       def fail (thrown: Throwable) {
-        callback = null
+        completion = null
         handler.failed (thrown, attachment)
       }
       override def toString = s"Pending write($src)"
@@ -114,8 +113,8 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) {
   }
 
   def close() {
-    if (callback != null)
-      callback.fail (new AsynchronousCloseException)
+    if (completion != null)
+      completion.fail (new AsynchronousCloseException)
     require (!expectations.isEmpty, "No expectations.")
     expectations.remove().close()
   }
@@ -136,5 +135,5 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) {
   def getOption [T] (name: SocketOption [T]): T = ???
   def supportedOptions(): JavaSet [SocketOption[_]] = ???
 
-  override def toString = "AsyncSocketMock" + (expectations mkString ("[", ",", "]"), callback)
+  override def toString = "AsyncSocketMock" + (expectations mkString ("[", ",", "]"), completion)
 }

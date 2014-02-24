@@ -6,7 +6,6 @@ import scala.collection.JavaConversions
 import com.treode.async.{Async, AsyncConversions, Callback, Scheduler}
 
 import AsyncConversions._
-import Callback.continue
 import JavaConversions._
 
 private class LaunchAgent (drives: DiskDrives) extends Disks.Launch {

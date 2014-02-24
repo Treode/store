@@ -5,15 +5,13 @@ import java.util.concurrent.ConcurrentSkipListSet
 import com.treode.async.Callback
 import com.treode.store._
 
-import Callback.defer
-
 private class TempTimedTable extends TimedTable {
 
   // Visible for testing.
   protected val memtable = new ConcurrentSkipListSet [TimedCell] (TimedCell)
 
   def get (key: Bytes, time: TxClock, cb: Callback [TimedCell]): Unit =
-    defer (cb) {
+    cb.defer {
       val c = memtable.ceiling (TimedCell (key, time, None))
       if (c == null)
         cb.pass (TimedCell (key, TxClock.zero, None))
@@ -22,7 +20,7 @@ private class TempTimedTable extends TimedTable {
     }
 
   def put (key: Bytes, time: TxClock, value: Option [Bytes], cb: Callback [Unit]): Unit =
-    defer (cb) {
+    cb.defer {
       memtable.add (TimedCell (key, time, value))
       cb.pass()
     }

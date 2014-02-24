@@ -72,12 +72,25 @@ trait Async [A] {
     flatMap (task => task)
 
   def defer (cb: Callback [_]) {
-    val self = this
     run (new Callback [A] {
       def pass (v: A): Unit = ()
       def fail (t: Throwable) = cb.fail (t)
     })
   }
+
+  def onError (f: => Any): Async [A] = {
+    val self = this
+    new Async [A] {
+      def run (cb: Callback [A]) {
+        self.run (cb onError f)
+      }}}
+
+  def onLeave (f: => Any): Async [A] = {
+    val self = this
+    new Async [A] {
+      def run (cb: Callback [A]) {
+        self.run (cb onLeave f)
+      }}}
 
   def await(): A = {
     val q = new SynchronousQueue [Either [Throwable, A]]
@@ -132,13 +145,13 @@ object Async {
         v run cb
       }}
 
-  def run [A] (cb: Callback [A]) (f: => Async [A]): Unit =
-    guard (f) run (cb)
-
   def supply [A] (v: A): Async [A] =
     new Async [A] {
       def run (cb: Callback [A]): Unit = cb.pass (v)
     }
+
+  def run [A] (cb: Callback [A]) (f: => Async [A]): Unit =
+    guard (f) run (cb)
 
   def cond (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
     new Async [Unit] {

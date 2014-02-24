@@ -6,7 +6,6 @@ import com.treode.disk.{Disks, Position}
 
 import Async.async
 import AsyncConversions._
-import Callback.continue
 
 private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
     implicit disks: Disks) extends CellIterator {
@@ -19,11 +18,11 @@ private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
     private var page: CellPage = null
     private var index = 0
 
-    val _push = continue (cb) { p: TierPage =>
+    val _push = cb.continue { p: TierPage =>
       push (p)
     }
 
-    val _next = continue (cb) { _: Unit =>
+    val _next = cb.continue { _: Unit =>
       next()
     }
 

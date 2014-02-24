@@ -26,16 +26,15 @@ class AsyncFileMock extends AsynchronousFileChannel {
   }
 
   private var expectations = new ArrayDeque [Expectation] ()
-
-  private var callback: Callback [Int] = null
+  private var completion: Callback [Int] = null
 
   def completeLast (v: Int) (implicit scheduler: StubScheduler) {
-    callback.pass (v)
+    completion.pass (v)
     scheduler.runTasks()
   }
 
   def failLast (t: Throwable) (implicit scheduler: StubScheduler) {
-    callback.fail (t)
+    completion.fail (t)
     scheduler.runTasks()
   }
 
@@ -51,18 +50,18 @@ class AsyncFileMock extends AsynchronousFileChannel {
   }
 
   def read [A] (dst: ByteBuffer, position: Long, attachment: A, handler: CompletionHandler [JavaInt, _ >: A]) {
-    require (callback == null, "Pending callback on file.")
+    require (completion == null, "Pending callback on file.")
     require (!expectations.isEmpty, "No expectations.")
     expectations.remove().read (dst, position)
-    callback = new Callback [Int] {
+    completion = new Callback [Int] {
       def pass (result: Int) = {
-        callback = null;
+        completion = null;
         if (result > 0)
           dst.position (dst.position + result)
         handler.completed (result, attachment)
       }
       def fail (thrown: Throwable) = {
-        callback = null
+        completion = null
         handler.failed (thrown, attachment)
       }
       override def toString = "Pending read" + (dst, position)
@@ -80,18 +79,18 @@ class AsyncFileMock extends AsynchronousFileChannel {
   }
 
   def write [A] (src: ByteBuffer, position: Long, attachment: A, handler: CompletionHandler [JavaInt, _ >: A]) {
-    require (callback == null, "Pending callback on file.")
+    require (completion == null, "Pending callback on file.")
     require (!expectations.isEmpty, "No expectations.")
     expectations.remove().write (src, position)
-    callback = new Callback [Int] {
+    completion = new Callback [Int] {
       def pass (result: Int) = {
-        callback = null
+        completion = null
         if (result > 0)
           src.position (src.position + result)
         handler.completed (result, attachment)
       }
       def fail (thrown: Throwable) {
-        callback = null
+        completion = null
         handler.failed (thrown, attachment)
       }
       override def toString = "Pending write" + (src, position)
@@ -108,5 +107,5 @@ class AsyncFileMock extends AsynchronousFileChannel {
   def tryLock (position: Long, size: Long, shared: Boolean): FileLock = ???
   def write (src: ByteBuffer, position: Long): Future [JavaInt] = ???
 
-  override def toString = "AsyncFileMock" + (expectations mkString ("[", ",", "]"), callback)
+  override def toString = "AsyncFileMock" + (expectations mkString ("[", ",", "]"), completion)
 }

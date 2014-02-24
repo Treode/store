@@ -73,6 +73,52 @@ class AsyncSpec extends FlatSpec {
       async [Int] (_.pass (1)) .filter (_ == 1) .run (exceptional)
     }}
 
+  "Async.defer" should "not invoke the callback" in {
+    val cb = CallbackCaptor [Unit]
+    var flag = false
+    supply (flag = true) defer (cb)
+    cb.expectNotInvoked()
+    expectResult (true) (flag)
+  }
+
+  it should "report an exception through the callback" in {
+    val cb = CallbackCaptor [Unit]
+    guard (throw new DistinguishedException) defer (cb)
+    cb.failed [DistinguishedException]
+  }
+
+  "Async.onError" should "ignore the body on pass" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    val a = supply (0) .onError (flag = true)
+    a.pass
+    expectResult (false) (flag)
+  }
+
+  it should "invoke the body on fail" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    val a = guard [Int] (throw new DistinguishedException) .onError (flag = true)
+    a.fail [DistinguishedException]
+    expectResult (true) (flag)
+  }
+
+  "Async.onLeave" should "invoke the body on pass" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    val a = supply (0) .onLeave (flag = true)
+    a.pass
+    expectResult (true) (flag)
+  }
+
+  it should "invoke the body on fail" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    val a = guard [Int] (throw new DistinguishedException) .onLeave (flag = true)
+    a.fail [DistinguishedException]
+    expectResult (true) (flag)
+  }
+
   "Async.async" should "inovke the body" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false
@@ -111,7 +157,7 @@ class AsyncSpec extends FlatSpec {
     guard (throw new DistinguishedException) .fail [DistinguishedException]
   }
 
-  it should "throw and exception from the callback" in {
+  it should "throw an exception from the callback" in {
     implicit val scheduler = StubScheduler.random()
     intercept [DistinguishedException] {
       guard (supply()) .run (exceptional)
@@ -144,13 +190,13 @@ class AsyncSpec extends FlatSpec {
     cond (true) (throw new DistinguishedException) .fail [DistinguishedException]
   }
 
-  it should "throw and exception from the callback when the condition is true" in {
+  it should "throw an exception from the callback when the condition is true" in {
     implicit val scheduler = StubScheduler.random()
     intercept [DistinguishedException] {
       cond (true) (supply()) .run (exceptional)
     }}
 
-  it should "throw and exception from the callback when the condition is false" in {
+  it should "throw an exception from the callback when the condition is false" in {
     implicit val scheduler = StubScheduler.random()
     intercept [DistinguishedException] {
       cond (false) (supply()) .run (exceptional)
@@ -171,6 +217,7 @@ class AsyncSpec extends FlatSpec {
     intercept [IllegalArgumentException] {
       a run disregard
     }}
+
   "Async.whilst" should "handle zero iterations" in {
     implicit val scheduler = StubScheduler.random()
     var count = 0

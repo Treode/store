@@ -96,6 +96,27 @@ class FiberSpec extends FlatSpec {
     cb.failed [DistinguishedException]
   }
 
+  "Fiber.supply" should "invoke the callback" in {
+    val s = StubScheduler.random()
+    val f = new Fiber (s)
+    var a = false
+    val cb = f.supply (a = true) .capture()
+    expectResult (false) (a)
+    cb.expectNotInvoked()
+    s.runTasks()
+    expectResult (true) (a)
+    cb.expectInvoked()
+  }
+
+  it should "report an exception through the callback" in {
+    val s = StubScheduler.random()
+    val f = new Fiber (s)
+    val cb = f.supply (throw new DistinguishedException) .capture()
+    cb.expectNotInvoked()
+    s.runTasks()
+    cb.failed [DistinguishedException]
+  }
+
   "Fiber.run" should "invoke the callback" in {
     val s = StubScheduler.random()
     val f = new Fiber (s)
@@ -142,11 +163,12 @@ class FiberSpec extends FlatSpec {
     cb.failed [DistinguishedException]
   }
 
-  "Fiber.supply" should "invoke the callback" in {
+  "Fiber.invoke" should "invoke the callback" in {
     val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
-    val cb = f.supply (a = true) .capture()
+    val cb = CallbackCaptor [Unit]
+    f.invoke (cb) (a = true)
     expectResult (false) (a)
     cb.expectNotInvoked()
     s.runTasks()
@@ -157,7 +179,8 @@ class FiberSpec extends FlatSpec {
   it should "report an exception through the callback" in {
     val s = StubScheduler.random()
     val f = new Fiber (s)
-    val cb = f.supply (throw new DistinguishedException) .capture()
+    val cb = CallbackCaptor [Unit]
+    f.defer (cb) (throw new DistinguishedException)
     cb.expectNotInvoked()
     s.runTasks()
     cb.failed [DistinguishedException]
