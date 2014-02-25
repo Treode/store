@@ -26,16 +26,6 @@ object AtomicBehaviors extends FreeSpec with StoreBehaviors {
 
   kit.runTasks()
 
-  "A Deputy should" - {
-
-    val xid = TxId (Bytes (random.nextLong))
-    var d: WriteDeputy = null
-
-    "be restoring when first opened" in {
-      d = writer (xid)
-      assert (d.isRestoring)
-    }}
-
   "The transaction implementation should" - {
 
     val xid = TxId (Bytes (random.nextLong))

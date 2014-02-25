@@ -2,9 +2,11 @@ package com.treode.store.atomic
 
 import java.util.concurrent.ConcurrentHashMap
 
+import com.treode.disk.{PageDescriptor, Position, RootDescriptor}
 import com.treode.store.{Bytes, TxId}
+import com.treode.store.tier.{TierDescriptor, TierTable}
 
-private class WriteDeputies (kit: AtomicKit) {
+private class WriteDeputies (val db: TierTable, kit: AtomicKit) {
   import WriteDeputy._
   import kit.cluster
 
@@ -34,3 +36,31 @@ private class WriteDeputies (kit: AtomicKit) {
     abort.listen { case (xid, mdtr) =>
       get (xid) .abort (mdtr)
     }}}
+
+private object WriteDeputies {
+
+  class Root (val pos: Position, val db: TierTable.Meta)
+
+  object Root {
+
+    val pickler = {
+      import AtomicPicklers._
+      wrap (pos, tierMeta)
+      .build (v => new Root (v._1, v._2))
+      .inspect (v => (v.pos, v.db))
+    }}
+
+  val root = {
+    import AtomicPicklers._
+    RootDescriptor (0xBFD4F3D3, Root.pickler)
+  }
+
+  val pager = {
+    import AtomicPicklers._
+    PageDescriptor (0x7C71E2AF, const (0), seq (activeStatus))
+  }
+
+  val db = {
+    import AtomicPicklers._
+    TierDescriptor (0xB601F6C0, bytes, const (true))
+  }}

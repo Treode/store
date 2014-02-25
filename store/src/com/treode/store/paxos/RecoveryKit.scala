@@ -9,8 +9,8 @@ import com.treode.disk.Disks
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.store.tier.TierMedic
 
-import Acceptors.{root, statii}
-import Acceptor.{open, promise, accept, reaccept, close}
+import Acceptors.{root, pager}
+import Acceptor.{ActiveStatus, open, promise, accept, reaccept, close}
 
 private class RecoveryKit (implicit
     val random: Random,
@@ -23,7 +23,7 @@ private class RecoveryKit (implicit
   val db = TierMedic (Acceptors.db)
   val medics = newMedicsMap
 
-  def openByStatus (status: Acceptor.Status) {
+  def openByStatus (status: ActiveStatus) {
     val m1 = Medic (status, db, this)
     val m0 = medics.putIfAbsent (m1.key, m1)
     require (m0 == null, "Already recovering paxos instance ${m1.key}.")
@@ -47,7 +47,7 @@ private class RecoveryKit (implicit
 
   root.reload { root => implicit reloader =>
     db.checkpoint (root.db)
-    for (ss <- statii.read (reloader, root.statii))
+    for (ss <- pager.read (reloader, root.pos))
       yield (ss foreach openByStatus)
   }
 

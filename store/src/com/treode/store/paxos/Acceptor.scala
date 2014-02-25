@@ -8,7 +8,7 @@ import com.treode.store.Bytes
 import Callback.ignore
 
 private class Acceptor (val key: Bytes, kit: PaxosKit) {
-  import Acceptor.{NoPost, Post, Status}
+  import Acceptor.{ActiveStatus, NoPost, Post}
   import kit.{cluster, disks, scheduler}
   import kit.acceptors.db
   import kit.config.{closedLifetime, deliberatingTimeout}
@@ -20,7 +20,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     def query (proposer: Peer, ballot: Long, default: Bytes)
     def propose (proposer: Peer, ballot: Long, value: Bytes)
     def choose (chosen: Bytes)
-    def checkpoint (cb: Callback [Status])
+    def checkpoint (cb: Callback [ActiveStatus])
     def shutdown()
   }
 
@@ -28,23 +28,26 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
     def query (proposer: Peer, ballot: Long, default: Bytes) {
       val s = new Restoring (default)
-      s.restore (_.query (proposer, ballot, default))
+      s.query (proposer, ballot, default)
+      s.restore()
       state = s
     }
 
     def propose (proposer: Peer, ballot: Long, value: Bytes) {
       val s = new Restoring (value)
-      s.restore (_.propose (proposer, ballot, value))
+      s.propose (proposer, ballot, value)
+      s.restore()
       state = s
     }
 
     def choose (chosen: Bytes) {
       val s = new Restoring (chosen)
-      s.restore (_.choose (chosen))
+      s.choose (chosen)
+      s.restore()
       state = s
     }
 
-    def checkpoint (cb: Callback [Status]): Unit =
+    def checkpoint (cb: Callback [ActiveStatus]): Unit =
       throw new IllegalStateException
 
     def shutdown(): Unit =
@@ -64,7 +67,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     def accept (ballot: BallotNumber, value: Bytes, proposer: Peer): Unit =
       postable = (_.accept (ballot, value, proposer))
 
-    def restore (f: State => Unit) {
+    def restore() {
       db.get (key) run (new Callback [Option [Bytes]] {
 
         def pass (chosen: Option [Bytes]): Unit = fiber.execute {
@@ -77,13 +80,11 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
                 val s = new Deliberating (default, ballot, proposal, proposers)
                 postable (s)
                 s
-            }
-            f (state)
-          }}
+            }}}
 
         def fail (t: Throwable): Unit = fiber.execute {
           if (state == Restoring.this) {
-            state = new Panicked (Status.Restoring (key, default), t)
+            state = new Panicked (ActiveStatus.Restoring (key, default), t)
             throw t
           }}})
     }
@@ -112,11 +113,11 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       Proposer.chosen (key, chosen) (proposers)
     }
 
-    def checkpoint (cb: Callback [Status]): Unit =
-      cb.pass (Status.Restoring (key, default))
+    def checkpoint (cb: Callback [ActiveStatus]): Unit =
+      cb.pass (ActiveStatus.Restoring (key, default))
 
     def shutdown(): Unit =
-      state = new Shutdown (Status.Restoring (key, default))
+      state = new Shutdown (ActiveStatus.Restoring (key, default))
 
     override def toString = s"Acceptor.Restoring($key)"
   }
@@ -142,7 +143,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
       def fail (t: Throwable): Unit = fiber.execute {
         if (state == Deliberating.this) {
-          val s = Status.Deliberating (key, default, ballot, proposal)
+          val s = ActiveStatus.Deliberating (key, default, ballot, proposal)
           state = new Panicked (s, t)
         }}}
 
@@ -213,11 +214,11 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       Acceptor.close.record (key, chosen, gen) .run (Callback.ignore)
     }
 
-    def checkpoint (cb: Callback [Status]): Unit =
-      cb.pass (Status.Deliberating (key, default, ballot, proposal))
+    def checkpoint (cb: Callback [ActiveStatus]): Unit =
+      cb.pass (ActiveStatus.Deliberating (key, default, ballot, proposal))
 
     def shutdown(): Unit =
-      state = new Shutdown (Status.Deliberating (key, default, ballot, proposal))
+      state = new Shutdown (ActiveStatus.Deliberating (key, default, ballot, proposal))
 
     override def toString = s"Acceptor.Deliberating($key, $proposal)"
   }
@@ -236,18 +237,18 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     def choose (chosen: Bytes): Unit =
       require (chosen == this.chosen, "Paxos disagreement")
 
-    def checkpoint (cb: Callback [Status]): Unit =
-      cb.pass (Status.Closed (key, chosen))
+    def checkpoint (cb: Callback [ActiveStatus]): Unit =
+      cb.pass (ActiveStatus.Closed (key, chosen))
 
     def shutdown(): Unit =
-      state = new Shutdown (Status.Closed (key, chosen))
+      state = new Shutdown (ActiveStatus.Closed (key, chosen))
 
     override def toString = s"Acceptor.Closed($key, $chosen)"
   }
 
-  class Shutdown (status: Status) extends State {
+  class Shutdown (status: ActiveStatus) extends State {
 
-    def checkpoint (cb: Callback [Status]): Unit =
+    def checkpoint (cb: Callback [ActiveStatus]): Unit =
       cb.pass (status)
 
     def query (proposer: Peer, ballot: Long, abort: Bytes): Unit = ()
@@ -258,7 +259,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     override def toString = s"Acceptor.Shutdown($key)"
   }
 
-  class Panicked (status: Status, thrown: Throwable) extends Shutdown (status) {
+  class Panicked (status: ActiveStatus, thrown: Throwable) extends Shutdown (status) {
 
     override def toString = s"Acceptor.Panicked($key, $thrown)"
   }
@@ -272,7 +273,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
   def choose (chosen: Bytes): Unit =
     fiber.execute (state.choose (chosen))
 
-  def checkpoint(): Async [Status] =
+  def checkpoint(): Async [ActiveStatus] =
     fiber.async (state.checkpoint (_))
 
   def shutdown(): Unit =
@@ -333,25 +334,25 @@ private object Acceptor {
     def reply() = ()
   }
 
-  sealed abstract class Status
+  sealed abstract class ActiveStatus
 
-  object Status {
+  object ActiveStatus {
 
-    case class Restoring (key: Bytes, default: Bytes) extends Status
+    case class Restoring (key: Bytes, default: Bytes) extends ActiveStatus
 
     case class Deliberating (
         key: Bytes,
         default: Bytes,
         ballot: BallotNumber,
-        proposal: Proposal) extends Status
+        proposal: Proposal) extends ActiveStatus
 
-    case class Closed (key: Bytes, chosen: Bytes) extends Status {
+    case class Closed (key: Bytes, chosen: Bytes) extends ActiveStatus {
       def default = chosen
     }
 
     val pickler = {
       import PaxosPicklers._
-      tagged [Status] (
+      tagged [ActiveStatus] (
           0x1 -> wrap (bytes, bytes)
                  .build ((Restoring.apply _).tupled)
                  .inspect (v => (v.key, v.default)),

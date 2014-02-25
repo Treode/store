@@ -4,7 +4,7 @@ import com.treode.async.{Async, Fiber}
 import com.treode.store.Bytes
 import com.treode.store.tier.TierMedic
 
-import Acceptor.Status
+import Acceptor.ActiveStatus
 
 private class Medic (
     val key: Bytes,
@@ -56,13 +56,13 @@ private class Medic (
 
 private object Medic {
 
-  def apply (status: Status, db: TierMedic, kit: RecoveryKit): Medic = {
+  def apply (status: ActiveStatus, db: TierMedic, kit: RecoveryKit): Medic = {
     status match {
-      case Status.Restoring (key, default) =>
+      case ActiveStatus.Restoring (key, default) =>
         new Medic (key, default, BallotNumber.zero, Option.empty, None, db, kit)
-      case Status.Deliberating (key, default, ballot, proposal) =>
+      case ActiveStatus.Deliberating (key, default, ballot, proposal) =>
         new Medic (key, default, ballot, proposal, None, db, kit)
-      case Status.Closed (key, chosen) =>
+      case ActiveStatus.Closed (key, chosen) =>
         new Medic (key, chosen, BallotNumber.zero, Option.empty, Some (chosen), db, kit)
     }}
 

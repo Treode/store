@@ -6,7 +6,7 @@ import com.treode.disk.{PageDescriptor, Position, RootDescriptor}
 import com.treode.store.Bytes
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
-import Acceptors.{Root, statii}
+import Acceptors.{Root, pager}
 import Async.guard
 import AsyncConversions._
 
@@ -44,9 +44,9 @@ private class Acceptors (val db: TierTable, kit: PaxosKit) {
       val as = materialize (acceptors.values)
       for {
         ss <- as.latch.seq (_.checkpoint())
-        _statii <- statii.write (0, ss)
+        _pos <- pager.write (0, ss)
         _db <- db.checkpoint()
-      } yield new Root (_statii, _db)
+      } yield new Root (_pos, _db)
     }
 
   def attach() {
@@ -65,11 +65,8 @@ private class Acceptors (val db: TierTable, kit: PaxosKit) {
     }}}
 
 private object Acceptors {
-  import Acceptor._
 
-  class Root (
-      private [paxos] val statii: Position,
-      private [paxos] val db: TierTable.Meta)
+  class Root (val pos: Position, val db: TierTable.Meta)
 
   object Root {
 
@@ -77,7 +74,7 @@ private object Acceptors {
       import PaxosPicklers._
       wrap (pos, tierMeta)
       .build (v => new Root (v._1, v._2))
-      .inspect (v => (v.statii, v.db))
+      .inspect (v => (v.pos, v.db))
     }}
 
   val root = {
@@ -85,9 +82,9 @@ private object Acceptors {
     RootDescriptor (0xBFD4F3D3, Root.pickler)
   }
 
-  val statii = {
+  val pager = {
     import PaxosPicklers._
-    PageDescriptor (0x7C71E2AF, const (0), seq (acceptorStatus))
+    PageDescriptor (0x7C71E2AF, const (0), seq (activeStatus))
   }
 
   val db = {

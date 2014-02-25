@@ -8,10 +8,13 @@ import com.treode.cluster.Cluster
 import com.treode.disk.Disks
 import com.treode.store._
 import com.treode.store.paxos.Paxos
+import com.treode.store.tier.TierTable
 
 import Async.async
 
-private class AtomicKit (implicit
+private class AtomicKit (
+    db: TierTable
+) (implicit
     val random: Random,
     val scheduler: Scheduler,
     val cluster: Cluster,
@@ -22,7 +25,7 @@ private class AtomicKit (implicit
 
   val store = new TimedStore (this)
   val reader = new ReadDeputy (this)
-  val writers = new WriteDeputies (this)
+  val writers = new WriteDeputies (db, this)
 
   def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] =
     async (new ReadDirector (rt, ops, this, _))

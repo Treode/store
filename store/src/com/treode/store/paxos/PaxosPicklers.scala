@@ -5,7 +5,7 @@ import com.treode.store.StorePicklers
 
 private class PaxosPicklers extends StorePicklers {
 
-  def acceptorStatus = Acceptor.Status.pickler
+  def activeStatus = Acceptor.ActiveStatus.pickler
   def ballotNumber = BallotNumber.pickler
   def position = Position.pickler
 
