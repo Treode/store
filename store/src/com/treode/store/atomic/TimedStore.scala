@@ -4,10 +4,10 @@ import java.util.concurrent.ConcurrentHashMap
 
 import com.treode.async.{Async, AsyncConversions, Callback, Latch}
 import com.treode.cluster.misc.materialize
-import com.treode.disk.{PageDescriptor, Position}
+import com.treode.disk.{Disks, PageDescriptor, Position}
 import com.treode.store.{ReadOp, TableId, TxClock, TxId, Value, WriteOp}
 import com.treode.store.locks.{LockSet, LockSpace}
-import com.treode.store.tier.TierTable
+import com.treode.store.tier.{TierMedic, TierTable}
 
 import Async.async
 import AsyncConversions._
@@ -17,7 +17,7 @@ private class TimedStore (kit: AtomicKit) {
   import kit.{config, disks, scheduler}
 
   val space = new LockSpace
-  val tables = new ConcurrentHashMap [TableId, TimedTable]
+  val tables = newTablesMap
 
   private def getTable (id: TableId): TimedTable = {
     var t0 = tables.get (id)
@@ -79,6 +79,11 @@ private class TimedStore (kit: AtomicKit) {
         case op: Update => t.put (op.key, wt, op.value)
         case op: Delete => t.delete (op.key, wt)
       }}}
+
+  def recover (ts: Seq [(TableId, TimedTable)]) {
+    for ((id, t) <-ts)
+      tables.put (id, t)
+  }
 
   private def checkpoint (id: TableId, table: TimedTable) =
     for (meta <- table.checkpoint())

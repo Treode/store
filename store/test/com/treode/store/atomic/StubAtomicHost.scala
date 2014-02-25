@@ -29,7 +29,7 @@ extends StubActiveHost (id, network) {
   val _atomic = AtomicKit.recover()
 
   val file = new StubFile
-  val geometry = DiskGeometry (10, 6, 1<<20)
+  val geometry = DiskGeometry (14, 8, 1<<20)
   val files = Seq ((Paths.get ("a"), file, geometry))
 
   val _launch =
@@ -57,6 +57,6 @@ extends StubActiveHost (id, network) {
     atomic.write (xid, ct, ops)
 
   def expectCells (id: TableId) (cs: TimedCell*) {
-    val t = atomic.store.tables.get (id)
+    val t = atomic.tables.tables.get (id)
     expectResult (cs) (t.iterator.toSeq)
   }}

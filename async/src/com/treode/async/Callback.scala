@@ -99,6 +99,12 @@ object Callback {
     def failed (t: Throwable, cb: Callback [Unit]) = cb.fail (t)
   }
 
+  def callback [A] (passf: A => Any) (failf: Throwable => Any): Callback [A] =
+    new Callback [A] {
+      def pass (v: A): Unit = passf (v)
+      def fail (t: Throwable): Unit = failf (t)
+    }
+
   def fanout [A] (cbs: Traversable [Callback [A]], scheduler: Scheduler): Callback [A] =
     new Callback [A] {
       def pass (v: A): Unit = cbs foreach (scheduler.pass (_, v))

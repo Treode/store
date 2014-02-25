@@ -12,10 +12,9 @@ private class Medic (
     var ballot: BallotNumber,
     var proposal: Proposal,
     var chosen: Option [Bytes],
-    db: TierMedic,
     kit: RecoveryKit) {
 
-  import kit.scheduler
+  import kit.{archive, scheduler}
 
   val fiber = new Fiber (scheduler)
 
@@ -39,7 +38,7 @@ private class Medic (
 
   def closed (chosen: Bytes, gen: Long): Unit = fiber.execute {
     this.chosen = Some (chosen)
-    db.put (gen, key, chosen)
+    archive.put (gen, key, chosen)
   }
 
   def close (kit: PaxosKit): Async [Acceptor] = fiber.supply {
@@ -56,16 +55,17 @@ private class Medic (
 
 private object Medic {
 
-  def apply (status: ActiveStatus, db: TierMedic, kit: RecoveryKit): Medic = {
+  def apply (status: ActiveStatus, kit: RecoveryKit): Medic = {
+    import ActiveStatus._
     status match {
-      case ActiveStatus.Restoring (key, default) =>
-        new Medic (key, default, BallotNumber.zero, Option.empty, None, db, kit)
-      case ActiveStatus.Deliberating (key, default, ballot, proposal) =>
-        new Medic (key, default, ballot, proposal, None, db, kit)
-      case ActiveStatus.Closed (key, chosen) =>
-        new Medic (key, chosen, BallotNumber.zero, Option.empty, Some (chosen), db, kit)
+      case Restoring (key, default) =>
+        new Medic (key, default, BallotNumber.zero, Option.empty, None, kit)
+      case Deliberating (key, default, ballot, proposal) =>
+        new Medic (key, default, ballot, proposal, None, kit)
+      case Closed (key, chosen) =>
+        new Medic (key, chosen, BallotNumber.zero, Option.empty, Some (chosen), kit)
     }}
 
-  def apply (key: Bytes, default: Bytes, db: TierMedic, kit: RecoveryKit): Medic =
-    new Medic (key, default, BallotNumber.zero, Option.empty, None, db, kit)
+  def apply (key: Bytes, default: Bytes, kit: RecoveryKit): Medic =
+    new Medic (key, default, BallotNumber.zero, Option.empty, None, kit)
 }

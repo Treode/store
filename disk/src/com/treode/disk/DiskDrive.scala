@@ -109,9 +109,10 @@ private class DiskDrive (
     }
 
   private def splitRecords (entries: UnrolledBuffer [PickledRecord]) = {
+    // TODO: reject records that are too large
     val accepts = new UnrolledBuffer [PickledRecord]
     val rejects = new UnrolledBuffer [PickledRecord]
-    var pos = logHead
+    var pos = logTail
     var realloc = false
     for (entry <- entries) {
       if (entry.disk.isDefined && entry.disk.get != id) {
@@ -173,10 +174,6 @@ private class DiskDrive (
 
       val (accepts, rejects, realloc) = splitRecords (entries)
       logmp.replace (rejects)
-      if (accepts.isEmpty) {
-        logmp.receive (logr)
-        return
-      }
 
       val callbacks = writeRecords (logBuf, accepts)
       val cb = Callback.fanout (callbacks, scheduler)
@@ -190,7 +187,7 @@ private class DiskDrive (
     }
 
   private def splitPages (pages: UnrolledBuffer [PickledPage]) = {
-
+    // TODO: reject pages that are too large
     val projector = pageLedger.project
     val limit = (pageHead - pageSeg.pos).toInt
     val accepts = new UnrolledBuffer [PickledPage]

@@ -1,6 +1,5 @@
 package com.treode.store.atomic
 
-import java.util.concurrent.ConcurrentHashMap
 import scala.util.Random
 
 import com.treode.async.{Async, Callback, Scheduler}
@@ -13,7 +12,7 @@ import com.treode.store.tier.TierTable
 import Async.async
 
 private class AtomicKit (
-    db: TierTable
+    val archive: TierTable
 ) (implicit
     val random: Random,
     val scheduler: Scheduler,
@@ -23,9 +22,9 @@ private class AtomicKit (
     val config: StoreConfig
 ) extends Store {
 
-  val store = new TimedStore (this)
+  val tables = new TimedStore (this)
   val reader = new ReadDeputy (this)
-  val writers = new WriteDeputies (db, this)
+  val writers = new WriteDeputies (this)
 
   def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] =
     async (new ReadDirector (rt, ops, this, _))
@@ -37,11 +36,6 @@ private class AtomicKit (
 
   def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult] =
     async (write (xid, ct, ops, _))
-
-  def attach() {
-    reader.attach()
-    writers.attach()
-  }
 
   def close() = ()
 }

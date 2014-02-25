@@ -1,7 +1,5 @@
 package com.treode.store.paxos
 
-import java.util.concurrent.ConcurrentHashMap
-import scala.collection.JavaConversions._
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
@@ -13,7 +11,7 @@ import com.treode.store.tier.TierTable
 import Async.async
 
 private class PaxosKit (
-    db: TierTable
+    val archive: TierTable
 ) (implicit
     val random: Random,
     val scheduler: Scheduler,
@@ -21,7 +19,7 @@ private class PaxosKit (
     val disks: Disks,
     val config: StoreConfig) extends Paxos {
 
-  val acceptors = new Acceptors (db, this)
+  val acceptors = new Acceptors (this)
 
   val proposers = new Proposers (this)
 

@@ -9,7 +9,7 @@ import com.treode.disk.Disks
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.store.tier.TierMedic
 
-import Acceptors.{root, pager}
+import Acceptors.{active, root}
 import Acceptor.{ActiveStatus, open, promise, accept, reaccept, close}
 
 private class RecoveryKit (implicit
@@ -20,20 +20,20 @@ private class RecoveryKit (implicit
     val config: StoreConfig
 ) extends Paxos.Recovery {
 
-  val db = TierMedic (Acceptors.db)
+  val archive = TierMedic (Acceptors.archive)
   val medics = newMedicsMap
 
   def openByStatus (status: ActiveStatus) {
-    val m1 = Medic (status, db, this)
+    val m1 = Medic (status, this)
     val m0 = medics.putIfAbsent (m1.key, m1)
-    require (m0 == null, "Already recovering paxos instance ${m1.key}.")
+    require (m0 == null, s"Already recovering paxos instance ${m1.key}.")
   }
 
   def openWithDefault (key: Bytes, default: Bytes) {
     var m0 = medics.get (key)
     if (m0 != null)
       return
-    val m1 = Medic (key, default, db, this)
+    val m1 = Medic (key, default, this)
     m0 = medics.putIfAbsent (key, m1)
     if (m0 != null)
       return
@@ -45,9 +45,9 @@ private class RecoveryKit (implicit
     m
   }
 
-  root.reload { root => implicit reloader =>
-    db.checkpoint (root.db)
-    for (ss <- pager.read (reloader, root.pos))
+  root.reload { root => implicit reload =>
+    archive.checkpoint (root.archive)
+    for (ss <- active.read (reload, root.active))
       yield (ss foreach openByStatus)
   }
 
@@ -74,7 +74,7 @@ private class RecoveryKit (implicit
   def launch (implicit launch: Disks.Launch): Async [Paxos] = {
     import launch.disks
 
-    val kit = new PaxosKit (db.close())
+    val kit = new PaxosKit (archive.close())
     import kit.{acceptors, proposers}
 
     root.checkpoint (acceptors.checkpoint())

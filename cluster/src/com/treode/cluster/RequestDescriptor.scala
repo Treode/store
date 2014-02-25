@@ -47,6 +47,9 @@ class RequestDescriptor [Q, A] private (id: MailboxId, preq: Pickler [Q], prsp: 
     def timeout()
   }
 
+  val void: Mediator =
+    new Mediator (prsp, 0, Peer.void)
+
   private val _preq = {
     import Picklers._
     tuple (MailboxId.pickler, preq)

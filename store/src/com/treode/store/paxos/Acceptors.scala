@@ -1,17 +1,17 @@
 package com.treode.store.paxos
 
-import com.treode.async.{Async, AsyncConversions}
+import com.treode.async.{Async, AsyncConversions, Latch}
 import com.treode.cluster.misc.materialize
 import com.treode.disk.{PageDescriptor, Position, RootDescriptor}
 import com.treode.store.Bytes
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
-import Acceptors.{Root, pager}
+import Acceptors.{Root, active}
 import Async.guard
 import AsyncConversions._
 
-private class Acceptors (val db: TierTable, kit: PaxosKit) {
-  import kit.{cluster, disks}
+private class Acceptors (kit: PaxosKit) {
+  import kit.{archive, cluster, disks}
 
   val acceptors = newAcceptorsMap
 
@@ -43,10 +43,11 @@ private class Acceptors (val db: TierTable, kit: PaxosKit) {
     guard {
       val as = materialize (acceptors.values)
       for {
-        ss <- as.latch.seq (_.checkpoint())
-        _pos <- pager.write (0, ss)
-        _db <- db.checkpoint()
-      } yield new Root (_pos, _db)
+        (ss, _archive) <- Latch.pair (
+            as.latch.seq (_.checkpoint()),
+            archive.checkpoint())
+        _active <- active.write (0, ss.flatten)
+      } yield new Root (_active, _archive)
     }
 
   def attach() {
@@ -66,7 +67,7 @@ private class Acceptors (val db: TierTable, kit: PaxosKit) {
 
 private object Acceptors {
 
-  class Root (val pos: Position, val db: TierTable.Meta)
+  class Root (val active: Position, val archive: TierTable.Meta)
 
   object Root {
 
@@ -74,7 +75,7 @@ private object Acceptors {
       import PaxosPicklers._
       wrap (pos, tierMeta)
       .build (v => new Root (v._1, v._2))
-      .inspect (v => (v.pos, v.db))
+      .inspect (v => (v.active, v.archive))
     }}
 
   val root = {
@@ -82,12 +83,12 @@ private object Acceptors {
     RootDescriptor (0xBFD4F3D3, Root.pickler)
   }
 
-  val pager = {
+  val active = {
     import PaxosPicklers._
     PageDescriptor (0x7C71E2AF, const (0), seq (activeStatus))
   }
 
-  val db = {
+  val archive = {
     import PaxosPicklers._
     TierDescriptor (0xDD683792, bytes, const (true))
   }}
