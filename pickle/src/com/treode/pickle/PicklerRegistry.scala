@@ -3,7 +3,7 @@ package com.treode.pickle
 import java.util.concurrent.ConcurrentHashMap
 import scala.reflect.ClassTag
 
-import com.treode.buffer.{PagedBuffer}
+import com.treode.buffer.PagedBuffer
 
 import PicklerRegistry._
 
@@ -184,7 +184,7 @@ object PicklerRegistry {
           reader (p.u (ctx))
 
         def read (buf: PagedBuffer): T =
-            reader (p.unpickle (buf))
+          reader (p.unpickle (buf))
 
         override def toString = f"Opener($id%X)"
     }}}

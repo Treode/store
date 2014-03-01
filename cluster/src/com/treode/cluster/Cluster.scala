@@ -14,6 +14,8 @@ trait Cluster {
 
   def peer (id: HostId): Peer
 
+  def rpeer: Option [Peer]
+
   def open [M] (p: Pickler [M], s: Scheduler): EphemeralMailbox [M]
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M)

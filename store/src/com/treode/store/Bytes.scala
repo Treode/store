@@ -46,6 +46,8 @@ class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
 
 object Bytes extends Ordering [Bytes] {
 
+  val empty = new Bytes (new Array (0))
+
   def apply (bytes: Array [Byte]): Bytes =
     new Bytes (bytes)
 

@@ -33,6 +33,7 @@ object TreodeBuild extends Build {
       "com.google.code.findbugs" % "jsr305" % "2.0.2",
       "com.google.guava" % "guava" % "15.0",
       "com.googlecode.javaewah" % "JavaEWAH" % "0.7.9",
+      "com.nothome" % "javaxdelta" % "2.0.1",
       "org.slf4j" % "slf4j-api" % "1.7.5",
       "org.slf4j" % "slf4j-simple" % "1.7.5"))
 

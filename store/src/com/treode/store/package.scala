@@ -4,6 +4,7 @@ import java.io.Closeable
 import java.util.logging.{Level, Logger}
 
 import com.treode.async.{Async, Callback}
+import com.treode.cluster.MailboxId
 import com.treode.pickle.Pickler
 import com.treode.store.locks.LockSet
 
@@ -32,4 +33,7 @@ package object store {
 
     def exceptionPreparingWrite (e: Throwable): Unit =
       logger.log (WARNING, s"Exception preparing write", e)
+
+    def catalogUpdateMissingDiffs (id: MailboxId): Unit =
+      logger.log (WARNING, s"A catalog update was missing diffs: $id")
   }}

@@ -53,8 +53,8 @@ object ScuttlebuttBehaviors extends FreeSpec {
 
     val sb = new Scuttlebutt (LOCAL, peers)
 
-    def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any) =
-      sb.listen (desc) (f)
+    def listen (f: (Int, Peer) => Any) =
+      sb.listen (rumor) (f)
 
     def status = sb.status.pass
 
@@ -89,35 +89,29 @@ object ScuttlebuttBehaviors extends FreeSpec {
 
     "yield an empty status" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.listen (rumor) ((v, from) => ())
       expectSeq () (sb.status)
     }
 
     "yield empty deltas on empty ping" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.listen (rumor) ((v, from) => ())
       expectSeq () (sb.ping())
     }
 
     "yield empty deltas on non-empty ping" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.listen (rumor) ((v, from) => ())
       expectSeq () (sb.ping (PEER1 -> 1))
-    }
-  }
+    }}
 
   "When Scuttlebutt has one local update it should" - {
 
     "yield a status containg LOCAL" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.listen (rumor) ((v, from) => ())
       sb.spread (1)
       expectSeq (LOCAL -> 1) (sb.status)
     }
 
     "raise the version number" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.listen (rumor) ((v, from) => ())
       sb.spread (1)
       sb.spread (2)
       expectSeq (LOCAL -> 2) (sb.status)
@@ -125,7 +119,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
 
     "yield non-empty deltas on empty ping" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.listen (rumor) ((v, from) => ())
+      sb.listen ((_v, from) => ())
       sb.spread (1)
       expectSeq (delta (LOCAL, (1, 1))) (sb.ping())
     }
@@ -133,21 +127,20 @@ object ScuttlebuttBehaviors extends FreeSpec {
 
     "yield non-empty deltas on ping missing this host" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.listen (rumor) ((v, from) => ())
+      sb.listen ((_v, from) => ())
       sb.spread (1)
       expectSeq (delta (LOCAL, (1, 1))) (sb.ping (PEER1 -> 1))
     }
 
     "yield non-empty deltas on ping out-of-date with this host" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.listen (rumor) ((v, from) => ())
+      sb.listen ((_v, from) => ())
       sb.spread (1)
       expectSeq (delta (LOCAL, (1, 1))) (sb.ping (LOCAL -> 0))
     }
 
     "yield empty deltas on ping up-to-date with this host" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.listen (rumor) ((v, from) => ())
       sb.spread (1)
       expectSeq () (sb.ping (LOCAL -> 1))
     }}
@@ -156,14 +149,12 @@ object ScuttlebuttBehaviors extends FreeSpec {
 
     "yield a status that contains the peer" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.listen (rumor) ((v, from) => ())
       sb.sync (sb.delta (PEER1, (1, 1)))
       expectSeq (PEER1 -> 1) (sb.status)
     }
 
     "raise the local version number" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.listen (rumor) ((v, from) => ())
       sb.sync (sb.delta (PEER1, (1, 3745)))
       sb.spread (2)
       expectSeq (PEER1 -> 3745, LOCAL -> 3746) (sb.status)
@@ -172,7 +163,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
     "invoke the listener on a first update" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       var v = 0
-      sb.listen (rumor) ((_v, from) => v = _v)
+      sb.listen ((_v, from) => v = _v)
       sb.sync (sb.delta (PEER1, (1, 1)))
       expectResult (1) (v)
     }
@@ -180,7 +171,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
     "invoke the listener on second update" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       var v = 0
-      sb.listen (rumor) ((_v, from) => v = _v)
+      sb.listen ((_v, from) => v = _v)
       sb.sync (sb.delta (PEER1, (1, 1)))
       sb.sync (sb.delta (PEER1, (2, 2)))
       expectResult (2) (v)
@@ -189,7 +180,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
     "ignore a repeated update" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       var count = 0
-      sb.listen (rumor) ((v, from) => count += 1)
+      sb.listen ((v, from) => count += 1)
       sb.sync (sb.delta (PEER1, (1, 1)))
       sb.sync (sb.delta (PEER1, (1, 1)))
       expectResult (1) (count)
@@ -200,13 +191,10 @@ object ScuttlebuttBehaviors extends FreeSpec {
     "invoke the listener once foreach peer" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       var vs = Map.empty [HostId, Int]
-      sb.listen (rumor) ((v, from) => vs += from.id -> v)
+      sb.listen ((v, from) => vs += from.id -> v)
       sb.sync (sb.delta (PEER1, (1, 1)), sb.delta (PEER2, (2, 1)))
       expectResult (Map (PEER1 -> 1, PEER2 -> 2)) (vs)
-    }}
-
-
-}
+    }}}
 
 object ScuttlebuttProperties extends PropSpec with PropertyChecks {
 
@@ -264,12 +252,12 @@ object ScuttlebuttProperties extends PropSpec with PropertyChecks {
     assert (hs forall (_.heard == expected))
   }
 
-  property ("Scuttlebutt should spread rummors") {
+  property ("Scuttlebutt should spread rumors") {
     forAll (seeds) { seed =>
       checkUnity (seed, 0.0)
     }}
 
-  property ("Scuttlebutt should spread rummors with a flakey network") {
+  property ("Scuttlebutt should spread rumors with a flakey network") {
     forAll (seeds) { seed =>
       checkUnity (seed, 0.1)
     }}}

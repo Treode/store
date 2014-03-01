@@ -111,6 +111,9 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
       def peer (id: HostId): Peer =
         _peers.get (id)
 
+      def rpeer: Option [Peer] =
+        _peers.rpeer
+
       def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
         _peers.get (remoteId) .address = remoteAddr
 

@@ -24,6 +24,9 @@ class StubActiveHost (val localId: HostId, network: StubNetwork) extends Cluster
   def peer (id: HostId): Peer =
     peers.get (id)
 
+  def rpeer: Option [Peer] =
+    peers.rpeer
+
   def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
     mailboxes.listen (desc.pmsg, desc.id) (f)
 
