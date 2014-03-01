@@ -28,7 +28,7 @@ class ArrayBuffer private (val data: Array [Byte]) extends Buffer {
     this.rpos = pos
   }
 
-  def readableBytes: Int = data.length - rpos
+  def readableBytes: Int = wpos - rpos
 
   private [this] def requireWritable (length: Int) {
     val available = data.length - wpos
@@ -37,7 +37,7 @@ class ArrayBuffer private (val data: Array [Byte]) extends Buffer {
   }
 
   private [this] def requireReadable (length: Int) {
-    val available = data.length - rpos
+    val available = wpos - rpos
     if (available < length)
       throw new BufferUnderflowException (length, available)
   }
@@ -440,8 +440,11 @@ class ArrayBuffer private (val data: Array [Byte]) extends Buffer {
 
 object ArrayBuffer {
 
-  def apply (data: Array [Byte]): ArrayBuffer =
-    new ArrayBuffer (data)
+  def apply (data: Array [Byte]): ArrayBuffer = {
+    val buffer = new ArrayBuffer (data)
+    buffer.writePos = data.length
+    buffer
+  }
 
   def apply (length: Int): ArrayBuffer =
     new ArrayBuffer (new Array (length))
