@@ -6,7 +6,8 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
 import com.treode.disk.Disks
-import com.treode.store.{StoreConfig, TxId}
+import com.treode.store.{Store, StoreConfig, TxId}
+import com.treode.store.catalog.CohortCatalog
 import com.treode.store.paxos.Paxos
 import com.treode.store.tier.TierMedic
 
@@ -59,7 +60,7 @@ private class RecoveryKit (implicit
     get (xid) .aborted (gen)
   }
 
-  def launch (implicit launch: Disks.Launch, paxos: Paxos): Async [AtomicKit] = {
+  def launch (implicit launch: Disks.Launch, cohorts: CohortCatalog, paxos: Paxos): Async [Store] = {
     import launch.disks
 
     val kit = new AtomicKit (archive.close())

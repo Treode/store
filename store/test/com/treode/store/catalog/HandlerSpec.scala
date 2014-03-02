@@ -1,13 +1,19 @@
 package com.treode.store.catalog
 
+import java.nio.file.Paths
 import scala.collection.JavaConversions._
 
 import org.scalatest.FreeSpec
+import com.treode.async.{Async, AsyncTestTools, StubScheduler}
+import com.treode.async.io.StubFile
 import com.treode.cluster.MailboxId
+import com.treode.disk.Position
 import com.treode.pickle.{Pickler, Picklers}
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, StoreConfig}
 
-class CatalogHandlerSpec extends FreeSpec {
+import AsyncTestTools._
+
+class HandlerSpec extends FreeSpec {
 
   val ID = MailboxId (0x26)
 
@@ -23,13 +29,27 @@ class CatalogHandlerSpec extends FreeSpec {
   val patches = {
     var prev = Bytes.empty
     for (v <- bytes) yield {
-      val p = CatalogHandler.diff (prev, v)
+      val p = Handler.diff (prev, v)
       prev = v
       p
     }}
 
-  private def newCatalog (issues: Int): CatalogHandler = {
-    val cat = CatalogHandler.unknown (ID)
+  private class TestPoster (handler: Long => Any) extends Poster {
+
+    def this() = this (_ => ())
+
+    def dispatch (bytes: Bytes): Unit =
+      handler (bytes.unpickle (Picklers.fixedLong))
+
+    def post (update: Update, bytes: Bytes): Unit =
+      dispatch (bytes)
+
+    def checkpoint (version: Int, bytes: Bytes, history: Patches): Async [(MailboxId, Position)] =
+      ???
+  }
+
+  private def newCatalog (issues: Int): Handler = {
+    val cat = Handler (new TestPoster)
     for ((v, i) <- values.take (issues) .zipWithIndex)
       cat.issue (i+1, Bytes (Picklers.fixedLong, v))
     cat
@@ -41,8 +61,8 @@ class CatalogHandlerSpec extends FreeSpec {
     def checkDiff [A] (p: Pickler [A], v1: A, v2: A) {
       val b1 = Bytes (p, v1)
       val b2 = Bytes (p, v2)
-      val patch = CatalogHandler.diff (b1, b2)
-      val bp = CatalogHandler.patch (b1, patch)
+      val patch = Handler.diff (b1, b2)
+      val bp = Handler.patch (b1, patch)
       expectResult (b2) (bp)
       val vp = bp.unpickle (p)
       expectResult (v2) (vp)

@@ -79,9 +79,8 @@ object AtomicProperties extends PropSpec with PropertyChecks {
     val kit = StubNetwork (seed)
     val hs = kit.install (3, new StubAtomicHost (_, kit))
     val Seq (h1, h2, h3) = hs
-    import kit.{random, scheduler}
 
-    kit.runTasks()
+    import kit.{random, scheduler}
 
     // Setup.
     val xid1 = TxId (Bytes (random.nextLong))
@@ -93,7 +92,7 @@ object AtomicProperties extends PropSpec with PropertyChecks {
     val cb1 = h1.write (xid1, TxClock.zero, Seq (Create (t, k, One))) .capture()
     val cb2 = h2.write (xid2, TxClock.zero, Seq (Create (t, k, Two))) .capture()
     kit.messageFlakiness = mf
-    scheduler.runTasks (true)
+    scheduler.runTasks (true, count = 400)
 
     // One host might write and the other collide or timeout, or both might timeout.
     if (cb1.hasWritten) {

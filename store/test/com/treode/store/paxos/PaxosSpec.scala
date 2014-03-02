@@ -51,9 +51,8 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
     val kit = StubNetwork (seed)
     val hs = kit.install (3, new StubPaxosHost (_, kit))
     val Seq (h1, h2, h3) = hs
-    import kit.{random, scheduler}
 
-    kit.runTasks()
+    import kit.{random, scheduler}
 
     try {
 
@@ -63,7 +62,7 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
       val cb1 = h1.paxos.propose (k, One) .capture()
       val cb2 = h2.paxos.propose (k, Two) .capture()
       kit.messageFlakiness = mf
-      scheduler.runTasks (true)
+      kit.runTasks (true, count = 500)
       val v = cb1.passed
       expectResult (v) (cb2.passed)
 

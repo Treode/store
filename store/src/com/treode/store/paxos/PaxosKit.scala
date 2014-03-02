@@ -17,7 +17,8 @@ private class PaxosKit (
     val scheduler: Scheduler,
     val cluster: Cluster,
     val disks: Disks,
-    val config: StoreConfig) extends Paxos {
+    val config: StoreConfig
+) extends Paxos {
 
   val acceptors = new Acceptors (this)
 

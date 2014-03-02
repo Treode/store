@@ -1,9 +1,12 @@
 package com.treode.store.catalog
 
+import java.nio.file.Paths
 import scala.util.Random
 
 import com.treode.async.{AsyncTestTools, StubScheduler}
+import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, MailboxId, StubActiveHost, StubNetwork}
+import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.pickle.{Pickler, Picklers}
 import org.scalacheck.Gen
@@ -11,6 +14,7 @@ import org.scalatest.{FreeSpec, PropSpec, ShouldMatchers, Specs}
 import org.scalatest.prop.PropertyChecks
 
 import AsyncTestTools._
+import StubCatalogHost.{cat1, cat2}
 
 class BrokerSpec extends Specs (BrokerBehaviors, BrokerProperties)
 
@@ -33,16 +37,24 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
   val patches = {
     var prev = Bytes.empty
     for (v <- bytes) yield {
-      val p = CatalogHandler.diff (prev, v)
+      val p = Handler.diff (prev, v)
       prev = v
       p
     }}
 
   private class RichBroker (implicit random: Random, scheduler: StubScheduler) {
 
-    implicit val config = StoreConfig (8, 1<<20)
+    implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
+    implicit val recovery = Disks.recover()
+    val disk = new StubFile
+    val geometry = DiskGeometry (16, 12, 1<<30)
+    implicit val launch = recovery.attach (Seq ((Paths.get ("a"), disk, geometry))) .pass
+    implicit val disks = launch.disks
+    launch.launch()
 
-    val broker = new Broker
+    implicit val storeConfig = StoreConfig (4, 1<<12)
+
+    val broker = new Broker (Map.empty)
 
     def status = broker.status
 
@@ -205,39 +217,10 @@ object BrokerProperties extends PropSpec with PropertyChecks {
 
   val values = BrokerBehaviors.values
 
-  val c1 = {
-    import Picklers._
-    CatalogDescriptor (0x07, fixedLong)
-  }
-
-  val c2 = {
-    import Picklers._
-    CatalogDescriptor (0x7A, seq (fixedLong))
-  }
-
-  class StubHost (id: HostId, network: StubNetwork) extends StubActiveHost (id, network) {
-    import network.{random, scheduler}
-
-    implicit val cluster: Cluster = this
-
-    private val broker = new Broker
-
-    var v1 = 0L
-    var v2 = Seq.empty [Long]
-
-    broker.listen (c1) (v1 = _)
-    broker.listen (c2) (v2 = _)
-
-    broker.attach (this)
-
-    def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Unit =
-      broker.issue (desc) (version, cat)
-  }
-
   def checkUnity (seed: Long, mf: Double) {
     val kit = StubNetwork (seed)
     kit.messageFlakiness = mf
-    val hs = kit.install (3, new StubHost (_, kit))
+    val hs = kit.install (3, new StubCatalogHost (_, kit))
     for (h1 <- hs; h2 <- hs)
       h1.hail (h2.localId, null)
     kit.runTasks()
@@ -248,15 +231,15 @@ object BrokerProperties extends PropSpec with PropertyChecks {
     val vs4 = vs3.updated (11, 0x3F081D8657CD9220L)
 
     val Seq (h1, h2, h3) = hs
-    h1.issue (c1) (1, 0xED0F7511F6E3EC20L)
-    h1.issue (c2) (1, vs1)
-    h1.issue (c1) (2, 0x30F517CC57223260L)
-    h1.issue (c2) (2, vs2)
-    h1.issue (c1) (3, 0xC97846EBE5AC571BL)
-    h1.issue (c2) (3, vs3)
-    h1.issue (c1) (4, 0x4A048A835ED3A0A6L)
-    h1.issue (c2) (4, vs4)
-    kit.runTasks (timers = true, count = 150)
+    h1.issue (cat1) (1, 0xED0F7511F6E3EC20L)
+    h1.issue (cat2) (1, vs1)
+    h1.issue (cat1) (2, 0x30F517CC57223260L)
+    h1.issue (cat2) (2, vs2)
+    h1.issue (cat1) (3, 0xC97846EBE5AC571BL)
+    h1.issue (cat2) (3, vs3)
+    h1.issue (cat1) (4, 0x4A048A835ED3A0A6L)
+    h1.issue (cat2) (4, vs4)
+    kit.runTasks (timers = true, count = 400)
 
     // Hosts do not receive their own issues.
     h1.v1 = 0x4A048A835ED3A0A6L

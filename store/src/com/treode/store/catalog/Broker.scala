@@ -1,29 +1,36 @@
 package com.treode.store.catalog
 
-import com.treode.async.{Async, Callback, Fiber, Scheduler}
+import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Scheduler}
 import com.treode.cluster.{Cluster, MailboxId, MessageDescriptor, Peer}
+import com.treode.disk.{Disks, Position, RootDescriptor}
 import com.treode.store.{Bytes, StoreConfig, StorePicklers}
 
+import AsyncConversions._
+import Broker.Root
 import Callback.ignore
 
-private class Broker (implicit scheduler: Scheduler) {
+private class Broker (
+    private var catalogs: Map [MailboxId, Handler]
+) (implicit
+    scheduler: Scheduler,
+    disks: Disks
+) extends Catalogs {
 
   private val fiber = new Fiber (scheduler)
-  private var catalogs = Map.empty [MailboxId, CatalogHandler]
 
-  private def get (id: MailboxId): CatalogHandler = {
+  private def get (id: MailboxId): Handler = {
     catalogs get (id) match {
       case Some (cat) =>
         cat
       case None =>
-        val cat = CatalogHandler.unknown (id)
+        val cat = Handler (Poster (id))
         catalogs += id -> cat
         cat
     }}
 
   def listen [C] (desc: CatalogDescriptor [C]) (handler: C => Any): Unit = fiber.execute {
     require (!(catalogs contains desc.id), f"Catalog ${desc.id.id}%X already registered")
-    catalogs += desc.id -> CatalogHandler (desc.id, desc.pcat, handler)
+    catalogs += desc.id -> Handler (Poster (desc, handler))
   }
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) {
@@ -54,7 +61,6 @@ private class Broker (implicit scheduler: Scheduler) {
       Broker.ping (_status) (peer)
     }
 
-
   def sync (updates: Sync): Unit =
     fiber.execute {
       for ((id, update) <- updates)
@@ -69,6 +75,14 @@ private class Broker (implicit scheduler: Scheduler) {
       }
       gab()
     }}
+
+  def checkpoint(): Async [Root] =
+    fiber.guard {
+      for {
+        _catalogs <- catalogs.values.latch.map (_.checkpoint())
+      } yield {
+        new Root (_catalogs)
+      }}
 
   def attach (implicit cluster: Cluster) {
 
@@ -87,7 +101,21 @@ private class Broker (implicit scheduler: Scheduler) {
     gab()
   }}
 
-private object Broker {
+object Broker {
+
+  class Root (val catalogs: Map [MailboxId, Position])
+
+  object Root {
+
+    val pickler = {
+      import StorePicklers._
+      wrap (map (mbxId, pos)) .build (new Root (_)) .inspect (_.catalogs)
+    }}
+
+  val root = {
+    import StorePicklers._
+    RootDescriptor (0xB7842D23, Root.pickler)
+  }
 
   val ping: MessageDescriptor [Ping] = {
     import StorePicklers._
