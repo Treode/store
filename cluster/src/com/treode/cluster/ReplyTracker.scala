@@ -1,6 +1,6 @@
 package com.treode.cluster
 
-trait Acknowledgements {
+trait ReplyTracker {
 
   def += (p: Peer)
   def clear()
@@ -9,22 +9,23 @@ trait Acknowledgements {
   def unity: Boolean
 }
 
-object Acknowledgements {
+object ReplyTracker {
 
-  /** The empty acknowledegments speaks to no-one and never gets a quorum. */
-  val empty = new Acknowledgements {
-
+  private class Isolated extends ReplyTracker {
     def += (p: Peer) = ()
     def clear() = ()
     def awaiting = Set.empty [HostId]
     def quorum = false
     def unity = false
 
-    override def toString = "Acknowledgements.empty"
+    override def toString = "ReplyTracker.Isolated"
   }
 
+  /** The isolated tracker speaks to no-one and never gets a quorum. */
+  val empty: ReplyTracker = new Isolated
+
   private class Settled (hosts: Set [HostId], nquorum: Int)
-      extends Acknowledgements {
+  extends ReplyTracker {
 
     private var hs = hosts
 
@@ -35,41 +36,41 @@ object Acknowledgements {
     def unity = hs.size == 0
 
     override def toString =
-      s"Acknowledgements.Settled(${(hosts -- hs) mkString ","})"
+      s"ReplyTracker.Settled(${(hosts -- hs) mkString ","})"
   }
 
-  private class Moving (active: Set [HostId], target: Set [HostId], aquorum: Int, tquorum: Int)
-      extends Acknowledgements {
+  private class Moving (origin: Set [HostId], target: Set [HostId], aquorum: Int, tquorum: Int)
+  extends ReplyTracker {
 
-    private var as = active
+    private var os = origin
     private var ts = target
 
     def += (p: Peer) {
-      as -= p.id
+      os -= p.id
       ts -= p.id
     }
 
     def clear() {
-      as = active
+      os = origin
       ts = target
     }
 
-    def awaiting = as ++ ts
+    def awaiting = os ++ ts
 
-    def quorum = as.size < aquorum && ts.size < tquorum
+    def quorum = os.size < aquorum && ts.size < tquorum
 
-    def unity = as.size == 0 && ts.size == 0
+    def unity = os.size == 0 && ts.size == 0
 
     override def toString =
-      s"Acknowledgements.Moving(${(active ++ target -- as -- ts) mkString ","})"
+      s"ReplyTracker.Moving(${(origin ++ target -- os -- ts) mkString ","})"
   }
 
-  def apply (active: Set [HostId], target: Set [HostId]): Acknowledgements =
+  def apply (active: Set [HostId], target: Set [HostId]): ReplyTracker =
     if (active == target)
       new Settled (active, (active.size >> 1) + 1)
     else
       new Moving (active, target, (active.size >> 1) + 1, (target.size >> 1) + 1)
 
-  def settled (hosts: HostId*): Acknowledgements =
+  def settled (hosts: HostId*): ReplyTracker =
     new Settled (hosts.toSet, (hosts.length >> 1) + 1)
 }

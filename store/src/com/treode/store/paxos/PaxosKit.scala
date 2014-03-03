@@ -3,7 +3,7 @@ package com.treode.store.paxos
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.cluster.{Acknowledgements, Cluster}
+import com.treode.cluster.{Cluster, ReplyTracker}
 import com.treode.disk.Disks
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.store.tier.TierTable
@@ -24,7 +24,7 @@ private class PaxosKit (
 
   val proposers = new Proposers (this)
 
-  def locate (key: Bytes): Acknowledgements =
+  def locate (key: Bytes): ReplyTracker =
     cluster.locate (Bytes.pickler, 0, key)
 
   def lead (key: Bytes, value: Bytes): Async [Bytes] =

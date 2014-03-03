@@ -5,7 +5,7 @@ import com.treode.pickle.Pickler
 trait MessageSender {
   def apply (h: Peer)
   def apply (hs: Iterable [Peer]) (implicit c: Cluster)
-  def apply (acks: Acknowledgements) (implicit c: Cluster)
+  def apply (acks: ReplyTracker) (implicit c: Cluster)
 }
 
 object MessageSender {
@@ -19,6 +19,6 @@ object MessageSender {
       def apply (hs: Iterable [Peer]) (implicit c: Cluster): Unit =
         hs foreach (apply _)
 
-      def apply (acks: Acknowledgements) (implicit c: Cluster): Unit =
+      def apply (acks: ReplyTracker) (implicit c: Cluster): Unit =
         acks.awaiting foreach (h => apply (c.peer (h)))
     }}

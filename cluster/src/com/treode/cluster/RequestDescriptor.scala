@@ -9,7 +9,7 @@ class RequestDescriptor [Q, A] private (id: MailboxId, preq: Pickler [Q], prsp: 
   type Mailbox = EphemeralMailbox [A]
   type Mediator = RequestMediator [A]
 
-  abstract class QuorumCollector (req: Q) (acks: Acknowledgements, backoff: BackoffTimer) (
+  abstract class QuorumCollector (req: Q) (acks: ReplyTracker, backoff: BackoffTimer) (
       implicit scheduler: Scheduler, cluster: Cluster) {
 
     private val fiber = new Fiber (scheduler)

@@ -20,8 +20,8 @@ trait Cluster {
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M)
 
-  def locate (id: Int): Acknowledgements
+  def locate (id: Int): ReplyTracker
 
-  def locate [K] (p: Pickler [K], seed: Long, key: K): Acknowledgements =
+  def locate [K] (p: Pickler [K], seed: Long, key: K): ReplyTracker =
     locate (0)
 }
