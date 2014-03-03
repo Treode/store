@@ -6,7 +6,6 @@ import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
 import com.treode.store._
-import com.treode.store.catalog.CohortCatalog
 import com.treode.store.tier.TierTable
 
 import Async.async
@@ -18,7 +17,7 @@ private class AtomicKit (
     val scheduler: Scheduler,
     val cluster: Cluster,
     val disks: Disks,
-    val cohorts: CohortCatalog,
+    val atlas: Atlas,
     val paxos: Paxos,
     val config: StoreConfig
 ) extends Store {
@@ -43,7 +42,7 @@ private [store] object AtomicKit {
 
   trait Recovery {
 
-    def launch (implicit launch: Disks.Launch, cohorts: CohortCatalog, paxos: Paxos): Async [Store]
+    def launch (implicit launch: Disks.Launch, atlas: Atlas, paxos: Paxos): Async [Store]
   }
 
   def recover() (implicit

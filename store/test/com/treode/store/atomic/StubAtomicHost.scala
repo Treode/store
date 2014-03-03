@@ -7,7 +7,6 @@ import com.treode.async.{Async, AsyncTestTools, Callback, CallbackCaptor}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
-import com.treode.store.catalog.CohortCatalog
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions
 
@@ -26,7 +25,7 @@ extends StubActiveHost (id, network) {
 
   implicit val recovery = Disks.recover()
   val _catalogs = Catalogs.recover()
-  val _cohorts = CohortCatalog.recover (_catalogs)
+  val _atlas = Atlas.recover (_catalogs)
   val _paxos = Paxos.recover()
   val _atomic = AtomicKit.recover()
 
@@ -38,9 +37,9 @@ extends StubActiveHost (id, network) {
     for {
       launch <- recovery.attach (files)
       catalogs <- _catalogs.launch (launch)
-      cohorts <- _cohorts.launch()
-      paxos <- _paxos.launch (launch, cohorts)
-      atomic <- _atomic.launch (launch, cohorts, paxos) .map (_.asInstanceOf [AtomicKit])
+      atlas <- _atlas.launch()
+      paxos <- _paxos.launch (launch, atlas)
+      atomic <- _atomic.launch (launch, atlas, paxos) .map (_.asInstanceOf [AtomicKit])
     } yield {
       launch.launch()
       (launch.disks, atomic)

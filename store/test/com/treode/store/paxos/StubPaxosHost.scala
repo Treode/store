@@ -5,8 +5,7 @@ import com.treode.async.{AsyncTestTools, CallbackCaptor}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Catalogs, Paxos, StoreConfig}
-import com.treode.store.catalog.CohortCatalog
+import com.treode.store.{Atlas, Catalogs, Paxos, StoreConfig}
 
 import AsyncTestTools._
 
@@ -21,7 +20,7 @@ extends StubActiveHost (id, network) {
 
   implicit val recovery = Disks.recover()
   val _catalogs = Catalogs.recover()
-  val _cohorts = CohortCatalog.recover (_catalogs)
+  val _atlas = Atlas.recover (_catalogs)
   val _paxos = Paxos.recover()
 
   val file = new StubFile
@@ -32,8 +31,8 @@ extends StubActiveHost (id, network) {
     for {
       launch <- recovery.attach (files)
       catalogs <- _catalogs.launch (launch)
-      cohorts <- _cohorts.launch()
-      paxos <- _paxos.launch (launch, cohorts) .map (_.asInstanceOf [PaxosKit])
+      atlas <- _atlas.launch()
+      paxos <- _paxos.launch (launch, atlas) .map (_.asInstanceOf [PaxosKit])
     } yield {
       launch.launch()
       (launch.disks, paxos)

@@ -1,34 +1,31 @@
-package com.treode.store.catalog
+package com.treode.store.atlas
 
 import com.treode.async.Async
 import com.treode.cluster.HostId
-import com.treode.store.{Catalogs, CatalogDescriptor, StorePicklers}
+import com.treode.store.{Atlas, Catalogs, CatalogDescriptor, StorePicklers}
 
 import Async.supply
+import Atlas.Recovery
 
-class CohortCatalog {
+private class AtlasKit extends Atlas {
 
   var places = new Array [Seq [HostId]] (0)
   var mask = 0
 
   def attach (recovery: Catalogs.Recovery) {
-    recovery.listen (CohortCatalog.catalog) { places =>
+    recovery.listen (AtlasKit.catalog) { places =>
       require (Integer.highestOneBit (places.length) == places.length)
       this.places = places
       this.mask = places.length - 1
     }}}
 
-object CohortCatalog {
-
-  trait Recovery {
-    def launch(): Async [CohortCatalog]
-  }
+private [store] object AtlasKit {
 
   def recover (recovery: Catalogs.Recovery): Recovery = {
-    val cohorts = new CohortCatalog
+    val cohorts = new AtlasKit
     cohorts.attach (recovery)
     new Recovery {
-      def launch(): Async [CohortCatalog] =
+      def launch(): Async [Atlas] =
         supply (cohorts)
     }}
 

@@ -6,7 +6,6 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
 import com.treode.store.atomic.AtomicKit
-import com.treode.store.catalog.CohortCatalog
 
 private class RecoveryKit (implicit
     random: Random,
@@ -17,7 +16,7 @@ private class RecoveryKit (implicit
 ) extends Store.Recovery {
 
   val _catalogs = Catalogs.recover()
-  val _cohorts = CohortCatalog.recover (_catalogs)
+  val _atlas = Atlas.recover (_catalogs)
   val _paxos = Paxos.recover()
   val _atomic = AtomicKit.recover()
 
@@ -29,9 +28,9 @@ private class RecoveryKit (implicit
 
     for {
       catalogs <- _catalogs.launch (launch)
-      cohorts <- _cohorts.launch()
-      paxos <- _paxos.launch (launch, cohorts)
-      atomic <- _atomic.launch (launch, cohorts, paxos)
+      atlas <- _atlas.launch()
+      paxos <- _paxos.launch (launch, atlas)
+      atomic <- _atomic.launch (launch, atlas, paxos)
     } yield {
       atomic
     }}}
