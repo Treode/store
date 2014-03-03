@@ -20,10 +20,14 @@ object PaxosBehaviors extends WordSpec with PaxosTestTools {
 
   private val kit = StubNetwork()
   private val hs = kit.install (3, new StubPaxosHost (_, kit))
-  private val host = hs.head
+  private val Seq (h1, h2, h3) = hs
+
+  for (h <- hs)
+    h.setCohorts((h1, h2, h3))
+
   import kit.{random, scheduler}
-  import host.acceptors
-  import host.paxos.lead
+  import h1.acceptors
+  import h1.paxos.lead
 
   kit.runTasks()
 
@@ -51,6 +55,9 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
     val kit = StubNetwork (seed)
     val hs = kit.install (3, new StubPaxosHost (_, kit))
     val Seq (h1, h2, h3) = hs
+
+    for (h <- hs)
+    h.setCohorts((h1, h2, h3))
 
     import kit.{random, scheduler}
 

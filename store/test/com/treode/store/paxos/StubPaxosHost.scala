@@ -3,9 +3,10 @@ package com.treode.store.paxos
 import java.nio.file.Paths
 import com.treode.async.{AsyncTestTools, CallbackCaptor}
 import com.treode.async.io.StubFile
-import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
+import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Atlas, Catalogs, Paxos, StoreConfig}
+import com.treode.store.{Cohort, Paxos, StoreConfig}
+import com.treode.store.atlas.AtlasKit
 
 import AsyncTestTools._
 
@@ -19,19 +20,17 @@ extends StubActiveHost (id, network) {
   implicit val storeConfig = StoreConfig (4, 1<<16)
 
   implicit val recovery = Disks.recover()
-  val _catalogs = Catalogs.recover()
-  val _atlas = Atlas.recover (_catalogs)
   val _paxos = Paxos.recover()
 
   val file = new StubFile
   val geometry = DiskGeometry (10, 6, 1<<20)
   val files = Seq ((Paths.get ("a"), file, geometry))
 
+  val atlas = new AtlasKit
+
   val _launch =
     for {
       launch <- recovery.attach (files)
-      catalogs <- _catalogs.launch (launch)
-      atlas <- _atlas.launch()
       paxos <- _paxos.launch (launch, atlas) .map (_.asInstanceOf [PaxosKit])
     } yield {
       launch.launch()
@@ -45,4 +44,10 @@ extends StubActiveHost (id, network) {
   implicit val (disks, paxos) = captor.passed
 
   val acceptors = paxos.acceptors
-}
+
+  def setCohorts (cohorts: (StubHost, StubHost, StubHost)*) {
+    val _cohorts =
+      for ((h1, h2, h3) <- cohorts)
+        yield Cohort.settled (h1.localId, h2.localId, h3.localId)
+    atlas.set (_cohorts.toArray)
+  }}

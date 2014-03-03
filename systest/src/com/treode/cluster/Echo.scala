@@ -25,7 +25,8 @@ object Echo {
     }
 
     def loop (i: Int) {
-      new _echo.QuorumCollector ("Hello World") (cluster.locate (0), backoff) {
+      val hosts = ReplyTracker.settled (0, 1, 2)
+      new _echo.QuorumCollector ("Hello World") (hosts, backoff) {
 
         process (_ => ())
 

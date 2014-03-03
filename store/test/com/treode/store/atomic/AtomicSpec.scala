@@ -20,11 +20,13 @@ object AtomicBehaviors extends FreeSpec with StoreBehaviors {
 
   private val kit = StubNetwork()
   private val hs = kit.install (3, new StubAtomicHost (_, kit))
-  private val host = hs.head
-  import kit.{random, scheduler}
-  import host.{write, writer}
+  private val Seq (h1, h2, h3) = hs
 
-  kit.runTasks()
+  for (h <- hs)
+    h.setCohorts((h1, h2, h3))
+
+  import kit.{random, scheduler}
+  import h1.{write, writer}
 
   "The transaction implementation should" - {
 
@@ -45,13 +47,18 @@ object AtomicBehaviors extends FreeSpec with StoreBehaviors {
     behave like aStore { scheduler =>
       val kit = StubNetwork (new Random (0), scheduler)
       val hs = kit.install (3, new StubAtomicHost (_, kit))
-      kit.runTasks()
+      val Seq (h1, h2, h3) = hs
+      for (h <- hs)
+        h.setCohorts((h1, h2, h3))
       new TestableCluster (hs, kit)
     }
 
     val threaded = {
       val kit = StubNetwork (0, true)
       val hs = kit.install (3, new StubAtomicHost (_, kit))
+      val Seq (h1, h2, h3) = hs
+      for (h <- hs)
+        h.setCohorts((h1, h2, h3))
       new TestableCluster (hs, kit)
     }
 
@@ -79,6 +86,9 @@ object AtomicProperties extends PropSpec with PropertyChecks {
     val kit = StubNetwork (seed)
     val hs = kit.install (3, new StubAtomicHost (_, kit))
     val Seq (h1, h2, h3) = hs
+
+    for (h <- hs)
+      h.setCohorts((h1, h2, h3))
 
     import kit.{random, scheduler}
 

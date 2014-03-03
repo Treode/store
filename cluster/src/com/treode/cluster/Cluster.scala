@@ -19,9 +19,4 @@ trait Cluster {
   def open [M] (p: Pickler [M], s: Scheduler): EphemeralMailbox [M]
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M)
-
-  def locate (id: Int): ReplyTracker
-
-  def locate [K] (p: Pickler [K], seed: Long, key: K): ReplyTracker =
-    locate (0)
 }

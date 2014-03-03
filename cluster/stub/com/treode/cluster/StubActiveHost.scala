@@ -39,9 +39,6 @@ class StubActiveHost (val localId: HostId, network: StubNetwork) extends Cluster
   def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
     scuttlebutt.spread (desc) (msg)
 
-  def locate (id: Int): ReplyTracker =
-    network.locate (id)
-
   def deliver [M] (p: Pickler [M], from: HostId, mbx: MailboxId, msg: M): Unit =
     mailboxes.deliver (p, peers.get (from), mbx, msg)
 }

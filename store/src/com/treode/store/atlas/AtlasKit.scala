@@ -1,35 +1,43 @@
 package com.treode.store.atlas
 
 import com.treode.async.Async
-import com.treode.cluster.HostId
-import com.treode.store.{Atlas, Catalogs, CatalogDescriptor, StorePicklers}
+import com.treode.cluster.{ReplyTracker, HostId}
+import com.treode.store.{Atlas, Catalogs, CatalogDescriptor, Cohort, StorePicklers}
+import com.treode.pickle.Pickler
 
 import Async.supply
 import Atlas.Recovery
+import Integer.highestOneBit
 
-private class AtlasKit extends Atlas {
+private [store] class AtlasKit extends Atlas {
 
-  var places = new Array [Seq [HostId]] (0)
+  var cohorts = new Array [Cohort] (0)
   var mask = 0
 
+  def locate (id: Int): ReplyTracker =
+    cohorts (id & mask) .track
+
+  def set (cohorts: Array [Cohort]) {
+    require (highestOneBit (cohorts.length) == cohorts.length)
+    this.cohorts = cohorts
+    this.mask = cohorts.length - 1
+  }
+
   def attach (recovery: Catalogs.Recovery) {
-    recovery.listen (AtlasKit.catalog) { places =>
-      require (Integer.highestOneBit (places.length) == places.length)
-      this.places = places
-      this.mask = places.length - 1
-    }}}
+    recovery.listen (AtlasKit.catalog) (set _)
+  }}
 
 private [store] object AtlasKit {
 
   def recover (recovery: Catalogs.Recovery): Recovery = {
-    val cohorts = new AtlasKit
-    cohorts.attach (recovery)
+    val atlas = new AtlasKit
+    atlas.attach (recovery)
     new Recovery {
       def launch(): Async [Atlas] =
-        supply (cohorts)
+        supply (atlas)
     }}
 
   val catalog = {
     import StorePicklers._
-    CatalogDescriptor (0x65F723E9, array (seq (hostId)))
+    CatalogDescriptor (0x65F723E9, array (cohort))
   }}

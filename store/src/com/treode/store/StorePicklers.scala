@@ -8,6 +8,7 @@ import com.treode.store.tier.TierTable
 private trait StorePicklers extends Picklers {
 
   def bytes = Bytes.pickler
+  def cohort = Cohort.pickler
   def hostId = HostId.pickler
   def mbxId = MailboxId.pickler
   def pos = Position.pickler

@@ -122,8 +122,6 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
       def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
       scuttlebutt.spread (desc) (msg)
-
-      def locate (id: Int) = ReplyTracker.settled (0, 1, 2)
     }
 
     Echo.attach (localId) (_random, _scheduler, cluster)

@@ -71,6 +71,9 @@ object ReplyTracker {
     else
       new Moving (active, target, (active.size >> 1) + 1, (target.size >> 1) + 1)
 
+  def settled (hosts: Set [HostId]): ReplyTracker =
+    new Settled (hosts.toSet, (hosts.size >> 1) + 1)
+
   def settled (hosts: HostId*): ReplyTracker =
-    new Settled (hosts.toSet, (hosts.length >> 1) + 1)
+    settled (hosts.toSet)
 }
