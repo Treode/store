@@ -39,7 +39,7 @@ private class AtomicKit (
     async (write (xid, ct, ops, _))
 }
 
-object AtomicKit {
+private [store] object AtomicKit {
 
   trait Recovery {
 
