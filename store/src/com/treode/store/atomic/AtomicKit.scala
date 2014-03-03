@@ -7,7 +7,6 @@ import com.treode.cluster.Cluster
 import com.treode.disk.Disks
 import com.treode.store._
 import com.treode.store.catalog.CohortCatalog
-import com.treode.store.paxos.Paxos
 import com.treode.store.tier.TierTable
 
 import Async.async

@@ -6,7 +6,7 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.cluster.misc.materialize
 import com.treode.disk.Disks
-import com.treode.store.{Bytes, StoreConfig}
+import com.treode.store.{Bytes, Paxos, StoreConfig}
 import com.treode.store.catalog.CohortCatalog
 import com.treode.store.tier.TierMedic
 

@@ -1,18 +1,17 @@
-package com.treode.store.paxos
+package com.treode.store
 
 import com.treode.async.{Async, Callback}
 import com.treode.pickle.Pickler
-import com.treode.store.Bytes
 
 import Async.guard
 
-trait PaxosAccessor [K, V] {
+private trait PaxosAccessor [K, V] {
 
   def lead (key: K, value: V) (implicit paxos: Paxos): Async [V]
   def propose (key: K, value: V) (implicit paxos: Paxos): Async [V]
 }
 
-object PaxosAccessor {
+private object PaxosAccessor {
 
   def apply [K, V] (pk: Pickler [K], pv: Pickler [V]): PaxosAccessor [K, V] =
     new PaxosAccessor [K, V] {

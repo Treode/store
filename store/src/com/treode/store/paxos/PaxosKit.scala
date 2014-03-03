@@ -5,7 +5,7 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.{Cluster, ReplyTracker}
 import com.treode.disk.Disks
-import com.treode.store.{Bytes, StoreConfig}
+import com.treode.store.{Bytes, Paxos, StoreConfig}
 import com.treode.store.tier.TierTable
 
 import Async.async
@@ -32,4 +32,15 @@ private class PaxosKit (
 
   def propose (key: Bytes, value: Bytes): Async [Bytes] =
     proposers.propose (random.nextInt (17) + 1, key, value)
+}
+
+private [store] object PaxosKit {
+
+  def recover () (implicit
+    random: Random,
+    scheduler: Scheduler,
+    cluster: Cluster,
+    recovery: Disks.Recovery,
+    config: StoreConfig): Paxos.Recovery =
+  new RecoveryKit
 }

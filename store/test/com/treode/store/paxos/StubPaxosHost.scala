@@ -5,7 +5,7 @@ import com.treode.async.{AsyncTestTools, CallbackCaptor}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.StoreConfig
+import com.treode.store.{Paxos, StoreConfig}
 import com.treode.store.catalog.{Catalogs, CohortCatalog}
 
 import AsyncTestTools._

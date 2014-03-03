@@ -7,7 +7,6 @@ import com.treode.cluster.Cluster
 import com.treode.disk.Disks
 import com.treode.store.atomic.AtomicKit
 import com.treode.store.catalog.{Catalogs, CatalogDescriptor, CohortCatalog}
-import com.treode.store.paxos.Paxos
 
 private class RecoveryKit (implicit
     random: Random,
