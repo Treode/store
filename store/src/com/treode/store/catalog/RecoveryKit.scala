@@ -3,13 +3,14 @@ package com.treode.store.catalog
 import com.treode.async.{Async, AsyncConversions, Fiber, Scheduler}
 import com.treode.cluster.{Cluster, MailboxId}
 import com.treode.disk.{Disks, Position}
+import com.treode.store.{Catalogs, CatalogDescriptor}
 
 import Async.supply
 import AsyncConversions._
 import Broker.root
 import Poster.{pager, update}
 
-class RecoveryKit (implicit
+private class RecoveryKit (implicit
     scheduler: Scheduler,
     cluster: Cluster,
     recovery: Disks.Recovery

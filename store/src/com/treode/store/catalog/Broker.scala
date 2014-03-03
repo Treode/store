@@ -3,7 +3,7 @@ package com.treode.store.catalog
 import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Scheduler}
 import com.treode.cluster.{Cluster, MailboxId, MessageDescriptor, Peer}
 import com.treode.disk.{Disks, Position, RootDescriptor}
-import com.treode.store.{Bytes, StoreConfig, StorePicklers}
+import com.treode.store.{Bytes, Catalogs, CatalogDescriptor, StoreConfig, StorePicklers}
 
 import AsyncConversions._
 import Broker.Root

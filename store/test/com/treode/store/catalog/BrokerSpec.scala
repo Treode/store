@@ -7,7 +7,7 @@ import com.treode.async.{AsyncTestTools, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, MailboxId, StubActiveHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Bytes, StoreConfig}
+import com.treode.store.{Bytes, CatalogDescriptor, StoreConfig}
 import com.treode.pickle.{Pickler, Picklers}
 import org.scalacheck.Gen
 import org.scalatest.{FreeSpec, PropSpec, ShouldMatchers, Specs}

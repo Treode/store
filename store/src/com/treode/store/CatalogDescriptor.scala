@@ -1,4 +1,4 @@
-package com.treode.store.catalog
+package com.treode.store
 
 import com.treode.cluster.MailboxId
 import com.treode.pickle.{Pickler, Picklers}

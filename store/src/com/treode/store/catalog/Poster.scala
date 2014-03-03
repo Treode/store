@@ -5,7 +5,7 @@ import java.util.ArrayDeque
 import com.treode.async.{Async, Fiber, Callback, Scheduler}
 import com.treode.cluster.MailboxId
 import com.treode.disk.{Disks, PageDescriptor, Position, RecordDescriptor}
-import com.treode.store.{Bytes, StorePicklers}
+import com.treode.store.{Bytes, CatalogDescriptor, StorePicklers}
 
 import Async.guard
 import Callback.callback

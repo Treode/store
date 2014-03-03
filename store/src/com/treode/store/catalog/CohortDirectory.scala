@@ -2,7 +2,7 @@ package com.treode.store.catalog
 
 import com.treode.async.Async
 import com.treode.cluster.HostId
-import com.treode.store.StorePicklers
+import com.treode.store.{Catalogs, CatalogDescriptor, StorePicklers}
 
 import Async.supply
 

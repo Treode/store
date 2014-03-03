@@ -15,7 +15,8 @@ import AsyncTestTools._
 import Callback.ignore
 import StubCatalogHost.{cat1, cat2}
 
-class StubCatalogHost (id: HostId, network: StubNetwork) extends StubActiveHost (id, network) {
+private class StubCatalogHost (id: HostId, network: StubNetwork)
+extends StubActiveHost (id, network) {
   import network.{random, scheduler}
 
   implicit val cluster: Cluster = this
@@ -55,8 +56,7 @@ class StubCatalogHost (id: HostId, network: StubNetwork) extends StubActiveHost 
     catalogs.issue (desc) (version, cat)
 }
 
-object StubCatalogHost {
-
+private object StubCatalogHost {
 
   val cat1 = {
     import StorePicklers._

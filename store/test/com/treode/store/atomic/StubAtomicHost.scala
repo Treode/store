@@ -7,7 +7,7 @@ import com.treode.async.{Async, AsyncTestTools, Callback, CallbackCaptor}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
-import com.treode.store.catalog.{Catalogs, CohortCatalog}
+import com.treode.store.catalog.CohortCatalog
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions
 

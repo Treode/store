@@ -5,7 +5,6 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
-import com.treode.store.catalog.CatalogDescriptor
 
 trait Store {
 

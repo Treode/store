@@ -1,15 +1,16 @@
-package com.treode.store.catalog
+package com.treode.store
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
+import com.treode.store.catalog.CatalogKit
 
-trait Catalogs {
+private trait Catalogs {
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C)
 }
 
-object Catalogs {
+private object Catalogs {
 
   trait Recovery {
 
@@ -23,5 +24,5 @@ object Catalogs {
       cluster: Cluster,
       recovery: Disks.Recovery
   ): Recovery =
-    new RecoveryKit
+    CatalogKit.recover()
 }
