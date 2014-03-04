@@ -165,35 +165,6 @@ object Async {
           case e: Throwable => cb.fail (e)
         }}
 
-  object whilst {
-
-    def cb (p: => Boolean) (f: Callback [Unit] => Any) (implicit e: Executor): Async [Unit] =
-      new Async [Unit] {
-        private var ran = false
-        def run (cb: Callback [Unit]) {
-          require (!ran, "Async was already run.")
-          ran = true
-          val loop = new Callback [Unit] {
-            def pass (v: Unit): Unit = e.execute (toRunnable {
-              try {
-                if (p) f (this)
-                else
-                  e.execute (toRunnable (cb, ()))
-              } catch {
-                case t: Throwable => e.execute (toRunnable (cb, t))
-              }})
-            def fail (t: Throwable): Unit = e.execute (toRunnable (cb, t))
-          }
-          loop.pass()
-        }}
-
-    def f (p: => Boolean) (f: => Any) (implicit e: Executor): Async [Unit] =
-      cb (p) {cb => f; cb.pass()}
-
-    def apply [A] (p: => Boolean) (f: => Async [Unit]) (implicit e: Executor): Async [Unit] =
-      cb (p) {cb => f run cb}
-  }
-
   def latch [A, B] (a: Async [A], b: Async [B]): Async [(A, B)] =
     async { cb =>
       val latch = new PairLatch (cb)

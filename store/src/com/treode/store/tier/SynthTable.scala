@@ -6,7 +6,7 @@ import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.disk.{Disks, PageHandler, PageDescriptor, Position, TypeId}
 import com.treode.store.{Bytes, StoreConfig}
 
-import Async.{async, supply, whilst}
+import Async.{async, supply}
 import TierTable.Meta
 
 private class SynthTable [K, V] (
@@ -36,6 +36,7 @@ private class SynthTable [K, V] (
     disks: Disks,
     config: StoreConfig
 ) extends TierTable with PageHandler [Long] {
+  import scheduler.whilst
 
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()

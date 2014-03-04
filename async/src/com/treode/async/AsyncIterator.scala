@@ -3,8 +3,6 @@ package com.treode.async
 import java.lang.{Iterable => JIterable}
 import java.util.{Iterator => JIterator}
 
-import Async.whilst
-
 trait AsyncIterator [+A] {
 
   def _foreach (f: (A, Callback [Unit]) => Any): Async [Unit]
@@ -41,14 +39,14 @@ object AsyncIterator {
   def adapt [A] (iter: Iterator [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
     new AsyncIterator [A] {
       def _foreach (f: (A, Callback [Unit]) => Any): Async [Unit] =
-        whilst.cb (iter.hasNext) (f (iter.next, _))
+        scheduler.whilst.cb (iter.hasNext) (f (iter.next, _))
     }
 
   /** Transform a Java iterator into an AsyncIterator. */
   def adapt [A] (iter: JIterator [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
     new AsyncIterator [A] {
       def _foreach (f: (A, Callback [Unit]) => Any): Async [Unit] =
-        whilst.cb (iter.hasNext) (f (iter.next, _))
+        scheduler.whilst.cb (iter.hasNext) (f (iter.next, _))
   }
 
   /** Given asynchronous iterators of sorted items, merge them into single asynchronous iterator

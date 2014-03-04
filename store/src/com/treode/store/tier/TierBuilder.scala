@@ -7,12 +7,13 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, StoreConfig, TxClock}
 
-import Async.{async, cond, guard, supply, whilst}
+import Async.{async, cond, guard, supply}
 
 private class TierBuilder (desc: TierDescriptor [_, _], generation: Long) (
     implicit scheduler: Scheduler, disks: Disks, config: StoreConfig) {
 
   import desc.pager
+  import scheduler.whilst
 
   private def newIndexEntries = new ArrayList [IndexEntry] (1024)
   private def newCellEntries = new ArrayList [Cell] (256)

@@ -3,7 +3,6 @@ package com.treode.cluster
 import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.pickle.{InvalidTagException, Pickler, PicklerRegistry}
 
-import Async.whilst
 import Callback.ignore
 import PicklerRegistry.{BaseTag, FunctionTag}
 import Scuttlebutt.{Handler, Ping, Sync, Universe}

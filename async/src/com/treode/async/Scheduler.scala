@@ -34,7 +34,10 @@ trait Scheduler extends Executor {
     new Callback [A] {
       def pass (v: A): Unit = execute (toRunnable (cb, v))
       def fail (t: Throwable): Unit = execute (toRunnable (cb, t))
-    }}
+    }
+
+  val whilst = new Whilst (this)
+}
 
 object Scheduler {
 

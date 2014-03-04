@@ -9,7 +9,7 @@ import com.treode.async._
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
-import Async.{async, whilst}
+import Async.async
 import AsyncConversions._
 import Cardinals.{One, Two}
 import Fruits.Apple
@@ -235,6 +235,7 @@ trait StoreBehaviors {
 
       val executor = Executors.newScheduledThreadPool (threads)
       implicit val scheduler = Scheduler (executor)
+      import scheduler.whilst
 
       val supply = size * opening
       val create =

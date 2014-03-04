@@ -7,11 +7,10 @@ import java.nio.file.attribute.FileAttribute
 import java.util.concurrent.{Executor, ExecutorService}
 import scala.collection.JavaConversions._
 
-import com.treode.async.{Async, Callback, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler, Whilst}
 import com.treode.buffer.PagedBuffer
 
-import Async.{async, whilst}
-import Scheduler.toRunnable
+import Async.async
 
 /** A file that has useful behavior (flush/fill) and that can be mocked. */
 class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor) {
@@ -21,6 +20,8 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
 
   private def write (src: ByteBuffer, pos: Long): Async [Int] =
     async (file.write (src, pos, _, Callback.IntHandler))
+
+  private def whilst = new Whilst (exec)
 
   def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] = {
     input.capacity (input.readPos + len)
