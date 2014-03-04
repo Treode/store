@@ -24,24 +24,26 @@ private class Medic (
       this.history.addAll (history)
     }}
 
-  def patch (start: Int, patches: Seq [Bytes]) {
-    if (start + patches.length > version) {
-      val now = version
-      val future = patches drop (now - start)
-      for (patch <- future) {
-        version += 1
-        bytes = Handler.patch (bytes, patch)
-        history.add (patch)
-        if (history.size > catalogHistoryLimit)
-          history.remove()
-      }}}
+  def patch (end: Int, patches: Seq [Bytes]) {
+    val span = end - version
+    if (0 < span && span <= patches.length) {
+      val future = patches drop (patches.length - end + version)
+      var bytes = this.bytes
+      for (patch <- future)
+        bytes = Patch.patch (bytes, patch)
+      this.version += span
+      this.bytes = bytes
+      for (_ <- 0 until history.size + span - catalogHistoryLimit)
+        history.remove()
+      history.addAll (future)
+    }}
 
   def patch (update: Update): Unit =
     update match {
-      case Left ((version, bytes, history)) =>
+      case Assign (version, bytes, history) =>
         patch (version, bytes, history)
-      case Right ((start, patches)) =>
-        patch (start, patches)
+      case Patch (end, checksum, patches) =>
+        patch (end, patches)
     }
 
   def close (poster: Poster): Handler =

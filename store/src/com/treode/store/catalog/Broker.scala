@@ -3,7 +3,7 @@ package com.treode.store.catalog
 import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Scheduler}
 import com.treode.cluster.{Cluster, MailboxId, MessageDescriptor, Peer}
 import com.treode.disk.{Disks, Position, RootDescriptor}
-import com.treode.store.{Bytes, Catalogs, CatalogDescriptor, StoreConfig, StorePicklers}
+import com.treode.store.{Bytes, Catalogs, CatalogDescriptor, StoreConfig}
 
 import AsyncConversions._
 import Broker.Root
@@ -51,9 +51,9 @@ private class Broker (
       val _values = values.toMap.withDefaultValue (0)
       for {
         (id, cat) <- catalogs.toSeq
-        u = cat.diff (_values (id))
-        if !isEmpty (u)
-      } yield (id -> u)
+        update = cat.diff (_values (id))
+        if !update.isEmpty
+      } yield (id -> update)
     }
 
   def ping (peer: Peer): Unit =
@@ -108,27 +108,24 @@ object Broker {
   object Root {
 
     val pickler = {
-      import StorePicklers._
+      import CatalogPicklers._
       wrap (map (mbxId, pos)) .build (new Root (_)) .inspect (_.catalogs)
     }}
 
   val root = {
-    import StorePicklers._
+    import CatalogPicklers._
     RootDescriptor (0xB7842D23, Root.pickler)
   }
 
   val ping: MessageDescriptor [Ping] = {
-    import StorePicklers._
+    import CatalogPicklers._
     MessageDescriptor (
         0xFF8D38A840A7E6BCL,
         seq (tuple (mbxId, uint)))
   }
 
   val sync: MessageDescriptor [Sync] = {
-    import StorePicklers._
-    val patches = seq (bytes)
-    val value = tuple (uint, bytes, patches)
-    val update = either (value, tuple (uint, patches))
+    import CatalogPicklers._
     MessageDescriptor (
         0xFF632A972A814B35L,
         seq (tuple (mbxId, update)))

@@ -5,7 +5,7 @@ import java.util.ArrayDeque
 import com.treode.async.{Async, Fiber, Callback, Scheduler}
 import com.treode.cluster.MailboxId
 import com.treode.disk.{Disks, PageDescriptor, Position, RecordDescriptor}
-import com.treode.store.{Bytes, CatalogDescriptor, StorePicklers}
+import com.treode.store.{Bytes, CatalogDescriptor}
 
 import Async.guard
 import Callback.callback
@@ -14,21 +14,18 @@ private trait Poster {
 
   def post (update: Update, bytes: Bytes)
 
-  def checkpoint (version: Int, bytes: Bytes, patches: Patches): Async [(MailboxId, Position)]
+  def checkpoint (version: Int, bytes: Bytes, patches: Seq [Bytes]): Async [(MailboxId, Position)]
 }
 
 private object Poster {
 
   val update = {
-    import StorePicklers._
-    val patches = seq (bytes)
-    val value = tuple (int, bytes, patches)
-    val update = either (value, tuple (int, patches))
-    RecordDescriptor (0xC7D5CD23, tuple (mbxId, update))
+    import CatalogPicklers._
+    RecordDescriptor (0xC7D5CD23, tuple (mbxId, CatalogPicklers.update))
   }
 
   val pager = {
-    import StorePicklers._
+    import CatalogPicklers._
     PageDescriptor (0x1B1B3913, int, tuple (int, bytes, seq (bytes)))
   }
 
@@ -64,7 +61,7 @@ private object Poster {
         engage()
     }
 
-    def checkpoint (version: Int, bytes: Bytes, history: Patches): Async [(MailboxId, Position)] =
+    def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [(MailboxId, Position)] =
       guard {
         for {
           pos <- pager.write (0, (version, bytes, history))

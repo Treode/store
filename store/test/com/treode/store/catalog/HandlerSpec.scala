@@ -1,17 +1,13 @@
 package com.treode.store.catalog
 
-import java.nio.file.Paths
 import scala.collection.JavaConversions._
 
 import org.scalatest.FreeSpec
-import com.treode.async.{Async, AsyncTestTools, StubScheduler}
-import com.treode.async.io.StubFile
+import com.treode.async.Async
 import com.treode.cluster.MailboxId
 import com.treode.disk.Position
-import com.treode.pickle.{Pickler, Picklers}
-import com.treode.store.{Bytes, StoreConfig}
-
-import AsyncTestTools._
+import com.treode.pickle.Picklers
+import com.treode.store.Bytes
 
 class HandlerSpec extends FreeSpec {
 
@@ -29,7 +25,7 @@ class HandlerSpec extends FreeSpec {
   val patches = {
     var prev = Bytes.empty
     for (v <- bytes) yield {
-      val p = Handler.diff (prev, v)
+      val p = Patch.diff (prev, v)
       prev = v
       p
     }}
@@ -44,7 +40,7 @@ class HandlerSpec extends FreeSpec {
     def post (update: Update, bytes: Bytes): Unit =
       dispatch (bytes)
 
-    def checkpoint (version: Int, bytes: Bytes, history: Patches): Async [(MailboxId, Position)] =
+    def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [(MailboxId, Position)] =
       ???
   }
 
@@ -55,50 +51,6 @@ class HandlerSpec extends FreeSpec {
     cat
   }
 
-  "When computing a patch and applying, the handler should" - {
-    import Picklers._
-
-    def checkDiff [A] (p: Pickler [A], v1: A, v2: A) {
-      val b1 = Bytes (p, v1)
-      val b2 = Bytes (p, v2)
-      val patch = Handler.diff (b1, b2)
-      val bp = Handler.patch (b1, patch)
-      expectResult (b2) (bp)
-      val vp = bp.unpickle (p)
-      expectResult (v2) (vp)
-    }
-
-    "handle equal longs" in {
-      checkDiff (fixedLong, 0x4423014FC535F3AFL, 0x4423014FC535F3AFL)
-    }
-
-    "handle consecutive longs" in {
-      checkDiff (fixedLong, 0x4423014FC535F3AFL, 0x4423014FC535F3B0L)
-    }
-
-    "handle different longs" in {
-      checkDiff (fixedLong, 0x4423014FC535F3AFL, 0x85CA2FFA1B08D309L)
-    }
-
-    "handle equal arrays of longs" in {
-      checkDiff (seq (fixedLong), values, values)
-    }
-
-    "handle dropping longs from the array" in {
-      checkDiff (seq (fixedLong), values, values.filter (_ != 0x3C4F7468C8B828FEL))
-    }
-
-    "handle adding longs to the array" in {
-      checkDiff (seq (fixedLong), values filter (_ != 0x056C1999B220A24AL), values)
-    }
-
-    "handle changing longs in the array" in {
-      checkDiff (
-          seq (fixedLong),
-          values updated (7, 0x6A973D914A523044L),
-          values updated (11, 0xC2E5194FAFF06599L))
-    }}
-
   "When computing and apply an update" - {
 
     "and this catalog has no history" - {
@@ -106,7 +58,7 @@ class HandlerSpec extends FreeSpec {
       "and the other catalog has no history, there should be no updates" in {
         val c = newCatalog (0)
         val u = c.diff (0)
-        assert (isEmpty (u))
+        assert (u.isEmpty)
         val c2 = newCatalog (0)
         c2.patch (u)
         expectResult (0) (c2.version)
@@ -116,19 +68,19 @@ class HandlerSpec extends FreeSpec {
 
       "and the other catalog is ahead, there should be no updates" in {
         val c = newCatalog (0)
-        assert (isEmpty (c.diff (8)))
+        assert (c.diff (8) .isEmpty)
       }}
 
     "and this catalog has history" - {
 
       "and the other catalog is caught up, there should be no updates" in {
         val c = newCatalog (8)
-        assert (isEmpty (c.diff (8)))
+        assert (c.diff (8) .isEmpty)
       }
 
       "and the other catalog is ahead, there should be no updates" in {
         val c = newCatalog (8)
-        assert (isEmpty (c.diff (12)))
+        assert (c.diff (12) .isEmpty)
       }
 
       "and the other catalog is not too far behind" - {
@@ -136,8 +88,9 @@ class HandlerSpec extends FreeSpec {
         "and it can retain all its history, it should work" in {
           val c = newCatalog (12)
           expectResult (bytes (11)) (c.bytes)
-          val u @ Right ((v, ps)) = c.diff (8)
-          expectResult (8) (v)
+          val u @ Patch (ver, sum, ps) = c.diff (8)
+          expectResult (12) (ver)
+          expectResult (bytes (11) .hashCode) (sum)
           expectResult (patches drop 8 take 4) (ps)
           val c2 = newCatalog (8)
           expectResult (bytes (7)) (c2.bytes)
@@ -150,8 +103,9 @@ class HandlerSpec extends FreeSpec {
         "and it can drop some of its history, it should work" in {
           val c = newCatalog (20)
           expectResult (bytes (19)) (c.bytes)
-          val u @ Right ((v, ps)) = c.diff (18)
-          expectResult (18) (v)
+          val u @ Patch (ver, sum, ps) = c.diff (18)
+          expectResult (20) (ver)
+          expectResult (bytes (19) .hashCode) (sum)
           expectResult (patches drop 18 take 2) (ps)
           val c2 = newCatalog (18)
           expectResult (bytes (17)) (c2.bytes)
@@ -166,7 +120,7 @@ class HandlerSpec extends FreeSpec {
 
         "it should synchronize the full catalog" in {
           val c = newCatalog (20)
-          val u @ Left ((v, b, ps)) = c.diff (0)
+          val u @ Assign (v, b, ps) = c.diff (0)
           expectResult (20) (v)
           expectResult (bytes (19)) (c.bytes)
           expectResult (patches drop 4) (ps)

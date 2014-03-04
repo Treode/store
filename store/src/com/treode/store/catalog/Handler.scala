@@ -22,11 +22,11 @@ private class Handler (
   def diff (other: Int): Update = {
     val start = other - version + history.size
     if (start >= history.size) {
-      Right (other, Seq.empty)
+      Patch (version, bytes.hashCode, Seq.empty)
     } else if (start < 0) {
-      Left (version, bytes, history.toSeq)
+      Assign (version, bytes, history.toSeq)
     } else {
-      Right (other, history.drop (start) .toSeq)
+      Patch (version, bytes.hashCode, history.drop (start) .toSeq)
     }}
 
   def patch (version: Int, bytes: Bytes, history: Seq [Bytes]) {
@@ -35,43 +35,43 @@ private class Handler (
       this.bytes = bytes
       this.history.clear()
       this.history.addAll (history)
-      poster.post (Left ((version, bytes, history)), bytes)
+      poster.post (Assign (version, bytes, history), bytes)
     }}
 
-  def patch (start: Int, patches: Seq [Bytes]) {
-    if (start + patches.length > version) {
-      val now = version
-      val future = patches drop (now - start)
-      for (patch <- future) {
-        version += 1
-        bytes = Handler.patch (bytes, patch)
-        history.add (patch)
-        if (history.size > catalogHistoryLimit)
-          history.remove()
-      }
-      poster.post (Right (now, future), bytes)
+  def patch (end: Int, patches: Seq [Bytes]) {
+    val span = end - version
+    if (0 < span && span <= patches.length) {
+      val future = patches drop (patches.length - span)
+      var bytes = this.bytes
+      for (patch <- future)
+        bytes = Patch.patch (bytes, patch)
+      this.version += span
+      this.bytes = bytes
+      for (_ <- 0 until history.size + span - catalogHistoryLimit)
+        history.remove()
+      history.addAll (future)
+      poster.post (Patch (version, bytes.hashCode, future), bytes)
     }}
 
   def patch (update: Update): Unit =
     update match {
-      case Left ((version, bytes, history)) =>
+      case Assign (version, bytes, history) =>
         patch (version, bytes, history)
-      case Right ((start, patches)) =>
-        patch (start, patches)
+      case Patch (end, checksum, patches) =>
+        patch (end, patches)
     }
 
   def issue (version: Int, bytes: Bytes) {
     require (
         version == this.version + 1,
         "Required version ${this.version + 1}, found $version.")
-    val now = this.version
-    val patch = Handler.diff (this.bytes, bytes)
+    val patch = Patch.diff (this.bytes, bytes)
     this.version = version
     this.bytes = bytes
     history.add (patch)
     if (history.size > catalogHistoryLimit)
       history.remove()
-    poster.post (Right (now, Seq (patch)), bytes)
+    poster.post (Patch (version, bytes.hashCode, Seq (patch)), bytes)
   }
 
   def checkpoint(): Async [(MailboxId, Position)] =
@@ -80,17 +80,6 @@ private class Handler (
     }}
 
 private object Handler {
-
-  def diff (val0: Bytes, val1: Bytes): Bytes = {
-    val differ = new Delta
-    differ.setChunkSize (catalogChunkSize)
-    Bytes (differ.compute (val0.bytes, val1.bytes))
-  }
-
-  def patch (val0: Bytes, diff: Bytes): Bytes = {
-    val patcher = new GDiffPatcher
-    Bytes (patcher.patch (val0.bytes, diff.bytes))
-  }
 
   def apply (poster: Poster): Handler =
     new Handler (0, Bytes.empty, new ArrayDeque, poster)

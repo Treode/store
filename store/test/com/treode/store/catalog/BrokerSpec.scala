@@ -37,7 +37,7 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
   val patches = {
     var prev = Bytes.empty
     for (v <- bytes) yield {
-      val p = Handler.diff (prev, v)
+      val p = Patch.diff (prev, v)
       prev = v
       p
     }}
@@ -129,26 +129,29 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
       broker.status expectSeq (ID1 -> 1)
     }
 
-    def right (version: Int, patches: Seq [Bytes]): Update =
-      Right ((version, patches))
+    def patch (drop: Int, take: Int): Update = {
+      val version  = take + drop
+      val bytes = Bytes (values (version - 1))
+      Patch (version, bytes.hashCode, patches drop (drop) take (take))
+    }
 
     "yield non-empty deltas on empty ping" in {
       implicit val (scheduler, broker) = newBroker
       broker.issue (cat1) (1, values (0))
-      broker.ping () expectSeq (ID1 -> right (0, patches take 1))
+      broker.ping () expectSeq (ID1 -> patch (0, 1))
     }
 
     "yield non-empty deltas on ping missing the value" in {
       implicit val (scheduler, broker) = newBroker
       broker.issue (cat1) (1, values (0))
-      broker.ping (ID2 -> 1) expectSeq (ID1 -> right (0, patches take 1))
+      broker.ping (ID2 -> 1) expectSeq (ID1 -> patch (0, 1))
     }
 
     "yield non-empty deltas on ping out-of-date with this host" in {
       implicit val (scheduler, broker) = newBroker
       broker.issue (cat1) (1, values (0))
       broker.issue (cat1) (2, values (1))
-      broker.ping (ID1 -> 1) expectSeq (ID1 -> right (1, patches drop 1 take 1))
+      broker.ping (ID1 -> 1) expectSeq (ID1 -> patch (1, 1))
     }
 
     "yield empty deltas on ping up-to-date with this host" in {
