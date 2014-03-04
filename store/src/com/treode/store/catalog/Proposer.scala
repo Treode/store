@@ -1,14 +1,15 @@
-package com.treode.store.paxos
+package com.treode.store.catalog
 
 import java.util.concurrent.TimeoutException
 import scala.language.postfixOps
 
 import com.treode.async.{Callback, Fiber}
-import com.treode.cluster.{Peer, MessageDescriptor}
+import com.treode.cluster.{MailboxId, MessageDescriptor, Peer}
 import com.treode.cluster.misc.{BackoffTimer, RichInt}
 import com.treode.store.Bytes
+import com.treode.store.paxos.BallotNumber
 
-private class Proposer (key: Bytes, kit: PaxosKit) {
+private class Proposer (key: MailboxId, kit: CatalogKit) {
   import kit.proposers.remove
   import kit.{cluster, locate, random, scheduler}
 
@@ -20,12 +21,12 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
   var state: State = Opening
 
   trait State {
-    def open (ballot: Long, value: Bytes) = ()
+    def open (ballot: Long, patch: Patch) = ()
     def learn (k: Learner)
     def refuse (ballot: Long)
     def promise (from: Peer, ballot: Long, proposal: Proposal)
     def accept (from: Peer, ballot: Long)
-    def chosen (value: Bytes)
+    def chosen (value: Update)
     def timeout()
     def shutdown() = state = Shutdown
   }
@@ -41,18 +42,18 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
       None
     }}
 
-  private def agreement (x: Proposal, value: Bytes) = {
+  private def agreement (x: Proposal, patch: Patch) = {
     x match {
-      case Some ((_, value)) => value
-      case None => value
+      case Some ((_, patch)) => patch
+      case None => patch
     }}
 
   private def illegal = throw new IllegalStateException
 
   object Opening extends State {
 
-    override def open (ballot: Long, value: Bytes) =
-      state = new Open (ballot, value)
+    override def open (ballot: Long, patch: Patch) =
+      state = new Open (ballot, patch)
 
     def learn (k: Learner) = throw new IllegalStateException
 
@@ -62,7 +63,7 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
 
     def accept (from: Peer, ballot: Long) = ()
 
-    def chosen (v: Bytes): Unit =
+    def chosen (v: Update): Unit =
       state = new Closed (v)
 
     def timeout() = ()
@@ -70,20 +71,20 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
     override def toString = "Proposer.Open (%s)" format (key.toString)
   }
 
-  class Open (_ballot: Long, value: Bytes) extends State {
+  class Open (_ballot: Long, patch: Patch) extends State {
 
     var learners = List.empty [Learner]
     var ballot = _ballot
     var refused = ballot
-    var proposed = Option.empty [(BallotNumber, Bytes)]
-    val promised = locate (key)
-    val accepted = locate (key)
+    var proposed = Option.empty [(BallotNumber, Patch)]
+    val promised = locate()
+    val accepted = locate()
 
     // Ballot number zero was implicitly accepted.
     if (ballot == 0)
-      Acceptor.propose (key, ballot, value) (promised)
+      Acceptor.propose (key, ballot, patch) (promised)
     else
-      Acceptor.query (key, ballot, value) (promised)
+      Acceptor.query (key, ballot) (promised)
 
     val backoff = proposingBackoff.iterator
     fiber.delay (backoff.next) (state.timeout())
@@ -102,7 +103,7 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
         promised += from
         proposed = max (proposed, proposal)
         if (promised.quorum) {
-          val v = agreement (proposed, value)
+          val v = agreement (proposed, patch)
           Acceptor.propose (key, ballot, v) (accepted)
         }}}
 
@@ -110,13 +111,13 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
       if (ballot == this.ballot) {
         accepted += from
         if (accepted.quorum) {
-          val v = agreement (proposed, value)
-          Acceptor.choose (key, v) (locate (key))
+          val v = agreement (proposed, patch)
+          Acceptor.choose (key, v) (locate())
           learners foreach (_.pass (v))
           state = new Closed (v)
         }}}
 
-    def chosen (v: Bytes) {
+    def chosen (v: Update) {
       learners foreach (_.pass (v))
       state = new Closed (v)
     }
@@ -127,32 +128,32 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
         accepted.clear()
         ballot = refused + random.nextInt (17) + 1
         refused = ballot
-        Acceptor.query (key, ballot, value) (promised)
+        Acceptor.query (key, ballot) (promised)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         remove (key, Proposer.this)
         learners foreach (_.fail (new TimeoutException))
       }}
 
-    override def toString = "Proposer.Open " + (key, ballot, value)
+    override def toString = "Proposer.Open " + (key, ballot, patch)
   }
 
-  class Closed (value: Bytes) extends State {
+  class Closed (update: Update) extends State {
 
     fiber.delay (closedLifetime) (remove (key, Proposer.this))
 
     def learn (k: Learner) =
-      k.pass (value)
+      k.pass (update)
 
-    def chosen (v: Bytes) =
-      require (v == value, "Paxos disagreement")
+    def chosen (v: Update) =
+      require (v == update, "Paxos disagreement")
 
     def refuse (ballot: Long) = ()
     def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
     def accept (from: Peer, ballot: Long) = ()
     def timeout() = ()
 
-    override def toString = "Proposer.Closed " + (key, value)
+    override def toString = "Proposer.Closed " + (key, update)
   }
 
   object Shutdown extends State {
@@ -161,14 +162,14 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
     def refuse (ballot: Long) = ()
     def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
     def accept (from: Peer, ballot: Long) = ()
-    def chosen (v: Bytes) = ()
+    def chosen (v: Update) = ()
     def timeout() = ()
 
     override def toString = "Proposer.Shutdown (%s)" format (key)
   }
 
-  def open (ballot: Long, value: Bytes) =
-    fiber.execute (state.open (ballot, value))
+  def open (ballot: Long, patch: Patch) =
+    fiber.execute (state.open (ballot, patch))
 
   def learn (k: Learner) =
     fiber.execute  (state.learn (k))
@@ -182,8 +183,8 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
   def accept (from: Peer, ballot: Long) =
     fiber.execute  (state.accept (from, ballot))
 
-  def chosen (value: Bytes) =
-    fiber.execute  (state.chosen (value))
+  def chosen (updatre: Update) =
+    fiber.execute  (state.chosen (updatre))
 
   def shutdown() =
     fiber.execute  (state.shutdown())
@@ -194,21 +195,21 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
 private object Proposer {
 
   val refuse = {
-    import PaxosPicklers._
-    MessageDescriptor (0xFF3725D9448D98D0L, tuple (bytes, ulong))
+    import CatalogPicklers._
+    MessageDescriptor (0xFF8562E9071168EAL, tuple (mbxId, ulong))
   }
 
   val promise = {
-    import PaxosPicklers._
-    MessageDescriptor (0xFF52232E0CCEE1D2L, tuple (bytes, ulong, proposal))
+    import CatalogPicklers._
+    MessageDescriptor (0xFF3F6FFC9993CD75L, tuple (mbxId, ulong, proposal))
   }
 
   val accept = {
-    import PaxosPicklers._
-    MessageDescriptor (0xFFB799D0E495804BL, tuple (bytes, ulong))
+    import CatalogPicklers._
+    MessageDescriptor (0xFF0E7973CC65E95FL, tuple (mbxId, ulong))
   }
 
   val chosen = {
-    import PaxosPicklers._
-    MessageDescriptor (0xFF3D8DDECF0F6CBEL, tuple (bytes, bytes))
+    import CatalogPicklers._
+    MessageDescriptor (0xFF2259321F9D4EF9L, tuple (mbxId, update))
   }}

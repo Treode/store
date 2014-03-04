@@ -5,6 +5,8 @@ import com.treode.store.Bytes
 
 private sealed abstract class Update {
 
+  def version: Int
+  def checksum: Int
   def isEmpty: Boolean
 }
 
@@ -35,6 +37,7 @@ private object Patch {
 
 private case class Assign (version: Int, bytes: Bytes, history: Seq [Bytes]) extends Update {
 
+  def checksum = bytes.hashCode
   def isEmpty: Boolean = false
 }
 
@@ -48,7 +51,6 @@ private object Assign {
   }}
 
 private object Update {
-
 
   val empty = Patch (0, 0, Seq.empty)
 

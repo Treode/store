@@ -47,7 +47,7 @@ private class Medic (
     }
 
   def close (poster: Poster): Handler =
-    new Handler (version, bytes, history, poster)
+    new Handler (version, bytes.hashCode, bytes, history, poster)
 }
 
 private object Medic {

@@ -47,7 +47,7 @@ class HandlerSpec extends FreeSpec {
   private def newCatalog (issues: Int): Handler = {
     val cat = Handler (new TestPoster)
     for ((v, i) <- values.take (issues) .zipWithIndex)
-      cat.issue (i+1, Bytes (Picklers.fixedLong, v))
+      cat.patch (cat.diff (i+1, Bytes (Picklers.fixedLong, v)))
     cat
   }
 

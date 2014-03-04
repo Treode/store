@@ -14,11 +14,11 @@ private class Broker (
 ) (implicit
     scheduler: Scheduler,
     disks: Disks
-) extends Catalogs {
+) {
 
   private val fiber = new Fiber (scheduler)
 
-  private def get (id: MailboxId): Handler = {
+  private def _get (id: MailboxId): Handler = {
     catalogs get (id) match {
       case Some (cat) =>
         cat
@@ -33,11 +33,21 @@ private class Broker (
     catalogs += desc.id -> Handler (Poster (desc, handler))
   }
 
-  def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) {
-    val _cat = Bytes (desc.pcat, cat)
-    fiber.execute {
-      get (desc.id) issue (version, _cat)
+  def get (cat: MailboxId): Async [Handler] =
+    fiber.supply {
+      _get (cat)
+    }
+
+  def diff [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Patch] = {
+    val bytes = Bytes (desc.pcat, cat)
+    fiber.supply {
+      _get (desc.id) diff (version, bytes)
     }}
+
+  def patch (id: MailboxId, update: Update): Async [Unit] =
+    fiber.supply {
+      _get (id) patch (update)
+    }
 
   private def _status: Ping =
     for ((id, cat) <- catalogs.toSeq)
@@ -64,7 +74,7 @@ private class Broker (
   def sync (updates: Sync): Unit =
     fiber.execute {
       for ((id, update) <- updates)
-        get (id) .patch (update)
+        _get (id) .patch (update)
     }
 
   def gab () (implicit cluster: Cluster) {

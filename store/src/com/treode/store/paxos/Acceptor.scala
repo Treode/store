@@ -232,8 +232,10 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
   class Shutdown (status: Option [ActiveStatus]) extends State {
 
+    // TODO: Purge acceptor from memory.
+
     def status = None
-    def query (proposer: Peer, ballot: Long, abort: Bytes): Unit = ()
+    def query (proposer: Peer, ballot: Long, default: Bytes): Unit = ()
     def propose (proposer: Peer, ballot: Long, value: Bytes): Unit = ()
     def choose (chosen: Bytes): Unit = ()
 
@@ -270,12 +272,12 @@ private object Acceptor {
 
   val query = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF14D4F00908FB59L, tuple (bytes, long, bytes))
+    MessageDescriptor (0xFF14D4F00908FB59L, tuple (bytes, ulong, bytes))
   }
 
   val propose = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF09AFD4F9B688D9L, tuple (bytes, long, bytes))
+    MessageDescriptor (0xFF09AFD4F9B688D9L, tuple (bytes, ulong, bytes))
   }
 
   val choose = {

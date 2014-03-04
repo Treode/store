@@ -3,10 +3,12 @@ package com.treode.store
 import com.treode.cluster.{HostId, MailboxId}
 import com.treode.disk.Position
 import com.treode.pickle.Picklers
+import com.treode.store.paxos.BallotNumber
 import com.treode.store.tier.TierTable
 
 private trait StorePicklers extends Picklers {
 
+  def ballotNumber = BallotNumber.pickler
   def bytes = Bytes.pickler
   def cohort = Cohort.pickler
   def hostId = HostId.pickler

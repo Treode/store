@@ -14,6 +14,7 @@ import Async.guard
 
 private class Handler (
   var version: Int,
+  var checksum: Int,
   var bytes:  Bytes,
   var history: ArrayDeque [Bytes],
   poster: Poster
@@ -22,16 +23,17 @@ private class Handler (
   def diff (other: Int): Update = {
     val start = other - version + history.size
     if (start >= history.size) {
-      Patch (version, bytes.hashCode, Seq.empty)
+      Patch (version, checksum, Seq.empty)
     } else if (start < 0) {
       Assign (version, bytes, history.toSeq)
     } else {
-      Patch (version, bytes.hashCode, history.drop (start) .toSeq)
+      Patch (version, checksum, history.drop (start) .toSeq)
     }}
 
   def patch (version: Int, bytes: Bytes, history: Seq [Bytes]) {
     if (this.version < version) {
       this.version = version
+      this.checksum = bytes.hashCode
       this.bytes = bytes
       this.history.clear()
       this.history.addAll (history)
@@ -46,11 +48,12 @@ private class Handler (
       for (patch <- future)
         bytes = Patch.patch (bytes, patch)
       this.version += span
+      this.checksum = bytes.hashCode
       this.bytes = bytes
       for (_ <- 0 until history.size + span - catalogHistoryLimit)
         history.remove()
       history.addAll (future)
-      poster.post (Patch (version, bytes.hashCode, future), bytes)
+      poster.post (Patch (version, checksum, future), bytes)
     }}
 
   def patch (update: Update): Unit =
@@ -61,17 +64,9 @@ private class Handler (
         patch (end, patches)
     }
 
-  def issue (version: Int, bytes: Bytes) {
-    require (
-        version == this.version + 1,
-        "Required version ${this.version + 1}, found $version.")
-    val patch = Patch.diff (this.bytes, bytes)
-    this.version = version
-    this.bytes = bytes
-    history.add (patch)
-    if (history.size > catalogHistoryLimit)
-      history.remove()
-    poster.post (Patch (version, bytes.hashCode, Seq (patch)), bytes)
+  def diff (version: Int, bytes: Bytes): Patch = {
+    require (version == this.version + 1, "Could not diff catalog against stale one.")
+    Patch (version, checksum, Seq (Patch.diff (this.bytes, bytes)))
   }
 
   def checkpoint(): Async [(MailboxId, Position)] =
@@ -82,5 +77,5 @@ private class Handler (
 private object Handler {
 
   def apply (poster: Poster): Handler =
-    new Handler (0, Bytes.empty, new ArrayDeque, poster)
+    new Handler (0, 0, Bytes.empty, new ArrayDeque, poster)
 }

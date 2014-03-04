@@ -80,12 +80,11 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
       task.pass
     }
 
-    def listen (desc: CatalogDescriptor [Long]) (f: Long => Any) =
+    def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any) =
       broker.listen (desc) (f)
 
-    def issue (desc: CatalogDescriptor [Long]) (ver1: Int, val1: Long) = {
-      broker.issue (desc) (ver1, val1)
-      scheduler.runTasks()
+    def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) = {
+      broker.patch (desc.id, broker.diff (desc) (version, cat) .pass) .pass
     }}
 
   private def newBroker = {

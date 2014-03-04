@@ -27,8 +27,8 @@ private class RecoveryKit (implicit
     import launch.disks
 
     for {
-      catalogs <- _catalogs.launch (launch)
       atlas <- _atlas.launch()
+      catalogs <- _catalogs.launch (launch, atlas)
       paxos <- _paxos.launch (launch, atlas)
       atomic <- _atomic.launch (launch, atlas, paxos)
     } yield {

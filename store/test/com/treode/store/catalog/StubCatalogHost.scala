@@ -7,6 +7,7 @@ import com.treode.async.{Async, AsyncTestTools, Callback, CallbackCaptor}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
+import com.treode.store.atlas.AtlasKit
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions
 
@@ -37,10 +38,12 @@ extends StubActiveHost (id, network) {
   val geometry = DiskGeometry (14, 8, 1<<20)
   val files = Seq ((Paths.get ("a"), file, geometry))
 
+  val atlas = new AtlasKit
+
   val _launch =
     for {
       launch <- recovery.attach (files)
-      catalogs <- _catalogs.launch (launch)
+      catalogs <- _catalogs.launch (launch, atlas) .map (_.asInstanceOf [CatalogKit])
     } yield {
       launch.launch()
       (launch.disks, catalogs)
@@ -52,9 +55,10 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, catalogs) = captor.passed
 
-  def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Unit =
-    catalogs.issue (desc) (version, cat)
-}
+  def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) {
+    val broker = catalogs.broker
+    broker.patch (desc.id, broker.diff (desc) (version, cat) .pass) .pass
+  }}
 
 private object StubCatalogHost {
 

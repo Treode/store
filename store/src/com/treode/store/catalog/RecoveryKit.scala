@@ -1,9 +1,11 @@
 package com.treode.store.catalog
 
+import scala.util.Random
+
 import com.treode.async.{Async, AsyncConversions, Fiber, Scheduler}
 import com.treode.cluster.{Cluster, MailboxId}
 import com.treode.disk.{Disks, Position}
-import com.treode.store.{Catalogs, CatalogDescriptor}
+import com.treode.store.{Atlas, Catalogs, CatalogDescriptor, StoreConfig}
 
 import Async.supply
 import AsyncConversions._
@@ -11,9 +13,11 @@ import Broker.root
 import Poster.{pager, update}
 
 private class RecoveryKit (implicit
+    random: Random,
     scheduler: Scheduler,
     cluster: Cluster,
-    recovery: Disks.Recovery
+    recovery: Disks.Recovery,
+    config: StoreConfig
 ) extends Catalogs.Recovery {
 
   private val fiber = new Fiber (scheduler)
@@ -52,7 +56,7 @@ private class RecoveryKit (implicit
     makers += desc.id -> (Poster (desc, handler) (scheduler, _))
   }
 
-  def launch (implicit launch: Disks.Launch): Async [Catalogs] =
+  def launch (implicit launch: Disks.Launch, atlas: Atlas): Async [Catalogs] =
     fiber.supply {
       import launch.disks
 
@@ -64,5 +68,5 @@ private class RecoveryKit (implicit
       }
       val broker = new Broker (handlers.result)
       broker.attach (cluster)
-      broker
+      new CatalogKit (broker)
     }}
