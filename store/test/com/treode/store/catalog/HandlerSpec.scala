@@ -4,14 +4,13 @@ import scala.collection.JavaConversions._
 
 import org.scalatest.FreeSpec
 import com.treode.async.Async
-import com.treode.cluster.MailboxId
 import com.treode.disk.Position
 import com.treode.pickle.Picklers
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, CatalogId}
 
 class HandlerSpec extends FreeSpec {
 
-  val ID = MailboxId (0x26)
+  val ID = CatalogId (0x26)
 
   val values = Seq (
       0x292C28335A06E344L, 0xB58E76CED969A4C7L, 0xDF20D7F2B8C33B9EL, 0x63D5DAAF0C58D041L,
@@ -40,7 +39,7 @@ class HandlerSpec extends FreeSpec {
     def post (update: Update, bytes: Bytes): Unit =
       dispatch (bytes)
 
-    def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [(MailboxId, Position)] =
+    def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [(CatalogId, Position)] =
       ???
   }
 

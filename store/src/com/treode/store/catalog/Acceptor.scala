@@ -1,13 +1,13 @@
 package com.treode.store.catalog
 
 import com.treode.async.{Async, Callback, Fiber}
-import com.treode.cluster.{MailboxId, MessageDescriptor, Peer}
-import com.treode.store.Bytes
+import com.treode.cluster.{MessageDescriptor, Peer}
+import com.treode.store.{CatalogId, Bytes}
 import com.treode.store.paxos.BallotNumber
 
 import Callback.ignore
 
-private class Acceptor (val key: MailboxId, kit: CatalogKit) {
+private class Acceptor (val key: CatalogId, kit: CatalogKit) {
   import kit.{broker, cluster, scheduler}
   import kit.acceptors.remove
   import kit.config.{closedLifetime, deliberatingTimeout}
@@ -166,15 +166,15 @@ private object Acceptor {
 
   val query = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF9BFCEDF7D2E129L, tuple (mbxId, ulong))
+    MessageDescriptor (0xFF9BFCEDF7D2E129L, tuple (catId, ulong))
   }
 
   val propose = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF3E59E358D49679L, tuple (mbxId, ulong, patch))
+    MessageDescriptor (0xFF3E59E358D49679L, tuple (catId, ulong, patch))
   }
 
   val choose = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF3CF1687A498C79L, tuple (mbxId, patch))
+    MessageDescriptor (0xFF3CF1687A498C79L, tuple (catId, patch))
   }}

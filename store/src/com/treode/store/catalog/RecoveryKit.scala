@@ -3,9 +3,9 @@ package com.treode.store.catalog
 import scala.util.Random
 
 import com.treode.async.{Async, AsyncConversions, Fiber, Scheduler}
-import com.treode.cluster.{Cluster, MailboxId}
+import com.treode.cluster.Cluster
 import com.treode.disk.{Disks, Position}
-import com.treode.store.{Atlas, Catalogs, CatalogDescriptor, StoreConfig}
+import com.treode.store.{Atlas, Catalogs, CatalogDescriptor, CatalogId, StoreConfig}
 
 import Async.supply
 import AsyncConversions._
@@ -21,10 +21,10 @@ private class RecoveryKit (implicit
 ) extends Catalogs.Recovery {
 
   private val fiber = new Fiber (scheduler)
-  private var medics = Map.empty [MailboxId, Medic]
-  private var makers = Map.empty [MailboxId, Disks => Poster]
+  private var medics = Map.empty [CatalogId, Medic]
+  private var makers = Map.empty [CatalogId, Disks => Poster]
 
-  private def getMedic (id: MailboxId): Medic = {
+  private def getMedic (id: CatalogId): Medic = {
     medics get (id) match {
       case Some (m) =>
         m
@@ -34,7 +34,7 @@ private class RecoveryKit (implicit
         m
     }}
 
-  private def getMaker (id: MailboxId): Disks => Poster =
+  private def getMaker (id: CatalogId): Disks => Poster =
     makers get (id) match {
       case Some (m) => m
       case None => (Poster (id) (scheduler, _))
@@ -60,7 +60,7 @@ private class RecoveryKit (implicit
     fiber.supply {
       import launch.disks
 
-      val handlers = Map.newBuilder [MailboxId, Handler]
+      val handlers = Map.newBuilder [CatalogId, Handler]
       for (id <- medics.keySet ++ makers.keySet) yield {
         val poster = getMaker (id) .apply (disks)
         val handler = getMedic (id) .close (poster)

@@ -3,9 +3,9 @@ package com.treode.store.catalog
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.cluster.{Cluster, MailboxId, ReplyTracker}
+import com.treode.cluster.{Cluster, ReplyTracker}
 import com.treode.disk.Disks
-import com.treode.store.{Atlas, Bytes, Catalogs, CatalogDescriptor, StoreConfig}
+import com.treode.store.{Atlas, Bytes, Catalogs, CatalogDescriptor, CatalogId, StoreConfig}
 
 private class CatalogKit (val broker: Broker) (implicit
     val random: Random,
@@ -23,10 +23,10 @@ private class CatalogKit (val broker: Broker) (implicit
   def locate(): ReplyTracker =
     atlas.locate (0)
 
-  def lead (key: MailboxId, patch: Patch): Async [Update] =
+  def lead (key: CatalogId, patch: Patch): Async [Update] =
     proposers.propose (0, key, patch)
 
-  def propose (key: MailboxId, patch: Patch): Async [Update] =
+  def propose (key: CatalogId, patch: Patch): Async [Update] =
     proposers.propose (random.nextInt (17) + 1, key, patch)
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit] = {

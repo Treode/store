@@ -5,11 +5,11 @@ import scala.language.postfixOps
 
 import com.treode.async.{Backoff, Callback, Fiber}
 import com.treode.async.misc.RichInt
-import com.treode.cluster.{MailboxId, MessageDescriptor, Peer}
-import com.treode.store.Bytes
+import com.treode.cluster.{MessageDescriptor, Peer}
+import com.treode.store.{Bytes, CatalogId}
 import com.treode.store.paxos.BallotNumber
 
-private class Proposer (key: MailboxId, kit: CatalogKit) {
+private class Proposer (key: CatalogId, kit: CatalogKit) {
   import kit.proposers.remove
   import kit.{cluster, locate, random, scheduler}
 
@@ -196,20 +196,20 @@ private object Proposer {
 
   val refuse = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF8562E9071168EAL, tuple (mbxId, ulong))
+    MessageDescriptor (0xFF8562E9071168EAL, tuple (catId, ulong))
   }
 
   val promise = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF3F6FFC9993CD75L, tuple (mbxId, ulong, proposal))
+    MessageDescriptor (0xFF3F6FFC9993CD75L, tuple (catId, ulong, proposal))
   }
 
   val accept = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF0E7973CC65E95FL, tuple (mbxId, ulong))
+    MessageDescriptor (0xFF0E7973CC65E95FL, tuple (catId, ulong))
   }
 
   val chosen = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF2259321F9D4EF9L, tuple (mbxId, update))
+    MessageDescriptor (0xFF2259321F9D4EF9L, tuple (catId, update))
   }}

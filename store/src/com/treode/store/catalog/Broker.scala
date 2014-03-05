@@ -1,16 +1,16 @@
 package com.treode.store.catalog
 
 import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Scheduler}
-import com.treode.cluster.{Cluster, MailboxId, MessageDescriptor, Peer}
+import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
 import com.treode.disk.{Disks, Position, RootDescriptor}
-import com.treode.store.{Bytes, Catalogs, CatalogDescriptor, StoreConfig}
+import com.treode.store.{Bytes, Catalogs, CatalogDescriptor, CatalogId, StoreConfig}
 
 import AsyncConversions._
 import Broker.Root
 import Callback.ignore
 
 private class Broker (
-    private var catalogs: Map [MailboxId, Handler]
+    private var catalogs: Map [CatalogId, Handler]
 ) (implicit
     scheduler: Scheduler,
     disks: Disks
@@ -18,7 +18,7 @@ private class Broker (
 
   private val fiber = new Fiber (scheduler)
 
-  private def _get (id: MailboxId): Handler = {
+  private def _get (id: CatalogId): Handler = {
     catalogs get (id) match {
       case Some (cat) =>
         cat
@@ -33,7 +33,7 @@ private class Broker (
     catalogs += desc.id -> Handler (Poster (desc, handler))
   }
 
-  def get (cat: MailboxId): Async [Handler] =
+  def get (cat: CatalogId): Async [Handler] =
     fiber.supply {
       _get (cat)
     }
@@ -44,7 +44,7 @@ private class Broker (
       _get (desc.id) diff (version, bytes)
     }}
 
-  def patch (id: MailboxId, update: Update): Async [Unit] =
+  def patch (id: CatalogId, update: Update): Async [Unit] =
     fiber.supply {
       _get (id) patch (update)
     }
@@ -113,13 +113,13 @@ private class Broker (
 
 object Broker {
 
-  class Root (val catalogs: Map [MailboxId, Position])
+  class Root (val catalogs: Map [CatalogId, Position])
 
   object Root {
 
     val pickler = {
       import CatalogPicklers._
-      wrap (map (mbxId, pos)) .build (new Root (_)) .inspect (_.catalogs)
+      wrap (map (catId, pos)) .build (new Root (_)) .inspect (_.catalogs)
     }}
 
   val root = {
@@ -131,12 +131,12 @@ object Broker {
     import CatalogPicklers._
     MessageDescriptor (
         0xFF8D38A840A7E6BCL,
-        seq (tuple (mbxId, uint)))
+        seq (tuple (catId, uint)))
   }
 
   val sync: MessageDescriptor [Sync] = {
     import CatalogPicklers._
     MessageDescriptor (
         0xFF632A972A814B35L,
-        seq (tuple (mbxId, update)))
+        seq (tuple (catId, update)))
   }}

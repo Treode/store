@@ -5,9 +5,9 @@ import scala.util.Random
 
 import com.treode.async.{AsyncTestTools, StubScheduler}
 import com.treode.async.io.StubFile
-import com.treode.cluster.{Cluster, HostId, MailboxId, StubActiveHost, StubNetwork}
+import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Bytes, CatalogDescriptor, StoreConfig}
+import com.treode.store.{Bytes, CatalogDescriptor, CatalogId, StoreConfig}
 import com.treode.pickle.{Pickler, Picklers}
 import org.scalacheck.Gen
 import org.scalatest.{FreeSpec, PropSpec, ShouldMatchers, Specs}
@@ -20,8 +20,8 @@ class BrokerSpec extends Specs (BrokerBehaviors, BrokerProperties)
 
 object BrokerBehaviors extends FreeSpec with ShouldMatchers {
 
-  val ID1 = MailboxId (0xCB)
-  val ID2 = MailboxId (0x2D)
+  val ID1 = CatalogId (0xCB)
+  val ID2 = CatalogId (0x2D)
   val cat1 = new CatalogDescriptor (ID1, Picklers.fixedLong)
   val cat2 = new CatalogDescriptor (ID2, Picklers.fixedLong)
 
@@ -58,7 +58,7 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
 
     def status = broker.status
 
-    def ping (values: (MailboxId, Int)*) =
+    def ping (values: (CatalogId, Int)*) =
       broker.ping (values)
 
     def sync (other: RichBroker) {

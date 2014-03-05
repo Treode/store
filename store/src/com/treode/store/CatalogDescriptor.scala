@@ -1,9 +1,8 @@
 package com.treode.store
 
-import com.treode.cluster.MailboxId
-import com.treode.pickle.{Pickler, Picklers}
+import com.treode.pickle.Pickler
 
-class CatalogDescriptor [C] (val id: MailboxId, val pcat: Pickler [C]) {
+class CatalogDescriptor [C] (val id: CatalogId, val pcat: Pickler [C]) {
 
   def listen (f: C => Any): Unit =
     ???
@@ -16,6 +15,6 @@ class CatalogDescriptor [C] (val id: MailboxId, val pcat: Pickler [C]) {
 
 object CatalogDescriptor {
 
-  def apply [M] (id: MailboxId, pval: Pickler [M]): CatalogDescriptor [M] =
+  def apply [M] (id: CatalogId, pval: Pickler [M]): CatalogDescriptor [M] =
     new CatalogDescriptor (id, pval)
 }

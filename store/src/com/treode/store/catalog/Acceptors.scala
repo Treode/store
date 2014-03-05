@@ -1,9 +1,8 @@
 package com.treode.store.catalog
 
 import com.treode.async.{Async, AsyncConversions, Latch}
-import com.treode.cluster.MailboxId
 import com.treode.disk.{PageDescriptor, Position, RootDescriptor}
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, CatalogId}
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
 import Async.guard
@@ -14,7 +13,7 @@ private class Acceptors (kit: CatalogKit) {
 
   val acceptors = newAcceptorsMap
 
-  def get (key: MailboxId): Acceptor = {
+  def get (key: CatalogId): Acceptor = {
     var a0 = acceptors.get (key)
     if (a0 != null)
       return a0
@@ -26,7 +25,7 @@ private class Acceptors (kit: CatalogKit) {
     a1
   }
 
-  def remove (key: MailboxId, a: Acceptor): Unit =
+  def remove (key: CatalogId, a: Acceptor): Unit =
     acceptors.remove (key, a)
 
   def attach() {

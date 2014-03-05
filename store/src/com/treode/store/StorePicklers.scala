@@ -10,6 +10,7 @@ private trait StorePicklers extends Picklers {
 
   def ballotNumber = BallotNumber.pickler
   def bytes = Bytes.pickler
+  def catId = CatalogId.pickler
   def cohort = Cohort.pickler
   def hostId = HostId.pickler
   def mbxId = MailboxId.pickler

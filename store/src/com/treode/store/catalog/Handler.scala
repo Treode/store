@@ -6,9 +6,8 @@ import scala.collection.JavaConversions._
 import com.nothome.delta.{Delta, GDiffPatcher}
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.misc.materialize
-import com.treode.cluster.MailboxId
 import com.treode.disk.{Disks, Position}
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, CatalogId}
 
 import Async.guard
 
@@ -69,7 +68,7 @@ private class Handler (
     Patch (version, checksum, Seq (Patch.diff (this.bytes, bytes)))
   }
 
-  def checkpoint(): Async [(MailboxId, Position)] =
+  def checkpoint(): Async [(CatalogId, Position)] =
     guard {
       poster.checkpoint (version, bytes, materialize (history))
     }}

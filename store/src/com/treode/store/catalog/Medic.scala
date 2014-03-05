@@ -4,9 +4,8 @@ import java.util.ArrayDeque
 import scala.collection.JavaConversions._
 
 import com.treode.async.Async
-import com.treode.cluster.MailboxId
 import com.treode.disk.{Disks, Position}
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, CatalogId}
 
 import Poster.pager
 
@@ -56,11 +55,11 @@ private object Medic {
     new Medic (0, Bytes.empty, new ArrayDeque)
 
   def apply (
-      id: MailboxId,
+      id: CatalogId,
       pos: Position
   ) (implicit
       reload: Disks.Reload
-  ): Async [(MailboxId, Medic)] = {
+  ): Async [(CatalogId, Medic)] = {
     for {
       (version, bytes, _history) <- pager.read (reload, pos)
     } yield {

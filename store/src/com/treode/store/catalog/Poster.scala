@@ -3,9 +3,8 @@ package com.treode.store.catalog
 import java.util.ArrayDeque
 
 import com.treode.async.{Async, Fiber, Callback, Scheduler}
-import com.treode.cluster.MailboxId
 import com.treode.disk.{Disks, PageDescriptor, Position, RecordDescriptor}
-import com.treode.store.{Bytes, CatalogDescriptor}
+import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 
 import Async.guard
 import Callback.callback
@@ -14,14 +13,14 @@ private trait Poster {
 
   def post (update: Update, bytes: Bytes)
 
-  def checkpoint (version: Int, bytes: Bytes, patches: Seq [Bytes]): Async [(MailboxId, Position)]
+  def checkpoint (version: Int, bytes: Bytes, patches: Seq [Bytes]): Async [(CatalogId, Position)]
 }
 
 private object Poster {
 
   val update = {
     import CatalogPicklers._
-    RecordDescriptor (0xC7D5CD23, tuple (mbxId, CatalogPicklers.update))
+    RecordDescriptor (0xC7D5CD23, tuple (catId, CatalogPicklers.update))
   }
 
   val pager = {
@@ -31,7 +30,7 @@ private object Poster {
 
   case class Post (update: Update, bytes: Bytes)
 
-  abstract class AbstractPoster (id: MailboxId) (implicit scheduler: Scheduler, disks: Disks)
+  abstract class AbstractPoster (id: CatalogId) (implicit scheduler: Scheduler, disks: Disks)
   extends Poster {
 
     val fiber = new Fiber (scheduler)
@@ -61,7 +60,7 @@ private object Poster {
         engage()
     }
 
-    def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [(MailboxId, Position)] =
+    def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [(CatalogId, Position)] =
       guard {
         for {
           pos <- pager.write (0, (version, bytes, history))
@@ -83,7 +82,7 @@ private object Poster {
       override def toString = s"Poster(${desc.id},${desc.pcat})"
     }}
 
-  def apply (id: MailboxId) (implicit scheduler: Scheduler, disks: Disks): Poster =
+  def apply (id: CatalogId) (implicit scheduler: Scheduler, disks: Disks): Poster =
     new AbstractPoster (id) {
 
       def dispatch (bytes: Bytes): Unit = ()
