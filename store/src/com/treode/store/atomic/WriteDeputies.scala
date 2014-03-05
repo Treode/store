@@ -1,7 +1,7 @@
 package com.treode.store.atomic
 
 import com.treode.async.{Async, AsyncConversions, Latch}
-import com.treode.cluster.misc.materialize
+import com.treode.async.misc.materialize
 import com.treode.disk.{PageDescriptor, Position, RootDescriptor}
 import com.treode.store.{Bytes, TableId, TxId}
 import com.treode.store.tier.{TierDescriptor, TierTable}

@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import java.util.concurrent.ConcurrentHashMap
 
 import com.treode.async.{Async, AsyncConversions, Callback, Latch}
-import com.treode.cluster.misc.materialize
+import com.treode.async.misc.materialize
 import com.treode.disk.{Disks, PageDescriptor, Position}
 import com.treode.store.{ReadOp, TableId, TxClock, TxId, Value, WriteOp}
 import com.treode.store.locks.{LockSet, LockSpace}

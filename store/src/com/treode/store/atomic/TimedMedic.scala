@@ -1,7 +1,7 @@
 package com.treode.store.atomic
 
 import com.treode.async.Async
-import com.treode.cluster.misc.materialize
+import com.treode.async.misc.materialize
 import com.treode.disk.Disks
 import com.treode.store.{TableId, TxClock, WriteOp}
 import com.treode.store.tier.TierMedic

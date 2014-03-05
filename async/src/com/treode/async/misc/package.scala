@@ -1,4 +1,4 @@
-package com.treode.cluster
+package com.treode.async
 
 import java.net.InetSocketAddress
 

@@ -3,8 +3,8 @@ package com.treode.store.atomic
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
+import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
-import com.treode.cluster.misc.materialize
 import com.treode.disk.Disks
 import com.treode.store.{Atlas, Paxos, Store, StoreConfig, TxId}
 import com.treode.store.tier.TierMedic

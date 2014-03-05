@@ -2,7 +2,6 @@ package com.treode.store.catalog
 
 import com.treode.async.{Async, AsyncConversions, Latch}
 import com.treode.cluster.MailboxId
-import com.treode.cluster.misc.materialize
 import com.treode.disk.{PageDescriptor, Position, RootDescriptor}
 import com.treode.store.Bytes
 import com.treode.store.tier.{TierDescriptor, TierTable}

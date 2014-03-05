@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.util.Random
 
 import com.treode.async.Scheduler
-import com.treode.cluster.misc.{RichBoolean, RichOption, parseInetSocketAddress, parseInt}
+import com.treode.async.misc._
 import com.treode.pickle.Pickler
 import sun.misc.{SignalHandler, Signal}
 

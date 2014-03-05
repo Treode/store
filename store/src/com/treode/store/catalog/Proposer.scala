@@ -4,8 +4,8 @@ import java.util.concurrent.TimeoutException
 import scala.language.postfixOps
 
 import com.treode.async.{Backoff, Callback, Fiber}
+import com.treode.async.misc.RichInt
 import com.treode.cluster.{MailboxId, MessageDescriptor, Peer}
-import com.treode.cluster.misc.RichInt
 import com.treode.store.Bytes
 import com.treode.store.paxos.BallotNumber
 

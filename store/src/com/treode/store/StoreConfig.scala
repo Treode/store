@@ -1,7 +1,7 @@
 package com.treode.store
 
 import scala.language.postfixOps
-import com.treode.cluster.misc.RichInt
+import com.treode.async.misc.RichInt
 
 class StoreConfig private (
     val lockSpaceBits: Int,

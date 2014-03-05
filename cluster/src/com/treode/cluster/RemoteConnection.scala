@@ -8,8 +8,8 @@ import scala.util.Random
 
 import com.treode.async.{Backoff, Callback, Fiber, Scheduler}
 import com.treode.async.io.Socket
+import com.treode.async.misc.RichInt
 import com.treode.buffer.PagedBuffer
-import com.treode.cluster.misc.RichInt
 import com.treode.pickle.Pickler
 
 private class RemoteConnection (
