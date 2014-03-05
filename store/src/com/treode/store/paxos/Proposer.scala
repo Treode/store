@@ -3,17 +3,17 @@ package com.treode.store.paxos
 import java.util.concurrent.TimeoutException
 import scala.language.postfixOps
 
-import com.treode.async.{Callback, Fiber}
+import com.treode.async.{Backoff, Callback, Fiber}
 import com.treode.cluster.{Peer, MessageDescriptor}
-import com.treode.cluster.misc.{BackoffTimer, RichInt}
+import com.treode.cluster.misc.RichInt
 import com.treode.store.Bytes
 
 private class Proposer (key: Bytes, kit: PaxosKit) {
   import kit.proposers.remove
   import kit.{cluster, locate, random, scheduler}
 
-  private val proposingBackoff = BackoffTimer (200, 300, 1 minutes, 7)
-  private val confirmingBackoff = BackoffTimer (200, 300, 1 minutes, 7)
+  private val proposingBackoff = Backoff (200, 300, 1 minutes, 7)
+  private val confirmingBackoff = Backoff (200, 300, 1 minutes, 7)
   private val closedLifetime = 2 seconds
 
   private val fiber = new Fiber (scheduler)

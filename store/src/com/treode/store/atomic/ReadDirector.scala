@@ -3,9 +3,9 @@ package com.treode.store.atomic
 import java.util.concurrent.TimeoutException
 import scala.language.postfixOps
 
-import com.treode.async.{Callback, Fiber}
+import com.treode.async.{Backoff, Callback, Fiber}
 import com.treode.cluster.Peer
-import com.treode.cluster.misc.{BackoffTimer, RichInt}
+import com.treode.cluster.misc.RichInt
 import com.treode.store.{ReadOp, TxClock, Value}
 
 private class ReadDirector (
@@ -16,7 +16,7 @@ private class ReadDirector (
 
   import kit.{atlas, cluster, random, scheduler}
 
-  val readBackoff = BackoffTimer (100, 100, 1 seconds, 7) (random)
+  val readBackoff = Backoff (100, 100, 1 seconds, 7) (random)
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)

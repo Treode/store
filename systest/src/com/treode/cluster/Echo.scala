@@ -3,9 +3,8 @@ package com.treode.cluster
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
-import com.treode.async.Scheduler
+import com.treode.async.{Backoff, Scheduler}
 import com.treode.pickle.Picklers
-import com.treode.cluster.misc.BackoffTimer
 
 object Echo {
 
@@ -17,7 +16,7 @@ object Echo {
   def attach (localId: HostId) (implicit random: Random, scheduler: Scheduler, cluster: Cluster) {
 
     val period = 10000
-    val backoff = BackoffTimer (100, 200)
+    val backoff = Backoff (100, 200)
     var start = 0L
 
     _echo.listen { case (s, mdtr) =>

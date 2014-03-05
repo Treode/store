@@ -1,15 +1,14 @@
 package com.treode.cluster
 
-import com.treode.async.{Fiber, Scheduler}
+import com.treode.async.{Backoff, Fiber, Scheduler}
 import com.treode.pickle.{Pickler, Picklers}
-import com.treode.cluster.misc.BackoffTimer
 
 class RequestDescriptor [Q, A] private (id: MailboxId, preq: Pickler [Q], prsp: Pickler [A]) {
 
   type Mailbox = EphemeralMailbox [A]
   type Mediator = RequestMediator [A]
 
-  abstract class QuorumCollector (req: Q) (acks: ReplyTracker, backoff: BackoffTimer) (
+  abstract class QuorumCollector (req: Q) (acks: ReplyTracker, backoff: Backoff) (
       implicit scheduler: Scheduler, cluster: Cluster) {
 
     private val fiber = new Fiber (scheduler)

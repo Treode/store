@@ -4,16 +4,16 @@ import java.util.concurrent.TimeoutException
 import scala.collection.mutable
 import scala.language.postfixOps
 
-import com.treode.async.{Callback, Fiber}
+import com.treode.async.{Backoff, Callback, Fiber}
 import com.treode.cluster.{Cluster, Peer}
-import com.treode.cluster.misc.{BackoffTimer, RichInt}
+import com.treode.cluster.misc.RichInt
 import com.treode.store.{PaxosAccessor, TxClock, TxId, WriteOp, WriteResult}
 
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
   import WriteDirector.deliberate
   import kit.{atlas, cluster, paxos, random, scheduler}
 
-  val prepareBackoff = BackoffTimer (100, 100, 1 seconds, 7) (random)
+  val prepareBackoff = Backoff (100, 100, 1 seconds, 7) (random)
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)

@@ -6,10 +6,10 @@ import scala.collection.JavaConversions._
 import scala.language.postfixOps
 import scala.util.Random
 
-import com.treode.async.{Scheduler, Callback, Fiber}
+import com.treode.async.{Backoff, Callback, Fiber, Scheduler}
 import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
-import com.treode.cluster.misc.{BackoffTimer, RichInt}
+import com.treode.cluster.misc.RichInt
 import com.treode.pickle.Pickler
 
 private class RemoteConnection (
@@ -161,7 +161,7 @@ private class RemoteConnection (
 
   case object Closed extends State
 
-  private val BlockedTimer = BackoffTimer (500, 500, 1 minutes) (Random)
+  private val BlockedTimer = Backoff (500, 500, 1 minutes) (Random)
 
   private var state: State = new Disconnected (BlockedTimer.iterator)
 
