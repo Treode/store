@@ -78,19 +78,23 @@ trait Async [A] {
     })
   }
 
+  def on (s: Scheduler): Async [A] = {
+    val self = this
+    new Async [A] {
+      def run (cb: Callback [A]): Unit = self.run (s.take (cb))
+    }}
+
   def onError (f: => Any): Async [A] = {
     val self = this
     new Async [A] {
-      def run (cb: Callback [A]) {
-        self.run (cb onError f)
-      }}}
+      def run (cb: Callback [A]): Unit = self.run (cb onError f)
+    }}
 
   def onLeave (f: => Any): Async [A] = {
     val self = this
     new Async [A] {
-      def run (cb: Callback [A]) {
-        self.run (cb onLeave f)
-      }}}
+      def run (cb: Callback [A]): Unit = self.run (cb onLeave f)
+    }}
 
   def await(): A = {
     val q = new SynchronousQueue [Either [Throwable, A]]
@@ -103,7 +107,7 @@ trait Async [A] {
       case Left (e) => throw e
     }}
 
-  def toFuture (implicit scheduler: Scheduler): Future [A] = {
+  def toFuture: Future [A] = {
     val f = new Future [A]
     run (f)
     f
@@ -152,6 +156,9 @@ object Async {
 
   def run [A] (cb: Callback [A]) (f: => Async [A]): Unit =
     guard (f) run (cb)
+
+  def defer (cb: Callback [_]) (f: => Async [_]): Unit =
+    guard (f) defer (cb)
 
   def cond (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
     new Async [Unit] {

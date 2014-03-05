@@ -7,7 +7,6 @@ import com.treode.async.{Async, Future}
 import Async.guard
 
 private class PageCache (disks: DiskDrives) {
-  import disks.scheduler
 
   class Load (desc: PageDescriptor [_, Any], pos: Position)
   extends Callable [Future [Any]] {

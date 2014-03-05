@@ -5,7 +5,7 @@ import scala.collection.JavaConversions._
 
 import Async.async
 
-class Future [A] (implicit scheduler: Scheduler) extends Callback [A] {
+class Future [A] extends Callback [A] {
 
   private var callbacks = new ArrayList [Callback [A]]
   private var value = null.asInstanceOf [A]
@@ -16,7 +16,7 @@ class Future [A] (implicit scheduler: Scheduler) extends Callback [A] {
     value = v
     val callbacks = this.callbacks
     this.callbacks = null
-    callbacks foreach (scheduler.pass (_, v))
+    callbacks foreach (_.pass (v))
   }
 
   def fail (t: Throwable): Unit = synchronized {
