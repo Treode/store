@@ -12,9 +12,7 @@ import com.treode.store.{PaxosAccessor, TxClock, TxId, WriteOp, WriteResult}
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
   import WriteDirector.deliberate
   import kit.{atlas, cluster, paxos, random, scheduler}
-
-  val prepareBackoff = Backoff (100, 100, 1 seconds, 7) (random)
-  val closedLifetime = 2 seconds
+  import kit.config.prepareBackoff
 
   val fiber = new Fiber (scheduler)
   val port = cluster.open (WriteResponse.pickler) (receive _)
@@ -215,6 +213,8 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
   class Closed extends State {
 
+    port.close()
+
     override def isOpen = false
     override def committed (from: Peer) = ()
     override def aborted (from: Peer) = ()
@@ -223,9 +223,9 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     override def toString = "Director.Closed"
   }
 
-  def receive (msg: WriteResponse, from: Peer): Unit = fiber.execute {
+  def receive (rsp: WriteResponse, from: Peer): Unit = fiber.execute {
     import WriteResponse._
-    msg match {
+    rsp match {
       case Prepared (ft)   => state.prepared (ft, from)
       case Collisions (ks) => state.collisions (ks, from)
       case Advance         => state.advance (from)

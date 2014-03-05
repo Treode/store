@@ -136,7 +136,7 @@ private class RemoteConnection (
 
   case class Connected (socket: Socket, clientId: HostId, buffer: PagedBuffer) extends HaveSocket {
 
-    def backoff = BlockedTimer.iterator
+    def backoff = BlockedTimer.iterator (Random)
 
     override def send (message: PickledMessage) {
       enque (message)
@@ -148,7 +148,7 @@ private class RemoteConnection (
 
     val buffer = PagedBuffer (12)
 
-    def backoff = BlockedTimer.iterator
+    def backoff = BlockedTimer.iterator (Random)
   }
 
   case class Block (time: Long, backoff: Iterator [Int]) extends State {
@@ -161,9 +161,9 @@ private class RemoteConnection (
 
   case object Closed extends State
 
-  private val BlockedTimer = Backoff (500, 500, 1 minutes) (Random)
+  private val BlockedTimer = Backoff (500, 500, 1 minutes)
 
-  private var state: State = new Disconnected (BlockedTimer.iterator)
+  private var state: State = new Disconnected (BlockedTimer.iterator (Random))
 
   def loop (socket: Socket, input: PagedBuffer) {
 

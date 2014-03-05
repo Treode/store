@@ -84,16 +84,10 @@ trait Async [A] {
       def run (cb: Callback [A]): Unit = self.run (s.take (cb))
     }}
 
-  def onError (f: => Any): Async [A] = {
+  def leave (f: => Any): Async [A] = {
     val self = this
     new Async [A] {
-      def run (cb: Callback [A]): Unit = self.run (cb onError f)
-    }}
-
-  def onLeave (f: => Any): Async [A] = {
-    val self = this
-    new Async [A] {
-      def run (cb: Callback [A]): Unit = self.run (cb onLeave f)
+      def run (cb: Callback [A]): Unit = self.run (cb leave f)
     }}
 
   def await(): A = {

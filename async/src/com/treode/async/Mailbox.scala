@@ -23,4 +23,7 @@ class Mailbox [M] {
 
   def receive(): Async [M] =
     Async.async (receive (_))
+
+  def untupled [A, B] (a: A, b: B) (implicit w: (A, B) <:< M): Unit =
+    send ((a, b))
 }

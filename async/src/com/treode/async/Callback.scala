@@ -2,8 +2,9 @@ package com.treode.async
 
 import java.lang.{Integer => JavaInt, Long => JavaLong}
 import java.nio.channels.CompletionHandler
-import scala.language.experimental.macros
-import scala.reflect.macros.Context
+import scala.util.Random
+
+import Scheduler.toRunnable
 
 trait Callback [-A] {
 
@@ -57,16 +58,11 @@ trait Callback [-A] {
     pass (v)
   }
 
-  def onError (f: => Any): Callback [A] = {
-    val self = this
-    new Callback [A] {
-      def pass (v: A): Unit = self.pass (v)
-      def fail (t: Throwable) {
-        f
-        self.fail (t)
-      }}}
+  def timeout (fiber: Fiber, backoff: Backoff) (rouse: => Any) (implicit random: Random):
+      TimeoutCallback [A] =
+    new TimeoutCallback (fiber, backoff, rouse, this)
 
-  def onLeave (f: => Any): Callback [A] = {
+  def leave (f: => Any): Callback [A] = {
     val self = this
     new Callback [A] {
       def pass (v: A) {

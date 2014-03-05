@@ -3,47 +3,55 @@ package com.treode.cluster
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
-import com.treode.async.{Backoff, Scheduler}
+import com.treode.async.{Async, Backoff, Callback, Fiber, Scheduler}
 import com.treode.pickle.Picklers
+
+import Async.async
+import Callback.ignore
 
 object Echo {
 
-  private val _echo = {
+  private val echo = {
     import Picklers._
     RequestDescriptor (0xFF9F76CB490BE8A8L, string, string)
   }
 
   def attach (localId: HostId) (implicit random: Random, scheduler: Scheduler, cluster: Cluster) {
 
-    val period = 10000
+    val fiber = new Fiber (scheduler)
     val backoff = Backoff (100, 200)
+    val period = 10000
     var start = 0L
+    var count = 0
 
-    _echo.listen { case (s, mdtr) =>
+    echo.listen { case (s, mdtr) =>
       mdtr.respond (s)
     }
 
-    def loop (i: Int) {
+    def loop: Async [Unit] = async { cb =>
+
       val hosts = ReplyTracker.settled (0, 1, 2)
-      new _echo.QuorumCollector ("Hello World") (hosts, backoff) {
 
-        def process (rsp: String) = ()
+      val port = echo.open { (_, from) =>
+        fiber.execute {
+          hosts += from
+        }}
 
-        def quorum() {
-          if (i % period == 0) {
-            val end = System.currentTimeMillis
-            val ms = (end - start) .toDouble / period.toDouble
-            val qps = period.toDouble / (end - start) .toDouble * 1000.0
-            println ("%8d: %10.3f ms, %10.0f qps" format (i, ms, qps))
-            start = System.currentTimeMillis
-          }
-          loop (i + 1)
+      val timer = cb.leave {
+        port.close()
+        count += 1
+        if (count % period == 0) {
+          val end = System.currentTimeMillis
+          val ms = (end - start) .toDouble / period.toDouble
+          val qps = period.toDouble / (end - start) .toDouble * 1000.0
+          println ("%8d: %10.3f ms, %10.0f qps" format (count, ms, qps))
+          start = System.currentTimeMillis
         }
-
-        def timeout() = throw new TimeoutException
+      } .timeout (fiber, backoff) {
+        echo ("Hello World")
       }}
 
     if (localId == HostId (2)) {
       start = System.currentTimeMillis
-      loop (1)
+      scheduler.whilst (true) (loop) run (ignore)
     }}}

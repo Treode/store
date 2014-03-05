@@ -1,6 +1,7 @@
 package com.treode.store
 
 import scala.language.postfixOps
+import com.treode.async.Backoff
 import com.treode.async.misc.RichInt
 
 class StoreConfig private (
@@ -8,7 +9,8 @@ class StoreConfig private (
     val targetPageBytes: Int) {
 
   val deliberatingTimeout = 2 seconds
-
+  val readBackoff = Backoff (100, 100, 1 seconds, 7)
+  val prepareBackoff = Backoff (100, 100, 1 seconds, 7)
   val closedLifetime = 2 seconds
 }
 
