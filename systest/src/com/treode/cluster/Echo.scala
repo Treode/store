@@ -27,7 +27,7 @@ object Echo {
       val hosts = ReplyTracker.settled (0, 1, 2)
       new _echo.QuorumCollector ("Hello World") (hosts, backoff) {
 
-        process (_ => ())
+        def process (rsp: String) = ()
 
         def quorum() {
           if (i % period == 0) {

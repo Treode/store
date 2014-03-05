@@ -117,8 +117,8 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
       def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
         _peers.get (remoteId) .address = remoteAddr
 
-      def open [M] (p: Pickler [M], s: Scheduler): EphemeralMailbox [M] =
-        _mailboxes.open (p, s)
+      def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralMailbox [M] =
+        _mailboxes.open (p) (f)
 
       def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
       scuttlebutt.spread (desc) (msg)

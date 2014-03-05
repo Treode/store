@@ -12,8 +12,11 @@ class RequestDescriptor [Q, A] private (id: MailboxId, preq: Pickler [Q], prsp: 
       implicit scheduler: Scheduler, cluster: Cluster) {
 
     private val fiber = new Fiber (scheduler)
-    private val mbx = open (fiber)
+    private val mbx = open (fiber) (receive _)
     private val timer = backoff.iterator
+
+    if (timer.hasNext)
+      fiber.delay (timer.next) (_send())
 
     private def _send(): Unit = fiber.execute {
       if (!acks.quorum) {
@@ -25,23 +28,17 @@ class RequestDescriptor [Q, A] private (id: MailboxId, preq: Pickler [Q], prsp: 
           timeout()
         }}}
 
-    private def receive (f: A => Any) {
-      mbx.receive { case (rsp, from) =>
-        f (rsp)
+    private def receive (rsp: A, from: Peer) {
+      if (!acks.quorum) {
+        process (rsp)
         acks += from
         if (timer.hasNext) {
           if (acks.quorum) {
             mbx.close()
             quorum()
-          } else {
-            receive (f)
           }}}}
 
-    def process (f: A => Any) {
-      receive (f)
-      _send()
-    }
-
+    def process (rsp: A)
     def quorum()
     def timeout()
   }
@@ -61,8 +58,8 @@ class RequestDescriptor [Q, A] private (id: MailboxId, preq: Pickler [Q], prsp: 
 
   def apply (req: Q) = RequestSender [Q, A] (id, _preq, req)
 
-  def open (s: Scheduler) (implicit c: Cluster): Mailbox =
-    c.open (prsp, s)
+  def open (s: Scheduler) (f: (A, Peer) => Any) (implicit c: Cluster): Mailbox =
+    c.open (prsp) (f)
 }
 
 object RequestDescriptor {

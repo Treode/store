@@ -33,8 +33,8 @@ class StubActiveHost (val localId: HostId, network: StubNetwork) extends Cluster
   def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
     scuttlebutt.listen (desc) (f)
 
-  def open [M] (p: Pickler [M], s: Scheduler): EphemeralMailbox [M] =
-    mailboxes.open (p, s)
+  def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralMailbox [M] =
+    mailboxes.open (p) (f)
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
     scuttlebutt.spread (desc) (msg)

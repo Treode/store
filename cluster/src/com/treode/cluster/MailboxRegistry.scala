@@ -32,33 +32,18 @@ class MailboxRegistry {
   def listen [M] (p: Pickler [M], id: MailboxId) (f: (M, Peer) => Any): Unit =
     PicklerRegistry.tupled (mailboxes, p, id.id) (f)
 
-  private class EphemeralMailboxImpl [M] (val id: MailboxId, mbx: Mailbox [(M, Peer)])
-  extends EphemeralMailbox [M] {
+  private class EphemeralMailboxImpl [M] (val id: MailboxId) extends EphemeralMailbox [M] {
 
     def close() =
       mailboxes.unregister (id.id)
+  }
 
-    def receive (receiver: (M, Peer) => Any) =
-      mbx.receive {case (msg, from) => receiver (msg, from)}
-
-    def whilst (condition: => Boolean) (receiver: (M, Peer) => Any) {
-      if (condition) {
-        mbx.receive { case (msg, from) =>
-          receiver (msg, from)
-          whilst (condition) (receiver)
-        }
-      } else {
-        close()
-      }}}
-
-  def open [M] (p: Pickler [M], scheduler: Scheduler): EphemeralMailbox [M] = {
-    val mbx = new Mailbox [(M, Peer)] (scheduler)
-    val cmbx = Mailbox.curried2 (mbx)
+  def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralMailbox [M] = {
     val id = mailboxes.open (p) {
       val id = MailboxId.newEphemeral
-      (id.id, PicklerRegistry.curried (p, id.id) (cmbx))
+      (id.id, PicklerRegistry.tupled (p, id.id) (f))
     }
-    new EphemeralMailboxImpl (id, mbx)
+    new EphemeralMailboxImpl (id)
   }}
 
 private object MailboxRegistry {

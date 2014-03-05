@@ -2,9 +2,9 @@ package com.treode.cluster
 
 import com.treode.pickle.Pickler
 
-trait RequestSender [Rsp] {
+trait RequestSender [A] {
 
-  type Mailbox = EphemeralMailbox [Rsp]
+  type Mailbox = EphemeralMailbox [A]
 
   def apply (h: Peer, mbx: Mailbox)
   def apply (hs: Iterable [Peer], mbx: Mailbox) (implicit c: Cluster)
@@ -13,8 +13,8 @@ trait RequestSender [Rsp] {
 
 object RequestSender {
 
-  def apply [Req, Rsp] (id: MailboxId, preq: Pickler [(MailboxId, Req)], req: Req): RequestSender [Rsp] =
-    new RequestSender [Rsp] {
+  def apply [Q, A] (id: MailboxId, preq: Pickler [(MailboxId, Q)], req: Q): RequestSender [A] =
+    new RequestSender [A] {
 
       private def send (mbx: MailboxId) =
         MessageSender (id, preq, (mbx, req))

@@ -17,11 +17,10 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)
-  val mbx = cluster.open (WriteResponse.pickler, fiber)
-  var state: State = new Opening
-
+  val mbx = cluster.open (WriteResponse.pickler) (receive _)
   val backoff = prepareBackoff.iterator
   val prepares = atlas.locate (0)
+  var state: State = new Opening
 
   trait State {
 
@@ -224,7 +223,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     override def toString = "Director.Closed"
   }
 
-  mbx.whilst (state.isOpen) { (msg, from) =>
+  def receive (msg: WriteResponse, from: Peer): Unit = fiber.execute {
     import WriteResponse._
     msg match {
       case Prepared (ft)   => state.prepared (ft, from)
