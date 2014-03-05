@@ -17,7 +17,7 @@ private class RemoteConnection (
   localId: HostId,
   fiber: Fiber,
   group: AsynchronousChannelGroup,
-  mailboxes: MailboxRegistry
+  ports: PortRegistry
 ) (implicit
     scheduler: Scheduler
 ) extends Peer {
@@ -170,7 +170,7 @@ private class RemoteConnection (
     val loop = new Callback [Unit] {
 
       def pass (v: Unit) {
-        mailboxes.deliver (RemoteConnection.this, socket, input) run (this)
+        ports.deliver (RemoteConnection.this, socket, input) run (this)
       }
 
       def fail (t: Throwable) {
@@ -242,8 +242,8 @@ private class RemoteConnection (
     state.close()
   }
 
-  def send [M] (p: Pickler [M], mbx: MailboxId, msg: M): Unit = fiber.execute {
-    state.send (MailboxRegistry.frame (p, mbx, msg, _))
+  def send [M] (p: Pickler [M], port: PortId, msg: M): Unit = fiber.execute {
+    state.send (PortRegistry.frame (p, port, msg, _))
   }
 
   override def hashCode() = id.hashCode()

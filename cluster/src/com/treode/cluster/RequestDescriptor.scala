@@ -3,16 +3,16 @@ package com.treode.cluster
 import com.treode.async.{Backoff, Fiber, Scheduler}
 import com.treode.pickle.{Pickler, Picklers}
 
-class RequestDescriptor [Q, A] private (id: MailboxId, preq: Pickler [Q], prsp: Pickler [A]) {
+class RequestDescriptor [Q, A] private (id: PortId, preq: Pickler [Q], prsp: Pickler [A]) {
 
-  type Mailbox = EphemeralMailbox [A]
+  type Port = EphemeralPort [A]
   type Mediator = RequestMediator [A]
 
   abstract class QuorumCollector (req: Q) (acks: ReplyTracker, backoff: Backoff) (
       implicit scheduler: Scheduler, cluster: Cluster) {
 
     private val fiber = new Fiber (scheduler)
-    private val mbx = open (fiber) (receive _)
+    private val port = open (fiber) (receive _)
     private val timer = backoff.iterator
 
     if (timer.hasNext)
@@ -21,10 +21,10 @@ class RequestDescriptor [Q, A] private (id: MailboxId, preq: Pickler [Q], prsp: 
     private def _send(): Unit = fiber.execute {
       if (!acks.quorum) {
         if (timer.hasNext) {
-          apply (req) (acks, mbx)
+          apply (req) (acks, port)
           fiber.delay (timer.next) (_send())
         } else {
-          mbx.close()
+          port.close()
           timeout()
         }}}
 
@@ -34,7 +34,7 @@ class RequestDescriptor [Q, A] private (id: MailboxId, preq: Pickler [Q], prsp: 
         acks += from
         if (timer.hasNext) {
           if (acks.quorum) {
-            mbx.close()
+            port.close()
             quorum()
           }}}}
 
@@ -48,22 +48,22 @@ class RequestDescriptor [Q, A] private (id: MailboxId, preq: Pickler [Q], prsp: 
 
   private val _preq = {
     import Picklers._
-    tuple (MailboxId.pickler, preq)
+    tuple (PortId.pickler, preq)
   }
 
   def listen (f: (Q, Mediator) => Any) (implicit c: Cluster): Unit =
-    c.listen (MessageDescriptor (id, _preq)) { case ((mbx, req), c) =>
-      f (req, new RequestMediator (prsp, mbx, c))
+    c.listen (MessageDescriptor (id, _preq)) { case ((port, req), c) =>
+      f (req, new RequestMediator (prsp, port, c))
     }
 
   def apply (req: Q) = RequestSender [Q, A] (id, _preq, req)
 
-  def open (s: Scheduler) (f: (A, Peer) => Any) (implicit c: Cluster): Mailbox =
+  def open (s: Scheduler) (f: (A, Peer) => Any) (implicit c: Cluster): Port =
     c.open (prsp) (f)
 }
 
 object RequestDescriptor {
 
-  def apply [Q, A] (id: MailboxId, preq: Pickler [Q], pans: Pickler [A]): RequestDescriptor [Q, A] =
+  def apply [Q, A] (id: PortId, preq: Pickler [Q], pans: Pickler [A]): RequestDescriptor [Q, A] =
     new RequestDescriptor (id, preq, pans)
 }

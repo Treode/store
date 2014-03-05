@@ -17,7 +17,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)
-  val mbx = cluster.open (WriteResponse.pickler) (receive _)
+  val port = cluster.open (WriteResponse.pickler) (receive _)
   val backoff = prepareBackoff.iterator
   val prepares = atlas.locate (0)
   var state: State = new Opening
@@ -69,7 +69,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     var ks = Set.empty [Int]
     var ft = TxClock.now
 
-    WriteDeputy.prepare (xid, ct, ops) (acks, mbx)
+    WriteDeputy.prepare (xid, ct, ops) (acks, port)
     fiber.delay (backoff.next) (state.timeout())
 
     private def maybeNextState() {
@@ -113,7 +113,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     override def timeout() {
       if (backoff.hasNext) {
-        WriteDeputy.prepare (xid, ct, ops) (acks, mbx)
+        WriteDeputy.prepare (xid, ct, ops) (acks, port)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Aborting (true)
@@ -148,7 +148,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     override def timeout() {
       if (backoff.hasNext) {
-        WriteDeputy.prepare (xid, ct, ops) (prepares, mbx)
+        WriteDeputy.prepare (xid, ct, ops) (prepares, port)
         fiber.delay (backoff.next) (state.timeout())
       }}
 
@@ -159,7 +159,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     val commits = atlas.locate (0)
 
-    WriteDeputy.commit (xid, wt) (commits, mbx)
+    WriteDeputy.commit (xid, wt) (commits, port)
     fiber.delay (backoff.next) (state.timeout())
 
     override def prepared (ft: TxClock, from: Peer): Unit =
@@ -176,8 +176,8 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     override def timeout() {
       if (backoff.hasNext) {
-        WriteDeputy.prepare (xid, ct, ops) (prepares, mbx)
-        WriteDeputy.commit (xid, wt) (commits, mbx)
+        WriteDeputy.prepare (xid, ct, ops) (prepares, port)
+        WriteDeputy.commit (xid, wt) (commits, port)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Closed
@@ -192,7 +192,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     if (lead)
       WriteDirector.deliberate.lead (xid.id, TxStatus.Aborted) run (Callback.ignore)
-    WriteDeputy.abort (xid) (aborts, mbx)
+    WriteDeputy.abort (xid) (aborts, port)
 
     override def aborted (from: Peer) {
       aborts += from
@@ -204,7 +204,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     override def timeout() {
       if (backoff.hasNext) {
-        WriteDeputy.abort (xid) (aborts, mbx)
+        WriteDeputy.abort (xid) (aborts, port)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Closed

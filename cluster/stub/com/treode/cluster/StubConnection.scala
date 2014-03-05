@@ -11,8 +11,8 @@ extends Peer {
 
   address = new SocketAddress {}
 
-  def send [M] (p: Pickler [M], mbx: MailboxId, msg: M): Unit =
-    network.deliver (p, localId, id, mbx, msg)
+  def send [M] (p: Pickler [M], port: PortId, msg: M): Unit =
+    network.deliver (p, localId, id, port, msg)
 
   // Stubs do not require this.
   def connect (socket: Socket, input: PagedBuffer, clientId: HostId) =

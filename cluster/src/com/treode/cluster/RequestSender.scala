@@ -4,27 +4,27 @@ import com.treode.pickle.Pickler
 
 trait RequestSender [A] {
 
-  type Mailbox = EphemeralMailbox [A]
+  type Port = EphemeralPort [A]
 
-  def apply (h: Peer, mbx: Mailbox)
-  def apply (hs: Iterable [Peer], mbx: Mailbox) (implicit c: Cluster)
-  def apply (acks: ReplyTracker, mbx: Mailbox) (implicit c: Cluster)
+  def apply (h: Peer, port: Port)
+  def apply (hs: Iterable [Peer], port: Port) (implicit c: Cluster)
+  def apply (acks: ReplyTracker, port: Port) (implicit c: Cluster)
 }
 
 object RequestSender {
 
-  def apply [Q, A] (id: MailboxId, preq: Pickler [(MailboxId, Q)], req: Q): RequestSender [A] =
+  def apply [Q, A] (id: PortId, preq: Pickler [(PortId, Q)], req: Q): RequestSender [A] =
     new RequestSender [A] {
 
-      private def send (mbx: MailboxId) =
-        MessageSender (id, preq, (mbx, req))
+      private def send (port: PortId) =
+        MessageSender (id, preq, (port, req))
 
-      def apply (h: Peer, mbx: Mailbox): Unit =
-        send (mbx.id) (h)
+      def apply (h: Peer, port: Port): Unit =
+        send (port.id) (h)
 
-      def apply (hs: Iterable [Peer], mbx: Mailbox) (implicit c: Cluster): Unit =
-        hs foreach (send (mbx.id) (_))
+      def apply (hs: Iterable [Peer], port: Port) (implicit c: Cluster): Unit =
+        hs foreach (send (port.id) (_))
 
-      def apply (acks: ReplyTracker, mbx: Mailbox) (implicit c: Cluster): Unit =
-        acks.awaiting foreach (h => send (mbx.id) (c.peer (h)))
+      def apply (acks: ReplyTracker, port: Port) (implicit c: Cluster): Unit =
+        acks.awaiting foreach (h => send (port.id) (c.peer (h)))
     }}

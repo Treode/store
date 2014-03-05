@@ -9,8 +9,8 @@ import com.treode.pickle.Pickler
 class StubActiveHost (val localId: HostId, network: StubNetwork) extends Cluster with StubHost {
   import network.{random, scheduler}
 
-  private val mailboxes: MailboxRegistry =
-    new MailboxRegistry
+  private val ports: PortRegistry =
+    new PortRegistry
 
   private val peers: PeerRegistry =
     new PeerRegistry (localId, new StubConnection (_, localId, network))
@@ -28,17 +28,17 @@ class StubActiveHost (val localId: HostId, network: StubNetwork) extends Cluster
     peers.rpeer
 
   def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
-    mailboxes.listen (desc.pmsg, desc.id) (f)
+    ports.listen (desc.pmsg, desc.id) (f)
 
   def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
     scuttlebutt.listen (desc) (f)
 
-  def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralMailbox [M] =
-    mailboxes.open (p) (f)
+  def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralPort [M] =
+    ports.open (p) (f)
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
     scuttlebutt.spread (desc) (msg)
 
-  def deliver [M] (p: Pickler [M], from: HostId, mbx: MailboxId, msg: M): Unit =
-    mailboxes.deliver (p, peers.get (from), mbx, msg)
+  def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M): Unit =
+    ports.deliver (p, peers.get (from), port, msg)
 }

@@ -44,7 +44,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
 
     def connect (socket: Socket, input: PagedBuffer, clientId: HostId) = ???
     def close() = ???
-    def send [A] (p: Pickler [A], mbx: MailboxId, msg: A) = ???
+    def send [A] (p: Pickler [A], port: PortId, msg: A) = ???
   }
 
   class RichScuttlebutt (implicit random: Random, scheduler: StubScheduler) {
@@ -212,7 +212,7 @@ object ScuttlebuttProperties extends PropSpec with PropertyChecks {
 
     implicit val cluster: Cluster = this
 
-    var heard = Map.empty [(HostId, MailboxId), Int]
+    var heard = Map.empty [(HostId, PortId), Int]
 
     r1.listen ((v, from) => heard += entry (from.id, r1, v))
     r2.listen ((v, from) => heard += entry (from.id, r2, v))

@@ -35,14 +35,14 @@ class StubNetwork (implicit val random: Random, val scheduler: StubScheduler) {
   def locate (id: Int): ReplyTracker =
     ReplyTracker.settled (hosts.keys.toSeq: _*)
 
-  def deliver [M] (p: Pickler [M], from: HostId, to: HostId, mbx: MailboxId, msg: M) {
+  def deliver [M] (p: Pickler [M], from: HostId, to: HostId, port: PortId, msg: M) {
     if (messageFlakiness != 0.0 && random.nextDouble < messageFlakiness)
       return
     val h = hosts.get (to)
     require (h != null, s"Host $to is not installed.")
     if (messageTrace)
-      println (s"$from->$to:$mbx: $msg")
-    h.deliver (p, from, mbx, msg)
+      println (s"$from->$to:$port: $msg")
+    h.deliver (p, from, port, msg)
   }
 
   def runTasks (timers: Boolean = false, count: Int = Int.MaxValue): Unit =

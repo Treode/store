@@ -14,16 +14,16 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
   private var universe: Universe = Map.empty .withDefaultValue (Map.empty)
   private var next = 1
 
-  private val mailboxes =
+  private val ports =
     PicklerRegistry [Handler] { id: Long =>
       PicklerRegistry.const [Peer, Any] (id, ())
     }
 
   def loopback [M] (desc: RumorDescriptor [M]) (msg: M): Handler =
-    mailboxes.loopback (desc.pmsg, desc.id.id, msg)
+    ports.loopback (desc.pmsg, desc.id.id, msg)
 
   def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
-    PicklerRegistry.tupled (mailboxes, desc.pmsg, desc.id.id) (f)
+    PicklerRegistry.tupled (ports, desc.pmsg, desc.id.id) (f)
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
     fiber.execute {
@@ -61,7 +61,7 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
         val peer = peers.get (host)
         var state = universe (host)
         for ((h1, n1) <- deltas) {
-          val k = MailboxId (h1.id)
+          val k = PortId (h1.id)
           val v0 = state.get (k)
           if (v0.isEmpty || v0.get._2 < n1) {
             state += k -> (h1, n1)
@@ -82,7 +82,7 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
 
   def attach (implicit cluster: Cluster) {
 
-    val _sync = Scuttlebutt.sync (mailboxes.pickler)
+    val _sync = Scuttlebutt.sync (ports.pickler)
 
     Scuttlebutt.ping.listen { (hosts, from) =>
       val task = for {
@@ -104,7 +104,7 @@ object Scuttlebutt {
   type Handler = FunctionTag [Peer, Any]
   type Ping = Seq [(HostId, Int)]
   type Sync = Seq [(HostId, Seq [(Handler, Int)])]
-  type Universe = Map [HostId, Map [MailboxId, (Handler, Int)]]
+  type Universe = Map [HostId, Map [PortId, (Handler, Int)]]
 
   val ping: MessageDescriptor [Ping] = {
     import ClusterPicklers._

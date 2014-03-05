@@ -1,6 +1,6 @@
 package com.treode.store
 
-import com.treode.cluster.{HostId, MailboxId}
+import com.treode.cluster.{HostId, PortId}
 import com.treode.disk.Position
 import com.treode.pickle.Picklers
 import com.treode.store.paxos.BallotNumber
@@ -13,7 +13,7 @@ private trait StorePicklers extends Picklers {
   def catId = CatalogId.pickler
   def cohort = Cohort.pickler
   def hostId = HostId.pickler
-  def mbxId = MailboxId.pickler
+  def portId = PortId.pickler
   def pos = Position.pickler
   def readOp = ReadOp.pickler
   def tableId = TableId.pickler

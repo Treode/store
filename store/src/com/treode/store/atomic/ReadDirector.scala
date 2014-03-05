@@ -21,13 +21,13 @@ private class ReadDirector (
   val closedLifetime = 2 seconds
 
   val fiber = new Fiber (scheduler)
-  val mbx = cluster.open (ReadResponse.pickler) (receive _)
+  val port = cluster.open (ReadResponse.pickler) (receive _)
   val backoff = readBackoff.iterator
   val acks = atlas.locate (0)
   val gots = atlas.locate (0)
   val vs = Array.fill (ops.size) (Value.empty)
 
-  ReadDeputy.read (rt, ops) (acks, mbx)
+  ReadDeputy.read (rt, ops) (acks, port)
   fiber.delay (backoff.next) (timeout())
 
   private def maybeFinish() {
@@ -66,7 +66,7 @@ private class ReadDirector (
   def timeout() {
     if (cb == null) return
     if (backoff.hasNext) {
-      ReadDeputy.read (rt, ops) (acks, mbx)
+      ReadDeputy.read (rt, ops) (acks, port)
       fiber.delay (backoff.next) (timeout())
     } else {
       val _cb = cb

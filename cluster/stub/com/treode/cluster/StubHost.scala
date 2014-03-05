@@ -5,5 +5,5 @@ import com.treode.pickle.Pickler
 trait StubHost {
 
   def localId: HostId
-  def deliver [M] (p: Pickler [M], from: HostId, mbx: MailboxId, msg: M)
+  def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M)
 }

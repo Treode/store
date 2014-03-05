@@ -18,7 +18,7 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
   private var _executor: ScheduledExecutorService = null
   private var _scheduler: Scheduler = null
-  private var _mailboxes: MailboxRegistry = null
+  private var _ports: PortRegistry = null
   private var _group: AsynchronousChannelGroup = null
   private var _peers: PeerRegistry = null
   private var _listener: Listener = null
@@ -86,11 +86,11 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
     _executor = Executors.newScheduledThreadPool (nt)
     _scheduler = Scheduler (_executor)
 
-    _mailboxes = new MailboxRegistry
+    _ports = new PortRegistry
 
     _group = AsynchronousChannelGroup.withFixedThreadPool (1, Executors.defaultThreadFactory)
 
-    _peers = PeerRegistry.live (localId, _group, _mailboxes) (_random, _scheduler)
+    _peers = PeerRegistry.live (localId, _group, _ports) (_random, _scheduler)
     for ((a, i) <- addresses.zipWithIndex)
       _peers.get (i) .address = a
 
@@ -103,7 +103,7 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
         new Scuttlebutt (localId, _peers) (_scheduler)
 
       def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
-        _mailboxes.listen (desc.pmsg, desc.id) (f)
+        _ports.listen (desc.pmsg, desc.id) (f)
 
       def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
         scuttlebutt.listen (desc) (f)
@@ -117,8 +117,8 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
       def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
         _peers.get (remoteId) .address = remoteAddr
 
-      def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralMailbox [M] =
-        _mailboxes.open (p) (f)
+      def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralPort [M] =
+        _ports.open (p) (f)
 
       def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
       scuttlebutt.spread (desc) (msg)

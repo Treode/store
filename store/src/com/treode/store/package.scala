@@ -1,7 +1,7 @@
 package com.treode
 
 import java.util.logging.{Level, Logger}
-import com.treode.cluster.MailboxId
+import com.treode.cluster.PortId
 
 import Level.WARNING
 
@@ -24,6 +24,6 @@ package object store {
     def exceptionPreparingWrite (e: Throwable): Unit =
       logger.log (WARNING, s"Exception preparing write", e)
 
-    def catalogUpdateMissingDiffs (id: MailboxId): Unit =
+    def catalogUpdateMissingDiffs (id: PortId): Unit =
       logger.log (WARNING, s"A catalog update was missing diffs: $id")
   }}

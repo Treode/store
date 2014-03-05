@@ -4,15 +4,15 @@ import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Pickler
 
-private class LocalConnection (val id: HostId, mbxs: MailboxRegistry) extends Peer {
+private class LocalConnection (val id: HostId, ports: PortRegistry) extends Peer {
 
   def connect (socket: Socket, input: PagedBuffer, clientId: HostId) =
     throw new IllegalArgumentException
 
   def close() = ()
 
-  def send [M] (p: Pickler [M], mbx: MailboxId, msg: M): Unit =
-    mbxs.deliver (p, this, mbx, msg)
+  def send [M] (p: Pickler [M], port: PortId, msg: M): Unit =
+    ports.deliver (p, this, port, msg)
 
   override def hashCode = id.id.hashCode
 

@@ -10,11 +10,11 @@ trait MessageSender {
 
 object MessageSender {
 
-  def apply [M] (mbx: MailboxId, p: Pickler [M], msg: M): MessageSender =
+  def apply [M] (port: PortId, p: Pickler [M], msg: M): MessageSender =
     new MessageSender {
 
       def apply (h: Peer): Unit =
-        h.send (p, mbx, msg)
+        h.send (p, port, msg)
 
       def apply (hs: Iterable [Peer]) (implicit c: Cluster): Unit =
         hs foreach (apply _)

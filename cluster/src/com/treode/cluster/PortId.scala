@@ -4,30 +4,30 @@ import scala.language.implicitConversions
 import scala.util.Random
 import com.treode.pickle.Picklers
 
-class MailboxId (val id: Long) extends AnyVal {
+class PortId (val id: Long) extends AnyVal {
 
-  def isFixed = MailboxId.isFixed (id)
+  def isFixed = PortId.isFixed (id)
   override def toString = f"Mailbox:$id%016X"
 }
 
-object MailboxId {
+object PortId {
 
   private val fixed = 0xFF00000000000000L
 
-  implicit def apply (id: Long): MailboxId =
-    new MailboxId (id)
+  implicit def apply (id: Long): PortId =
+    new PortId (id)
 
-  def isFixed (id: MailboxId): Boolean =
+  def isFixed (id: PortId): Boolean =
     (id.id & fixed) == fixed
 
-  def isEphemeral (id: MailboxId): Boolean =
+  def isEphemeral (id: PortId): Boolean =
     (id.id & fixed) != fixed
 
-  def newEphemeral(): MailboxId = {
+  def newEphemeral(): PortId = {
     var id = Random.nextLong()
     while ((id & fixed) == fixed)
       id = Random.nextLong
-    new MailboxId (id)
+    new PortId (id)
   }
 
   val pickler = {

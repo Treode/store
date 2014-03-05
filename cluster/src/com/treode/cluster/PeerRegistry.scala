@@ -43,14 +43,14 @@ class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit random: 
 
 object PeerRegistry {
 
-  def live (localId: HostId, group: AsynchronousChannelGroup, mailboxes: MailboxRegistry) (
+  def live (localId: HostId, group: AsynchronousChannelGroup, ports: PortRegistry) (
       implicit random: Random, scheduler: Scheduler): PeerRegistry = {
 
     def newPeer (remoteId: HostId): Peer =
       if (remoteId == localId)
-        new LocalConnection (localId, mailboxes)
+        new LocalConnection (localId, ports)
       else
-        new RemoteConnection (remoteId, localId, new Fiber (scheduler), group, mailboxes)
+        new RemoteConnection (remoteId, localId, new Fiber (scheduler), group, ports)
 
     new PeerRegistry (localId, newPeer)
   }}
