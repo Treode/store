@@ -21,7 +21,7 @@ private class CatalogKit (val broker: Broker) (implicit
   val proposers = new Proposers (this)
 
   def locate(): ReplyTracker =
-    atlas.locate (0)
+    atlas.locate (0) .track
 
   def lead (key: CatalogId, patch: Patch): Async [Update] =
     proposers.propose (0, key, patch)

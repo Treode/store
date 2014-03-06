@@ -6,7 +6,7 @@ import com.treode.store.atlas.AtlasKit
 
 private trait Atlas {
 
-  def locate (id: Int): ReplyTracker
+  def locate (id: Int): Cohort
 }
 
 private object Atlas {

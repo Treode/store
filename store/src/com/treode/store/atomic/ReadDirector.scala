@@ -4,10 +4,8 @@ import scala.language.postfixOps
 
 import com.treode.async.{Async, Backoff, Callback, Fiber, TimeoutCallback}
 import com.treode.async.misc.RichInt
-import com.treode.cluster.Peer
-import com.treode.store.{ReadOp, TxClock, Value}
-
-import ReadDeputy.read
+import com.treode.cluster.{HostId, Peer}
+import com.treode.store.{DeputyException, ReadOp, TxClock, Value}
 
 private class ReadDirector (
     rt: TxClock,
@@ -16,15 +14,19 @@ private class ReadDirector (
     cb: Callback [Seq [Value]]
 ) {
 
-  import kit.{atlas, cluster, random, scheduler}
+  import kit.{cluster, random, scheduler}
   import kit.config.readBackoff
 
   val fiber = new Fiber (scheduler)
-  val acks = atlas.locate (0)
-  val gots = atlas.locate (0)
   val vs = Array.fill (ops.size) (Value.empty)
 
-  val port = read.open { (rsp, from) =>
+  val cohorts = ops map (kit.locate (_))
+
+  val broker = TightTracker (ops, cohorts, kit) { (host, ops) =>
+    ReadDeputy.read (rt, ops) (host, port)
+  }
+
+  val port = ReadDeputy.read.open { (rsp, from) =>
     fiber.execute {
       import ReadResponse._
       rsp match {
@@ -35,29 +37,20 @@ private class ReadDirector (
   val timer = cb.leave {
     port.close()
   } .timeout (fiber, readBackoff) {
-    read (rt, ops) (acks, port)
+    broker.rouse()
   }
 
-  private def maybeFinish() {
-    if (!acks.quorum) return
-    if (gots.quorum) {
+  def got (_vs: Seq [Value], from: Peer) {
+    if (timer.invoked) return
+    broker += from
+    for ((v, i) <- _vs.zip (broker.idxs (from)))
+      if (vs (i) .time < v.time)
+        vs (i) = v
+    if (broker.quorum)
       timer.pass (vs)
-    } else {
-      timer.fail (new Exception)
-    }}
-
-  private def got (_vs: Seq [Value], from: Peer) {
-    if (timer.invoked) return
-    acks += from
-    gots += from
-    for ((v, i) <- _vs.zipWithIndex)
-      if (vs(i).time < v.time)
-        vs(i) = v
-    maybeFinish()
   }
 
-  private def failed (from: Peer) {
+  def failed (from: Peer) {
     if (timer.invoked) return
-    acks += from
-    maybeFinish()
+    timer.fail (new DeputyException)
   }}

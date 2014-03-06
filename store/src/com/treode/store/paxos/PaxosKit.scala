@@ -26,7 +26,7 @@ private class PaxosKit (
   val proposers = new Proposers (this)
 
   def locate (key: Bytes): ReplyTracker =
-    atlas.locate (key.hashCode)
+    atlas.locate (key.hashCode) .track
 
   def lead (key: Bytes, value: Bytes): Async [Bytes] =
     proposers.propose (0, key, value)

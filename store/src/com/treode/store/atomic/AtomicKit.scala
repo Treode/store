@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import scala.util.Random
 
 import com.treode.async.{Async, Callback, Scheduler}
-import com.treode.cluster.Cluster
+import com.treode.cluster.{Cluster, ReplyTracker}
 import com.treode.disk.Disks
 import com.treode.store._
 import com.treode.store.tier.TierTable
@@ -25,6 +25,12 @@ private class AtomicKit (
   val tables = new TimedStore (this)
   val reader = new ReadDeputy (this)
   val writers = new WriteDeputies (this)
+
+  def locate (table: TableId, key: Bytes): Cohort =
+    atlas.locate ((table, key).hashCode)
+
+  def locate (op: Op): Cohort =
+    locate (op.table, op.key)
 
   def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] =
     async (new ReadDirector (rt, ops, this, _))

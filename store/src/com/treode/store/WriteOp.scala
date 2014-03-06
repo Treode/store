@@ -1,9 +1,6 @@
 package com.treode.store
 
-sealed abstract class WriteOp {
-  def table: TableId
-  def key: Bytes
-}
+sealed abstract class WriteOp extends Op
 
 object WriteOp {
 

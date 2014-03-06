@@ -4,6 +4,7 @@ import com.treode.cluster.{ReplyTracker, HostId}
 
 trait Cohort {
 
+  def hosts: Set [HostId]
   def track: ReplyTracker
 }
 
@@ -16,6 +17,8 @@ object Cohort {
   }
 
   private class Moving (val origin: Set [HostId], val target: Set [HostId]) extends Cohort {
+
+    def hosts = origin ++ target
 
     def track: ReplyTracker =
       ReplyTracker (origin, target)

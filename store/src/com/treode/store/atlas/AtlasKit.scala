@@ -14,8 +14,8 @@ private [store] class AtlasKit extends Atlas {
   var cohorts = new Array [Cohort] (0)
   var mask = 0
 
-  def locate (id: Int): ReplyTracker =
-    cohorts (id & mask) .track
+  def locate (id: Int): Cohort =
+    cohorts (id & mask)
 
   def set (cohorts: Array [Cohort]) {
     require (highestOneBit (cohorts.length) == cohorts.length)

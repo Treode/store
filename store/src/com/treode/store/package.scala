@@ -7,6 +7,13 @@ import Level.WARNING
 
 package store {
 
+  class DeputyException extends Exception
+
+  trait Op {
+    def table: TableId
+    def key: Bytes
+  }
+
   sealed abstract class WriteResult
 
   object WriteResult {

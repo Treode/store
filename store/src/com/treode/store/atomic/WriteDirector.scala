@@ -7,18 +7,23 @@ import scala.language.postfixOps
 import com.treode.async.{Backoff, Callback, Fiber}
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{Cluster, Peer}
-import com.treode.store.{PaxosAccessor, TxClock, TxId, WriteOp, WriteResult}
+import com.treode.store._
 
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
   import WriteDirector.deliberate
-  import kit.{atlas, cluster, paxos, random, scheduler}
+  import kit.{cluster, paxos, random, scheduler}
   import kit.config.prepareBackoff
 
   val fiber = new Fiber (scheduler)
   val port = cluster.open (WriteResponse.pickler) (receive _)
   val backoff = prepareBackoff.iterator
-  val prepares = atlas.locate (0)
   var state: State = new Opening
+
+  val cohorts = ops map (kit.locate (_))
+
+  val prepares = TightTracker (ops, cohorts, kit) { (host, ops) =>
+    WriteDeputy.prepare (xid, ct, ops) (host, port)
+  }
 
   trait State {
 
@@ -62,56 +67,56 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
   class Preparing (cb: Callback [WriteResult]) extends State {
 
-    val acks = atlas.locate (0)
+    var failure = false
     var advance = false
     var ks = Set.empty [Int]
     var ft = TxClock.now
 
-    WriteDeputy.prepare (xid, ct, ops) (acks, port)
+    prepares.rouse()
     fiber.delay (backoff.next) (state.timeout())
 
     private def maybeNextState() {
-      if (acks.quorum) {
-        if (prepares.quorum) {
-          state = new Deliberating (ft+1, cb)
-        } else if (advance) {
+      if (prepares.quorum) {
+        if (advance) {
           state = new Aborting (true)
           cb.pass (WriteResult.Stale)
         } else if (!ks.isEmpty) {
           state = new Aborting (true)
           cb.pass (WriteResult.Collided (ks.toSeq))
-        } else {
+        } else if (failure) {
           state = new Aborting (true)
-          cb.fail (new Exception)
+          cb.fail (new DeputyException)
+        } else {
+          state = new Deliberating (ft+1, cb)
         }}}
 
     override def prepared (ft: TxClock, from: Peer) {
-      if (this.ft < ft) this.ft = ft
       prepares += from
-      acks += from
+      if (this.ft < ft) this.ft = ft
       maybeNextState()
     }
 
     override def collisions (ks: Set [Int], from: Peer) {
+      prepares += from
       this.ks ++= ks
-      acks += from
       maybeNextState()
     }
 
     override def advance (from: Peer) {
+      prepares += from
       advance = true
-      acks += from
       maybeNextState()
     }
 
     override def failed (from: Peer) {
-      acks += from
+      prepares += from
+      failure = true
       maybeNextState()
     }
 
     override def timeout() {
       if (backoff.hasNext) {
-        WriteDeputy.prepare (xid, ct, ops) (acks, port)
+        prepares.rouse()
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Aborting (true)
@@ -146,7 +151,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     override def timeout() {
       if (backoff.hasNext) {
-        WriteDeputy.prepare (xid, ct, ops) (prepares, port)
+        prepares.rouse()
         fiber.delay (backoff.next) (state.timeout())
       }}
 
@@ -155,9 +160,11 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
   class Committing (wt: TxClock) extends State {
 
-    val commits = atlas.locate (0)
+    val commits = BroadTracker (cohorts, kit) { hosts =>
+      WriteDeputy.commit (xid, wt) (hosts, port)
+    }
 
-    WriteDeputy.commit (xid, wt) (commits, port)
+    commits.rouse()
     fiber.delay (backoff.next) (state.timeout())
 
     override def prepared (ft: TxClock, from: Peer): Unit =
@@ -174,8 +181,8 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     override def timeout() {
       if (backoff.hasNext) {
-        WriteDeputy.prepare (xid, ct, ops) (prepares, port)
-        WriteDeputy.commit (xid, wt) (commits, port)
+        prepares.rouse()
+        commits.rouse()
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Closed
@@ -186,11 +193,13 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
   class Aborting (lead: Boolean) extends State {
 
-    val aborts = atlas.locate (0)
+    val aborts = BroadTracker (cohorts, kit) { hosts =>
+      WriteDeputy.abort (xid) (hosts, port)
+    }
 
     if (lead)
       WriteDirector.deliberate.lead (xid.id, TxStatus.Aborted) run (Callback.ignore)
-    WriteDeputy.abort (xid) (aborts, port)
+    aborts.rouse()
 
     override def aborted (from: Peer) {
       aborts += from
@@ -202,7 +211,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     override def timeout() {
       if (backoff.hasNext) {
-        WriteDeputy.abort (xid) (aborts, port)
+        aborts.rouse()
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Closed

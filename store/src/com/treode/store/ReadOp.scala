@@ -1,6 +1,6 @@
 package com.treode.store
 
-case class ReadOp (table: TableId, key: Bytes)
+case class ReadOp (table: TableId, key: Bytes) extends Op
 
 object ReadOp {
 
