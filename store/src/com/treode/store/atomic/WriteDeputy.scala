@@ -453,17 +453,17 @@ private object WriteDeputy {
 
   val preparing = {
     import AtomicPicklers._
-    RecordDescriptor (0xC78C0304, tuple (txId, seq (writeOp)))
+    RecordDescriptor (0x875B728C8F37467AL, tuple (txId, seq (writeOp)))
   }
 
   val committed = {
     import AtomicPicklers._
-    RecordDescriptor (0x611E63F7, tuple (txId, ulong, seq (ulong), txClock))
+    RecordDescriptor (0x5A5C7DA53F8C60F6L, tuple (txId, ulong, seq (ulong), txClock))
   }
 
   val aborted = {
     import AtomicPicklers._
-    RecordDescriptor (0x20E92CA4, tuple (txId, ulong))
+    RecordDescriptor (0xF83F939483B72F77L, tuple (txId, ulong))
   }
 
   sealed abstract class ActiveStatus

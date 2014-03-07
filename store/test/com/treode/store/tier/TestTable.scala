@@ -23,25 +23,25 @@ private object TestTable {
 
   val descriptor = {
     import StorePicklers._
-    TierDescriptor (0x0B918C28, string, int)
+    TierDescriptor (0x28, string, int)
   }
 
   val root = {
     import StorePicklers._
-    RootDescriptor (0x2B30D8AF, tierMeta)
+    RootDescriptor (0xAF, tierMeta)
   }
 
   val put = {
     import StorePicklers._
-    RecordDescriptor (0x6AC99D09, tuple (ulong, int, int))
+    RecordDescriptor (0x09, tuple (ulong, int, int))
   }
 
   val delete = {
     import StorePicklers._
-    RecordDescriptor (0x4D620837, tuple (ulong, int))
+    RecordDescriptor (0x37, tuple (ulong, int))
   }
 
   val checkpoint = {
     import StorePicklers._
-    RecordDescriptor (0xA67C3DD1, tierMeta)
+    RecordDescriptor (0xD1, tierMeta)
   }}

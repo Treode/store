@@ -2,17 +2,24 @@ package com.treode.disk
 
 import scala.language.implicitConversions
 
-class TypeId private (val id: Int) extends AnyVal {
+class TypeId private (val id: Long) extends AnyVal with Ordered [TypeId] {
 
-  override def toString = f"Type:$id%04X"
+  def compare (that: TypeId): Int =
+    this.id compare that.id
+
+  override def toString =
+    if (id < 256) f"Type:$id%02X" else f"Type:$id%016X"
 }
 
-object TypeId {
+object TypeId extends Ordering [TypeId] {
 
-  implicit def apply (id: Int): TypeId =
+  implicit def apply (id: Long): TypeId =
     new TypeId (id)
+
+  def compare (x: TypeId, y: TypeId): Int =
+    x compare y
 
   val pickler = {
     import DiskPicklers._
-    wrap (fixedInt) build (new TypeId (_)) inspect (_.id)
+    wrap (fixedLong) build (new TypeId (_)) inspect (_.id)
   }}

@@ -60,13 +60,13 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
       for ((host, deltas) <- updates) {
         val peer = peers.get (host)
         var state = universe (host)
-        for ((h1, n1) <- deltas) {
-          val k = PortId (h1.id)
+        for ((r1, n1) <- deltas) {
+          val k = RumorId (r1.id)
           val v0 = state.get (k)
           if (v0.isEmpty || v0.get._2 < n1) {
-            state += k -> (h1, n1)
+            state += k -> (r1, n1)
             if (next < n1) next = n1 + 1
-            scheduler.execute (h1 (peer))
+            scheduler.execute (r1 (peer))
           }}
         universe += host -> state
       }}
@@ -104,7 +104,7 @@ object Scuttlebutt {
   type Handler = FunctionTag [Peer, Any]
   type Ping = Seq [(HostId, Int)]
   type Sync = Seq [(HostId, Seq [(Handler, Int)])]
-  type Universe = Map [HostId, Map [PortId, (Handler, Int)]]
+  type Universe = Map [HostId, Map [RumorId, (Handler, Int)]]
 
   val ping: MessageDescriptor [Ping] = {
     import ClusterPicklers._

@@ -33,7 +33,7 @@ private object CheckpointRegistry {
 
   def pager [T] (p: Pickler [T]) = {
     import DiskPicklers._
-    PageDescriptor (0x6EC7584D, int, seq (p))
+    PageDescriptor (0xD8EF891B5953EDBBL, int, seq (p))
   }
 
   val writer = pager (PicklerRegistry.pickler [Tag])

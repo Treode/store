@@ -124,7 +124,7 @@ object Broker {
 
   val root = {
     import CatalogPicklers._
-    RootDescriptor (0xB7842D23, Root.pickler)
+    RootDescriptor (0xE246C81CFC83575FL, Root.pickler)
   }
 
   val ping: MessageDescriptor [Ping] = {

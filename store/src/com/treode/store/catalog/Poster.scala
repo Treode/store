@@ -20,12 +20,12 @@ private object Poster {
 
   val update = {
     import CatalogPicklers._
-    RecordDescriptor (0xC7D5CD23, tuple (catId, CatalogPicklers.update))
+    RecordDescriptor (0x7F5551148920906EL, tuple (catId, CatalogPicklers.update))
   }
 
   val pager = {
     import CatalogPicklers._
-    PageDescriptor (0x1B1B3913, int, tuple (int, bytes, seq (bytes)))
+    PageDescriptor (0x8407E7035A50C6CFL, int, tuple (int, bytes, seq (bytes)))
   }
 
   case class Post (update: Update, bytes: Bytes)

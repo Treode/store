@@ -80,15 +80,15 @@ private object WriteDeputies {
 
   val root = {
     import AtomicPicklers._
-    RootDescriptor (0x2C5DEC55, Root.pickler)
+    RootDescriptor (0xB0E4265A9A70F753L, Root.pickler)
   }
 
   val active = {
     import AtomicPicklers._
-    PageDescriptor (0x68FA2C07, const (0), seq (activeStatus))
+    PageDescriptor (0x86CA87954DF61878L, const (0), seq (activeStatus))
   }
 
   val archive = {
     import AtomicPicklers._
-    TierDescriptor (0x4B55BDBA, bytes, const (true))
+    TierDescriptor (0x36D62E3F7EF580CEL, bytes, const (true))
   }}

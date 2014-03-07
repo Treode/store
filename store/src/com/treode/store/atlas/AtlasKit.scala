@@ -39,5 +39,5 @@ private [store] object AtlasKit {
 
   val catalog = {
     import StorePicklers._
-    CatalogDescriptor (0x65F723E9, array (cohort))
+    CatalogDescriptor (0x693799787FDC9106L, array (cohort))
   }}

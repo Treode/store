@@ -35,7 +35,7 @@ private object TimedTable {
 
   val table = {
     import com.treode.store.StorePicklers._
-    TierDescriptor (0xB085DCAF, unit, unit)
+    TierDescriptor (0xB500D51FACAEA961L, unit, unit)
   }
 
   def keyToBytes (key: Bytes, time: TxClock): Bytes = {

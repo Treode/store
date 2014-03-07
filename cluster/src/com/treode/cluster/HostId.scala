@@ -9,7 +9,8 @@ class HostId private (val id: Long) extends AnyVal with Ordered [HostId] {
   def compare (that: HostId): Int =
     this.id compare that.id
 
-  override def toString = f"Host:$id%016X"
+  override def toString =
+    if (id < 256) f"Host:$id%02X" else f"Host:$id%016X"
 }
 
 object HostId extends Ordering [HostId] {
@@ -17,11 +18,10 @@ object HostId extends Ordering [HostId] {
   implicit def apply (id: Long): HostId =
     new HostId (id)
 
+  def compare (x: HostId, y: HostId): Int =
+    x compare y
+
   val pickler = {
     import Picklers._
     wrap (fixedLong) build (apply _) inspect (_.id)
-  }
-
-  def compare (x: HostId, y: HostId): Int =
-    x compare y
-}
+  }}

@@ -2,7 +2,7 @@ package com.treode.cluster
 
 import com.treode.pickle.{Pickler, Picklers}
 
-class RumorDescriptor [M] (val id: PortId, val pmsg: Pickler [M]) {
+class RumorDescriptor [M] (val id: RumorId, val pmsg: Pickler [M]) {
 
   def listen (f: (M, Peer) => Any) (implicit c: Cluster): Unit =
     c.listen (this) (f)
@@ -13,6 +13,6 @@ class RumorDescriptor [M] (val id: PortId, val pmsg: Pickler [M]) {
 
 object RumorDescriptor {
 
-  def apply [M] (id: PortId, pval: Pickler [M]): RumorDescriptor [M] =
+  def apply [M] (id: RumorId, pval: Pickler [M]): RumorDescriptor [M] =
     new RumorDescriptor (id, pval)
 }

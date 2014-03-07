@@ -3,14 +3,24 @@ package com.treode.store
 import scala.language.implicitConversions
 import com.treode.pickle.Picklers
 
-class CatalogId (val id: Int) extends AnyVal
+class CatalogId (val id: Long) extends AnyVal with Ordered [CatalogId] {
 
-object CatalogId {
+  def compare (that: CatalogId): Int =
+    this.id compare that.id
 
-  implicit def apply (id: Int): CatalogId =
+  override def toString =
+    if (id < 256) f"Catalog:$id%02X" else f"Catalog:$id%016X"
+}
+
+object CatalogId extends Ordering [CatalogId] {
+
+  implicit def apply (id: Long): CatalogId =
     new CatalogId (id)
+
+  def compare (x: CatalogId, y: CatalogId): Int =
+    x compare y
 
   val pickler = {
     import Picklers._
-    wrap (fixedInt) build (apply _) inspect (_.id)
+    wrap (fixedLong) build (apply _) inspect (_.id)
   }}
