@@ -248,8 +248,8 @@ private class DiskDrives (implicit
   def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit] =
     async (cb => logd.send (PickledRecord (desc, entry, cb)))
 
-  def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P): Async [Position] =
-    async (cb => paged.send (PickledPage (desc, group, page, cb)))
+  def write [G, P] (desc: PageDescriptor [G, P], obj: ObjectId, group: G, page: P): Async [Position] =
+    async (cb => paged.send (PickledPage (desc, obj, group, page, cb)))
 
   def fetch [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
     guard {

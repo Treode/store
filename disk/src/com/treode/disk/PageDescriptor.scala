@@ -22,8 +22,8 @@ class PageDescriptor [G, P] private (
   def read (pos: Position) (implicit disks: Disks): Async [P] =
     disks.read (this, pos)
 
-  def write (group: G, page: P) (implicit disks: Disks): Async [Position] =
-    disks.write (this, group, page)
+  def write (obj: ObjectId, group: G, page: P) (implicit disks: Disks): Async [Position] =
+    disks.write (this, obj, group, page)
 
   override def toString = s"PageDescriptor($id)"
 }

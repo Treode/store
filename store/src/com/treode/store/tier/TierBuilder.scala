@@ -4,12 +4,12 @@ import java.util.{ArrayDeque, ArrayList}
 import scala.collection.JavaConversions._
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.disk.{Disks, Position}
+import com.treode.disk.{Disks, ObjectId, Position}
 import com.treode.store.{Bytes, StoreConfig, TxClock}
 
 import Async.{async, cond, guard, supply}
 
-private class TierBuilder (desc: TierDescriptor [_, _], generation: Long) (
+private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long) (
     implicit scheduler: Scheduler, disks: Disks, config: StoreConfig) {
 
   import desc.pager
@@ -81,7 +81,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], generation: Long) (
           val page = IndexPage (node.entries)
           val last = page.last
           for {
-            pos2 <- pager.write (generation, page)
+            pos2 <- pager.write (obj, gen, page)
             _ = rpush (key, pos, height)
             _ <- add (last.key, pos2, height+1)
           } yield ()
@@ -109,7 +109,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], generation: Long) (
         byteSize = entryByteSize
         val last = page.last
         for {
-          pos <- pager.write (generation, page)
+          pos <- pager.write (obj, gen, page)
           _ <- add (last.key, pos, 0)
         } yield ()
       }}
@@ -120,7 +120,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], generation: Long) (
       pos1 <-
         if (node.size > 1) {
           val page = IndexPage (node.entries)
-          pager.write (generation, page)
+          pager.write (obj, gen, page)
         } else {
           supply (pos0)
         }
@@ -136,17 +136,17 @@ private class TierBuilder (desc: TierDescriptor [_, _], generation: Long) (
     val page = CellPage (entries)
     var pos: Position = null
     for {
-      _ <- pager.write (generation, page) .map (pos = _)
+      _ <- pager.write (obj, gen, page) .map (pos = _)
       _ <- cond (entries.size > 0) (add (page.last.key, pos, 0))
       _ <- whilst (!stack.isEmpty) (pop (page, pos) .map (pos = _))
-    } yield Tier (generation, pos)
+    } yield Tier (gen, pos)
   }}
 
 private object TierBuilder {
 
-  def build [K, V] (desc: TierDescriptor [K, V], generation: Long, iter: CellIterator) (
+  def build [K, V] (desc: TierDescriptor [K, V], obj: ObjectId, gen: Long, iter: CellIterator) (
       implicit scheduler: Scheduler, disks: Disks, config: StoreConfig): Async [Tier] = {
-    val builder = new TierBuilder (desc, generation)
+    val builder = new TierBuilder (desc, obj, gen)
     for {
       _ <- iter.foreach (cell => builder.add (cell.key, cell.value))
       tier <- builder.result()

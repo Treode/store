@@ -14,6 +14,8 @@ import TierTestTools._
 
 class SynthTableSpec extends FreeSpec {
 
+  val tier = TierDescriptor (0x56, Picklers.int, Picklers.int)
+
   private def mkTable (disk: File) (
       implicit scheduler: StubScheduler): SynthTable [Int, Int] = {
 
@@ -24,7 +26,7 @@ class SynthTableSpec extends FreeSpec {
     implicit val disks = launch.disks
     launch.launch()
     implicit val storeConfig = StoreConfig (4, 1<<12)
-    SynthTable (TierDescriptor (0x62C8FE56, Picklers.int, Picklers.int))
+    SynthTable (tier, 0x62)
   }
 
   private def aNonEmptyTable (setup: StubScheduler => SynthTable [_, _]) {

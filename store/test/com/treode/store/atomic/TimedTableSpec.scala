@@ -15,6 +15,8 @@ import TimedTestTools._
 
 class TimedTableSpec extends FreeSpec {
 
+  val ID = 0xCA
+
   private def newTable(): (StubScheduler, TimedTable) = {
     implicit val scheduler = StubScheduler.random()
     implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
@@ -26,7 +28,7 @@ class TimedTableSpec extends FreeSpec {
     launch.launch()
     implicit val disks = launch.disks
     implicit val storeConfig = StoreConfig (8, 1<<20)
-    val table = TimedTable()
+    val table = TimedTable (ID)
     (scheduler, table)
   }
 

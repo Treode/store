@@ -25,7 +25,7 @@ private class CheckpointRegistry (implicit disks: DiskDrives) {
     guard {
       for {
         roots <- checkpoints.latch.seq (_())
-        pos <- writer.write (rootgen, roots)
+        pos <- writer.write (0, rootgen, roots)
       } yield pos
     }}
 

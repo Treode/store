@@ -16,7 +16,7 @@ private class TimedMedic (kit: RecoveryKit) {
   val tables = newTableMedicsMap
 
   def get (id: TableId): TierMedic = {
-    val m1 = TierMedic (TimedTable.table)
+    val m1 = TierMedic (TimedTable.table, id.id)
     val m0 = tables.putIfAbsent (id, m1)
     if (m0 == null) m1 else m0
   }

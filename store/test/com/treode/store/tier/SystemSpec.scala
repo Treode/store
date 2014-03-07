@@ -15,6 +15,8 @@ import AsyncTestTools._
 
 class SystemSpec extends FlatSpec {
 
+  val ID = 0xC8
+
   implicit class RichRandom (random: Random) {
 
     def nextPut (nkeys: Int, nputs: Int): Seq [(Int, Int)] =
@@ -48,7 +50,7 @@ class SystemSpec extends FlatSpec {
 
       implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
       implicit val recovery = Disks.recover()
-      val _table = new TestRecovery
+      val _table = new TestRecovery (ID)
       val files = Seq ((Paths.get ("a"), disk, geometry))
       val launch = recovery.attach (files) .pass
       _table.launch (launch) .pass
@@ -59,7 +61,7 @@ class SystemSpec extends FlatSpec {
 
     implicit val config = DisksConfig (14, 1<<24, 1<<16, 10, 1)
     implicit val recovery = Disks.recover()
-    val _table = new TestRecovery
+    val _table = new TestRecovery (ID)
     val files = Seq ((Paths.get ("a"), disk))
     val launch = recovery.reattach (files) .pass
     _table.launch (launch) .pass

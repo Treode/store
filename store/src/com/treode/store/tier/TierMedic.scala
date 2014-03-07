@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.async.Scheduler
-import com.treode.disk.{Disks, TypeId}
+import com.treode.disk.{Disks, ObjectId}
 import com.treode.store.{Bytes, StoreConfig}
 
 trait TierMedic {
@@ -18,11 +18,12 @@ trait TierMedic {
 object TierMedic {
 
   def apply [K, V] (
-      desc: TierDescriptor [K, V]
+      desc: TierDescriptor [K, V],
+      obj: ObjectId
   ) (implicit
       scheduler: Scheduler,
       recovery: Disks.Recovery,
       config: StoreConfig
   ): TierMedic =
-    new SynthMedic (desc)
+    new SynthMedic (desc, obj)
 }

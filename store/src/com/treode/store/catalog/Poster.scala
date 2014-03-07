@@ -63,7 +63,7 @@ private object Poster {
     def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [(CatalogId, Position)] =
       guard {
         for {
-          pos <- pager.write (0, (version, bytes, history))
+          pos <- pager.write (id.id, 0, (version, bytes, history))
         } yield (id, pos)
       }}
 

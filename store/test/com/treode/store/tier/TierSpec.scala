@@ -19,6 +19,8 @@ import TierTestTools._
 
 class TierSpec extends WordSpec {
 
+  val ID = 0x1E
+
   private def setup(): (StubScheduler, Disks) = {
     implicit val scheduler = StubScheduler.random()
     implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
@@ -63,7 +65,7 @@ class TierSpec extends WordSpec {
   private def buildTier (pageBytes: Int) (
       implicit scheduler: StubScheduler, disks: Disks): Tier = {
     implicit val config = StoreConfig (4, pageBytes)
-    val builder = new TierBuilder (descriptor, 0)
+    val builder = new TierBuilder (descriptor, ID, 0)
     AllFruits.async.foreach (builder.add (_, Some (One))) .pass
     builder.result.pass
   }
@@ -95,7 +97,7 @@ class TierSpec extends WordSpec {
     "require that added entries are not duplicated" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (4, 1 << 16)
-      val builder = new TierBuilder (descriptor, 0)
+      val builder = new TierBuilder (descriptor, ID, 0)
       builder.add (Apple, None) .pass
       builder.add (Apple, None) .fail [IllegalArgumentException]
     }
@@ -103,7 +105,7 @@ class TierSpec extends WordSpec {
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (4, 1 << 16)
-      val builder = new TierBuilder (descriptor, 0)
+      val builder = new TierBuilder (descriptor, ID, 0)
       builder.add (Orange, None) .pass
       builder.add (Apple, None) .fail [IllegalArgumentException]
     }
@@ -111,7 +113,7 @@ class TierSpec extends WordSpec {
     "require that added entries are reverse sorted by time" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (4, 1 << 16)
-      val builder = new TierBuilder (descriptor, 0)
+      val builder = new TierBuilder (descriptor, ID, 0)
       builder.add (Apple, None) .pass
       builder.add (Apple, None) .fail [IllegalArgumentException]
     }
@@ -119,7 +121,7 @@ class TierSpec extends WordSpec {
     "allow properly sorted entries" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (4, 1 << 16)
-      val builder = new TierBuilder (descriptor, 0)
+      val builder = new TierBuilder (descriptor, ID, 0)
       builder.add (Apple, None) .pass
       builder.add (Orange, None) .pass
       builder.add (Watermelon, None) .pass

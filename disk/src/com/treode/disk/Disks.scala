@@ -16,7 +16,7 @@ trait Disks {
 
   def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P]
 
-  def write [G, P] (desc: PageDescriptor [G, P], group: G, page: P): Async [Position]
+  def write [G, P] (desc: PageDescriptor [G, P], obj: ObjectId, group: G, page: P): Async [Position]
 
   def join [A] (task: Async [A]): Async [A]
 }

@@ -7,7 +7,7 @@ import com.treode.async.{Async, AsyncConversions, Callback, Latch}
 import Async.guard
 import AsyncConversions._
 import PageLedger.{Groups, Merger}
-import PageRegistry.{PickledHandler, chooseByMargin}
+import PageRegistry.{PickledHandler, Probe, chooseByMargin}
 
 private class PageRegistry (disks: DiskDrives) {
   import disks.{config, releaser, scheduler}
@@ -25,13 +25,17 @@ private class PageRegistry (disks: DiskDrives) {
     h
   }
 
-  def probe (id: TypeId, groups: Set [PageGroup]): Async [(TypeId, Set [PageGroup])] =
+  def probe (typ: TypeId, obj: ObjectId, groups: Set [PageGroup]): Async [Probe] =
     guard {
-      get (id) .probe (groups)
+      get (typ) .probe (obj, groups)
     }
 
   def probe (ledger: PageLedger): Async [Long] = {
-    for (liveGroups <- ledger.groups.latch.map { case (id, groups) => probe (id, groups) })
+    val _liveGroups = ledger.groups.latch.map {
+      case ((typ, obj), groups) =>
+        probe (typ, obj, groups)
+    }
+    for (liveGroups <- _liveGroups)
       yield ledger.liveBytes (liveGroups)
   }
 
@@ -97,17 +101,19 @@ private class PageRegistry (disks: DiskDrives) {
       merger.result
     }}
 
-  def compact (id: TypeId, groups: Set [PageGroup]): Async [Unit] =
+  def compact (id: TypeId, obj: ObjectId, groups: Set [PageGroup]): Async [Unit] =
     guard {
-      get (id) .compact (groups)
+      get (id) .compact (obj, groups)
     }}
 
 private object PageRegistry {
 
+  type Probe = ((TypeId, ObjectId), Set [PageGroup])
+
   trait PickledHandler {
 
-    def probe (groups: Set [PageGroup]): Async [(TypeId, Set [PageGroup])]
-    def compact (groups: Set [PageGroup]): Async [Unit]
+    def probe (obj: ObjectId, groups: Set [PageGroup]): Async [Probe]
+    def compact (obj: ObjectId, groups: Set [PageGroup]): Async [Unit]
   }
 
   object PickledHandler {
@@ -115,26 +121,26 @@ private object PageRegistry {
     def apply [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]): PickledHandler =
       new PickledHandler {
 
-        def probe (groups: Set [PageGroup]): Async [(TypeId, Set [PageGroup])] = {
-          for (live <- handler.probe (groups map (_.unpickle (desc.pgrp))))
-            yield (desc.id, live map (PageGroup (desc.pgrp, _)))
+        def probe (obj: ObjectId, groups: Set [PageGroup]): Async [Probe] = {
+          for (live <- handler.probe (obj, groups map (_.unpickle (desc.pgrp))))
+            yield ((desc.id, obj), live map (PageGroup (desc.pgrp, _)))
         }
 
-        def compact (groups: Set [PageGroup]): Async [Unit] =
-          handler.compact (groups map (_.unpickle (desc.pgrp)))
+        def compact (obj: ObjectId, groups: Set [PageGroup]): Async [Unit] =
+          handler.compact (obj, groups map (_.unpickle (desc.pgrp)))
      }}
 
-  def set (groups: Groups): Set [(TypeId, PageGroup)] = {
-    val builder = Set.newBuilder [(TypeId, PageGroup)]
-    for ((id, gs) <- groups; g <- gs)
-      builder += ((id, g))
+  def set (groups: Groups): Set [(TypeId, ObjectId, PageGroup)] = {
+    val builder = Set.newBuilder [(TypeId, ObjectId, PageGroup)]
+    for (((typ, obj), gs) <- groups; g <- gs)
+      builder += ((typ, obj, g))
     builder.result
   }
 
-  def margin (chosen: Set [(TypeId, PageGroup)], groups: Groups): Int = {
+  def margin (chosen: Set [(TypeId, ObjectId, PageGroup)], groups: Groups): Int = {
     var count = 0
-    for ((id, gs) <-  groups; g <- gs)
-      if (!(chosen contains (id, g)))
+    for (((typ, obj), gs) <-  groups; g <- gs)
+      if (!(chosen contains (typ, obj, g)))
         count += 1
     count
   }

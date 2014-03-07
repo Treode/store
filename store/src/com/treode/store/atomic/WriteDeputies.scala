@@ -44,7 +44,7 @@ private class WriteDeputies (kit: AtomicKit) {
             ds.latch.seq (_.checkpoint()),
             archive.checkpoint(),
             tables.checkpoint())
-        _active <- active.write (0, ss.flatten)
+        _active <- active.write (0, 0, ss.flatten)
       } yield new Root (_active, _archive, _tables)
     }
 

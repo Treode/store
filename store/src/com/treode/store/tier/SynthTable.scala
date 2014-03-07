@@ -3,7 +3,7 @@ package com.treode.store.tier
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
-import com.treode.disk.{Disks, PageHandler, PageDescriptor, Position, TypeId}
+import com.treode.disk.{Disks, ObjectId, PageHandler, PageDescriptor, Position}
 import com.treode.store.{Bytes, StoreConfig}
 
 import Async.{async, supply}
@@ -13,6 +13,8 @@ private class SynthTable [K, V] (
 
     val desc: TierDescriptor [K, V],
 
+    val obj: ObjectId,
+
     // To lock the generation and references to the primary and secondary; this locks the references
     // only, while the skip list manages concurrent readers and writers of entries.  Writing to the
     // table requires only a read lock on the references to ensure that the compactor does not change
@@ -20,7 +22,7 @@ private class SynthTable [K, V] (
     // primary, and increment the generation.
     lock: ReentrantReadWriteLock,
 
-    var generation: Long,
+    var gen: Long,
 
     // This resides in memory and it is the only tier that is written.
     var primary: MemTier,
@@ -35,7 +37,7 @@ private class SynthTable [K, V] (
     implicit scheduler: Scheduler,
     disks: Disks,
     config: StoreConfig
-) extends TierTable with PageHandler [Long] {
+) extends TierTable {
   import scheduler.whilst
 
   private val readLock = lock.readLock()
@@ -84,7 +86,7 @@ private class SynthTable [K, V] (
     readLock.lock()
     try {
       primary.put (key, Some (value))
-      generation
+      gen
     } finally {
       readLock.unlock()
     }}
@@ -93,7 +95,7 @@ private class SynthTable [K, V] (
     readLock.lock()
     try {
       primary.put (key, None)
-      generation
+      gen
     } finally {
       readLock.unlock()
     }}
@@ -109,20 +111,14 @@ private class SynthTable [K, V] (
     OverwritesFilter (merged)
   }
 
-  def probe (groups: Set [Long]): Async [Set [Long]] =
-    supply (groups intersect tiers.active)
-
-  def compact (groups: Set [Long]): Async [Unit] =
-    checkpoint() .map (_ => ())
-
   def checkpoint(): Async [Meta] = disks.join {
 
     writeLock.lock()
-    val (generation, primary, tiers) = try {
+    val (gen, primary, tiers) = try {
       require (secondary.isEmpty)
-      val g = this.generation
+      val g = this.gen
       val p = this.primary
-      this.generation += 1
+      this.gen += 1
       this.primary = secondary
       this.secondary = p
       (g, p, this.tiers)
@@ -133,13 +129,13 @@ private class SynthTable [K, V] (
     val merged = TierIterator.merge (desc, primary, emptyMemTier, tiers)
     val filtered = OverwritesFilter (merged)
     for {
-      tier <- TierBuilder.build (desc, generation, filtered)
+      tier <- TierBuilder.build (desc, obj, gen, filtered)
     } yield {
       writeLock.lock()
       val meta = try {
         this.secondary = newMemTier
         this.tiers = Tiers (tier)
-        new Meta (generation, this.tiers)
+        new Meta (gen, this.tiers)
       } finally {
         writeLock.unlock()
       }
@@ -148,8 +144,8 @@ private class SynthTable [K, V] (
 
 private object SynthTable {
 
-  def apply [K, V] (desc: TierDescriptor [K,V]) (
+  def apply [K, V] (desc: TierDescriptor [K,V], obj: ObjectId) (
       implicit scheduler: Scheduler, disk: Disks, config: StoreConfig): SynthTable [K, V] = {
     val lock = new ReentrantReadWriteLock
-    new SynthTable (desc, lock, 0, new MemTier, new MemTier, Tiers.empty)
+    new SynthTable (desc, obj, lock, 0, new MemTier, new MemTier, Tiers.empty)
   }}

@@ -21,7 +21,7 @@ private class RecoveryKit (implicit
     val config: StoreConfig
 ) extends AtomicKit.Recovery {
 
-  val archive = TierMedic (WriteDeputies.archive)
+  val archive = TierMedic (WriteDeputies.archive, 0)
   val tables = new TimedMedic (this)
   val writers = newWriterMedicsMap
 

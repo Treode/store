@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.async.{Async, Callback, Scheduler}
-import com.treode.disk.Disks
+import com.treode.disk.{Disks, ObjectId}
 import com.treode.store.{Bytes, StoreConfig, StorePicklers}
 
 import Async.async
@@ -36,7 +36,7 @@ object TierTable {
       .inspect (v => (v.gen, v.tiers))
     }}
 
-  def apply (desc: TierDescriptor [_, _]) (
+  def apply (desc: TierDescriptor [_, _], obj: ObjectId) (
       implicit scheduler: Scheduler, disk: Disks, config: StoreConfig): TierTable =
-    SynthTable (desc)
+    SynthTable (desc, obj)
 }

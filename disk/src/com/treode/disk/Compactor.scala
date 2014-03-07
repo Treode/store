@@ -13,26 +13,26 @@ private class Compactor (disks: DiskDrives) {
 
   val fiber = new Fiber (scheduler)
   var pages: PageRegistry = null
-  var cleanq = Set.empty [TypeId]
-  var drainq = Set.empty [TypeId]
-  var book = Map.empty [TypeId, (Set [PageGroup], List [Callback [Unit]])]
+  var cleanq = Set.empty [(TypeId, ObjectId)]
+  var drainq = Set.empty [(TypeId, ObjectId)]
+  var book = Map.empty [(TypeId, ObjectId), (Set [PageGroup], List [Callback [Unit]])]
   var segments = 0
   var engaged = true
   var cleanreq = true
 
   private def reengage() {
     if (!cleanq.isEmpty) {
-      val id = cleanq.head
+      val (typ, obj) = cleanq.head
       cleanq = cleanq.tail
-      compact (id)
+      compact (typ, obj)
     } else if (config.clean (segments)) {
       engaged == false
       clean()
     } else if (!drainq.isEmpty) {
-      val id = drainq.head
+      val (typ, obj) = drainq.head
       drainq = drainq.tail
       cleanreq = false
-      compact (id)
+      compact (typ, obj)
     } else {
       book = Map.empty
       engaged = false
@@ -54,11 +54,11 @@ private class Compactor (disks: DiskDrives) {
         cb.fail (t)
       }}
 
-  private def compact (id: TypeId) {
-    val (groups, latches) = book (id)
-    book -= id
+  private def compact (typ: TypeId, obj: ObjectId) {
+    val (groups, latches) = book (typ, obj)
+    book -= ((typ, obj))
     engaged = true
-    pages.compact (id, groups) .run (compacted  (latches))
+    pages.compact (typ, obj, groups) .run (compacted  (latches))
   }
 
   private def release (segments: Seq [SegmentPointer]): Callback [Unit] =

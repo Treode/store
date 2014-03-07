@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import com.treode.async.{Async, Scheduler}
 import com.treode.disk.Disks
 import com.treode.buffer.ArrayBuffer
-import com.treode.store.{Bytes, StoreConfig, TimedCell, TxClock, Value}
+import com.treode.store.{Bytes, StoreConfig, TableId, TimedCell, TxClock, Value}
 import com.treode.store.tier.{Cell, TierDescriptor, TierTable}
 
 import TimedTable.{keyToBytes, cellToCell, cellToValue}
@@ -60,6 +60,6 @@ private object TimedTable {
     Value (Long.MaxValue - time, cell.value)
   }
 
-  def apply() (implicit scheduler: Scheduler, disks: Disks, config: StoreConfig): TimedTable =
-    new TimedTable (TierTable (table))
+  def apply (id: TableId) (implicit scheduler: Scheduler, disks: Disks, config: StoreConfig): TimedTable =
+    new TimedTable (TierTable (table, id.id))
 }

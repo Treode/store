@@ -20,7 +20,7 @@ private class RecoveryKit (implicit
     val config: StoreConfig
 ) extends Paxos.Recovery {
 
-  val archive = TierMedic (Acceptors.archive)
+  val archive = TierMedic (Acceptors.archive, 0)
   val medics = newMedicsMap
 
   def openByStatus (status: ActiveStatus) {

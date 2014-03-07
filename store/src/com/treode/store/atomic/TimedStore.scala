@@ -23,7 +23,7 @@ private class TimedStore (kit: AtomicKit) {
     var t0 = tables.get (id)
     if (t0 != null)
       return t0
-    val t1 = TimedTable()
+    val t1 = TimedTable (id)
     t0 = tables.putIfAbsent (id, t1)
     if (t0 != null)
       return t0
@@ -93,7 +93,7 @@ private class TimedStore (kit: AtomicKit) {
     val tables = materialize (this.tables.entrySet)
     for {
       roots <- tables.latch.map (e => checkpoint (e.getKey, e.getValue))
-      pos <- pager.write (0, roots)
+      pos <- pager.write (0, 0, roots)
     } yield Meta (pos)
   }}
 

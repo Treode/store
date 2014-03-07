@@ -3,11 +3,12 @@ package com.treode.store.tier
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.Scheduler
-import com.treode.disk.{Disks, Position, TypeId}
+import com.treode.disk.{Disks, ObjectId, Position}
 import com.treode.store.{Bytes, StoreConfig}
 
 private class SynthMedic [K, V] (
-    desc: TierDescriptor [K, V]
+    desc: TierDescriptor [K, V],
+    obj: ObjectId
 ) (implicit
     scheduler: Scheduler,
     config: StoreConfig
@@ -17,7 +18,7 @@ private class SynthMedic [K, V] (
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
 
-  private var generation = 0L
+  private var gen = 0L
 
   // This resides in memory and it is the only tier that is written.
   private var primary = newMemTier
@@ -32,10 +33,10 @@ private class SynthMedic [K, V] (
 
     readLock.lock()
     val needWrite = try {
-      if (gen == this.generation - 1) {
+      if (gen == this.gen - 1) {
         secondary.put (key, value)
         false
-      } else if (gen == this.generation) {
+      } else if (gen == this.gen) {
         primary.put (key, value)
         false
       } else {
@@ -48,17 +49,17 @@ private class SynthMedic [K, V] (
     if (needWrite) {
       writeLock.lock()
       try {
-        if (gen == this.generation - 1) {
+        if (gen == this.gen - 1) {
           secondary.put (key, value)
-        } else if (gen == this.generation) {
+        } else if (gen == this.gen) {
           primary.put (key, value)
-        } else if (gen == this.generation + 1) {
-          this.generation = gen
+        } else if (gen == this.gen + 1) {
+          this.gen = gen
           secondary = primary
           primary = newMemTier
           primary.put (key, value)
-        } else if (gen > this.generation + 1) {
-          this.generation = gen
+        } else if (gen > this.gen + 1) {
+          this.gen = gen
           primary = newMemTier
           secondary = newMemTier
           primary.put (key, value)
@@ -76,7 +77,7 @@ private class SynthMedic [K, V] (
   def checkpoint (meta: TierTable.Meta) {
     writeLock.lock()
     try {
-      generation = meta.gen+1
+      gen = meta.gen+1
       primary = newMemTier
       secondary = newMemTier
       tiers = meta.tiers
@@ -88,13 +89,13 @@ private class SynthMedic [K, V] (
     import launch.disks
 
     writeLock.lock()
-    val (generation, primary, secondary, tiers) = try {
+    val (gem, primary, secondary, tiers) = try {
       if (!this.secondary.isEmpty) {
         this.secondary.putAll (this.primary)
         this.primary = this.secondary
         this.secondary = newMemTier
       }
-      val result = (this.generation, this.primary, this.secondary, this.tiers)
+      val result = (this.gen, this.primary, this.secondary, this.tiers)
       this.primary = null
       this.secondary = null
       this.tiers = null
@@ -103,7 +104,5 @@ private class SynthMedic [K, V] (
       writeLock.unlock()
     }
 
-    val table = new SynthTable (desc, lock, generation, primary, secondary, tiers)
-    desc.pager.handle (table)
-    table
+    new SynthTable (desc, obj, lock, gem, primary, secondary, tiers)
   }}

@@ -46,7 +46,7 @@ private class Acceptors (kit: PaxosKit) {
         (ss, _archive) <- Latch.pair (
             as.latch.seq (_.checkpoint()),
             archive.checkpoint())
-        _active <- active.write (0, ss.flatten)
+        _active <- active.write (0, 0, ss.flatten)
       } yield new Root (_active, _archive)
     }
 
