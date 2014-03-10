@@ -2,15 +2,14 @@ package com.treode.store.paxos
 
 import com.treode.async.{Async, AsyncConversions, Latch}
 import com.treode.async.misc.materialize
-import com.treode.disk.{PageDescriptor, Position, RootDescriptor}
+import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position, RecordDescriptor, RootDescriptor}
 import com.treode.store.Bytes
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
-import Acceptors.{Root, active}
-import Async.guard
+import Async.{guard, supply}
 import AsyncConversions._
 
-private class Acceptors (kit: PaxosKit) {
+private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   import kit.{archive, cluster, disks}
 
   val acceptors = newAcceptorsMap
@@ -39,19 +38,32 @@ private class Acceptors (kit: PaxosKit) {
     } yield ()
   }
 
-  def checkpoint(): Async [Root] =
+  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+    supply (archive.probe (groups))
+
+  def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
-      val as = materialize (acceptors.values)
       for {
-        (ss, _archive) <- Latch.pair (
-            as.latch.seq (_.checkpoint()),
-            archive.checkpoint())
-        _active <- active.write (0, 0, ss.flatten)
-      } yield new Root (_active, _archive)
+        meta <- archive.compact (groups)
+        _ <- Acceptors.checkpoint.record (meta)
+      } yield ()
     }
 
-  def attach() {
+  def checkpoint(): Async [Unit] =
+    guard {
+      for {
+        _ <- Latch.pair (
+            archive.checkpoint() .flatMap (Acceptors.checkpoint.record (_)),
+            materialize (acceptors.values) .latch.unit (_.checkpoint()))
+      } yield ()
+    }
+
+  def attach () (implicit launch: Disks.Launch) {
     import Acceptor.{choose, propose, query}
+
+    Acceptors.root.checkpoint (checkpoint())
+
+    Acceptors.archive.handle (this)
 
     query.listen { case ((key, ballot, default), c) =>
       get (key) query (c, ballot, default)
@@ -67,25 +79,14 @@ private class Acceptors (kit: PaxosKit) {
 
 private object Acceptors {
 
-  class Root (val active: Position, val archive: TierTable.Meta)
-
-  object Root {
-
-    val pickler = {
-      import PaxosPicklers._
-      wrap (pos, tierMeta)
-      .build (v => new Root (v._1, v._2))
-      .inspect (v => (v.active, v.archive))
-    }}
-
   val root = {
     import PaxosPicklers._
-    RootDescriptor (0x4BF7F275BBE8086EL, Root.pickler)
+    RootDescriptor (0x4BF7F275BBE8086EL, unit)
   }
 
-  val active = {
+  val checkpoint = {
     import PaxosPicklers._
-    PageDescriptor (0x6D5C9C6CA7E4ACC5L, const (0), seq (activeStatus))
+    RecordDescriptor (0x42A17DC354412E17L, tierMeta)
   }
 
   val archive = {

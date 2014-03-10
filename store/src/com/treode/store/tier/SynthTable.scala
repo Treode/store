@@ -111,6 +111,19 @@ private class SynthTable [K, V] (
     OverwritesFilter (merged)
   }
 
+  def probe (groups: Set [Long]): Set [Long] = {
+    readLock.lock()
+    val (tiers) = try {
+      this.tiers
+    } finally {
+      readLock.unlock()
+    }
+    tiers.active
+  }
+
+  def compact (groups: Set [Long]): Async [Meta] =
+    checkpoint()
+
   def checkpoint(): Async [Meta] = disks.join {
 
     writeLock.lock()
@@ -131,11 +144,12 @@ private class SynthTable [K, V] (
     for {
       tier <- TierBuilder.build (desc, obj, gen, filtered)
     } yield {
+      val tiers = Tiers (tier)
+      val meta = new Meta (gen, tiers)
       writeLock.lock()
-      val meta = try {
+      try {
         this.secondary = newMemTier
-        this.tiers = Tiers (tier)
-        new Meta (gen, this.tiers)
+        this.tiers = tiers
       } finally {
         writeLock.unlock()
       }

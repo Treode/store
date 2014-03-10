@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-import com.treode.disk.{PageDescriptor, TypeId}
+import com.treode.disk.{Disks, PageDescriptor, PageHandler, TypeId}
 import com.treode.store.StorePicklers
 import com.treode.pickle.Pickler
 
@@ -20,7 +20,11 @@ class TierDescriptor [K, V] private (
   private [tier] val pager = {
     import StorePicklers._
     PageDescriptor (id, ulong, pickler)
-  }}
+  }
+
+  def handle (handler: PageHandler [Long]) (implicit launch: Disks.Launch): Unit =
+    pager.handle (handler)
+}
 
 object TierDescriptor {
 

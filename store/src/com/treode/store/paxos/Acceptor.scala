@@ -5,10 +5,11 @@ import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.disk.RecordDescriptor
 import com.treode.store.Bytes
 
+import Async.supply
 import Callback.ignore
 
 private class Acceptor (val key: Bytes, kit: PaxosKit) {
-  import Acceptor.{ActiveStatus, NoPost, Post}
+  import Acceptor.{NoPost, Post}
   import kit.{archive, cluster, disks, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
 
@@ -17,18 +18,16 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
   trait State {
 
-    def status: Option [ActiveStatus]
     def query (proposer: Peer, ballot: Long, default: Bytes)
     def propose (proposer: Peer, ballot: Long, value: Bytes)
     def choose (chosen: Bytes)
+    def checkpoint(): Async [Unit]
 
     def shutdown(): Unit =
-      state = new Shutdown (status)
+      state = new Shutdown (this)
   }
 
   class Opening extends State {
-
-    def status = throw new IllegalStateException
 
     def query (proposer: Peer, ballot: Long, default: Bytes) {
       val s = new Restoring (default)
@@ -49,7 +48,11 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       s.choose (chosen)
       s.restore()
       state = s
-    }}
+    }
+
+    def checkpoint(): Async [Unit] =
+      supply()
+  }
 
   class Restoring (default: Bytes) extends State {
 
@@ -57,8 +60,6 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     var proposal: Proposal = Option.empty
     var proposers = Set.empty [Peer]
     var postable = {_: Deliberating => ()}
-
-    def status = None
 
     def promise (ballot: BallotNumber, proposal: Proposal, proposer: Peer): Unit =
       postable = (_.promise (ballot, proposal, proposer))
@@ -74,7 +75,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
             state = chosen match {
               case Some (value) =>
                 Proposer.chosen (key, value) (proposers)
-                new Closed (value)
+                new Closed (value, 0)
               case None =>
                 val s = new Deliberating (default, ballot, proposal, proposers)
                 postable (s)
@@ -83,7 +84,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
         def fail (t: Throwable): Unit = fiber.execute {
           if (state == Restoring.this) {
-            state = new Panicked (status, t)
+            state = new Panicked (Restoring.this, t)
             throw t
           }}})
     }
@@ -106,11 +107,14 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       }}
 
     def choose (chosen: Bytes) {
-      state = new Closed (chosen)
       val gen  = archive.put (key, chosen)
+      state = new Closed (chosen, gen)
       Acceptor.close.record (key, chosen, gen) .run (Callback.ignore)
       Proposer.chosen (key, chosen) (proposers)
     }
+
+    def checkpoint(): Async [Unit] =
+      supply()
 
     override def toString = s"Acceptor.Restoring($key)"
   }
@@ -136,7 +140,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
       def fail (t: Throwable): Unit = fiber.execute {
         if (state == Deliberating.this) {
-          state = new Panicked (status, t)
+          state = new Panicked (Deliberating.this, t)
         }}}
 
     def post (post: Post) {
@@ -176,8 +180,6 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
         def reply() = Proposer.accept (key, ballot.number) (proposer)
       })
 
-    def status = Some (ActiveStatus.Deliberating (key, default, ballot, proposal))
-
     def query (proposer: Peer, _ballot: Long, default: Bytes) {
       proposers += proposer
       val ballot = BallotNumber (_ballot, proposer.id)
@@ -203,15 +205,21 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       }}
 
     def choose (chosen: Bytes) {
-      state = new Closed (chosen)
       val gen  = archive.put (key, chosen)
+      state = new Closed (chosen, gen)
       Acceptor.close.record (key, chosen, gen) .run (Callback.ignore)
     }
+
+    def checkpoint(): Async [Unit] = {
+      proposal match {
+        case Some ((ballot, value)) => Acceptor.accept.record (key, ballot, value)
+        case None => Acceptor.open.record (key, default)
+      }}
 
     override def toString = s"Acceptor.Deliberating($key, $proposal)"
   }
 
-  class Closed (val chosen: Bytes) extends State {
+  class Closed (val chosen: Bytes, gen: Long) extends State {
 
     // TODO: Purge acceptor from memory.
     // fiber.delay (closedLifetime) (remove (key, Acceptor.this))
@@ -227,12 +235,18 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     def choose (chosen: Bytes): Unit =
       require (chosen == this.chosen, "Paxos disagreement")
 
+    def checkpoint(): Async [Unit] =
+      Acceptor.close.record (key, chosen, gen)
+
     override def toString = s"Acceptor.Closed($key, $chosen)"
   }
 
-  class Shutdown (status: Option [ActiveStatus]) extends State {
+  class Shutdown (s: State) extends State {
 
     // TODO: Purge acceptor from memory.
+
+    def checkpoint(): Async [Unit] =
+      s.checkpoint()
 
     def status = None
     def query (proposer: Peer, ballot: Long, default: Bytes): Unit = ()
@@ -244,8 +258,8 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     override def toString = s"Acceptor.Shutdown($key)"
   }
 
-  class Panicked (status: Option [ActiveStatus], thrown: Throwable)
-  extends Shutdown (status) {
+  class Panicked (s: State, thrown: Throwable)
+  extends Shutdown (s) {
 
     override def toString = s"Acceptor.Panicked($key, $thrown)"
   }
@@ -259,8 +273,8 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
   def choose (chosen: Bytes): Unit =
     fiber.execute (state.choose (chosen))
 
-  def checkpoint(): Async [Option [ActiveStatus]] =
-    fiber.supply (state.status)
+  def checkpoint(): Async [Unit] =
+    fiber.guard (state.checkpoint())
 
   def shutdown(): Unit =
     fiber.execute (state.shutdown())
@@ -318,34 +332,4 @@ private object Acceptor {
   object NoPost extends Post {
     def record() = ()
     def reply() = ()
-  }
-
-  sealed abstract class ActiveStatus
-
-  object ActiveStatus {
-
-    case class Restoring (key: Bytes, default: Bytes) extends ActiveStatus
-
-    case class Deliberating (
-        key: Bytes,
-        default: Bytes,
-        ballot: BallotNumber,
-        proposal: Proposal) extends ActiveStatus
-
-    case class Closed (key: Bytes, chosen: Bytes) extends ActiveStatus {
-      def default = chosen
-    }
-
-    val pickler = {
-      import PaxosPicklers._
-      tagged [ActiveStatus] (
-          0x1 -> wrap (bytes, bytes)
-                 .build ((Restoring.apply _).tupled)
-                 .inspect (v => (v.key, v.default)),
-          0x2 -> wrap (bytes, bytes, ballotNumber, proposal)
-                 .build ((Deliberating.apply _).tupled)
-                 .inspect (v => (v.key, v.default, v.ballot, v.proposal)),
-          0x3 -> wrap (bytes, bytes)
-                 .build ((Closed.apply _).tupled)
-                 .inspect (v => (v.key, v.chosen)))
-    }}}
+  }}

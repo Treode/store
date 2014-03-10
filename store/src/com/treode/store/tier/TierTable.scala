@@ -5,6 +5,7 @@ import com.treode.disk.{Disks, ObjectId}
 import com.treode.store.{Bytes, StoreConfig, StorePicklers}
 
 import Async.async
+import TierTable.Meta
 
 trait TierTable {
 
@@ -18,7 +19,11 @@ trait TierTable {
 
   def delete (key: Bytes): Long
 
-  def checkpoint(): Async [TierTable.Meta]
+  def probe (groups: Set [Long]): Set [Long]
+
+  def compact (groups: Set [Long]): Async [Meta]
+
+  def checkpoint(): Async [Meta]
 }
 
 object TierTable {

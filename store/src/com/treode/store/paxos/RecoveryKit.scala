@@ -9,8 +9,8 @@ import com.treode.disk.Disks
 import com.treode.store.{Atlas, Bytes, Paxos, StoreConfig}
 import com.treode.store.tier.TierMedic
 
-import Acceptors.Root
-import Acceptor.{ActiveStatus, open, promise, accept, reaccept, close}
+import Acceptors.checkpoint
+import Acceptor.{open, promise, accept, reaccept, close}
 import Async.cond
 
 private class RecoveryKit (implicit
@@ -23,7 +23,6 @@ private class RecoveryKit (implicit
 
   val archive = TierMedic (Acceptors.archive, 0)
   val medics = newMedicsMap
-  var root = Option.empty [Root]
 
   def openWithDefault (key: Bytes, default: Bytes) {
     var m0 = medics.get (key)
@@ -42,7 +41,7 @@ private class RecoveryKit (implicit
   }
 
   Acceptors.root.reload { root =>
-    this.root = Some (root)
+    ()
   }
 
   open.replay { case (key, default) =>
@@ -65,19 +64,9 @@ private class RecoveryKit (implicit
     get (key) closed (chosen, gen)
   }
 
-  def checkpoint (status: ActiveStatus) {
-    val m1 = Medic (status, this)
-    val m0 = medics.putIfAbsent (m1.key, m1)
-    if (m0 != null)
-      m0.checkpoint (status)
+  checkpoint.replay { meta =>
+    archive.checkpoint (meta)
   }
-
-  def checkpoint (root: Root) (implicit disks: Disks): Async [Unit] = {
-    for {
-      _active <- Acceptors.active.read (root.active)
-    } yield {
-      _active foreach checkpoint
-    }}
 
   def launch (implicit launch: Disks.Launch, atlas: Atlas): Async [Paxos] = {
     import launch.disks
@@ -85,10 +74,7 @@ private class RecoveryKit (implicit
     val kit = new PaxosKit (archive.close())
     import kit.{acceptors, proposers}
 
-    Acceptors.root.checkpoint (acceptors.checkpoint())
-
     for {
-      _ <- cond (root.isDefined) (checkpoint (root.get))
       _ <- acceptors.recover (materialize (medics.values))
     } yield {
       acceptors.attach()
