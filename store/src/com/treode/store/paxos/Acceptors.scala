@@ -80,15 +80,15 @@ private object Acceptors {
 
   val root = {
     import PaxosPicklers._
-    RootDescriptor (0xBFD4F3D3, Root.pickler)
+    RootDescriptor (0x4BF7F275BBE8086EL, Root.pickler)
   }
 
   val active = {
     import PaxosPicklers._
-    PageDescriptor (0x7C71E2AF, const (0), seq (activeStatus))
+    PageDescriptor (0x6D5C9C6CA7E4ACC5L, const (0), seq (activeStatus))
   }
 
   val archive = {
     import PaxosPicklers._
-    TierDescriptor (0xDD683792, bytes, const (true))
+    TierDescriptor (0x9F59C4262C8190E8L, bytes, const (true))
   }}

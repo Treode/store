@@ -4,17 +4,18 @@ import java.util.ArrayDeque
 import scala.collection.JavaConversions._
 
 import com.treode.async.Async
-import com.treode.disk.{Disks, Position}
-import com.treode.store.{Bytes, CatalogId}
+import com.treode.disk.Disks
+import com.treode.store.Bytes
 
-import Async.supply
-import Poster.pager
+import Async.{cond, guard}
+import Poster.{Meta, pager}
 
 private class Medic {
 
   var version = 0
   var bytes = Bytes.empty
   var history = new ArrayDeque [Bytes]
+  var saved = Option.empty [Meta]
 
   def patch (version: Int, bytes: Bytes, history: Seq [Bytes]) {
     if (this.version < version) {
@@ -52,9 +53,22 @@ private class Medic {
         patch (end, patches)
     }
 
-  def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Unit =
-    patch (version, bytes, history)
+  def patch (meta: Meta) (implicit disks: Disks): Async [Unit] =
+    guard {
+      for {
+        (version, bytes, history) <- pager.read (meta.pos)
+      } yield {
+        patch (version, bytes, history)
+      }}
 
-  def close (poster: Poster): Handler =
-    new Handler (version, bytes.hashCode, bytes, history, poster)
+  def checkpoint (meta: Meta): Unit =
+    this.saved = Some (meta)
+
+  def close (poster: Poster) (implicit disks: Disks): Async [Handler] =
+    guard {
+      for {
+        _ <- cond (saved.isDefined) (patch (saved.get))
+      } yield {
+        new Handler (version, bytes.hashCode, bytes, history, saved, poster)
+      }}
 }

@@ -9,13 +9,15 @@ import com.treode.async.misc.materialize
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, CatalogId}
 
-import Async.guard
+import Async.{cond, guard}
+import Poster.Meta
 
 private class Handler (
   var version: Int,
   var checksum: Int,
   var bytes:  Bytes,
   var history: ArrayDeque [Bytes],
+  var saved: Option [Meta],
   poster: Poster
 ) {
 
@@ -68,13 +70,33 @@ private class Handler (
     Patch (version, checksum, Seq (Patch.diff (this.bytes, bytes)))
   }
 
-  def checkpoint(): Async [(CatalogId, Position)] =
+  def probe (groups: Set [Int]): Set [Int] =
+    if (saved.isDefined)
+      Set (saved.get.version)
+    else
+      Set.empty
+
+  def save(): Async [Unit] =
     guard {
-      poster.checkpoint (version, bytes, materialize (history))
-    }}
+      for {
+        meta <- poster.checkpoint (version, bytes, materialize (history))
+      } yield {
+        this.saved = Some (meta)
+      }}
+
+  def compact (groups: Set [Int]): Async [Unit] =
+    cond (saved.isDefined && (groups contains saved.get.version)) (save())
+
+  def checkpoint(): Async [Unit] =
+    guard {
+      if (saved.isDefined && saved.get.version == version)
+        poster.checkpoint (saved.get)
+      else
+        save()
+  }}
 
 private object Handler {
 
   def apply (poster: Poster): Handler =
-    new Handler (0, 0, Bytes.empty, new ArrayDeque, poster)
+    new Handler (0, 0, Bytes.empty, new ArrayDeque, None, poster)
 }

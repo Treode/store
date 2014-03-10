@@ -8,27 +8,44 @@ import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 
 import Async.guard
 import Callback.callback
+import Poster.Meta
 
 private trait Poster {
 
   def post (update: Update, bytes: Bytes)
-
-  def checkpoint (version: Int, bytes: Bytes, patches: Seq [Bytes]): Async [(CatalogId, Position)]
+  def checkpoint (version: Int, bytes: Bytes, patches: Seq [Bytes]): Async [Meta]
+  def checkpoint (meta: Meta): Async [Unit]
 }
 
 private object Poster {
 
+  case class Meta (version: Int, pos: Position)
+
+  object Meta {
+
+    val pickler = {
+      import CatalogPicklers._
+      wrap (uint, pos)
+      .build ((Meta.apply _).tupled)
+      .inspect (v => (v.version, v.pos))
+    }}
+
+  case class Post (update: Update, bytes: Bytes)
+
   val update = {
     import CatalogPicklers._
-    RecordDescriptor (0x7F5551148920906EL, tuple (catId, CatalogPicklers.update))
+    RecordDescriptor (0x7F5551148920906EL, tuple (catId, Update.pickler))
+  }
+
+  val checkpoint = {
+    import CatalogPicklers._
+    RecordDescriptor (0x79C3FDABEE2C9FDFL, tuple (catId, Meta.pickler))
   }
 
   val pager = {
     import CatalogPicklers._
-    PageDescriptor (0x8407E7035A50C6CFL, int, tuple (int, bytes, seq (bytes)))
+    PageDescriptor (0x8407E7035A50C6CFL, uint, tuple (uint, bytes, seq (bytes)))
   }
-
-  case class Post (update: Update, bytes: Bytes)
 
   abstract class AbstractPoster (id: CatalogId) (implicit scheduler: Scheduler, disks: Disks)
   extends Poster {
@@ -60,12 +77,20 @@ private object Poster {
         engage()
     }
 
-    def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [(CatalogId, Position)] =
+    def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [Meta] =
       guard {
         for {
-          pos <- pager.write (id.id, 0, (version, bytes, history))
-        } yield (id, pos)
-      }}
+          pos <- pager.write (id.id, version, (version, bytes, history))
+          meta = Meta (version, pos)
+          _ <- Poster.checkpoint.record (id, meta)
+        } yield {
+          meta
+        }}
+
+
+    def checkpoint (meta: Meta): Async [Unit] =
+      Poster.checkpoint.record (id, meta)
+  }
 
   def apply [C] (
       desc: CatalogDescriptor [C],
@@ -79,7 +104,7 @@ private object Poster {
       def dispatch (bytes: Bytes): Unit =
         scheduler.execute (handler (bytes.unpickle (desc.pcat)))
 
-      override def toString = s"Poster(${desc.id},${desc.pcat})"
+      override def toString = s"Poster(${desc.id}, ${desc.pcat})"
     }}
 
   def apply (id: CatalogId) (implicit scheduler: Scheduler, disks: Disks): Poster =
@@ -87,5 +112,5 @@ private object Poster {
 
       def dispatch (bytes: Bytes): Unit = ()
 
-      override def toString = s"Poster($id,unknown)"
+      override def toString = s"Poster($id, unknown)"
     }}

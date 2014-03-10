@@ -2,11 +2,10 @@ package com.treode.store.catalog
 
 import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Scheduler}
 import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
-import com.treode.disk.{Disks, Position, RootDescriptor}
-import com.treode.store.{Bytes, Catalogs, CatalogDescriptor, CatalogId, StoreConfig}
+import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position, RootDescriptor}
+import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 
 import AsyncConversions._
-import Broker.Root
 import Callback.ignore
 
 private class Broker (
@@ -14,7 +13,7 @@ private class Broker (
 ) (implicit
     scheduler: Scheduler,
     disks: Disks
-) {
+) extends PageHandler [Int] {
 
   private val fiber = new Fiber (scheduler)
 
@@ -86,15 +85,26 @@ private class Broker (
       gab()
     }}
 
-  def checkpoint(): Async [Root] =
-    fiber.guard {
-      for {
-        _catalogs <- catalogs.values.latch.map (_.checkpoint())
-      } yield {
-        new Root (_catalogs)
-      }}
+  def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+    fiber.supply {
+      _get (obj.id) .probe (groups)
+    }
 
-  def attach (implicit cluster: Cluster) {
+  def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+    fiber.guard {
+      _get (obj.id) .compact (groups)
+    }
+
+  def checkpoint(): Async [Unit] =
+    fiber.guard {
+      catalogs.values.latch.unit (_.checkpoint())
+    }
+
+  def attach () (implicit launch: Disks.Launch, cluster: Cluster) {
+
+    Broker.root.checkpoint (checkpoint())
+
+    Poster.pager.handle (this)
 
     Broker.ping.listen { (values, from) =>
       val task = for {
@@ -113,18 +123,9 @@ private class Broker (
 
 object Broker {
 
-  class Root (val catalogs: Map [CatalogId, Position])
-
-  object Root {
-
-    val pickler = {
-      import CatalogPicklers._
-      wrap (map (catId, pos)) .build (new Root (_)) .inspect (_.catalogs)
-    }}
-
   val root = {
     import CatalogPicklers._
-    RootDescriptor (0xE246C81CFC83575FL, Root.pickler)
+    RootDescriptor (0xE246C81CFC83575FL, unit)
   }
 
   val ping: MessageDescriptor [Ping] = {

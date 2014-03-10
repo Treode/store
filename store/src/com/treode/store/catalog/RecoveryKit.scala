@@ -9,8 +9,7 @@ import com.treode.store.{Atlas, Catalogs, CatalogDescriptor, CatalogId, StoreCon
 
 import Async.guard
 import AsyncConversions._
-import Broker.Root
-import Poster.{pager, update}
+import Poster.pager
 
 private class RecoveryKit (implicit
     random: Random,
@@ -21,7 +20,6 @@ private class RecoveryKit (implicit
 ) extends Catalogs.Recovery {
 
   private val fiber = new Fiber (scheduler)
-  private var positions = Map.empty [CatalogId, Position]
   private var medics = Map.empty [CatalogId, Medic]
   private var makers = Map.empty [CatalogId, Disks => Poster]
 
@@ -42,11 +40,15 @@ private class RecoveryKit (implicit
     }
 
   Broker.root.reload { root =>
-    positions ++= root.catalogs
+    ()
   }
 
-  update.replay { case (id, update) =>
+  Poster.update.replay { case (id, update) =>
     fiber.execute (getMedic (id) patch (update))
+  }
+
+  Poster.checkpoint.replay { case (id, meta) =>
+    fiber.execute (getMedic (id) checkpoint (meta))
   }
 
   def listen [C] (desc: CatalogDescriptor [C]) (handler: C => Any): Unit = fiber.execute {
@@ -54,27 +56,14 @@ private class RecoveryKit (implicit
     makers += desc.id -> (Poster (desc, handler) (scheduler, _))
   }
 
-  private def close (id: CatalogId) (implicit disks: Disks): Async [(CatalogId, Handler)] =
-    fiber.guard {
-      positions.get (id) match {
-        case Some (pos) =>
-          for {
-            (version, bytes, history) <- pager.read (pos)
-            result <- fiber.supply {
-              val medic = getMedic (id)
-              medic.checkpoint (version, bytes, history)
-              val maker = getMaker (id) .apply (disks)
-              val handler = medic.close (maker)
-              (id, handler)
-            }
-          } yield result
-        case None =>
-          fiber.supply {
-            val medic = getMedic (id)
-            val maker = getMaker (id) .apply (disks)
-            val handler = medic.close (maker)
-            (id, handler)
-          }}}
+  private def close (id: CatalogId) (implicit disks: Disks): Async [(CatalogId, Handler)] = {
+    val medic = getMedic (id)
+    val maker = getMaker (id) .apply (disks)
+    for {
+      handler <- medic.close (maker)
+    } yield {
+      (id, handler)
+    }}
 
   def launch (implicit launch: Disks.Launch, atlas: Atlas): Async [Catalogs] =
     fiber.guard {
@@ -83,6 +72,6 @@ private class RecoveryKit (implicit
         handlers <- (medics.keySet ++ makers.keySet) .latch.map (close (_))
       } yield {
         val broker = new Broker (handlers)
-        broker.attach (cluster)
+        broker.attach()
         new CatalogKit (broker)
       }}}

@@ -8,6 +8,8 @@ import com.treode.disk.Position
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, CatalogId}
 
+import Poster.Meta
+
 class HandlerSpec extends FreeSpec {
 
   val ID = CatalogId (0x26)
@@ -39,7 +41,10 @@ class HandlerSpec extends FreeSpec {
     def post (update: Update, bytes: Bytes): Unit =
       dispatch (bytes)
 
-    def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [(CatalogId, Position)] =
+    def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [Meta] =
+      ???
+
+    def checkpoint (meta: Meta): Async [Unit] =
       ???
   }
 
