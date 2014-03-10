@@ -22,7 +22,6 @@ object TierMedic {
       obj: ObjectId
   ) (implicit
       scheduler: Scheduler,
-      recovery: Disks.Recovery,
       config: StoreConfig
   ): TierMedic =
     new SynthMedic (desc, obj)

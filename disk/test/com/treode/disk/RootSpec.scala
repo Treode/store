@@ -34,10 +34,7 @@ class RootSpec extends FlatSpec {
     {
       implicit val recovery = Disks.recover()
       var reloaded: String = null
-      root.reload { s => implicit reloader =>
-        reloaded = s
-        supply()
-      }
+      root.reload (reloaded = _)
       implicit val disks = recovery.reattachAndLaunch (("a", disk1))
       expectResult ("one") (reloaded)
     }}}

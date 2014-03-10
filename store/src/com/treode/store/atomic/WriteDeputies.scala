@@ -8,7 +8,7 @@ import com.treode.store.tier.{TierDescriptor, TierTable}
 
 import Async.guard
 import AsyncConversions._
-import WriteDeputies.{Root, active}
+import WriteDeputies.Root
 
 private class WriteDeputies (kit: AtomicKit) {
   import WriteDeputy._
@@ -38,13 +38,15 @@ private class WriteDeputies (kit: AtomicKit) {
 
   def checkpoint(): Async [Root] =
     guard {
-      val ds = materialize (deputies.values)
+      val _deputies = materialize (deputies.values)
       for {
-        (ss, _archive, _tables) <- Latch.triple (
-            ds.latch.seq (_.checkpoint()),
-            archive.checkpoint(),
-            tables.checkpoint())
-        _active <- active.write (0, 0, ss.flatten)
+        (__active, __tables, _archive) <- Latch.triple (
+            _deputies.latch.seq (_.checkpoint()),
+            tables.checkpoint(),
+            archive.checkpoint())
+        (_active, _tables) <- Latch.pair (
+            WriteDeputies.active.write (0, 0, __active.flatten),
+            TimedStore.tables.write (0, 0, __tables))
       } yield new Root (_active, _archive, _tables)
     }
 
@@ -67,13 +69,13 @@ private object WriteDeputies {
   class Root (
       val active: Position,
       val archive: TierTable.Meta,
-      val tables: TimedStore.Meta)
+      val tables: Position)
 
   object Root {
 
     val pickler = {
       import AtomicPicklers._
-      wrap (pos, tierMeta, timedStoreMeta)
+      wrap (pos, tierMeta, pos)
       .build (v => new Root (v._1, v._2, v._3))
       .inspect (v => (v.active, v.archive, v.tables))
     }}

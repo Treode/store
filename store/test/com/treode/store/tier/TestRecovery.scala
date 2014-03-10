@@ -15,11 +15,10 @@ private class TestRecovery (
     config: StoreConfig
 ) extends TestTable.Recovery {
 
- val medic = TierMedic (descriptor, id.id)
+  val medic = TierMedic (descriptor, id.id)
 
-  root.reload { tiers => implicit reload =>
+  root.reload { tiers =>
     medic.checkpoint (tiers)
-    supply(())
   }
 
   put.replay { case (gen, key, value) =>

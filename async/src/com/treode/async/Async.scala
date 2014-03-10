@@ -154,14 +154,14 @@ object Async {
   def defer (cb: Callback [_]) (f: => Async [_]): Unit =
     guard (f) defer (cb)
 
-  def cond (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
+  def cond [A] (p: => Boolean) (f: => Async [A]): Async [Unit] =
     new Async [Unit] {
       private var ran = false
       def run (cb: Callback [Unit]): Unit =
         try {
           require (!ran, "Async was already run.")
           ran = true
-          if (p) f run cb else cb.pass()
+          if (p) f map (_ => ()) run cb else cb.pass()
         } catch {
           case e: Throwable => cb.fail (e)
         }}

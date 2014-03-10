@@ -1,7 +1,7 @@
 package com.treode.store.catalog
 
 import com.treode.async.Async
-import com.treode.store.{Bytes, CatalogId}
+import com.treode.store.CatalogId
 
 import Async.async
 

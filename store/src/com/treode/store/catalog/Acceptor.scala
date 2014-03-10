@@ -1,8 +1,8 @@
 package com.treode.store.catalog
 
-import com.treode.async.{Async, Callback, Fiber}
+import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
-import com.treode.store.{CatalogId, Bytes}
+import com.treode.store.CatalogId
 import com.treode.store.paxos.BallotNumber
 
 import Callback.ignore

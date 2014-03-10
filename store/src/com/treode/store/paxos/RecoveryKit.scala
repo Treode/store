@@ -9,8 +9,9 @@ import com.treode.disk.Disks
 import com.treode.store.{Atlas, Bytes, Paxos, StoreConfig}
 import com.treode.store.tier.TierMedic
 
-import Acceptors.{active, root}
+import Acceptors.Root
 import Acceptor.{ActiveStatus, open, promise, accept, reaccept, close}
+import Async.cond
 
 private class RecoveryKit (implicit
     val random: Random,
@@ -22,12 +23,7 @@ private class RecoveryKit (implicit
 
   val archive = TierMedic (Acceptors.archive, 0)
   val medics = newMedicsMap
-
-  def openByStatus (status: ActiveStatus) {
-    val m1 = Medic (status, this)
-    val m0 = medics.putIfAbsent (m1.key, m1)
-    require (m0 == null, s"Already recovering paxos instance ${m1.key}.")
-  }
+  var root = Option.empty [Root]
 
   def openWithDefault (key: Bytes, default: Bytes) {
     var m0 = medics.get (key)
@@ -45,10 +41,8 @@ private class RecoveryKit (implicit
     m
   }
 
-  root.reload { root => implicit reload =>
-    archive.checkpoint (root.archive)
-    for (ss <- active.read (reload, root.active))
-      yield (ss foreach openByStatus)
+  Acceptors.root.reload { root =>
+    this.root = Some (root)
   }
 
   open.replay { case (key, default) =>
@@ -71,15 +65,30 @@ private class RecoveryKit (implicit
     get (key) closed (chosen, gen)
   }
 
+  def checkpoint (status: ActiveStatus) {
+    val m1 = Medic (status, this)
+    val m0 = medics.putIfAbsent (m1.key, m1)
+    if (m0 != null)
+      m0.checkpoint (status)
+  }
+
+  def checkpoint (root: Root) (implicit disks: Disks): Async [Unit] = {
+    for {
+      _active <- Acceptors.active.read (root.active)
+    } yield {
+      _active foreach checkpoint
+    }}
+
   def launch (implicit launch: Disks.Launch, atlas: Atlas): Async [Paxos] = {
     import launch.disks
 
     val kit = new PaxosKit (archive.close())
     import kit.{acceptors, proposers}
 
-    root.checkpoint (acceptors.checkpoint())
+    Acceptors.root.checkpoint (acceptors.checkpoint())
 
     for {
+      _ <- cond (root.isDefined) (checkpoint (root.get))
       _ <- acceptors.recover (materialize (medics.values))
     } yield {
       acceptors.attach()

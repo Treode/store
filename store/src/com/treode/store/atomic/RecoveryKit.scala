@@ -2,15 +2,15 @@ package com.treode.store.atomic
 
 import scala.util.Random
 
-import com.treode.async.{Async, Scheduler}
+import com.treode.async.{Async, Latch, Scheduler}
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
 import com.treode.store.{Atlas, Paxos, Store, StoreConfig, TxId}
 import com.treode.store.tier.TierMedic
 
-import Async.supply
-import WriteDeputies.{active, root}
+import Async.cond
+import WriteDeputies.Root
 import WriteDeputy.{ActiveStatus, aborted, committed, preparing}
 
 private class RecoveryKit (implicit
@@ -24,6 +24,7 @@ private class RecoveryKit (implicit
   val archive = TierMedic (WriteDeputies.archive, 0)
   val tables = new TimedMedic (this)
   val writers = newWriterMedicsMap
+  var root = Option.empty [Root]
 
   def openByStatus (status: ActiveStatus) {
     val m1 = Medic (status, this)
@@ -37,14 +38,9 @@ private class RecoveryKit (implicit
     if (m0 == null) m1 else m0
   }
 
-  root.reload { root => implicit reload =>
-    archive.checkpoint (root.archive)
-    for {
-      _ <- tables.checkpoint (root.tables)
-      ss <- active.read (reload, root.active)
-    } yield {
-      ss foreach openByStatus
-    }}
+  WriteDeputies.root.reload { root =>
+    this.root = Some (root)
+  }
 
   preparing.replay { case (xid, ops) =>
     get (xid) .preparing (ops)
@@ -58,6 +54,16 @@ private class RecoveryKit (implicit
     get (xid) .aborted (gen)
   }
 
+  def checkpoint (root: Root) (implicit disks: Disks): Async [Unit] = {
+    for {
+      (_tables, _archive) <- Latch.pair (
+          TimedStore.tables.read (root.tables),
+          WriteDeputies.active.read (root.active))
+    } yield {
+      tables.checkpoint (_tables)
+      archive.checkpoint (root.archive)
+    }}
+
   def launch (implicit launch: Disks.Launch, atlas: Atlas, paxos: Paxos): Async [Store] = {
     import launch.disks
 
@@ -65,6 +71,7 @@ private class RecoveryKit (implicit
     kit.tables.recover (tables.close())
 
     for {
+      _ <- cond (root.isDefined) (checkpoint (root.get))
       _ <- kit.writers.recover (materialize (writers.values))
     } yield {
       kit.reader.attach()

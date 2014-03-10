@@ -20,7 +20,7 @@ extends Disks.Recovery {
   def requireOpen(): Unit =
     require (open, "Recovery has already begun.")
 
-  def reload [B] (desc: RootDescriptor [B]) (f: B => Disks.Reload => Async [Unit]) {
+  def reload [B] (desc: RootDescriptor [B]) (f: B => Any) {
     requireOpen()
     loaders.reload (desc) (f)
   }

@@ -123,6 +123,15 @@ object PicklerRegistry {
   def tag [P] (p: Pickler [P], id: Long, v: P): Tag =
     new BaseTag (p, id, v)
 
+  def action [P] (p: Pickler [P], id: Long) (f: P => Any): P => Tag =
+    { v =>
+      f (v)
+      new BaseTag (p, id, v)
+    }
+
+  def action [P] (reg: PicklerRegistry [Tag], p: Pickler [P], id: Long) (f: P => Any): Unit =
+    reg.register (p, id) (action (p, id) (f))
+
   def pickler [T <: Tag]: Pickler [T] =
     new Pickler [T] {
       def p (v: T, ctx: PickleContext): Unit = v.pickle (ctx)

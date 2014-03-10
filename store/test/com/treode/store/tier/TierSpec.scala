@@ -3,14 +3,13 @@ package com.treode.store.tier
 import java.nio.file.Paths
 import scala.collection.mutable.Builder
 
-import com.treode.async.{AsyncConversions, Async, Callback, StubScheduler}
+import com.treode.async.{AsyncConversions, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.pickle.Picklers
 import com.treode.store._
-import com.treode.disk.{Disks, DisksConfig, DiskGeometry, PageDescriptor, Position}
+import com.treode.disk.{Disks, DisksConfig, DiskGeometry, Position}
 import org.scalatest.WordSpec
 
-import Async.async
 import AsyncConversions._
 import Cardinals.One
 import Fruits._

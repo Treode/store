@@ -27,8 +27,6 @@ object Disks {
 
     implicit def disks: Disks
 
-    def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P]
-
     def checkpoint [B] (desc: RootDescriptor [B]) (f: => Async [B])
 
     def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G])
@@ -36,14 +34,9 @@ object Disks {
     def launch()
   }
 
-  trait Reload {
-
-    def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P]
-  }
-
   trait Recovery {
 
-    def reload [B] (desc: RootDescriptor [B]) (f: B => Reload => Async [Unit])
+    def reload [B] (desc: RootDescriptor [B]) (f: B => Any)
 
     def replay [R] (desc: RecordDescriptor [R]) (f: R => Any)
 

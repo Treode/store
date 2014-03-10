@@ -11,7 +11,6 @@ import com.treode.store.tier.{TierMedic, TierTable}
 
 import Async.async
 import AsyncConversions._
-import TimedStore.{Meta, pager}
 
 private class TimedStore (kit: AtomicKit) {
   import kit.{config, disks, scheduler}
@@ -89,26 +88,14 @@ private class TimedStore (kit: AtomicKit) {
     for (meta <- table.checkpoint())
       yield (id, meta)
 
-  def checkpoint(): Async [Meta] = {
+  def checkpoint(): Async [Map [TableId, TierTable.Meta]] = {
     val tables = materialize (this.tables.entrySet)
-    for {
-      roots <- tables.latch.map (e => checkpoint (e.getKey, e.getValue))
-      pos <- pager.write (0, 0, roots)
-    } yield Meta (pos)
+    tables.latch.map (e => checkpoint (e.getKey, e.getValue))
   }}
 
 private object TimedStore {
 
-  case class Meta (tables: Position)
-
-  object Meta {
-
-    val pickler = {
-      import AtomicPicklers._
-      wrap (pos) .build (Meta.apply _) .inspect (_.tables)
-    }}
-
-  val pager = {
+  val tables = {
     import AtomicPicklers._
     PageDescriptor (0x889C188D2C6EB309L, uint, map (tableId, tierMeta))
   }}

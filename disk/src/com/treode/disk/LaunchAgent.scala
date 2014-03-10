@@ -19,9 +19,6 @@ private class LaunchAgent (drives: DiskDrives) extends Disks.Launch {
 
   def disks: Disks = drives
 
-  def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
-    drives.fetch (desc, pos)
-
   def checkpoint [B] (desc: RootDescriptor [B]) (f: => Async [B]): Unit =
     synchronized {
       requireOpen()

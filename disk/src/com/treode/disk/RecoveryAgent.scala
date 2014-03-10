@@ -9,7 +9,7 @@ import com.treode.async.{Async, AsyncConversions, Callback, Scheduler}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
-import Async.{async, defer, supply}
+import Async.{async, cond, defer, supply}
 import AsyncConversions._
 
 private class RecoveryAgent (
@@ -87,12 +87,7 @@ private class RecoveryAgent (
       val files = reads.mapValuesBy (_.superb (useGen1) .id) (_.file)
 
       for {
-        roots <-
-            if (rootpos.length == 0)
-              supply (Seq.empty [Disks.Reload => Async [Unit]])
-            else
-              DiskDrive.read (files (rootpos.disk), loaders.pager, rootpos)
-        _ <- async [Unit] (new ReloadAgent (files, roots, _))
+        _ <- cond (rootpos.length > 0) (DiskDrive.read (files (rootpos.disk), loaders.pager, rootpos))
         disks <- LogIterator.replay (useGen1, reads, records)
       } yield launch (disks)
     }

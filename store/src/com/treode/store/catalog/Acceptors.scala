@@ -1,12 +1,6 @@
 package com.treode.store.catalog
 
-import com.treode.async.{Async, AsyncConversions, Latch}
-import com.treode.disk.{PageDescriptor, Position, RootDescriptor}
-import com.treode.store.{Bytes, CatalogId}
-import com.treode.store.tier.{TierDescriptor, TierTable}
-
-import Async.guard
-import AsyncConversions._
+import com.treode.store.CatalogId
 
 private class Acceptors (kit: CatalogKit) {
   import kit.{cluster, disks}

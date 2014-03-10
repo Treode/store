@@ -7,13 +7,14 @@ import com.treode.async.Async
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, CatalogId}
 
+import Async.supply
 import Poster.pager
 
-private class Medic (
-  var version: Int,
-  var bytes:  Bytes,
-  var history: ArrayDeque [Bytes]
-) {
+private class Medic {
+
+  var version = 0
+  var bytes = Bytes.empty
+  var history = new ArrayDeque [Bytes]
 
   def patch (version: Int, bytes: Bytes, history: Seq [Bytes]) {
     if (this.version < version) {
@@ -21,7 +22,13 @@ private class Medic (
       this.bytes = bytes
       this.history.clear()
       this.history.addAll (history)
-    }}
+    } else {
+      val start = version - history.size
+      val thisStart = version - history.size
+      if (start < thisStart && this.history.size < catalogHistoryLimit) {
+        for (patch <- history take (thisStart - start))
+          this.history.push (patch)
+      }}}
 
   def patch (end: Int, patches: Seq [Bytes]) {
     val span = end - version
@@ -45,25 +52,9 @@ private class Medic (
         patch (end, patches)
     }
 
+  def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Unit =
+    patch (version, bytes, history)
+
   def close (poster: Poster): Handler =
     new Handler (version, bytes.hashCode, bytes, history, poster)
 }
-
-private object Medic {
-
-  def apply(): Medic =
-    new Medic (0, Bytes.empty, new ArrayDeque)
-
-  def apply (
-      id: CatalogId,
-      pos: Position
-  ) (implicit
-      reload: Disks.Reload
-  ): Async [(CatalogId, Medic)] = {
-    for {
-      (version, bytes, _history) <- pager.read (reload, pos)
-    } yield {
-      val history = new ArrayDeque [Bytes]
-      history.addAll (_history)
-      (id, new Medic (version, bytes, history))
-    }}}

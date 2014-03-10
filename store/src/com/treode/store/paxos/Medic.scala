@@ -41,6 +41,20 @@ private class Medic (
     archive.put (gen, key, chosen)
   }
 
+  def checkpoint (status: ActiveStatus) {
+    import ActiveStatus._
+    status match {
+      case Restoring (key, default) =>
+        ()
+      case Deliberating (key, default, ballot, proposal) =>
+        if (this.ballot < ballot) {
+          this.ballot = ballot
+          this.proposal = proposal
+        }
+      case Closed (key, chosen) =>
+        this.chosen = Some (chosen)
+    }}
+
   def close (kit: PaxosKit): Async [Acceptor] = fiber.supply {
     val a = new Acceptor (key, kit)
     if (chosen.isDefined)

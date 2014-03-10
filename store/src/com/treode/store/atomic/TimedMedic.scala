@@ -4,14 +4,13 @@ import com.treode.async.Async
 import com.treode.async.misc.materialize
 import com.treode.disk.Disks
 import com.treode.store.{TableId, TxClock, WriteOp}
-import com.treode.store.tier.TierMedic
+import com.treode.store.tier.{TierMedic, TierTable}
 
 import Async.guard
 import TimedTable.keyToBytes
-import TimedStore.pager
 
 private class TimedMedic (kit: RecoveryKit) {
-  import kit.{config, recovery, scheduler}
+  import kit.{config, scheduler}
 
   val tables = newTableMedicsMap
 
@@ -34,14 +33,10 @@ private class TimedMedic (kit: RecoveryKit) {
         case op: Delete => t.delete (gen, k)
       }}}
 
-  def checkpoint (meta: TimedStore.Meta) (implicit reload: Disks.Reload): Async [Unit] =
-    guard {
-      for {
-        _tables <- pager.read (reload, meta.tables)
-      } yield {
-        for ((id, meta) <- _tables)
-          tables.get (id) .checkpoint (meta)
-      }}
+  def checkpoint (tables: Map [TableId, TierTable.Meta]) {
+    for ((id, meta) <- tables)
+      get (id) .checkpoint (meta)
+  }
 
   def close() (implicit launch: Disks.Launch): Seq [(TableId, TimedTable)] = {
     materialize (tables.entrySet) map { entry =>
