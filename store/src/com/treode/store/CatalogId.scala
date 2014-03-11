@@ -1,12 +1,14 @@
 package com.treode.store
 
 import scala.language.implicitConversions
+
+import com.google.common.primitives.UnsignedLongs
 import com.treode.pickle.Picklers
 
 class CatalogId (val id: Long) extends AnyVal with Ordered [CatalogId] {
 
   def compare (that: CatalogId): Int =
-    this.id compare that.id
+    UnsignedLongs.compare (this.id, that.id)
 
   override def toString =
     if (id < 256) f"Catalog:$id%02X" else f"Catalog:$id%016X"

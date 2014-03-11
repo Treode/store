@@ -2,12 +2,13 @@ package com.treode.cluster
 
 import scala.language.implicitConversions
 
+import com.google.common.primitives.UnsignedLongs
 import com.treode.pickle.Picklers
 
 class HostId private (val id: Long) extends AnyVal with Ordered [HostId] {
 
   def compare (that: HostId): Int =
-    this.id compare that.id
+    UnsignedLongs.compare (this.id, that.id)
 
   override def toString =
     if (id < 256) f"Host:$id%02X" else f"Host:$id%016X"
