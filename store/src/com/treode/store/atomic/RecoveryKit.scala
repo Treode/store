@@ -9,9 +9,7 @@ import com.treode.disk.Disks
 import com.treode.store.{Atlas, Paxos, Store, StoreConfig, TxId}
 import com.treode.store.tier.TierMedic
 
-import Async.cond
-import WriteDeputies.Root
-import WriteDeputy.{ActiveStatus, aborted, committed, preparing}
+import WriteDeputy.{aborted, committed, preparing}
 
 private class RecoveryKit (implicit
     val random: Random,
@@ -24,22 +22,15 @@ private class RecoveryKit (implicit
   val archive = TierMedic (WriteDeputies.archive, 0)
   val tables = new TimedMedic (this)
   val writers = newWriterMedicsMap
-  var root = Option.empty [Root]
-
-  def openByStatus (status: ActiveStatus) {
-    val m1 = Medic (status, this)
-    val m0 = writers.putIfAbsent (m1.xid, m1)
-    require (m0 == null, s"Already recovering write deputy ${m1.xid}.")
-  }
 
   def get (xid: TxId): Medic = {
-    val m1 = Medic (xid, this)
+    val m1 = new Medic (xid, this)
     val m0 = writers.putIfAbsent (m1.xid, m1)
     if (m0 == null) m1 else m0
   }
 
   WriteDeputies.root.reload { root =>
-    this.root = Some (root)
+    ()
   }
 
   preparing.replay { case (xid, ops) =>
@@ -54,15 +45,13 @@ private class RecoveryKit (implicit
     get (xid) .aborted (gen)
   }
 
-  def checkpoint (root: Root) (implicit disks: Disks): Async [Unit] = {
-    for {
-      (_tables, _archive) <- Latch.pair (
-          TimedStore.tables.read (root.tables),
-          WriteDeputies.active.read (root.active))
-    } yield {
-      tables.checkpoint (_tables)
-      archive.checkpoint (root.archive)
-    }}
+  TimedStore.checkpoint.replay { case (tab, meta) =>
+    tables.checkpoint (tab, meta)
+  }
+
+  WriteDeputies.checkpoint.replay { case meta =>
+    archive.checkpoint (meta)
+  }
 
   def launch (implicit launch: Disks.Launch, atlas: Atlas, paxos: Paxos): Async [Store] = {
     import launch.disks
@@ -71,7 +60,6 @@ private class RecoveryKit (implicit
     kit.tables.recover (tables.close())
 
     for {
-      _ <- cond (root.isDefined) (checkpoint (root.get))
       _ <- kit.writers.recover (materialize (writers.values))
     } yield {
       kit.reader.attach()

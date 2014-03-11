@@ -33,10 +33,8 @@ private class TimedMedic (kit: RecoveryKit) {
         case op: Delete => t.delete (gen, k)
       }}}
 
-  def checkpoint (tables: Map [TableId, TierTable.Meta]) {
-    for ((id, meta) <- tables)
-      get (id) .checkpoint (meta)
-  }
+  def checkpoint (id: TableId, meta: TierTable.Meta): Unit =
+    get (id) .checkpoint (meta)
 
   def close() (implicit launch: Disks.Launch): Seq [(TableId, TimedTable)] = {
     materialize (tables.entrySet) map { entry =>

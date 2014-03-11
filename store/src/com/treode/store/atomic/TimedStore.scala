@@ -4,15 +4,15 @@ import java.util.concurrent.ConcurrentHashMap
 
 import com.treode.async.{Async, AsyncConversions, Callback, Latch}
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disks, PageDescriptor, Position}
+import com.treode.disk.{Disks, ObjectId, PageHandler, Position, RecordDescriptor}
 import com.treode.store.{ReadOp, TableId, TxClock, TxId, Value, WriteOp}
 import com.treode.store.locks.LockSpace
 import com.treode.store.tier.{TierMedic, TierTable}
 
-import Async.async
+import Async.{async, guard, supply}
 import AsyncConversions._
 
-private class TimedStore (kit: AtomicKit) {
+private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
   import kit.{config, disks, scheduler}
 
   val space = new LockSpace
@@ -84,18 +84,29 @@ private class TimedStore (kit: AtomicKit) {
       tables.put (id, t)
   }
 
-  private def checkpoint (id: TableId, table: TimedTable) =
-    for (meta <- table.checkpoint())
-      yield (id, meta)
+  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+    supply (getTable (obj.id) .probe (groups))
 
-  def checkpoint(): Async [Map [TableId, TierTable.Meta]] = {
+  def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
+    guard {
+      val id = TableId (obj.id)
+      for {
+        meta <- getTable (id) .compact (groups)
+        _ <- TimedStore.checkpoint.record (id, meta)
+      } yield ()
+    }
+
+  private def checkpoint (id: TableId, table: TimedTable): Async [Unit] =
+    table.checkpoint() .flatMap (TimedStore.checkpoint.record (id, _))
+
+  def checkpoint(): Async [Unit] = {
     val tables = materialize (this.tables.entrySet)
-    tables.latch.map (e => checkpoint (e.getKey, e.getValue))
+    tables.latch.unit (e => checkpoint (e.getKey, e.getValue))
   }}
 
 private object TimedStore {
 
-  val tables = {
+  val checkpoint = {
     import AtomicPicklers._
-    PageDescriptor (0x889C188D2C6EB309L, uint, map (tableId, tierMeta))
+    RecordDescriptor (0x1DB0E46F7FD15C5DL, tuple (tableId, tierMeta))
   }}

@@ -2,15 +2,14 @@ package com.treode.store.atomic
 
 import com.treode.async.{Async, AsyncConversions, Latch}
 import com.treode.async.misc.materialize
-import com.treode.disk.{PageDescriptor, Position, RootDescriptor}
+import com.treode.disk.{Disks, ObjectId, PageHandler, Position, RecordDescriptor, RootDescriptor}
 import com.treode.store.{Bytes, TableId, TxId}
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
-import Async.guard
+import Async.{guard, supply}
 import AsyncConversions._
-import WriteDeputies.Root
 
-private class WriteDeputies (kit: AtomicKit) {
+private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
   import WriteDeputy._
   import kit.{archive, cluster, disks, tables}
 
@@ -36,21 +35,34 @@ private class WriteDeputies (kit: AtomicKit) {
     } yield ()
   }
 
-  def checkpoint(): Async [Root] =
+  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+    supply (archive.probe (groups))
+
+  def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
-      val _deputies = materialize (deputies.values)
       for {
-        (__active, __tables, _archive) <- Latch.triple (
-            _deputies.latch.seq (_.checkpoint()),
-            tables.checkpoint(),
-            archive.checkpoint())
-        (_active, _tables) <- Latch.pair (
-            WriteDeputies.active.write (0, 0, __active.flatten),
-            TimedStore.tables.write (0, 0, __tables))
-      } yield new Root (_active, _archive, _tables)
+        meta <- archive.compact (groups)
+        _ <- WriteDeputies.checkpoint.record (meta)
+      } yield ()
     }
 
-  def attach() {
+  def checkpoint(): Async [Unit] =
+    guard {
+      for {
+        _ <- Latch.triple (
+            archive.checkpoint() .flatMap (WriteDeputies.checkpoint.record (_)),
+            tables.checkpoint(),
+            materialize (deputies.values) .latch.unit (_.checkpoint()))
+      } yield ()
+    }
+
+  def attach () (implicit launch: Disks.Launch) {
+
+    WriteDeputies.root.checkpoint (checkpoint())
+
+    WriteDeputies.archive.handle (this)
+
+    TimedTable.table.handle (tables)
 
     prepare.listen { case ((xid, ct, ops), mdtr) =>
       get (xid) .prepare (mdtr, ct, ops)
@@ -66,28 +78,14 @@ private class WriteDeputies (kit: AtomicKit) {
 
 private object WriteDeputies {
 
-  class Root (
-      val active: Position,
-      val archive: TierTable.Meta,
-      val tables: Position)
-
-  object Root {
-
-    val pickler = {
-      import AtomicPicklers._
-      wrap (pos, tierMeta, pos)
-      .build (v => new Root (v._1, v._2, v._3))
-      .inspect (v => (v.active, v.archive, v.tables))
-    }}
-
   val root = {
     import AtomicPicklers._
-    RootDescriptor (0xB0E4265A9A70F753L, Root.pickler)
+    RootDescriptor (0xB0E4265A9A70F753L, unit)
   }
 
-  val active = {
+  val checkpoint = {
     import AtomicPicklers._
-    PageDescriptor (0x86CA87954DF61878L, const (0), seq (activeStatus))
+    RecordDescriptor (0x3D121F46F3D82362L, tierMeta)
   }
 
   val archive = {

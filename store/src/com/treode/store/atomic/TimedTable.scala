@@ -27,6 +27,12 @@ private class TimedTable (table: TierTable) {
   def delete (key: Bytes, time: TxClock): Long =
     table.delete (keyToBytes (key, time))
 
+  def probe (groups: Set [Long]): Set [Long] =
+    table.probe (groups)
+
+  def compact (groups: Set [Long]): Async [TierTable.Meta] =
+    table.compact (groups)
+
   def checkpoint(): Async [TierTable.Meta] =
     table.checkpoint()
 }

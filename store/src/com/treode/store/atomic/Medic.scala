@@ -4,7 +4,7 @@ import com.treode.async.{Async, Fiber}
 import com.treode.store.{Bytes, TxClock, TxId, WriteOp}
 import com.treode.store.tier.TierMedic
 
-import WriteDeputy.{ActiveStatus, ArchiveStatus}
+import WriteDeputy.ArchiveStatus
 
 private class Medic (val xid: TxId, kit: RecoveryKit)  {
   import kit.{archive, scheduler, tables}
@@ -50,19 +50,3 @@ private class Medic (val xid: TxId, kit: RecoveryKit)  {
       }
       w
     }}
-
-private object Medic {
-
-  def apply (xid: TxId, kit: RecoveryKit): Medic =
-    new Medic (xid, kit)
-
-  def apply (status: ActiveStatus, kit: RecoveryKit): Medic = {
-    import ActiveStatus._
-    status match {
-
-      case Preparing (xid, ops) =>
-        val m = new Medic (xid, kit)
-        m.preparing (ops)
-        m
-    }}
-}
