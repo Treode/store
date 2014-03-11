@@ -20,7 +20,7 @@ private class DiskDrives (implicit
   type AttachRequest = (Seq [AttachItem], Callback [Unit])
   type DrainRequest = (Seq [Path], Callback [Unit])
   type DetachRequest = DiskDrive
-  type CheckpointRequest = (Int, Position, Callback [Unit])
+  type CheckpointRequest = Callback [Unit]
 
   val fiber = new Fiber (scheduler)
   val logd = new Dispatcher [PickledRecord] (scheduler)
@@ -39,8 +39,6 @@ private class DiskDrives (implicit
 
   var bootgen = 0
   var number = 0
-  var rootgen = 0
-  var rootpos = Position (0, 0, 0)
 
   def panic (t: Throwable) {
     throw t
@@ -103,7 +101,7 @@ private class DiskDrives (implicit
       val bootgen = this.bootgen + 1
       val number = this.number + items.size
       val attached = priorPaths ++ newPaths
-      val newBoot = BootBlock (bootgen, number, attached, rootgen, rootpos)
+      val newBoot = BootBlock (bootgen, number, attached)
 
       if (newPaths exists (priorPaths contains _)) {
         val already = (newPaths -- priorPaths).toSeq.sorted
@@ -145,7 +143,7 @@ private class DiskDrives (implicit
       val disks = this.disks -- (items map (_.id))
       val bootgen = this.bootgen + 1
       val attached = disks.values.setBy (_.path)
-      val newboot = BootBlock (bootgen, number, attached, rootgen, rootpos)
+      val newboot = BootBlock (bootgen, number, attached)
 
       for {
         _ <- disks.latch.unit (_._2.checkpoint (newboot))
@@ -210,29 +208,22 @@ private class DiskDrives (implicit
   }
 
   private def _checkpoint (req: CheckpointRequest) {
-    val (rootgen, rootpos, _cb) = req
-    val cb = leave (_cb)
+    val cb = leave (req)
     engaged = true
     fiber.run (cb) {
-
       val attached = disks.values.map (_.path) .toSet
-      val newBoot = BootBlock (bootgen, number, attached, rootgen, rootpos)
+      val newBoot = BootBlock (bootgen, number, attached)
+      disks.latch.unit (_._2.checkpoint (newBoot))
+    }}
 
-      for {
-        _ <- disks.latch.unit (_._2.checkpoint (newBoot))
-      } yield {
-        this.rootgen = rootgen
-        this.rootpos = rootpos
-      }}}
-
-  def checkpoint (rootgen: Int, rootpos: Position): Async [Unit] =
+  def checkpoint (): Async [Unit] =
     fiber.async { cb =>
       require (checkreqs.isEmpty, "A checkpoint is already in progress.")
       if (engaged)
-        checkreqs = Some ((rootgen, rootpos, cb))
+        checkreqs = Some (cb)
       else
         engaged = true
-        _checkpoint (rootgen, rootpos, cb)
+        _checkpoint (cb)
     }
 
   def cleanable(): Async [Iterator [SegmentPointer]] =  {

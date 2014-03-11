@@ -40,10 +40,6 @@ private class RecoveryKit (implicit
     m
   }
 
-  Acceptors.root.reload { root =>
-    ()
-  }
-
   open.replay { case (key, default) =>
     openWithDefault (key, default)
   }

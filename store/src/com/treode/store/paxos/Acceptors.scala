@@ -2,7 +2,7 @@ package com.treode.store.paxos
 
 import com.treode.async.{Async, AsyncConversions, Latch}
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position, RecordDescriptor, RootDescriptor}
+import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position, RecordDescriptor}
 import com.treode.store.Bytes
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
@@ -61,8 +61,6 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   def attach () (implicit launch: Disks.Launch) {
     import Acceptor.{choose, propose, query}
 
-    Acceptors.root.checkpoint (checkpoint())
-
     Acceptors.archive.handle (this)
 
     query.listen { case ((key, ballot, default), c) =>
@@ -78,11 +76,6 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
     }}}
 
 private object Acceptors {
-
-  val root = {
-    import PaxosPicklers._
-    RootDescriptor (0x4BF7F275BBE8086EL, unit)
-  }
 
   val checkpoint = {
     import PaxosPicklers._

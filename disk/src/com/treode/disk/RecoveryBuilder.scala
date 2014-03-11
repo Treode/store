@@ -14,16 +14,10 @@ private class RecoveryBuilder (implicit scheduler: Scheduler, config: DisksConfi
 extends Disks.Recovery {
 
   private val records = new RecordRegistry
-  private val loaders = new ReloadRegistry
   private var open = true
 
   def requireOpen(): Unit =
     require (open, "Recovery has already begun.")
-
-  def reload [B] (desc: RootDescriptor [B]) (f: B => Any) {
-    requireOpen()
-    loaders.reload (desc) (f)
-  }
 
   def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit = {
     requireOpen()
@@ -32,7 +26,7 @@ extends Disks.Recovery {
 
   def close (cb: Callback [Launch]): RecoveryAgent = {
     open = false
-    new RecoveryAgent (records, loaders, cb)
+    new RecoveryAgent (records, cb)
   }
 
   def reattach (items: Seq [(Path, File)]): Async [Launch] =

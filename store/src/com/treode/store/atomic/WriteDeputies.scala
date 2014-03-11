@@ -2,7 +2,7 @@ package com.treode.store.atomic
 
 import com.treode.async.{Async, AsyncConversions, Latch}
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disks, ObjectId, PageHandler, Position, RecordDescriptor, RootDescriptor}
+import com.treode.disk.{Disks, ObjectId, PageHandler, Position, RecordDescriptor}
 import com.treode.store.{Bytes, TableId, TxId}
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
@@ -58,8 +58,6 @@ private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
 
   def attach () (implicit launch: Disks.Launch) {
 
-    WriteDeputies.root.checkpoint (checkpoint())
-
     WriteDeputies.archive.handle (this)
 
     TimedTable.table.handle (tables)
@@ -77,11 +75,6 @@ private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
     }}}
 
 private object WriteDeputies {
-
-  val root = {
-    import AtomicPicklers._
-    RootDescriptor (0xB0E4265A9A70F753L, unit)
-  }
 
   val checkpoint = {
     import AtomicPicklers._

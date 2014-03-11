@@ -2,7 +2,7 @@ package com.treode.store.catalog
 
 import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Scheduler}
 import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
-import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position, RootDescriptor}
+import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position}
 import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 
 import AsyncConversions._
@@ -102,8 +102,6 @@ private class Broker (
 
   def attach () (implicit launch: Disks.Launch, cluster: Cluster) {
 
-    Broker.root.checkpoint (checkpoint())
-
     Poster.pager.handle (this)
 
     Broker.ping.listen { (values, from) =>
@@ -122,11 +120,6 @@ private class Broker (
   }}
 
 object Broker {
-
-  val root = {
-    import CatalogPicklers._
-    RootDescriptor (0xE246C81CFC83575FL, unit)
-  }
 
   val ping: MessageDescriptor [Ping] = {
     import CatalogPicklers._

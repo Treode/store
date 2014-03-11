@@ -14,7 +14,6 @@ import AsyncConversions._
 
 private class RecoveryAgent (
     records: RecordRegistry,
-    loaders: ReloadRegistry,
     val cb: Callback [Disks.Launch]
 ) (implicit
     val scheduler: Scheduler,
@@ -32,8 +31,7 @@ private class RecoveryAgent (
 
       val disks = new DiskDrives
       val attaching = items.map (_._1) .toSet
-      val roots = Position (0, 0, 0)
-      val boot = BootBlock.apply (0, items.size, attaching, 0, roots)
+      val boot = BootBlock.apply (0, items.size, attaching)
 
       val task = for {
         drives <- items.latch.indexed { case ((path, file, geometry), i) =>
@@ -83,11 +81,9 @@ private class RecoveryAgent (
       val useGen1 = chooseSuperBlock (reads)
       val boot = if (useGen1) reads.head.sb1.get.boot else reads.head.sb2.get.boot
       verifyReattachment (boot.disks.toSet, reads .map (_.path) .toSet)
-      val rootpos = reads.head.superb (useGen1) .boot.roots
       val files = reads.mapValuesBy (_.superb (useGen1) .id) (_.file)
 
       for {
-        _ <- cond (rootpos.length > 0) (DiskDrive.read (files (rootpos.disk), loaders.pager, rootpos))
         disks <- LogIterator.replay (useGen1, reads, records)
       } yield launch (disks)
     }

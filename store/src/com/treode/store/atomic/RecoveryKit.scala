@@ -29,10 +29,6 @@ private class RecoveryKit (implicit
     if (m0 == null) m1 else m0
   }
 
-  WriteDeputies.root.reload { root =>
-    ()
-  }
-
   preparing.replay { case (xid, ops) =>
     get (xid) .preparing (ops)
   }

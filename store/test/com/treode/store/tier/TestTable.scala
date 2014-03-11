@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.async.{Async, AsyncIterator}
-import com.treode.disk.{Disks, RecordDescriptor, RootDescriptor}
+import com.treode.disk.{Disks, RecordDescriptor}
 import com.treode.store.StorePicklers
 
 private trait TestTable {
@@ -24,11 +24,6 @@ private object TestTable {
   val descriptor = {
     import StorePicklers._
     TierDescriptor (0x28, string, int)
-  }
-
-  val root = {
-    import StorePicklers._
-    RootDescriptor (0xAF, tierMeta)
   }
 
   val put = {

@@ -34,8 +34,8 @@ private class Checkpointer (disks: DiskDrives) {
       engaged = true
       for {
         _ <- disks.mark()
-        pos <- fiber.guard (checkpoints.checkpoint (rootgen+1))
-        _ <- fiber.guard (disks.checkpoint (rootgen+1, pos))
+        _ <- fiber.guard (checkpoints.checkpoint())
+        _ <- fiber.guard (disks.checkpoint())
         _ <- fiber.supply {
             rootgen += 1
             reengage()

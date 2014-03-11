@@ -39,10 +39,6 @@ private class RecoveryKit (implicit
       case None => (Poster (id) (scheduler, _))
     }
 
-  Broker.root.reload { root =>
-    ()
-  }
-
   Poster.update.replay { case (id, update) =>
     fiber.execute (getMedic (id) patch (update))
   }
