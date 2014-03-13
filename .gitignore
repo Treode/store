@@ -5,6 +5,7 @@
 .idea_modules
 .project
 .settings
+/*/logs
 /*/target
 /project/project
 /target

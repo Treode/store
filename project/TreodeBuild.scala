@@ -125,4 +125,26 @@ object TreodeBuild extends Build {
   lazy val systest = Project ("systest", file ("systest"))
     .dependsOn (store)
     .settings (systestSettings: _*)
+
+  lazy val exampleSettings = Seq (
+
+    organization := "com.treode",
+    version := "0.1",
+    scalaVersion := "2.10.3",
+
+    unmanagedSourceDirectories in Compile <<=
+      (baseDirectory ((base: File) => Seq (base / "src"))),
+
+    unmanagedSourceDirectories in CustomTest <<=
+      (baseDirectory ((base: File) => Seq (base / "test"))),
+
+    scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", "-Yinline-warnings"),
+
+    libraryDependencies ++= Seq (
+      "com.twitter" %% "finatra" % "1.5.2"),
+
+    resolvers += "Twitter" at "http://maven.twttr.com")
+
+  lazy val example1 = Project ("example1", file ("example1"))
+    .settings (exampleSettings: _*)
 }
