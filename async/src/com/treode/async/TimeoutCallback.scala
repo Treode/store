@@ -1,11 +1,11 @@
 package com.treode.async
 
 import java.util.concurrent.TimeoutException
-import scala.util.Random
+import scala.util.{Failure, Random, Try}
 
 import Scheduler.toRunnable
 
-class TimeoutCallback [-A] private [async] (
+class TimeoutCallback [A] private [async] (
     fiber: Fiber,
     backoff: Backoff,
     rouse: => Any,
@@ -20,16 +20,10 @@ class TimeoutCallback [-A] private [async] (
     fiber.delay (iter.next) (timeout())
   rouse
 
-  private def _pass (v: A) {
-    val _cb = cb
+  private def _apply (v: Try [A]) {
+    val _cb = cb .asInstanceOf [Callback [A]]
     cb = null
-    _cb .asInstanceOf [Callback [A]] .pass (v)
-  }
-
-  private def _fail (t: Throwable) {
-    val _cb = cb
-    cb = null
-    _cb.fail (t)
+    _cb (v)
   }
 
   private def timeout() {
@@ -39,20 +33,16 @@ class TimeoutCallback [-A] private [async] (
           fiber.delay (iter.next) (timeout())
           rouse
         } catch {
-          case t: Throwable => _fail (t)
+          case t: Throwable => _apply (Failure (t))
         }
       } else {
-        _fail (new TimeoutException)
+        _apply (Failure (new TimeoutException))
       }}}
 
   def invoked: Boolean =
     cb == null
 
-  def pass (v: A): Unit =
+  def apply (v: Try [A]): Unit = synchronized {
     if (cb != null)
-      _pass (v)
-
-  def fail (t: Throwable): Unit =
-    if (cb != null)
-      _fail (t)
-}
+      _apply (v)
+  }}

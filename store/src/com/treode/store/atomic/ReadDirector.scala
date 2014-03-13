@@ -2,10 +2,12 @@ package com.treode.store.atomic
 
 import scala.language.postfixOps
 
-import com.treode.async.{Async, Backoff, Callback, Fiber, TimeoutCallback}
+import com.treode.async.{Async, AsyncConversions, Backoff, Callback, Fiber}
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{HostId, Peer}
 import com.treode.store.{DeputyException, ReadOp, TxClock, Value}
+
+import AsyncConversions._
 
 private class ReadDirector (
     rt: TxClock,

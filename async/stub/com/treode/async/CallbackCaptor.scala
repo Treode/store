@@ -1,9 +1,11 @@
 package com.treode.async
 
 import java.util.concurrent.TimeoutException
+import scala.util.{Failure, Success, Try}
+
 import org.scalatest.Assertions
 
-class CallbackCaptor [T] protected extends Callback [T] {
+class CallbackCaptor [T] protected extends (Try [T] => Unit) {
 
   private var _invokation: Array [StackTraceElement] = null
   private var _v: T = null.asInstanceOf [T]
@@ -19,15 +21,12 @@ class CallbackCaptor [T] protected extends Callback [T] {
       assert (false, "Callback was already invoked.")
     }}
 
-  def pass (v: T) = {
+  def apply (v: Try [T]) {
     invoked()
-    _v = v
-  }
-
-  def fail (t: Throwable) {
-    invoked()
-    _t = t
-  }
+    v match {
+      case Success (v) => _v = v
+      case Failure (t) => _t = t
+    }}
 
   def wasInvoked: Boolean =
     _invokation != null

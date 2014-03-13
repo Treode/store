@@ -3,10 +3,11 @@ package com.treode.cluster
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
-import com.treode.async.{Async, Backoff, Callback, Fiber, Scheduler}
+import com.treode.async.{Async, AsyncConversions, Backoff, Callback, Fiber, Scheduler}
 import com.treode.pickle.Picklers
 
 import Async.async
+import AsyncConversions._
 import Callback.ignore
 
 object Echo {

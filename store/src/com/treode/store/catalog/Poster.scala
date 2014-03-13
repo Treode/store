@@ -1,13 +1,13 @@
 package com.treode.store.catalog
 
 import java.util.ArrayDeque
+import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, Fiber, Callback, Scheduler}
 import com.treode.disk.{Disks, PageDescriptor, Position, RecordDescriptor}
 import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 
 import Async.guard
-import Callback.callback
 import Poster.Meta
 
 private trait Poster {
@@ -55,7 +55,10 @@ private object Poster {
 
     def dispatch (bytes: Bytes): Unit
 
-    private val _posted = callback [Unit] (_ => posted()) (throw _)
+    private val _posted: Callback [Unit] = {
+      case Success (v) => posted()
+      case Failure (t) => throw t
+    }
 
     private def engage() {
       val post = posts.peek()

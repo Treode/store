@@ -1,5 +1,7 @@
 package com.treode.async
 
+import scala.util.{Failure, Success}
+
 private class PairLatch [A, B] (cb: Callback [(A, B)])
 extends AbstractLatch [(A, B)] (2, cb) {
 
@@ -10,22 +12,20 @@ extends AbstractLatch [(A, B)] (2, cb) {
 
   init()
 
-  val cbA = new Callback [A] {
-    def pass (v: A) {
+  val cbA: Callback [A] = {
+    case Success (v) =>
       require (va == null, "Value 'a' was already set.")
       va = v
       release()
-    }
-    def fail (t: Throwable): Unit =
-      PairLatch.this.fail (t)
+    case Failure (t) =>
+      failure (t)
   }
 
-  val cbB = new Callback [B] {
-    def pass (v: B) {
+  val cbB: Callback [B] = {
+    case Success (v) =>
       require (vb == null, "Value 'b' was already set.")
       vb = v
       release()
-    }
-    def fail (t: Throwable): Unit =
-      PairLatch.this.fail (t)
+    case Failure (t) =>
+      failure (t)
   }}

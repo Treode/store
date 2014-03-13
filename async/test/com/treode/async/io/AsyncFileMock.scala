@@ -6,9 +6,13 @@ import java.nio.channels._
 import java.util.ArrayDeque
 import java.util.concurrent.Future
 import scala.collection.JavaConversions._
+import scala.util.{Success, Failure}
 
-import com.treode.async.{Callback, StubScheduler}
-import org.scalatest.Assertions.assert
+import com.treode.async.{AsyncConversions, Callback, StubScheduler}
+import org.scalatest.Assertions
+
+import Assertions.assert
+import AsyncConversions._
 
 /** ScalaMock refuses to mock AsynchronousFileChannel. */
 class AsyncFileMock extends AsynchronousFileChannel {
@@ -53,18 +57,15 @@ class AsyncFileMock extends AsynchronousFileChannel {
     require (completion == null, "Pending callback on file.")
     require (!expectations.isEmpty, "No expectations.")
     expectations.remove().read (dst, position)
-    completion = new Callback [Int] {
-      def pass (result: Int) = {
+    completion = {
+      case Success (result) =>
         completion = null;
         if (result > 0)
           dst.position (dst.position + result)
         handler.completed (result, attachment)
-      }
-      def fail (thrown: Throwable) = {
+      case Failure (thrown) =>
         completion = null
         handler.failed (thrown, attachment)
-      }
-      override def toString = "Pending read" + (dst, position)
     }}
 
   def expectWrite (filePos: Long, bufPos: Int, bufLimit: Int) {
@@ -82,18 +83,15 @@ class AsyncFileMock extends AsynchronousFileChannel {
     require (completion == null, "Pending callback on file.")
     require (!expectations.isEmpty, "No expectations.")
     expectations.remove().write (src, position)
-    completion = new Callback [Int] {
-      def pass (result: Int) = {
+    completion = {
+      case Success (result) =>
         completion = null
         if (result > 0)
           src.position (src.position + result)
         handler.completed (result, attachment)
-      }
-      def fail (thrown: Throwable) {
+      case Failure (thrown) =>
         completion = null
         handler.failed (thrown, attachment)
-      }
-      override def toString = "Pending write" + (src, position)
     }}
 
   def close(): Unit = ???

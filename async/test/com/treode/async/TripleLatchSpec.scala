@@ -2,13 +2,15 @@ package com.treode.async
 
 import org.scalatest.FlatSpec
 
+import AsyncConversions._
+
 class TripleLatchSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
 
   "The TripleLatch" should "release after a, b and c are set" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
-    val (la, lb, lc) = Latch.triple (cb)
+    val (la, lb, lc) = Latch.triple [Int, Int, Int] (cb)
     cb.expectNotInvoked()
     la.pass (1)
     cb.expectNotInvoked()
@@ -19,29 +21,29 @@ class TripleLatchSpec extends FlatSpec {
   }
 
   it should "reject two sets on a" in {
-    val cb = CallbackCaptor [(Int, Int)]
-    val (la, lb) = Latch.pair (cb)
+    val cb = CallbackCaptor [(Int, Int, Int)]
+    val (la, lb, lc) = Latch.triple [Int, Int, Int] (cb)
     la.pass (1)
     intercept [Exception] (la.pass (0))
   }
 
   it should "reject two sets on b" in {
-    val cb = CallbackCaptor [(Int, Int)]
-    val (la, lb) = Latch.pair (cb)
+    val cb = CallbackCaptor [(Int, Int, Int)]
+    val (la, lb, lc) = Latch.triple [Int, Int, Int] (cb)
     lb.pass (2)
     intercept [Exception] (lb.pass (0))
   }
 
   it should "reject two sets on c" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
-    val (la, lb, lc) = Latch.triple (cb)
+    val (la, lb, lc) = Latch.triple [Int, Int, Int] (cb)
     lc.pass (4)
     intercept [Exception] (lc.pass (0))
   }
 
   it should "release after two passes but a fail on a" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
-    val (la, lb, lc) = Latch.triple (cb)
+    val (la, lb, lc) = Latch.triple [Int, Int, Int] (cb)
     cb.expectNotInvoked()
     la.fail (new DistinguishedException)
     cb.expectNotInvoked()
@@ -53,7 +55,7 @@ class TripleLatchSpec extends FlatSpec {
 
   it should "release after two passes but a fail on b" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
-    val (la, lb, lc) = Latch.triple (cb)
+    val (la, lb, lc) = Latch.triple [Int, Int, Int] (cb)
     cb.expectNotInvoked()
     la.pass (1)
     cb.expectNotInvoked()
@@ -65,7 +67,7 @@ class TripleLatchSpec extends FlatSpec {
 
   it should "release after two passes but a fail on c" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
-    val (la, lb, lc) = Latch.triple (cb)
+    val (la, lb, lc) = Latch.triple [Int, Int, Int] (cb)
     cb.expectNotInvoked()
     la.pass (1)
     cb.expectNotInvoked()

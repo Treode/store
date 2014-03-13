@@ -1,5 +1,6 @@
 package com.treode.disk
 
+import scala.util.{Failure, Success}
 import com.treode.async.{Callback, Fiber}
 
 private class Checkpointer (disks: DiskDrives) {
@@ -20,11 +21,10 @@ private class Checkpointer (disks: DiskDrives) {
       engaged = false
   }
 
-  private val completed: Callback [Unit] =
-    new Callback [Unit] {
-      def pass (v: Unit): Unit = fiber.execute (reengage())
-      def fail (t: Throwable): Unit = disks.panic (t)
-    }
+  private val completed: Callback [Unit] = {
+    case Success (v) => fiber.execute (reengage())
+    case Failure (t) => disks.panic (t)
+  }
 
   private def _checkpoint(): Unit =
     fiber.run (completed) {

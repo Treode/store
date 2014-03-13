@@ -1,8 +1,10 @@
 package com.treode.async
 
+import scala.util.{Failure, Success}
 import org.scalatest.FlatSpec
 
 import Async.{async, cond, guard, supply}
+import AsyncConversions._
 import AsyncTestTools._
 import Callback.{ignore => disregard}
 
@@ -22,11 +24,10 @@ class AsyncSpec extends FlatSpec {
       new ScheduledAsync (async, scheduler)
   }
 
-  def exceptional [A]: Callback [A] =
-    new Callback [A] {
-      def pass (v: A) = throw new DistinguishedException
-      def fail (t: Throwable) = throw t
-    }
+  def exceptional [A]: Callback [A] = {
+    case Success (v) => throw new DistinguishedException
+    case Failure (t) => throw t
+  }
 
   "Async.map" should "apply the function" in {
     implicit val scheduler = StubScheduler.random()

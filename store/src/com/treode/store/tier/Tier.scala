@@ -1,10 +1,13 @@
 package com.treode.store.tier
 
-import com.treode.async.{Async, Callback}
+import scala.util.{Failure, Success}
+
+import com.treode.async.{Async, AsyncConversions, Callback}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, StorePicklers}
 
 import Async.async
+import AsyncConversions._
 
 private case class Tier (gen: Long, root: Position) {
 
@@ -13,28 +16,30 @@ private case class Tier (gen: Long, root: Position) {
 
     import desc.pager
 
-    val loop = new Callback [TierPage] {
+    val loop = Callback.fix [TierPage] { loop => {
 
-      def pass (p: TierPage) {
-        p match {
-          case p: IndexPage =>
-            val i = p.ceiling (key)
-            if (i == p.size) {
-              cb.pass (None)
-            } else {
-              val e = p.get (i)
-              pager.read (e.pos) .run (this)
-            }
-          case p: CellPage =>
-            val i = p.ceiling (key)
-            if (i == p.size)
-              cb.pass (None)
-            else
-              cb.pass (Some (p.get (i)))
-        }}
+      case Success (p: IndexPage) =>
+        val i = p.ceiling (key)
+        if (i == p.size) {
+          cb.pass (None)
+        } else {
+          val e = p.get (i)
+          pager.read (e.pos) .run (loop)
+        }
 
-      def fail (t: Throwable) = cb.fail (t)
-    }
+      case Success (p: CellPage) =>
+        val i = p.ceiling (key)
+        if (i == p.size)
+          cb.pass (None)
+        else
+          cb.pass (Some (p.get (i)))
+
+      case Success (_) =>
+        cb.fail (new MatchError)
+
+      case Failure (t) =>
+        cb.fail (t)
+    }}
 
     pager.read (root) .run (loop)
   }

@@ -69,8 +69,7 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
       try {
         f run (spawn (cb))
       } catch {
-        case t: Throwable =>
-          scheduler.fail (cb, t)
+        case t: Throwable => scheduler.fail (cb, t)
       }}
 
   def defer [A] (cb: Callback [A]) (f: => Any): Unit =

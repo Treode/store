@@ -3,6 +3,8 @@ package com.treode.async
 import java.lang.{Iterable => JIterable}
 import java.util.{Iterator => JIterator}
 
+import AsyncConversions._
+
 trait AsyncIterator [+A] {
 
   def _foreach (f: (A, Callback [Unit]) => Any): Async [Unit]

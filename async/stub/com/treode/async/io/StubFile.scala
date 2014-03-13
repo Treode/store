@@ -2,11 +2,13 @@ package com.treode.async.io
 
 import java.io.EOFException
 import java.util.Arrays
+import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, Callback, CallbackCaptor, StubScheduler}
+import com.treode.async.{Async, AsyncConversions, Callback, CallbackCaptor, StubScheduler}
 import com.treode.buffer.PagedBuffer
 
 import Async.async
+import AsyncConversions._
 
 class StubFile (implicit scheduler: StubScheduler) extends File (null) {
 
@@ -21,15 +23,14 @@ class StubFile (implicit scheduler: StubScheduler) extends File (null) {
     async { cb =>
       if (stop) {
         require (_last == null)
-        _last = new Callback [Unit] {
-          def pass (v: Unit): Unit = {
+        _last = {
+          case Success (v) =>
             _last = null
             f (cb)
-          }
-          def fail (t: Throwable): Unit = {
+          case Failure (t) =>
             _last = null
             cb.fail (t)
-          }}
+        }
       } else {
         f (cb)
       }}

@@ -1,8 +1,12 @@
 package com.treode.async
 
+import AsyncConversions._
+
 private abstract class AbstractLatch [A] (private var count: Int, cb: Callback [A]) {
 
   private var thrown = List.empty [Throwable]
+
+  def value: A
 
   def init() {
     if (count == 0)
@@ -20,10 +24,7 @@ private abstract class AbstractLatch [A] (private var count: Int, cb: Callback [
       cb.pass (value)
   }
 
-  def fail (t: Throwable): Unit = synchronized {
+  def failure (t: Throwable) {
     thrown ::= t
     release()
-  }
-
-  def value: A
-}
+  }}

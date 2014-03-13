@@ -3,13 +3,14 @@ package com.treode.disk
 import java.nio.file.Path
 import scala.collection.JavaConversions._
 import scala.collection.mutable.{ArrayBuffer, UnrolledBuffer}
+import scala.util.{Failure, Success}
 
-import com.treode.{async => xasync}
-import com.treode.async.{Async, Callback, Fiber, Latch}
+import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
 import Async.{async, guard, latch}
+import AsyncConversions._
 import DiskDrive.offset
 import RecordHeader._
 
@@ -282,10 +283,7 @@ private class DiskDrive (
 private object DiskDrive {
 
   def offset (id: Int, offset: Long, length: Int, cb: Callback [Position]): Callback [Long] =
-    new Callback [Long] {
-      def pass (base: Long) = cb.pass (Position (id, base + offset, length))
-      def fail (t: Throwable) = cb.fail (t)
-    }
+    cb.callback (base => Position (id, base + offset, length))
 
   def read [P] (file: File, desc: PageDescriptor [_, P], pos: Position): Async [P] =
     guard {

@@ -1,7 +1,9 @@
 package com.treode.store.locks
 
-import com.treode.async.{Callback, Scheduler}
+import com.treode.async.{AsyncConversions, Callback, Scheduler}
 import com.treode.store.TxClock
+
+import AsyncConversions._
 
 // Tracks the acquisition of locks and invokes the callback when they have all been granted.
 private class LockReader (_rt: TxClock, cb: Callback [Unit]) {

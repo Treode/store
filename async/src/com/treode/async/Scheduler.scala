@@ -1,6 +1,7 @@
 package com.treode.async
 
 import java.util.concurrent.{Executor, TimeUnit, ScheduledExecutorService}
+import scala.util.{Failure, Success, Try}
 
 import Scheduler.toRunnable
 
@@ -18,6 +19,9 @@ trait Scheduler extends Executor {
   def execute [A] (f: A => Any, v: A): Unit =
     execute (toRunnable (f, v))
 
+  def execute [A] (cb: Callback [A], v: Try [A]): Unit =
+    execute (toRunnable (cb, v))
+
   def delay (millis: Long) (task: => Any): Unit =
     delay (millis, toRunnable (task))
 
@@ -25,16 +29,13 @@ trait Scheduler extends Executor {
     at (millis, toRunnable (task))
 
   def pass [A] (cb: Callback [A], v: A): Unit =
-    execute (toRunnable (cb, v))
+    execute (cb, Success (v))
 
-  def fail (cb: Callback [_], t: Throwable): Unit =
-    execute (toRunnable (cb, t))
+  def fail [A] (cb: Callback [A], t: Throwable): Unit =
+    execute (cb, Failure (t))
 
   def take [A] (cb: Callback [A]): Callback [A] =
-    new Callback [A] {
-      def pass (v: A): Unit = execute (toRunnable (cb, v))
-      def fail (t: Throwable): Unit = execute (toRunnable (cb, t))
-    }
+    (v => execute (cb, v))
 
   val whilst = new Whilst (this)
 }
@@ -54,12 +55,7 @@ object Scheduler {
       def run() = f (v)
     }
 
-  def toRunnable [A] (cb: Callback [A], v: A): Runnable =
+  def toRunnable [A] (cb: Callback [A], v: Try [A]): Runnable =
     new Runnable {
-      def run() = cb.pass (v)
-    }
-
-  def toRunnable [A] (cb: Callback [A], t: Throwable): Runnable =
-    new Runnable {
-      def run() = cb.fail (t)
+      def run() = cb (v)
     }}

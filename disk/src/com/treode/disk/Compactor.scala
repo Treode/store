@@ -1,9 +1,11 @@
 package com.treode.disk
 
 import scala.collection.immutable.Queue
-import com.treode.async.{Async, Callback, Fiber, Latch, Scheduler}
+import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch, Scheduler}
+import scala.util.{Failure, Success}
 
 import Async.async
+import AsyncConversions._
 import PageLedger.Groups
 
 private class Compactor (disks: DiskDrives) {
@@ -39,20 +41,18 @@ private class Compactor (disks: DiskDrives) {
       cleanreq = false
     }}
 
-  private def compacted (latches: Seq [Callback [Unit]]): Callback [Unit] =
-    new Callback [Unit] {
-
-      val cb = Callback.fanout (latches, scheduler)
-
-      def pass (v: Unit) {
+  private def compacted (latches: Seq [Callback [Unit]]): Callback [Unit] = {
+      // MUSTDO: fix
+    {
+      case Success (v) =>
+        val cb = Callback.fanout (latches, scheduler)
         fiber.execute (reengage())
         cb.pass (v)
-      }
-
-      def fail (t: Throwable) {
+      case Failure (t) =>
+        val cb = Callback.fanout (latches, scheduler)
         disks.panic (t)
         cb.fail (t)
-      }}
+    }}
 
   private def compact (typ: TypeId, obj: ObjectId) {
     val (groups, latches) = book (typ, obj)
@@ -61,20 +61,16 @@ private class Compactor (disks: DiskDrives) {
     pages.compact (typ, obj, groups) .run (compacted  (latches))
   }
 
-  private def release (segments: Seq [SegmentPointer]): Callback [Unit] =
-    new Callback [Unit] {
-
-      def pass (v: Unit) {
-        releaser.release (segments)
-      }
-
-      def fail (t: Throwable) {
-        // Exception already reported by compacted callback
-      }}
+  private def release (segments: Seq [SegmentPointer]): Callback [Unit] = {
+    case Success (v) =>
+      releaser.release (segments)
+    case Failure (t) =>
+      // Exception already reported by compacted callback
+  }
 
   private def compact (groups: Groups, segments: Seq [SegmentPointer], cleaning: Boolean): Unit =
     fiber.execute {
-      val latch = Latch.unit (groups.size, release (segments))
+      val latch = Latch.unit [Unit] (groups.size, release (segments))
       for ((id, gs1) <- groups) {
         if (cleaning) {
           if (!(cleanq contains id))

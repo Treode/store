@@ -4,13 +4,15 @@ import java.nio.channels.AsynchronousChannelGroup
 import java.util
 import scala.collection.JavaConversions._
 import scala.language.postfixOps
-import scala.util.Random
+import scala.util.{Failure, Random, Success}
 
-import com.treode.async.{Backoff, Callback, Fiber, Scheduler}
+import com.treode.async.{AsyncConversions, Backoff, Callback, Fiber, Scheduler}
 import com.treode.async.io.Socket
 import com.treode.async.misc.RichInt
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Pickler
+
+import AsyncConversions._
 
 private class RemoteConnection (
   val id: HostId,
@@ -54,21 +56,16 @@ private class RemoteConnection (
     def buffer: PagedBuffer
     def backoff: Iterator [Int]
 
-    object Flushed extends Callback [Unit] {
-
-      def pass (v: Unit) {
-        //buffer.release()
-        RemoteConnection.this.sent ()
-      }
-
-      def fail (t: Throwable) {
-        //buffer.release()
+    val flushed: Callback [Unit] = {
+      case Success (v) =>
+        RemoteConnection.this.sent()
+      case Failure (t) =>
         log.exceptionWritingMessage (t)
         RemoteConnection.this.disconnect (socket)
-      }}
+    }
 
     def flush(): Unit = fiber.spawn {
-      socket.flush (buffer) run (Flushed)
+      socket.flush (buffer) run (flushed)
     }
 
     def enque (message: PickledMessage) {
@@ -167,60 +164,52 @@ private class RemoteConnection (
 
   def loop (socket: Socket, input: PagedBuffer) {
 
-    val loop = new Callback [Unit] {
-
-      def pass (v: Unit) {
-        ports.deliver (RemoteConnection.this, socket, input) run (this)
-      }
-
-      def fail (t: Throwable) {
+    val loop = Callback.fix [Unit] { loop => {
+      case Success (v) =>
+        ports.deliver (RemoteConnection.this, socket, input) run (loop)
+      case Failure (t) =>
         log.exceptionReadingMessage (t)
         disconnect (socket)
-      }}
+    }}
 
     fiber.spawn (loop.pass())
   }
 
   private def hearHello (socket: Socket) {
     val input = PagedBuffer (12)
-    socket.fill (input, 9) run (new Callback [Unit] {
-      def pass (v: Unit) {
+    socket.fill (input, 9) run {
+      case Success (v) =>
         val Hello (clientId) = Hello.pickler.unpickle (input)
         if (clientId == id) {
           connect (socket, input, localId)
         } else {
           log.errorWhileGreeting (id, clientId)
           disconnect (socket)
-        }}
-      def fail (t: Throwable) {
+        }
+      case Failure (t) =>
         log.exceptionWhileGreeting (t)
         disconnect (socket)
-      }})
-  }
+    }}
 
   private def sayHello (socket: Socket) {
     val buffer = PagedBuffer (12)
     Hello.pickler.pickle (Hello (localId), buffer)
-    socket.flush (buffer) run (new Callback [Unit] {
-      def pass (v: Unit) {
+    socket.flush (buffer) run {
+      case Success (v) =>
         hearHello (socket)
-      }
-      def fail (t: Throwable) {
+      case Failure (t) =>
         log.exceptionWhileGreeting (t)
         disconnect (socket)
-      }})
-  }
+    }}
 
   private def greet (socket: Socket) {
-    socket.connect (address) run (new Callback [Unit] {
-      def pass (v: Unit) {
+    socket.connect (address) run {
+      case Success (v) =>
         sayHello (socket)
-      }
-      def fail (t: Throwable) {
+      case Failure (t) =>
         log.exceptionWhileGreeting (t)
         disconnect (socket)
-      }})
-  }
+    }}
 
   private def disconnect (socket: Socket): Unit = fiber.execute {
     state.disconnect (socket)

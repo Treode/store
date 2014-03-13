@@ -1,5 +1,7 @@
 package com.treode.store.atomic
 
+import scala.util.{Failure, Success}
+
 import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.{RequestDescriptor, RequestMediator}
 import com.treode.disk.RecordDescriptor
@@ -7,8 +9,7 @@ import com.treode.store.{Bytes, TxClock, TxId, WriteOp, log}
 import com.treode.store.atomic.{WriteDeputy => WD}
 import com.treode.store.locks.LockSet
 
-import Async.{cond, supply}
-import Callback.callback
+import Async.{cond, guard, supply}
 import WriteDeputy.ArchiveStatus
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
@@ -83,9 +84,9 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       }}
 
     def restore() {
-      archive.get (xid.id) run (new Callback [Option [Bytes]] {
+      archive.get (xid.id) run {
 
-        def pass (_status: Option [Bytes]): Unit = fiber.execute {
+        case Success (_status) => fiber.execute {
           val status = _status map (_.unpickle (ArchiveStatus.pickler))
           if (state == Restoring.this) {
             state = status match {
@@ -99,12 +100,11 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
           catchup()
         }
 
-        def fail (t: Throwable): Unit = fiber.execute {
+        case Failure (t) => fiber.execute {
           if (state == Restoring.this) {
             state = new Panicked (Restoring.this, t)
             throw t
-          }}})
-    }
+          }}}}
 
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit =
       _prepare = Some ((mdtr, ct, ops))
@@ -147,7 +147,8 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   class Preparing (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]) extends State {
 
     tables.prepare (ct, ops) run {
-      callback [PrepareResult] (prepared (_)) (failed (_))
+      case Success (prep) => prepared (prep)
+      case Failure (t) => failed (t)
     }
 
     private def _failed (t: Throwable) {
@@ -177,7 +178,8 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     private def prepared (ft: TxClock, locks: LockSet): Unit = fiber.execute {
       if (state == Preparing.this) {
         WD.preparing.record (xid, ops) run {
-          callback [Unit] (_ => logged (ft, locks)) (failed (locks, _))
+          case Success (v) => logged (ft, locks)
+          case Failure (t) => failed (locks, t)
         }
       } else {
         locks.release()
@@ -291,11 +293,14 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     val gen = archive.put (xid.id, Bytes (ArchiveStatus.pickler, ArchiveStatus.Committed (wt)))
     val gens = tables.commit (wt, ops)
-    Async.run (callback [Unit] (_ => logged()) (failed (_))) {
+    guard {
       for {
         _ <- cond (locks.isEmpty) (WD.preparing.record (xid, ops))
         _ <- WD.committed.record (xid, gen, gens, wt)
       } yield ()
+    } run {
+      case Success (v) => logged()
+      case Failure (t) => failed (t)
     }
 
     private def logged(): Unit = fiber.execute {
@@ -352,9 +357,12 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   class Aborting (mdtr: WriteMediator, locks: Option [LockSet]) extends State {
 
     val gen = archive.put (xid.id, Bytes (ArchiveStatus.pickler, ArchiveStatus.Aborted))
-    Async.run (callback [Unit] (_ => logged()) (failed (_))) {
+    guard {
       locks foreach (_.release())
       WD.aborted.record (xid, gen)
+    } run {
+      case Success (v) => logged()
+      case Failure (t) => failed (t)
     }
 
     private def logged(): Unit = fiber.execute {

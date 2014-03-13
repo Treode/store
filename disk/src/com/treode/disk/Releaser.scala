@@ -1,7 +1,9 @@
 package com.treode.disk
 
 import scala.collection.mutable.Builder
-import com.treode.async.{Async, Callback}
+import com.treode.async.{Async, AsyncConversions, Callback}
+
+import AsyncConversions._
 
 private class Releaser {
 
@@ -48,17 +50,10 @@ private class Releaser {
   def leave (epoch: Int): Unit =
     free (_leave (epoch))
 
-  def join [A] (cb: Callback [A]): Callback [A] =
-    new Callback [A] {
-      val epoch = join()
-      def pass (v: A) {
-        leave (epoch)
-        cb.pass (v)
-      }
-      def fail (t: Throwable) {
-        leave (epoch)
-        cb.fail (t)
-      }}
+  def join [A] (cb: Callback [A]): Callback [A] = {
+    val epoch = join()
+    cb.leave (leave (epoch))
+  }
 
   def join [A] (task: Async [A]): Async [A] =
     new Async [A] {

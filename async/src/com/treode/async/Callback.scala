@@ -2,78 +2,10 @@ package com.treode.async
 
 import java.lang.{Integer => JavaInt, Long => JavaLong}
 import java.nio.channels.CompletionHandler
-import scala.util.Random
+import scala.util.{Failure, Random, Success, Try}
 
+import AsyncConversions._
 import Scheduler.toRunnable
-
-trait Callback [-A] {
-
-  def pass (v: A)
-
-  def fail (t: Throwable)
-
-  def callback [B] (f: B => A): Callback [B] = {
-    val self = this
-    new Callback [B] {
-      def pass (b: B) {
-        val a = try {
-          f (b)
-        } catch {
-          case t: Throwable =>
-            self.fail (t)
-            return
-        }
-        self.pass (a)
-      }
-      def fail (t: Throwable): Unit = self.fail (t)
-    }}
-
-  def continue [B] (f: B => Any): Callback [B] = {
-    val self = this
-    new Callback [B] {
-      def pass (b: B) {
-        try {
-          f (b)
-        } catch {
-          case t: Throwable => self.fail (t)
-        }}
-      def fail (t: Throwable): Unit = self.fail (t)
-    }}
-
-  def defer (f: => Any) {
-    try {
-      f
-    } catch {
-      case t: Throwable => fail (t)
-    }}
-
-  def invoke (f: => A) {
-    val v = try {
-      f
-    } catch {
-      case t: Throwable =>
-        fail (t)
-        return
-    }
-    pass (v)
-  }
-
-  def timeout (fiber: Fiber, backoff: Backoff) (rouse: => Any) (implicit random: Random):
-      TimeoutCallback [A] =
-    new TimeoutCallback (fiber, backoff, rouse, this)
-
-  def leave (f: => Any): Callback [A] = {
-    val self = this
-    new Callback [A] {
-      def pass (v: A) {
-        f
-        self.pass (v)
-      }
-      def fail (t: Throwable) {
-        f
-        self.fail (t)
-      }}}
-}
 
 object Callback {
 
@@ -95,20 +27,15 @@ object Callback {
     def failed (t: Throwable, cb: Callback [Unit]) = cb.fail (t)
   }
 
-  def callback [A] (passf: A => Any) (failf: Throwable => Any): Callback [A] =
+  def fix [A] (f: Callback [A] => Try [A] => Any): Callback [A] =
     new Callback [A] {
-      def pass (v: A): Unit = passf (v)
-      def fail (t: Throwable): Unit = failf (t)
+      def apply (v: Try [A]) = f (this) (v)
     }
 
   def fanout [A] (cbs: Traversable [Callback [A]], scheduler: Scheduler): Callback [A] =
-    new Callback [A] {
-      def pass (v: A): Unit = cbs foreach (scheduler.pass (_, v))
-      def fail (t: Throwable): Unit = cbs foreach (scheduler.fail (_, t))
-    }
+    (v => cbs foreach (scheduler.execute (_, v)))
 
-  def ignore [A]: Callback [A] =
-    new Callback [A] {
-      def pass (v: A): Unit = ()
-      def fail (t: Throwable): Unit = throw t
+  def ignore [A]: Callback [A] = {
+      case Success (v) => ()
+      case Failure (t) => throw t
     }}

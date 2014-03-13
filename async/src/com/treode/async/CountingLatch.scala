@@ -1,7 +1,9 @@
 package com.treode.async
 
+import scala.util.{Failure, Success, Try}
+
 private class CountingLatch [A] (count: Int, cb: Callback [Unit])
-extends AbstractLatch [Unit] (count, cb) with Callback [A] {
+extends AbstractLatch (count, cb) with Callback [A] {
 
   private var thrown = List.empty [Throwable]
 
@@ -9,6 +11,8 @@ extends AbstractLatch [Unit] (count, cb) with Callback [A] {
 
   def value = ()
 
-  def pass (v: A): Unit = synchronized {
-    release()
-  }}
+  def apply (v: Try [A]): Unit = synchronized {
+    v match {
+      case Success (v) => release()
+      case Failure (t) => failure (t)
+    }}}

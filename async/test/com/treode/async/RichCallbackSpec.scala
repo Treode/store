@@ -2,11 +2,13 @@ package com.treode.async
 
 import org.scalatest.FlatSpec
 
-class CallbackSpec extends FlatSpec {
+import AsyncConversions._
+
+class RichCallbackSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
 
-  "Callback.continue" should "not invoke the callback" in {
+  "RichCallback.continue" should "not invoke the callback" in {
     val captor = CallbackCaptor [Unit]
     var flag = false
     val cb = captor.continue [Unit] (_ => flag = true)
@@ -29,7 +31,7 @@ class CallbackSpec extends FlatSpec {
     captor.failed [DistinguishedException]
   }
 
-  "Callback.callback" should "invoke the callback" in {
+  "RichCallback.callback" should "invoke the callback" in {
     val captor = CallbackCaptor [Unit]
     var flag = false
     val cb = captor.callback [Unit] (_ => flag = true)
@@ -52,7 +54,7 @@ class CallbackSpec extends FlatSpec {
     captor.failed [DistinguishedException]
   }
 
-  "Callback.defer" should "not invoke the callback" in {
+  "RichCallback.defer" should "not invoke the callback" in {
     val cb = CallbackCaptor [Unit]
     var flag = false
     cb.defer (flag = true)
@@ -66,7 +68,7 @@ class CallbackSpec extends FlatSpec {
     cb.failed [DistinguishedException]
   }
 
-  "Callback.invoke" should "invoke the callback" in {
+  "RichCallback.invoke" should "invoke the callback" in {
     val cb = CallbackCaptor [Unit]
     var flag = false
     cb.invoke (flag = true)
@@ -80,7 +82,7 @@ class CallbackSpec extends FlatSpec {
     cb.failed [DistinguishedException]
   }
 
-  "Callback.leave" should "run the body on pass" in {
+  "RichCallback.leave" should "run the body on pass" in {
     val cb1 = CallbackCaptor [Unit]
     var flag = false
     val cb2 = cb1.leave (flag = true)

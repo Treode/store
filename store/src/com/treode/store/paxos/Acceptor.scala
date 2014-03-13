@@ -1,5 +1,7 @@
 package com.treode.store.paxos
 
+import scala.util.{Failure, Success}
+
 import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.disk.RecordDescriptor
@@ -68,9 +70,8 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       postable = (_.accept (ballot, value, proposer))
 
     def restore() {
-      archive.get (key) run (new Callback [Option [Bytes]] {
-
-        def pass (chosen: Option [Bytes]): Unit = fiber.execute {
+      archive.get (key) run {
+        case Success (chosen) => fiber.execute {
           if (state == Restoring.this) {
             state = chosen match {
               case Some (value) =>
@@ -81,12 +82,11 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
                 postable (s)
                 s
             }}}
-
-        def fail (t: Throwable): Unit = fiber.execute {
+        case Failure (t) => fiber.execute {
           if (state == Restoring.this) {
             state = new Panicked (Restoring.this, t)
             throw t
-          }}})
+          }}}
     }
 
     def query (proposer: Peer, _ballot: Long, default: Bytes) {
@@ -128,17 +128,15 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     var posting: Post = NoPost
     var postable: Post = NoPost
 
-    val posted = new Callback [Unit] {
-
-      def pass (v: Unit): Unit = fiber.execute {
+    val posted: Callback [Unit] = {
+      case Success (v) => fiber.execute {
         if (state == Deliberating.this) {
           posting.reply()
           posting = postable
           postable = NoPost
           posting.record()
         }}
-
-      def fail (t: Throwable): Unit = fiber.execute {
+      case Failure (t) => fiber.execute {
         if (state == Deliberating.this) {
           state = new Panicked (Deliberating.this, t)
         }}}
@@ -207,7 +205,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     def choose (chosen: Bytes) {
       val gen  = archive.put (key, chosen)
       state = new Closed (chosen, gen)
-      Acceptor.close.record (key, chosen, gen) .run (Callback.ignore)
+      Acceptor.close.record (key, chosen, gen) .run (ignore)
     }
 
     def checkpoint(): Async [Unit] = {

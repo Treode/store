@@ -7,22 +7,22 @@ class IterableLatch [A] private [async] (iter: Iterable [A]) {
 
   def map [K, V] (f: A => Async [(K, V)]): Async [Map [K, V]] =
     Async.async { cb =>
-      run (iter, new MapLatch [K, V] (iter.size, cb)) (f)
+      run [A, (K, V)] (iter, new MapLatch [K, V] (iter.size, cb)) (f)
     }
 
   def indexed [B] (f: ((A, Int)) => Async [B]) (implicit m: Manifest [B]): Async [Seq [B]] =
     Async.async { cb =>
-      run (iter.zipWithIndex, new IndexedLatch (iter.size, cb)) {
+      run [(A, Int), (Int, B)] (iter.zipWithIndex, new IndexedLatch (iter.size, cb)) {
         case (x, i) => f ((x, i)) map ((i, _))
       }
     }
 
   def seq [B] (f: A => Async [B]) (implicit m: Manifest [B]): Async [Seq [B]] =
     Async.async { cb =>
-      run (iter, new SeqLatch [B] (iter.size, cb)) (f)
+      run [A, B] (iter, new SeqLatch [B] (iter.size, cb)) (f)
     }
 
   def unit [B] (f: A => Async [B]): Async [Unit] =
     Async.async { cb =>
-      run (iter, new CountingLatch [B] (iter.size, cb)) (f)
+      run [A, B] (iter, new CountingLatch [B] (iter.size, cb)) (f)
     }}

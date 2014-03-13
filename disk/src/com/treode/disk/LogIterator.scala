@@ -2,6 +2,7 @@ package com.treode.disk
 
 import java.nio.file.Path
 import scala.collection.mutable.ArrayBuffer
+import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, AsyncConversions, AsyncIterator, Callback, Scheduler}
 import com.treode.async.io.File
@@ -32,14 +33,14 @@ private class LogIterator private (
 
   class Foreach (f: ((Long, Unit => Any), Callback [Unit]) => Any, cb: Callback [Unit]) {
 
-    val _read = new Callback [Int] {
-      def pass (v: Int): Unit = read (v)
-      def fail (t: Throwable): Unit = Foreach.this.fail (t)
+    val _read: Callback [Int] = {
+      case Success (v) => read (v)
+      case Failure (t) => fail (t)
     }
 
-    val _next = new Callback [Unit] {
-      def pass (v: Unit): Unit = next()
-      def fail (t: Throwable): Unit = Foreach.this.fail (t)
+    val _next: Callback [Unit] = {
+      case Success (v) => next()
+      case Failure (t) => fail (t)
     }
 
     def fail (t: Throwable) {

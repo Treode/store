@@ -1,5 +1,7 @@
 package com.treode.async
 
+import scala.util.{Failure, Success, Try}
+
 private class IndexedLatch [A] (count: Int, cb: Callback [Seq [A]]) (implicit manifest: Manifest [A])
 extends AbstractLatch [Seq [A]] (count, cb) with Callback [(Int, A)] {
 
@@ -9,8 +11,10 @@ extends AbstractLatch [Seq [A]] (count, cb) with Callback [(Int, A)] {
 
   def value = values.toSeq
 
-  def pass (x: (Int, A)): Unit = synchronized {
-    val (i, v) = x
-    values (i) = v
-    release()
-  }}
+  def apply (v: Try [(Int, A)]): Unit = synchronized {
+    v match {
+      case Success ((i, v)) =>
+        values (i) = v
+        release()
+      case Failure (t) => failure (t)
+    }}}

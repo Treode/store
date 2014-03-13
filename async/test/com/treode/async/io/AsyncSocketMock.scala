@@ -7,9 +7,13 @@ import java.nio.channels._
 import java.util.{Set => JavaSet, ArrayDeque}
 import java.util.concurrent.{Future, TimeUnit}
 import scala.collection.JavaConversions._
+import scala.util.{Failure, Success}
 
-import com.treode.async.{Callback, StubScheduler}
-import org.scalatest.Assertions.assert
+import com.treode.async.{AsyncConversions, Callback, StubScheduler}
+import org.scalatest.Assertions
+
+import Assertions.assert
+import AsyncConversions._
 
 /** ScalaMock refuses to mock AsynchronousSocketChannel. */
 class AsyncSocketMock extends AsynchronousSocketChannel (null) {
@@ -60,18 +64,15 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) {
     require (!expectations.isEmpty, "No expectations.")
     val dst = dsts .find (_.remaining > 0) .get
     expectations.remove().read (dst)
-    completion = new Callback [Int] {
-      def pass (result: Int) = {
+    completion = {
+      case Success (result) =>
         completion = null;
         if (result > 0)
           dst.position (dst.position + result)
         handler.completed (result, attachment)
-      }
-      def fail (thrown: Throwable) = {
+      case Failure (thrown) =>
         completion = null
         handler.failed (thrown, attachment)
-      }
-      override def toString = s"Pending read($dst)"
     }}
 
   def expectWrite (bufPos: Int, bufLimit: Int) {
@@ -91,18 +92,15 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) {
     require (!expectations.isEmpty, "No expectations.")
     val src = srcs (0)
     expectations.remove().write (src)
-    completion = new Callback [Int] {
-      def pass (result: Int) = {
+    completion = {
+      case Success (result) =>
         completion = null
         if (result > 0)
           src.position (src.position + result)
         handler.completed (result, attachment)
-      }
-      def fail (thrown: Throwable) {
+      case Failure (thrown) =>
         completion = null
         handler.failed (thrown, attachment)
-      }
-      override def toString = s"Pending write($src)"
     }}
 
   def expectClose() {

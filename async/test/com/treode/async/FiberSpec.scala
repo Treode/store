@@ -122,7 +122,7 @@ class FiberSpec extends FlatSpec {
     val f = new Fiber (s)
     var a = false
     val cb = CallbackCaptor [Unit]
-    f.run (cb) (supply (a = true))
+    f.run [Unit] (cb) (supply (a = true))
     expectResult (false) (a)
     cb.expectNotInvoked()
     s.runTasks()
@@ -134,7 +134,7 @@ class FiberSpec extends FlatSpec {
     val s = StubScheduler.random()
     val f = new Fiber (s)
     val cb = CallbackCaptor [Unit]
-    f.run (cb) (throw new DistinguishedException)
+    f.run [Unit] (cb) (throw new DistinguishedException)
     cb.expectNotInvoked()
     s.runTasks()
     cb.failed [DistinguishedException]
@@ -168,7 +168,7 @@ class FiberSpec extends FlatSpec {
     val f = new Fiber (s)
     var a = false
     val cb = CallbackCaptor [Unit]
-    f.invoke (cb) (a = true)
+    f.invoke [Unit] (cb) (a = true)
     expectResult (false) (a)
     cb.expectNotInvoked()
     s.runTasks()

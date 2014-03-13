@@ -3,11 +3,14 @@ package com.treode.store.atomic
 import java.util.concurrent.TimeoutException
 import scala.collection.mutable
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
-import com.treode.async.{Backoff, Callback, Fiber}
+import com.treode.async.{AsyncConversions, Backoff, Callback, Fiber}
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{Cluster, Peer}
 import com.treode.store._
+
+import AsyncConversions._
 
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
   import WriteDirector.deliberate
@@ -129,9 +132,9 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
   class Deliberating (wt: TxClock, cb: Callback [WriteResult]) extends State {
     import TxStatus._
 
-    WriteDirector.deliberate.lead (xid.id, Committed (wt)) run (new Callback [TxStatus] {
+    WriteDirector.deliberate.lead (xid.id, Committed (wt)) run {
 
-      def pass (status: TxStatus) = fiber.execute {
+      case Success (status) => fiber.execute {
         status match {
           case Committed (wt) =>
             state = new Committing (wt)
@@ -141,10 +144,10 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
             cb.fail (new TimeoutException)
         }}
 
-      def fail (t: Throwable) = fiber.execute {
+      case Failure (t) => fiber.execute {
         state = new Aborting (false)
         cb.fail (t)
-      }})
+      }}
 
     override def prepared (ft: TxClock, from: Peer): Unit =
       prepares += from

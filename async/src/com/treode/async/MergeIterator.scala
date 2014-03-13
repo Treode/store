@@ -2,8 +2,10 @@ package com.treode.async
 
 import scala.collection.mutable.PriorityQueue
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 import Async.async
+import AsyncConversions._
 
 private class MergeIterator [A] (iters: Seq [AsyncIterator [A]]) (implicit order: Ordering [A])
 extends AsyncIterator [A] {
@@ -29,18 +31,11 @@ extends AsyncIterator [A] {
     var count = iters.size
     var thrown = List.empty [Throwable]
 
-    val next: Callback [Unit] =
-      new Callback [Unit] {
-
-        def pass (v: Unit): Unit = pq.synchronized {
-          val elem = pq.dequeue()
-          elem.cb.pass()
-        }
-
-        def fail (t: Throwable): Unit = pq.synchronized {
-          val elem = pq.dequeue()
-          elem.cb.fail (t)
-        }}
+    val next: Callback [Unit] = { v =>
+      pq.synchronized {
+        val elem = pq.dequeue()
+        elem.cb (v)
+      }}
 
     def _close() {
       require (count > 0, "MergeIterator was already closed.")
@@ -53,14 +48,13 @@ extends AsyncIterator [A] {
         cb.pass()
     }
 
-    val close: Callback [Unit] =
-      new Callback [Unit] {
-
-        def pass (v: Unit): Unit = pq.synchronized {
+    val close: Callback [Unit] = {
+      case Success (v) =>
+        pq.synchronized {
           _close()
         }
-
-        def fail (t: Throwable): Unit = pq.synchronized {
+      case Failure (t) =>
+        pq.synchronized {
           thrown ::= t
           _close()
         }}

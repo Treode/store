@@ -1,5 +1,7 @@
 package com.treode.store.catalog
 
+import scala.util.{Failure, Success}
+
 import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.store.CatalogId
@@ -39,19 +41,17 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
 
   class Getting (var op: State => Unit) extends State {
 
-    broker.get (key) run (new Callback [Handler] {
-
-      def pass (cat: Handler): Unit = fiber.execute {
+    broker.get (key) run {
+      case Success (cat) => fiber.execute {
         if (state == Getting.this) {
           state = new Deliberating (cat)
           op (state)
         }}
-
-      def fail (t: Throwable): Unit = fiber.execute {
+      case Failure (t) => fiber.execute {
         if (state == Getting.this) {
           state = new Panicked (t)
           throw t
-        }}})
+        }}}
 
     def query (proposer: Peer, ballot: Long): Unit =
       op = (_.query (proposer, ballot))
@@ -107,15 +107,13 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
 
   class Closed (val chosen: Update) extends State {
 
-    broker.patch (key, chosen) run (new Callback [Unit] {
-
-      def pass (v: Unit): Unit =
+    broker.patch (key, chosen) run {
+      case Success (v) =>
         fiber.delay (closedLifetime) (remove (key, Acceptor.this))
-
-      def fail (t: Throwable): Unit = fiber.execute {
+      case Failure (t) => fiber.execute {
         if (state == Closed.this)
           state = new Panicked (t)
-      }})
+      }}
 
     def query (proposer: Peer, ballot: Long): Unit =
       Proposer.chosen (key, chosen) (proposer)

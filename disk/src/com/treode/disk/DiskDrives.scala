@@ -4,6 +4,7 @@ import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 import scala.collection.immutable.Queue
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch, Scheduler}
 import com.treode.async.io.File
@@ -44,11 +45,10 @@ private class DiskDrives (implicit
     throw t
   }
 
-  val panic: Callback [Unit] =
-    new Callback [Unit] {
-      def pass (v: Unit): Unit = ()
-      def fail (t: Throwable): Unit = panic (t)
-    }
+  val panic: Callback [Unit] = {
+    case Success (v) => ()
+    case Failure (t) => panic (t)
+  }
 
   private def reengage() {
     if (!attachreqs.isEmpty) {
@@ -78,16 +78,14 @@ private class DiskDrives (implicit
       reengage()
     }
 
-  private def leave [A] (cb: Callback [A]): Callback [A] =
-    new Callback [A] {
-      def pass (v: A): Unit = fiber.execute {
-        reengage()
-        scheduler.pass (cb, v)
-      }
-      def fail (t: Throwable): Unit = fiber.execute {
-        reengage()
-        scheduler.fail (cb, t)
-      }}
+  private def leave [A] (cb: Callback [A]): Callback [A] = {
+    case Success (v) =>
+      fiber.execute (reengage())
+      scheduler.pass (cb, v)
+    case Failure (t) =>
+      fiber.execute (reengage())
+      scheduler.fail (cb, t)
+  }
 
   private def _attach (req: AttachRequest) {
     val items = req._1
@@ -208,7 +206,7 @@ private class DiskDrives (implicit
   }
 
   private def _checkpoint (req: CheckpointRequest) {
-    val cb = leave (req)
+    val cb = leave [Unit] (req)
     engaged = true
     fiber.run (cb) {
       val attached = disks.values.map (_.path) .toSet

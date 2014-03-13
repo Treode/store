@@ -2,6 +2,8 @@ package com.treode.async
 
 import org.scalatest.FlatSpec
 
+import AsyncConversions._
+
 class CountingLatchSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
@@ -14,14 +16,14 @@ class CountingLatchSpec extends FlatSpec {
 
   it should "reject extra releases" in {
     val cb = CallbackCaptor [Unit]
-    val ltch = Latch.unit (0, cb)
+    val ltch = Latch.unit [Int] (0, cb)
     cb.passed
     intercept [Exception] (ltch.pass (0))
   }
 
   it should "release after one pass for count==1" in {
     val cb = CallbackCaptor [Unit]
-    val ltch = Latch.unit (1, cb)
+    val ltch = Latch.unit [Int] (1, cb)
     cb.expectNotInvoked()
     ltch.pass (0)
     cb.passed
@@ -29,7 +31,7 @@ class CountingLatchSpec extends FlatSpec {
 
   it should "release after one fail for count==1" in {
     val cb = CallbackCaptor [Unit]
-    val ltch = Latch.unit (1, cb)
+    val ltch = Latch.unit [Int] (1, cb)
     cb.expectNotInvoked()
     ltch.fail (new DistinguishedException)
     cb.failed [DistinguishedException]
@@ -37,7 +39,7 @@ class CountingLatchSpec extends FlatSpec {
 
   it should "release after two passes for count==2" in {
     val cb = CallbackCaptor [Unit]
-    val ltch = Latch.unit (2, cb)
+    val ltch = Latch.unit [Int] (2, cb)
     cb.expectNotInvoked()
     ltch.pass (0)
     cb.expectNotInvoked()
@@ -47,7 +49,7 @@ class CountingLatchSpec extends FlatSpec {
 
   it should "release after a pass and a fail for count==2" in {
     val cb = CallbackCaptor [Unit]
-    val ltch = Latch.unit (2, cb)
+    val ltch = Latch.unit [Int] (2, cb)
     cb.expectNotInvoked()
     ltch.pass (0)
     cb.expectNotInvoked()
@@ -57,7 +59,7 @@ class CountingLatchSpec extends FlatSpec {
 
   it should "release after two fails for count==2" in {
     val cb = CallbackCaptor [Unit]
-    val ltch = Latch.unit (2, cb)
+    val ltch = Latch.unit [Int] (2, cb)
     cb.expectNotInvoked()
     ltch.fail (new Exception)
     cb.expectNotInvoked()

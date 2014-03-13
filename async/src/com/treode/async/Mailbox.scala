@@ -2,6 +2,8 @@ package com.treode.async
 
 import java.util
 
+import AsyncConversions._
+
 class Mailbox [M] {
 
   private[this] val messages = new util.ArrayDeque [M]

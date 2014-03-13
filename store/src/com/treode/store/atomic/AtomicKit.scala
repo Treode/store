@@ -2,13 +2,14 @@ package com.treode.store.atomic
 
 import scala.util.Random
 
-import com.treode.async.{Async, Callback, Scheduler}
+import com.treode.async.{Async, AsyncConversions, Callback, Scheduler}
 import com.treode.cluster.{Cluster, ReplyTracker}
 import com.treode.disk.Disks
 import com.treode.store._
 import com.treode.store.tier.TierTable
 
 import Async.async
+import AsyncConversions._
 
 private class AtomicKit (
     val archive: TierTable

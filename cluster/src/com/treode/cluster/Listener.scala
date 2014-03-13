@@ -2,6 +2,7 @@ package com.treode.cluster
 
 import java.net.{InetSocketAddress, SocketAddress}
 import java.nio.channels.{AsynchronousChannelGroup, AsynchronousCloseException}
+import scala.util.{Failure, Success}
 
 import com.treode.async.{Callback, Scheduler}
 import com.treode.async.io.{Socket, ServerSocket}
@@ -21,48 +22,38 @@ class Listener (
   private def sayHello (socket: Socket, input: PagedBuffer, remoteId: HostId) {
     val buffer = PagedBuffer (12)
     Hello.pickler.pickle (Hello (localId), buffer)
-    socket.flush (buffer) run (new Callback [Unit] {
-      def pass (v: Unit) {
+    socket.flush (buffer) run {
+      case Success (v) =>
         peers.get (remoteId) connect (socket, input, remoteId)
-      }
-      def fail (t: Throwable) {
+      case Failure (t) =>
         log.exceptionWhileGreeting (t)
         socket.close()
-      }})
-  }
+    }}
 
   private def hearHello (socket: Socket) {
     val buffer = PagedBuffer (12)
-    socket.fill (buffer, 9) run (new Callback [Unit] {
-      def pass (v: Unit) {
+    socket.fill (buffer, 9) run {
+      case Success (v) =>
         val Hello (remoteId) = Hello.pickler.unpickle (buffer)
         sayHello (socket, buffer, remoteId)
-      }
-      def fail (t: Throwable) {
+      case Failure (t) =>
         log.exceptionWhileGreeting (t)
         socket.close()
-      }})
-  }
+    }}
 
   private def loop() {
-    server.accept() run (new Callback [Socket] {
-      def pass (socket: Socket) {
+    server.accept() run {
+      case Success (socket) =>
         scheduler.execute (hearHello (socket))
         loop()
-      }
-      def fail (t: Throwable) {
-        t match {
-          case e: AsynchronousCloseException =>
-            server.close()
-          case e: Throwable =>
-            log.recyclingMessengerSocket (e)
-            server.close()
-            scheduler.delay (200) (startup())
-            throw e
-        }
+      case Failure (e: AsynchronousCloseException) =>
         server.close()
-      }})
-  }
+      case Failure (e: Throwable) =>
+        log.recyclingMessengerSocket (e)
+        server.close()
+        scheduler.delay (200) (startup())
+        throw e
+    }}
 
   def startup() {
     server = ServerSocket.open (group, scheduler)

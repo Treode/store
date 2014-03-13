@@ -2,13 +2,14 @@ package com.treode.store.tier
 
 import java.nio.file.Paths
 
-import com.treode.async.{CallbackCaptor, StubScheduler}
+import com.treode.async.{AsyncConversions, CallbackCaptor, StubScheduler}
 import com.treode.async.io.{File, StubFile}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.StoreConfig
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
+import AsyncConversions._
 import TierTable.Meta
 import TierTestTools._
 

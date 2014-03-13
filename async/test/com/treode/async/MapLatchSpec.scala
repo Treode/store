@@ -2,26 +2,28 @@ package com.treode.async
 
 import org.scalatest.FlatSpec
 
+import AsyncConversions._
+
 class MapLatchSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
 
   "The MapLatch" should "release immediately for count==0" in {
     val cb = CallbackCaptor [Map [Int, Int]]
-    val ltch = Latch.map (0, cb)
+    val ltch = Latch.map [Int, Int] (0, cb)
     expectResult (Map [Int, Int] ()) (cb.passed)
   }
 
   it should "reject extra releases" in {
     val cb = CallbackCaptor [Map [Int, Int]]
-    val ltch = Latch.map (0, cb)
+    val ltch = Latch.map [Int, Int] (0, cb)
     expectResult (Map [Int, Int] ()) (cb.passed)
     intercept [Exception] (ltch.pass (0, 0))
   }
 
   it should "release after one pass for count==1" in {
     val cb = CallbackCaptor [Map [Int, Int]]
-    val ltch = Latch.map (1, cb)
+    val ltch = Latch.map [Int, Int] (1, cb)
     cb.expectNotInvoked()
     ltch.pass (0, 1)
     expectResult (Map ((0, 1))) (cb.passed)
@@ -29,7 +31,7 @@ class MapLatchSpec extends FlatSpec {
 
   it should "release after one fail for count==1" in {
     val cb = CallbackCaptor [Map [Int, Int]]
-    val ltch = Latch.map (1, cb)
+    val ltch = Latch.map [Int, Int] (1, cb)
     cb.expectNotInvoked()
     ltch.fail (new DistinguishedException)
     cb.failed [DistinguishedException]
@@ -37,7 +39,7 @@ class MapLatchSpec extends FlatSpec {
 
   it should "release after two passes for count==2" in {
     val cb = CallbackCaptor [Map [Int, Int]]
-    val ltch = Latch.map (2, cb)
+    val ltch = Latch.map [Int, Int] (2, cb)
     cb.expectNotInvoked()
     ltch.pass (0, 1)
     cb.expectNotInvoked()
@@ -47,7 +49,7 @@ class MapLatchSpec extends FlatSpec {
 
   it should "release after two reversed passes for count==2" in {
     val cb = CallbackCaptor [Map [Int, Int]]
-    val ltch = Latch.map (2, cb)
+    val ltch = Latch.map [Int, Int] (2, cb)
     cb.expectNotInvoked()
     ltch.pass (1, 2)
     cb.expectNotInvoked()
@@ -57,7 +59,7 @@ class MapLatchSpec extends FlatSpec {
 
   it should "release after a pass and a fail for count==2" in {
     val cb = CallbackCaptor [Map [Int, Int]]
-    val ltch = Latch.map (2, cb)
+    val ltch = Latch.map [Int, Int] (2, cb)
     cb.expectNotInvoked()
     ltch.pass (0, 0)
     cb.expectNotInvoked()
@@ -67,7 +69,7 @@ class MapLatchSpec extends FlatSpec {
 
   it should "release after two fails for count==2" in {
     val cb = CallbackCaptor [Map [Int, Int]]
-    val ltch = Latch.map (2, cb)
+    val ltch = Latch.map [Int, Int] (2, cb)
     cb.expectNotInvoked()
     ltch.fail (new Exception)
     cb.expectNotInvoked()

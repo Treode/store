@@ -5,6 +5,8 @@ import scala.util.Random
 
 import org.scalatest.FlatSpec
 
+import AsyncConversions._
+
 class TimeoutCallbackSpec extends FlatSpec {
 
   class DistinguishedException extends Exception

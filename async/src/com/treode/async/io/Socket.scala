@@ -4,21 +4,20 @@ import java.nio.ByteBuffer
 import java.nio.channels.{AsynchronousChannelGroup, AsynchronousSocketChannel}
 import java.net.SocketAddress
 import java.util.concurrent.{Executor, TimeUnit}
+import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, Callback, Scheduler, Whilst}
+import com.treode.async.{Async, AsyncConversions, Callback, Scheduler, Whilst}
 import com.treode.buffer.PagedBuffer
 
 import Async.async
+import AsyncConversions._
 import TimeUnit.MILLISECONDS
 
 /** A socket that has useful behavior (flush/fill) and that can be mocked. */
 class Socket (socket: AsynchronousSocketChannel) (implicit exec: Executor) {
 
-  private def execute (cb: Callback [Unit]): Unit =
-    exec.execute (Scheduler.toRunnable (cb, ()))
-
   private def fail (cb: Callback [Unit], t: Throwable): Unit =
-    exec.execute (Scheduler.toRunnable (cb, t))
+    exec.execute (Scheduler.toRunnable (cb, Failure (t)))
 
   private def whilst = new Whilst (exec)
 

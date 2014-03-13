@@ -1,5 +1,7 @@
 package com.treode.store.atomic
 
+import scala.util.{Failure, Success}
+
 import com.treode.async.Callback
 import com.treode.cluster.RequestDescriptor
 import com.treode.store.{ReadOp, TxClock, Value}
@@ -10,15 +12,12 @@ private class ReadDeputy (kit: AtomicKit) {
   type ReadMediator = ReadDeputy.read.Mediator
 
   def read (mdtr: ReadMediator, rt: TxClock, ops: Seq [ReadOp]) {
-    tables.read (rt, ops) run (new Callback [Seq [Value]] {
-
-      def pass (vs: Seq [Value]): Unit =
+    tables.read (rt, ops) run {
+      case Success (vs) =>
         mdtr.respond (ReadResponse.Got (vs))
-
-      def fail (t: Throwable): Unit =
+      case Failure (t) =>
         mdtr.respond (ReadResponse.Failed)
-    })
-  }
+    }}
 
   def attach() {
     ReadDeputy.read.listen { case ((rt, ops), mdtr) =>

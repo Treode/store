@@ -1,5 +1,7 @@
 package com.treode.async
 
+import scala.util.{Failure, Success}
+
 private class TripleLatch [A, B, C] (cb: Callback [(A, B, C)])
 extends AbstractLatch [(A, B, C)] (3, cb) {
 
@@ -11,32 +13,29 @@ extends AbstractLatch [(A, B, C)] (3, cb) {
 
   init()
 
-  val cbA = new Callback [A] {
-    def pass (v: A) {
+  val cbA: Callback [A] = {
+    case Success (v) =>
       require (va == null, "Value 'a' was already set.")
       va = v
       release()
-    }
-    def fail (t: Throwable): Unit =
-      TripleLatch.this.fail (t)
+    case Failure (t) =>
+      failure (t)
   }
 
-  val cbB = new Callback [B] {
-    def pass (v: B) {
+  val cbB: Callback [B] = {
+    case Success (v) =>
       require (vb == null, "Value 'b' was already set.")
       vb = v
       release()
-    }
-    def fail (t: Throwable): Unit =
-      TripleLatch.this.fail (t)
+    case Failure (t) =>
+      failure (t)
   }
 
-  val cbC = new Callback [C] {
-    def pass (v: C) {
+  val cbC: Callback [C] = {
+    case Success (v) =>
       require (vc == null, "Value 'c' was already set.")
       vc = v
       release()
-    }
-    def fail (t: Throwable): Unit =
-      TripleLatch.this.fail (t)
+    case Failure (t) =>
+      failure (t)
   }}
