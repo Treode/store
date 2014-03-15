@@ -6,7 +6,7 @@ import com.treode.disk.{Disks, ObjectId, PageHandler, Position, RecordDescriptor
 import com.treode.store.{Bytes, TableId, TxId}
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
-import Async.{guard, supply}
+import Async.{guard, latch, supply}
 import AsyncConversions._
 
 private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
@@ -49,7 +49,7 @@ private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
   def checkpoint(): Async [Unit] =
     guard {
       for {
-        _ <- Latch.triple (
+        _ <- latch (
             archive.checkpoint() .flatMap (WriteDeputies.checkpoint.record (_)),
             tables.checkpoint(),
             materialize (deputies.values) .latch.unit (_.checkpoint()))

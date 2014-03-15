@@ -9,8 +9,9 @@ import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
-import Async.{async, guard, latch}
+import Async.{async, guard, latch, when}
 import AsyncConversions._
+import Callback.ignore
 import DiskDrive.offset
 import RecordHeader._
 
@@ -54,7 +55,7 @@ private class DiskDrive (
     }
 
   private def writeLedger(): Async [Unit] = {
-    Async.cond (pageLedgerDirty) {
+    when (pageLedgerDirty) {
       pageLedgerDirty = false
       PageLedger.write (pageLedger.clone(), file, pageSeg.pos)
     }}
@@ -87,7 +88,7 @@ private class DiskDrive (
     fiber.execute {
       val nums = IntSet (segs.map (_.num) .sorted: _*)
       alloc.free (nums)
-      record (SegmentFree (nums)) run (Callback.ignore)
+      record (SegmentFree (nums)) run (ignore)
       if (draining && alloc.drained (logSegs))
         disks.detach (this)
     }
@@ -103,10 +104,9 @@ private class DiskDrive (
     }
 
   def detach(): Unit =
-    fiber.execute {
-      val task = for (_ <- logmp.close())
+    fiber.run (ignore) {
+      for (_ <- logmp.close())
         yield file.close()
-      task.run (Callback.ignore)
     }
 
   private def splitRecords (entries: UnrolledBuffer [PickledRecord]) = {

@@ -52,22 +52,4 @@ class WhilstSpec extends FlatSpec {
       true
     } (count += 1) .fail [DistinguishedException]
     expectResult (3) (count)
-  }
-
-  it should "prevent double runs with zero iterations" in {
-    implicit val scheduler = StubScheduler.random()
-    val a = whilst.f (false) (())
-    a run disregard
-    intercept [IllegalArgumentException] {
-      a run disregard
-    }}
-
-  it should "prevent double runs with multiple iterations" in {
-    implicit val scheduler = StubScheduler.random()
-    var count = 0
-    val a = whilst.f (count < 3) (count += 1)
-    a run disregard
-    intercept [IllegalArgumentException] {
-      a run disregard
-    }}
-}
+  }}

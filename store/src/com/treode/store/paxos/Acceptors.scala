@@ -6,7 +6,7 @@ import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position, 
 import com.treode.store.Bytes
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
-import Async.{guard, supply}
+import Async.{guard, latch, supply}
 import AsyncConversions._
 
 private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
@@ -52,7 +52,7 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   def checkpoint(): Async [Unit] =
     guard {
       for {
-        _ <- Latch.pair (
+        _ <- latch (
             archive.checkpoint() .flatMap (Acceptors.checkpoint.record (_)),
             materialize (acceptors.values) .latch.unit (_.checkpoint()))
       } yield ()

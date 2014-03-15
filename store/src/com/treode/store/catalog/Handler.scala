@@ -9,7 +9,7 @@ import com.treode.async.misc.materialize
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, CatalogId}
 
-import Async.{cond, guard}
+import Async.{guard, when}
 import Poster.Meta
 
 private class Handler (
@@ -85,7 +85,7 @@ private class Handler (
       }}
 
   def compact (groups: Set [Int]): Async [Unit] =
-    cond (saved.isDefined && (groups contains saved.get.version)) (save())
+    when (saved.isDefined && (groups contains saved.get.version)) (save())
 
   def checkpoint(): Async [Unit] =
     guard {

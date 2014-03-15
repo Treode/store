@@ -9,7 +9,7 @@ import com.treode.async.{Async, AsyncConversions, Callback, Scheduler}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
-import Async.{async, cond, defer, supply}
+import Async.{async, guard, supply}
 import AsyncConversions._
 
 private class RecoveryAgent (
@@ -76,7 +76,7 @@ private class RecoveryAgent (
     }}
 
   def superBlocksRead (reads: Seq [SuperBlocks]): Unit =
-    defer (cb) {
+    guard {
 
       val useGen1 = chooseSuperBlock (reads)
       val boot = if (useGen1) reads.head.sb1.get.boot else reads.head.sb2.get.boot
@@ -86,15 +86,15 @@ private class RecoveryAgent (
       for {
         disks <- LogIterator.replay (useGen1, reads, records)
       } yield launch (disks)
-    }
+    } defer (cb)
 
   def reattach (items: Seq [(Path, File)]): Unit =
-    defer (cb) {
+    guard {
       require (!items.isEmpty, "Must list at least one file or device to reaattach.")
       for {
         reads <- items.latch.seq { case (path, file) => SuperBlocks.read (path, file) }
       } yield superBlocksRead (reads)
-    }
+    } defer (cb)
 
   def reattach (items: Seq [Path], exec: ExecutorService): Unit =
     cb.defer {

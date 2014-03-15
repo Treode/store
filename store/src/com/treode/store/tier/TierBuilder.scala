@@ -7,7 +7,7 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.disk.{Disks, ObjectId, Position}
 import com.treode.store.{Bytes, StoreConfig, TxClock}
 
-import Async.{async, cond, guard, supply}
+import Async.{async, guard, supply, when}
 
 private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long) (
     implicit scheduler: Scheduler, disks: Disks, config: StoreConfig) {
@@ -137,7 +137,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
     var pos: Position = null
     for {
       _ <- pager.write (obj, gen, page) .map (pos = _)
-      _ <- cond (entries.size > 0) (add (page.last.key, pos, 0))
+      _ <- when (entries.size > 0) (add (page.last.key, pos, 0))
       _ <- whilst (!stack.isEmpty) (pop (page, pos) .map (pos = _))
     } yield Tier (gen, pos)
   }}

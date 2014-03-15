@@ -7,7 +7,7 @@ import com.treode.async.Async
 import com.treode.disk.Disks
 import com.treode.store.Bytes
 
-import Async.{cond, guard}
+import Async.{guard, when}
 import Poster.{Meta, pager}
 
 private class Medic {
@@ -67,7 +67,7 @@ private class Medic {
   def close (poster: Poster) (implicit disks: Disks): Async [Handler] =
     guard {
       for {
-        _ <- cond (saved.isDefined) (patch (saved.get))
+        _ <- when (saved.isDefined) (patch (saved.get))
       } yield {
         new Handler (version, bytes.hashCode, bytes, history, saved, poster)
       }}

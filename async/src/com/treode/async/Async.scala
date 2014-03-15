@@ -3,7 +3,7 @@ package com.treode.async
 import java.util.concurrent.{Future => JFuture, Callable, Executor, FutureTask, SynchronousQueue}
 import scala.util.{Failure, Success, Try}
 
-import Async.async
+import Async.{_async, async}
 import AsyncConversions._
 import Scheduler.toRunnable
 
@@ -12,14 +12,14 @@ trait Async [A] {
   def run (cb: Callback [A])
 
   def map [B] (f: A => B): Async [B] =
-    async { cb =>
+    _async { cb =>
       run {
         case Success (a) => cb (Try (f (a)))
         case Failure (t) => cb (Failure (t))
       }}
 
   def flatMap [B] (f: A => Async [B]): Async [B] =
-    async { cb =>
+    _async { cb =>
       run {
         case Success (a) =>
           Try (f (a)) match {
@@ -30,7 +30,7 @@ trait Async [A] {
       }}
 
   def filter (p: A => Boolean): Async [A] =
-    async { cb =>
+    _async { cb =>
       run {
         case Success (v) =>
           Try (p (v)) match {
@@ -53,22 +53,16 @@ trait Async [A] {
       case Failure (t) => cb (Failure (t))
     }}
 
-  def on (s: Scheduler): Async [A] = {
-    val self = this
-    new Async [A] {
-      def run (cb: Callback [A]): Unit = self.run (s.take (cb))
-    }}
+  def on (s: Scheduler): Async [A] =
+    _async (cb => run (s.take (cb)))
 
-  def leave (f: => Any): Async [A] = {
-    val self = this
-    new Async [A] {
-      def run (cb: Callback [A]): Unit = self.run (cb leave f)
-    }}
+  def leave (f: => Any): Async [A] =
+    _async (cb => run (cb leave f))
 
   def await(): A = {
-    val q = new SynchronousQueue [Try [A]]
-    run (q.offer _)
-    q.take() match {
+    val q = new OnceQueue [Try [A]]
+    run (q.set _)
+    q.await() match {
       case Success (v) => v
       case Failure (t) => throw t
     }}
@@ -87,46 +81,55 @@ trait Async [A] {
 
 object Async {
 
+  private def _async [A] (f: Callback [A] => Any): Async [A] =
+    new Async [A] {
+      def run (cb: Callback [A]): Unit =
+        f (cb)
+    }
+
+  private def _pass [A] (v: A): Async [A] =
+    new Async [A] {
+      def run (cb: Callback [A]): Unit =
+        cb.pass (v)
+    }
+
+  private def _fail [A] (t: Throwable): Async [A] =
+    new Async [A] {
+      def run (cb: Callback [A]): Unit =
+        cb.fail (t)
+    }
+
   def async [A] (f: Callback [A] => Any): Async [A] =
     new Async [A] {
-      private var ran = false
       def run (cb: Callback [A]) {
-        require (!ran, "Async was already run.")
-        ran = true
+        val c = new ExceptionCaptor (cb)
         try {
-          f (cb)
+          f (c)
         } catch {
           case t: Throwable => cb.fail (t)
-        }}}
-
-  def guard [A] (f: => Async [A]): Async [A] =
-    new Async [A] {
-      private var ran = false
-      def run (cb: Callback [A]) {
-        require (!ran, "Async was already run.")
-        ran = true
-        val v = try {
-          f
-        } catch {
-          case t: Throwable =>
-            cb.fail (t)
-            return
         }
-        v run cb
+        c.get
       }}
 
-  def supply [A] (v: A): Async [A] =
-    async (_.pass (v))
+  def guard [A] (f: => Async [A]): Async [A] =
+    try {
+      f
+    } catch {
+      case t: Throwable => _fail (t)
+    }
 
-  def run [A] (cb: Callback [A]) (f: => Async [A]): Unit =
-    guard (f) run (cb)
+  def supply [A] (f: => A): Async [A] =
+    try {
+      _pass (f)
+    } catch {
+      case t: Throwable => _fail (t)
+    }
 
-  def defer (cb: Callback [_]) (f: => Async [_]): Unit =
-    guard (f) defer (cb)
-
-  def cond [A] (p: => Boolean) (f: => Async [A]): Async [Unit] =
-    guard {
-      if (p) f map (_ => ()) else supply()
+  def when [A] (p: => Boolean) (f: => Async [A]): Async [Unit] =
+    try {
+      if (p) f map (_ => ()) else _pass()
+    } catch {
+      case t: Throwable => _fail (t)
     }
 
   def latch [A, B] (a: Async [A], b: Async [B]): Async [(A, B)] =

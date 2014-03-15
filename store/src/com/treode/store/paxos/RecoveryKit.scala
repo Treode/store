@@ -11,7 +11,6 @@ import com.treode.store.tier.TierMedic
 
 import Acceptors.checkpoint
 import Acceptor.{open, promise, accept, reaccept, close}
-import Async.cond
 
 private class RecoveryKit (implicit
     val random: Random,

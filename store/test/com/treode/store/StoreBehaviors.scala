@@ -9,7 +9,7 @@ import com.treode.async._
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
-import Async.async
+import Async.{async, latch}
 import AsyncConversions._
 import Cardinals.{One, Two}
 import Fruits.Apple
@@ -309,7 +309,7 @@ trait StoreBehaviors {
           audit() .flatMap (_ => sleep (100))
         }}
 
-      Latch.pair (brokers, auditor) .await()
+      latch (brokers, auditor) .await()
       executor.shutdown()
 
       assert (countAuditsPassed.get > 0, "Expected at least one audit to pass.")

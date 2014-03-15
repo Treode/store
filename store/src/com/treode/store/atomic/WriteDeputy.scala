@@ -9,7 +9,7 @@ import com.treode.store.{Bytes, TxClock, TxId, WriteOp, log}
 import com.treode.store.atomic.{WriteDeputy => WD}
 import com.treode.store.locks.LockSet
 
-import Async.{cond, guard, supply}
+import Async.{guard, supply, when}
 import WriteDeputy.ArchiveStatus
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
@@ -295,7 +295,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     val gens = tables.commit (wt, ops)
     guard {
       for {
-        _ <- cond (locks.isEmpty) (WD.preparing.record (xid, ops))
+        _ <- when (locks.isEmpty) (WD.preparing.record (xid, ops))
         _ <- WD.committed.record (xid, gen, gens, wt)
       } yield ()
     } run {

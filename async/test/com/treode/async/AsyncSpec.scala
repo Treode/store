@@ -1,9 +1,9 @@
 package com.treode.async
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 import org.scalatest.FlatSpec
 
-import Async.{async, cond, guard, supply}
+import Async.{async, guard, supply, when}
 import AsyncConversions._
 import AsyncTestTools._
 import Callback.{ignore => disregard}
@@ -24,17 +24,41 @@ class AsyncSpec extends FlatSpec {
       new ScheduledAsync (async, scheduler)
   }
 
-  def exceptional [A]: Callback [A] = {
-    case Success (v) => throw new DistinguishedException
-    case Failure (t) => throw t
-  }
+  def exceptional [A]: Callback [A] =
+    new Callback [A] {
+      private var ran = false
+      def apply (v: Try [A]) {
+        require (!ran, "Callback was already invoked.")
+        ran = true
+        v match {
+          case Success (v) => throw new DistinguishedException
+          case Failure (t) => throw t
+        }}}
 
   "Async.map" should "apply the function" in {
     implicit val scheduler = StubScheduler.random()
     async [Int] (_.pass (1)) .map (_ * 2) .expect (2)
   }
 
-  it should "pass an exception from the function to the callback" in {
+  it should "skip the function on a failure thrown" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    async [Int] (_ => throw new DistinguishedException)
+        .map (_ => flag = true)
+        .fail [DistinguishedException]
+    assert (!flag)
+  }
+
+  it should "skip the function on a failure given" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    async [Int] (_.fail (new DistinguishedException))
+        .map (_ => flag = true)
+        .fail [DistinguishedException]
+    assert (!flag)
+  }
+
+  it should "pass an exception thrown from the function to the callback" in {
     implicit val scheduler = StubScheduler.random()
     async [Int] (_.pass (1))
         .on (scheduler)
@@ -42,10 +66,55 @@ class AsyncSpec extends FlatSpec {
         .fail [DistinguishedException]
   }
 
-  it should "thrown an exception from the callback" in {
+  it should "throw an exception thrown from the callback" in {
     implicit val scheduler = StubScheduler.random()
     intercept [DistinguishedException] {
       async [Int] (_.pass (1)) .map (_ * 2) .run (exceptional)
+    }}
+
+  "Async.flatMap" should "apply the function" in {
+    implicit val scheduler = StubScheduler.random()
+    async [Int] (_.pass (1)) .flatMap (i => supply (i * 2)) .expect (2)
+  }
+
+  it should "skip the function on a failure thrown" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    async [Int] (_ => throw new DistinguishedException)
+        .flatMap (_ => supply (flag = true))
+        .fail [DistinguishedException]
+    assert (!flag)
+  }
+
+  it should "skip the function on a failure given" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    async [Int] (_.fail (new DistinguishedException))
+        .flatMap (_ => supply (flag = true))
+        .fail [DistinguishedException]
+    assert (!flag)
+  }
+
+  it should "pass an exception thrown from the function to the callback" in {
+    implicit val scheduler = StubScheduler.random()
+    async [Int] (_.pass (1))
+        .on (scheduler)
+        .flatMap (_ => throw new DistinguishedException)
+        .fail [DistinguishedException]
+  }
+
+  it should "pass an exception yielded from the function to the callback" in {
+    implicit val scheduler = StubScheduler.random()
+    async [Int] (_.pass (1))
+        .on (scheduler)
+        .flatMap (_ => guard [Int] (throw new DistinguishedException))
+        .fail [DistinguishedException]
+  }
+
+  it should "throw an exception thrown from the callback" in {
+    implicit val scheduler = StubScheduler.random()
+    intercept [DistinguishedException] {
+      async [Int] (_.pass (1)) .flatMap (i => supply (i * 2)) .run (exceptional)
     }}
 
   "Async.filter" should "continue when the predicate is true" in {
@@ -60,15 +129,21 @@ class AsyncSpec extends FlatSpec {
     cb.expectNotInvoked()
   }
 
-  it should "pass an exception from the predicate to the callback" in {
+  it should "stop when an exeption is given" in {
+    implicit val scheduler = StubScheduler.random()
+    async [Int] (_.fail (new DistinguishedException))
+        .filter (_ == 1)
+        .fail [DistinguishedException]
+  }
+
+  it should "pass an exception thrown from the predicate to the callback" in {
     implicit val scheduler = StubScheduler.random()
     async [Int] (_.pass (1))
-        .on (scheduler)
         .filter (_ => throw new DistinguishedException)
         .fail [DistinguishedException]
   }
 
-  it should "thrown an exception from the callback" in {
+  it should "throw an exception thrown from the callback" in {
     implicit val scheduler = StubScheduler.random()
     intercept [DistinguishedException] {
       async [Int] (_.pass (1)) .filter (_ == 1) .run (exceptional)
@@ -88,7 +163,7 @@ class AsyncSpec extends FlatSpec {
     cb.failed [DistinguishedException]
   }
 
-  "Async.onLeave" should "invoke the body on pass" in {
+  "Async.leave" should "invoke the body on pass" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false
     val a = supply (0) .leave (flag = true)
@@ -104,6 +179,21 @@ class AsyncSpec extends FlatSpec {
     expectResult (true) (flag)
   }
 
+  "Async.await" should "invoke the async" in {
+    var flag = false
+    supply (flag = true) .await()
+    expectResult (true) (flag)
+  }
+
+  it should "should pass an async from the body to the caller" in {
+    expectResult (1) (supply (1) .await())
+  }
+
+  it should "thrown an exception from the body to the caller" in {
+    intercept [DistinguishedException] {
+      supply (throw new DistinguishedException) .await()
+    }}
+
   "Async.async" should "inovke the body" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false
@@ -116,18 +206,10 @@ class AsyncSpec extends FlatSpec {
     async [Unit] (_ => throw new DistinguishedException) .fail [DistinguishedException]
   }
 
-  it should "thrown an exception from the callback" in {
+  it should "throw an exception from the callback" in {
     implicit val scheduler = StubScheduler.random()
     intercept [DistinguishedException] {
       async [Unit] (_.pass()) run (exceptional)
-    }}
-
-  it should "prevent double runs" in {
-    implicit val scheduler = StubScheduler.random()
-    val a = async [Unit] (_.pass())
-    a run disregard
-    intercept [IllegalArgumentException] {
-      a run disregard
     }}
 
   "Async.guard" should "invoke the body" in {
@@ -135,6 +217,11 @@ class AsyncSpec extends FlatSpec {
     var flag = false
     guard (supply (flag = true)) .pass
     expectResult (true) (flag)
+  }
+
+  it should "should pass an async from the body to the callback" in {
+    implicit val scheduler = StubScheduler.random()
+    expectResult (1) (guard (supply (1)) .pass)
   }
 
   it should "pass an exception from the body to the callback" in {
@@ -148,57 +235,56 @@ class AsyncSpec extends FlatSpec {
       guard (supply()) .run (exceptional)
     }}
 
-  it should "prevent double runs" in {
-    implicit val scheduler = StubScheduler.random()
-    val a = guard (supply())
-    a run disregard
-    intercept [IllegalArgumentException] {
-      a run disregard
-    }}
-
-  "Async.cond" should "invoke the body when the condition is true" in {
+  "Async.supply" should "invoke the body" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false
-    cond (true) (supply (flag = true)) .pass
+    supply (supply (flag = true)) .pass
+    expectResult (true) (flag)
+  }
+
+  it should "should pass data from the body to the callback" in {
+    implicit val scheduler = StubScheduler.random()
+    expectResult (1) (supply (1) .pass)
+  }
+
+  it should "pass an exception from the body to the callback" in {
+    implicit val scheduler = StubScheduler.random()
+    supply (throw new DistinguishedException) .fail [DistinguishedException]
+  }
+
+  it should "throw an exception from the callback" in {
+    implicit val scheduler = StubScheduler.random()
+    intercept [DistinguishedException] {
+      supply (supply()) .run (exceptional)
+    }}
+
+  "Async.when" should "invoke the body when the condition is true" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    when (true) (supply (flag = true)) .pass
     expectResult (true) (flag)
   }
 
   it should "skip the body when the condition is false" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false
-    cond (false) (supply (flag = true)) .pass
+    when (false) (supply (flag = true)) .pass
     expectResult (false) (flag)
   }
 
   it should "pass an exception from the body to the callback" in {
     implicit val scheduler = StubScheduler.random()
-    cond (true) (throw new DistinguishedException) .fail [DistinguishedException]
+    when (true) (throw new DistinguishedException) .fail [DistinguishedException]
   }
 
   it should "throw an exception from the callback when the condition is true" in {
     implicit val scheduler = StubScheduler.random()
     intercept [DistinguishedException] {
-      cond (true) (supply()) .run (exceptional)
+      when (true) (supply()) .run (exceptional)
     }}
 
   it should "throw an exception from the callback when the condition is false" in {
     implicit val scheduler = StubScheduler.random()
     intercept [DistinguishedException] {
-      cond (false) (supply()) .run (exceptional)
-    }}
-
-  it should "prevent double runs when the condition is true" in {
-    implicit val scheduler = StubScheduler.random()
-    val a = cond (true) (supply())
-    a run disregard
-    intercept [IllegalArgumentException] {
-      a run disregard
-    }}
-
-  it should "prevent double runs when the condition is false" in {
-    implicit val scheduler = StubScheduler.random()
-    val a = cond (false) (supply())
-    a run disregard
-    intercept [IllegalArgumentException] {
-      a run disregard
+      when (false) (supply()) .run (exceptional)
     }}}
