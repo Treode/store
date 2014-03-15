@@ -8,16 +8,18 @@ import com.treode.async.{Async, AsyncConversions, Callback, Scheduler}
 import AsyncConversions._
 import JavaConversions._
 
-private class LaunchAgent (drives: DiskDrives) extends Disks.Launch {
+private class LaunchAgent (val kit: DisksKit) extends Disks.Launch {
 
-  val roots = new CheckpointRegistry () (drives)
-  val pages = new PageRegistry (drives)
+  val roots = new CheckpointRegistry
+  val pages = new PageRegistry (kit)
   private var open = true
 
   def requireOpen(): Unit =
     require (open, "Disks have already launched.")
 
-  def disks: Disks = drives
+  val disks: Disks = new DisksAgent (kit)
+
+  val controller: Disks.Controller = new ControllerAgent (kit, disks)
 
   def checkpoint (f: => Async [Unit]): Unit =
     synchronized {
@@ -35,5 +37,5 @@ private class LaunchAgent (drives: DiskDrives) extends Disks.Launch {
     synchronized {
       requireOpen()
       open = false
-      drives.launch (roots, pages)
+      kit.launch (roots, pages)
     }}

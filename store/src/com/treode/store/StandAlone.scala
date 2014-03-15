@@ -14,7 +14,7 @@ object StandAlone {
   class Controller (
       executor: ExecutorService,
       cluster: Cluster,
-      disks: Disks
+      disks: Disks.Controller
   ) (implicit
       val store: Store
   ) {
@@ -50,7 +50,7 @@ object StandAlone {
       launch <- _disks.attach (items, executor)
       store <- _store.launch (Cohort.settled (localId)) (launch)
     } yield {
-      new Controller (executor, cluster, launch.disks) (store)
+      new Controller (executor, cluster, launch.controller) (store)
     }}
 
   def recover (
@@ -77,5 +77,5 @@ object StandAlone {
       launch <- _disks.reattach (items, executor)
       store <- _store.launch (Cohort.settled (localId)) (launch)
     } yield {
-      new Controller (executor, cluster, launch.disks) (store)
+      new Controller (executor, cluster, launch.controller) (store)
     }}}

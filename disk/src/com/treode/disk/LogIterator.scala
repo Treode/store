@@ -94,10 +94,10 @@ private class LogIterator private (
   def _foreach (f: ((Long, Unit => Any), Callback [Unit]) => Any): Async [Unit] =
     async (new Foreach (f, _) .next())
 
-  def close (disks: DiskDrives, logd: LogDispatcher, paged: PageDispatcher): DiskDrive = {
+  def close (kit: DisksKit): DiskDrive = {
     buf.clear()
     val disk = new DiskDrive (
-        superb.id, path, file, superb.geometry, alloc, disks, superb.draining, logSegs,
+        superb.id, path, file, superb.geometry, alloc, kit, superb.draining, logSegs,
         superb.logHead, logPos, logSeg.limit, buf, pageSeg, superb.pagePos, pageLedger, false)
     disk
   }}
@@ -139,7 +139,7 @@ private object LogIterator {
   ) (implicit
       scheduler: Scheduler,
       config: DisksConfig
-  ): Async [DiskDrives] = {
+  ): Async [DisksKit] = {
 
     val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
 
@@ -147,12 +147,12 @@ private object LogIterator {
       logs <- reads.latch.map (apply (useGen1, _, records))
       iter = AsyncIterator.merge (logs.values.toSeq) (ordering)
       _ <- iter.foreach.f (_._2())
-      disks = new DiskDrives
+      kit = new DisksKit
       drives =
         for (read <- reads) yield {
           val superb = read.superb (useGen1)
-          logs (superb.id) .close (disks, disks.logd, disks.paged)
+          logs (superb.id) .close (kit)
         }
-      _ <- disks.add (drives)
-    } yield disks
+      _ <- kit.disks.add (drives)
+    } yield kit
   }}

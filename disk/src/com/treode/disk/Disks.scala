@@ -8,10 +8,6 @@ import com.treode.async.io.File
 
 trait Disks {
 
-  def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit]
-
-  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Unit]
-
   def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit]
 
   def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P]
@@ -23,9 +19,20 @@ trait Disks {
 
 object Disks {
 
+  trait Controller {
+
+    implicit def disks: Disks
+
+    def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit]
+
+    def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Unit]
+  }
+
   trait Launch {
 
     implicit def disks: Disks
+
+    implicit def controller: Controller
 
     def checkpoint (f: => Async [Unit])
 

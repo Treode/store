@@ -18,19 +18,12 @@ private object DiskTestTools extends AsyncTestTools {
       recovery.attach (_items)
     }
 
-    def attachAndLaunch (items: (String, File, DiskGeometry)*): DiskDrives = {
-      val launch = _attach (items) .pass
+    def attachAndLaunch (items: (String, File, DiskGeometry)*): Disks = {
+      val launch = _attach (items) .pass.asInstanceOf [LaunchAgent]
       launch.launch()
       scheduler.runTasks()
-      val disks = launch.disks.asInstanceOf [DiskDrives]
-      disks.assertLaunched()
-      disks
-    }
-
-    def attach (item: (String, File, DiskGeometry)): (Launch, DiskDrives) = {
-      val launch = _attach (Seq (item)) .pass
-      val disks = launch.disks.asInstanceOf [DiskDrives]
-      (launch, disks)
+      launch.kit.assertLaunched()
+      launch.disks
     }
 
     private def _reattach (items: Seq [(String, File)]): Async [Launch] = {
@@ -38,23 +31,21 @@ private object DiskTestTools extends AsyncTestTools {
       recovery.reattach (_items)
     }
 
-    def reattachAndLaunch (items: (String, File)*): DiskDrives = {
-      val launch = _reattach (items) .pass
+    def reattachAndLaunch (items: (String, File)*): Disks = {
+      val launch = _reattach (items) .pass.asInstanceOf [LaunchAgent]
       launch.launch()
       scheduler.runTasks()
-      val disks = launch.disks.asInstanceOf [DiskDrives]
-      disks.assertLaunched()
-      disks
+      launch.kit.assertLaunched()
+      launch.disks
     }}
 
-  implicit class RichDiskDrives (disks: DiskDrives) (implicit scheduler: StubScheduler) {
+  implicit class RichDiskKit (kit: DisksKit) (implicit scheduler: StubScheduler) {
+    import kit.{disks, checkpointer, compactor}
 
     def assertLaunched() {
       assert (!disks.engaged, "Expected disks to be disengaged.")
-      val cp = disks.checkpointer
-      assert (cp.checkpoints != null, "Expected checkpointer to have a registry.")
-      assert (!cp.engaged, "Expected checkpointer to be disengaged.")
-      val c = disks.compactor
-      assert (c.pages != null, "Expected compactor to have a page registry.")
-      assert (!c.engaged, "Expected compactor to be disengaged.")
+      assert (checkpointer.checkpoints != null, "Expected checkpointer to have a registry.")
+      assert (!checkpointer.engaged, "Expected checkpointer to be disengaged.")
+      assert (compactor.pages != null, "Expected compactor to have a page registry.")
+      assert (!compactor.engaged, "Expected compactor to be disengaged.")
     }}}

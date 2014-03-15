@@ -21,7 +21,7 @@ private class DiskDrive (
     val file: File,
     val geometry: DiskGeometry,
     val alloc: Allocator,
-    val disks: DiskDrives,
+    val kit: DisksKit,
     var draining: Boolean,
     var logSegs: ArrayBuffer [Int],
     var logHead: Long,
@@ -33,12 +33,12 @@ private class DiskDrive (
     var pageLedger: PageLedger,
     var pageLedgerDirty: Boolean
 ) {
-  import disks.{checkpointer, compactor, config, scheduler}
+  import kit.{checkpointer, compactor, config, disks, scheduler}
 
   val fiber = new Fiber (scheduler)
-  val logmp = new Multiplexer [PickledRecord] (disks.logd)
+  val logmp = new Multiplexer [PickledRecord] (kit.logd)
   val logr: UnrolledBuffer [PickledRecord] => Unit = (receiveRecords _)
-  val pagemp = new Multiplexer [PickledPage] (disks.paged)
+  val pagemp = new Multiplexer [PickledPage] (kit.paged)
   val pager: UnrolledBuffer [PickledPage] => Unit = (receivePages _)
 
   def record (entry: RecordHeader): Async [Unit] =
@@ -298,11 +298,11 @@ private object DiskDrive {
       file: File,
       geometry: DiskGeometry,
       boot: BootBlock,
-      disks: DiskDrives
+      kit: DisksKit
   ): Async [DiskDrive] =
 
     guard {
-      import disks.{config}
+      import kit.config
 
       val alloc = Allocator (geometry, config)
       val logSeg = alloc.alloc (geometry, config)
@@ -320,6 +320,6 @@ private object DiskDrive {
             PageLedger.write (PageLedger.Zipped.empty, file, pageSeg.pos))
       } yield {
         new DiskDrive (
-            id, path, file, geometry, alloc, disks, false, logSegs, logSeg.pos, logSeg.pos,
+            id, path, file, geometry, alloc, kit, false, logSegs, logSeg.pos, logSeg.pos,
             logSeg.limit, PagedBuffer (12), pageSeg, pageSeg.limit, new PageLedger, false)
       }}}

@@ -20,26 +20,26 @@ private class RecoveryAgent (
     val config: DisksConfig
 ) {
 
-  def launch (disks: DiskDrives): Unit =
+  def launch (kit: DisksKit): Unit =
     cb.invoke {
-      new LaunchAgent (disks)
+      new LaunchAgent (kit)
     }
 
   def attach (items: Seq [(Path, File, DiskGeometry)]): Unit =
     cb.defer {
       require (!items.isEmpty, "Must list at least one file or device to attach.")
 
-      val disks = new DiskDrives
+      val kit = new DisksKit
       val attaching = items.map (_._1) .toSet
       val boot = BootBlock.apply (0, items.size, attaching)
 
       val task = for {
         drives <- items.latch.indexed { case ((path, file, geometry), i) =>
-          DiskDrive.init (i, path, file, geometry, boot, disks)
+          DiskDrive.init (i, path, file, geometry, boot, kit)
         }
-        _ <- disks.add (drives)
-      } yield launch (disks)
-      task run disks.panic
+        _ <- kit.disks.add (drives)
+      } yield launch (kit)
+      task run kit.panic
     }
 
   def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Unit =
@@ -83,9 +83,8 @@ private class RecoveryAgent (
       verifyReattachment (boot.disks.toSet, reads .map (_.path) .toSet)
       val files = reads.mapValuesBy (_.superb (useGen1) .id) (_.file)
 
-      for {
-        disks <- LogIterator.replay (useGen1, reads, records)
-      } yield launch (disks)
+      for (kit <- LogIterator.replay (useGen1, reads, records))
+        yield launch (kit)
     } defer (cb)
 
   def reattach (items: Seq [(Path, File)]): Unit =

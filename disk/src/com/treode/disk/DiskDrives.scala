@@ -12,10 +12,8 @@ import com.treode.async.io.File
 import Async.{async, guard}
 import AsyncConversions._
 
-private class DiskDrives (implicit
-    val scheduler: Scheduler,
-    val config: DisksConfig
-) extends Disks {
+private class DiskDrives (kit: DisksKit) {
+  import kit.{checkpointer, compactor, panic, scheduler}
 
   type AttachItem = (Path, File, DiskGeometry)
   type AttachRequest = (Seq [AttachItem], Callback [Unit])
@@ -24,12 +22,6 @@ private class DiskDrives (implicit
   type CheckpointRequest = Callback [Unit]
 
   val fiber = new Fiber (scheduler)
-  val logd = new Dispatcher [PickledRecord] (scheduler)
-  val paged = new Dispatcher [PickledPage] (scheduler)
-  val checkpointer = new Checkpointer (this)
-  val releaser = new Releaser
-  val compactor = new Compactor (this)
-  val cache = new PageCache (this)
 
   var disks = Map.empty [Int, DiskDrive]
   var attachreqs = Queue.empty [AttachRequest]
@@ -40,15 +32,6 @@ private class DiskDrives (implicit
 
   var bootgen = 0
   var number = 0
-
-  def panic (t: Throwable) {
-    throw t
-  }
-
-  val panic: Callback [Unit] = {
-    case Success (v) => ()
-    case Failure (t) => panic (t)
-  }
 
   private def reengage() {
     if (!attachreqs.isEmpty) {
@@ -71,10 +54,8 @@ private class DiskDrives (implicit
       engaged = false
     }}
 
-  def launch (checkpoints: CheckpointRegistry, pages: PageRegistry): Unit =
-    fiber.execute {
-      checkpointer.launch (checkpoints)
-      compactor.launch (pages)
+  def launch(): Async [Unit] =
+    fiber.supply {
       reengage()
     }
 
@@ -108,7 +89,7 @@ private class DiskDrives (implicit
 
       for {
         newDisks <- items.latch.indexed { case ((path, file, geometry), i) =>
-          DiskDrive.init (this.number + i, path, file, geometry, newBoot, this)
+          DiskDrive.init (this.number + i, path, file, geometry, newBoot, kit)
         }
         _ <- priorDisks.latch.unit (_.checkpoint (newBoot))
 
@@ -203,7 +184,7 @@ private class DiskDrives (implicit
   def mark(): Async [Unit] =
     fiber.guard {
       disks.latch.unit (_._2.mark())
-  }
+    }
 
   private def _checkpoint (req: CheckpointRequest) {
     val cb = leave [Unit] (req)
@@ -231,20 +212,6 @@ private class DiskDrives (implicit
       } yield segs.iterator.flatten
     }}
 
-  def join [A] (task: Async [A]): Async [A] =
-    releaser.join (task)
-
-  def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit] =
-    async (cb => logd.send (PickledRecord (desc, entry, cb)))
-
-  def write [G, P] (desc: PageDescriptor [G, P], obj: ObjectId, group: G, page: P): Async [Position] =
-    async (cb => paged.send (PickledPage (desc, obj, group, page, cb)))
-
   def fetch [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
-    guard {
-      DiskDrive.read (disks (pos.disk) .file, desc, pos)
-    }
-
-  def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
-    cache.read (desc, pos)
+    guard (DiskDrive.read (disks (pos.disk) .file, desc, pos))
 }

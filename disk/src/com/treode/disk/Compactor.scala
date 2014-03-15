@@ -4,12 +4,12 @@ import scala.collection.immutable.Queue
 import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch, Scheduler}
 import scala.util.{Failure, Success}
 
-import Async.async
+import Async.{async, guard}
 import AsyncConversions._
 import PageLedger.Groups
 
-private class Compactor (disks: DiskDrives) {
-  import disks.{config, releaser, scheduler}
+private class Compactor (kit: DisksKit) {
+  import kit.{config, disks, panic, releaser, scheduler}
 
   val empty = (Set.empty [PageGroup], List.empty [Callback [Unit]])
 
@@ -50,7 +50,7 @@ private class Compactor (disks: DiskDrives) {
         cb.pass (v)
       case Failure (t) =>
         val cb = Callback.fanout (latches, scheduler)
-        disks.panic (t)
+        panic (t)
         cb.fail (t)
     }}
 
@@ -91,17 +91,17 @@ private class Compactor (disks: DiskDrives) {
         reengage()
     }
 
-  private def clean() {
-    cleanreq = true
-    val x = for {
-      iter <- disks.cleanable()
-      (segs, groups) <- pages.probeByUtil (iter, 0.9)
-    } yield compact (groups, segs, true)
-    x run (disks.panic)
-  }
+  private def clean(): Unit =
+    guard {
+      cleanreq = true
+      for {
+        iter <- disks.cleanable()
+        (segs, groups) <- pages.probeByUtil (iter, 0.9)
+      } yield compact (groups, segs, true)
+    } run (panic)
 
-  def launch (pages: PageRegistry): Unit =
-    fiber.execute {
+  def launch (pages: PageRegistry): Async [Unit] =
+    fiber.supply {
       this.pages = pages
       reengage()
     }
@@ -113,9 +113,9 @@ private class Compactor (disks: DiskDrives) {
         clean()
     }
 
-  def drain (iter: Iterator [SegmentPointer]) {
-    val x = for {
-      groups <- pages.probeForDrain (iter)
-    } yield compact (groups, iter.toSeq, false)
-    x run (disks.panic)
-  }}
+  def drain (iter: Iterator [SegmentPointer]): Unit =
+    guard {
+      for (groups <- pages.probeForDrain (iter))
+        yield  compact (groups, iter.toSeq, false)
+    } run (panic)
+}

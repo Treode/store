@@ -9,8 +9,8 @@ import AsyncConversions._
 import PageLedger.{Groups, Merger}
 import PageRegistry.{PickledHandler, Probe, chooseByMargin}
 
-private class PageRegistry (disks: DiskDrives) {
-  import disks.{config, releaser, scheduler}
+private class PageRegistry (kit: DisksKit) {
+  import kit.{config, releaser, scheduler}
 
   val handlers = new ConcurrentHashMap [TypeId, PickledHandler]
 
