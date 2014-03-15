@@ -141,10 +141,12 @@ object TreodeBuild extends Build {
     scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", "-Yinline-warnings"),
 
     libraryDependencies ++= Seq (
+      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.3.1",
       "com.twitter" %% "finatra" % "1.5.2"),
 
     resolvers += "Twitter" at "http://maven.twttr.com")
 
   lazy val example1 = Project ("example1", file ("example1"))
+    .dependsOn (store)
     .settings (exampleSettings: _*)
 }

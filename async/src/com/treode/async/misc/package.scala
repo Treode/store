@@ -55,9 +55,9 @@ package object misc {
     b.result
   }
 
-  def parseInt (s: String, radix: Int = 10): Option [Int] = {
+  def parseInt (s: String): Option [Int] = {
     try {
-      Some (java.lang.Integer.parseInt (s, radix))
+      Some (java.lang.Integer.decode (s))
     } catch {
       case _: NumberFormatException => None
     }}
@@ -72,7 +72,7 @@ package object misc {
 
   def parseLong (s: String): Option [Long] = {
     try {
-      Some (java.lang.Long.parseLong (s))
+      Some (java.lang.Long.decode (s))
     } catch {
       case _: NumberFormatException => None
     }}

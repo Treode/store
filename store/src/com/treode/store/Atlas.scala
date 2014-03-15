@@ -13,7 +13,7 @@ private object Atlas {
 
   trait Recovery {
 
-    def launch(): Async [Atlas]
+    def launch (cohort: Cohort): Async [Atlas]
   }
 
   def recover (recovery: Catalogs.Recovery): Recovery =

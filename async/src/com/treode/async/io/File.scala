@@ -63,6 +63,7 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
 
 object File {
 
-  def open (path: Path, exec: ExecutorService, opts: OpenOption*): File =
-    new File (AsynchronousFileChannel.open (path, opts.toSet, exec, null)) (exec)
-}
+  def open (path: Path, exec: ExecutorService, opts: OpenOption*): File = {
+    val attrs = new Array [FileAttribute [_]] (0)
+    new File (AsynchronousFileChannel.open (path, opts.toSet, exec, attrs: _*)) (exec)
+  }}

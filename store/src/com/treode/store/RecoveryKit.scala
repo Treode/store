@@ -23,11 +23,11 @@ private class RecoveryKit (implicit
   def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =
     _catalogs.listen (desc) (f)
 
-  def launch (implicit launch: Disks.Launch): Async [Store] = {
+  def launch (cohort: Cohort) (implicit launch: Disks.Launch): Async [Store] = {
     import launch.disks
 
     for {
-      atlas <- _atlas.launch()
+      atlas <- _atlas.launch (cohort)
       catalogs <- _catalogs.launch (launch, atlas)
       paxos <- _paxos.launch (launch, atlas)
       atomic <- _atomic.launch (launch, atlas, paxos)

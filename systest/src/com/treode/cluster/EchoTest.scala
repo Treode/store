@@ -121,7 +121,10 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
         _ports.open (p) (f)
 
       def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
-      scuttlebutt.spread (desc) (msg)
+        scuttlebutt.spread (desc) (msg)
+
+      def startup(): Unit =
+        _listener.startup()
     }
 
     Echo.attach (localId) (_random, _scheduler, cluster)

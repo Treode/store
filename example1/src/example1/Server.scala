@@ -1,8 +1,23 @@
 package example1
 
-import com.twitter.finatra.FinatraServer
+import java.net.InetSocketAddress
+import java.nio.file.Paths
+import com.treode.disk.{DisksConfig, DiskGeometry}
+import com.treode.store.{StandAlone, StoreConfig}
 
-object Server extends FinatraServer {
+object Server extends AsyncFinatraServer {
 
-  register (Example1)
+  implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 32, 3)
+
+  val controller = {
+    val c = StandAlone.create (
+        localId = 0x288ACE6509E0CA47L,
+        localAddr = InetSocketAddress.createUnresolved ("*", 6782),
+        disksConfig = disksConfig,
+        storeConfig = StoreConfig (12, 1<<20),
+        items = Seq (Paths.get ("store.db") -> DiskGeometry (28, 14, 1L<<38)))
+    c.await()
+  }
+
+  register (new Resource (controller.store))
 }

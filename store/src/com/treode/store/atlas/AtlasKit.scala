@@ -33,9 +33,10 @@ private [store] object AtlasKit {
     val atlas = new AtlasKit
     atlas.attach (recovery)
     new Recovery {
-      def launch(): Async [Atlas] =
-        supply (atlas)
-    }}
+      def launch (cohort: Cohort): Async [Atlas] = supply {
+        atlas.set (Array (cohort))
+        atlas
+      }}}
 
   val catalog = {
     import StorePicklers._
