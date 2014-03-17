@@ -35,7 +35,7 @@ private object TierCellPage {
   def apply (entries: ArrayList [TierCell]): TierCellPage =
     new TierCellPage (entries.toArray (empty.entries))
 
-  private val _pickle: Pickler [TierCellPage] =
+  val pickler: Pickler [TierCellPage] =
     new AbstractPagePickler [TierCellPage, TierCell] {
 
       private [this] val value = Picklers.option (Bytes.pickler)
@@ -61,9 +61,4 @@ private object TierCellPage {
 
       def u (ctx: UnpickleContext): TierCellPage =
         new TierCellPage (_u (ctx))
-  }
-
-  val pickler = {
-    import Picklers._
-    tagged [TierCellPage] (0x1 -> _pickle)
   }}

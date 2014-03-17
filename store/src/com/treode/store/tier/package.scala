@@ -3,11 +3,6 @@ package com.treode.store
 import java.util.concurrent.ConcurrentSkipListMap
 import com.treode.async.AsyncIterator
 
-package tier {
-
-  private trait TierPage
-}
-
 package object tier {
 
   private [tier] type MemTier =

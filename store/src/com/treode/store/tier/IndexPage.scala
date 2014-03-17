@@ -35,7 +35,7 @@ private object IndexPage {
   def apply (entries: ArrayList [IndexEntry]): IndexPage =
     new IndexPage (entries.toArray (empty.entries))
 
-  private val _pickle: Pickler [IndexPage] =
+  val pickler: Pickler [IndexPage] =
     new AbstractPagePickler [IndexPage, IndexEntry] {
 
       private [this] val disk = Picklers.uint
@@ -77,9 +77,4 @@ private object IndexPage {
 
       def u (ctx: UnpickleContext): IndexPage =
         new IndexPage (_u (ctx))
-  }
-
-  val pickler = {
-    import Picklers._
-    tagged [IndexPage] (0x1 -> _pickle)
   }}

@@ -10,16 +10,9 @@ class TierDescriptor [K, V] private (
     val pval: Pickler [V]
 ) {
 
-  private [tier] val pickler = {
-    import StorePicklers._
-    tagged [TierPage] (
-      0x1 -> IndexPage.pickler,
-      0x2 -> TierCellPage.pickler)
-  }
-
   private [tier] val pager = {
     import StorePicklers._
-    PageDescriptor (id, ulong, pickler)
+    PageDescriptor (id, ulong, TierPage.pickler)
   }
 
   def handle (handler: PageHandler [Long]) (implicit launch: Disks.Launch): Unit =
