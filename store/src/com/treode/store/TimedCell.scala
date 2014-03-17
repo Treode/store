@@ -1,35 +1,23 @@
 package com.treode.store
 
-private class TimedCell (val key: Bytes, val time: TxClock, val value: Option [Bytes])
+private case class TimedCell (val key: Bytes, val time: TxClock, val value: Option [Bytes])
 extends Ordered [TimedCell] {
 
   def byteSize = TimedCell.pickler.byteSize (this)
 
   def compare (that: TimedCell): Int = {
-    val rk = key compare that.key
-    if (rk != 0)
-      return rk
+    var r = key compare that.key
+    if (r != 0) return r
     // Reverse chronological order
-    that.time compare time
+    r = that.time compare time
+    if (r != 0) return r
+    value compare that.value
   }
 
-  override def hashCode: Int =
-    41 * (key.hashCode + 41) + time.hashCode
-
-  override def equals (other: Any) =
-    other match {
-      case that: TimedCell =>
-        this.key == that.key && this.time == that.time
-      case _ => false
-    }
-
-  override def toString = "Cell" + (key, time, value)
+  override def toString = "TimedCell" + (key, time, value)
 }
 
 private object TimedCell extends Ordering [TimedCell] {
-
-  def apply (key: Bytes, vt: TxClock, value: Option [Bytes]): TimedCell =
-    new TimedCell (key, vt, value)
 
   def compare (x: TimedCell, y: TimedCell): Int =
     x compare y
