@@ -147,6 +147,6 @@ object TreodeBuild extends Build {
     resolvers += "Twitter" at "http://maven.twttr.com")
 
   lazy val example1 = Project ("example1", file ("example1"))
-    .dependsOn (store)
+    .dependsOn (store % "compile;test->stub")
     .settings (exampleSettings: _*)
 }

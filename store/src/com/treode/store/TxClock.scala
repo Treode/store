@@ -10,6 +10,8 @@ class TxClock private (val time: Long) extends AnyVal with Ordered [TxClock] {
 
   def + (n: Int): TxClock = new TxClock (time+n)
 
+  def - (n: Int): TxClock = new TxClock (time-n)
+
   def byteSize: Int = Longs.BYTES
 
   def compare (that: TxClock): Int =

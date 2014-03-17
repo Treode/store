@@ -7,9 +7,10 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.treode.async.Async
 import com.treode.store.{Bytes, TxClock}
-import com.twitter.finagle.http.ParamMap
+import com.twitter.finagle.http.{MediaType, ParamMap}
 import com.twitter.finatra.Request
 import com.twitter.util.{Future, Promise, Return, Throw, Try}
+import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 import Async.async
 
@@ -23,13 +24,17 @@ package object example1 {
   private val textJson = new ObjectMapper()
   private val binaryJson = new ObjectMapper (new SmileFactory)
 
-  val ApplicationJson = "application/json"
-
+  val ContentType = "Content-Type"
   val ETag = "ETag"
-  val IfMatch = "If-Match"
+  val IfModifiedSince = "If-Modified-Since"
+  val IfUnmodifiedSince = "If-Unmodified-Since"
+  val LastModificationBefore = "Last-Modification-Before"
 
-  val Conflict = 409
-  val PreconditionFailed = 412
+  val Conflict = HttpResponseStatus.CONFLICT.getCode
+  val NotFound = HttpResponseStatus.NOT_FOUND.getCode
+  val NotModified = HttpResponseStatus.NOT_MODIFIED.getCode
+  val Ok = HttpResponseStatus.OK.getCode
+  val PreconditionFailed = HttpResponseStatus.PRECONDITION_FAILED.getCode
 
   implicit class RichAsync [A] (async: Async [A]) {
 
@@ -70,21 +75,47 @@ package object example1 {
         case None => throw exc
     }}
 
+  implicit class RichString (s: String) {
+
+    def readJson(): JsonNode =
+      textJson.readTree (s)
+  }
+
   implicit class RichRequest (request: Request) {
 
-    def getIfMatch(): TxClock =
-      request.headerMap.get (IfMatch) match {
+    def getIfModifiedSince: TxClock =
+      request.headerMap.get (IfModifiedSince) match {
         case Some (ct) =>
           TxClock
             .parse (ct)
-            .getOrElse (throw new BadRequestException (s"Bad If-Match value: $ct"))
+            .getOrElse (throw new BadRequestException (s"Bad If-Modified-Since value: $ct"))
         case None =>
           TxClock.zero
       }
 
+    def getIfUnmodifiedSince: TxClock =
+      request.headerMap.get (IfUnmodifiedSince) match {
+        case Some (ct) =>
+          TxClock
+            .parse (ct)
+            .getOrElse (throw new BadRequestException (s"Bad If-Unmodified-Since value: $ct"))
+        case None =>
+          TxClock.now
+      }
+
+    def getLastModificationBefore: TxClock =
+      request.headerMap.get (LastModificationBefore) match {
+        case Some (rt) =>
+          TxClock
+            .parse (rt)
+            .getOrElse (throw new BadRequestException (s"Bad Last-Modification-Before value: $rt"))
+        case None =>
+          TxClock.now
+      }
+
     def readJson(): JsonNode = {
       try {
-        if (request.contentType != Some (ApplicationJson))
+        if (request.contentType != Some (MediaType.Json))
           throw new BadRequestException ("Expected JSON entity.")
         request.withReader (textJson.readTree _)
       } catch {

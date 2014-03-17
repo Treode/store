@@ -205,12 +205,6 @@ trait StoreBehaviors {
             s.read (ts2-1, Get (T1, Apple)) .expectSeq (ts1::One)
           }
 
-          "find ts1::One for Apple##ts1+1" in {
-            implicit val scheduler = StubScheduler.random()
-            val (s, ts1, ts2) = setup()
-            s.read (ts1+1, Get (T1, Apple)) .expectSeq (ts1::One)
-          }
-
           "find ts1::One for Apple##ts1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1, ts2) = setup()

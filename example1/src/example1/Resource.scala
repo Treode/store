@@ -20,17 +20,19 @@ class Resource (store: Store) extends AsyncFinatraController {
     TxId (tx)
   }
 
-  private def parseRead (request: Request): Async [Seq [ReadOp]] =
+  private def parseRead (request: Request): Async [(TxClock, TxClock, Seq [ReadOp])] =
     supply {
+      val rt = request.getLastModificationBefore
+      val ct = request.getIfModifiedSince
       val _table = request.routeParams.getOrThrow ("name", new BadRequestException ("Expected table ID"))
       val table = parseLong (_table) .getOrThrow (new BadRequestException ("Bad table ID"))
       val key = request.params.getOrThrow ("key", new BadRequestException ("Expected key"))
-      Seq (ReadOp (table, Bytes (key)))
+      (rt, ct, Seq (ReadOp (table, Bytes (key))))
     }
 
   private def parseWrite (request: Request): Async [(TxClock, Seq [WriteOp])] =
     supply {
-      val ct = request.getIfMatch()
+      val ct = request.getIfUnmodifiedSince
       val _table = request.routeParams.getOrThrow ("name", new BadRequestException ("Expected table ID"))
       val table = parseLong (_table) .getOrThrow (new BadRequestException ("Bad table ID"))
       val key = request.params.getOrThrow ("key", new BadRequestException ("Expected key"))
@@ -40,13 +42,15 @@ class Resource (store: Store) extends AsyncFinatraController {
 
   get ("/table/:name") { request =>
     for {
-      ops <- parseRead (request)
-      vs <- store.read (TxClock.now, ops)
+      (rt, ct, ops) <- parseRead (request)
+      vs <- store.read (rt, ops)
     } yield {
       val v = vs.head
       v.value match {
-        case Some (value) =>
+        case Some (value) if ct < v.time =>
           render.header (ETag, v.time.toString) .json (value.toJsonNode)
+        case Some (value) =>
+          render.status (NotModified) .nothing
         case None =>
           render.notFound.nothing
       }}}
