@@ -27,9 +27,9 @@ object AsyncIteratorTestTools extends AsyncTestTools {
           g (x, cb)
         }}}
 
-  def expectSeq [A] (expected: A*) (actual: AsyncIterator [A]) (implicit s: StubScheduler): Unit =
+  def assertSeq [A] (expected: A*) (actual: AsyncIterator [A]) (implicit s: StubScheduler): Unit =
     assertResult (expected) (actual.toSeq)
 
-  def expectFail [E] (iter: AsyncIterator [_]) (implicit s: StubScheduler, m: Manifest [E]): Unit =
+  def assertFail [E] (iter: AsyncIterator [_]) (implicit s: StubScheduler, m: Manifest [E]): Unit =
     iter.foreach.f (_ => ()) .fail [E]
 }

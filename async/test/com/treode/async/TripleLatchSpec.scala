@@ -16,11 +16,11 @@ class TripleLatchSpec extends FlatSpec {
   "The TripleLatch" should "release after a, b and c are set" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
     val (la, lb, lc) = triple [Int, Int, Int] (cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     la.pass (1)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lb.pass (2)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lc.pass (3)
     assertResult ((1, 2, 3)) (cb.passed)
   }
@@ -49,11 +49,11 @@ class TripleLatchSpec extends FlatSpec {
   it should "release after two passes but a fail on a" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
     val (la, lb, lc) = triple [Int, Int, Int] (cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     la.fail (new DistinguishedException)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lb.pass (2)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lc.pass (3)
     cb.failed [DistinguishedException]
   }
@@ -61,11 +61,11 @@ class TripleLatchSpec extends FlatSpec {
   it should "release after two passes but a fail on b" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
     val (la, lb, lc) = triple [Int, Int, Int] (cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     la.pass (1)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lb.fail (new DistinguishedException)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lc.pass (3)
     cb.failed [DistinguishedException]
   }
@@ -73,11 +73,11 @@ class TripleLatchSpec extends FlatSpec {
   it should "release after two passes but a fail on c" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
     val (la, lb, lc) = triple [Int, Int, Int] (cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     la.pass (1)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lb.pass (2)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lc.fail (new DistinguishedException)
     cb.failed [DistinguishedException]
   }}

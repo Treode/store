@@ -40,10 +40,10 @@ class CallbackCaptor [T] protected extends (Try [T] => Unit) with Assertions {
   def hasTimedOut: Boolean =
     _t != null && _t.isInstanceOf [TimeoutException]
 
-  def expectInvoked(): Unit =
+  def assertInvoked(): Unit =
     assert (_invokation != null, "Expected callback to have been invoked, but it was not.")
 
-  def expectNotInvoked() {
+  def assertNotInvoked() {
     if (_invokation != null)
       fail (
           "Expected callback to not have been invoked, but it was:\n" +
@@ -51,14 +51,14 @@ class CallbackCaptor [T] protected extends (Try [T] => Unit) with Assertions {
   }
 
   def passed: T = {
-    expectInvoked()
+    assertInvoked()
     if (_t != null)
       throw _t
     _v
   }
 
   def failed [E] (implicit m: Manifest [E]): E = {
-    expectInvoked()
+    assertInvoked()
     if (_v != null)
       fail (
           "Expected operation to fail, but it passed:\n" +

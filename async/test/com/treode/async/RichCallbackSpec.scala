@@ -13,7 +13,7 @@ class RichCallbackSpec extends FlatSpec {
     var flag = false
     val cb = captor.continue [Unit] (_ => flag = true)
     cb.pass()
-    captor.expectNotInvoked()
+    captor.assertNotInvoked()
     assertResult (true) (flag)
   }
 
@@ -58,7 +58,7 @@ class RichCallbackSpec extends FlatSpec {
     val cb = CallbackCaptor [Unit]
     var flag = false
     cb.defer (flag = true)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     assertResult (true) (flag)
   }
 

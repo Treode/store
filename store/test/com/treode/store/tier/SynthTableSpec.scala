@@ -246,7 +246,7 @@ class SynthTableSpec extends FreeSpec {
       disk.stop = true
       val cb = table.checkpoint() .capture()
       scheduler.runTasks()
-      cb.expectNotInvoked()
+      cb.assertNotInvoked()
       assert (table.primary.isEmpty)
       assert (!table.secondary.isEmpty)
       assert (table.tiers.isEmpty)
@@ -268,7 +268,7 @@ class SynthTableSpec extends FreeSpec {
       disk.stop = true
       val cb = table.checkpoint() .capture()
       scheduler.runTasks()
-      cb.expectNotInvoked()
+      cb.assertNotInvoked()
       disk.stop = false
       table.putAll (5 -> 10)
       assert (!table.primary.isEmpty)

@@ -24,7 +24,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
 
   val rumor = RumorDescriptor (0x63, Picklers.int)
 
-  def expectSeq [T] (xs: T*) (test: => Seq [T]): Unit =
+  def assertSeq [T] (xs: T*) (test: => Seq [T]): Unit =
     assertResult (xs) (test)
 
   def tag [M] (desc: RumorDescriptor [M]) (msg: M): Handler = {
@@ -89,17 +89,17 @@ object ScuttlebuttBehaviors extends FreeSpec {
 
     "yield an empty status" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      expectSeq () (sb.status)
+      assertSeq () (sb.status)
     }
 
     "yield empty deltas on empty ping" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      expectSeq () (sb.ping())
+      assertSeq () (sb.ping())
     }
 
     "yield empty deltas on non-empty ping" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      expectSeq () (sb.ping (PEER1 -> 1))
+      assertSeq () (sb.ping (PEER1 -> 1))
     }}
 
   "When Scuttlebutt has one local update it should" - {
@@ -107,21 +107,21 @@ object ScuttlebuttBehaviors extends FreeSpec {
     "yield a status containg LOCAL" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       sb.spread (1)
-      expectSeq (LOCAL -> 1) (sb.status)
+      assertSeq (LOCAL -> 1) (sb.status)
     }
 
     "raise the version number" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       sb.spread (1)
       sb.spread (2)
-      expectSeq (LOCAL -> 2) (sb.status)
+      assertSeq (LOCAL -> 2) (sb.status)
     }
 
     "yield non-empty deltas on empty ping" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       sb.listen ((_v, from) => ())
       sb.spread (1)
-      expectSeq (delta (LOCAL, (1, 1))) (sb.ping())
+      assertSeq (delta (LOCAL, (1, 1))) (sb.ping())
     }
 
 
@@ -129,20 +129,20 @@ object ScuttlebuttBehaviors extends FreeSpec {
       implicit val (scheduler, sb) = mkScuttlebutt
       sb.listen ((_v, from) => ())
       sb.spread (1)
-      expectSeq (delta (LOCAL, (1, 1))) (sb.ping (PEER1 -> 1))
+      assertSeq (delta (LOCAL, (1, 1))) (sb.ping (PEER1 -> 1))
     }
 
     "yield non-empty deltas on ping out-of-date with this host" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       sb.listen ((_v, from) => ())
       sb.spread (1)
-      expectSeq (delta (LOCAL, (1, 1))) (sb.ping (LOCAL -> 0))
+      assertSeq (delta (LOCAL, (1, 1))) (sb.ping (LOCAL -> 0))
     }
 
     "yield empty deltas on ping up-to-date with this host" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       sb.spread (1)
-      expectSeq () (sb.ping (LOCAL -> 1))
+      assertSeq () (sb.ping (LOCAL -> 1))
     }}
 
   "When Scuttlebutt receives a sync with one peer it should" - {
@@ -150,14 +150,14 @@ object ScuttlebuttBehaviors extends FreeSpec {
     "yield a status that contains the peer" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       sb.sync (sb.delta (PEER1, (1, 1)))
-      expectSeq (PEER1 -> 1) (sb.status)
+      assertSeq (PEER1 -> 1) (sb.status)
     }
 
     "raise the local version number" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       sb.sync (sb.delta (PEER1, (1, 3745)))
       sb.spread (2)
-      expectSeq (PEER1 -> 3745, LOCAL -> 3746) (sb.status)
+      assertSeq (PEER1 -> 3745, LOCAL -> 3746) (sb.status)
     }
 
     "invoke the listener on a first update" in {

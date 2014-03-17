@@ -9,7 +9,7 @@ class DiskGeometrySpec extends FlatSpec {
   val block = 1<<12
   val seg = 1<<16
 
-  def expectBounds (id: Int, pos: Long, limit: Long) (actual: SegmentBounds): Unit =
+  def assertBounds (id: Int, pos: Long, limit: Long) (actual: SegmentBounds): Unit =
     assertResult (SegmentBounds (id, pos, limit)) (actual)
 
   "DiskGeometry" should "compute the segment count" in {
@@ -36,9 +36,9 @@ class DiskGeometrySpec extends FlatSpec {
 
   it should "compute the segment bounds" in {
     val c = DiskGeometry (16, 12, (1<<20) + 6*block)
-    expectBounds (0, config.diskLeadBytes, seg) (c.segmentBounds (0))
-    expectBounds (1, seg, 2*seg) (c.segmentBounds (1))
-    expectBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))
-    expectBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))
-    expectBounds (16, 16*seg, 16*seg + 6*block) (c.segmentBounds (16))
+    assertBounds (0, config.diskLeadBytes, seg) (c.segmentBounds (0))
+    assertBounds (1, seg, 2*seg) (c.segmentBounds (1))
+    assertBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))
+    assertBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))
+    assertBounds (16, 16*seg, 16*seg + 6*block) (c.segmentBounds (16))
   }}

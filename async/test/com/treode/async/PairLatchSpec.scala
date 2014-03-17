@@ -16,9 +16,9 @@ class PairLatchSpec extends FlatSpec {
   "The PairLatch" should "release after a and b are set" in {
     val cb = CallbackCaptor [(Int, Int)]
     val (la, lb) = pair [Int, Int] (cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     la.pass (1)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lb.pass (2)
     assertResult ((1, 2)) (cb.passed)
   }
@@ -40,9 +40,9 @@ class PairLatchSpec extends FlatSpec {
   it should "release after a pass on b and a fail on a" in {
     val cb = CallbackCaptor [(Int, Int)]
     val (la, lb) = pair [Int, Int] (cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     la.fail (new DistinguishedException)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lb.pass (2)
     cb.failed [DistinguishedException]
   }
@@ -50,9 +50,9 @@ class PairLatchSpec extends FlatSpec {
   it should "release after a pass on a and a fail on b" in {
     val cb = CallbackCaptor [(Int, Int)]
     val (la, lb) = pair [Int, Int] (cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     la.pass (1)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lb.fail (new DistinguishedException)
     cb.failed [DistinguishedException]
   }
@@ -60,9 +60,9 @@ class PairLatchSpec extends FlatSpec {
   it should "release after a fail on a and b" in {
     val cb = CallbackCaptor [(Int, Int)]
     val (la, lb) = pair [Int, Int] (cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     la.fail (new DistinguishedException)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     lb.fail (new DistinguishedException)
     cb.failed [MultiException]
   }}

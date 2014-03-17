@@ -72,17 +72,17 @@ class FiberSpec extends FlatSpec {
     var a = false
     val cb = f.async [Unit] (cb => a = true) .capture()
     assertResult (false) (a)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     s.runTasks()
     assertResult (true) (a)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
   }
 
   it should "report an exception through the callback" in {
     val s = StubScheduler.random()
     val f = new Fiber (s)
     val cb = f.async [Unit] (cb => throw new DistinguishedException) .capture()
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     s.runTasks()
     cb.failed [DistinguishedException]
   }
@@ -91,7 +91,7 @@ class FiberSpec extends FlatSpec {
     val s = StubScheduler.random()
     val f = new Fiber (s)
     val cb = f.guard (throw new DistinguishedException) .capture()
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     s.runTasks()
     cb.failed [DistinguishedException]
   }
@@ -102,17 +102,17 @@ class FiberSpec extends FlatSpec {
     var a = false
     val cb = f.supply (a = true) .capture()
     assertResult (false) (a)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     s.runTasks()
     assertResult (true) (a)
-    cb.expectInvoked()
+    cb.assertInvoked()
   }
 
   it should "report an exception through the callback" in {
     val s = StubScheduler.random()
     val f = new Fiber (s)
     val cb = f.supply (throw new DistinguishedException) .capture()
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     s.runTasks()
     cb.failed [DistinguishedException]
   }
@@ -124,10 +124,10 @@ class FiberSpec extends FlatSpec {
     val cb = CallbackCaptor [Unit]
     f.run [Unit] (cb) (supply (a = true))
     assertResult (false) (a)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     s.runTasks()
     assertResult (true) (a)
-    cb.expectInvoked()
+    cb.assertInvoked()
   }
 
   it should "report an exception through the callback" in {
@@ -135,7 +135,7 @@ class FiberSpec extends FlatSpec {
     val f = new Fiber (s)
     val cb = CallbackCaptor [Unit]
     f.run [Unit] (cb) (throw new DistinguishedException)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     s.runTasks()
     cb.failed [DistinguishedException]
   }
@@ -147,10 +147,10 @@ class FiberSpec extends FlatSpec {
     val cb = CallbackCaptor [Unit]
     f.defer (cb) (a = true)
     assertResult (false) (a)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     s.runTasks()
     assertResult (true) (a)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
   }
 
   it should "report an exception through the callback" in {
@@ -158,7 +158,7 @@ class FiberSpec extends FlatSpec {
     val f = new Fiber (s)
     val cb = CallbackCaptor [Unit]
     f.defer (cb) (throw new DistinguishedException)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     s.runTasks()
     cb.failed [DistinguishedException]
   }
@@ -170,10 +170,10 @@ class FiberSpec extends FlatSpec {
     val cb = CallbackCaptor [Unit]
     f.invoke [Unit] (cb) (a = true)
     assertResult (false) (a)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     s.runTasks()
     assertResult (true) (a)
-    cb.expectInvoked()
+    cb.assertInvoked()
   }
 
   it should "report an exception through the callback" in {
@@ -181,7 +181,7 @@ class FiberSpec extends FlatSpec {
     val f = new Fiber (s)
     val cb = CallbackCaptor [Unit]
     f.defer (cb) (throw new DistinguishedException)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     s.runTasks()
     cb.failed [DistinguishedException]
   }}

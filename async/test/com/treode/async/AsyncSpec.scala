@@ -126,7 +126,7 @@ class AsyncSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     val cb = async [Int] (_.pass (1)) .filter (_ != 1) .capture()
     scheduler.runTasks()
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
   }
 
   it should "stop when an exeption is given" in {
@@ -153,7 +153,7 @@ class AsyncSpec extends FlatSpec {
     val cb = CallbackCaptor [Unit]
     var flag = false
     supply (flag = true) defer (cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     assertResult (true) (flag)
   }
 

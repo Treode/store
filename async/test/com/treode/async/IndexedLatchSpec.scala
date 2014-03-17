@@ -24,7 +24,7 @@ class ArrayLatchSpec extends FlatSpec {
   it should "release after one pass for count==1" in {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.indexed [Int] (1, cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     ltch.pass (0, 1)
     assertResult (Seq (1)) (cb.passed.toSeq)
   }
@@ -32,7 +32,7 @@ class ArrayLatchSpec extends FlatSpec {
   it should "release after one fail for count==1" in {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.indexed [Int] (1, cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     ltch.fail (new DistinguishedException)
     cb.failed [DistinguishedException]
   }
@@ -40,9 +40,9 @@ class ArrayLatchSpec extends FlatSpec {
   it should "release after two passes for count==2" in {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.indexed [Int] (2, cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     ltch.pass (0, 1)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     ltch.pass (1, 2)
     assertResult (Seq (1, 2)) (cb.passed.toSeq)
   }
@@ -50,9 +50,9 @@ class ArrayLatchSpec extends FlatSpec {
   it should "release after two reversed passes for count==2" in {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.indexed [Int] (2, cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     ltch.pass (1, 2)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     ltch.pass (0, 1)
     assertResult (Seq (1, 2)) (cb.passed.toSeq)
   }
@@ -60,9 +60,9 @@ class ArrayLatchSpec extends FlatSpec {
   it should "release after a pass and a fail for count==2" in {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.indexed [Int] (2, cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     ltch.pass (0, 0)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     ltch.fail (new DistinguishedException)
     cb.failed [DistinguishedException]
   }
@@ -70,9 +70,9 @@ class ArrayLatchSpec extends FlatSpec {
   it should "release after two fails for count==2" in {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.indexed [Int] (2, cb)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     ltch.fail (new Exception)
-    cb.expectNotInvoked()
+    cb.assertNotInvoked()
     ltch.fail (new Exception)
     cb.failed [MultiException]
   }}
