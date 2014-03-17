@@ -6,7 +6,8 @@ import scala.util.Random
 
 import com.treode.async.AsyncTestTools
 import com.treode.cluster.StubNetwork
-import com.treode.store.{Bytes, Cardinals, LargeTest}
+import com.treode.store.{Bytes, Cardinals}
+import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, PropSpec, Suites, WordSpec}
 import org.scalatest.prop.PropertyChecks
@@ -84,7 +85,7 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
         Summary (true, summary.chosen)
     }}
 
-  property ("The acceptors should achieve consensus") {
+  property ("The acceptors should achieve consensus", Intensive, Periodic) {
     var summary = Summary (false, Set.empty)
     forAll (seeds) { seed =>
       summary = checkConsensus (seed, 0.0, summary)
@@ -92,7 +93,7 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
     assert (Seq (1, 2) forall (summary.chosen contains _))
   }
 
-  property ("The acceptors should achieve consensus with a flakey network") {
+  property ("The acceptors should achieve consensus with a flakey network", Intensive, Periodic) {
     var summary = Summary (false, Set.empty)
     forAll (seeds) { seed =>
       summary = checkConsensus (seed, 0.1, summary)

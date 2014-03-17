@@ -7,6 +7,7 @@ import scala.util.Random
 
 import com.treode.async._
 import com.treode.pickle.Picklers
+import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
 import Async.{async, latch}
@@ -133,7 +134,7 @@ trait StoreBehaviors {
             s.expectCells (T1) (Apple##ts::One)
           }
 
-          "allow update Apple::Two at ts+1" taggedAs (com.treode.store.LargeTest) in {
+          "allow update Apple::Two at ts+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
             val ts2 = s.write (ts1+1, Update (T1, Apple, Two)) .expectWritten
@@ -219,7 +220,7 @@ trait StoreBehaviors {
 
   def aMultithreadableStore (size: Int, store: TestableStore) {
 
-    "serialize concurrent operations" in {
+    "serialize concurrent operations" taggedAs (Intensive, Periodic) in {
 
       object Accounts extends Accessor (1, Picklers.fixedInt, Picklers.fixedInt)
 

@@ -7,6 +7,9 @@ import sbtassembly.Plugin.assemblySettings
 
 object TreodeBuild extends Build {
 
+  lazy val IntensiveTest = config ("intensive") extend (Test)
+  lazy val PeriodicTest = config ("periodic") extend (Test)
+
   // Settings common to both projects with stubs and without stubs.
   // Adds production libraries to the "main" configuration.  Squashes
   // the source directory structure.
@@ -18,9 +21,6 @@ object TreodeBuild extends Build {
 
     unmanagedSourceDirectories in Compile <<=
       (baseDirectory ((base: File) => Seq (base / "src"))),
-
-    unmanagedSourceDirectories in CustomTest <<=
-      (baseDirectory ((base: File) => Seq (base / "test"))),
 
     scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", "-Yinline-warnings"),
 
@@ -39,6 +39,22 @@ object TreodeBuild extends Build {
   // testing libraries to SBT's "test" configuration.
   lazy val standardPortion = Seq (
 
+    ivyConfigurations := overrideConfigs (Compile, Test) (ivyConfigurations.value),
+
+    EclipseKeys.configurations := Set (Compile, Test),
+
+    testOptions in Test := Seq (
+      Tests.Argument ("-l", "com.treode.tags.Intensive")),
+
+    testOptions in IntensiveTest := Seq (
+      Tests.Argument ("-n", "com.treode.tags.Intensive")),
+
+    testOptions in PeriodicTest := Seq (
+      Tests.Argument ("-n", "com.treode.tags.Periodic")),
+
+    unmanagedSourceDirectories in Test <<=
+      (baseDirectory ((base: File) => Seq (base / "test"))),
+
     libraryDependencies ++= Seq (
       "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "test",
       "org.scalatest" %% "scalatest" % "2.1.0" % "test",
@@ -46,11 +62,15 @@ object TreodeBuild extends Build {
 
   // Settings for projects without stubs.
   lazy val standardSettings =
+    inConfig (IntensiveTest) (Defaults.testTasks) ++ 
+    inConfig (PeriodicTest) (Defaults.testTasks) ++ 
     commonPortion ++
     standardPortion
 
   lazy val Stub = config ("stub") extend (Compile)
-  lazy val CustomTest = config ("test") extend (Stub)
+  lazy val TestWithStub = config ("test") extend (Stub)
+  lazy val IntensiveTestWithStub = config ("intensive") extend (TestWithStub)
+  lazy val PeriodicTestWithStub = config ("periodic") extend (TestWithStub)
 
   // A portion of the settings for projects with stubs.  Adds the
   // "stub" configuration and creates a replaces the SBT "test"
@@ -58,12 +78,24 @@ object TreodeBuild extends Build {
   // adds the testing libraries to the new "test" configuration.
   lazy val stubPortion = Seq (
 
-    ivyConfigurations := overrideConfigs (Compile, Stub, CustomTest) (ivyConfigurations.value),
+    ivyConfigurations := overrideConfigs (Compile, Stub, TestWithStub) (ivyConfigurations.value),
+
+    EclipseKeys.configurations := Set (Compile, Stub, TestWithStub),
+
+    testOptions in TestWithStub := Seq (
+      Tests.Argument ("-l", "com.treode.tags.Intensive")),
+
+    testOptions in IntensiveTestWithStub := Seq (
+      Tests.Argument ("-n", "com.treode.tags.Intensive")),
+
+    testOptions in PeriodicTestWithStub := Seq (
+      Tests.Argument ("-n", "com.treode.tags.Periodic")),
 
     unmanagedSourceDirectories in Stub <<=
       (baseDirectory ((base: File) => Seq (base / "stub"))),
 
-    EclipseKeys.configurations := Set (Compile, Stub, CustomTest),
+    unmanagedSourceDirectories in TestWithStub <<=
+      (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
       "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "stub->default",
@@ -73,7 +105,9 @@ object TreodeBuild extends Build {
   // Settings for projects with stubs.
   lazy val stubSettings =
     inConfig (Stub) (Defaults.configSettings) ++
-    inConfig (CustomTest) (Defaults.testSettings) ++
+    inConfig (TestWithStub) (Defaults.testTasks) ++
+    inConfig (IntensiveTestWithStub) (Defaults.testTasks) ++
+    inConfig (PeriodicTestWithStub) (Defaults.testTasks) ++
     commonPortion ++
     stubPortion
 
@@ -81,30 +115,36 @@ object TreodeBuild extends Build {
   // someone may want the async package without the picklers or vice
   // versa, so we have isolated the buffers into their own project.
   lazy val buffer = Project ("buffer", file ("buffer"))
+    .configs (IntensiveTest, PeriodicTest)
     .settings (standardSettings: _*)
 
   // Separated because this may be useful on its own.
   lazy val async = Project ("async", file ("async"))
+    .configs (IntensiveTestWithStub, PeriodicTestWithStub)
     .dependsOn (buffer)
     .settings (stubSettings: _*)
 
   // Separated because this may be useful on its own.
   lazy val pickle = Project ("pickle", file ("pickle"))
+    .configs (IntensiveTest, PeriodicTest)
     .dependsOn (buffer)
     .settings (standardSettings: _*)
 
   // Separated because it helped development.
   lazy val cluster = Project ("cluster", file ("cluster"))
+    .configs (IntensiveTestWithStub, PeriodicTestWithStub)
     .dependsOn (async % "compile;stub->stub", pickle)
     .settings (stubSettings: _*)
 
   // Separated because it helped development.
   lazy val disk = Project ("disk", file ("disk"))
+    .configs (IntensiveTest, PeriodicTest)
     .dependsOn (async % "compile;test->stub", pickle)
     .settings (standardSettings: _*)
 
   // The main component that this repository and build provides.
   lazy val store = Project ("store", file ("store"))
+    .configs (IntensiveTestWithStub, PeriodicTestWithStub)
     .dependsOn (cluster % "compile;stub->stub", disk)
     .settings (stubSettings: _*)
 
@@ -119,6 +159,7 @@ object TreodeBuild extends Build {
     test in assembly := {})
 
   lazy val systest = Project ("systest", file ("systest"))
+    .configs (IntensiveTest, PeriodicTest)
     .dependsOn (store)
     .settings (systestSettings: _*)
 
@@ -131,7 +172,7 @@ object TreodeBuild extends Build {
     unmanagedSourceDirectories in Compile <<=
       (baseDirectory ((base: File) => Seq (base / "src"))),
 
-    unmanagedSourceDirectories in CustomTest <<=
+    unmanagedSourceDirectories in TestWithStub <<=
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", "-Yinline-warnings"),

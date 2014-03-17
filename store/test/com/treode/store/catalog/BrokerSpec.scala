@@ -7,8 +7,9 @@ import com.treode.async.{AsyncTestTools, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Bytes, CatalogDescriptor, CatalogId, StoreConfig}
 import com.treode.pickle.{Pickler, Picklers}
+import com.treode.store.{Bytes, CatalogDescriptor, CatalogId, StoreConfig}
+import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
 import org.scalatest.{FreeSpec, PropSpec, ShouldMatchers, Suites}
 import org.scalatest.prop.PropertyChecks
@@ -252,12 +253,12 @@ object BrokerProperties extends PropSpec with PropertyChecks {
       assertResult (vs4) (h.v2)
     }}
 
-  property ("The broker should distribute catalogs") {
+  property ("The broker should distribute catalogs", Intensive, Periodic) {
     forAll (seeds) { seed =>
       checkUnity (seed, 0.0)
     }}
 
-  property ("The broker should distribute catalogs with a flakey network") {
+  property ("The broker should distribute catalogs with a flakey network", Intensive, Periodic) {
     forAll (seeds) { seed =>
       checkUnity (seed, 0.1)
     }}

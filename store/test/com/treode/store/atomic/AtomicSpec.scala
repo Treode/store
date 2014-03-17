@@ -6,6 +6,7 @@ import scala.util.Random
 import com.treode.async.CallbackCaptor
 import com.treode.cluster.StubNetwork
 import com.treode.store._
+import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, PropSpec, Suites}
 import org.scalatest.prop.PropertyChecks
@@ -119,6 +120,6 @@ object AtomicProperties extends PropSpec with PropertyChecks {
       hs foreach (_.expectCells (t) (k##0))
     }}
 
-  property ("The atomic implemetation should work") {
+  property ("The atomic implemetation should work", Intensive, Periodic) {
     forAll (seeds) (checkConsensus (_, 0.0))
   }}
