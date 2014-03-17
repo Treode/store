@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import com.treode.async.{Async, Scheduler}
 import com.treode.disk.Disks
 import com.treode.buffer.ArrayBuffer
-import com.treode.store.{Bytes, StoreConfig, TableId, TimedCell, TxClock, Value}
+import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, TableId, TxClock, Value}
 import com.treode.store.tier.{TierCell, TierDescriptor, TierTable}
 
 import TimedTable.{keyToBytes, cellToCell, cellToValue}
@@ -17,7 +17,7 @@ private class TimedTable (table: TierTable) {
       yield cellToValue (cell)
   }
 
-  def iterator: TimedIterator  =
+  def iterator: CellIterator  =
     for (cell <- table.iterator)
       yield cellToCell (cell)
 
@@ -51,12 +51,12 @@ private object TimedTable {
     Bytes (buf.data)
   }
 
-  def cellToCell (cell: TierCell): TimedCell = {
+  def cellToCell (cell: TierCell): Cell = {
     val buf = ArrayBuffer (cell.key.bytes)
     val key = new Array [Byte] (cell.key.length - 8)
     buf.readBytes (key, 0, cell.key.length - 8)
     val time = buf.readLong()
-    TimedCell (Bytes (key), Long.MaxValue - time, cell.value)
+    Cell (Bytes (key), Long.MaxValue - time, cell.value)
   }
 
   def cellToValue (cell: TierCell): Value = {

@@ -11,5 +11,5 @@ trait TestableStore {
 
   def write (ct: TxClock, ops: WriteOp*): Async [WriteResult]
 
-  def expectCells (t: TableId) (expected: TimedCell*)
+  def expectCells (t: TableId) (expected: Cell*)
 }

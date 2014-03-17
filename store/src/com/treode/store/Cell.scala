@@ -1,11 +1,11 @@
 package com.treode.store
 
-private case class TimedCell (val key: Bytes, val time: TxClock, val value: Option [Bytes])
-extends Ordered [TimedCell] {
+case class Cell (val key: Bytes, val time: TxClock, val value: Option [Bytes])
+extends Ordered [Cell] {
 
-  def byteSize = TimedCell.pickler.byteSize (this)
+  def byteSize = Cell.pickler.byteSize (this)
 
-  def compare (that: TimedCell): Int = {
+  def compare (that: Cell): Int = {
     var r = key compare that.key
     if (r != 0) return r
     // Reverse chronological order
@@ -14,12 +14,12 @@ extends Ordered [TimedCell] {
     value compare that.value
   }
 
-  override def toString = "TimedCell" + (key, time, value)
+  override def toString = "Cell" + (key, time, value)
 }
 
-private object TimedCell extends Ordering [TimedCell] {
+object Cell extends Ordering [Cell] {
 
-  def compare (x: TimedCell, y: TimedCell): Int =
+  def compare (x: Cell, y: Cell): Int =
     x compare y
 
   val pickler = {

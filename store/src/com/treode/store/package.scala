@@ -1,6 +1,7 @@
 package com.treode
 
 import java.util.logging.{Level, Logger}
+import com.treode.async.AsyncIterator
 import com.treode.cluster.PortId
 
 import Level.WARNING
@@ -23,6 +24,8 @@ package store {
   }}
 
 package object store {
+
+  type CellIterator = AsyncIterator [Cell]
 
   private [store] object log {
 

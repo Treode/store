@@ -65,7 +65,7 @@ extends StubActiveHost (id, network) {
   def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult] =
     atomic.write (xid, ct, ops)
 
-  def expectCells (id: TableId) (cs: TimedCell*) {
+  def expectCells (id: TableId) (cs: Cell*) {
     val t = atomic.tables.tables.get (id)
     expectResult (cs) (t.iterator.toSeq)
   }}

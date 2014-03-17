@@ -32,7 +32,7 @@ class TimedTableSpec extends FreeSpec {
     (scheduler, table)
   }
 
-  def expectCells (cs: TimedCell*) (t: TimedTable) (implicit s: StubScheduler): Unit =
+  def expectCells (cs: Cell*) (t: TimedTable) (implicit s: StubScheduler): Unit =
     expectResult (cs) (t.iterator.toSeq)
 
   "TimedTable.keyToBytes should" - {

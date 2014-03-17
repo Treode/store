@@ -26,6 +26,4 @@ package object atomic {
   private [atomic] def newTableMedicsMap = new ConcurrentHashMap [TableId, TierMedic]
   private [atomic] def newWritersMap = new ConcurrentHashMap [TxId, WriteDeputy]
   private [atomic] def newWriterMedicsMap = new ConcurrentHashMap [TxId, Medic]
-
-  private [atomic] type TimedIterator = AsyncIterator [TimedCell]
 }

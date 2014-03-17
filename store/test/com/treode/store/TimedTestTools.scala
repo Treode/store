@@ -10,11 +10,11 @@ import Assertions.{expectResult, fail}
 private trait TimedTestTools extends AsyncTestTools {
 
   implicit class RichBytes (v: Bytes) {
-    def ## (time: Int) = TimedCell (v, TxClock (time), None)
-    def ## (time: TxClock) = TimedCell (v, time, None)
+    def ## (time: Int) = Cell (v, TxClock (time), None)
+    def ## (time: TxClock) = Cell (v, time, None)
     def :: (time: Int) = Value (TxClock (time), Some (v))
     def :: (time: TxClock) = Value (time, Some (v))
-    def :: (cell: TimedCell) = TimedCell (cell.key, cell.time, Some (v))
+    def :: (cell: Cell) = Cell (cell.key, cell.time, Some (v))
   }
 
   implicit class RichOption (v: Option [Bytes]) {
