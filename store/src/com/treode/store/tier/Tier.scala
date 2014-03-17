@@ -11,8 +11,13 @@ import AsyncConversions._
 
 private case class Tier (gen: Long, root: Position) {
 
-  private def ceiling (desc: TierDescriptor [_, _], key: Bytes, cb: Callback [Option [Cell]]) (
-      implicit disks: Disks) {
+  private def ceiling (
+      desc: TierDescriptor [_, _],
+      key: Bytes,
+      cb: Callback [Option [TierCell]]
+  ) (
+      implicit disks: Disks
+  ) {
 
     import desc.pager
 
@@ -27,7 +32,7 @@ private case class Tier (gen: Long, root: Position) {
           pager.read (e.pos) .run (loop)
         }
 
-      case Success (p: CellPage) =>
+      case Success (p: TierCellPage) =>
         val i = p.ceiling (key)
         if (i == p.size)
           cb.pass (None)
@@ -44,7 +49,7 @@ private case class Tier (gen: Long, root: Position) {
     pager.read (root) .run (loop)
   }
 
-  def ceiling (desc: TierDescriptor [_, _], key: Bytes) (implicit disks: Disks): Async [Option [Cell]] =
+  def ceiling (desc: TierDescriptor [_, _], key: Bytes) (implicit disks: Disks): Async [Option [TierCell]] =
     async (ceiling (desc, key, _))
 }
 

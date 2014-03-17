@@ -9,11 +9,11 @@ import TierTable.Meta
 
 trait TierTable {
 
-  def ceiling (key: Bytes, limit: Bytes): Async [Cell]
+  def ceiling (key: Bytes, limit: Bytes): Async [TierCell]
 
   def get (key: Bytes): Async [Option [Bytes]]
 
-  def iterator: CellIterator
+  def iterator: TierCellIterator
 
   def put (key: Bytes, value: Bytes): Long
 

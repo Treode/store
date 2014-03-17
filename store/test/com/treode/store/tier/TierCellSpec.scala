@@ -6,8 +6,8 @@ import org.scalatest.FlatSpec
 import Fruits.{Apple, Orange}
 import TierTestTools._
 
-class CellSpec extends FlatSpec {
+class TierCellSpec extends FlatSpec {
 
-  "Cell.compare" should "sort by key" in {
+  "TierCell.compare" should "sort by key" in {
     assert (Apple::None < Orange::None)
   }}

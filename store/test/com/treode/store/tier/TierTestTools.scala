@@ -10,11 +10,11 @@ import Async.async
 private object TierTestTools extends AsyncTestTools {
 
   implicit class RichInt (v: Int) {
-    def :: (k: Bytes): Cell = Cell (k, Some (Bytes (v)))
+    def :: (k: Bytes): TierCell = TierCell (k, Some (Bytes (v)))
   }
 
   implicit class RichOption (v: Option [Bytes]) {
-    def :: (k: Bytes): Cell = Cell (k, v)
+    def :: (k: Bytes): TierCell = TierCell (k, v)
   }
 
   implicit class RichTable (table: TierTable) (implicit scheduler: StubScheduler) {

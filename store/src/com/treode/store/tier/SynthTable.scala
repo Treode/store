@@ -43,7 +43,7 @@ private class SynthTable [K, V] (
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
 
-  private def read (key: Bytes, limit: Bytes): Async [Cell] = {
+  private def read (key: Bytes, limit: Bytes): Async [TierCell] = {
 
     readLock.lock()
     val (primary, secondary, tiers) = try {
@@ -54,13 +54,13 @@ private class SynthTable [K, V] (
 
     var entry = primary.ceilingEntry (key)
     if (entry != null && entry.getKey <= limit)
-      return supply (Cell (entry.getKey, entry.getValue))
+      return supply (TierCell (entry.getKey, entry.getValue))
 
     entry = secondary.ceilingEntry (key)
     if (entry != null && entry.getKey <= limit)
-      return supply (Cell (entry.getKey, entry.getValue))
+      return supply (TierCell (entry.getKey, entry.getValue))
 
-    var cell = Option.empty [Cell]
+    var cell = Option.empty [TierCell]
     var i = 0
     for {
       _ <-
@@ -71,12 +71,12 @@ private class SynthTable [K, V] (
           }}
     } yield {
       if (cell.isDefined && cell.get.key <= limit)
-        Cell (cell.get.key, cell.get.value)
+        TierCell (cell.get.key, cell.get.value)
       else
-        Cell (limit, None)
+        TierCell (limit, None)
     }}
 
-  def ceiling (key: Bytes, limit: Bytes): Async [Cell] =
+  def ceiling (key: Bytes, limit: Bytes): Async [TierCell] =
     read (key, limit)
 
   def get (key: Bytes): Async [Option [Bytes]] =
@@ -100,7 +100,7 @@ private class SynthTable [K, V] (
       readLock.unlock()
     }}
 
-  def iterator: CellIterator = {
+  def iterator: TierCellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)

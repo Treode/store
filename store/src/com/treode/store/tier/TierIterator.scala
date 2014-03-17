@@ -8,14 +8,14 @@ import Async.async
 import AsyncConversions._
 
 private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
-    implicit disks: Disks) extends CellIterator {
+    implicit disks: Disks) extends TierCellIterator {
 
-  class Foreach (f: (Cell, Callback [Unit]) => Any, cb: Callback [Unit]) {
+  class Foreach (f: (TierCell, Callback [Unit]) => Any, cb: Callback [Unit]) {
 
     import desc.pager
 
     private var stack = List.empty [(IndexPage, Int)]
-    private var page: CellPage = null
+    private var page: TierCellPage = null
     private var index = 0
 
     val _push = cb.continue { p: TierPage =>
@@ -36,7 +36,7 @@ private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
           val e = p.get (0)
           stack ::= (p, 0)
           pager.read (e.pos) .run (_push)
-        case p: CellPage =>
+        case p: TierCellPage =>
           page = p
           index = 0
           next()
@@ -66,22 +66,22 @@ private class TierIterator (desc: TierDescriptor [_, _], root: Position) (
         cb.pass()
       }}}
 
-  def _foreach (f: (Cell, Callback [Unit]) => Any): Async [Unit] =
+  def _foreach (f: (TierCell, Callback [Unit]) => Any): Async [Unit] =
     async (new Foreach (f, _) .start())
 }
 
 private object TierIterator {
 
-  def apply (desc: TierDescriptor [_, _], root: Position) (implicit disks: Disks): CellIterator =
+  def apply (desc: TierDescriptor [_, _], root: Position) (implicit disks: Disks): TierCellIterator =
     new TierIterator (desc, root)
 
-  def adapt (tier: MemTier) (implicit scheduler: Scheduler): CellIterator =
-     tier.entrySet.iterator.map (Cell.apply _) .async
+  def adapt (tier: MemTier) (implicit scheduler: Scheduler): TierCellIterator =
+     tier.entrySet.iterator.map (TierCell.apply _) .async
 
   def merge (desc: TierDescriptor [_, _], primary: MemTier, secondary: MemTier, tiers: Tiers) (
-      implicit scheduler: Scheduler, disks: Disks): CellIterator = {
+      implicit scheduler: Scheduler, disks: Disks): TierCellIterator = {
 
-    val allTiers = new Array [CellIterator] (tiers.size + 2)
+    val allTiers = new Array [TierCellIterator] (tiers.size + 2)
     allTiers (0) = adapt (primary)
     allTiers (1) = adapt (secondary)
     for (i <- 0 until tiers.size)

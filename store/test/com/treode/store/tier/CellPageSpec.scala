@@ -9,24 +9,24 @@ import TierTestTools._
 
 class CellPageSpec extends WordSpec {
 
-  private def newPage (entries: Cell*): CellPage =
-    new CellPage (Array (entries: _*))
+  private def newPage (entries: TierCell*): TierCellPage =
+    new TierCellPage (Array (entries: _*))
 
-  private def entriesEqual (expected: Cell, actual: Cell) {
+  private def entriesEqual (expected: TierCell, actual: TierCell) {
     expectResult (expected.key) (actual.key)
     expectResult (expected.value) (actual.value)
   }
 
-  private def pagesEqual (expected: CellPage, actual: CellPage) {
+  private def pagesEqual (expected: TierCellPage, actual: TierCellPage) {
     expectResult (expected.entries.length) (actual.entries.length)
     for (i <- 0 until expected.entries.length)
       entriesEqual (expected.entries (i), actual.entries (i))
   }
 
-  private def checkPickle (page: CellPage) {
+  private def checkPickle (page: TierCellPage) {
     val buffer = PagedBuffer (12)
-    CellPage.pickler.pickle (page, buffer)
-    val result = CellPage.pickler.unpickle (buffer)
+    TierCellPage.pickler.pickle (page, buffer)
+    val result = TierCellPage.pickler.unpickle (buffer)
     pagesEqual (page, result)
   }
 

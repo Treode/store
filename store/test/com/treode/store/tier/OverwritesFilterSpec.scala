@@ -10,10 +10,10 @@ import TierTestTools._
 
 class OverwritesFilterSpec extends FlatSpec {
 
-  private def expectCells (expected: Cell*) (actual: CellIterator) (implicit s: StubScheduler): Unit =
+  private def expectCells (expected: TierCell*) (actual: TierCellIterator) (implicit s: StubScheduler): Unit =
     expectResult (expected) (actual.toSeq)
 
-  private def newFilter (cs: Cell*) (implicit s: StubScheduler) =
+  private def newFilter (cs: TierCell*) (implicit s: StubScheduler) =
     OverwritesFilter (cs.iterator.async)
 
   "The OverwritesFilter" should "handle []" in {

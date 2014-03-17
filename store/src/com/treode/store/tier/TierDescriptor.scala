@@ -14,7 +14,7 @@ class TierDescriptor [K, V] private (
     import StorePicklers._
     tagged [TierPage] (
       0x1 -> IndexPage.pickler,
-      0x2 -> CellPage.pickler)
+      0x2 -> TierCellPage.pickler)
   }
 
   private [tier] val pager = {

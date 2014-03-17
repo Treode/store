@@ -16,7 +16,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
   import scheduler.whilst
 
   private def newIndexEntries = new ArrayList [IndexEntry] (1024)
-  private def newCellEntries = new ArrayList [Cell] (256)
+  private def newCellEntries = new ArrayList [TierCell] (256)
 
   private class IndexNode (val height: Int) {
 
@@ -90,7 +90,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
   def add (key: Bytes, value: Option [Bytes]): Async [Unit] =
     guard {
 
-      val entry = Cell (key, value)
+      val entry = TierCell (key, value)
       val entryByteSize = entry.byteSize
 
       // Require that user adds entries in sorted order.
@@ -103,7 +103,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
         supply()
 
       } else {
-        val page = CellPage (entries)
+        val page = TierCellPage (entries)
         entries = newCellEntries
         entries.add (entry)
         byteSize = entryByteSize
@@ -114,7 +114,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
         } yield ()
       }}
 
-  private def pop (page: CellPage, pos0: Position): Async [Position] = {
+  private def pop (page: TierCellPage, pos0: Position): Async [Position] = {
     val node = stack.pop()
     for {
       pos1 <-
@@ -133,7 +133,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
   }
 
   def result(): Async [Tier] = {
-    val page = CellPage (entries)
+    val page = TierCellPage (entries)
     var pos: Position = null
     for {
       _ <- pager.write (obj, gen, page) .map (pos = _)
@@ -144,7 +144,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
 
 private object TierBuilder {
 
-  def build [K, V] (desc: TierDescriptor [K, V], obj: ObjectId, gen: Long, iter: CellIterator) (
+  def build [K, V] (desc: TierDescriptor [K, V], obj: ObjectId, gen: Long, iter: TierCellIterator) (
       implicit scheduler: Scheduler, disks: Disks, config: StoreConfig): Async [Tier] = {
     val builder = new TierBuilder (desc, obj, gen)
     for {

@@ -42,7 +42,7 @@ class TierSpec extends WordSpec {
       implicit scheduler: StubScheduler, disks: Disks): Set [Int] = {
     descriptor.pager.read (pos) .pass match {
       case b: IndexPage => getDepths (b.entries, depth+1)
-      case b: CellPage => Set (depth)
+      case b: TierCellPage => Set (depth)
     }}
 
   /** Check that tree rooted at `pos` has all ValueBlocks at the same depth, expect those under
@@ -56,7 +56,7 @@ class TierSpec extends WordSpec {
         val d = ds1.head
         val ds2 = getDepths (b.last.pos, 1)
         expectResult (true, "Expected final ValueBlocks at depth < $d") (ds2 forall (_ < d))
-      case b: CellPage =>
+      case b: TierCellPage =>
         ()
     }}
 
@@ -71,22 +71,22 @@ class TierSpec extends WordSpec {
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier) (
-      implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] =
+      implicit scheduler: StubScheduler, disks: Disks): Seq [TierCell] =
     TierIterator (descriptor, tier.root) .toSeq
 
-  private def toSeq (builder: Builder [Cell, _], pos: Position) (
+  private def toSeq (builder: Builder [TierCell, _], pos: Position) (
       implicit scheduler: StubScheduler, disks: Disks) {
     descriptor.pager.read (pos) .pass match {
       case page: IndexPage =>
         page.entries foreach (e => toSeq (builder, e.pos))
-      case page: CellPage =>
+      case page: TierCellPage =>
         page.entries foreach (builder += _)
     }}
 
   /** Build a sequence of the cells in the tier using old-fashioned recursion. */
   private def toSeq (tier: Tier) (
-      implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] = {
-    val builder = Seq.newBuilder [Cell]
+      implicit scheduler: StubScheduler, disks: Disks): Seq [TierCell] = {
+    val builder = Seq.newBuilder [TierCell]
     toSeq (builder, tier.root)
     builder.result
   }
