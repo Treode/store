@@ -3,13 +3,12 @@ package example1
 import com.treode.store.{Bytes, Cell, StubStore, TxClock, WriteOp, WriteResult}
 import com.twitter.finagle.http.MediaType
 import com.twitter.finatra.test.{MockApp, MockResult}
-import org.scalatest.FreeSpec
-import org.scalatest.matchers.ShouldMatchers
+import org.scalatest.{FreeSpec, Matchers}
 
 import WriteOp._
 import WriteResult._
 
-class ResourceSpec extends FreeSpec with ShouldMatchers with SpecTools {
+class ResourceSpec extends FreeSpec with Matchers with SpecTools {
 
   def newMock (store: StubStore) = {
     val resource = new Resource (store)

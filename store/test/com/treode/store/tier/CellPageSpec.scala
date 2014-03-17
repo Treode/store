@@ -13,12 +13,12 @@ class CellPageSpec extends WordSpec {
     new TierCellPage (Array (entries: _*))
 
   private def entriesEqual (expected: TierCell, actual: TierCell) {
-    expectResult (expected.key) (actual.key)
-    expectResult (expected.value) (actual.value)
+    assertResult (expected.key) (actual.key)
+    assertResult (expected.value) (actual.value)
   }
 
   private def pagesEqual (expected: TierCellPage, actual: TierCellPage) {
-    expectResult (expected.entries.length) (actual.entries.length)
+    assertResult (expected.entries.length) (actual.entries.length)
     for (i <- 0 until expected.entries.length)
       entriesEqual (expected.entries (i), actual.entries (i))
   }
@@ -37,7 +37,7 @@ class CellPageSpec extends WordSpec {
       val page = newPage ()
 
       "find nothing" in {
-        expectResult (0) (page.ceiling (Apple))
+        assertResult (0) (page.ceiling (Apple))
       }
 
       "pickle and unpickle to the same value" in {
@@ -65,15 +65,15 @@ class CellPageSpec extends WordSpec {
       val page = newPage (Kiwi::None)
 
       "find apple before kiwi" in {
-        expectResult (0) (page.ceiling (Apple))
+        assertResult (0) (page.ceiling (Apple))
       }
 
       "find kiwi using kiwi" in {
-        expectResult (0) (page.ceiling (Kiwi))
+        assertResult (0) (page.ceiling (Kiwi))
       }
 
       "find orange after kiwi" in {
-        expectResult (1) (page.ceiling (Orange))
+        assertResult (1) (page.ceiling (Orange))
       }
 
       "pickle and unpickle to the same value" in {
@@ -85,23 +85,23 @@ class CellPageSpec extends WordSpec {
       val page = newPage (Apple::None, Kiwi::None, Orange::None)
 
       "find apple using apple" in {
-        expectResult (0) (page.ceiling (Apple))
+        assertResult (0) (page.ceiling (Apple))
       }
 
       "find kiwi using banana" in {
-        expectResult (1) (page.ceiling (Banana))
+        assertResult (1) (page.ceiling (Banana))
       }
 
       "find kiwi using kiwi" in {
-        expectResult (1) (page.ceiling (Kiwi))
+        assertResult (1) (page.ceiling (Kiwi))
       }
 
       "find orange using kumquat" in {
-        expectResult (2) (page.ceiling (Kumquat))
+        assertResult (2) (page.ceiling (Kumquat))
       }
 
       "find orange using orange" in {
-        expectResult (2) (page.ceiling (Orange))
+        assertResult (2) (page.ceiling (Orange))
       }
 
       "pickle and unpickle to the same value" in {

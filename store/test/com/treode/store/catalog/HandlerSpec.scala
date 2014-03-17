@@ -65,9 +65,9 @@ class HandlerSpec extends FreeSpec {
         assert (u.isEmpty)
         val c2 = newCatalog (0)
         c2.patch (u)
-        expectResult (0) (c2.version)
-        expectResult (Bytes.empty) (c2.bytes)
-        expectResult (Seq.empty) (c2.history.toSeq)
+        assertResult (0) (c2.version)
+        assertResult (Bytes.empty) (c2.bytes)
+        assertResult (Seq.empty) (c2.history.toSeq)
       }
 
       "and the other catalog is ahead, there should be no updates" in {
@@ -91,33 +91,33 @@ class HandlerSpec extends FreeSpec {
 
         "and it can retain all its history, it should work" in {
           val c = newCatalog (12)
-          expectResult (bytes (11)) (c.bytes)
+          assertResult (bytes (11)) (c.bytes)
           val u @ Patch (ver, sum, ps) = c.diff (8)
-          expectResult (12) (ver)
-          expectResult (bytes (11) .hashCode) (sum)
-          expectResult (patches drop 8 take 4) (ps)
+          assertResult (12) (ver)
+          assertResult (bytes (11) .hashCode) (sum)
+          assertResult (patches drop 8 take 4) (ps)
           val c2 = newCatalog (8)
-          expectResult (bytes (7)) (c2.bytes)
+          assertResult (bytes (7)) (c2.bytes)
           c2.patch (u)
-          expectResult (12) (c2.version)
-          expectResult (bytes (11)) (c2.bytes)
-          expectResult (patches take 12) (c2.history.toSeq)
+          assertResult (12) (c2.version)
+          assertResult (bytes (11)) (c2.bytes)
+          assertResult (patches take 12) (c2.history.toSeq)
         }
 
         "and it can drop some of its history, it should work" in {
           val c = newCatalog (20)
-          expectResult (bytes (19)) (c.bytes)
+          assertResult (bytes (19)) (c.bytes)
           val u @ Patch (ver, sum, ps) = c.diff (18)
-          expectResult (20) (ver)
-          expectResult (bytes (19) .hashCode) (sum)
-          expectResult (patches drop 18 take 2) (ps)
+          assertResult (20) (ver)
+          assertResult (bytes (19) .hashCode) (sum)
+          assertResult (patches drop 18 take 2) (ps)
           val c2 = newCatalog (18)
-          expectResult (bytes (17)) (c2.bytes)
-          expectResult (16) (c2.history.size)
+          assertResult (bytes (17)) (c2.bytes)
+          assertResult (16) (c2.history.size)
           c2.patch (u)
-          expectResult (20) (c2.version)
-          expectResult (bytes (19)) (c2.bytes)
-          expectResult (patches drop 4) (c2.history.toSeq)
+          assertResult (20) (c2.version)
+          assertResult (bytes (19)) (c2.bytes)
+          assertResult (patches drop 4) (c2.history.toSeq)
         }}
 
       "and the other catalog is far behind" - {
@@ -125,12 +125,12 @@ class HandlerSpec extends FreeSpec {
         "it should synchronize the full catalog" in {
           val c = newCatalog (20)
           val u @ Assign (v, b, ps) = c.diff (0)
-          expectResult (20) (v)
-          expectResult (bytes (19)) (c.bytes)
-          expectResult (patches drop 4) (ps)
+          assertResult (20) (v)
+          assertResult (bytes (19)) (c.bytes)
+          assertResult (patches drop 4) (ps)
           val c2 = newCatalog (0)
           c2.patch (u)
-          expectResult (20) (c2.version)
-          expectResult (bytes (19)) (c2.bytes)
-          expectResult (patches drop 4) (c2.history.toSeq)
+          assertResult (20) (c2.version)
+          assertResult (bytes (19)) (c2.bytes)
+          assertResult (patches drop 4) (c2.history.toSeq)
         }}}}}

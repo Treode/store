@@ -11,7 +11,7 @@ import com.treode.store.atlas.AtlasKit
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions
 
-import Assertions.expectResult
+import Assertions.assertResult
 import AsyncTestTools._
 import Callback.ignore
 import StubCatalogHost.{cat1, cat2}

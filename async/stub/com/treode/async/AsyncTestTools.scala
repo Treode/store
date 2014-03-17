@@ -2,7 +2,7 @@ package com.treode.async
 
 import org.scalatest.Assertions
 
-import Assertions.expectResult
+import Assertions.assertResult
 
 trait AsyncTestTools {
 
@@ -27,10 +27,10 @@ trait AsyncTestTools {
     }
 
     def expect (expected: A) (implicit scheduler: StubScheduler): Unit =
-      expectResult (expected) (pass)
+      assertResult (expected) (pass)
 
     def expectSeq [B] (xs: B*) (implicit s: StubScheduler, w: A <:< Seq [B]): Unit =
-      expectResult (xs) (pass)
+      assertResult (xs) (pass)
   }
 
   implicit class RichAsyncIterator [A] (iter: AsyncIterator [A]) {

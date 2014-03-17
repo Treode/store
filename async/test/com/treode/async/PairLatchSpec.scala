@@ -20,7 +20,7 @@ class PairLatchSpec extends FlatSpec {
     la.pass (1)
     cb.expectNotInvoked()
     lb.pass (2)
-    expectResult ((1, 2)) (cb.passed)
+    assertResult ((1, 2)) (cb.passed)
   }
 
   it should "reject two sets on a" in {

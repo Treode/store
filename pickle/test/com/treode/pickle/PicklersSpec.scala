@@ -3,13 +3,12 @@ package com.treode.pickle
 import scala.util.Random
 
 import com.treode.buffer.PagedBuffer
-import org.scalatest.matchers.ShouldMatchers
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.{FlatSpec, PropSpec, Specs}
+import org.scalatest.{FlatSpec, Matchers, PropSpec, Suites}
 
-class PicklersSpec extends Specs (PicklersBehaviors, PicklersProperties)
+class PicklersSpec extends Suites (PicklersBehaviors, PicklersProperties)
 
-private trait PicklersSpecCommon extends ShouldMatchers {
+private trait PicklersSpecCommon extends Matchers {
   import Picklers._
 
   case class Url (host: String, port: Int, path: String)
@@ -38,7 +37,7 @@ private trait PicklersSpecCommon extends ShouldMatchers {
     .inspect (x => (x.name, x.bookmarks))
 
   def check [A] (pa: Pickler [A], x: A) {
-    expectResult (x) {
+    assertResult (x) {
       val buffer = PagedBuffer (10)
       pa.pickle (x, buffer)
       val y = pa.unpickle (buffer)

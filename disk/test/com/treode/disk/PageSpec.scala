@@ -28,11 +28,11 @@ class PageSpec extends FlatSpec {
       implicit val recovery = Disks.recover()
       implicit val disks = recovery.attachAndLaunch (("a", disk1, geometry))
       pos = disks.write (desc, 0, 0, seq) .pass
-      expectResult (seq) (disks.read (desc, pos) .pass)
+      assertResult (seq) (disks.read (desc, pos) .pass)
     }
 
     {
       implicit val recovery = Disks.recover()
       implicit val disks = recovery.reattachAndLaunch (("a", disk1))
-      expectResult (seq) (disks.read (desc, pos). pass)
+      assertResult (seq) (disks.read (desc, pos). pass)
     }}}

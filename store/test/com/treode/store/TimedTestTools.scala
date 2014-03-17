@@ -5,7 +5,7 @@ import scala.util.Random
 import com.treode.async.{Async, AsyncTestTools, CallbackCaptor, StubScheduler}
 import org.scalatest.Assertions
 
-import Assertions.{expectResult, fail}
+import Assertions.{assertResult, fail}
 
 private trait TimedTestTools extends AsyncTestTools {
 

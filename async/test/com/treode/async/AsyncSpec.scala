@@ -154,7 +154,7 @@ class AsyncSpec extends FlatSpec {
     var flag = false
     supply (flag = true) defer (cb)
     cb.expectNotInvoked()
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "report an exception through the callback" in {
@@ -168,7 +168,7 @@ class AsyncSpec extends FlatSpec {
     var flag = false
     val a = supply (0) .leave (flag = true)
     a.pass
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "invoke the body on fail" in {
@@ -176,17 +176,17 @@ class AsyncSpec extends FlatSpec {
     var flag = false
     val a = guard [Int] (throw new DistinguishedException) .leave (flag = true)
     a.fail [DistinguishedException]
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   "Async.await" should "invoke the async" in {
     var flag = false
     supply (flag = true) .await()
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "should pass an async from the body to the caller" in {
-    expectResult (1) (supply (1) .await())
+    assertResult (1) (supply (1) .await())
   }
 
   it should "thrown an exception from the body to the caller" in {
@@ -198,7 +198,7 @@ class AsyncSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     var flag = false
     async [Unit] { cb => flag = true; cb.pass() } .pass
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "pass an exception from the body to the callback" in {
@@ -216,12 +216,12 @@ class AsyncSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     var flag = false
     guard (supply (flag = true)) .pass
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "should pass an async from the body to the callback" in {
     implicit val scheduler = StubScheduler.random()
-    expectResult (1) (guard (supply (1)) .pass)
+    assertResult (1) (guard (supply (1)) .pass)
   }
 
   it should "pass an exception from the body to the callback" in {
@@ -239,12 +239,12 @@ class AsyncSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     var flag = false
     supply (supply (flag = true)) .pass
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "should pass data from the body to the callback" in {
     implicit val scheduler = StubScheduler.random()
-    expectResult (1) (supply (1) .pass)
+    assertResult (1) (supply (1) .pass)
   }
 
   it should "pass an exception from the body to the callback" in {
@@ -262,14 +262,14 @@ class AsyncSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     var flag = false
     when (true) (supply (flag = true)) .pass
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "skip the body when the condition is false" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false
     when (false) (supply (flag = true)) .pass
-    expectResult (false) (flag)
+    assertResult (false) (flag)
   }
 
   it should "pass an exception from the body to the callback" in {

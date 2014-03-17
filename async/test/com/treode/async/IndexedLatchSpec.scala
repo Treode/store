@@ -11,13 +11,13 @@ class ArrayLatchSpec extends FlatSpec {
   "The ArrayLatch" should "release immediately for count==0" in {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.indexed [Int] (0, cb)
-    expectResult (Seq [Int] ()) (cb.passed.toSeq)
+    assertResult (Seq [Int] ()) (cb.passed.toSeq)
   }
 
   it should "reject extra releases" in {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.indexed [Int] (0, cb)
-    expectResult (Seq [Int] ()) (cb.passed.toSeq)
+    assertResult (Seq [Int] ()) (cb.passed.toSeq)
     intercept [Exception] (ltch.pass (0, 0))
   }
 
@@ -26,7 +26,7 @@ class ArrayLatchSpec extends FlatSpec {
     val ltch = Latch.indexed [Int] (1, cb)
     cb.expectNotInvoked()
     ltch.pass (0, 1)
-    expectResult (Seq (1)) (cb.passed.toSeq)
+    assertResult (Seq (1)) (cb.passed.toSeq)
   }
 
   it should "release after one fail for count==1" in {
@@ -44,7 +44,7 @@ class ArrayLatchSpec extends FlatSpec {
     ltch.pass (0, 1)
     cb.expectNotInvoked()
     ltch.pass (1, 2)
-    expectResult (Seq (1, 2)) (cb.passed.toSeq)
+    assertResult (Seq (1, 2)) (cb.passed.toSeq)
   }
 
   it should "release after two reversed passes for count==2" in {
@@ -54,7 +54,7 @@ class ArrayLatchSpec extends FlatSpec {
     ltch.pass (1, 2)
     cb.expectNotInvoked()
     ltch.pass (0, 1)
-    expectResult (Seq (1, 2)) (cb.passed.toSeq)
+    assertResult (Seq (1, 2)) (cb.passed.toSeq)
   }
 
   it should "release after a pass and a fail for count==2" in {

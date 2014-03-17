@@ -29,7 +29,7 @@ class LockSpec extends WordSpec with MockFactory {
         val r = mock [LockReader]
         (r.rt _) .expects() .returns (0) .anyNumberOfTimes()
         (r.grant _) .expects() .never()
-        expectResult (true) (lock.read (r))
+        assertResult (true) (lock.read (r))
       }
 
       "grant a writer immediately rather than invoke grant later" in {
@@ -37,7 +37,7 @@ class LockSpec extends WordSpec with MockFactory {
         val w = mock [LockWriter]
         (w.ft _) .expects() .returns (0) .anyNumberOfTimes()
         (w.grant _) .expects (TxClock.zero) .never()
-        expectResult (Some (TxClock.zero)) (lock.write (w))
+        assertResult (Some (TxClock.zero)) (lock.write (w))
       }}
 
     "previously held by a reader" should {
@@ -47,11 +47,11 @@ class LockSpec extends WordSpec with MockFactory {
         val r = mock [LockReader]
         (r.rt _) .expects() .returns (1) .anyNumberOfTimes()
         (r.grant _) .expects() .never()
-        expectResult (true) (lock.read (r))
+        assertResult (true) (lock.read (r))
         val w = mock [LockWriter]
         (w.ft _) .expects() .returns (0) .anyNumberOfTimes()
         (w.grant _) .expects (TxClock.zero) .never()
-        expectResult (Some (TxClock (1))) (lock.write (w))
+        assertResult (Some (TxClock (1))) (lock.write (w))
       }}
 
     "currently held by a writer" should {
@@ -61,11 +61,11 @@ class LockSpec extends WordSpec with MockFactory {
         val w = mock [LockWriter]
         (w.ft _) .expects() .returns (1) .anyNumberOfTimes()
         (w.grant _) .expects (TxClock (1)) .never()
-        expectResult (Some (TxClock (1))) (lock.write (w))
+        assertResult (Some (TxClock (1))) (lock.write (w))
         val r = mock [LockReader]
         (r.rt _) .expects() .returns (0) .anyNumberOfTimes()
         (r.grant _) .expects() .never()
-        expectResult (true) (lock.read (r))
+        assertResult (true) (lock.read (r))
         lock.release (w)
       }
 
@@ -74,11 +74,11 @@ class LockSpec extends WordSpec with MockFactory {
         val w = mock [LockWriter]
         (w.ft _) .expects() .returns (1) .anyNumberOfTimes()
         (w.grant _) .expects (TxClock (1)) .never()
-        expectResult (Some (TxClock (1))) (lock.write (w))
+        assertResult (Some (TxClock (1))) (lock.write (w))
         val r = mock [LockReader]
         (r.rt _) .expects() .returns (2) .anyNumberOfTimes()
         (r.grant _) .expects() .never()
-        expectResult (false) (lock.read (r))
+        assertResult (false) (lock.read (r))
         (r.grant _) .expects() .once()
         lock.release (w)
       }
@@ -88,15 +88,15 @@ class LockSpec extends WordSpec with MockFactory {
         val w = mock [LockWriter]
         (w.ft _) .expects() .returns (1) .anyNumberOfTimes()
         (w.grant _) .expects (TxClock (1)) .never()
-        expectResult (Some (TxClock (1))) (lock.write (w))
+        assertResult (Some (TxClock (1))) (lock.write (w))
         val r1 = mock [LockReader]
         (r1.rt _) .expects() .returns (2) .anyNumberOfTimes()
         (r1.grant _) .expects() .never()
-        expectResult (false) (lock.read (r1))
+        assertResult (false) (lock.read (r1))
         val r2 = mock [LockReader]
         (r2.rt _) .expects() .returns (2) .anyNumberOfTimes()
         (r2.grant _) .expects() .never()
-        expectResult (false) (lock.read (r2))
+        assertResult (false) (lock.read (r2))
         (r1.grant _) .expects() .once()
         (r2.grant _) .expects() .once()
         lock.release (w)
@@ -107,11 +107,11 @@ class LockSpec extends WordSpec with MockFactory {
         val w1 = mock [LockWriter]
         (w1.ft _) .expects() .returns (0) .anyNumberOfTimes()
         (w1.grant _) .expects (TxClock.zero) .never()
-        expectResult (Some (TxClock.zero)) (lock.write (w1))
+        assertResult (Some (TxClock.zero)) (lock.write (w1))
         val w2 = mock [LockWriter]
         (w2.ft _) .expects() .returns (0) .anyNumberOfTimes()
         (w2.grant _) .expects (TxClock.zero) .never()
-        expectResult (None) (lock.write (w2))
+        assertResult (None) (lock.write (w2))
         (w2.grant _) .expects (TxClock.zero) .once()
         lock.release (w1)
       }
@@ -121,15 +121,15 @@ class LockSpec extends WordSpec with MockFactory {
         val w1 = mock [LockWriter]
         (w1.ft _) .expects() .returns (0) .anyNumberOfTimes()
         (w1.grant _) .expects (TxClock.zero) .never()
-        expectResult (Some (TxClock.zero)) (lock.write (w1))
+        assertResult (Some (TxClock.zero)) (lock.write (w1))
         val w2 = mock [LockWriter]
         (w2.ft _) .expects() .returns (0) .anyNumberOfTimes()
         (w2.grant _) .expects (TxClock.zero) .never()
-        expectResult (None) (lock.write (w2))
+        assertResult (None) (lock.write (w2))
         val w3 = mock [LockWriter]
         (w3.ft _) .expects() .returns (0) .anyNumberOfTimes()
         (w3.grant _) .expects (TxClock.zero) .never()
-        expectResult (None) (lock.write (w3))
+        assertResult (None) (lock.write (w3))
         (w2.grant _) .expects (TxClock.zero) .once()
         lock.release (w1)
       }}}

@@ -10,28 +10,28 @@ class DiskGeometrySpec extends FlatSpec {
   val seg = 1<<16
 
   def expectBounds (id: Int, pos: Long, limit: Long) (actual: SegmentBounds): Unit =
-    expectResult (SegmentBounds (id, pos, limit)) (actual)
+    assertResult (SegmentBounds (id, pos, limit)) (actual)
 
   "DiskGeometry" should "compute the segment count" in {
     val disk1 = 1<<20
     val disk2 = 1<<21
     def c (diskBytes: Long) = DiskGeometry (16, 12, diskBytes).segmentCount
-    expectResult (16) (c (disk1))
-    expectResult (17) (c (disk1 + 4*block))
-    expectResult (32) (c (disk2))
-    expectResult (32) (c (disk2 - seg + 4*block))
-    expectResult (31) (c (disk2 - seg + 4*block - 1))
-    expectResult (32) (c (disk2 + 4*block - 1))
-    expectResult (33) (c (disk2 + 4*block))
+    assertResult (16) (c (disk1))
+    assertResult (17) (c (disk1 + 4*block))
+    assertResult (32) (c (disk2))
+    assertResult (32) (c (disk2 - seg + 4*block))
+    assertResult (31) (c (disk2 - seg + 4*block - 1))
+    assertResult (32) (c (disk2 + 4*block - 1))
+    assertResult (33) (c (disk2 + 4*block))
   }
 
   it should "align block length" in {
     val c = DiskGeometry (16, 12, 1<<20)
-    expectResult (0) (c.blockAlignLength (0))
-    expectResult (block) (c.blockAlignLength (1))
-    expectResult (block) (c.blockAlignLength (4095))
-    expectResult (block) (c.blockAlignLength (4096))
-    expectResult (2*block) (c.blockAlignLength (4097))
+    assertResult (0) (c.blockAlignLength (0))
+    assertResult (block) (c.blockAlignLength (1))
+    assertResult (block) (c.blockAlignLength (4095))
+    assertResult (block) (c.blockAlignLength (4096))
+    assertResult (2*block) (c.blockAlignLength (4097))
   }
 
   it should "compute the segment bounds" in {

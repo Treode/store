@@ -1,9 +1,9 @@
 package com.treode.buffer
 
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.{FlatSpec, PropSpec, Specs}
+import org.scalatest.{FlatSpec, PropSpec, Suites}
 
-class PagedBufferSpec extends Specs (PagedBufferBehaviors, PagedBufferProperties)
+class PagedBufferSpec extends Suites (PagedBufferBehaviors, PagedBufferProperties)
 
 private object PagedBufferBehaviors extends FlatSpec {
 
@@ -14,7 +14,7 @@ private object PagedBufferBehaviors extends FlatSpec {
     it should (s"add the right pages for nbytes=$nbytes") in {
       val buffer = PagedBuffer (pageBits)
       buffer.capacity (nbytes)
-      expectResult (npages << pageBits) (buffer.capacity)
+      assertResult (npages << pageBits) (buffer.capacity)
       for (i <- 0 until npages)
         assert (buffer.pages (i) != null)
       for (i <- npages until buffer.pages.length)
@@ -38,14 +38,14 @@ private object PagedBufferBehaviors extends FlatSpec {
       buffer.readPos = nbytes
       val before = (Seq (buffer.pages: _*), buffer.writePos, buffer.readPos)
       buffer.discard (nbytes)
-      expectResult ((4 - npages) << pageBits) (buffer.capacity)
+      assertResult ((4 - npages) << pageBits) (buffer.capacity)
       val after = (Seq (buffer.pages: _*), buffer.writePos, buffer.readPos)
       for (i <- 0 until before._1.length - npages)
         assert (before._1 (i + npages) == after._1 (i))
       for (i <- before._1.length - npages until after._1.length)
         assert (after._1 (i) == null)
-      expectResult (before._2 - pageSize * npages) (after._2)
-      expectResult (before._3 - pageSize * npages) (after._3)
+      assertResult (before._2 - pageSize * npages) (after._2)
+      assertResult (before._3 - pageSize * npages) (after._3)
     }}
 
   behavior of "PagedBuffer.discard"
@@ -64,8 +64,8 @@ private object PagedBufferBehaviors extends FlatSpec {
       val buffer = PagedBuffer (pageBits)
       buffer.writePos = 128
       val bytebuf = buffer.buffer (sbyte, nbytes)
-      expectResult (first) (bytebuf.position)
-      expectResult (last) (bytebuf.limit)
+      assertResult (first) (bytebuf.position)
+      assertResult (last) (bytebuf.limit)
       assert (buffer.pages (page) == bytebuf.array)
     }}
 
@@ -92,10 +92,10 @@ private object PagedBufferBehaviors extends FlatSpec {
       val buffer = PagedBuffer (pageBits)
       buffer.writePos = 128
       val bytebufs = buffer.buffers (sbyte, nbytes)
-      expectResult (nbufs) (bytebufs.length)
+      assertResult (nbufs) (bytebufs.length)
       if (nbufs > 0) {
-        expectResult (first) (bytebufs (0) .position)
-        expectResult (last) (bytebufs (nbufs - 1) .limit)
+        assertResult (first) (bytebufs (0) .position)
+        assertResult (last) (bytebufs (nbufs - 1) .limit)
       }
       for (i <- 0 until nbufs)
         assert (buffer.pages (i + spage) == bytebufs (i) .array)
@@ -133,15 +133,15 @@ private object PagedBufferBehaviors extends FlatSpec {
       val buffer = PagedBuffer (pageBits)
       buffer.writePos = dstOff
       buffer.writeBytes (bytes, srcOff, len)
-      expectResult (dstOff + len) (buffer.writePos)
+      assertResult (dstOff + len) (buffer.writePos)
       buffer.writeInt (0xDEADBEEF)
       bytes = Array.fill (size) (0)
       buffer.readPos = dstOff
       buffer.readBytes (bytes, 0, len)
-      expectResult (dstOff + len) (buffer.readPos)
+      assertResult (dstOff + len) (buffer.readPos)
       for (i <- 0 until len)
-        expectResult (srcOff+i+1, s"at pos=$i") (bytes (i))
-      expectResult (0xDEADBEEF) (buffer.readInt())
+        assertResult (srcOff+i+1, s"at pos=$i") (bytes (i))
+      assertResult (0xDEADBEEF) (buffer.readInt())
     }}
 
   behavior of "A PagedBuffer"
@@ -173,10 +173,10 @@ private object PagedBufferBehaviors extends FlatSpec {
       val buffer = PagedBuffer (pageBits)
       buffer.writePos = offset
       buffer.writeZeroToAlign (bits)
-      expectResult (offset + length) (buffer.writePos)
+      assertResult (offset + length) (buffer.writePos)
       buffer.readPos = offset
       for (i <- 0 until length)
-        expectResult (0) (buffer.readByte())
+        assertResult (0) (buffer.readByte())
     }}
 
   behavior of "A PagedBuffer"
@@ -258,138 +258,138 @@ private object PagedBufferProperties extends PropSpec with PropertyChecks {
     forAll ("x") { x: Short =>
       val buffer = PagedBuffer (5)
       buffer.writeShort (x)
-      expectResult (x) (buffer.readShort())
+      assertResult (x) (buffer.readShort())
     }}
 
   property ("A PagedBuffer reads and writes shorts across a page boundry") {
     forAll ("x") { x: Short =>
       val buffer = PagedBuffer (1)
       buffer.writeShort (x)
-      expectResult (x) (buffer.readShort())
+      assertResult (x) (buffer.readShort())
     }}
 
   property ("A PagedBuffer reads and writes ints within a page") {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (5)
       buffer.writeInt (x)
-      expectResult (x) (buffer.readInt())
+      assertResult (x) (buffer.readInt())
     }}
 
   property ("A PagedBuffer reads and writes ints across a page boundry") {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (1)
       buffer.writeInt (x)
-      expectResult (x) (buffer.readInt())
+      assertResult (x) (buffer.readInt())
     }}
 
   property ("A PagedBuffer reads and writes var ints within a page") {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (5)
       buffer.writeVarInt (x)
-      expectResult (x) (buffer.readVarInt())
+      assertResult (x) (buffer.readVarInt())
     }}
 
   property ("A PagedBuffer reads and writes var ints across a page boundry") {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (1)
       buffer.writeVarInt (x)
-      expectResult (x) (buffer.readVarInt())
+      assertResult (x) (buffer.readVarInt())
     }}
 
   property ("A PagedBuffer reads and writes unsigned var ints within a page") {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (5)
       buffer.writeVarUInt (x)
-      expectResult (x) (buffer.readVarUInt())
+      assertResult (x) (buffer.readVarUInt())
     }}
 
   property ("A PagedBuffer reads and writes unsigned var ints across a page boundry") {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (1)
       buffer.writeVarUInt (x)
-      expectResult (x) (buffer.readVarUInt())
+      assertResult (x) (buffer.readVarUInt())
     }}
 
   property ("A PagedBuffer reads and writes longs within a page") {
     forAll ("x") { x: Long =>
       val buffer = PagedBuffer (5)
       buffer.writeLong (x)
-      expectResult (x) (buffer.readLong())
+      assertResult (x) (buffer.readLong())
     }}
 
   property ("A PagedBuffer reads and writes longs across a page boundry") {
     forAll ("x") { x: Long =>
       val buffer = PagedBuffer (1)
       buffer.writeLong (x)
-      expectResult (x) (buffer.readLong())
+      assertResult (x) (buffer.readLong())
     }}
 
   property ("A PagedBuffer reads and writes var longs within a page") {
     forAll ("x") { x: Byte =>
       val buffer = PagedBuffer (5)
       buffer.writeVarLong (-1L)
-      expectResult (-1L) (buffer.readVarLong())
+      assertResult (-1L) (buffer.readVarLong())
     }}
 
   property ("A PagedBuffer reads and writes var longs across a page boundry") {
     forAll ("x") { x: Long =>
       val buffer = PagedBuffer (1)
       buffer.writeVarLong (x)
-      expectResult (x) (buffer.readVarLong())
+      assertResult (x) (buffer.readVarLong())
     }}
 
   property ("A PagedBuffer reads and writes unsigned var longs within a page") {
     forAll ("x") { x: Long =>
       val buffer = PagedBuffer (5)
       buffer.writeVarULong (x)
-      expectResult (x) (buffer.readVarULong())
+      assertResult (x) (buffer.readVarULong())
     }}
 
   property ("A PagedBuffer reads and writes unsigned var longs across a page boundry") {
     forAll ("x") { x: Long =>
       val buffer = PagedBuffer (1)
       buffer.writeVarULong (x)
-      expectResult (x) (buffer.readVarULong())
+      assertResult (x) (buffer.readVarULong())
     }}
 
   property ("A PagedBuffer reads and writes floats within a page") {
     forAll ("x") { x: Float =>
       val buffer = PagedBuffer (5)
       buffer.writeFloat (x)
-      expectResult (x) (buffer.readFloat())
+      assertResult (x) (buffer.readFloat())
     }}
 
   property ("A PagedBuffer reads and writes floats across a page boundry") {
     forAll ("x") { x: Float =>
       val buffer = PagedBuffer (1)
       buffer.writeFloat (x)
-      expectResult (x) (buffer.readFloat())
+      assertResult (x) (buffer.readFloat())
     }}
 
   property ("A PagedBuffer reads and writes doubles within a page") {
     forAll ("x") { x: Double =>
       val buffer = PagedBuffer (5)
       buffer.writeDouble (x)
-      expectResult (x) (buffer.readDouble())
+      assertResult (x) (buffer.readDouble())
     }}
 
   property ("A PagedBuffer reads and writes doubles across a page boundry") {
     forAll ("x") { x: Double =>
       val buffer = PagedBuffer (1)
       buffer.writeDouble (x)
-      expectResult (x) (buffer.readDouble())
+      assertResult (x) (buffer.readDouble())
     }}
 
   property ("A PagedBuffer reads and writes strings within a page") {
     forAll ("x") { x: String =>
       val buffer = PagedBuffer (9)
       buffer.writeString (x)
-      expectResult (x) (buffer.readString())
+      assertResult (x) (buffer.readString())
     }}
 
   property ("A PagedBuffer reads and writes strings across a page boundry") {
     forAll ("x") { x: String =>
       val buffer = PagedBuffer (3)
       buffer.writeString (x)
-      expectResult (x) (buffer.readString())
+      assertResult (x) (buffer.readString())
     }}}

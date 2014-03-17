@@ -21,9 +21,9 @@ class UpdateSpec extends FreeSpec {
       val b2 = Bytes (p, v2)
       val patch = Patch.diff (b1, b2)
       val bp = Patch.patch (b1, patch)
-      expectResult (b2) (bp)
+      assertResult (b2) (bp)
       val vp = bp.unpickle (p)
-      expectResult (v2) (vp)
+      assertResult (v2) (vp)
     }
 
     "handle equal longs" in {

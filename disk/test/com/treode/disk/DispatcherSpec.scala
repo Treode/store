@@ -36,7 +36,7 @@ class DispatcherSpec extends FlatSpec {
 
     def expect (messages: M*) {
       assert (wasInvoked, "Receiver was not invoked.")
-      expectResult (list (messages: _*)) (_messages)
+      assertResult (list (messages: _*)) (_messages)
     }
 
     override def toString: String =

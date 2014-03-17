@@ -11,7 +11,7 @@ import TierTestTools._
 class OverwritesFilterSpec extends FlatSpec {
 
   private def expectCells (expected: TierCell*) (actual: TierCellIterator) (implicit s: StubScheduler): Unit =
-    expectResult (expected) (actual.toSeq)
+    assertResult (expected) (actual.toSeq)
 
   private def newFilter (cs: TierCell*) (implicit s: StubScheduler) =
     OverwritesFilter (cs.iterator.async)

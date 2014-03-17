@@ -4,12 +4,12 @@ import scala.util.Random
 
 import com.treode.async.{AsyncTestTools, Callback, StubScheduler}
 import com.treode.buffer.PagedBuffer
-import org.scalatest.{FlatSpec, PropSpec, Specs}
+import org.scalatest.{FlatSpec, PropSpec, Suites}
 import org.scalatest.prop.PropertyChecks
 
 import AsyncTestTools._
 
-class FileSpec extends Specs (FileBehaviors, FileProperties)
+class FileSpec extends Suites (FileBehaviors, FileProperties)
 
 object FileBehaviors extends FlatSpec {
 
@@ -181,5 +181,5 @@ object FileProperties extends PropSpec with PropertyChecks {
       buffer.clear()
       file.fill (buffer, 0, length) .pass
       for (i <- data)
-        expectResult (i) (buffer.readVarInt())
+        assertResult (i) (buffer.readVarInt())
     }}}

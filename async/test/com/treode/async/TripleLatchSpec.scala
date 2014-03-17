@@ -22,7 +22,7 @@ class TripleLatchSpec extends FlatSpec {
     lb.pass (2)
     cb.expectNotInvoked()
     lc.pass (3)
-    expectResult ((1, 2, 3)) (cb.passed)
+    assertResult ((1, 2, 3)) (cb.passed)
   }
 
   it should "reject two sets on a" in {

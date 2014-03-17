@@ -42,7 +42,7 @@ class SystemSpec extends FlatSpec {
       table.get (key) .expect (Some (value))
 
     def expectValues (kvs: (Int, Int)*) (implicit scheduler: StubScheduler): Unit =
-      expectResult (kvs.sorted) (toSeq)
+      assertResult (kvs.sorted) (toSeq)
   }
 
   private def setup (disk: StubFile, geometry: DiskGeometry) (

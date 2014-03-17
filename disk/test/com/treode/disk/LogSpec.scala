@@ -31,5 +31,5 @@ class LogSpec extends FlatSpec {
       val replayed = Seq.newBuilder [String]
       record.replay (replayed += _)
       implicit val disks = recovery.reattachAndLaunch (("a", disk1))
-      expectResult (Seq ("one")) (replayed.result)
+      assertResult (Seq ("one")) (replayed.result)
     }}}

@@ -15,21 +15,21 @@ class WhilstSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     var count = 0
     whilst.f (false) (count += 1) .pass
-    expectResult (0) (count)
+    assertResult (0) (count)
   }
 
   it should "handle one iteration" in {
     implicit val scheduler = StubScheduler.random()
     var count = 0
     whilst.f (count < 1) (count += 1) .pass
-    expectResult (1) (count)
+    assertResult (1) (count)
   }
 
   it should "handle multiple iterations" in {
     implicit val scheduler = StubScheduler.random()
     var count = 0
     whilst.f (count < 3) (count += 1) .pass
-    expectResult (3) (count)
+    assertResult (3) (count)
   }
 
   it should "handle pass an exception from the body to the callback" in {
@@ -40,7 +40,7 @@ class WhilstSpec extends FlatSpec {
       if (count == 3)
         throw new DistinguishedException
     } .fail [DistinguishedException]
-    expectResult (3) (count)
+    assertResult (3) (count)
   }
 
   it should "handle pass an exception from the conditions to the callback" in {
@@ -51,5 +51,5 @@ class WhilstSpec extends FlatSpec {
         throw new DistinguishedException
       true
     } (count += 1) .fail [DistinguishedException]
-    expectResult (3) (count)
+    assertResult (3) (count)
   }}

@@ -5,7 +5,7 @@ import org.scalatest.FlatSpec
 class IntSetSpec extends FlatSpec {
 
   def expectSet (xs: Int*) (s: IntSet): Unit =
-    expectResult (xs.toSet) (s.toSet)
+    assertResult (xs.toSet) (s.toSet)
 
   "An IntSet" should "fill with 0 to n" in {
     val s = IntSet.fill (4)
@@ -49,7 +49,7 @@ class IntSetSpec extends FlatSpec {
 
     def checkPickle (s: IntSet) {
       val s2 = fromByteArray (toByteArray (s))
-      expectResult (s) (s2)
+      assertResult (s) (s2)
     }
 
     checkPickle (IntSet())

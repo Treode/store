@@ -20,9 +20,9 @@ class FiberSpec extends FlatSpec {
     val f = new Fiber (s)
     var a = false
     f.execute (a = true)
-    expectResult (false) (a)
+    assertResult (false) (a)
     s.runTasks()
-    expectResult (true) (a)
+    assertResult (true) (a)
   }
 
   it should "run two queued tasks" in {
@@ -32,11 +32,11 @@ class FiberSpec extends FlatSpec {
     var b = false
     f.execute (a = true)
     f.execute (b = true)
-    expectResult (false) (a)
-    expectResult (false) (b)
+    assertResult (false) (a)
+    assertResult (false) (b)
     s.runTasks()
-    expectResult (true) (a)
-    expectResult (true) (b)
+    assertResult (true) (a)
+    assertResult (true) (b)
   }
 
   it should "run two tasks one after the other" in {
@@ -45,13 +45,13 @@ class FiberSpec extends FlatSpec {
     var a = false
     var b = false
     f.execute (a = true)
-    expectResult (false) (a)
+    assertResult (false) (a)
     s.runTasks()
-    expectResult (true) (a)
+    assertResult (true) (a)
     f.execute (b = true)
-    expectResult (false) (b)
+    assertResult (false) (b)
     s.runTasks()
-    expectResult (true) (b)
+    assertResult (true) (b)
   }
 
   it should "report an exception thrown from a task and continue" in {
@@ -60,10 +60,10 @@ class FiberSpec extends FlatSpec {
     var a = false
     f.execute (throwDistinguishedException)
     f.execute (a = true)
-    expectResult (false) (a)
+    assertResult (false) (a)
     intercept [DistinguishedException] (s.runTasks())
     s.runTasks()
-    expectResult (true) (a)
+    assertResult (true) (a)
   }
 
   "Fiber.async" should "not invoke the callback" in {
@@ -71,10 +71,10 @@ class FiberSpec extends FlatSpec {
     val f = new Fiber (s)
     var a = false
     val cb = f.async [Unit] (cb => a = true) .capture()
-    expectResult (false) (a)
+    assertResult (false) (a)
     cb.expectNotInvoked()
     s.runTasks()
-    expectResult (true) (a)
+    assertResult (true) (a)
     cb.expectNotInvoked()
   }
 
@@ -101,10 +101,10 @@ class FiberSpec extends FlatSpec {
     val f = new Fiber (s)
     var a = false
     val cb = f.supply (a = true) .capture()
-    expectResult (false) (a)
+    assertResult (false) (a)
     cb.expectNotInvoked()
     s.runTasks()
-    expectResult (true) (a)
+    assertResult (true) (a)
     cb.expectInvoked()
   }
 
@@ -123,10 +123,10 @@ class FiberSpec extends FlatSpec {
     var a = false
     val cb = CallbackCaptor [Unit]
     f.run [Unit] (cb) (supply (a = true))
-    expectResult (false) (a)
+    assertResult (false) (a)
     cb.expectNotInvoked()
     s.runTasks()
-    expectResult (true) (a)
+    assertResult (true) (a)
     cb.expectInvoked()
   }
 
@@ -146,10 +146,10 @@ class FiberSpec extends FlatSpec {
     var a = false
     val cb = CallbackCaptor [Unit]
     f.defer (cb) (a = true)
-    expectResult (false) (a)
+    assertResult (false) (a)
     cb.expectNotInvoked()
     s.runTasks()
-    expectResult (true) (a)
+    assertResult (true) (a)
     cb.expectNotInvoked()
   }
 
@@ -169,10 +169,10 @@ class FiberSpec extends FlatSpec {
     var a = false
     val cb = CallbackCaptor [Unit]
     f.invoke [Unit] (cb) (a = true)
-    expectResult (false) (a)
+    assertResult (false) (a)
     cb.expectNotInvoked()
     s.runTasks()
-    expectResult (true) (a)
+    assertResult (true) (a)
     cb.expectInvoked()
   }
 

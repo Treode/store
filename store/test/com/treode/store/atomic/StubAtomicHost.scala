@@ -11,7 +11,7 @@ import com.treode.store.atlas.AtlasKit
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions
 
-import Assertions.expectResult
+import Assertions.assertResult
 import AsyncTestTools._
 import Callback.ignore
 
@@ -67,5 +67,5 @@ extends StubActiveHost (id, network) {
 
   def expectCells (id: TableId) (cs: Cell*) {
     val t = atomic.tables.tables.get (id)
-    expectResult (cs) (t.iterator.toSeq)
+    assertResult (cs) (t.iterator.toSeq)
   }}

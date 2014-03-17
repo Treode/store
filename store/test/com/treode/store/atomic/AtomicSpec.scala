@@ -7,14 +7,14 @@ import com.treode.async.CallbackCaptor
 import com.treode.cluster.StubNetwork
 import com.treode.store._
 import org.scalacheck.Gen
-import org.scalatest.{BeforeAndAfterAll, FreeSpec, PropSpec, Specs}
+import org.scalatest.{BeforeAndAfterAll, FreeSpec, PropSpec, Suites}
 import org.scalatest.prop.PropertyChecks
 
 import AtomicTestTools._
 import Cardinals.{One, Two}
 import WriteOp._
 
-class AtomicSpec extends Specs (AtomicBehaviors, AtomicProperties)
+class AtomicSpec extends Suites (AtomicBehaviors, AtomicProperties)
 
 object AtomicBehaviors extends FreeSpec with StoreBehaviors {
 

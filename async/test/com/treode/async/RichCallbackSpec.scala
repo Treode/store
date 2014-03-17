@@ -14,7 +14,7 @@ class RichCallbackSpec extends FlatSpec {
     val cb = captor.continue [Unit] (_ => flag = true)
     cb.pass()
     captor.expectNotInvoked()
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "report an exception in the body through the callback" in {
@@ -37,7 +37,7 @@ class RichCallbackSpec extends FlatSpec {
     val cb = captor.callback [Unit] (_ => flag = true)
     cb.pass()
     captor.passed
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "report an exception in the body through the callback" in {
@@ -59,7 +59,7 @@ class RichCallbackSpec extends FlatSpec {
     var flag = false
     cb.defer (flag = true)
     cb.expectNotInvoked()
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "report an exception through the callback" in {
@@ -73,7 +73,7 @@ class RichCallbackSpec extends FlatSpec {
     var flag = false
     cb.invoke (flag = true)
     cb.passed
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "report an exception through the callback" in {
@@ -88,7 +88,7 @@ class RichCallbackSpec extends FlatSpec {
     val cb2 = cb1.leave (flag = true)
     cb2.pass()
     cb1.passed
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }
 
   it should "run the body on fail" in {
@@ -97,5 +97,5 @@ class RichCallbackSpec extends FlatSpec {
     val cb2 = cb1.leave (flag = true)
     cb2.fail (new DistinguishedException)
     cb1.failed [DistinguishedException]
-    expectResult (true) (flag)
+    assertResult (true) (flag)
   }}

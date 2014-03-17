@@ -4,7 +4,7 @@ import com.treode.async.{Async, AsyncTestTools, StubScheduler}
 import com.treode.store.Bytes
 import org.scalatest.Assertions
 
-import Assertions.expectResult
+import Assertions.assertResult
 import Async.async
 
 private object TierTestTools extends AsyncTestTools {
@@ -47,17 +47,17 @@ private object TierTestTools extends AsyncTestTools {
       toSeq.toMap
 
     def expectNone (key: Int): Unit =
-      expectResult (None) (get (key))
+      assertResult (None) (get (key))
 
     def expectValue (key: Int, value: Int): Unit =
-      expectResult (Some (value)) (get (key))
+      assertResult (Some (value)) (get (key))
 
     def expectCeiling (key: Int, limit: Int, found: Int, value: Int): Unit =
-      expectResult (found -> Some (value)) (ceiling (key, limit))
+      assertResult (found -> Some (value)) (ceiling (key, limit))
 
     def expectNoCeiling (key: Int, limit: Int, found: Int): Unit =
-      expectResult (found -> None) (ceiling (key, limit))
+      assertResult (found -> None) (ceiling (key, limit))
 
     def expectValues (kvs: (Int, Int)*): Unit =
-      expectResult (kvs.sorted) (toSeq)
+      assertResult (kvs.sorted) (toSeq)
   }}

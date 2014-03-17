@@ -14,10 +14,10 @@ class ReleaserSpec extends FlatSpec {
         ns map (n => SegmentPointer (null, geometry.segmentBounds (n)))
 
     def leaveAndExpect (epoch: Int) (fs: Int*): Unit =
-      expectResult (fs) (releaser._leave (epoch) .map (_.num))
+      assertResult (fs) (releaser._leave (epoch) .map (_.num))
 
     def releaseAndExpect (ns: Int*) (fs: Int*): Unit =
-      expectResult (fs) (releaser._release (ptrs (ns)) .map (_.num))
+      assertResult (fs) (releaser._release (ptrs (ns)) .map (_.num))
   }
 
   "The SegmentReleaser" should "free immediately when there are no parties" in {

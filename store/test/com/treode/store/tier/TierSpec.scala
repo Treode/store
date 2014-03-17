@@ -52,10 +52,10 @@ class TierSpec extends WordSpec {
     descriptor.pager.read (tier.root) .pass match {
       case b: IndexPage =>
         val ds1 = getDepths (b.entries.take (b.size-1), 1)
-        expectResult (1, "Expected lead ValueBlocks at the same depth.") (ds1.size)
+        assertResult (1, "Expected lead ValueBlocks at the same depth.") (ds1.size)
         val d = ds1.head
         val ds2 = getDepths (b.last.pos, 1)
-        expectResult (true, "Expected final ValueBlocks at depth < $d") (ds2 forall (_ < d))
+        assertResult (true, "Expected final ValueBlocks at depth < $d") (ds2 forall (_ < d))
       case b: TierCellPage =>
         ()
     }}
@@ -132,7 +132,7 @@ class TierSpec extends WordSpec {
         implicit val (scheduler, disks) = setup()
         val tier = buildTier (pageBytes)
         expectBalanced (tier)
-        expectResult (AllFruits.toSeq) (toSeq (tier) .map (_.key))
+        assertResult (AllFruits.toSeq) (toSeq (tier) .map (_.key))
       }
 
       "the pages are limited to one byte" in {
@@ -154,7 +154,7 @@ class TierSpec extends WordSpec {
       def checkIterator (pageBytes: Int) {
         implicit val (scheduler, disks) = setup()
         val tier = buildTier (pageBytes)
-        expectResult (AllFruits.toSeq) (iterateTier (tier) map (_.key))
+        assertResult (AllFruits.toSeq) (iterateTier (tier) map (_.key))
       }
 
       "the pages are limited to one byte" in {
@@ -185,12 +185,12 @@ class TierSpec extends WordSpec {
         def ceiling (key: Bytes): Option [Bytes] =
           tier.ceiling (descriptor, key) .pass.map (_.key)
 
-        expectResult (Apple) (ceiling (Apple) .get)
-        expectResult (Apricot) (ceiling (AppleX) .get)
-        expectResult (Orange) (ceiling (Orange) .get)
-        expectResult (Papaya) (ceiling (OrangeX) .get)
-        expectResult (Watermelon) (ceiling (Watermelon). get)
-        expectResult (None) (ceiling (WatermelonX))
+        assertResult (Apple) (ceiling (Apple) .get)
+        assertResult (Apricot) (ceiling (AppleX) .get)
+        assertResult (Orange) (ceiling (Orange) .get)
+        assertResult (Papaya) (ceiling (OrangeX) .get)
+        assertResult (Watermelon) (ceiling (Watermelon). get)
+        assertResult (None) (ceiling (WatermelonX))
       }
 
       "the pages are limited to one byte" in {

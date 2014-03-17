@@ -1,9 +1,9 @@
 package com.treode.buffer
 
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.{FlatSpec, PropSpec, Specs}
+import org.scalatest.{FlatSpec, PropSpec, Suites}
 
-class DataBufferSpec extends Specs (DataBufferBehaviors, DataBufferProperties)
+class DataBufferSpec extends Suites (DataBufferBehaviors, DataBufferProperties)
 
 private object DataBufferBehaviors extends FlatSpec {
 
@@ -12,7 +12,7 @@ private object DataBufferBehaviors extends FlatSpec {
     val output = new DataOutputWrapper(buffer)
     output.writeBoolean (x)
     val input = new DataInputWrapper (buffer)
-    expectResult (x) (input.readBoolean())
+    assertResult (x) (input.readBoolean())
   }
 
   "A DataInput" should "read and write booleans" in {
@@ -28,7 +28,7 @@ private object DataBufferProperties extends PropSpec with PropertyChecks {
       val output = new DataOutputWrapper (buffer)
       output.writeChar (x)
       val input = new DataInputWrapper (buffer)
-      expectResult (x) (input.readChar())
+      assertResult (x) (input.readChar())
     }}
 
   property ("A DataInputBuffer reads and writes shorts") {
@@ -37,7 +37,7 @@ private object DataBufferProperties extends PropSpec with PropertyChecks {
       val output = new DataOutputWrapper (buffer)
       output.writeShort (x)
       val input = new DataInputWrapper (buffer)
-      expectResult (x.toShort) (input.readShort())
+      assertResult (x.toShort) (input.readShort())
     }}
 
   property ("A DataInputBuffer reads and writes unsigned bytes") {
@@ -46,7 +46,7 @@ private object DataBufferProperties extends PropSpec with PropertyChecks {
       val output = new DataOutputWrapper (buffer)
       output.writeByte (x.toByte)
       val input = new DataInputWrapper (buffer)
-      expectResult (x & 0xFF) (input.readUnsignedByte())
+      assertResult (x & 0xFF) (input.readUnsignedByte())
     }}
 
   property ("A DataInputBuffer reads and writes unsigned shorts") {
@@ -55,5 +55,5 @@ private object DataBufferProperties extends PropSpec with PropertyChecks {
       val output = new DataOutputWrapper (buffer)
       output.writeShort (x.toShort)
       val input = new DataInputWrapper (buffer)
-      expectResult (x & 0xFFFF) (input.readUnsignedShort())
+      assertResult (x & 0xFFFF) (input.readUnsignedShort())
     }}}

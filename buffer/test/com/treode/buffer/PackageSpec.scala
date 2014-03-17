@@ -6,7 +6,7 @@ class PackageSpec extends FlatSpec {
 
   def twopow (in: Int, out: Int) {
     it should (s"yield $out for $in") in {
-      expectResult (out) (com.treode.buffer.twopow (in))
+      assertResult (out) (com.treode.buffer.twopow (in))
     }}
 
   behavior of "PagedBuffer.twopow"

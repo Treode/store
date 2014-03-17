@@ -29,7 +29,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     assert (timer.invoked)
     captor.expectInvoked()
     scheduler.runTasks (timers = true)
-    expectResult (1) (count)
+    assertResult (1) (count)
   }
 
   it should "rouse only once when the work fails quickly" in {
@@ -40,7 +40,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     assert (timer.invoked)
     captor.failed [DistinguishedException]
     scheduler.runTasks (timers = true)
-    expectResult (1) (count)
+    assertResult (1) (count)
   }
 
   it should "rouse until the work passes when it does pass eventually" in {
@@ -50,14 +50,14 @@ class TimeoutCallbackSpec extends FlatSpec {
     assert (!timer.invoked)
     captor.expectNotInvoked()
     scheduler.runTasks (timers = true, count = 2)
-    expectResult (2) (count)
+    assertResult (2) (count)
     assert (!timer.invoked)
     captor.expectNotInvoked()
     timer.pass()
     assert (timer.invoked)
     captor.expectInvoked()
     scheduler.runTasks (timers = true)
-    expectResult (2) (count)
+    assertResult (2) (count)
   }
 
   it should "rouse until the work fails when it does fail eventually" in {
@@ -67,14 +67,14 @@ class TimeoutCallbackSpec extends FlatSpec {
     assert (!timer.invoked)
     captor.expectNotInvoked()
     scheduler.runTasks (timers = true, count = 2)
-    expectResult (2) (count)
+    assertResult (2) (count)
     assert (!timer.invoked)
     captor.expectNotInvoked()
     timer.fail (new DistinguishedException)
     assert (timer.invoked)
     captor.failed [DistinguishedException]
     scheduler.runTasks (timers = true)
-    expectResult (2) (count)
+    assertResult (2) (count)
   }
 
   it should "rouse until the iterator is exhaused when the work does not pass or fail" in {
@@ -84,7 +84,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     assert (!timer.invoked)
     captor.expectNotInvoked()
     scheduler.runTasks (timers = true)
-    expectResult (3) (count)
+    assertResult (3) (count)
     assert (timer.invoked)
     captor.failed [TimeoutException]
   }

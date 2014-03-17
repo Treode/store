@@ -28,7 +28,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = PagedBuffer (5)
       out.writeShort (x)
       val in = flip (out)
-      expectResult (x) (in.readShort())
+      assertResult (x) (in.readShort())
     }}
 
   property ("An ArrayBuffer writes shorts") {
@@ -36,7 +36,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = ArrayBuffer (256)
       out.writeShort (x)
       val in = flip (out)
-      expectResult (x) (in.readShort())
+      assertResult (x) (in.readShort())
     }}
 
   property ("An ArrayBuffer reads ints") {
@@ -44,7 +44,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = PagedBuffer (5)
       out.writeInt (x)
       val in = flip (out)
-      expectResult (x) (in.readInt())
+      assertResult (x) (in.readInt())
     }}
 
   property ("An ArrayBuffer writes ints") {
@@ -52,7 +52,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = ArrayBuffer (256)
       out.writeInt (x)
       val in = flip (out)
-      expectResult (x) (in.readInt())
+      assertResult (x) (in.readInt())
     }}
 
   property ("An ArrayBuffer reads var ints") {
@@ -60,7 +60,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = PagedBuffer (5)
       out.writeVarInt (x)
       val in = flip (out)
-      expectResult (x) (in.readVarInt())
+      assertResult (x) (in.readVarInt())
     }}
 
 
@@ -69,7 +69,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = ArrayBuffer (256)
       out.writeVarInt (x)
       val in = flip (out)
-      expectResult (x) (in.readVarInt())
+      assertResult (x) (in.readVarInt())
     }}
 
   property ("An ArrayBuffer reads unsigned var ints") {
@@ -77,7 +77,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = PagedBuffer (5)
       out.writeVarUInt (x)
       val in = flip (out)
-      expectResult (x) (in.readVarUInt())
+      assertResult (x) (in.readVarUInt())
     }}
 
   property ("An ArrayBuffer writes unsigned var ints") {
@@ -85,7 +85,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = ArrayBuffer (256)
       out.writeVarUInt (x)
       val in = flip (out)
-      expectResult (x) (in.readVarUInt())
+      assertResult (x) (in.readVarUInt())
     }}
 
   property ("An ArrayBuffer reads longs") {
@@ -93,7 +93,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = PagedBuffer (5)
       out.writeLong (x)
       val in = flip (out)
-      expectResult (x) (in.readLong())
+      assertResult (x) (in.readLong())
     }}
 
   property ("An ArrayBuffer writes longs") {
@@ -101,7 +101,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = ArrayBuffer (256)
       out.writeLong (x)
       val in = flip (out)
-      expectResult (x) (in.readLong())
+      assertResult (x) (in.readLong())
     }}
 
   property ("An ArrayBuffer reads var longs") {
@@ -109,7 +109,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = PagedBuffer (5)
       out.writeVarLong (-1L)
       val in = flip (out)
-      expectResult (-1L) (in.readVarLong())
+      assertResult (-1L) (in.readVarLong())
     }}
 
   property ("An ArrayBuffer writes var longs") {
@@ -117,7 +117,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = ArrayBuffer (256)
       out.writeVarLong (-1L)
       val in = flip (out)
-      expectResult (-1L) (in.readVarLong())
+      assertResult (-1L) (in.readVarLong())
     }}
 
   property ("An ArrayBuffer reads unsigned var longs") {
@@ -125,7 +125,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = PagedBuffer (5)
       out.writeVarULong (x)
       val in = flip (out)
-      expectResult (x) (in.readVarULong())
+      assertResult (x) (in.readVarULong())
     }}
 
   property ("An ArrayBuffer writes unsigned var longs") {
@@ -133,7 +133,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = ArrayBuffer (256)
       out.writeVarULong (x)
       val in = flip (out)
-      expectResult (x) (in.readVarULong())
+      assertResult (x) (in.readVarULong())
     }}
 
   property ("An ArrayBuffer reads floats") {
@@ -141,7 +141,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = PagedBuffer (5)
       out.writeFloat (x)
       val in = flip (out)
-      expectResult (x) (in.readFloat())
+      assertResult (x) (in.readFloat())
     }}
 
   property ("An ArrayBuffer writes floats") {
@@ -149,7 +149,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = ArrayBuffer (256)
       out.writeFloat (x)
       val in = flip (out)
-      expectResult (x) (in.readFloat())
+      assertResult (x) (in.readFloat())
     }}
 
   property ("An ArrayBuffer reads doubles") {
@@ -157,7 +157,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = PagedBuffer (5)
       out.writeDouble (x)
       val in = flip (out)
-      expectResult (x) (in.readDouble())
+      assertResult (x) (in.readDouble())
     }}
 
   property ("An ArrayBuffer writes doubles") {
@@ -165,7 +165,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = ArrayBuffer (256)
       out.writeDouble (x)
       val in = flip (out)
-      expectResult (x) (in.readDouble())
+      assertResult (x) (in.readDouble())
     }}
 
   property ("An ArrayBuffer reads strings") {
@@ -174,7 +174,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = PagedBuffer (9)
       out.writeString (x)
       val in = flip (out)
-      expectResult (x) (in.readString())
+      assertResult (x) (in.readString())
       } catch {
         case e: Throwable => e.printStackTrace()
         throw e
@@ -187,7 +187,7 @@ class ArrayBufferSpec extends PropSpec with PropertyChecks {
       val out = ArrayBuffer (1024)
       out.writeString (x)
       val in = flip (out)
-      expectResult (x) (in.readString())
+      assertResult (x) (in.readString())
       } catch {
         case e: Throwable => e.printStackTrace()
         throw e

@@ -18,7 +18,7 @@ class StubStoreSpec extends FreeSpec with StoreBehaviors {
       delegate.write (TxId (Random.nextLong), ct, ops)
 
     def expectCells (t: TableId) (expected: Cell*): Unit =
-      expectResult (expected.sorted) (delegate.scan (t))
+      assertResult (expected.sorted) (delegate.scan (t))
   }
 
   "The StubStore should" - {

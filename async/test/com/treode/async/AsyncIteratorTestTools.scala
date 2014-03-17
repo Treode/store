@@ -2,7 +2,7 @@ package com.treode.async
 
 import org.scalatest.Assertions
 
-import Assertions.expectResult
+import Assertions.assertResult
 
 object AsyncIteratorTestTools extends AsyncTestTools {
 
@@ -28,7 +28,7 @@ object AsyncIteratorTestTools extends AsyncTestTools {
         }}}
 
   def expectSeq [A] (expected: A*) (actual: AsyncIterator [A]) (implicit s: StubScheduler): Unit =
-    expectResult (expected) (actual.toSeq)
+    assertResult (expected) (actual.toSeq)
 
   def expectFail [E] (iter: AsyncIterator [_]) (implicit s: StubScheduler, m: Manifest [E]): Unit =
     iter.foreach.f (_ => ()) .fail [E]

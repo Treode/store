@@ -3,7 +3,7 @@ package com.treode.store
 import com.treode.async.Async
 import org.scalatest.Assertions
 
-import Assertions.expectResult
+import Assertions.assertResult
 
 trait TestableStore {
 

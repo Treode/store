@@ -7,14 +7,14 @@ import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{Pickler, Picklers, PicklerRegistry}
 import org.scalacheck.Gen
-import org.scalatest.{FreeSpec, PropSpec, Specs}
+import org.scalatest.{FreeSpec, PropSpec, Suites}
 import org.scalatest.prop.PropertyChecks
 
 import AsyncTestTools._
 import PicklerRegistry.{BaseTag, FunctionTag}
 import Scuttlebutt.{Handler, Sync}
 
-class ScuttlebuttSpec extends Specs (ScuttlebuttBehaviors, ScuttlebuttProperties)
+class ScuttlebuttSpec extends Suites (ScuttlebuttBehaviors, ScuttlebuttProperties)
 
 object ScuttlebuttBehaviors extends FreeSpec {
 
@@ -25,7 +25,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
   val rumor = RumorDescriptor (0x63, Picklers.int)
 
   def expectSeq [T] (xs: T*) (test: => Seq [T]): Unit =
-    expectResult (xs) (test)
+    assertResult (xs) (test)
 
   def tag [M] (desc: RumorDescriptor [M]) (msg: M): Handler = {
     new BaseTag (desc.pmsg, desc.id.id, msg) with FunctionTag [Peer, Any] {
@@ -165,7 +165,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
       var v = 0
       sb.listen ((_v, from) => v = _v)
       sb.sync (sb.delta (PEER1, (1, 1)))
-      expectResult (1) (v)
+      assertResult (1) (v)
     }
 
     "invoke the listener on second update" in {
@@ -174,7 +174,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
       sb.listen ((_v, from) => v = _v)
       sb.sync (sb.delta (PEER1, (1, 1)))
       sb.sync (sb.delta (PEER1, (2, 2)))
-      expectResult (2) (v)
+      assertResult (2) (v)
     }
 
     "ignore a repeated update" in {
@@ -183,7 +183,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
       sb.listen ((v, from) => count += 1)
       sb.sync (sb.delta (PEER1, (1, 1)))
       sb.sync (sb.delta (PEER1, (1, 1)))
-      expectResult (1) (count)
+      assertResult (1) (count)
     }}
 
   "When Scuttlebutt receives a sync with two peers it should" - {
@@ -193,7 +193,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
       var vs = Map.empty [HostId, Int]
       sb.listen ((v, from) => vs += from.id -> v)
       sb.sync (sb.delta (PEER1, (1, 1)), sb.delta (PEER2, (2, 1)))
-      expectResult (Map (PEER1 -> 1, PEER2 -> 2)) (vs)
+      assertResult (Map (PEER1 -> 1, PEER2 -> 2)) (vs)
     }}}
 
 object ScuttlebuttProperties extends PropSpec with PropertyChecks {

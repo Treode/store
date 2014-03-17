@@ -10,13 +10,13 @@ import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Bytes, CatalogDescriptor, CatalogId, StoreConfig}
 import com.treode.pickle.{Pickler, Picklers}
 import org.scalacheck.Gen
-import org.scalatest.{FreeSpec, PropSpec, ShouldMatchers, Specs}
+import org.scalatest.{FreeSpec, PropSpec, ShouldMatchers, Suites}
 import org.scalatest.prop.PropertyChecks
 
 import AsyncTestTools._
 import StubCatalogHost.{cat1, cat2}
 
-class BrokerSpec extends Specs (BrokerBehaviors, BrokerProperties)
+class BrokerSpec extends Suites (BrokerBehaviors, BrokerProperties)
 
 object BrokerBehaviors extends FreeSpec with ShouldMatchers {
 
@@ -174,7 +174,7 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
       b2.listen (cat1) (v = _)
       b1.issue (cat1) (1, values (0))
       b2.sync (b1)
-      expectResult (values (0)) (v)
+      assertResult (values (0)) (v)
     }
 
     "invoke the listener on second update" in {
@@ -185,7 +185,7 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
       b2.sync (b1)
       b1.issue (cat1) (2, values (1))
       b2.sync (b1)
-      expectResult (values (1)) (v)
+      assertResult (values (1)) (v)
     }
 
     "ignore a repeated update" in {
@@ -194,7 +194,7 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
       b2.listen (cat1) (_ => count += 1)
       b1.issue (cat1) (1, values (0))
       b2.double (b1)
-      expectResult (1) (count)
+      assertResult (1) (count)
     }
   }
 
@@ -209,8 +209,8 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
       b1.issue (cat1) (1, values (0))
       b1.issue (cat2) (1, values (1))
       b2.sync (b1)
-      expectResult (values (0)) (v1)
-      expectResult (values (1)) (v2)
+      assertResult (values (0)) (v1)
+      assertResult (values (1)) (v2)
     }}}
 
 object BrokerProperties extends PropSpec with PropertyChecks {
@@ -248,8 +248,8 @@ object BrokerProperties extends PropSpec with PropertyChecks {
     h1.v2 = vs4
 
     for (h <- hs) {
-      expectResult (0x4A048A835ED3A0A6L) (h.v1)
-      expectResult (vs4) (h.v2)
+      assertResult (0x4A048A835ED3A0A6L) (h.v1)
+      assertResult (vs4) (h.v2)
     }}
 
   property ("The broker should distribute catalogs") {

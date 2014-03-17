@@ -8,13 +8,13 @@ import com.treode.async.AsyncTestTools
 import com.treode.cluster.StubNetwork
 import com.treode.store.{Bytes, Cardinals, LargeTest}
 import org.scalacheck.Gen
-import org.scalatest.{BeforeAndAfterAll, PropSpec, Specs, WordSpec}
+import org.scalatest.{BeforeAndAfterAll, PropSpec, Suites, WordSpec}
 import org.scalatest.prop.PropertyChecks
 
 import AsyncTestTools._
 import Cardinals.{Zero, One, Two}
 
-class PaxosSpec extends Specs (PaxosBehaviors, PaxosProperties)
+class PaxosSpec extends Suites (PaxosBehaviors, PaxosProperties)
 
 object PaxosBehaviors extends WordSpec with PaxosTestTools {
 
@@ -42,7 +42,7 @@ object PaxosBehaviors extends WordSpec with PaxosTestTools {
     "leave all acceptors closed and consistent" in {
       val as = hs map (_.acceptors.get (k))
       assert (as forall (_.isClosed))
-      expectResult (Set (1)) (as.map (_.getChosen) .flatten.toSet)
+      assertResult (Set (1)) (as.map (_.getChosen) .flatten.toSet)
     }}}
 
 object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools {
@@ -71,12 +71,12 @@ object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools 
       kit.messageFlakiness = mf
       kit.runTasks (true, count = 500)
       val v = cb1.passed
-      expectResult (v) (cb2.passed)
+      assertResult (v) (cb2.passed)
 
       // Expect all acceptors closed and in agreement.
       val as = hs map (_.acceptors.get (k))
       assert (as forall (_.isClosed))
-      expectResult (1) (as.map (_.getChosen) .flatten.toSet.size)
+      assertResult (1) (as.map (_.getChosen) .flatten.toSet.size)
 
       Summary (summary.timedout, summary.chosen + v.int)
     } catch {

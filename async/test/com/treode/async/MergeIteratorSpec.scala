@@ -159,9 +159,9 @@ class MergeIteratorSpec extends FlatSpec {
       val j1 = track (adapt (2, 4, 6, 8)) (c2 += _)
       track (AsyncIterator.merge (Seq (i2, j1))) (provided += _)
     }
-    expectResult (Set (1, 3, 5)) (c1)
-    expectResult (Set (2, 4)) (c2)
-    expectResult (Set (1, 2, 3)) (provided)
+    assertResult (Set (1, 3, 5)) (c1)
+    assertResult (Set (2, 4)) (c2)
+    assertResult (Set (1, 2, 3)) (provided)
   }
 
   it should "stop at an exception in the second iterator" in {
@@ -175,9 +175,9 @@ class MergeIteratorSpec extends FlatSpec {
       val j2 = failWhen (j1) (_ == 6)
       track (AsyncIterator.merge (Seq (i1, j2))) (provided += _)
     }
-    expectResult (Set (1, 3, 5)) (c1)
-    expectResult (Set (2, 4, 6)) (c2)
-    expectResult (Set (1, 2, 3, 4)) (provided)
+    assertResult (Set (1, 3, 5)) (c1)
+    assertResult (Set (2, 4, 6)) (c2)
+    assertResult (Set (1, 2, 3, 4)) (provided)
   }
 
   it should "get exceptions from both iterators" in {
@@ -192,7 +192,7 @@ class MergeIteratorSpec extends FlatSpec {
       val j2 = failWhen (j1) (_ => true)
       track (AsyncIterator.merge (Seq (i2, j2))) (provided += _)
     }
-    expectResult (Set (1)) (c1)
-    expectResult (Set (2)) (c2)
-    expectResult (Set.empty) (provided)
+    assertResult (Set (1)) (c1)
+    assertResult (Set (2)) (c2)
+    assertResult (Set.empty) (provided)
   }}

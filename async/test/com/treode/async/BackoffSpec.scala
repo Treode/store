@@ -15,7 +15,7 @@ class BackoffSpec extends PropSpec with PropertyChecks {
     forAll (seeds, retries) { case (seed, retries) =>
       implicit val random = new Random (seed)
       val backoff = Backoff (30, 20, 400, retries)
-      expectResult (retries) (backoff.iterator.length)
+      assertResult (retries) (backoff.iterator.length)
     }}
 
   property ("Backoff should usually grow") {

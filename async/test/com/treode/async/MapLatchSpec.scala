@@ -11,13 +11,13 @@ class MapLatchSpec extends FlatSpec {
   "The MapLatch" should "release immediately for count==0" in {
     val cb = CallbackCaptor [Map [Int, Int]]
     val ltch = Latch.map [Int, Int] (0, cb)
-    expectResult (Map [Int, Int] ()) (cb.passed)
+    assertResult (Map [Int, Int] ()) (cb.passed)
   }
 
   it should "reject extra releases" in {
     val cb = CallbackCaptor [Map [Int, Int]]
     val ltch = Latch.map [Int, Int] (0, cb)
-    expectResult (Map [Int, Int] ()) (cb.passed)
+    assertResult (Map [Int, Int] ()) (cb.passed)
     intercept [Exception] (ltch.pass (0, 0))
   }
 
@@ -26,7 +26,7 @@ class MapLatchSpec extends FlatSpec {
     val ltch = Latch.map [Int, Int] (1, cb)
     cb.expectNotInvoked()
     ltch.pass (0, 1)
-    expectResult (Map ((0, 1))) (cb.passed)
+    assertResult (Map ((0, 1))) (cb.passed)
   }
 
   it should "release after one fail for count==1" in {
@@ -44,7 +44,7 @@ class MapLatchSpec extends FlatSpec {
     ltch.pass (0, 1)
     cb.expectNotInvoked()
     ltch.pass (1, 2)
-    expectResult (Map ((0, 1), (1, 2))) (cb.passed)
+    assertResult (Map ((0, 1), (1, 2))) (cb.passed)
   }
 
   it should "release after two reversed passes for count==2" in {
@@ -54,7 +54,7 @@ class MapLatchSpec extends FlatSpec {
     ltch.pass (1, 2)
     cb.expectNotInvoked()
     ltch.pass (0, 1)
-    expectResult (Map ((0, 1), (1, 2))) (cb.passed)
+    assertResult (Map ((0, 1), (1, 2))) (cb.passed)
   }
 
   it should "release after a pass and a fail for count==2" in {

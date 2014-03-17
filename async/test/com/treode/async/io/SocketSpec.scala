@@ -5,12 +5,12 @@ import scala.util.Random
 import com.treode.async.{AsyncTestTools, Callback, StubScheduler}
 import com.treode.buffer.PagedBuffer
 import org.scalamock.scalatest.MockFactory
-import org.scalatest.{FlatSpec, PropSpec, Specs}
+import org.scalatest.{FlatSpec, PropSpec, Suites}
 import org.scalatest.prop.PropertyChecks
 
 import AsyncTestTools._
 
-class SocketSpec extends Specs (SocketBehaviors, SocketProperties)
+class SocketSpec extends Suites (SocketBehaviors, SocketProperties)
 
 object SocketBehaviors extends FlatSpec {
 
@@ -174,5 +174,5 @@ object SocketProperties extends PropSpec with PropertyChecks {
       buffer.clear()
       socket.fill (buffer, length) .pass
       for (i <- data)
-        expectResult (i) (buffer.readVarInt())
+        assertResult (i) (buffer.readVarInt())
     }}}

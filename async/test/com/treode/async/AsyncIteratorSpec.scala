@@ -37,8 +37,8 @@ class AsyncIteratorSpec extends FlatSpec {
       val i2 = failWhen (i1) (_ == 3)
       track (i2) (provided += _)
     }
-    expectResult (Set (1, 2, 3)) (consumed)
-    expectResult (Set (1, 2)) (provided)
+    assertResult (Set (1, 2, 3)) (consumed)
+    assertResult (Set (1, 2)) (provided)
   }
 
   "AsyncIterator.map" should "handle an empty sequence" in {
@@ -66,8 +66,8 @@ class AsyncIteratorSpec extends FlatSpec {
       val i3 = i2 map (_ * 2)
       track (i3) (provided += _)
     }
-    expectResult (Set (1, 2, 3)) (consumed)
-    expectResult (Set (2, 4)) (provided)
+    assertResult (Set (1, 2, 3)) (consumed)
+    assertResult (Set (2, 4)) (provided)
   }
 
   "AsyncIterator.filter" should "handle [] -> []" in {
@@ -145,6 +145,6 @@ class AsyncIteratorSpec extends FlatSpec {
       val i3 = i2.filter (i => (i & 1) == 1)
       track (i3) (provided += _)
     }
-    expectResult (Set (1, 2, 3)) (consumed)
-    expectResult (Set (1)) (provided)
+    assertResult (Set (1, 2, 3)) (consumed)
+    assertResult (Set (1)) (provided)
   }}
