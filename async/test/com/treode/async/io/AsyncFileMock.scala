@@ -11,11 +11,10 @@ import scala.util.{Success, Failure}
 import com.treode.async.{AsyncConversions, Callback, StubScheduler}
 import org.scalatest.Assertions
 
-import Assertions.assert
 import AsyncConversions._
 
 /** ScalaMock refuses to mock AsynchronousFileChannel. */
-class AsyncFileMock extends AsynchronousFileChannel {
+class AsyncFileMock extends AsynchronousFileChannel with Assertions {
 
   private class Expectation {
     def read (dst: ByteBuffer, position: Long) {

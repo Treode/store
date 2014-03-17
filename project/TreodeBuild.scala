@@ -24,28 +24,25 @@ object TreodeBuild extends Build {
 
     scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", "-Yinline-warnings"),
 
-    testFrameworks += new TestFramework ("org.scalameter.ScalaMeterFramework"),
-
     libraryDependencies <+= (scalaVersion) ("org.scala-lang" % "scala-reflect" % _),
 
     libraryDependencies ++= Seq (
-      "com.codahale.metrics" % "metrics-core" % "3.0.1",
-      "com.google.code.findbugs" % "jsr305" % "2.0.2",
-      "com.google.guava" % "guava" % "15.0",
-      "com.googlecode.javaewah" % "JavaEWAH" % "0.7.9",
+      "com.codahale.metrics" % "metrics-core" % "3.0.2",
+      "com.google.code.findbugs" % "jsr305" % "2.0.3",
+      "com.google.guava" % "guava" % "16.0.1",
+      "com.googlecode.javaewah" % "JavaEWAH" % "0.8.3",
       "com.nothome" % "javaxdelta" % "2.0.1",
-      "org.slf4j" % "slf4j-api" % "1.7.5",
-      "org.slf4j" % "slf4j-simple" % "1.7.5"))
+      "org.slf4j" % "slf4j-api" % "1.7.6",
+      "org.slf4j" % "slf4j-simple" % "1.7.6"))
 
   // A portion of the settings for projects without stubs.  Adds
   // testing libraries to SBT's "test" configuration.
   lazy val standardPortion = Seq (
 
     libraryDependencies ++= Seq (
-      "com.github.axel22" %% "scalameter" % "0.3" % "test",
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.0.1" % "test",
-      "org.scalatest" %% "scalatest" % "2.0.M5b" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.10.1" % "test"))
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "test",
+      "org.scalatest" %% "scalatest" % "2.1.0" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.11.3" % "test"))
 
   // Settings for projects without stubs.
   lazy val standardSettings =
@@ -69,10 +66,9 @@ object TreodeBuild extends Build {
     EclipseKeys.configurations := Set (Compile, Stub, CustomTest),
 
     libraryDependencies ++= Seq (
-      "com.github.axel22" %% "scalameter" % "0.3" % "stub->default",
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.0.1" % "stub->default",
-      "org.scalatest" %% "scalatest" % "2.0.M5b" % "stub->default",
-      "org.scalacheck" %% "scalacheck" % "1.10.1" % "stub->default"))
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "stub->default",
+      "org.scalatest" %% "scalatest" % "2.1.0" % "stub->default",
+      "org.scalacheck" %% "scalacheck" % "1.11.3" % "stub->default"))
 
   // Settings for projects with stubs.
   lazy val stubSettings =
@@ -141,7 +137,7 @@ object TreodeBuild extends Build {
     scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", "-Yinline-warnings"),
 
     libraryDependencies ++= Seq (
-      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.3.1",
+      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.3.2",
       "com.twitter" %% "finatra" % "1.5.2"),
 
     resolvers += "Twitter" at "http://maven.twttr.com")

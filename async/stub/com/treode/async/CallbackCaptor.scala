@@ -5,7 +5,7 @@ import scala.util.{Failure, Success, Try}
 
 import org.scalatest.Assertions
 
-class CallbackCaptor [T] protected extends (Try [T] => Unit) {
+class CallbackCaptor [T] protected extends (Try [T] => Unit) with Assertions {
 
   private var _invokation: Array [StackTraceElement] = null
   private var _v: T = null.asInstanceOf [T]
@@ -45,7 +45,7 @@ class CallbackCaptor [T] protected extends (Try [T] => Unit) {
 
   def expectNotInvoked() {
     if (_invokation != null)
-      Assertions.fail (
+      fail (
           "Expected callback to not have been invoked, but it was:\n" +
           (_invokation take (10) mkString "\n"))
   }
@@ -60,10 +60,10 @@ class CallbackCaptor [T] protected extends (Try [T] => Unit) {
   def failed [E] (implicit m: Manifest [E]): E = {
     expectInvoked()
     if (_v != null)
-      Assertions.fail (
+      fail (
           "Expected operation to fail, but it passed:\n" +
           (_invokation take (10) mkString "\n"))
-    Assertions.assert (
+    assert (
         m.runtimeClass.isInstance (_t),
         s"Expected ${m.runtimeClass.getSimpleName}, found ${_t.getClass.getSimpleName}")
     _t.asInstanceOf [E]
