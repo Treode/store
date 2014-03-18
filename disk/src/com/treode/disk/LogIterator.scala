@@ -105,7 +105,7 @@ private class LogIterator private (
 private object LogIterator {
 
   def apply (
-      useGen1: Boolean,
+      useGen0: Boolean,
       read: SuperBlocks,
       records: RecordRegistry
   ) (implicit
@@ -115,7 +115,7 @@ private object LogIterator {
 
     val path = read.path
     val file = read.file
-    val superb = read.superb (useGen1)
+    val superb = read.superb (useGen0)
     val alloc = Allocator (superb.free)
     val logSeg = alloc.alloc (superb.logSeg, superb.geometry, config)
     val logSegs = new ArrayBuffer [Int]
@@ -133,7 +133,7 @@ private object LogIterator {
     }}
 
   def replay (
-      useGen1: Boolean,
+      useGen0: Boolean,
       reads: Seq [SuperBlocks],
       records: RecordRegistry
   ) (implicit
@@ -144,13 +144,13 @@ private object LogIterator {
     val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
 
     for {
-      logs <- reads.latch.map (apply (useGen1, _, records))
+      logs <- reads.latch.map (apply (useGen0, _, records))
       iter = AsyncIterator.merge (logs.values.toSeq) (ordering)
       _ <- iter.foreach.f (_._2())
       kit = new DisksKit
       drives =
         for (read <- reads) yield {
-          val superb = read.superb (useGen1)
+          val superb = read.superb (useGen0)
           logs (superb.id) .close (kit)
         }
       _ <- kit.disks.add (drives)

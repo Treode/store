@@ -66,7 +66,7 @@ private class DiskDrive (
           id, boot, geometry, draining, alloc.free, logSegs.head, logHead, pageSeg.num, pageHead)
       for {
         _ <- writeLedger()
-        _ <- SuperBlock.write (boot.bootgen, superb, file)
+        _ <- SuperBlock.write (superb, file)
       } yield ()
     }
 
@@ -315,7 +315,7 @@ private object DiskDrive {
 
       for {
         _ <- latch (
-            SuperBlock.write (0, superb, file),
+            SuperBlock.write (superb, file),
             RecordHeader.write (LogEnd, file, logSeg.pos),
             PageLedger.write (PageLedger.Zipped.empty, file, pageSeg.pos))
       } yield {

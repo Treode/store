@@ -3,6 +3,7 @@ package com.treode
 import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService
 
+import com.google.common.hash.Hashing
 import com.treode.async.AsyncIterator
 import com.treode.async.io.File
 
@@ -44,6 +45,10 @@ package disk {
     override def getMessage = "Panicked."
   }
 
+  class SuperblockOverflowException extends Exception {
+    override def getMessage = "The superblock data is to large for its allocated disk space."
+  }
+
   private case class SegmentBounds (num: Int, pos: Long, limit: Long)
 }
 
@@ -52,6 +57,8 @@ package object disk {
   private [disk] type LogDispatcher = Dispatcher [PickledRecord]
   private [disk] type PageDispatcher = Dispatcher [PickledPage]
   private [disk] type ReplayIterator = AsyncIterator [(Long, Unit => Any)]
+
+  private [disk] val checksum = Hashing.murmur3_32
 
   private [disk] implicit class RichIteratable [A] (iter: Iterable [A]) {
 

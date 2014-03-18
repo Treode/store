@@ -11,34 +11,33 @@ import Async.guard
 private class SuperBlocks (
     val path: Path,
     val file: File,
-    val sb1: Option [SuperBlock],
-    val sb2: Option [SuperBlock]) {
+    val sb0: Option [SuperBlock],
+    val sb1: Option [SuperBlock]) {
 
-  def superb (useGen1: Boolean): SuperBlock =
-    if (useGen1) sb1.get else sb2.get
+  def superb (useGen0: Boolean): SuperBlock =
+    if (useGen0) sb0.get else sb0.get
 
-  override def toString = s"SuperBlocks($path, $sb1, $sb2)"
+  override def toString = s"SuperBlocks($path, $sb0, $sb1)"
 }
 
 private object SuperBlocks {
 
+  private def unpickle (buf: PagedBuffer): Option [SuperBlock] =
+    try {
+      Some (SuperBlock.pickler.unpickle (buf))
+    } catch {
+      case e: Throwable => None
+    }
+
   def read (path: Path, file: File) (implicit config: DisksConfig): Async [SuperBlocks] =
     guard {
-
-      val buffer = PagedBuffer (config.superBlockBits+1)
-
-      def unpickleSuperBlock (pos: Int): Option [SuperBlock] =
-        try {
-          buffer.readPos = pos
-          Some (SuperBlock.pickler.unpickle (buffer))
-        } catch {
-          case e: Throwable => None
-        }
-
+      val buf0 = PagedBuffer (config.superBlockBits)
+      val buf1 = PagedBuffer (config.superBlockBits)
       for {
-        _ <- file.fill (buffer, 0, config.diskLeadBytes)
+        _ <- file.deframe (checksum, buf0, 0) .recover {case _ => 0}
+        _ <- file.deframe (checksum, buf1, config.superBlockBytes) .recover {case _ => 0}
       } yield {
-        val sb1 = unpickleSuperBlock (0)
-        val sb2 = unpickleSuperBlock (config.superBlockBytes)
-        new SuperBlocks (path, file, sb1, sb2)
+        val sb0 = unpickle (buf0)
+        val sb1 = unpickle (buf1)
+        new SuperBlocks (path, file, sb0, sb1)
       }}}

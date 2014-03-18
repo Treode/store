@@ -50,19 +50,19 @@ private class RecoveryAgent (
 
   def chooseSuperBlock (reads: Seq [SuperBlocks]): Boolean = {
 
+    val sb0 = reads.map (_.sb0) .flatten
     val sb1 = reads.map (_.sb1) .flatten
-    val sb2 = reads.map (_.sb2) .flatten
-    if (sb1.size == 0 && sb2.size == 0)
+    if (sb0.size == 0 && sb1.size == 0)
       throw new NoSuperBlocksException
 
-    val gen1 = if (sb1.isEmpty) -1 else sb1.map (_.boot.bootgen) .max
-    val n1 = sb1 count (_.boot.bootgen == gen1)
-    val gen2 = if (sb2.isEmpty) -1 else sb2.map (_.boot.bootgen) .max
-    val n2 = sb2 count (_.boot.bootgen == gen2)
-    if (n1 != reads.size && n2 != reads.size)
+    val gen0 = if (sb0.isEmpty) -1 else sb0.map (_.boot.gen) .max
+    val n0 = sb0 count (_.boot.gen == gen0)
+    val gen1 = if (sb1.isEmpty) -1 else sb1.map (_.boot.gen) .max
+    val n1 = sb1 count (_.boot.gen == gen1)
+    if (n0 != reads.size && n1 != reads.size)
       throw new InconsistentSuperBlocksException
 
-    (n1 == reads.size) && (gen1 > gen2 || n2 != reads.size)
+    (n0 == reads.size) && (gen0 > gen1 || n1 != reads.size)
   }
 
   def verifyReattachment (booted: Set [Path], reattaching: Set [Path]) {
@@ -78,12 +78,12 @@ private class RecoveryAgent (
   def superBlocksRead (reads: Seq [SuperBlocks]): Unit =
     guard {
 
-      val useGen1 = chooseSuperBlock (reads)
-      val boot = if (useGen1) reads.head.sb1.get.boot else reads.head.sb2.get.boot
+      val useGen0 = chooseSuperBlock (reads)
+      val boot = if (useGen0) reads.head.sb0.get.boot else reads.head.sb1.get.boot
       verifyReattachment (boot.disks.toSet, reads .map (_.path) .toSet)
-      val files = reads.mapValuesBy (_.superb (useGen1) .id) (_.file)
+      val files = reads.mapValuesBy (_.superb (useGen0) .id) (_.file)
 
-      for (kit <- LogIterator.replay (useGen1, reads, records))
+      for (kit <- LogIterator.replay (useGen0, reads, records))
         yield launch (kit)
     } defer (cb)
 
