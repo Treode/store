@@ -2,8 +2,10 @@ package com.treode.async.io
 
 import scala.util.Random
 
+import com.google.common.hash.Hashing
 import com.treode.async.{AsyncTestTools, Callback, StubScheduler}
 import com.treode.buffer.PagedBuffer
+import com.treode.pickle.Picklers
 import org.scalatest.{FlatSpec, PropSpec, Suites}
 import org.scalatest.prop.PropertyChecks
 
@@ -20,7 +22,7 @@ object FileBehaviors extends FlatSpec {
     (scheduler, async, file)
   }
 
-  "The flush method" should "handle an empty buffer" in {
+  "AsyncFile.flush" should "handle an empty buffer" in {
     implicit val (scheduler, async, file) = mkFile
     val buffer = PagedBuffer (5)
     file.flush (buffer, 0) .pass
@@ -66,7 +68,7 @@ object FileBehaviors extends FlatSpec {
     cb.failed [Exception]
   }
 
-  "The fill method for a file" should "handle a request for 0 bytes" in {
+  "AsyncFile.fill" should "handle a request for 0 bytes" in {
     implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
     file.fill (input, 0, 0) .pass
@@ -163,11 +165,55 @@ object FileBehaviors extends FlatSpec {
     cb.assertNotInvoked()
     async.completeLast (-1)
     cb.failed [Exception]
+  }
+
+  "AsyncFile.deframe" should "read from Pickler.frame" in {
+    implicit val scheduler = StubScheduler.random()
+    val file = new StubFile
+    val pickler = Picklers.seq (Picklers.int)
+    val out = Seq.fill (23) (Random.nextInt)
+    val buffer = PagedBuffer (12)
+    pickler.frame (out, buffer)
+    file.flush (buffer, 0) .pass
+    buffer.clear()
+    file.deframe (buffer, 0) .pass
+    val in = pickler.unpickle (buffer)
+    assertResult (out) (in)
+  }
+
+  it should "read from Pickler.frame with hashing" in {
+    implicit val scheduler = StubScheduler.random()
+    val file = new StubFile
+    val pickler = Picklers.seq (Picklers.int)
+    val out = Seq.fill (23) (Random.nextInt)
+    val buffer = PagedBuffer (12)
+    pickler.frame (Hashing.crc32, out, buffer)
+    file.flush (buffer, 0) .pass
+    buffer.clear()
+    file.deframe (Hashing.crc32, buffer, 0) .pass
+    val in = pickler.unpickle (buffer)
+    assertResult (out) (in)
+  }
+
+  it should "raise an error when the hash check fails" in {
+    implicit val scheduler = StubScheduler.random()
+    val file = new StubFile
+    val pickler = Picklers.seq (Picklers.int)
+    val out = Seq.fill (23) (Random.nextInt)
+    val buffer = PagedBuffer (12)
+    pickler.frame (Hashing.crc32, out, buffer)
+    val end = buffer.writePos
+    buffer.writePos = 33
+    buffer.writeInt (Random.nextInt)
+    buffer.writePos = end
+    file.flush (buffer, 0) .pass
+    buffer.clear()
+    file.deframe (Hashing.crc32, buffer, 0) .fail [HashMismatchException]
   }}
 
 object FileProperties extends PropSpec with PropertyChecks {
 
-  property ("It should work") {
+  property ("An Asyncfile should flush and fill") {
     forAll ("seed") { seed: Int =>
       implicit val random = new Random (seed)
       implicit val scheduler = StubScheduler.random (random)

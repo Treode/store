@@ -1,6 +1,7 @@
 package com.treode.pickle
 
-import com.treode.buffer.{ArrayBuffer, Input, PagedBuffer, Output, OutputBuffer}
+import com.google.common.hash.HashFunction
+import com.treode.buffer.{ArrayBuffer, Buffer, Input, PagedBuffer, Output, OutputBuffer}
 
 /** How to read and write an object of a particular type. */
 trait Pickler [A] {
@@ -36,12 +37,25 @@ trait Pickler [A] {
     v
   }
 
-  def frame (v: A, b: OutputBuffer) {
-    val start = b.writePos
-    b.writePos += 4
-    pickle (v, b)
-    val end = b.writePos
-    b.writePos = start
-    b.writeInt (end - start - 4)
-    b.writePos = end
+  def frame (v: A, buf: OutputBuffer) {
+    val start = buf.writePos
+    buf.writePos += 4
+    pickle (v, buf)
+    val end = buf.writePos
+    buf.writePos = start
+    buf.writeInt (end - start - 4)
+    buf.writePos = end
+  }
+
+  def frame (hashf: HashFunction, v: A, buf: Buffer) {
+    val start = buf.writePos
+    val head = 4 + (hashf.bits >> 3)
+    buf.writePos += head
+    pickle (v, buf)
+    val end = buf.writePos
+    val hash = buf.hash (start + head, end - start - head, hashf) .asBytes
+    buf.writePos = start
+    buf.writeInt (end - start - head)
+    buf.writeBytes (hash, 0, hash.length)
+    buf.writePos = end
   }}

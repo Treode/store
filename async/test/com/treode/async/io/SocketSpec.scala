@@ -4,7 +4,6 @@ import scala.util.Random
 
 import com.treode.async.{AsyncTestTools, Callback, StubScheduler}
 import com.treode.buffer.PagedBuffer
-import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FlatSpec, PropSpec, Suites}
 import org.scalatest.prop.PropertyChecks
 
@@ -22,7 +21,7 @@ object SocketBehaviors extends FlatSpec {
     (scheduler, async, socket, buffer)
   }
 
-  "The flush method" should "handle an empty buffer" in {
+  "AsyncSocket.flush" should "handle an empty buffer" in {
     implicit val (scheduler, async, socket, buffer) = mkSocket
     socket.flush (buffer) .pass
   }
@@ -64,7 +63,7 @@ object SocketBehaviors extends FlatSpec {
     cb.failed [Exception]
   }
 
-  "The fill method for a socket" should "handle a request for 0 bytes" in {
+  "AsyncSocket.fill" should "handle a request for 0 bytes" in {
     implicit val (scheduler, async, socket, input) = mkSocket
     socket.fill (input, 0) .pass
   }
@@ -160,7 +159,7 @@ object SocketBehaviors extends FlatSpec {
 
 object SocketProperties extends PropSpec with PropertyChecks {
 
-  property ("It should work") {
+  property ("An AsyncSocket should flush and fill") {
     forAll ("seed") { seed: Int =>
       implicit val random = new Random (seed)
       implicit val scheduler = StubScheduler.random (random)

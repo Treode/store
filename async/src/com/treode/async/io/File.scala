@@ -7,6 +7,7 @@ import java.nio.file.attribute.FileAttribute
 import java.util.concurrent.{Executor, ExecutorService}
 import scala.collection.JavaConversions._
 
+import com.google.common.hash.{HashCode, HashFunction}
 import com.treode.async.{Async, Callback, Scheduler, Whilst}
 import com.treode.buffer.PagedBuffer
 
@@ -44,6 +45,24 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
       _ <- fill (input, pos+4, len)
     } yield len
   }
+
+  def deframe (hashf: HashFunction, input: PagedBuffer, pos: Long): Async [Int] = {
+    val head = 4 + (hashf.bits >> 3)
+    for {
+      _ <- fill (input, pos, head)
+      len = input.readInt()
+      _ <- fill (input, pos+head, len)
+    } yield {
+      val bytes = new Array [Byte] (hashf.bits >> 3)
+      input.readBytes (bytes, 0, bytes.length)
+      val expected = HashCode.fromBytes (bytes)
+      val found = input.hash (input.readPos, len, hashf)
+      if (found != expected) {
+        input.readPos += len
+        throw new HashMismatchException
+      }
+      len
+    }}
 
   def flush (output: PagedBuffer, pos: Long): Async [Unit] = {
     var _pos = pos

@@ -119,16 +119,16 @@ object TreodeBuild extends Build {
     .settings (standardSettings: _*)
 
   // Separated because this may be useful on its own.
-  lazy val async = Project ("async", file ("async"))
-    .configs (IntensiveTestWithStub, PeriodicTestWithStub)
-    .dependsOn (buffer)
-    .settings (stubSettings: _*)
-
-  // Separated because this may be useful on its own.
   lazy val pickle = Project ("pickle", file ("pickle"))
     .configs (IntensiveTest, PeriodicTest)
     .dependsOn (buffer)
     .settings (standardSettings: _*)
+
+  // Separated because this may be useful on its own.
+  lazy val async = Project ("async", file ("async"))
+    .configs (IntensiveTestWithStub, PeriodicTestWithStub)
+    .dependsOn (buffer, pickle % "test")
+    .settings (stubSettings: _*)
 
   // Separated because it helped development.
   lazy val cluster = Project ("cluster", file ("cluster"))
