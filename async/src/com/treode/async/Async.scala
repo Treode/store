@@ -54,10 +54,16 @@ trait Async [A] {
     }}
 
   def on (s: Scheduler): Async [A] =
-    _async (cb => run (s.take (cb)))
+    _async (cb => run (cb on s))
 
   def leave (f: => Any): Async [A] =
     _async (cb => run (cb leave f))
+
+  def recover (f: PartialFunction [Throwable, A]): Async [A] =
+    _async (cb => run (cb recover f))
+
+  def rescue (f: PartialFunction [Throwable, Try [A]]): Async [A] =
+    _async (cb => run (cb rescue f))
 
   def await(): A = {
     val q = new OnceQueue [Try [A]]

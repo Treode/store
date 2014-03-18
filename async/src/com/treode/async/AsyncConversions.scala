@@ -41,10 +41,20 @@ trait AsyncConversions {
         TimeoutCallback [A] =
       new TimeoutCallback (fiber, backoff, rouse, cb)
 
+    def on (s: Scheduler): Callback [A] =
+      (v => s.execute (cb, v))
+
     def leave (f: => Any): Callback [A] = { v =>
       f
       cb (v)
-    }}
+    }
+
+    def recover (f: PartialFunction [Throwable, A]): Callback [A] =
+      (v => cb (v recover f))
+
+    def rescue (f: PartialFunction [Throwable, Try [A]]): Callback [A] =
+      (v => cb (v recoverWith f))
+}
 
   implicit class RichIterator [A] (iter: Iterator [A]) {
 

@@ -34,9 +34,6 @@ trait Scheduler extends Executor {
   def fail [A] (cb: Callback [A], t: Throwable): Unit =
     execute (cb, Failure (t))
 
-  def take [A] (cb: Callback [A]): Callback [A] =
-    (v => execute (cb, v))
-
   val whilst = new Whilst (this)
 }
 

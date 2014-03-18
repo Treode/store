@@ -12,18 +12,6 @@ class AsyncSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
 
-  class ScheduledAsync [A] (async: Async [A], scheduler: Scheduler) extends Async [A] {
-
-    def run (cb: Callback [A]): Unit =
-      async.run (scheduler.take (cb))
-  }
-
-  implicit class ExtraRichAsync [A] (async: Async [A]) {
-
-    def on (scheduler: Scheduler): Async [A] =
-      new ScheduledAsync (async, scheduler)
-  }
-
   def exceptional [A]: Callback [A] =
     new Callback [A] {
       private var ran = false
@@ -103,7 +91,7 @@ class AsyncSpec extends FlatSpec {
         .fail [DistinguishedException]
   }
 
-  it should "pass an exception yielded from the function to the callback" in {
+  it should "pass an exception returned from the function to the callback" in {
     implicit val scheduler = StubScheduler.random()
     async [Int] (_.pass (1))
         .on (scheduler)
@@ -177,6 +165,66 @@ class AsyncSpec extends FlatSpec {
     val a = guard [Int] (throw new DistinguishedException) .leave (flag = true)
     a.fail [DistinguishedException]
     assertResult (true) (flag)
+  }
+
+  "Async.recover" should "ignore the body on pass" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    val a = supply () .recover {
+      case _ => flag = true
+    }
+    a.pass
+    assertResult (false) (flag)
+  }
+
+  it should "use the result of the body on fail" in {
+    implicit val scheduler = StubScheduler.random()
+    val a = guard [Int] (throw new Exception) .recover {
+      case _ => 1
+    }
+    a.expect (1)
+  }
+
+  it should "report an exception thrown from the body through the callback" in {
+    implicit val scheduler = StubScheduler.random()
+    val a = guard [Int] (throw new Exception) .recover {
+      case _ => throw new DistinguishedException
+    }
+    a.fail [DistinguishedException]
+  }
+
+  "Async.rescue" should "ignore the body on pass" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    val a = supply () .rescue {
+      case _ => Try (flag = true)
+    }
+    a.pass
+    assertResult (false) (flag)
+  }
+
+  it should "use the result of the body on fail" in {
+    implicit val scheduler = StubScheduler.random()
+    val a = guard [Int] (throw new Exception) .rescue {
+      case _ => Try (1)
+    }
+    a.expect (1)
+  }
+
+  it should "report an exception thrown from the body through the callback" in {
+    implicit val scheduler = StubScheduler.random()
+    val a = guard [Int] (throw new Exception) .rescue {
+      case _ => throw new DistinguishedException
+    }
+    a.fail [DistinguishedException]
+  }
+
+  it should "report an exception returned from the body through the callback" in {
+    implicit val scheduler = StubScheduler.random()
+    val a = guard [Int] (throw new Exception) .rescue {
+      case _ => Failure (new DistinguishedException)
+    }
+    a.fail [DistinguishedException]
   }
 
   "Async.await" should "invoke the async" in {

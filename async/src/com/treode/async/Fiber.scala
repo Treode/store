@@ -2,6 +2,8 @@ package com.treode.async
 
 import java.util.ArrayDeque
 
+import AsyncConversions._
+
 class Fiber (scheduler: Scheduler) extends Scheduler {
 
   private [this] val tasks = new ArrayDeque [Runnable]
@@ -95,5 +97,5 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
     scheduler.execute (task)
 
   def spawn [A] (cb: Callback [A]): Callback [A] =
-    scheduler.take (cb)
+    (cb on scheduler)
 }
