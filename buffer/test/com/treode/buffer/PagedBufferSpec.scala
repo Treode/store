@@ -1,5 +1,6 @@
 package com.treode.buffer
 
+import com.google.common.hash.Hashing
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.{FlatSpec, PropSpec, Suites}
 
@@ -127,8 +128,36 @@ private object PagedBufferBehaviors extends FlatSpec {
   buffers (39, 56, 1, 2, 7, 31)
   buffers (39, 57, 1, 2, 7, 32)
 
-  def readWriteBytes (size: Int, srcOff: Int, dstOff: Int, len: Int) {
-    it should (s"read and write bytes size=$size, srcOff=$srcOff, dstOff=$dstOff, len=$len") in {
+  def zeroAlign (offset: Int, bits: Int, length: Int) {
+    it should (s"zero align offset=$offset, bits=$bits") in {
+      val buffer = PagedBuffer (pageBits)
+      buffer.writePos = offset
+      buffer.writeZeroToAlign (bits)
+      assertResult (offset + length) (buffer.writePos)
+      buffer.readPos = offset
+      for (i <- 0 until length)
+        assertResult (0) (buffer.readByte())
+    }}
+
+  behavior of "PagedBuffer.zeroAlign"
+  zeroAlign (0, 5, 0)
+  zeroAlign (1, 5, 31)
+  zeroAlign (31, 5, 1)
+  zeroAlign (32, 5, 0)
+  zeroAlign (33, 5, 31)
+  zeroAlign (0, 3, 0)
+  zeroAlign (1, 3, 7)
+  zeroAlign (7, 3, 1)
+  zeroAlign (8, 3, 0)
+  zeroAlign (9, 3, 7)
+  zeroAlign (0, 7, 0)
+  zeroAlign (1, 7, 127)
+  zeroAlign (127, 7, 1)
+  zeroAlign (128, 7, 0)
+  zeroAlign (129, 7, 127)
+
+  def writeAndReadBytes (size: Int, srcOff: Int, dstOff: Int, len: Int) {
+    it should (s"write and read bytes size=$size, srcOff=$srcOff, dstOff=$dstOff, len=$len") in {
       var bytes = Array.tabulate (size) (i => (i + 1).toByte)
       val buffer = PagedBuffer (pageBits)
       buffer.writePos = dstOff
@@ -145,56 +174,54 @@ private object PagedBufferBehaviors extends FlatSpec {
     }}
 
   behavior of "A PagedBuffer"
-  readWriteBytes (0, 0, 0, 0)
-  readWriteBytes (1, 0, 0, 1)
-  readWriteBytes (31, 0, 0, 31)
-  readWriteBytes (32, 0, 0, 32)
-  readWriteBytes (33, 0, 0, 32)
-  readWriteBytes (63, 0, 0, 63)
-  readWriteBytes (64, 0, 0, 64)
-  readWriteBytes (65, 0, 0, 65)
-  readWriteBytes (1, 0, 21, 1)
-  readWriteBytes (10, 0, 21, 10)
-  readWriteBytes (11, 0, 21, 11)
-  readWriteBytes (12, 0, 21, 12)
-  readWriteBytes (42, 0, 21, 42)
-  readWriteBytes (43, 0, 21, 43)
-  readWriteBytes (44, 0, 21, 44)
-  readWriteBytes (32, 7, 21, 1)
-  readWriteBytes (32, 7, 21, 10)
-  readWriteBytes (32, 7, 21, 11)
-  readWriteBytes (32, 7, 21, 12)
-  readWriteBytes (64, 7, 21, 42)
-  readWriteBytes (64, 7, 21, 43)
-  readWriteBytes (64, 7, 21, 44)
+  writeAndReadBytes (0, 0, 0, 0)
+  writeAndReadBytes (1, 0, 0, 1)
+  writeAndReadBytes (31, 0, 0, 31)
+  writeAndReadBytes (32, 0, 0, 32)
+  writeAndReadBytes (33, 0, 0, 32)
+  writeAndReadBytes (63, 0, 0, 63)
+  writeAndReadBytes (64, 0, 0, 64)
+  writeAndReadBytes (65, 0, 0, 65)
+  writeAndReadBytes (1, 0, 21, 1)
+  writeAndReadBytes (10, 0, 21, 10)
+  writeAndReadBytes (11, 0, 21, 11)
+  writeAndReadBytes (12, 0, 21, 12)
+  writeAndReadBytes (42, 0, 21, 42)
+  writeAndReadBytes (43, 0, 21, 43)
+  writeAndReadBytes (44, 0, 21, 44)
+  writeAndReadBytes (32, 7, 21, 1)
+  writeAndReadBytes (32, 7, 21, 10)
+  writeAndReadBytes (32, 7, 21, 11)
+  writeAndReadBytes (32, 7, 21, 12)
+  writeAndReadBytes (64, 7, 21, 42)
+  writeAndReadBytes (64, 7, 21, 43)
+  writeAndReadBytes (64, 7, 21, 44)
 
-  def zeroAlign (offset: Int, bits: Int, length: Int) {
-    it should (s"zero align offset=$offset, bits=$bits") in {
+  private def writeAndHashBytes (off: Int, len: Int) {
+    it should (s"write and hash bytes off=$off, len=$len") in {
+      val hashf = Hashing.murmur3_32()
+      var bytes = Array.tabulate (len) (i => (i + 1).toByte)
       val buffer = PagedBuffer (pageBits)
-      buffer.writePos = offset
-      buffer.writeZeroToAlign (bits)
-      assertResult (offset + length) (buffer.writePos)
-      buffer.readPos = offset
-      for (i <- 0 until length)
-        assertResult (0) (buffer.readByte())
+      buffer.writePos = off
+      buffer.writeBytes (bytes, 0, len)
+      assertResult (off + len) (buffer.writePos)
+      assertResult (hashf.hashBytes (bytes)) (buffer.hash (off, len, hashf))
     }}
 
-  behavior of "A PagedBuffer"
-  zeroAlign (0, 5, 0)
-  zeroAlign (1, 5, 31)
-  zeroAlign (31, 5, 1)
-  zeroAlign (32, 5, 0)
-  zeroAlign (33, 5, 31)
-  zeroAlign (0, 3, 0)
-  zeroAlign (1, 3, 7)
-  zeroAlign (7, 3, 1)
-  zeroAlign (8, 3, 0)
-  zeroAlign (9, 3, 7)
-  zeroAlign (0, 7, 0)
-  zeroAlign (1, 7, 127)
-  zeroAlign (127, 7, 1)
-  zeroAlign (128, 7, 0)
-  zeroAlign (129, 7, 127)
+  writeAndHashBytes (0, 0)
+  writeAndHashBytes (0, 1)
+  writeAndHashBytes (0, 31)
+  writeAndHashBytes (0, 32)
+  writeAndHashBytes (0, 63)
+  writeAndHashBytes (0, 64)
+  writeAndHashBytes (0, 65)
+  writeAndHashBytes (21, 1)
+  writeAndHashBytes (21, 10)
+  writeAndHashBytes (21, 11)
+  writeAndHashBytes (21, 12)
+  writeAndHashBytes (21, 42)
+  writeAndHashBytes (21, 43)
+  writeAndHashBytes (21, 44)
 
   "An empty PagedBuffer" should "fail to read bytes" in {
     val buffer = PagedBuffer (pageBits)

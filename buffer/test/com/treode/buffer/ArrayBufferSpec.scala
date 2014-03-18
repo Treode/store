@@ -1,9 +1,40 @@
 package com.treode.buffer
 
+import com.google.common.hash.Hashing
+import org.scalatest.{FlatSpec, PropSpec, Suites}
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.PropSpec
 
-class ArrayBufferSpec extends PropSpec with PropertyChecks {
+class ArrayBufferSpec extends Suites (ArrayBufferBehaviors, ArrayBufferProperties)
+
+object ArrayBufferBehaviors extends FlatSpec {
+
+  "An ArrayBuffer" should "hash bytes at the beginning" in {
+    val hashf = Hashing.murmur3_32()
+    var bytes = Array.tabulate (11) (i => (i + 1).toByte)
+    val buf = ArrayBuffer (32)
+    buf.writeBytes (bytes, 0, 11)
+    assertResult (hashf.hashBytes (bytes)) (buf.hash (0, 11, hashf))
+  }
+
+  it should "hash bytes in the middle" in {
+    val hashf = Hashing.murmur3_32()
+    var bytes = Array.tabulate (11) (i => (i + 1).toByte)
+    val buf = ArrayBuffer (32)
+    buf.writePos = 7
+    buf.writeBytes (bytes, 0, 11)
+    assertResult (hashf.hashBytes (bytes)) (buf.hash (7, 11, hashf))
+  }
+
+  it should "hash bytes at the end" in {
+    val hashf = Hashing.murmur3_32()
+    var bytes = Array.tabulate (11) (i => (i + 1).toByte)
+    val buf = ArrayBuffer (32)
+    buf.writePos = 21
+    buf.writeBytes (bytes, 0, 11)
+    assertResult (hashf.hashBytes (bytes)) (buf.hash (21, 11, hashf))
+  }}
+
+object ArrayBufferProperties extends PropSpec with PropertyChecks {
 
   // We regard PageBuffer as the gold standard, and check that ArrayBuffer and read and write data
   // from one.  Whereas in PagedBufferSpec, we check that a PagedBuffer can read and write with

@@ -3,12 +3,21 @@ package com.treode.buffer
 import java.nio.ByteBuffer
 import java.util.Arrays
 
+import com.google.common.hash.{HashCode, HashFunction}
+
 class ArrayBuffer private (val data: Array [Byte]) extends Buffer {
 
   private [this] var wpos = 0
   private [this] var rpos = 0
 
   def capacity = data.length
+
+  def hash (start: Int, length: Int, hashf: HashFunction): HashCode = {
+    val available = data.length - start
+    if (length > available)
+      throw new BufferUnderflowException (length, available)
+    hashf.hashBytes (data, start, length)
+  }
 
   def writePos: Int = wpos
 

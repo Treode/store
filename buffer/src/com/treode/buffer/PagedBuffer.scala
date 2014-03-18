@@ -3,6 +3,8 @@ package com.treode.buffer
 import java.nio.ByteBuffer
 import java.util.Arrays
 
+import com.google.common.hash.{HashCode, HashFunction}
+
 class PagedBuffer private (pageBits: Int) extends Buffer {
 
   private [this] val InitPages = 8
@@ -98,6 +100,33 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
     bufs
   }
 
+  def hash (start: Int, length: Int, hashf: HashFunction): HashCode = {
+    val end = start + length
+    require (0 <= start)
+    require (end <= capacity)
+    var index = start >> pageBits
+    var page = pages (index)
+    val segment = pageSize - (start & pageMask)
+    if (segment < length) {
+      val hasher = hashf.newHasher()
+      hasher.putBytes (page, start & pageMask, segment)
+      var remaining = length - segment
+      while (remaining > pageSize) {
+        index += 1
+        page = pages (index)
+        hasher.putBytes (page, 0, pageSize)
+        remaining -= pageSize
+      }
+      if (remaining > 0) {
+        index += 1
+        page = pages (index)
+        hasher.putBytes (page, 0, remaining)
+      }
+      hasher.hash()
+    } else {
+      hashf.hashBytes (page, start & pageMask, length)
+    }}
+
   private [this] def requireWritable (length: Int): Unit =
     capacity (woff + wpos + length)
 
@@ -172,7 +201,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
   def readableBytes: Int = writePos - readPos
 
   def writeBytes (data: Array [Byte], offset: Int, length: Int) {
-    var segment = pageSize - wpos
+    val segment = pageSize - wpos
     if (segment < length) {
       requireWritable (length+1)
       System.arraycopy (data, offset, wpage, wpos, segment)
@@ -181,10 +210,9 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
       var windex = (woff >> pageBits) + 1
       while (remaining > pageSize) {
         wpage = pages (windex)
-        segment = math.min (remaining, pageSize)
-        System.arraycopy (data, position, wpage, 0, segment)
-        position += segment
-        remaining -= segment
+        System.arraycopy (data, position, wpage, 0, pageSize)
+        position += pageSize
+        remaining -= pageSize
         windex += 1
       }
       wpage = pages (windex)
@@ -198,7 +226,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
 
   def readBytes (data: Array [Byte], offset: Int, length: Int) {
     requireReadable (length)
-    var segment = pageSize - rpos
+    val segment = pageSize - rpos
     if (segment < length) {
       System.arraycopy (rpage, rpos, data, offset, segment)
       var position = offset + segment
@@ -206,10 +234,9 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
       var rindex = (roff >> pageBits) + 1
       while (remaining > pageSize) {
         rpage = pages (rindex)
-        segment = math.min (remaining, pageSize)
-        System.arraycopy (rpage, 0, data, position, segment)
-        position += segment
-        remaining -= segment
+        System.arraycopy (rpage, 0, data, position, pageSize)
+        position += pageSize
+        remaining -= pageSize
         rindex += 1
       }
       rpage = pages (rindex)
