@@ -22,7 +22,7 @@ extends StubActiveHost (id, network) {
 
   implicit val cluster: Cluster = this
 
-  implicit val disksConfig = DisksConfig (0, 14, 1<<24, 1<<16, 10, 1)
+  implicit val disksConfig = DisksConfig (0, 10, 1<<24, 1<<16, 10, 1)
   implicit val storeConfig = StoreConfig (8, 1<<16)
 
   implicit val recovery = Disks.recover()
@@ -35,7 +35,7 @@ extends StubActiveHost (id, network) {
   _catalogs.listen (cat2) (v2 = _)
 
   val file = new StubFile
-  val geometry = DiskGeometry (14, 8, 1<<20)
+  val geometry = DiskGeometry (12, 8, 1<<20)
   val files = Seq ((Paths.get ("a"), file, geometry))
 
   val atlas = new AtlasKit
