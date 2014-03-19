@@ -17,6 +17,10 @@ package disk {
     override def getMessage = "Cannot drain all disks."
   }
 
+  class CellMismatchException (expected: CellId, found: CellId) extends Exception {
+    override def getMessage = s"Expected $expected, found $found."
+  }
+
   class DiskFullException extends Exception {
     override def getMessage = "Disk full."
   }
@@ -89,5 +93,5 @@ package object disk {
 
   private [disk] def reopenFile (path: Path, exec: ExecutorService) = {
     import StandardOpenOption.{READ, WRITE}
-    (path, File.open (path, exec, READ, WRITE))
+    File.open (path, exec, READ, WRITE)
   }}

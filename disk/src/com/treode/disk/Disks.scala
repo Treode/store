@@ -55,5 +55,5 @@ object Disks {
   }
 
   def recover () (implicit scheduler: Scheduler, config: DisksConfig): Recovery =
-    new RecoveryBuilder
+    new RecoveryAgent
 }

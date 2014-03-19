@@ -11,6 +11,7 @@ import com.treode.buffer.PagedBuffer
 import Async.async
 import AsyncConversions._
 import RecordHeader.{Entry, LogAlloc, LogEnd, PageAlloc, PageWrite}
+import SuperBlocks.chooseSuperBlock
 
 private class LogIterator private (
     records: RecordRegistry,
@@ -133,7 +134,6 @@ private object LogIterator {
     }}
 
   def replay (
-      useGen0: Boolean,
       reads: Seq [SuperBlocks],
       records: RecordRegistry
   ) (implicit
@@ -142,6 +142,7 @@ private object LogIterator {
   ): Async [DisksKit] = {
 
     val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
+    val useGen0 = chooseSuperBlock (reads)
 
     for {
       logs <- reads.latch.map (apply (useGen0, _, records))

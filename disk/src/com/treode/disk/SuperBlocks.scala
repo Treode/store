@@ -40,4 +40,41 @@ private object SuperBlocks {
         val sb0 = unpickle (buf0)
         val sb1 = unpickle (buf1)
         new SuperBlocks (path, file, sb0, sb1)
-      }}}
+      }}
+
+  def chooseSuperBlock (superbs: Seq [SuperBlocks]): Boolean = {
+
+    val sb0 = superbs.map (_.sb0) .flatten
+    val sb1 = superbs.map (_.sb1) .flatten
+    if (sb0.size == 0 && sb1.size == 0)
+      throw new NoSuperBlocksException
+
+    val gen0 = if (sb0.isEmpty) -1 else sb0.map (_.boot.gen) .max
+    val n0 = sb0 count (_.boot.gen == gen0)
+    val gen1 = if (sb1.isEmpty) -1 else sb1.map (_.boot.gen) .max
+    val n1 = sb1 count (_.boot.gen == gen1)
+    if (n0 != superbs.size && n1 != superbs.size)
+      throw new InconsistentSuperBlocksException
+
+    (n0 == superbs.size) && (gen0 > gen1 || n1 != superbs.size)
+  }
+
+  def verifyReattachment (superbs: Seq [SuperBlocks]) (implicit config: DisksConfig) {
+
+    val useGen0 = chooseSuperBlock (superbs)
+    val boot = superbs.head.superb (useGen0) .boot
+    val expected = boot.disks.toSet
+    val found = superbs.map (_.path) .toSet
+
+    if (config.cell != boot.cell)
+      throw new CellMismatchException (config.cell, boot.cell)
+
+    if (!(expected forall (found contains _))) {
+      val missing = (expected -- found).toSeq.sorted
+      throw new MissingDisksException (missing)
+    }
+
+    if (!(found forall (expected contains _))) {
+      val extra = (found -- expected).toSeq.sorted
+      throw new ExtraDisksException (extra)
+    }}}

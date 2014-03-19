@@ -1,7 +1,7 @@
 package com.treode.async.io
 
 import java.io.EOFException
-import java.util.Arrays
+import java.util.{Arrays, ArrayDeque}
 import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, AsyncConversions, Callback, CallbackCaptor, StubScheduler}
@@ -13,22 +13,21 @@ import AsyncConversions._
 class StubFile (implicit scheduler: StubScheduler) extends File (null) {
 
   private var data = new Array [Byte] (0)
-  private var _last: Callback [Unit] = null
+  private var stack = new ArrayDeque [Callback [Unit]]
 
-  def last: Callback [Unit] = _last
+  def hasLast: Boolean = !stack.isEmpty
+
+  def last: Callback [Unit] = stack.pop()
 
   var stop: Boolean = false
 
   private def _stop (f: Callback [Unit] => Any): Async [Unit] =
     async { cb =>
       if (stop) {
-        require (_last == null)
-        _last = {
+        stack.push {
           case Success (v) =>
-            _last = null
             f (cb)
           case Failure (t) =>
-            _last = null
             cb.fail (t)
         }
       } else {
