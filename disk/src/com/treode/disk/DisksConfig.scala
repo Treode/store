@@ -17,6 +17,9 @@ class DisksConfig private (
 
   def clean (segments: Int): Boolean =
     segments >= cleaningFrequency
+
+  override def toString =
+    s"DisksConfig($superBlockBits, $checkpointBytes, $checkpointEntries, $cleaningFrequency, $cleaningLoad)"
 }
 
 object DisksConfig {

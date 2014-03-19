@@ -17,7 +17,7 @@ class SuperBlocksSpec extends FlatSpec {
   private def setup() = {
     implicit val scheduler = StubScheduler.random()
     val file = new StubFile
-    val geom = DiskGeometry (8, 4, 1<<12) (config)
+    val geom = DiskGeometry (10, 4, 1<<20) (config)
     val free = IntSet()
     val boot0 = BootBlock (0, 0, Set.empty)
     val superb0 = new SuperBlock (0, boot0, geom, false, free, 0, 0, 0, 0)

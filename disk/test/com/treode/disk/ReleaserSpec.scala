@@ -4,7 +4,7 @@ import org.scalatest.FlatSpec
 
 class ReleaserSpec extends FlatSpec {
 
-  implicit val config = DisksConfig (14, 1<<24, 1<<16, 10, 1)
+  implicit val config = DisksConfig (8, 1<<24, 1<<16, 10, 1)
 
   val geometry = DiskGeometry (10, 6, 1<<20)
 

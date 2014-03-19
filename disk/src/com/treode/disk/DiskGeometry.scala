@@ -59,6 +59,7 @@ object DiskGeometry {
     require (segmentBits >= blockBits+2, "A segment must have at least 4 blocks")
     require (diskBytes >= (1<<(segmentBits+4)), "A disk must have at least 16 segments")
     require (config.superBlockBits >= blockBits, "A superblock must be at least one disk block.")
+    require (segmentBits >= config.superBlockBits+1, "A segment must be at least two superblocks.")
 
     new DiskGeometry (
         segmentBits,
