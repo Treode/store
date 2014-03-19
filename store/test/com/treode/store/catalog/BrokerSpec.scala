@@ -45,7 +45,7 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
 
   private class RichBroker (implicit random: Random, scheduler: StubScheduler) {
 
-    implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
+    implicit val disksConfig = DisksConfig (0, 14, 1<<24, 1<<16, 10, 1)
     implicit val recovery = Disks.recover()
     val disk = new StubFile
     val geometry = DiskGeometry (16, 12, 1<<30)

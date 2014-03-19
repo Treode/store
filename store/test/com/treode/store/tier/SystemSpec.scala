@@ -48,7 +48,7 @@ class SystemSpec extends FlatSpec {
   private def setup (disk: StubFile, geometry: DiskGeometry) (
       implicit scheduler: StubScheduler, config: StoreConfig): TestTable = {
 
-      implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
+      implicit val disksConfig = DisksConfig (0, 14, 1<<24, 1<<16, 10, 1)
       implicit val recovery = Disks.recover()
       val _table = new TestRecovery (ID)
       val files = Seq ((Paths.get ("a"), disk, geometry))
@@ -59,7 +59,7 @@ class SystemSpec extends FlatSpec {
   private def recover (disk: StubFile) (
       implicit scheduler: StubScheduler, storeConfig: StoreConfig): TestTable = {
 
-    implicit val config = DisksConfig (14, 1<<24, 1<<16, 10, 1)
+    implicit val config = DisksConfig (0, 14, 1<<24, 1<<16, 10, 1)
     implicit val recovery = Disks.recover()
     val _table = new TestRecovery (ID)
     val files = Seq ((Paths.get ("a"), disk))
@@ -69,7 +69,7 @@ class SystemSpec extends FlatSpec {
 
   "It" should "work" in {
 
-    implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
+    implicit val disksConfig = DisksConfig (0, 14, 1<<24, 1<<16, 10, 1)
     implicit val storeConfig = StoreConfig (4, 1 << 12)
     val geometry = DiskGeometry (20, 13, 1<<30)
 

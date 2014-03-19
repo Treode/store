@@ -11,7 +11,7 @@ import AsyncTestTools._
 
 class SuperBlocksSpec extends FlatSpec {
 
-  val config = DisksConfig (8, 1<<8, 10, 3, 1)
+  val config = DisksConfig (0, 8, 1<<8, 10, 3, 1)
   val path = Paths.get ("a")
 
   private def setup() = {
@@ -19,9 +19,9 @@ class SuperBlocksSpec extends FlatSpec {
     val file = new StubFile
     val geom = DiskGeometry (10, 4, 1<<20) (config)
     val free = IntSet()
-    val boot0 = BootBlock (0, 0, Set.empty)
+    val boot0 = BootBlock (0, 0, 0, Set.empty)
     val superb0 = new SuperBlock (0, boot0, geom, false, free, 0, 0, 0, 0)
-    val boot1 = BootBlock (1, 0, Set.empty)
+    val boot1 = BootBlock (0, 1, 0, Set.empty)
     val superb1 = new SuperBlock (0, boot1, geom, false, free, 0, 0, 0, 0)
     SuperBlock.write (superb0, file) (config) .pass
     SuperBlock.write (superb1, file) (config) .pass

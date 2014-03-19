@@ -14,6 +14,7 @@ import AsyncConversions._
 
 private class DiskDrives (kit: DisksKit) {
   import kit.{checkpointer, compactor, panic, scheduler}
+  import kit.config.cell
 
   type AttachItem = (Path, File, DiskGeometry)
   type AttachRequest = (Seq [AttachItem], Callback [Unit])
@@ -80,7 +81,7 @@ private class DiskDrives (kit: DisksKit) {
       val bootgen = this.bootgen + 1
       val number = this.number + items.size
       val attached = priorPaths ++ newPaths
-      val newBoot = BootBlock (bootgen, number, attached)
+      val newBoot = BootBlock (cell, bootgen, number, attached)
 
       if (newPaths exists (priorPaths contains _)) {
         val already = (newPaths -- priorPaths).toSeq.sorted
@@ -122,7 +123,7 @@ private class DiskDrives (kit: DisksKit) {
       val disks = this.disks -- (items map (_.id))
       val bootgen = this.bootgen + 1
       val attached = disks.values.setBy (_.path)
-      val newboot = BootBlock (bootgen, number, attached)
+      val newboot = BootBlock (cell, bootgen, number, attached)
 
       for {
         _ <- disks.latch.unit (_._2.checkpoint (newboot))
@@ -191,7 +192,7 @@ private class DiskDrives (kit: DisksKit) {
     engaged = true
     fiber.run (cb) {
       val attached = disks.values.map (_.path) .toSet
-      val newBoot = BootBlock (bootgen, number, attached)
+      val newBoot = BootBlock (cell, bootgen, number, attached)
       disks.latch.unit (_._2.checkpoint (newBoot))
     }}
 

@@ -31,7 +31,7 @@ private class RecoveryAgent (
 
       val kit = new DisksKit
       val attaching = items.map (_._1) .toSet
-      val boot = BootBlock.apply (0, items.size, attaching)
+      val boot = BootBlock.apply (0, 0, items.size, attaching)
 
       val task = for {
         drives <- items.latch.indexed { case ((path, file, geometry), i) =>

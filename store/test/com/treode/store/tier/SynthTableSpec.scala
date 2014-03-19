@@ -20,7 +20,7 @@ class SynthTableSpec extends FreeSpec {
   private def mkTable (disk: File) (
       implicit scheduler: StubScheduler): SynthTable [Int, Int] = {
 
-    implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
+    implicit val disksConfig = DisksConfig (0, 14, 1<<24, 1<<16, 10, 1)
     implicit val recovery = Disks.recover()
     val geometry = DiskGeometry (16, 12, 1<<30)
     implicit val launch = recovery.attach (Seq ((Paths.get ("a"), disk, geometry))) .pass

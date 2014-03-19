@@ -19,7 +19,7 @@ class TimedTableSpec extends FreeSpec {
 
   private def newTable(): (StubScheduler, TimedTable) = {
     implicit val scheduler = StubScheduler.random()
-    implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 10, 1)
+    implicit val disksConfig = DisksConfig (0, 14, 1<<24, 1<<16, 10, 1)
     implicit val recovery = Disks.recover()
     val file = new StubFile
     val geometry = DiskGeometry (20, 12, 1<<30)

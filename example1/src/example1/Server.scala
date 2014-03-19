@@ -7,7 +7,8 @@ import com.treode.store.{StandAlone, StoreConfig}
 
 class Server extends AsyncFinatraServer {
 
-  implicit val disksConfig = DisksConfig (14, 1<<24, 1<<16, 32, 3)
+  implicit val disksConfig =
+    DisksConfig (0x7D7A5F10A567B675L, 14, 1<<24, 1<<16, 32, 3)
 
   val controller = {
     val c = StandAlone.create (

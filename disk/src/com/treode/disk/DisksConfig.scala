@@ -1,6 +1,7 @@
 package com.treode.disk
 
 class DisksConfig private (
+    val cell: CellId,
     val superBlockBits: Int,
     val checkpointBytes: Int,
     val checkpointEntries: Int,
@@ -25,6 +26,7 @@ class DisksConfig private (
 object DisksConfig {
 
   def apply (
+      cell: CellId,
       superBlockBits: Int,
       checkpointBytes: Int,
       checkpointEntries: Int,
@@ -39,6 +41,7 @@ object DisksConfig {
     require (cleaningLoad > 0, "The cleaning load must be more than 0 segemnts")
 
     new DisksConfig (
+        cell,
         superBlockBits,
         checkpointBytes,
         checkpointEntries,
@@ -48,9 +51,9 @@ object DisksConfig {
 
   val pickler = {
     import DiskPicklers._
-    wrap (uint, uint, uint, uint, uint)
+    wrap (cellId, uint, uint, uint, uint, uint)
     .build ((apply _).tupled)
     .inspect (v => (
-        v.superBlockBits, v.checkpointBytes, v.checkpointEntries, v.cleaningFrequency,
+        v.cell, v.superBlockBits, v.checkpointBytes, v.checkpointEntries, v.cleaningFrequency,
         v.cleaningLoad))
   }}
