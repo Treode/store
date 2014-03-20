@@ -10,16 +10,18 @@ import com.treode.buffer.PagedBuffer
 import Async.async
 import AsyncConversions._
 
-class StubFile (implicit scheduler: StubScheduler) extends File (null) {
+class StubFile (implicit _scheduler: StubScheduler) extends File (null) {
 
   private var data = new Array [Byte] (0)
   private var stack = new ArrayDeque [Callback [Unit]]
 
+  var scheduler: StubScheduler = _scheduler
+
+  var stop: Boolean = false
+
   def hasLast: Boolean = !stack.isEmpty
 
   def last: Callback [Unit] = stack.pop()
-
-  var stop: Boolean = false
 
   private def _stop (f: Callback [Unit] => Any): Async [Unit] =
     async { cb =>
