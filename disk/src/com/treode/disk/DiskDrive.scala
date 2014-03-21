@@ -11,7 +11,7 @@ import com.treode.buffer.PagedBuffer
 
 import Async.{async, guard, latch, when}
 import AsyncConversions._
-import Callback.ignore
+import Callback.{fanout, ignore}
 import DiskDrive.offset
 import RecordHeader._
 
@@ -130,7 +130,7 @@ private class DiskDrive (
     (accepts, rejects, realloc)
   }
 
-  private def writeRecords (buf: PagedBuffer, entries: UnrolledBuffer [PickledRecord]) = {
+  private def writeRecords (buf: PagedBuffer, entries: Seq [PickledRecord]) = {
     val callbacks = new UnrolledBuffer [Callback [Unit]]
     for (entry <- entries) {
       entry.write (buf)
@@ -177,7 +177,7 @@ private class DiskDrive (
       logmp.replace (rejects)
 
       val callbacks = writeRecords (logBuf, accepts)
-      val cb = Callback.fanout (callbacks, scheduler)
+      val cb = fanout (callbacks, scheduler)
 
       checkpointer.tally (logBuf.readableBytes, accepts.size)
 
@@ -261,14 +261,18 @@ private class DiskDrive (
 
       val (accepts, rejects, realloc) = splitPages (pages)
       pagemp.replace (rejects)
+
+      // Looking for a test that exposes these bugs.
+      // BUG 1: This if doesn't belong
       if (accepts.isEmpty) {
         pagemp.receive (pager)
         return
       }
 
+      // BUG 2: pages should be accepts
       val (buffer, callbacks, ledger) = writePages (pages)
       val pos = pageHead - buffer.readableBytes
-      val cb = Callback.fanout (callbacks, scheduler)
+      val cb = fanout (callbacks, scheduler)
 
       val task = for {
         _ <- file.flush (buffer, pos)

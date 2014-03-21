@@ -1,6 +1,7 @@
 package com.treode.disk
 
 import java.nio.file.Paths
+import scala.util.Random
 
 import com.treode.async.{Async, AsyncTestTools, StubScheduler}
 import com.treode.async.io.File
@@ -48,4 +49,14 @@ private object DiskTestTools extends AsyncTestTools {
       assert (!checkpointer.engaged, "Expected checkpointer to be disengaged.")
       assert (compactor.pages != null, "Expected compactor to have a page registry.")
       assert (!compactor.engaged, "Expected compactor to be disengaged.")
+    }}
+
+  implicit class RichRandom (random: Random) {
+
+    /** Choose `count` unique integers between 0 inclusive and max exclusive. */
+    def nextInts (count: Int, max: Int): Set [Int] = {
+      var ks = Set.empty [Int]
+      while (ks.size < count)
+        ks += random.nextInt (max)
+      ks
     }}}

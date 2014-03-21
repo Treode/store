@@ -20,7 +20,7 @@ class DisksConfig private (
     segments >= cleaningFrequency
 
   override def toString =
-    s"DisksConfig($superBlockBits, $checkpointBytes, $checkpointEntries, $cleaningFrequency, $cleaningLoad)"
+    s"DisksConfig($cell, $superBlockBits, $checkpointBytes, $checkpointEntries, $cleaningFrequency, $cleaningLoad)"
 }
 
 object DisksConfig {

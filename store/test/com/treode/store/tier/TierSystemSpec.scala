@@ -14,7 +14,7 @@ import Async.async
 import AsyncConversions._
 import AsyncTestTools._
 
-class SystemSpec extends PropSpec with CrashChecks {
+class TierSystemSpec extends PropSpec with CrashChecks {
 
   val ID = 0xC8
 

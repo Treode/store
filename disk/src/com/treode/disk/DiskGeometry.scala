@@ -57,9 +57,10 @@ object DiskGeometry {
     require (blockBits > 0, "A block must have more than 0 bytes")
     require (diskBytes > 0, "A disk must have more than 0 bytes")
     require (segmentBits >= blockBits+2, "A segment must have at least 4 blocks")
-    require (diskBytes >= (1<<(segmentBits+4)), "A disk must have at least 16 segments")
     require (config.superBlockBits >= blockBits, "A superblock must be at least one disk block.")
-    require (segmentBits >= config.superBlockBits+1, "A segment must be at least two superblocks.")
+
+    val free = (diskBytes >> segmentBits) - (config.diskLeadBytes >> segmentBits)
+    require (free >= 16, "A disk must have at least 16 segments")
 
     new DiskGeometry (
         segmentBits,

@@ -2,8 +2,10 @@ package com.treode.disk
 
 import java.nio.file.Paths
 
-import com.treode.async.{Async, AsyncConversions, AsyncTestTools, StubScheduler}
+import com.treode.async.{Async, AsyncConversions, AsyncTestTools, CallbackCaptor, StubScheduler}
 import com.treode.async.io.{File, StubFile}
+import com.treode.buffer.PagedBuffer
+import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
 import AsyncConversions._
@@ -14,12 +16,12 @@ class DiskDriveSpec extends FreeSpec {
   class DistinguishedException extends Exception
 
   implicit val config = DisksConfig (0, 8, 1<<10, 100, 3, 1)
-  val path = Paths.get ("a")
-  val geom = DiskGeometry (10, 4, 1<<20)
 
-  private def init (geom: DiskGeometry, file: File, kit: DisksKit) = {
+  private def init (file: File, kit: DisksKit) = {
+    val path = Paths.get ("a")
     val free = IntSet()
     val boot = BootBlock (0, 0, 0, Set (path))
+    val geom = DiskGeometry (10, 4, 1<<20)
     new SuperBlock (0, boot, geom, false, free, 0, 0, 0, 0)
     DiskDrive.init (0, path, file, geom, boot, kit)
   }
@@ -30,15 +32,15 @@ class DiskDriveSpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random()
       val file = new StubFile
       val kit = new DisksKit
-      val disk = init (geom, file, kit) .pass
+      val drive = init (file, kit) .pass
     }
 
-    "issued three writes to the disk" in {
+    "issue three writes to the disk" in {
       implicit val scheduler = StubScheduler.random()
       val file = new StubFile
       val kit = new DisksKit
       file.stop = true
-      val cb = init (geom, file, kit) .capture()
+      val cb = init (file, kit) .capture()
       scheduler.runTasks()
       file.last.pass()
       file.last.pass()
@@ -53,7 +55,7 @@ class DiskDriveSpec extends FreeSpec {
       val file = new StubFile
       val kit = new DisksKit
       file.stop = true
-      val cb = init (geom, file, kit) .capture()
+      val cb = init (file, kit) .capture()
       scheduler.runTasks()
       file.last.pass()
       file.last.pass()
@@ -68,7 +70,7 @@ class DiskDriveSpec extends FreeSpec {
       val file = new StubFile
       val kit = new DisksKit
       file.stop = true
-      val cb = init (geom, file, kit) .capture()
+      val cb = init (file, kit) .capture()
       scheduler.runTasks()
       file.last.pass()
       file.last.fail (new DistinguishedException)
@@ -83,7 +85,7 @@ class DiskDriveSpec extends FreeSpec {
       val file = new StubFile
       val kit = new DisksKit
       file.stop = true
-      val cb = init (geom, file, kit) .capture()
+      val cb = init (file, kit) .capture()
       scheduler.runTasks()
       file.last.fail (new DistinguishedException)
       file.last.pass()
@@ -91,8 +93,4 @@ class DiskDriveSpec extends FreeSpec {
       file.stop = false
       scheduler.runTasks()
       cb.failed [DistinguishedException]
-    }
-
-  }
-
-}
+    }}}
