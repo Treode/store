@@ -16,7 +16,7 @@ class FiberSpec extends FlatSpec {
     }
 
   "A Fiber" should "run one task" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     f.execute (a = true)
@@ -26,7 +26,7 @@ class FiberSpec extends FlatSpec {
   }
 
   it should "run two queued tasks" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     var b = false
@@ -40,7 +40,7 @@ class FiberSpec extends FlatSpec {
   }
 
   it should "run two tasks one after the other" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     var b = false
@@ -54,8 +54,18 @@ class FiberSpec extends FlatSpec {
     assertResult (true) (b)
   }
 
+  it should "handle the return keyword" in {
+    implicit val s = StubScheduler.random()
+    val f = new Fiber (s)
+    var b = false
+    def method(): Unit = f.execute { return; b = true }
+    method()
+    s.runTasks()
+    assertResult (false) (b)
+  }
+
   it should "report an exception thrown from a task and continue" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     f.execute (throwDistinguishedException)
@@ -67,7 +77,7 @@ class FiberSpec extends FlatSpec {
   }
 
   "Fiber.async" should "not invoke the callback" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     val cb = f.async [Unit] (cb => a = true) .capture()
@@ -78,47 +88,55 @@ class FiberSpec extends FlatSpec {
     cb.assertNotInvoked()
   }
 
-  it should "report an exception through the callback" in {
-    val s = StubScheduler.random()
+  it should "reject the return keyword" in {
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
-    val cb = f.async [Unit] (cb => throw new DistinguishedException) .capture()
-    cb.assertNotInvoked()
-    s.runTasks()
-    cb.failed [DistinguishedException]
+    def method(): Async [Int] = f.async (_ => return null)
+    method() .fail [ReturnNotAllowedFromAsync]
+  }
+
+  it should "report an exception through the callback" in {
+    implicit val s = StubScheduler.random()
+    val f = new Fiber (s)
+    f.async [Unit] (cb => throw new DistinguishedException) .fail [DistinguishedException]
   }
 
   "Fiber.guard" should "report an exception through the callback" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
-    val cb = f.guard (throw new DistinguishedException) .capture()
-    cb.assertNotInvoked()
-    s.runTasks()
-    cb.failed [DistinguishedException]
+    f.guard (throw new DistinguishedException) .fail [DistinguishedException]
+  }
+
+  it should "handle the return keyword" in {
+    implicit val s = StubScheduler.random()
+    val f = new Fiber (s)
+    def method(): Async [Int] = f.guard (return supply (0))
+    method() .expect (0)
   }
 
   "Fiber.supply" should "invoke the callback" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
-    val cb = f.supply (a = true) .capture()
-    assertResult (false) (a)
-    cb.assertNotInvoked()
-    s.runTasks()
+    f.supply (a = true) .pass
     assertResult (true) (a)
-    cb.assertInvoked()
+  }
+
+  it should "reject the return keyword" in {
+    implicit val s = StubScheduler.random()
+    val f = new Fiber (s)
+    def method(): Async [Int] = f.supply {return null}
+    method() .fail [ReturnNotAllowedFromAsync]
   }
 
   it should "report an exception through the callback" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
-    val cb = f.supply (throw new DistinguishedException) .capture()
-    cb.assertNotInvoked()
-    s.runTasks()
-    cb.failed [DistinguishedException]
+    f.supply (throw new DistinguishedException) .fail [DistinguishedException]
   }
 
   "Fiber.run" should "invoke the callback" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     val cb = CallbackCaptor [Unit]
@@ -130,8 +148,19 @@ class FiberSpec extends FlatSpec {
     cb.assertInvoked()
   }
 
+  it should "reject the return keyword" in {
+    implicit val s = StubScheduler.random()
+    val f = new Fiber (s)
+    val cb = CallbackCaptor [Unit]
+    def method(): Unit = f.run [Unit] (cb) {return}
+    method()
+    cb.assertNotInvoked()
+    s.runTasks()
+    cb.failed [ReturnNotAllowedFromAsync]
+  }
+
   it should "report an exception through the callback" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     val cb = CallbackCaptor [Unit]
     f.run [Unit] (cb) (throw new DistinguishedException)
@@ -141,7 +170,7 @@ class FiberSpec extends FlatSpec {
   }
 
   "Fiber.defer" should "not invoke the callback" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     val cb = CallbackCaptor [Unit]
@@ -153,8 +182,19 @@ class FiberSpec extends FlatSpec {
     cb.assertNotInvoked()
   }
 
+  it should "reject the return keyword" in {
+    implicit val s = StubScheduler.random()
+    val f = new Fiber (s)
+    val cb = CallbackCaptor [Unit]
+    def method(): Unit = f.defer (cb) {return}
+    method()
+    cb.assertNotInvoked()
+    s.runTasks()
+    cb.failed [ReturnNotAllowedFromAsync]
+  }
+
   it should "report an exception through the callback" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     val cb = CallbackCaptor [Unit]
     f.defer (cb) (throw new DistinguishedException)
@@ -164,7 +204,7 @@ class FiberSpec extends FlatSpec {
   }
 
   "Fiber.invoke" should "invoke the callback" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     var a = false
     val cb = CallbackCaptor [Unit]
@@ -176,8 +216,19 @@ class FiberSpec extends FlatSpec {
     cb.assertInvoked()
   }
 
+  it should "reject the return keyword" in {
+    implicit val s = StubScheduler.random()
+    val f = new Fiber (s)
+    val cb = CallbackCaptor [Unit]
+    def method(): Unit = f.invoke [Unit] (cb) {return}
+    method()
+    cb.assertNotInvoked()
+    s.runTasks()
+    cb.failed [ReturnNotAllowedFromAsync]
+  }
+
   it should "report an exception through the callback" in {
-    val s = StubScheduler.random()
+    implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     val cb = CallbackCaptor [Unit]
     f.defer (cb) (throw new DistinguishedException)

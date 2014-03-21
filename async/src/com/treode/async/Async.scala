@@ -1,6 +1,7 @@
 package com.treode.async
 
 import java.util.concurrent.{Future => JFuture, Callable, Executor, FutureTask, SynchronousQueue}
+import scala.runtime.NonLocalReturnControl
 import scala.util.{Failure, Success, Try}
 
 import Async.{_async, async}
@@ -112,6 +113,7 @@ object Async {
         try {
           f (c)
         } catch {
+          case t: NonLocalReturnControl [_] => cb.fail (new ReturnNotAllowedFromAsync)
           case t: Throwable => cb.fail (t)
         }
         c.get
@@ -121,6 +123,7 @@ object Async {
     try {
       f
     } catch {
+      case t: NonLocalReturnControl [_] => t.value.asInstanceOf [Async [A]]
       case t: Throwable => _fail (t)
     }
 
@@ -128,6 +131,7 @@ object Async {
     try {
       _pass (f)
     } catch {
+      case t: NonLocalReturnControl [_] => _fail (new ReturnNotAllowedFromAsync)
       case t: Throwable => _fail (t)
     }
 
@@ -135,6 +139,7 @@ object Async {
     try {
       if (p) f map (_ => ()) else _pass()
     } catch {
+      case t: NonLocalReturnControl [_] => _fail (new ReturnNotAllowedFromAsync)
       case t: Throwable => _fail (t)
     }
 

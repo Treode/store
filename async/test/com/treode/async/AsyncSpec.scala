@@ -249,6 +249,12 @@ class AsyncSpec extends FlatSpec {
     assertResult (true) (flag)
   }
 
+  it should "reject the return keyword" in {
+    implicit val scheduler = StubScheduler.random()
+    def method(): Async [Int] = async (_ => return null)
+    method() .fail [ReturnNotAllowedFromAsync]
+  }
+
   it should "pass an exception from the body to the callback" in {
     implicit val scheduler = StubScheduler.random()
     async [Unit] (_ => throw new DistinguishedException) .fail [DistinguishedException]
@@ -265,6 +271,12 @@ class AsyncSpec extends FlatSpec {
     var flag = false
     guard (supply (flag = true)) .pass
     assertResult (true) (flag)
+  }
+
+  it should "handle the return keyword" in {
+    implicit val scheduler = StubScheduler.random()
+    def method(): Async [Int] = guard (return supply (0))
+    method() .expect (0)
   }
 
   it should "should pass an async from the body to the callback" in {
@@ -288,6 +300,12 @@ class AsyncSpec extends FlatSpec {
     var flag = false
     supply (supply (flag = true)) .pass
     assertResult (true) (flag)
+  }
+
+  it should "reject the return keyword" in {
+    implicit val scheduler = StubScheduler.random()
+    def method(): Async [Int] = supply {return null}
+    method() .fail [ReturnNotAllowedFromAsync]
   }
 
   it should "should pass data from the body to the callback" in {

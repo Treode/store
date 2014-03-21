@@ -1,6 +1,7 @@
 package com.treode.async
 
 import java.util.ArrayDeque
+import scala.runtime.NonLocalReturnControl
 
 import AsyncConversions._
 
@@ -45,6 +46,7 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
         try {
           f (cb)
         } catch {
+          case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnNotAllowedFromAsync)
           case t: Throwable => scheduler.fail (cb, t)
         }}}
 
@@ -54,6 +56,7 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
         try {
           scheduler.pass (cb, f)
         } catch {
+          case t: NonLocalReturnControl [_] => scheduler.pass (cb, t.value.asInstanceOf [Async [A]])
           case t: Throwable => scheduler.fail (cb, t)
         }}} .flatten
 
@@ -63,6 +66,7 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
         try {
           scheduler.pass (cb, f)
         } catch {
+          case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnNotAllowedFromAsync)
           case t: Throwable => scheduler.fail (cb, t)
         }}}
 
@@ -71,6 +75,7 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
       try {
         f run (spawn (cb))
       } catch {
+        case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnNotAllowedFromAsync)
         case t: Throwable => scheduler.fail (cb, t)
       }}
 
@@ -79,6 +84,7 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
       try {
         f
       } catch {
+        case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnNotAllowedFromAsync)
         case t: Throwable => scheduler.fail (cb, t)
       }}
 
@@ -87,6 +93,7 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
       try {
         scheduler.pass (cb, f)
       } catch {
+        case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnNotAllowedFromAsync)
         case t: Throwable => scheduler.fail (cb, t)
       }}
 

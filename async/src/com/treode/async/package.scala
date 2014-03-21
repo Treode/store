@@ -4,6 +4,12 @@ import java.lang.{Integer => JavaInt, Long => JavaLong}
 import java.nio.channels.CompletionHandler
 import scala.util.{Failure, Random, Success, Try}
 
+package async {
+
+  class ReturnNotAllowedFromAsync extends Exception {
+    override def getMessage = "The return keyword is not allowed in an async definition."
+  }}
+
 package object async {
 
   import AsyncConversions._

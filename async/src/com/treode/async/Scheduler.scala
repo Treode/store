@@ -1,6 +1,7 @@
 package com.treode.async
 
 import java.util.concurrent.{Executor, TimeUnit, ScheduledExecutorService}
+import scala.runtime.NonLocalReturnControl
 import scala.util.{Failure, Success, Try}
 
 import Scheduler.toRunnable
@@ -44,8 +45,12 @@ object Scheduler {
 
   def toRunnable (task: => Any): Runnable =
     new Runnable {
-      def run() = task
-    }
+      def run() =
+        try {
+          task
+        } catch {
+          case t: NonLocalReturnControl [_] => ()
+        }}
 
   def toRunnable [A] (f: A => Any, v: A): Runnable =
     new Runnable {
