@@ -46,7 +46,7 @@ private class Dispatcher [M] (scheduler: Scheduler) (implicit mtag: ClassTag [M]
     rejects.concat (messages)
     messages = rejects
     if (!messages.isEmpty && !receivers.isEmpty)
-      engage (receivers.remove(), messages)
+      engage (receivers.remove(), drain())
     else
       engaged = false
   }}

@@ -34,13 +34,14 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     fiber.spawn (receiver (messages))
 
   private def _close() {
-    fiber.spawn (closer.get, ())
+    scheduler.pass (closer.get, ())
     closer = Option.empty
   }
 
   def send (message: M): Unit = fiber.execute {
     require (!closed, "Multiplexer has been closed.")
     if (!receivers.isEmpty) {
+      exclusive = true
       deliver (remove(), UnrolledBuffer (message))
     } else {
       messages += message
@@ -51,7 +52,7 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     closed = true
     if (!receivers.isEmpty) {
       receivers = Option.empty
-      fiber.spawn (cb, ())
+      scheduler.pass (cb, ())
     } else {
       closer = Some (cb)
     }}
