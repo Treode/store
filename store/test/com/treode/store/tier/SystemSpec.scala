@@ -5,8 +5,8 @@ import scala.util.Random
 
 import com.treode.async.{Async, AsyncConversions, AsyncTestTools, StubScheduler}
 import com.treode.async.io.StubFile
-import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Bytes, CrashChecks, StoreConfig}
+import com.treode.disk.{CrashChecks, Disks, DisksConfig, DiskGeometry}
+import com.treode.store.{Bytes, StoreConfig}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.PropSpec
 

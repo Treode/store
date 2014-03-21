@@ -138,14 +138,14 @@ object TreodeBuild extends Build {
 
   // Separated because it helped development.
   lazy val disk = Project ("disk", file ("disk"))
-    .configs (IntensiveTest, PeriodicTest)
-    .dependsOn (async % "compile;test->stub", pickle)
-    .settings (standardSettings: _*)
+    .configs (IntensiveTestWithStub, PeriodicTestWithStub)
+    .dependsOn (async % "compile;stub->stub", pickle)
+    .settings (stubSettings: _*)
 
   // The main component that this repository and build provides.
   lazy val store = Project ("store", file ("store"))
     .configs (IntensiveTestWithStub, PeriodicTestWithStub)
-    .dependsOn (cluster % "compile;stub->stub", disk)
+    .dependsOn (cluster % "compile;stub->stub", disk % "compile;stub->stub")
     .settings (stubSettings: _*)
 
   // A standalone server for system tests.  Separated to keep system
