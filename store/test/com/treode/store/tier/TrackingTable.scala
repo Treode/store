@@ -19,7 +19,18 @@ class TrackingTable {
 
   def check (recovered: Map [Int, Int]) {
     var okay = true
-    for ((key, value) <- recovered)
-      okay &&= (accepted.get (key) == Some (value) || attempted.get (key) == Some (value))
-    assert (okay, s"Bad recovery.\n$attempted\n$accepted\n$recovered")
-  }}
+    for ((key, value) <- recovered) {
+      val _accepted = accepted.get (key)
+      val _attempted = attempted.get (key)
+      val expected = Seq (_accepted, _attempted) .flatten.mkString (" or ")
+      assert (
+          _accepted == Some (value) || _attempted == Some (value),
+          s"Found $key -> $value, expected $expected")
+    }
+    for ((key, value) <- accepted) {
+      val _recovered = recovered.get (key)
+      val _attempted = attempted.get (key)
+      assert (
+          _recovered == Some (value) || _recovered == _attempted,
+          s"Found ${_recovered}, expected ${Some (value)} or ${_attempted}")
+    }}}

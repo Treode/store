@@ -20,6 +20,9 @@ import com.treode.store.StorePicklers
 
   def isEmpty: Boolean =
     tiers.length == 0
+
+  override def toString: String =
+    s"Tiers(${tiers mkString ", "})"
 }
 
 private object Tiers {

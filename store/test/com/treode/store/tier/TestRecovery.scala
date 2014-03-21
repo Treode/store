@@ -5,7 +5,7 @@ import com.treode.disk.Disks
 import com.treode.store.{Bytes, StoreConfig, TableId}
 
 import Async.supply
-import TestTable.{delete, descriptor, put}
+import TestTable.{checkpoint, delete, descriptor, put}
 
 private class TestRecovery (
     id: TableId
@@ -17,6 +17,10 @@ private class TestRecovery (
 
   val medic = TierMedic (descriptor, id.id)
 
+  checkpoint.replay { meta =>
+    medic.checkpoint (meta)
+  }
+
   put.replay { case (gen, key, value) =>
     medic.put (gen, Bytes (key), Bytes (value))
   }
@@ -25,9 +29,10 @@ private class TestRecovery (
     medic.delete (gen, Bytes (key))
   }
 
-  def launch (implicit launch: Disks.Launch): Async [TestTable] = {
-    import launch.disks
-    val table = medic.close()
+  def launch (implicit launch: Disks.Launch): Async [TestTable] = supply {
+    import launch.{checkpoint, disks}
+    val table = new LoggedTable (medic.close())
+    checkpoint (table.checkpoint())
     //pager.handle (table)
-    supply (new LoggedTable (table))
+    table
   }}

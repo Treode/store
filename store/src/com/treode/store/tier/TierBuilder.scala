@@ -63,7 +63,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
       if (stack.isEmpty || height < node.height) {
         push (key, pos, height)
         rpop()
-        Async.supply ()
+        supply()
 
       } else {
 

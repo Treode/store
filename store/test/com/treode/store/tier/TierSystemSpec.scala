@@ -8,13 +8,13 @@ import com.treode.async.io.StubFile
 import com.treode.disk.{CrashChecks, Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Bytes, StoreConfig, TimedTestTools}
 import com.treode.tags.{Intensive, Periodic}
-import org.scalatest.FlatSpec
+import org.scalatest.FreeSpec
 
 import Async.async
 import AsyncImplicits._
 import TimedTestTools._
 
-class TierSystemSpec extends FlatSpec with CrashChecks {
+class TierSystemSpec extends FreeSpec with CrashChecks {
 
   val ID = 0xC8
 
@@ -58,29 +58,49 @@ class TierSystemSpec extends FlatSpec with CrashChecks {
       assertResult (kvs.sorted) (toSeq)
   }
 
-  private def setup (disk: StubFile, geometry: DiskGeometry) (
-      implicit scheduler: StubScheduler, config: StoreConfig): TestTable = {
-
-      implicit val disksConfig = TestDisksConfig()
+  private def setup (
+      disk: StubFile,
+      geometry: DiskGeometry
+  ) (implicit
+      scheduler: StubScheduler,
+      disksConfig: DisksConfig,
+      storeConfig: StoreConfig
+  ): TestTable = {
       implicit val recovery = Disks.recover()
       val _table = new TestRecovery (ID)
       val files = Seq ((Paths.get ("a"), disk, geometry))
       val launch = recovery.attach (files) .pass
-      _table.launch (launch) .pass
+      val table = _table.launch (launch) .pass
+      launch.launch()
+      table
   }
 
-  private def recover (disk: StubFile) (
-      implicit scheduler: StubScheduler, storeConfig: StoreConfig): TestTable = {
-
-    implicit val config = TestDisksConfig()
+  private def recover (
+      disk: StubFile
+  ) (implicit
+      scheduler: StubScheduler,
+      disksConfig: DisksConfig,
+      storeConfig: StoreConfig
+  ): TestTable = {
     implicit val recovery = Disks.recover()
     val _table = new TestRecovery (ID)
     val files = Seq ((Paths.get ("a"), disk))
     val launch = recovery.reattach (files) .pass
-    _table.launch (launch) .pass
+    val table = _table.launch (launch) .pass
+    launch.launch()
+    table
   }
 
-  def check (nkeys: Int, nrounds: Int, nbatch: Int) (implicit random: Random) = {
+  def check (
+      nkeys: Int,
+      nrounds: Int,
+      nbatch: Int
+  ) (implicit
+      geometry: DiskGeometry,
+      random: Random,
+      disksConfig: DisksConfig,
+      storeConfig: StoreConfig
+  ) = {
 
     implicit val disksConfig = TestDisksConfig()
     implicit val storeConfig = StoreConfig (8, 1 << 10)
@@ -101,17 +121,35 @@ class TierSystemSpec extends FlatSpec with CrashChecks {
       tracker.check (table.toMap)
     }}
 
-  "The TierTable" can "recover" taggedAs (Intensive, Periodic) in {
-    forAllCrashes { implicit random =>
-      check (100, 10, 10)
-    }}
+  "When given large limits for checkpointing and cleaning" - {
 
-  it can "recover with lots of overwrites" taggedAs (Intensive, Periodic) in {
-    forAllCrashes { implicit random =>
-      check (30, 10, 10)
-    }}
+    implicit val disksConfig = TestDisksConfig()
+    implicit val storeConfig = StoreConfig (8, 1<<10)
+    implicit val geometry = TestDiskGeometry()
 
-  it can "recover with very few overwrites" taggedAs (Intensive, Periodic) in {
-    forAllCrashes { implicit random =>
-      check (10000, 10, 10)
-    }}}
+    "it can recover" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+        check (100, 10, 10)
+      }}
+
+    "it can recover with lots of overwrites" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+        check (30, 10, 10)
+      }}
+
+    "it can recover with very few overwrites" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+        check (10000, 10, 10)
+      }}}
+
+  "When given a small threshold for checkpointing" - {
+
+    implicit val disksConfig = TestDisksConfig (checkpointEntries = 57)
+    implicit val storeConfig = StoreConfig (8, 1<<10)
+    implicit val geometry = TestDiskGeometry()
+
+    "it can recover" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+        check (100, 40, 10)
+      }}}
+}

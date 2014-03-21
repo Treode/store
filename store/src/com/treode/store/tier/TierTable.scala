@@ -30,7 +30,11 @@ object TierTable {
 
   class Meta (
       private [tier] val gen: Long,
-      private [tier] val tiers: Tiers)
+      private [tier] val tiers: Tiers) {
+
+    override def toString: String =
+      s"TierTable.Meta($gen, $tiers)"
+  }
 
   object Meta {
 

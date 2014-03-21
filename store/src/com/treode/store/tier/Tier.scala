@@ -51,6 +51,9 @@ private case class Tier (gen: Long, root: Position) {
 
   def ceiling (desc: TierDescriptor [_, _], key: Bytes) (implicit disks: Disks): Async [Option [TierCell]] =
     async (ceiling (desc, key, _))
+
+  override def toString: String =
+    s"Tier($gen, $root)"
 }
 
 private object Tier {
