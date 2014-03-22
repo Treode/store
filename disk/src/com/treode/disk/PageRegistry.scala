@@ -31,10 +31,9 @@ private class PageRegistry (kit: DisksKit) {
     }
 
   def probe (ledger: PageLedger): Async [Long] = {
-    val _liveGroups = ledger.groups.latch.map {
-      case ((typ, obj), groups) =>
+    val _liveGroups =
+      for (((typ, obj), groups) <- ledger.groups.latch.map)
         probe (typ, obj, groups)
-    }
     for (liveGroups <- _liveGroups)
       yield ledger.liveBytes (liveGroups)
   }

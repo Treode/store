@@ -145,7 +145,7 @@ private object LogIterator {
     val useGen0 = chooseSuperBlock (reads)
 
     for {
-      logs <- reads.latch.map (apply (useGen0, _, records))
+      logs <- reads.latch.map foreach (apply (useGen0, _, records))
       iter = AsyncIterator.merge (logs.values.toSeq) (ordering)
       _ <- iter.foreach.f (_._2())
       kit = new DisksKit

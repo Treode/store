@@ -31,10 +31,10 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
 
   def recover (medics: Seq [Medic]): Async [Unit] = {
     for {
-      _ <- medics.latch.unit { m =>
-        for (a <- m.close (kit))
-          yield acceptors.put (m.key, a)
-      }
+      _ <-
+        for (m <- medics.latch.unit)
+          for (a <- m.close (kit))
+            yield acceptors.put (m.key, a)
     } yield ()
   }
 
@@ -54,7 +54,7 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
       for {
         _ <- latch (
             archive.checkpoint() .flatMap (Acceptors.checkpoint.record (_)),
-            materialize (acceptors.values) .latch.unit (_.checkpoint()))
+            materialize (acceptors.values) .latch.unit foreach (_.checkpoint()))
       } yield ()
     }
 

@@ -44,9 +44,9 @@ extends Disks.Recovery {
       val boot = BootBlock.apply (cell, 0, items.size, attaching)
 
       for {
-        drives <- items.latch.indexed { case ((path, file, geometry), i) =>
-          DiskDrive.init (i, path, file, geometry, boot, kit)
-        }
+        drives <-
+          for (((path, file, geometry), i) <- items.zipWithIndex.latch.indexed)
+            DiskDrive.init (i, path, file, geometry, boot, kit)
         _ <- kit.disks.add (drives)
       } yield {
         new LaunchAgent (kit)
@@ -59,7 +59,8 @@ extends Disks.Recovery {
     }
 
   def reopen (items: Seq [(Path, File)]): Async [Seq [SuperBlocks]] =
-    items.latch.seq ((SuperBlocks.read _).tupled)
+    for ((path, file) <- items.latch.seq)
+      SuperBlocks.read (path, file)
 
   def reattach (items: Seq [(Path, File)]): Async [Launch] =
     guard {
@@ -87,7 +88,7 @@ extends Disks.Recovery {
 
     scheduler.whilst (!opening.isEmpty) {
       for {
-        _superbs <- opening.latch.seq (_reopen)
+        _superbs <- opening.latch.seq foreach (_reopen)
       } yield {
         opened ++= _superbs map (_.path)
         superbs ++= _superbs

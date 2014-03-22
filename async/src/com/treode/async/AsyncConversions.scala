@@ -67,7 +67,7 @@ trait AsyncConversions {
     def async (implicit scheduler: Scheduler): AsyncIterator [A] =
       AsyncIterator.adapt (iter.iterator)
 
-    object latch extends IterableLatch (iter)
+    object latch extends IterableLatch (iter, iter.size)
   }
 
   implicit class RichJavaIterator [A] (iter: JIterator [A]) {
@@ -81,7 +81,7 @@ trait AsyncConversions {
     def async (implicit scheduler: Scheduler): AsyncIterator [A] =
       AsyncIterator.adapt (iter.iterator)
 
-    object latch extends IterableLatch (iter)
+    object latch extends IterableLatch (iter, iter.size)
   }}
 
 object AsyncConversions extends AsyncConversions

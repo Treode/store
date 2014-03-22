@@ -33,7 +33,11 @@ trait AsyncIterator [+A] {
     new AsyncIterator [A] {
       def _foreach (g: (A, Callback [Unit]) => Any): Async [Unit] =
         self._foreach { case (x, cb) => if (p (x)) g (x, cb) else cb.pass() }
-    }}}
+    }}
+
+  def withFilter (p: A => Boolean): AsyncIterator [A] =
+    filter (p)
+}
 
 object AsyncIterator {
 

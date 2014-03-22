@@ -42,7 +42,8 @@ class TierSystemSpec extends FlatSpec with CrashChecks with TimeLimitedTests {
   implicit class RichTestTable (table: TestTable) {
 
     def putAll (kvs: (Int, Int)*): Async [Unit] =
-      kvs.latch.unit { case (key, value) => table.put (key, value) }
+      for ((key, value) <- kvs.latch.unit)
+        table.put (key, value)
 
     def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] =
       for (c <- table.iterator.toSeq; if c.value.isDefined)

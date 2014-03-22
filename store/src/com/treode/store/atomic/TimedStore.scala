@@ -34,9 +34,9 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     val ids = ops map (op => (op.table, op.key).hashCode)
     for {
       _ <- space.read (rt, ids)
-      vs <- ops.latch.indexed { case (op, i) =>
+      vs <-
+        for ((op, i) <- ops.zipWithIndex.latch.indexed)
           getTable (op.table) .get (op.key, rt)
-      }
     } yield vs
   }
 
@@ -54,7 +54,9 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     val ids = ops map (op => (op.table, op.key).hashCode)
     for {
       locks <- space.write (ct, ids)
-      results <- ops.latch.indexed {case (op, i) => prepare (ct, op)}
+      results <-
+        for ((op, i) <- ops.zipWithIndex.latch.indexed)
+          prepare (ct, op)
     } yield {
       val collisions = for (((c, t), i) <- results.zipWithIndex; if c) yield i
       val vt = results.filterNot (_._1) .map (_._2) .fold (TxClock.zero) (TxClock.max _)
@@ -101,7 +103,8 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
 
   def checkpoint(): Async [Unit] = {
     val tables = materialize (this.tables.entrySet)
-    tables.latch.unit (e => checkpoint (e.getKey, e.getValue))
+    for (e <- tables.latch.unit)
+      checkpoint (e.getKey, e.getValue)
   }}
 
 private object TimedStore {

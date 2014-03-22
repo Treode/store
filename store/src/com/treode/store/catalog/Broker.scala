@@ -97,7 +97,7 @@ private class Broker (
 
   def checkpoint(): Async [Unit] =
     fiber.guard {
-      catalogs.values.latch.unit (_.checkpoint())
+      catalogs.values.latch.unit foreach (_.checkpoint())
     }
 
   def attach () (implicit launch: Disks.Launch, cluster: Cluster) {

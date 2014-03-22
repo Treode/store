@@ -65,7 +65,7 @@ private class RecoveryKit (implicit
     fiber.guard {
       import launch.disks
       for {
-        handlers <- (medics.keySet ++ makers.keySet) .latch.map (close (_))
+        handlers <- (medics.keySet ++ makers.keySet) .latch.map foreach (close (_))
       } yield {
         val broker = new Broker (handlers)
         broker.attach()

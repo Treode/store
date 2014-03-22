@@ -43,10 +43,12 @@ class DiskSystemSpec extends FreeSpec with TimeLimitedTests {
           descriptor.replay (_ => fail ("Nothing to replay."))
           implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
 
-          for (n <- (0 until nrounds) .async)
-            random.nextInts (nbatch, nkeys) .latch.unit { k =>
-              tracker.record (n, k, random.nextInt (1<<20))
-            }}
+          for {
+            n <- (0 until nrounds) .async
+            k <- random.nextInts (nbatch, nkeys) .latch.unit
+          } {
+            tracker.record (n, k, random.nextInt (1<<20))
+          }}
 
         .recover { implicit scheduler =>
           disk.scheduler = scheduler

@@ -28,10 +28,10 @@ private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
 
   def recover (medics: Seq [Medic]): Async [Unit] = {
     for {
-      _ <- medics.latch.unit { m =>
-        for (w <- m.close (kit))
-          yield deputies.put (m.xid, w)
-      }
+      _ <-
+        for (m <- medics.latch.unit)
+          for (w <- m.close (kit))
+            yield deputies.put (m.xid, w)
     } yield ()
   }
 
@@ -52,7 +52,7 @@ private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
         _ <- latch (
             archive.checkpoint() .flatMap (WriteDeputies.checkpoint.record (_)),
             tables.checkpoint(),
-            materialize (deputies.values) .latch.unit (_.checkpoint()))
+            materialize (deputies.values) .latch.unit foreach (_.checkpoint()))
       } yield ()
     }
 

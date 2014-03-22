@@ -2,6 +2,7 @@ package com.treode.async
 
 import org.scalatest.FlatSpec
 
+import Async.supply
 import AsyncConversions._
 import AsyncIteratorTestTools._
 
@@ -41,6 +42,16 @@ class AsyncIteratorSpec extends FlatSpec {
     assertResult (Set (1, 2)) (provided)
   }
 
+  it should "work with the for keyword" in {
+    var xs = Seq.newBuilder [Int]
+    implicit val scheduler = StubScheduler.random()
+    val task =
+      for (x <- adapt (1, 2, 3))
+        supply (xs += x)
+    task.pass
+    assertResult (Seq (1, 2, 3)) (xs.result)
+  }
+
   "AsyncIterator.map" should "handle an empty sequence" in {
     implicit val scheduler = StubScheduler.random()
     assertSeq () (map [Int, Int] () (_ * 2))
@@ -68,6 +79,12 @@ class AsyncIteratorSpec extends FlatSpec {
     }
     assertResult (Set (1, 2, 3)) (consumed)
     assertResult (Set (2, 4)) (provided)
+  }
+
+  it should "work with the for keyword" in {
+    implicit val scheduler = StubScheduler.random()
+    val iter = for (x <- adapt (1, 2, 3)) yield x * 2
+    assertSeq (2, 4, 6) (iter)
   }
 
   "AsyncIterator.filter" should "handle [] -> []" in {
@@ -147,4 +164,11 @@ class AsyncIteratorSpec extends FlatSpec {
     }
     assertResult (Set (1, 2, 3)) (consumed)
     assertResult (Set (1)) (provided)
+  }
+
+  it should "work with the for keyword" in {
+    implicit val scheduler = StubScheduler.random()
+    val iter =
+      for (x <- adapt (1, 2, 3, 4); if (x & 1) == 0) yield x
+    assertSeq (2, 4) (iter)
   }}
