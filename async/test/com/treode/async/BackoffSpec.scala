@@ -2,23 +2,25 @@ package com.treode.async
 
 import scala.util.Random
 import org.scalacheck.Gen
-import org.scalatest.PropSpec
+import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks
 
-class BackoffSpec extends PropSpec with PropertyChecks {
+import PropertyChecks._
+
+class BackoffSpec extends FlatSpec {
 
   val seeds = Gen.choose (0L, Long.MaxValue)
   val retries = Gen.choose (1, 37)
   val max = Gen.choose (100, 1000)
 
-  property ("Backoff should provide limited retries") {
+  "Backoff" should "provide limited retries" in {
     forAll (seeds, retries) { case (seed, retries) =>
       implicit val random = new Random (seed)
       val backoff = Backoff (30, 20, 400, retries)
       assertResult (retries) (backoff.iterator.length)
     }}
 
-  property ("Backoff should usually grow") {
+  it should "usually grow" in {
     forAll (seeds, max) { case (seed, max) =>
       implicit val random = new Random (seed)
       val backoff = Backoff (30, 20, max, 37)
@@ -31,7 +33,7 @@ class BackoffSpec extends PropSpec with PropertyChecks {
         prev = i
       }}}
 
-  property ("Backoff should not exceed the maximum") {
+  it should "not exceed the maximum" in {
     forAll (seeds, max) { case (seed, max) =>
       implicit val random = new Random (seed)
       val backoff = Backoff (30, 20, max, 37)

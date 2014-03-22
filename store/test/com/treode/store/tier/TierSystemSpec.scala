@@ -8,7 +8,7 @@ import com.treode.async.io.StubFile
 import com.treode.disk.{CrashChecks, Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.tags.{Intensive, Periodic}
-import org.scalatest.PropSpec
+import org.scalatest.FlatSpec
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.time.SpanSugar
 
@@ -17,7 +17,7 @@ import AsyncConversions._
 import AsyncTestTools._
 import SpanSugar._
 
-class TierSystemSpec extends PropSpec with CrashChecks with TimeLimitedTests {
+class TierSystemSpec extends FlatSpec with CrashChecks with TimeLimitedTests {
 
   val ID = 0xC8
   val timeLimit = 5 minutes
@@ -104,17 +104,17 @@ class TierSystemSpec extends PropSpec with CrashChecks with TimeLimitedTests {
       tracker.check (table.toMap)
     }}
 
-  property ("It can recover", Intensive, Periodic) {
+  "The TierTable" can "recover" taggedAs (Intensive, Periodic) in {
     forAllCrashes { implicit random =>
       check (100, 10, 10)
     }}
 
-  property ("It can recover with lots of overwrites", Intensive, Periodic) {
+  it can "recover with lots of overwrites" taggedAs (Intensive, Periodic) in {
     forAllCrashes { implicit random =>
       check (30, 10, 10)
     }}
 
-  property ("It can recover with very few overwrites", Intensive, Periodic) {
+  it can "recover with very few overwrites" taggedAs (Intensive, Periodic) in {
     forAllCrashes { implicit random =>
       check (10000, 10, 10)
     }}}

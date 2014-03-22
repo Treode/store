@@ -1,12 +1,12 @@
 package com.treode.buffer
 
 import com.google.common.hash.Hashing
+import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.{FlatSpec, PropSpec, Suites}
 
-class PagedBufferSpec extends Suites (PagedBufferBehaviors, PagedBufferProperties)
+import PropertyChecks._
 
-private object PagedBufferBehaviors extends FlatSpec {
+class PagedBufferSpec extends FlatSpec {
 
   val pageBits = 5
   val pageSize = 32
@@ -277,144 +277,142 @@ private object PagedBufferBehaviors extends FlatSpec {
   it should "fail to read a double" in {
     val buffer = PagedBuffer (pageBits)
     intercept [BufferUnderflowException] (buffer.readDouble())
-  }}
+  }
 
-private object PagedBufferProperties extends PropSpec with PropertyChecks {
-
-  property ("A PagedBuffer reads and writes shorts within a page") {
+  it should "read and write shorts within a page" in {
     forAll ("x") { x: Short =>
       val buffer = PagedBuffer (5)
       buffer.writeShort (x)
       assertResult (x) (buffer.readShort())
     }}
 
-  property ("A PagedBuffer reads and writes shorts across a page boundry") {
+  it should "read and write shorts across a page boundry" in {
     forAll ("x") { x: Short =>
       val buffer = PagedBuffer (1)
       buffer.writeShort (x)
       assertResult (x) (buffer.readShort())
     }}
 
-  property ("A PagedBuffer reads and writes ints within a page") {
+  it should "read and write ints within a page" in {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (5)
       buffer.writeInt (x)
       assertResult (x) (buffer.readInt())
     }}
 
-  property ("A PagedBuffer reads and writes ints across a page boundry") {
+  it should "read and write ints across a page boundry" in {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (1)
       buffer.writeInt (x)
       assertResult (x) (buffer.readInt())
     }}
 
-  property ("A PagedBuffer reads and writes var ints within a page") {
+  it should "read and write var ints within a page" in {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (5)
       buffer.writeVarInt (x)
       assertResult (x) (buffer.readVarInt())
     }}
 
-  property ("A PagedBuffer reads and writes var ints across a page boundry") {
+  it should "read and write var ints across a page boundry" in {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (1)
       buffer.writeVarInt (x)
       assertResult (x) (buffer.readVarInt())
     }}
 
-  property ("A PagedBuffer reads and writes unsigned var ints within a page") {
+  it should "read and write unsigned var ints within a page" in {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (5)
       buffer.writeVarUInt (x)
       assertResult (x) (buffer.readVarUInt())
     }}
 
-  property ("A PagedBuffer reads and writes unsigned var ints across a page boundry") {
+  it should "read and write unsigned var ints across a page boundry" in {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (1)
       buffer.writeVarUInt (x)
       assertResult (x) (buffer.readVarUInt())
     }}
 
-  property ("A PagedBuffer reads and writes longs within a page") {
+  it should "read and write longs within a page" in {
     forAll ("x") { x: Long =>
       val buffer = PagedBuffer (5)
       buffer.writeLong (x)
       assertResult (x) (buffer.readLong())
     }}
 
-  property ("A PagedBuffer reads and writes longs across a page boundry") {
+  it should "read and write longs across a page boundry" in {
     forAll ("x") { x: Long =>
       val buffer = PagedBuffer (1)
       buffer.writeLong (x)
       assertResult (x) (buffer.readLong())
     }}
 
-  property ("A PagedBuffer reads and writes var longs within a page") {
+  it should "read and write var longs within a page" in {
     forAll ("x") { x: Byte =>
       val buffer = PagedBuffer (5)
       buffer.writeVarLong (-1L)
       assertResult (-1L) (buffer.readVarLong())
     }}
 
-  property ("A PagedBuffer reads and writes var longs across a page boundry") {
+  it should "read and write var longs across a page boundry" in {
     forAll ("x") { x: Long =>
       val buffer = PagedBuffer (1)
       buffer.writeVarLong (x)
       assertResult (x) (buffer.readVarLong())
     }}
 
-  property ("A PagedBuffer reads and writes unsigned var longs within a page") {
+  it should "read and write unsigned var longs within a page" in {
     forAll ("x") { x: Long =>
       val buffer = PagedBuffer (5)
       buffer.writeVarULong (x)
       assertResult (x) (buffer.readVarULong())
     }}
 
-  property ("A PagedBuffer reads and writes unsigned var longs across a page boundry") {
+  it should "read and write unsigned var longs across a page boundry" in {
     forAll ("x") { x: Long =>
       val buffer = PagedBuffer (1)
       buffer.writeVarULong (x)
       assertResult (x) (buffer.readVarULong())
     }}
 
-  property ("A PagedBuffer reads and writes floats within a page") {
+  it should "read and write floats within a page" in {
     forAll ("x") { x: Float =>
       val buffer = PagedBuffer (5)
       buffer.writeFloat (x)
       assertResult (x) (buffer.readFloat())
     }}
 
-  property ("A PagedBuffer reads and writes floats across a page boundry") {
+  it should "read and write floats across a page boundry" in {
     forAll ("x") { x: Float =>
       val buffer = PagedBuffer (1)
       buffer.writeFloat (x)
       assertResult (x) (buffer.readFloat())
     }}
 
-  property ("A PagedBuffer reads and writes doubles within a page") {
+  it should "read and write doubles within a page" in {
     forAll ("x") { x: Double =>
       val buffer = PagedBuffer (5)
       buffer.writeDouble (x)
       assertResult (x) (buffer.readDouble())
     }}
 
-  property ("A PagedBuffer reads and writes doubles across a page boundry") {
+  it should "read and write doubles across a page boundry" in {
     forAll ("x") { x: Double =>
       val buffer = PagedBuffer (1)
       buffer.writeDouble (x)
       assertResult (x) (buffer.readDouble())
     }}
 
-  property ("A PagedBuffer reads and writes strings within a page") {
+  it should "read and write strings within a page" in {
     forAll ("x") { x: String =>
       val buffer = PagedBuffer (9)
       buffer.writeString (x)
       assertResult (x) (buffer.readString())
     }}
 
-  property ("A PagedBuffer reads and writes strings across a page boundry") {
+  it should "read and write strings across a page boundry" in {
     forAll ("x") { x: String =>
       val buffer = PagedBuffer (3)
       buffer.writeString (x)

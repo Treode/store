@@ -3,13 +3,14 @@ package com.treode.pickle
 import scala.util.Random
 
 import com.treode.buffer.PagedBuffer
+import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.{FlatSpec, Matchers, PropSpec, Suites}
 
-class PicklersSpec extends Suites (PicklersBehaviors, PicklersProperties)
+import Picklers._
+import PropertyChecks._
 
-private trait PicklersSpecCommon extends Matchers {
-  import Picklers._
+class PicklersSpec extends FlatSpec {
+
 
   case class Url (host: String, port: Int, path: String)
 
@@ -42,10 +43,7 @@ private trait PicklersSpecCommon extends Matchers {
       pa.pickle (x, buffer)
       val y = pa.unpickle (buffer)
       y
-    }}}
-
-private object PicklersBehaviors extends FlatSpec with PicklersSpecCommon {
-  import Picklers._
+    }}
 
   "A Pickler" should "read and write tuples" in {
     check (tuple (string, int), ("So long, and thanks for all the fish", 42))
@@ -67,51 +65,48 @@ private object PicklersBehaviors extends FlatSpec with PicklersSpecCommon {
 
   it should "read and write very long messages" in {
     check (seq (long), Seq.fill (2^20) (Random.nextLong))
-  }}
+  }
 
-private object PicklersProperties extends PropSpec with PropertyChecks with PicklersSpecCommon {
-  import Picklers._
-
-  property ("A Pickler reads and writes bytes") {
+  it should "read and write bytes" in {
     forAll ("x") ((x: Byte) => check (byte, x))
   }
 
-  property ("A Pickler reads and writes ints") {
+  it should "read and write ints" in {
     forAll ("x") ((x: Int) => check (int, x))
   }
 
-  property ("A Pickler reads and writes longs") {
+  it should "read and write longs" in {
     forAll ("x") ((x: Long) => check (long, x))
   }
 
-  property ("A Pickler reads and writes fixed ints") {
+  it should "read and write fixed ints" in {
     forAll ("x") ((x: Int) => check (Picklers.fixedInt, x))
   }
 
-  property ("A Pickler reads and writes fixed longs") {
+  it should "read and write fixed longs" in {
     forAll ("x") ((x: Long) => check (Picklers.fixedLong, x))
   }
 
-  property ("A Pickler reads and writes unsigned ints") {
+  it should "read and write unsigned ints" in {
     forAll ("x") ((x: Int) => check (Picklers.uint, x))
   }
 
-  property ("A Pickler reads and writes unsigned longs") {
+  it should "read and write unsigned longs" in {
     forAll ("x") ((x: Long) => check (Picklers.ulong, x))
   }
 
-  property ("A Pickler reads and writes floats") {
+  it should "read and write floats" in {
     forAll ("x") ((x: Float) => check (float, x))
   }
 
-  property ("A Pickler reads and writes doubles") {
+  it should "read and write doubles" in {
     forAll ("x") ((x: Double) => check (double, x))
   }
 
-  property ("A Pickler reads and writes strings") {
+  it should "read and write strings" in {
     forAll ("x") ((x: String) => check (string, x))
   }
 
-  property ("A Pickler reads and writes lists") {
+  it should "read and write lists" in {
     forAll ("x", maxSize (3)) ((x: List [Int]) => check (list (int), x))
   }}

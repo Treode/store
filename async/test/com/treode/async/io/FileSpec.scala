@@ -6,14 +6,13 @@ import com.google.common.hash.Hashing
 import com.treode.async.{AsyncTestTools, Callback, StubScheduler}
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Picklers
-import org.scalatest.{FlatSpec, PropSpec, Suites}
+import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks
 
 import AsyncTestTools._
+import PropertyChecks._
 
-class FileSpec extends Suites (FileBehaviors, FileProperties)
-
-object FileBehaviors extends FlatSpec {
+class FileSpec extends FlatSpec {
 
   def mkFile = {
     implicit val scheduler = StubScheduler.random()
@@ -209,11 +208,9 @@ object FileBehaviors extends FlatSpec {
     file.flush (buffer, 0) .pass
     buffer.clear()
     file.deframe (Hashing.crc32, buffer, 0) .fail [HashMismatchException]
-  }}
+  }
 
-object FileProperties extends PropSpec with PropertyChecks {
-
-  property ("An Asyncfile should flush and fill") {
+  it should "flush and fill" in {
     forAll ("seed") { seed: Int =>
       implicit val random = new Random (seed)
       implicit val scheduler = StubScheduler.random (random)

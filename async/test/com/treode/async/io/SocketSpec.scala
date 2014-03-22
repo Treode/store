@@ -4,14 +4,13 @@ import scala.util.Random
 
 import com.treode.async.{AsyncTestTools, Callback, StubScheduler}
 import com.treode.buffer.PagedBuffer
-import org.scalatest.{FlatSpec, PropSpec, Suites}
+import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks
 
 import AsyncTestTools._
+import PropertyChecks._
 
-class SocketSpec extends Suites (SocketBehaviors, SocketProperties)
-
-object SocketBehaviors extends FlatSpec {
+class SocketSpec extends FlatSpec {
 
   def mkSocket = {
     implicit val scheduler = StubScheduler.random()
@@ -155,11 +154,9 @@ object SocketBehaviors extends FlatSpec {
     cb.assertNotInvoked()
     async.completeLast (-1)
     cb.failed [Exception]
-  }}
+  }
 
-object SocketProperties extends PropSpec with PropertyChecks {
-
-  property ("An AsyncSocket should flush and fill") {
+  it should "flush and fill" in {
     forAll ("seed") { seed: Int =>
       implicit val random = new Random (seed)
       implicit val scheduler = StubScheduler.random (random)

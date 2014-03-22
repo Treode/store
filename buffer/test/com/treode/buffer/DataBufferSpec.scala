@@ -1,11 +1,11 @@
 package com.treode.buffer
 
+import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks
-import org.scalatest.{FlatSpec, PropSpec, Suites}
 
-class DataBufferSpec extends Suites (DataBufferBehaviors, DataBufferProperties)
+import PropertyChecks._
 
-private object DataBufferBehaviors extends FlatSpec {
+class DataBufferSpec extends FlatSpec {
 
   def readWrite (x: Boolean) {
     val buffer = PagedBuffer (5)
@@ -18,11 +18,9 @@ private object DataBufferBehaviors extends FlatSpec {
   "A DataInput" should "read and write booleans" in {
     readWrite (true)
     readWrite (false)
-  }}
+  }
 
-private object DataBufferProperties extends PropSpec with PropertyChecks {
-
-  property ("A DataInputBuffer reads and writes chars") {
+  it should "read and write chars" in {
     forAll ("x") { x: Char =>
       val buffer = PagedBuffer (5)
       val output = new DataOutputWrapper (buffer)
@@ -31,7 +29,7 @@ private object DataBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (input.readChar())
     }}
 
-  property ("A DataInputBuffer reads and writes shorts") {
+  it should "read and write shorts" in {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (5)
       val output = new DataOutputWrapper (buffer)
@@ -40,7 +38,7 @@ private object DataBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x.toShort) (input.readShort())
     }}
 
-  property ("A DataInputBuffer reads and writes unsigned bytes") {
+  it should "read and write unsigned bytes" in {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (5)
       val output = new DataOutputWrapper (buffer)
@@ -49,7 +47,7 @@ private object DataBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x & 0xFF) (input.readUnsignedByte())
     }}
 
-  property ("A DataInputBuffer reads and writes unsigned shorts") {
+  it should "read and write unsigned shorts" in {
     forAll ("x") { x: Int =>
       val buffer = PagedBuffer (5)
       val output = new DataOutputWrapper (buffer)

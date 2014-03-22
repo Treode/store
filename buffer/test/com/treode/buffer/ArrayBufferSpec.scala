@@ -1,12 +1,12 @@
 package com.treode.buffer
 
 import com.google.common.hash.Hashing
-import org.scalatest.{FlatSpec, PropSpec, Suites}
+import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks
 
-class ArrayBufferSpec extends Suites (ArrayBufferBehaviors, ArrayBufferProperties)
+import PropertyChecks._
 
-object ArrayBufferBehaviors extends FlatSpec {
+class ArrayBufferSpec extends FlatSpec {
 
   "An ArrayBuffer" should "hash bytes at the beginning" in {
     val hashf = Hashing.murmur3_32()
@@ -32,14 +32,11 @@ object ArrayBufferBehaviors extends FlatSpec {
     buf.writePos = 21
     buf.writeBytes (bytes, 0, 11)
     assertResult (hashf.hashBytes (bytes)) (buf.hash (21, 11, hashf))
-  }}
-
-object ArrayBufferProperties extends PropSpec with PropertyChecks {
+  }
 
   // We regard PageBuffer as the gold standard, and check that ArrayBuffer and read and write data
   // from one.  Whereas in PagedBufferSpec, we check that a PagedBuffer can read and write with
   // itself only, and not with ArrayBuffer.
-
   private def flip (in: PagedBuffer): ArrayBuffer = {
     val bytes = new Array [Byte] (in.readableBytes)
     in.readBytes (bytes, 0, in.readableBytes)
@@ -54,7 +51,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
     out
   }
 
-  property ("An ArrayBuffer reads shorts") {
+  it should "read shorts" in {
     forAll ("x") { x: Short =>
       val out = PagedBuffer (5)
       out.writeShort (x)
@@ -62,7 +59,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readShort())
     }}
 
-  property ("An ArrayBuffer writes shorts") {
+  it should "write shorts" in {
     forAll ("x") { x: Short =>
       val out = ArrayBuffer (256)
       out.writeShort (x)
@@ -70,7 +67,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readShort())
     }}
 
-  property ("An ArrayBuffer reads ints") {
+  it should "read ints" in {
     forAll ("x") { x: Int =>
       val out = PagedBuffer (5)
       out.writeInt (x)
@@ -78,7 +75,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readInt())
     }}
 
-  property ("An ArrayBuffer writes ints") {
+  it should "write ints" in {
     forAll ("x") { x: Int =>
       val out = ArrayBuffer (256)
       out.writeInt (x)
@@ -86,7 +83,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readInt())
     }}
 
-  property ("An ArrayBuffer reads var ints") {
+  it should "read var ints" in {
     forAll ("x") { x: Int =>
       val out = PagedBuffer (5)
       out.writeVarInt (x)
@@ -94,8 +91,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readVarInt())
     }}
 
-
-  property ("An ArrayBuffer writes var ints") {
+  it should "write var ints" in {
     forAll ("x") { x: Int =>
       val out = ArrayBuffer (256)
       out.writeVarInt (x)
@@ -103,7 +99,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readVarInt())
     }}
 
-  property ("An ArrayBuffer reads unsigned var ints") {
+  it should "read unsigned var ints" in {
     forAll ("x") { x: Int =>
       val out = PagedBuffer (5)
       out.writeVarUInt (x)
@@ -111,7 +107,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readVarUInt())
     }}
 
-  property ("An ArrayBuffer writes unsigned var ints") {
+  it should "write unsigned var ints" in {
     forAll ("x") { x: Int =>
       val out = ArrayBuffer (256)
       out.writeVarUInt (x)
@@ -119,7 +115,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readVarUInt())
     }}
 
-  property ("An ArrayBuffer reads longs") {
+  it should "read longs" in {
     forAll ("x") { x: Long =>
       val out = PagedBuffer (5)
       out.writeLong (x)
@@ -127,7 +123,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readLong())
     }}
 
-  property ("An ArrayBuffer writes longs") {
+  it should "write longs" in {
     forAll ("x") { x: Long =>
       val out = ArrayBuffer (256)
       out.writeLong (x)
@@ -135,7 +131,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readLong())
     }}
 
-  property ("An ArrayBuffer reads var longs") {
+  it should "read var longs" in {
     forAll ("x") { x: Byte =>
       val out = PagedBuffer (5)
       out.writeVarLong (-1L)
@@ -143,7 +139,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (-1L) (in.readVarLong())
     }}
 
-  property ("An ArrayBuffer writes var longs") {
+  it should "write var longs" in {
     forAll ("x") { x: Byte =>
       val out = ArrayBuffer (256)
       out.writeVarLong (-1L)
@@ -151,7 +147,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (-1L) (in.readVarLong())
     }}
 
-  property ("An ArrayBuffer reads unsigned var longs") {
+  it should "read unsigned var longs" in {
     forAll ("x") { x: Long =>
       val out = PagedBuffer (5)
       out.writeVarULong (x)
@@ -159,7 +155,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readVarULong())
     }}
 
-  property ("An ArrayBuffer writes unsigned var longs") {
+  it should "write unsigned var longs" in {
     forAll ("x") { x: Long =>
       val out = ArrayBuffer (256)
       out.writeVarULong (x)
@@ -167,7 +163,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readVarULong())
     }}
 
-  property ("An ArrayBuffer reads floats") {
+  it should "read floats" in {
     forAll ("x") { x: Float =>
       val out = PagedBuffer (5)
       out.writeFloat (x)
@@ -175,7 +171,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readFloat())
     }}
 
-  property ("An ArrayBuffer writes floats") {
+  it should "write floats" in {
     forAll ("x") { x: Float =>
       val out = ArrayBuffer (256)
       out.writeFloat (x)
@@ -183,7 +179,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readFloat())
     }}
 
-  property ("An ArrayBuffer reads doubles") {
+  it should "read doubles" in {
     forAll ("x") { x: Double =>
       val out = PagedBuffer (5)
       out.writeDouble (x)
@@ -191,7 +187,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readDouble())
     }}
 
-  property ("An ArrayBuffer writes doubles") {
+  it should "write doubles" in {
     forAll ("x") { x: Double =>
       val out = ArrayBuffer (256)
       out.writeDouble (x)
@@ -199,7 +195,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       assertResult (x) (in.readDouble())
     }}
 
-  property ("An ArrayBuffer reads strings") {
+  it should "read strings" in {
     forAll ("x") { x: String =>
       try {
       val out = PagedBuffer (9)
@@ -212,7 +208,7 @@ object ArrayBufferProperties extends PropSpec with PropertyChecks {
       }
     }}
 
-  property ("An ArrayBuffer writes strings") {
+  it should "write strings" in {
     forAll ("x") { x: String =>
       try {
       val out = ArrayBuffer (1024)
