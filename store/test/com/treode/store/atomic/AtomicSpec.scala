@@ -9,15 +9,20 @@ import com.treode.store._
 import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, PropSpec, Suites}
+import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.prop.PropertyChecks
+import org.scalatest.time.SpanSugar
 
 import AtomicTestTools._
 import Cardinals.{One, Two}
+import SpanSugar._
 import WriteOp._
 
 class AtomicSpec extends Suites (AtomicBehaviors, AtomicProperties)
 
-object AtomicBehaviors extends FreeSpec with StoreBehaviors {
+object AtomicBehaviors extends FreeSpec with StoreBehaviors with TimeLimitedTests {
+
+  val timeLimit = 5 minutes
 
   private val kit = StubNetwork()
   private val hs = kit.install (3, new StubAtomicHost (_, kit))

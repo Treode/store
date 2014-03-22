@@ -9,14 +9,18 @@ import com.treode.disk.{CrashChecks, Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.PropSpec
+import org.scalatest.concurrent.TimeLimitedTests
+import org.scalatest.time.SpanSugar
 
 import Async.async
 import AsyncConversions._
 import AsyncTestTools._
+import SpanSugar._
 
-class TierSystemSpec extends PropSpec with CrashChecks {
+class TierSystemSpec extends PropSpec with CrashChecks with TimeLimitedTests {
 
   val ID = 0xC8
+  val timeLimit = 5 minutes
 
   implicit class RichRandom (random: Random) {
 

@@ -10,14 +10,18 @@ import com.treode.store.{Bytes, Cardinals}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, PropSpec, Suites, WordSpec}
+import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.prop.PropertyChecks
+import org.scalatest.time.SpanSugar
 
 import AsyncTestTools._
 import Cardinals.{Zero, One, Two}
+import PaxosTestTools._
+import SpanSugar._
 
 class PaxosSpec extends Suites (PaxosBehaviors, PaxosProperties)
 
-object PaxosBehaviors extends WordSpec with PaxosTestTools {
+object PaxosBehaviors extends WordSpec {
 
   private val kit = StubNetwork()
   private val hs = kit.install (3, new StubPaxosHost (_, kit))
@@ -46,11 +50,12 @@ object PaxosBehaviors extends WordSpec with PaxosTestTools {
       assertResult (Set (1)) (as.map (_.getChosen) .flatten.toSet)
     }}}
 
-object PaxosProperties extends PropSpec with PropertyChecks with PaxosTestTools {
+object PaxosProperties extends PropSpec with PropertyChecks with TimeLimitedTests {
 
   case class Summary (timedout: Boolean, chosen: Set [Int])
 
   val seeds = Gen.choose (0L, Long.MaxValue)
+  val timeLimit = 5 minutes
 
   def checkConsensus (seed: Long, mf: Double, summary: Summary): Summary = {
     val kit = StubNetwork (seed)

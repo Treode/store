@@ -2,7 +2,7 @@ package com.treode.store.paxos
 
 import com.treode.async.{CallbackCaptor, StubScheduler}
 
-trait PaxosTestTools {
+object PaxosTestTools {
 
   implicit class TestableAcceptor (a: Acceptor) {
 

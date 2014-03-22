@@ -12,9 +12,12 @@ import com.treode.store.{Bytes, CatalogDescriptor, CatalogId, StoreConfig}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
 import org.scalatest.{FreeSpec, PropSpec, ShouldMatchers, Suites}
+import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.prop.PropertyChecks
+import org.scalatest.time.SpanSugar
 
 import AsyncTestTools._
+import SpanSugar._
 import StubCatalogHost.{cat1, cat2}
 
 class BrokerSpec extends Suites (BrokerBehaviors, BrokerProperties)
@@ -214,11 +217,11 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
       assertResult (values (1)) (v2)
     }}}
 
-object BrokerProperties extends PropSpec with PropertyChecks {
+object BrokerProperties extends PropSpec with PropertyChecks with TimeLimitedTests {
 
   val seeds = Gen.choose (0L, Long.MaxValue)
-
   val values = BrokerBehaviors.values
+  val timeLimit = 5 minutes
 
   def checkUnity (seed: Long, mf: Double) {
     val kit = StubNetwork (seed)

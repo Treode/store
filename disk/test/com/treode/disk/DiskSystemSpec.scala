@@ -7,49 +7,55 @@ import com.treode.async.io.StubFile
 import com.treode.pickle.Picklers
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
+import org.scalatest.concurrent.TimeLimitedTests
+import org.scalatest.time.SpanSugar
 
 import Async.async
 import AsyncConversions._
 import DiskTestTools._
 import DiskSystemSpec._
+import SpanSugar._
 
-class DiskSystemSpec extends FreeSpec with CrashChecks {
+class DiskSystemSpec extends FreeSpec with CrashChecks with TimeLimitedTests {
 
   implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
-
   val geometry = DiskGeometry (10, 6, 1<<20)
 
-  "The log, without checkpoints, should replay items" taggedAs (Intensive, Periodic) in {
-    forAllCrashes (0x67E5D5C52589BC56L) { implicit random =>
+  val timeLimit = 5 minutes
 
-      val nkeys = 100
-      val nrounds = 100
-      val nbatch = 10
+  "The log" - {
 
-      val disk = new StubFile () (null)
-      val tracker = new Tracker
+    "without checkpoints, should replay items" taggedAs (Intensive, Periodic) in {
+      forAllCrashes (0) { implicit random =>
 
-      setup { implicit scheduler =>
-        disk.scheduler = scheduler
+        val nkeys = 100
+        val nrounds = 100
+        val nbatch = 10
 
-        implicit val recovery = Disks.recover()
-        descriptor.replay (_ => fail ("Nothing to replay."))
-        implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+        val disk = new StubFile () (null)
+        val tracker = new Tracker
 
-        for (n <- (0 until nrounds) .async)
-          random.nextInts (nbatch, nkeys) .latch.unit { k =>
-            tracker.record (n, k, random.nextInt (1<<20))
-          }}
+        setup { implicit scheduler =>
+          disk.scheduler = scheduler
 
-      .recover { implicit scheduler =>
-        disk.scheduler = scheduler
+          implicit val recovery = Disks.recover()
+          descriptor.replay (_ => fail ("Nothing to replay."))
+          implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
 
-        implicit val recovery = Disks.recover()
-        descriptor.replay ((tracker.replay _).tupled)
-        implicit val disks = recovery.reattachAndLaunch (("a", disk))
+          for (n <- (0 until nrounds) .async)
+            random.nextInts (nbatch, nkeys) .latch.unit { k =>
+              tracker.record (n, k, random.nextInt (1<<20))
+            }}
 
-        tracker.check()
-      }}}}
+        .recover { implicit scheduler =>
+          disk.scheduler = scheduler
+
+          implicit val recovery = Disks.recover()
+          descriptor.replay ((tracker.replay _).tupled)
+          implicit val disks = recovery.reattachAndLaunch (("a", disk))
+
+          tracker.check()
+        }}}}}
 
 object DiskSystemSpec {
 
