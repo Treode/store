@@ -64,3 +64,5 @@ trait CrashChecks extends PropertyChecks {
       println (f"Checking crashes with seed 0x$seed%016X")
       forAllCrashes (seed) (init)
     }}}
+
+object CrashChecks extends CrashChecks

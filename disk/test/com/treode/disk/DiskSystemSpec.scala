@@ -12,11 +12,12 @@ import org.scalatest.time.SpanSugar
 
 import Async.async
 import AsyncConversions._
+import CrashChecks._
 import DiskTestTools._
 import DiskSystemSpec._
 import SpanSugar._
 
-class DiskSystemSpec extends FreeSpec with CrashChecks with TimeLimitedTests {
+class DiskSystemSpec extends FreeSpec with TimeLimitedTests {
 
   implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
   val geometry = DiskGeometry (10, 6, 1<<20)
