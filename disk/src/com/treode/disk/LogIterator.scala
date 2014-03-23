@@ -35,18 +35,18 @@ private class LogIterator private (
   class Foreach (f: ((Long, Unit => Any), Callback [Unit]) => Any, cb: Callback [Unit]) {
 
     val _read: Callback [Int] = {
-      case Success (v) => read (v)
+      case Success (v) => cb.defer (read (v))
       case Failure (t) => fail (t)
     }
 
     val _next: Callback [Unit] = {
-      case Success (v) => next()
+      case Success (v) => cb.defer (next())
       case Failure (t) => fail (t)
     }
 
     def fail (t: Throwable) {
       logPos = -1L
-      cb.fail (t)
+      scheduler.fail (cb, t)
     }
 
     def read (len: Int) {

@@ -13,27 +13,28 @@ private object DiskTestTools extends AsyncTestTools {
   implicit class RichRecovery (recovery: Disks.Recovery) (implicit scheduler: StubScheduler) {
 
     type AttachItem = (String, File, DiskGeometry)
+    type ReattachItem = (String, File)
 
-    private def _attach (items: Seq [AttachItem]): Async [Launch] = {
+    def attachAndCapture (items: AttachItem*): Async [LaunchAgent] = {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
-      recovery.attach (_items)
+      recovery.attach (_items) .map (_.asInstanceOf [LaunchAgent])
     }
 
-    def attachAndLaunch (items: (String, File, DiskGeometry)*): Disks = {
-      val launch = _attach (items) .pass.asInstanceOf [LaunchAgent]
+    def attachAndLaunch (items: AttachItem*): Disks = {
+      val launch = attachAndCapture (items: _*) .pass
       launch.launch()
       scheduler.runTasks()
       launch.kit.assertLaunched()
       launch.disks
     }
 
-    private def _reattach (items: Seq [(String, File)]): Async [Launch] = {
+    def reattachAndCapture (items: ReattachItem*): Async [LaunchAgent] = {
       val _items = items map (v => (Paths.get (v._1), v._2))
-      recovery.reattach (_items)
+      recovery.reattach (_items) .map (_.asInstanceOf [LaunchAgent])
     }
 
-    def reattachAndLaunch (items: (String, File)*): Disks = {
-      val launch = _reattach (items) .pass.asInstanceOf [LaunchAgent]
+    def reattachAndLaunch (items: ReattachItem*): Disks = {
+      val launch = reattachAndCapture (items: _*) .pass
       launch.launch()
       scheduler.runTasks()
       launch.kit.assertLaunched()

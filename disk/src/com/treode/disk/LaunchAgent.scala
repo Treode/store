@@ -10,16 +10,16 @@ import JavaConversions._
 
 private class LaunchAgent (val kit: DisksKit) extends Disks.Launch {
 
-  val roots = new CheckpointRegistry
-  val pages = new PageRegistry (kit)
+  private val roots = new CheckpointRegistry
+  private val pages = new PageRegistry (kit)
   private var open = true
+
+  implicit val disks: Disks = new DisksAgent (kit)
+
+  val controller: Disks.Controller = new ControllerAgent (kit, disks)
 
   def requireOpen(): Unit =
     require (open, "Disks have already launched.")
-
-  val disks: Disks = new DisksAgent (kit)
-
-  val controller: Disks.Controller = new ControllerAgent (kit, disks)
 
   def checkpoint (f: => Async [Unit]): Unit =
     synchronized {
