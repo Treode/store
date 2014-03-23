@@ -178,6 +178,7 @@ private class DiskDrive (
 
       val callbacks = writeRecords (logBuf, accepts)
       val cb = fanout (callbacks, scheduler)
+      assert (logTail + logBuf.readableBytes <= logLimit)
 
       checkpointer.tally (logBuf.readableBytes, accepts.size)
 
@@ -199,7 +200,7 @@ private class DiskDrive (
       projector.add (page.typ, page.obj, page.group)
       val pageBytes = geometry.blockAlignLength (page.byteSize)
       val ledgerBytes = geometry.blockAlignLength (projector.byteSize)
-      if (ledgerBytes + pageBytes < limit) {
+      if (totalBytes + ledgerBytes + pageBytes < limit) {
         accepts.add (page)
         totalBytes += pageBytes
       } else {
@@ -264,6 +265,7 @@ private class DiskDrive (
 
       val (buffer, callbacks, ledger) = writePages (accepts)
       val pos = pageHead - buffer.readableBytes
+      assert (pos >= pageSeg.pos + geometry.blockBytes)
       val cb = fanout (callbacks, scheduler)
 
       val task = for {

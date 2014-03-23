@@ -104,7 +104,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           disk.scheduler = scheduler
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
-          tracker.batch (3, 3) .pass
+          tracker.batch (40, 10) .pass
         }
 
         {
