@@ -50,14 +50,25 @@ object Scheduler {
           task
         } catch {
           case t: NonLocalReturnControl [_] => ()
+          case t: CallbackException => throw t.thrown
         }}
 
   def toRunnable [A] (f: A => Any, v: A): Runnable =
     new Runnable {
-      def run() = f (v)
-    }
+      def run() =
+        try {
+          f (v)
+        } catch {
+          case t: NonLocalReturnControl [_] => ()
+          case t: CallbackException => throw t.thrown
+        }}
 
   def toRunnable [A] (cb: Callback [A], v: Try [A]): Runnable =
     new Runnable {
-      def run() = cb (v)
-    }}
+      def run() =
+        try {
+          cb (v)
+        } catch {
+          case t: NonLocalReturnControl [_] => ()
+          case t: CallbackException => throw t.thrown
+        }}}

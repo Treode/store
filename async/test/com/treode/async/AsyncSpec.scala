@@ -266,6 +266,30 @@ class AsyncSpec extends FlatSpec {
       async [Unit] (_.pass()) run (exceptional)
     }}
 
+  it should "allow storing the callback and passing it later" in {
+    implicit val scheduler = StubScheduler.random()
+    var callback: Callback [Int] = null
+    val captor = async [Int] (callback = _) .capture()
+    callback.pass (1)
+    assertResult (1) (captor.passed)
+  }
+
+  it should "allow storing the callback and failing it later" in {
+    implicit val scheduler = StubScheduler.random()
+    var callback: Callback [Int] = null
+    val captor = async [Int] (callback = _) .capture()
+    callback.fail (new DistinguishedException)
+    captor.failed [DistinguishedException]
+  }
+
+  it should "handle storing the callback that throws an exception later" in {
+    implicit val scheduler = StubScheduler.random()
+    var callback: Callback [Int] = null
+    async [Int] (callback = _) run (_ => throw new DistinguishedException)
+    intercept [CallbackException] {
+      callback.pass (1)
+    }}
+
   "Async.guard" should "invoke the body" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false

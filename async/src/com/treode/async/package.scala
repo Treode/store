@@ -6,6 +6,8 @@ import scala.util.{Failure, Random, Success, Try}
 
 package async {
 
+  class CallbackException (val thrown: Throwable) extends Exception
+
   class ReturnNotAllowedFromAsync extends Exception {
     override def getMessage = "The return keyword is not allowed in an async definition."
   }}

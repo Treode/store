@@ -109,15 +109,18 @@ object Async {
   def async [A] (f: Callback [A] => Any): Async [A] =
     new Async [A] {
       def run (cb: Callback [A]) {
-        val c = new ExceptionCaptor (cb)
         try {
-          f (c)
+          f { v =>
+            try {
+              cb (v)
+            } catch {
+              case t: Throwable => throw new CallbackException (t)
+            }}
         } catch {
           case t: NonLocalReturnControl [_] => cb.fail (new ReturnNotAllowedFromAsync)
+          case t: CallbackException => throw t.thrown
           case t: Throwable => cb.fail (t)
-        }
-        c.get
-      }}
+        }}}
 
   def guard [A] (f: => Async [A]): Async [A] =
     try {
