@@ -20,7 +20,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
 
   val timeLimit = 5 minutes
 
-  "The log should replay items" - {
+  "The logger should replay items" - {
 
     "without checkpoints" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
@@ -70,7 +70,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           for {
-            _ <- tracker.batch (100, 10, 10)
+            _ <- tracker.batch (100, 40, 10)
           } yield {
             assert (checkpoint, "Expected a checkpoint")
           }}

@@ -12,6 +12,8 @@ trait CrashChecks extends PropertyChecks {
 
   private val seeds = Gen.choose (0L, Long.MaxValue)
 
+  private val limit = 100
+
   class ForCrashesRunner (
       val setup: StubScheduler => Async [_],
       val recover: StubScheduler => Any
@@ -25,9 +27,8 @@ trait CrashChecks extends PropertyChecks {
   def setup (setup: StubScheduler => Async [_]) (implicit random: Random) =
     new ForCrashesSetup (setup)
 
-  def forCrash (seed: Long, target: Int) (init: Random => ForCrashesRunner): Int = {
+  def forCrash (random: Random, target: Int) (init: Random => ForCrashesRunner): Int = {
 
-    val random = new Random (seed)
     val runner = init (random)
 
     val actual = {           // Setup running only the target number of tasks.
@@ -46,12 +47,18 @@ trait CrashChecks extends PropertyChecks {
 
   def forAllCrashes (seed: Long) (init: Random => ForCrashesRunner) {
 
+    val random = new Random (seed)
+
     // Run the first time for as long as possible.
-    val count = forCrash (seed, Int.MaxValue) (init)
+    val count = forCrash (random, Int.MaxValue) (init)
 
     // Run the subsequent times for a portion of what was possible.
-    for (i <- 1 to count)
-      forCrash (seed, i) (init)
+    if (count < limit)
+      for (i <- 1 to count)
+        forCrash (random, i) (init)
+    else
+      for (i <- 1 to limit)
+        forCrash (random, random.nextInt (count - 1) + 1) (init)
   }
 
   def forAllCrashes (init: Random => ForCrashesRunner) {
