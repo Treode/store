@@ -148,7 +148,7 @@ class MergeIteratorSpec extends FlatSpec {
     assertSeq (1 -> "b", 1 -> "c", 2 -> "a") (iter)
   }
 
-  it should "stop at an exception in the first iterator" in {
+  it should "report an exception from the first iterator" in {
     implicit val scheduler = StubScheduler.random()
     var c1 = Set.empty [Int]
     var c2 = Set.empty [Int]
@@ -164,7 +164,7 @@ class MergeIteratorSpec extends FlatSpec {
     assertResult (Set (1, 2, 3)) (provided)
   }
 
-  it should "stop at an exception in the second iterator" in {
+  it should "report an exception from the second iterator" in {
     implicit val scheduler = StubScheduler.random()
     var c1 = Set.empty [Int]
     var c2 = Set.empty [Int]
@@ -180,7 +180,7 @@ class MergeIteratorSpec extends FlatSpec {
     assertResult (Set (1, 2, 3, 4)) (provided)
   }
 
-  it should "get exceptions from both iterators" in {
+  it should "report exceptions from both iterators" in {
     implicit val scheduler = StubScheduler.random()
     var c1 = Set.empty [Int]
     var c2 = Set.empty [Int]
@@ -195,4 +195,18 @@ class MergeIteratorSpec extends FlatSpec {
     assertResult (Set (1)) (c1)
     assertResult (Set (2)) (c2)
     assertResult (Set.empty) (provided)
+  }
+
+  it should "report and exception from the body (1)" in {
+    implicit val scheduler = StubScheduler.random()
+    val i1 = merge [Int] (Seq (1))
+    val i2 = i1.foreach.f (_ => throw new DistinguishedException)
+    i2.fail [DistinguishedException]
+  }
+
+  it should "report and exception from the body (2)" in {
+    implicit val scheduler = StubScheduler.random()
+    val i1 = merge [Int] (Seq (1), Seq (2))
+    val i2 = i1.foreach.f (x => if (x == 2) throw new DistinguishedException)
+    i2.fail [DistinguishedException]
   }}

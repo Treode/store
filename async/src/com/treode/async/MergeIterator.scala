@@ -41,7 +41,7 @@ extends AsyncIterator [A] {
       require (count > 0, "MergeIterator was already closed.")
       count -= 1
       if (count > 0 && thrown.isEmpty && count == pq.size)
-        f (pq.head.x, next)
+        cb.defer (f (pq.head.x, next))
       else if (count == pq.size && !thrown.isEmpty)
         cb.fail (MultiException.fit (thrown))
       else if (count == 0 && thrown.isEmpty)
@@ -59,10 +59,10 @@ extends AsyncIterator [A] {
           _close()
         }}
 
-    def loop (n: Int) (x: A, cb: Callback [Unit]): Unit = pq.synchronized {
-      pq.enqueue (Element (x, n, cb))
+    def loop (n: Int) (x: A, cbi: Callback [Unit]): Unit = pq.synchronized {
+      pq.enqueue (Element (x, n, cbi))
       if (thrown.isEmpty && count == pq.size)
-        f (pq.head.x, next)
+        cb.defer (f (pq.head.x, next))
     }
 
     if (count == 0)
