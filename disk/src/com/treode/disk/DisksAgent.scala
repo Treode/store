@@ -4,7 +4,7 @@ import com.treode.async.Async
 
 import Async.async
 
-private class DisksAgent (kit: DisksKit) extends Disks {
+private class DisksAgent (val kit: DisksKit) extends Disks {
   import kit.{disks, logd, paged, releaser}
 
   val cache = new PageCache (disks)
@@ -16,7 +16,12 @@ private class DisksAgent (kit: DisksKit) extends Disks {
     cache.read (desc, pos)
 
   def write [G, P] (desc: PageDescriptor [G, P], obj: ObjectId, group: G, page: P): Async [Position] =
-    async (cb => paged.send (PickledPage (desc, obj, group, page, cb)))
+    for {
+      pos <- async [Position] (cb => paged.send (PickledPage (desc, obj, group, page, cb)))
+    } yield {
+      cache.write (pos, page)
+      pos
+    }
 
   def join [A] (task: Async [A]): Async [A] =
     releaser.join (task)

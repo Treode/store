@@ -2,37 +2,76 @@ package com.treode.disk
 
 import com.treode.async.{Callback, StubScheduler}
 import com.treode.async.io.StubFile
-import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec
 
 import DiskTestTools._
 
 class PageSpec extends FlatSpec {
 
-  implicit val config = DisksConfig (0, 8, 1<<24, 1<<16, 10, 1)
-
+  implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
   val geometry = DiskGeometry (10, 6, 1<<20)
+  val pager = PageDescriptor (0xE9, DiskPicklers.uint, DiskPicklers.string)
 
-  val desc = {
-    import Picklers._
-    PageDescriptor (0xE9, int, seq (int))
+  private def setup (disk: StubFile) (implicit scheduler: StubScheduler) = {
+    disk.scheduler = scheduler
+    val recovery = Disks.recover()
+    recovery.attachAndLaunch (("a", disk, geometry))
   }
 
-  "The pager" should "fetch after write and restart" in {
-    implicit val scheduler = StubScheduler.random()
-    val disk1 = new StubFile
+  private def recover (disk: StubFile) (implicit scheduler: StubScheduler) = {
+    disk.scheduler = scheduler
+    val recovery = Disks.recover()
+    recovery.reattachAndLaunch (("a", disk))
+  }
+
+  "The pager" should "fetch after write and recovery" in {
+
+    val disk = new StubFile () (null)
+    var pos = Position (0, 0, 0)
+
+    {
+      implicit val scheduler = StubScheduler.random()
+      implicit val disks = setup (disk)
+      pos = pager.write (0, 0, "one") .pass
+      pager.fetch (pos) .expect ("one")
+    }
+
+    {
+      implicit val scheduler = StubScheduler.random()
+      implicit val disks = recover (disk)
+      pager.fetch (pos) .expect ("one")
+    }}
+
+  it should "read from the cache after write" in {
+
+    val disk = new StubFile () (null)
+    var pos = Position (0, 0, 0)
+
+    {
+      implicit val scheduler = StubScheduler.random()
+      implicit val disks = setup (disk)
+      pos = pager.write (0, 0, "one") .pass
+      disk.stop = true
+      pager.read (pos) .expect ("one")
+    }}
+
+  it should "read from the cache after a first read" in {
+
+    val disk = new StubFile () (null)
     val seq = Seq (0, 1, 2)
     var pos = Position (0, 0, 0)
 
     {
-      implicit val recovery = Disks.recover()
-      implicit val disks = recovery.attachAndLaunch (("a", disk1, geometry))
-      pos = disks.write (desc, 0, 0, seq) .pass
-      assertResult (seq) (disks.read (desc, pos) .pass)
+      implicit val scheduler = StubScheduler.random()
+      implicit val disks = setup (disk)
+      pos = pager.write (0, 0, "one") .pass
     }
 
     {
-      implicit val recovery = Disks.recover()
-      implicit val disks = recovery.reattachAndLaunch (("a", disk1))
-      assertResult (seq) (disks.read (desc, pos). pass)
-    }}}
+      implicit val scheduler = StubScheduler.random()
+      implicit val disks = recover (disk)
+      pager.read (pos) .expect ("one")
+      disk.stop = true
+      pager.read (pos) .expect ("one")
+    }}
+}

@@ -1,6 +1,8 @@
 package com.treode.disk
 
 import java.util.concurrent.Callable
+import scala.util.Success
+
 import com.google.common.cache.{CacheBuilder, CacheLoader, Cache}
 import com.treode.async.{Async, Future}
 
@@ -25,4 +27,10 @@ private class PageCache (disks: DiskDrives) {
           .get ((pos.disk, pos.offset), new Load (desc.asInstanceOf [PageDescriptor [_, Any]], pos))
           .get()
           .map (v => desc.tpag.runtimeClass.cast (v) .asInstanceOf [P])
+    }
+
+  def write [P] (pos: Position, page: P): Unit = {
+    val future = new Future [Any]
+    future (Success (page))
+    pages.put ((pos.disk, pos.offset), future)
   }}

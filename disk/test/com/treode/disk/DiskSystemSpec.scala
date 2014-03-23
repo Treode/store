@@ -1,11 +1,13 @@
 package com.treode.disk
 
+import java.util.ArrayList
+import scala.collection.JavaConversions
 import scala.util.Random
 
 import com.treode.async.{Async, AsyncConversions, AsyncTestTools, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.tags.{Intensive, Periodic}
-import org.scalatest.{FreeSpec, ParallelTestExecution}
+import org.scalatest.{Assertions, FreeSpec, ParallelTestExecution}
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.time.SpanSugar
 
@@ -14,6 +16,7 @@ import AsyncConversions._
 import CrashChecks._
 import DiskTestTools._
 import DiskSystemSpec._
+import JavaConversions._
 import SpanSugar._
 
 class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimitedTests {
@@ -28,7 +31,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
         implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
         val geometry = DiskGeometry (10, 6, 1<<20)
         val disk = new StubFile () (null)
-        val tracker = new Tracker
+        val tracker = new LogTracker
 
         setup { implicit scheduler =>
           disk.scheduler = scheduler
@@ -45,7 +48,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           disk.scheduler = scheduler
 
           implicit val recovery = Disks.recover()
-          val replayer = new Replayer
+          val replayer = new LogReplayer
           replayer.attach (recovery)
           implicit val disks = recovery.reattachAndLaunch (("a", disk))
           replayer.check (tracker)
@@ -57,7 +60,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
         implicit val config = DisksConfig (0, 8, 1<<30, 17, 1<<30, 1)
         val geometry = DiskGeometry (10, 6, 1<<20)
         val disk = new StubFile () (null)
-        val tracker = new Tracker
+        val tracker = new LogTracker
 
         setup { implicit scheduler =>
           disk.scheduler = scheduler
@@ -79,13 +82,41 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           disk.scheduler = scheduler
 
           implicit val recovery = Disks.recover()
-          val replayer = new Replayer
+          val replayer = new LogReplayer
           replayer.attach (recovery)
           implicit val disks = recovery.reattachAndLaunch (("a", disk))
           replayer.check (tracker)
+        }}}}
+
+  "The pager should" - {
+
+    "read after write and restart" taggedAs (Intensive, Periodic) in {
+      forAll (seeds) { seed =>
+
+        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
+        val geometry = DiskGeometry (10, 6, 1<<20)
+        val disk = new StubFile () (null)
+        var tracker = new StuffTracker
+
+        {
+          implicit val random = new Random (0)
+          implicit val scheduler = StubScheduler.random (random)
+          disk.scheduler = scheduler
+          implicit val recovery = Disks.recover()
+          implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+          tracker.batch (3, 3) .pass
+        }
+
+        {
+          implicit val scheduler = StubScheduler.random()
+          disk.scheduler = scheduler
+          implicit val recovery = Disks.recover()
+          implicit val disks = recovery.reattachAndLaunch (("a", disk))
+          tracker.check()
         }}}}}
 
 object DiskSystemSpec {
+  import Assertions._
 
   object records {
     import DiskPicklers._
@@ -97,12 +128,17 @@ object DiskSystemSpec {
       RecordDescriptor (0x9B, tuple (uint, pos))
   }
 
-  val pager = {
+  object pagers {
     import DiskPicklers._
-    PageDescriptor (0x79, uint, map (uint, uint))
+
+    val table =
+      PageDescriptor (0x79, uint, map (uint, uint))
+
+    val stuff =
+      PageDescriptor (0x26, uint, Stuff.pickler)
   }
 
-  class Tracker {
+  class LogTracker {
 
     private var attempted = Map.empty [Int, Int] .withDefaultValue (-1)
     private var accepted = Map.empty [Int, Int] .withDefaultValue (-1)
@@ -129,7 +165,7 @@ object DiskSystemSpec {
     def checkpoint () (implicit disks: Disks): Async [Unit] = {
       val save = attempted
       for {
-        pos <- pager.write (0, gen, save)
+        pos <- pagers.table.write (0, gen, save)
         _ <- records.checkpoint.record (gen, pos)
       } yield ()
     }
@@ -149,7 +185,7 @@ object DiskSystemSpec {
     override def toString = s"Tracker(\n  $attempted,\n  $accepted)"
   }
 
-  class Replayer {
+  class LogReplayer {
 
     private var replayed = Map.empty [Int, Int] .withDefaultValue (-1)
     private var reread = Option.empty [Position]
@@ -181,14 +217,69 @@ object DiskSystemSpec {
       records.checkpoint.replay ((checkpoint _).tupled)
     }
 
-    def check (tracker: Tracker) (implicit scheduler: StubScheduler, disks: Disks) {
+    def check (tracker: LogTracker) (implicit scheduler: StubScheduler, disks: Disks) {
       reread match {
         case Some (pos) =>
-          val saved = pager.read (pos) .pass
+          val saved = pagers.table.read (pos) .pass
           tracker.check (saved ++ replayed)
         case None =>
           tracker.check (replayed)
       }}
 
     override def toString = s"Replayer(\n  $reread\n  $replayed)"
-  }}
+  }
+
+  class Stuff (val seed: Long, val items: Seq [Int]) {
+
+    override def equals (other: Any): Boolean =
+      other match {
+        case that: Stuff => seed == that.seed && items == that.items
+        case _ => false
+      }
+
+    override def toString = f"Stuff(0x$seed%016X, 0x${items.hashCode}%08X)"
+  }
+
+  object Stuff {
+
+    val countLimit = 100
+    val valueLimit = Int.MaxValue
+
+    def apply (seed: Long): Stuff = {
+      val r = new Random (seed)
+      val xs = Seq.fill (r.nextInt (countLimit)) (r.nextInt (valueLimit))
+      new Stuff (seed, xs)
+    }
+
+    val pickler = {
+      import DiskPicklers._
+      wrap (fixedLong, seq (int))
+      .build (v => new Stuff (v._1, v._2))
+      .inspect (v => (v.seed, v.items))
+    }}
+
+  class StuffTracker {
+
+    private val written = new ArrayList [(Position, Long)]
+
+    def write (seed: Long) (implicit disks: Disks): Async [Position] =
+      for {
+        pos <- pagers.stuff.write (0, 0, Stuff (seed))
+      } yield {
+        written.add (pos -> seed)
+        pos
+      }
+
+   def batch (nrounds: Int, nbatch: Int) (
+      implicit random: Random, scheduler: StubScheduler, disks: Disks): Async [Unit] =
+    for {
+      _ <- (0 until nrounds) .async
+      seed <- random.nextSeeds (nbatch) .latch.unit
+    } {
+      write (seed)
+    }
+
+    def check () (implicit scheduler: StubScheduler, disks: Disks) {
+      for ((pos, seed) <- written)
+        pagers.stuff.read (pos) .expect (Stuff (seed))
+    }}}

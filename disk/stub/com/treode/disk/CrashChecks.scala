@@ -10,9 +10,9 @@ import AsyncTestTools._
 
 trait CrashChecks extends PropertyChecks {
 
-  private val seeds = Gen.choose (0L, Long.MaxValue)
-
   private val limit = 100
+
+  val seeds = Gen.choose (0L, Long.MaxValue)
 
   class ForCrashesRunner (
       val setup: StubScheduler => Async [_],

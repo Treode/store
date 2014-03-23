@@ -12,7 +12,7 @@ class LogSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
 
-  implicit val config = DisksConfig (0, 8, 1<<24, 1<<16, 10, 1)
+  implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
   val geometry = DiskGeometry (10, 6, 1<<20)
   val record = RecordDescriptor (0xBF, Picklers.string)
 
