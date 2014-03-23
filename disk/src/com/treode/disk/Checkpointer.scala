@@ -15,33 +15,29 @@ private class Checkpointer (kit: DisksKit) {
   var engaged = true
 
   private def reengage() {
+    engaged = false
     if (checkreq || config.checkpoint (bytes, entries))
       _checkpoint()
-    else
-      engaged = false
   }
 
-  private val completed: Callback [Unit] = {
-    case Success (v) => fiber.execute (reengage())
-    case Failure (t) => panic (t)
-  }
-
-  private def _checkpoint(): Unit =
-    fiber.run (completed) {
+  private def _checkpoint() {
+    if (engaged) {
+      checkreq = true
+      return
+    }
+    checkreq = false
+    engaged = true
+    fiber.run (panic) {
       bytes = 0
       entries = 0
-      checkreq = false
-      engaged = true
       for {
         _ <- disks.mark()
-        _ <- fiber.guard (checkpoints.checkpoint())
-        _ <- fiber.guard (disks.checkpoint())
-        _ <- fiber.supply {
-            rootgen += 1
-            reengage()
-        }
-      } yield ()
-    }
+        _ <- checkpoints.checkpoint()
+        _ <- disks.checkpoint()
+      } yield fiber.execute {
+        rootgen += 1
+        reengage()
+      }}}
 
   def launch (checkpoints: CheckpointRegistry): Async [Unit] =
     fiber.supply {
@@ -51,16 +47,13 @@ private class Checkpointer (kit: DisksKit) {
 
   def checkpoint(): Unit = {
     fiber.execute {
-      if (!engaged)
-        _checkpoint()
-      else
-        checkreq = true
+      _checkpoint()
     }}
 
   def tally (bytes: Int, entries: Int): Unit =
     fiber.execute {
       this.bytes += bytes
       this.entries += entries
-      if (!engaged && config.checkpoint (this.bytes, this.entries))
+      if (config.checkpoint (this.bytes, this.entries))
         _checkpoint()
     }}

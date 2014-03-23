@@ -262,15 +262,7 @@ private class DiskDrive (
       val (accepts, rejects, realloc) = splitPages (pages)
       pagemp.replace (rejects)
 
-      // Looking for a test that exposes these bugs.
-      // BUG 1: This if doesn't belong
-      if (accepts.isEmpty) {
-        pagemp.receive (pager)
-        return
-      }
-
-      // BUG 2: pages should be accepts
-      val (buffer, callbacks, ledger) = writePages (pages)
+      val (buffer, callbacks, ledger) = writePages (accepts)
       val pos = pageHead - buffer.readableBytes
       val cb = fanout (callbacks, scheduler)
 

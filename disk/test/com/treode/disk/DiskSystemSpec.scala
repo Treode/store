@@ -70,7 +70,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           for {
-            _ <- tracker.batch (100, 10, 3)
+            _ <- tracker.batch (100, 10, 10)
           } yield {
             assert (checkpoint, "Expected a checkpoint")
           }}
@@ -110,8 +110,9 @@ object DiskSystemSpec {
 
     def put (n: Int, k: Int, v: Int) (implicit disks: Disks): Async [Unit] = {
       attempted += k -> v
+      val g = gen
       for {
-        _ <- records.put.record (n, gen, k, v)
+        _ <- records.put.record (n, g, k, v)
       } yield {
         accepted += k -> v
       }}
