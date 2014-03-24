@@ -1,5 +1,7 @@
 package com.treode.disk
 
+import scala.util.Random
+
 import com.treode.async.{Callback, StubScheduler}
 import com.treode.async.io.StubFile
 import org.scalatest.FlatSpec
@@ -10,7 +12,12 @@ class PageSpec extends FlatSpec {
 
   implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
   val geometry = DiskGeometry (10, 6, 1<<20)
-  val pager = PageDescriptor (0xE9, DiskPicklers.uint, DiskPicklers.string)
+
+  object pagers {
+    import DiskPicklers._
+    val str = PageDescriptor (0xE9, uint, string)
+    val stuff = PageDescriptor (0x25, uint, Stuff.pickler)
+  }
 
   private def setup (disk: StubFile) (implicit scheduler: StubScheduler) = {
     disk.scheduler = scheduler
@@ -32,14 +39,14 @@ class PageSpec extends FlatSpec {
     {
       implicit val scheduler = StubScheduler.random()
       implicit val disks = setup (disk)
-      pos = pager.write (0, 0, "one") .pass
-      pager.fetch (pos) .expect ("one")
+      pos = pagers.str.write (0, 0, "one") .pass
+      pagers.str.fetch (pos) .expect ("one")
     }
 
     {
       implicit val scheduler = StubScheduler.random()
       implicit val disks = recover (disk)
-      pager.fetch (pos) .expect ("one")
+      pagers.str.fetch (pos) .expect ("one")
     }}
 
   it should "read from the cache after write" in {
@@ -50,28 +57,39 @@ class PageSpec extends FlatSpec {
     {
       implicit val scheduler = StubScheduler.random()
       implicit val disks = setup (disk)
-      pos = pager.write (0, 0, "one") .pass
+      pos = pagers.str.write (0, 0, "one") .pass
       disk.stop = true
-      pager.read (pos) .expect ("one")
+      pagers.str.read (pos) .expect ("one")
     }}
 
   it should "read from the cache after a first read" in {
 
     val disk = new StubFile () (null)
-    val seq = Seq (0, 1, 2)
     var pos = Position (0, 0, 0)
 
     {
       implicit val scheduler = StubScheduler.random()
       implicit val disks = setup (disk)
-      pos = pager.write (0, 0, "one") .pass
+      pos = pagers.str.write (0, 0, "one") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
       implicit val disks = recover (disk)
-      pager.read (pos) .expect ("one")
+      pagers.str.read (pos) .expect ("one")
       disk.stop = true
-      pager.read (pos) .expect ("one")
+      pagers.str.read (pos) .expect ("one")
     }}
+
+  "The compactor" should "work" in {
+    implicit val random = new Random (0)
+    implicit val scheduler = StubScheduler.random (random)
+    val disk = new StubFile
+    val recovery = Disks.recover()
+    implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+    for (i <- 0 until 10)
+      pagers.stuff.write (0, 0, Stuff (random.nextLong)) .pass
+    disks.clean()
+    scheduler.runTasks()
+  }
 }

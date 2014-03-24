@@ -88,7 +88,13 @@ private class Compactor (kit: DisksKit) {
         reengage()
     }
 
-  private def clean(): Unit =
+  def launch (pages: PageRegistry): Async [Unit] =
+    fiber.supply {
+      this.pages = pages
+      reengage()
+    }
+
+  def clean(): Unit =
     guard {
       cleanreq = true
       for {
@@ -96,12 +102,6 @@ private class Compactor (kit: DisksKit) {
         (segs, groups) <- pages.probeByUtil (iter, 0.9)
       } yield compact (groups, segs, true)
     } run (ignore)
-
-  def launch (pages: PageRegistry): Async [Unit] =
-    fiber.supply {
-      this.pages = pages
-      reengage()
-    }
 
   def tally (segments: Int): Unit =
     fiber.execute {

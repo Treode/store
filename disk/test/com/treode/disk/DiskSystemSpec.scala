@@ -7,6 +7,7 @@ import scala.util.Random
 import com.treode.async.{Async, AsyncConversions, AsyncTestTools, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.tags.{Intensive, Periodic}
+import org.scalacheck.Gen
 import org.scalatest.{Assertions, FreeSpec, ParallelTestExecution}
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.time.SpanSugar
@@ -25,7 +26,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
 
   "The logger should replay items" - {
 
-    "without checkpoints" taggedAs (Intensive, Periodic) in {
+    "without checkpoints" taggedAs (Intensive, Periodic) in { pending
       forAllCrashes { implicit random =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
@@ -54,7 +55,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           replayer.check (tracker)
         }}}
 
-    "with checkpoints" taggedAs (Intensive, Periodic) in {
+    "with checkpoints" taggedAs (Intensive, Periodic) in { pending
       forAllCrashes { implicit random =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 17, 1<<30, 1)
@@ -90,7 +91,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
 
   "The pager should" - {
 
-    "read after write and restart" taggedAs (Intensive, Periodic) in {
+    "read after write and restart" taggedAs (Intensive, Periodic) in { pending
       forAll (seeds) { seed =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
@@ -113,7 +114,25 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.reattachAndLaunch (("a", disk))
           tracker.check()
-        }}}}}
+        }}}
+
+    "clean" in {
+      forAll (Gen.const (0L)) {seed =>
+
+        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
+        val geometry = DiskGeometry (10, 6, 1<<20)
+        val disk = new StubFile () (null)
+        var tracker = new StuffTracker
+
+        {
+          implicit val random = new Random (0)
+          implicit val scheduler = StubScheduler.random (random)
+          disk.scheduler = scheduler
+          implicit val recovery = Disks.recover()
+          implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+          tracker.batch (40, 10) .pass
+        }
+      }}}}
 
 object DiskSystemSpec {
   import Assertions._
@@ -228,35 +247,6 @@ object DiskSystemSpec {
 
     override def toString = s"Replayer(\n  $reread\n  $replayed)"
   }
-
-  class Stuff (val seed: Long, val items: Seq [Int]) {
-
-    override def equals (other: Any): Boolean =
-      other match {
-        case that: Stuff => seed == that.seed && items == that.items
-        case _ => false
-      }
-
-    override def toString = f"Stuff(0x$seed%016X, 0x${items.hashCode}%08X)"
-  }
-
-  object Stuff {
-
-    val countLimit = 100
-    val valueLimit = Int.MaxValue
-
-    def apply (seed: Long): Stuff = {
-      val r = new Random (seed)
-      val xs = Seq.fill (r.nextInt (countLimit)) (r.nextInt (valueLimit))
-      new Stuff (seed, xs)
-    }
-
-    val pickler = {
-      import DiskPicklers._
-      wrap (fixedLong, seq (int))
-      .build (v => new Stuff (v._1, v._2))
-      .inspect (v => (v.seed, v.items))
-    }}
 
   class StuffTracker {
 

@@ -10,7 +10,8 @@ import Disks.Launch
 
 private object DiskTestTools extends AsyncTestTools {
 
-  implicit class RichDiskKit (kit: DisksKit) (implicit scheduler: StubScheduler) {
+  implicit class RichDisksAgent (agent: DisksAgent) {
+    import agent.kit
     import kit.{disks, checkpointer, compactor}
 
     def assertLaunched() {
@@ -19,7 +20,10 @@ private object DiskTestTools extends AsyncTestTools {
       assert (!checkpointer.engaged, "Expected checkpointer to be disengaged.")
       assert (compactor.pages != null, "Expected compactor to have a page registry.")
       assert (!compactor.engaged, "Expected compactor to be disengaged.")
-    }}
+    }
+
+    def clean() = compactor.clean()
+  }
 
   implicit class RichPager [G, P] (pager: PageDescriptor [G, P]) {
 
@@ -54,10 +58,11 @@ private object DiskTestTools extends AsyncTestTools {
 
     def attachAndLaunch (items: AttachItem*): DisksAgent = {
       val launch = attachAndCapture (items: _*) .pass
+      val disks = launch.disks.asInstanceOf [DisksAgent]
       launch.launch()
       scheduler.runTasks()
-      launch.kit.assertLaunched()
-      launch.disks.asInstanceOf [DisksAgent]
+      disks.assertLaunched()
+      disks
     }
 
     def reattachAndCapture (items: ReattachItem*): Async [LaunchAgent] = {
@@ -67,8 +72,9 @@ private object DiskTestTools extends AsyncTestTools {
 
     def reattachAndLaunch (items: ReattachItem*): DisksAgent = {
       val launch = reattachAndCapture (items: _*) .pass
+      val disks = launch.disks.asInstanceOf [DisksAgent]
       launch.launch()
       scheduler.runTasks()
-      launch.kit.assertLaunched()
-      launch.disks.asInstanceOf [DisksAgent]
+      disks.assertLaunched()
+      disks
     }}}
