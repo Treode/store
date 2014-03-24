@@ -68,41 +68,4 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
         } catch {
           case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnNotAllowedFromAsync)
           case t: Throwable => scheduler.fail (cb, t)
-        }}}
-
-  def run [A] (cb: Callback [A]) (f: => Async [A]): Unit =
-    execute {
-      try {
-        f run (spawn (cb))
-      } catch {
-        case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnNotAllowedFromAsync)
-        case t: Throwable => scheduler.fail (cb, t)
-      }}
-
-  def defer [A] (cb: Callback [A]) (f: => Any): Unit =
-    execute {
-      try {
-        f
-      } catch {
-        case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnNotAllowedFromAsync)
-        case t: Throwable => scheduler.fail (cb, t)
-      }}
-
-  def invoke [A] (cb: Callback [A]) (f: => A): Unit =
-    execute {
-      try {
-        scheduler.pass (cb, f)
-      } catch {
-        case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnNotAllowedFromAsync)
-        case t: Throwable => scheduler.fail (cb, t)
-      }}
-
-  def spawn (task: Runnable): Unit =
-    scheduler.execute (task)
-
-  def spawn (task: => Any): Unit =
-    scheduler.execute (task)
-
-  def spawn [A] (cb: Callback [A]): Callback [A] =
-    (cb on scheduler)
-}
+        }}}}

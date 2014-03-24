@@ -64,7 +64,7 @@ private class RemoteConnection (
         RemoteConnection.this.disconnect (socket)
     }
 
-    def flush(): Unit = fiber.spawn {
+    def flush(): Unit = scheduler.execute {
       socket.flush (buffer) run (flushed)
     }
 
@@ -172,7 +172,7 @@ private class RemoteConnection (
         disconnect (socket)
     }}
 
-    fiber.spawn (loop.pass())
+    scheduler.execute (loop.pass())
   }
 
   private def hearHello (socket: Socket) {

@@ -74,7 +74,7 @@ private class DiskDrives (kit: DisksKit) {
     val items = req._1
     val cb = leave (req._2)
     engaged = true
-    fiber.run (cb) {
+    fiber.guard {
 
       val priorDisks = disks.values
       val priorPaths = priorDisks.setBy (_.path)
@@ -99,7 +99,9 @@ private class DiskDrives (kit: DisksKit) {
         disks ++= newDisks.mapBy (_.id)
         this.bootgen = bootgen
         this.number = number
-      }}}
+      }
+    } run (cb)
+  }
 
   def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit] =
     fiber.async { cb =>
@@ -149,7 +151,7 @@ private class DiskDrives (kit: DisksKit) {
     val (items, _cb) = req
     val cb = leave (_cb)
     engaged = true
-    fiber.run (cb) {
+    fiber.guard {
 
       val byPath = disks.values.mapBy (_.path)
       if (!(items forall (byPath contains _))) {
@@ -167,7 +169,9 @@ private class DiskDrives (kit: DisksKit) {
       } yield {
         checkpointer.checkpoint()
         compactor.drain (segs.iterator.flatten)
-      }}}
+      }
+    } run (cb)
+  }
 
   def drain (items: Seq [Path]): Async [Unit] =
     fiber.async { cb =>
@@ -193,11 +197,12 @@ private class DiskDrives (kit: DisksKit) {
   private def _checkpoint (req: CheckpointRequest) {
     val cb = leave [Unit] (req)
     engaged = true
-    fiber.run (cb) {
+    fiber.guard {
       val attached = disks.values.map (_.path) .toSet
       val newBoot = BootBlock (cell, bootgen, number, attached)
       disks.latch.unit foreach (_._2.checkpoint (newBoot))
-    }}
+    } run (cb)
+  }
 
   def checkpoint (): Async [Unit] =
     fiber.async { cb =>

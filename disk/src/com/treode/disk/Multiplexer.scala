@@ -31,7 +31,7 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
   }
 
   private def deliver (receiver: R, messages: UnrolledBuffer [M]): Unit =
-    fiber.spawn (receiver (messages))
+    scheduler.execute (receiver (messages))
 
   private def _close() {
     scheduler.pass (closer.get, ())

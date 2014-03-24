@@ -104,10 +104,10 @@ private class DiskDrive (
     }
 
   def detach(): Unit =
-    fiber.run (ignore) {
+    fiber.guard {
       for (_ <- logmp.close())
         yield file.close()
-    }
+    } run (ignore)
 
   private def splitRecords (entries: UnrolledBuffer [PickledRecord]) = {
     // TODO: reject records that are too large
