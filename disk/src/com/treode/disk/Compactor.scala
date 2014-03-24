@@ -6,10 +6,11 @@ import scala.util.{Failure, Success}
 
 import Async.{async, guard}
 import AsyncConversions._
+import Callback.ignore
 import PageLedger.Groups
 
 private class Compactor (kit: DisksKit) {
-  import kit.{config, disks, panic, releaser, scheduler}
+  import kit.{config, disks, releaser, scheduler}
 
   val empty = (Set.empty [PageGroup], List.empty [Callback [Unit]])
 
@@ -42,17 +43,13 @@ private class Compactor (kit: DisksKit) {
     }}
 
   private def compacted (latches: Seq [Callback [Unit]]): Callback [Unit] = {
-      // MUSTDO: fix
-    {
-      case Success (v) =>
-        val cb = Callback.fanout (latches, scheduler)
-        fiber.execute (reengage())
-        cb.pass (v)
-      case Failure (t) =>
-        val cb = Callback.fanout (latches, scheduler)
-        panic (t)
-        cb.fail (t)
-    }}
+    case Success (v) =>
+      val cb = Callback.fanout (latches, scheduler)
+      fiber.execute (reengage())
+      cb.pass (v)
+    case Failure (t) =>
+      throw t
+  }
 
   private def compact (typ: TypeId, obj: ObjectId) {
     val (groups, latches) = book (typ, obj)
@@ -98,7 +95,7 @@ private class Compactor (kit: DisksKit) {
         iter <- disks.cleanable()
         (segs, groups) <- pages.probeByUtil (iter, 0.9)
       } yield compact (groups, segs, true)
-    } run (panic)
+    } run (ignore)
 
   def launch (pages: PageRegistry): Async [Unit] =
     fiber.supply {
@@ -117,5 +114,5 @@ private class Compactor (kit: DisksKit) {
     guard {
       for (groups <- pages.probeForDrain (iter))
         yield  compact (groups, iter.toSeq, false)
-    } run (panic)
+    } run (ignore)
 }

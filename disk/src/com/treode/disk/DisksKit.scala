@@ -5,6 +5,7 @@ import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback, Scheduler}
 
 import Async.{guard, latch}
+import Callback.ignore
 
 private class DisksKit (implicit val scheduler: Scheduler, val config: DisksConfig) {
 
@@ -23,13 +24,5 @@ private class DisksKit (implicit val scheduler: Scheduler, val config: DisksConf
             compactor.launch (pages))
         _ <- disks.launch()
       } yield ()
-    } run (panic)
-
-  def panic (t: Throwable) {
-    throw t
-  }
-
-  val panic: Callback [Unit] = {
-    case Success (v) => ()
-    case Failure (t) => panic (t)
-  }}
+    } run (ignore)
+}

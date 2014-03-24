@@ -45,10 +45,6 @@ package disk {
     override def getMessage = s"No such disks are attached: ${paths mkString ", "}"
   }
 
-  class PanickedException (t: Throwable) extends Exception (t) {
-    override def getMessage = "Panicked."
-  }
-
   class SuperblockOverflowException extends Exception {
     override def getMessage = "The superblock data is to large for its allocated disk space."
   }

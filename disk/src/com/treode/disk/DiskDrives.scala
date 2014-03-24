@@ -11,9 +11,10 @@ import com.treode.async.io.File
 
 import Async.{async, guard}
 import AsyncConversions._
+import Callback.ignore
 
 private class DiskDrives (kit: DisksKit) {
-  import kit.{checkpointer, compactor, panic, scheduler}
+  import kit.{checkpointer, compactor, scheduler}
   import kit.config.cell
 
   type AttachItem = (Path, File, DiskGeometry)
@@ -117,7 +118,7 @@ private class DiskDrives (kit: DisksKit) {
 
   private def _detach (items: List [DiskDrive]) {
     engaged = true
-    fiber.run (panic) {
+    fiber.guard {
 
       val paths = items map (_.path)
       val disks = this.disks -- (items map (_.id))
@@ -132,7 +133,9 @@ private class DiskDrives (kit: DisksKit) {
         this.bootgen = bootgen
         items foreach (_.detach())
         println ("Detached " + (paths mkString ","))
-      }}}
+      }
+    } run (ignore)
+  }
 
   def detach (disk: DiskDrive) {
     fiber.execute {

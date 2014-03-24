@@ -3,8 +3,10 @@ package com.treode.disk
 import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback, Fiber}
 
+import Callback.ignore
+
 private class Checkpointer (kit: DisksKit) {
-  import kit.{config, disks, panic, scheduler}
+  import kit.{config, disks, scheduler}
 
   val fiber = new Fiber (scheduler)
   var checkpoints: CheckpointRegistry = null
@@ -27,7 +29,7 @@ private class Checkpointer (kit: DisksKit) {
     }
     checkreq = false
     engaged = true
-    fiber.run (panic) {
+    fiber.guard {
       bytes = 0
       entries = 0
       for {
@@ -37,7 +39,9 @@ private class Checkpointer (kit: DisksKit) {
       } yield fiber.execute {
         rootgen += 1
         reengage()
-      }}}
+      }
+    } run (ignore)
+  }
 
   def launch (checkpoints: CheckpointRegistry): Async [Unit] =
     fiber.supply {
