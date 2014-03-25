@@ -7,7 +7,7 @@ import com.treode.async.{Async, AsyncConversions, Callback, Latch}
 import Async.guard
 import AsyncConversions._
 import PageLedger.{Groups, Merger}
-import PageRegistry.{PickledHandler, Probe, chooseByMargin}
+import PageRegistry.{PickledHandler, Probe}
 
 private class PageRegistry (kit: DisksKit) {
   import kit.{config, releaser, scheduler}
@@ -38,7 +38,7 @@ private class PageRegistry (kit: DisksKit) {
       yield ledger.liveBytes (liveGroups)
   }
 
-  def probeByUtil (iter: Iterator [SegmentPointer], threshold: Double):
+  def probeByUtil (iter: Iterator [SegmentPointer], threshold: Int):
       Async [(Seq [SegmentPointer], Groups)] = {
 
     val candidates =
@@ -62,28 +62,6 @@ private class PageRegistry (kit: DisksKit) {
       val segs = result map (_._1)
       val groups = PageLedger.merge (result map (_._2))
       (segs, groups)
-    }}
-
-  def probeByMargin (iter: Iterator [SegmentPointer], threshold: Double):
-      Async [(Seq [SegmentPointer], Groups)] = {
-
-    val candidates = Seq.newBuilder [(Int, SegmentPointer, Groups)]
-
-    iter.async.foreach { seg =>
-      for {
-        ledger <- seg.probe()
-        live <- probe (ledger)
-      } yield {
-        if (live == 0) {
-          releaser.release (Seq (seg))
-        } else {
-          val util =
-            ((live.toDouble / (seg.limit - seg.pos).toDouble) * 10000D).toInt
-          if (util < threshold)
-            candidates += ((util, seg, ledger.groups))
-        }}
-    } .map { _ =>
-      chooseByMargin (candidates.result, config.cleaningLoad)
     }}
 
   def probeForDrain (iter: Iterator [SegmentPointer]): Async [Groups] = {
@@ -127,31 +105,4 @@ private object PageRegistry {
 
         def compact (obj: ObjectId, groups: Set [PageGroup]): Async [Unit] =
           handler.compact (obj, groups map (_.unpickle (desc.pgrp)))
-     }}
-
-  def set (groups: Groups): Set [(TypeId, ObjectId, PageGroup)] = {
-    val builder = Set.newBuilder [(TypeId, ObjectId, PageGroup)]
-    for (((typ, obj), gs) <- groups; g <- gs)
-      builder += ((typ, obj, g))
-    builder.result
-  }
-
-  def margin (chosen: Set [(TypeId, ObjectId, PageGroup)], groups: Groups): Int = {
-    var count = 0
-    for (((typ, obj), gs) <-  groups; g <- gs)
-      if (!(chosen contains (typ, obj, g)))
-        count += 1
-    count
-  }
-
-  def chooseByMargin (report: Seq [(Int, SegmentPointer, Groups)], load: Int) = {
-    val minByUtil = report.minBy (_._1)
-    val chosenGroups = set (minByUtil._3)
-    val minByMargin = new MinimumCollector [(SegmentPointer, Groups)] (load)
-    for ((util, seg, groups) <- report)
-      minByMargin.add (margin (chosenGroups, groups), (seg, groups))
-    val result = minByMargin.result
-    val segs = result map (_._1)
-    val groups = PageLedger.merge (result map (_._2))
-    (segs, groups)
-  }}
+     }}}

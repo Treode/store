@@ -27,43 +27,57 @@ trait CrashChecks extends PropertyChecks {
   def setup (setup: StubScheduler => Async [_]) (implicit random: Random) =
     new ForCrashesSetup (setup)
 
-  def forCrash (random: Random, target: Int) (init: Random => ForCrashesRunner): Int = {
+  def forCrash (seed: Long, target: Int) (init: Random => ForCrashesRunner): Int = {
+    try {
 
-    val runner = init (random)
 
-    val actual = {           // Setup running only the target number of tasks.
-      val scheduler = StubScheduler.random (random)
-      val cb = runner.setup (scheduler) .capture()
-      scheduler.runTasks (count = target)
-    }
+      val random = new Random (seed)
+      val runner = init (random)
 
-    {                        // Then check the recovery.
-      val scheduler = StubScheduler.random (random)
-      runner.recover (scheduler)
-    }
+      val actual = {           // Setup running only the target number of tasks.
+        val scheduler = StubScheduler.random (random)
+        val cb = runner.setup (scheduler) .capture()
+        scheduler.runTasks (count = target)
+      }
 
-    actual
-  }
+      {                        // Then check the recovery.
+        val scheduler = StubScheduler.random (random)
+        runner.recover (scheduler)
+      }
+
+
+      actual
+    } catch {
+      case t: Throwable =>
+        println (s"Crash and recovery failed; seed=$seed, target=$target")
+        t.printStackTrace()
+        throw t
+    }}
 
   def forAllCrashes (seed: Long) (init: Random => ForCrashesRunner) {
 
-    val random = new Random (seed)
+    val start = System.currentTimeMillis
 
     // Run the first time for as long as possible.
-    val count = forCrash (random, Int.MaxValue) (init)
+    val count = forCrash (seed, Int.MaxValue) (init)
 
     // Run the subsequent times for a portion of what was possible.
-    if (count < limit)
+    if (count < limit) {
       for (i <- 1 to count)
-        forCrash (random, i) (init)
-    else
+        forCrash (seed, i) (init)
+    } else {
+      val random = new Random (seed)
       for (i <- 1 to limit)
-        forCrash (random, random.nextInt (count - 1) + 1) (init)
+        forCrash (seed, random.nextInt (count - 1) + 1) (init)
+    }
+
+    val end = System.currentTimeMillis
+    val average = (end - start) / (if (count < limit) count else limit)
+    println (s"Crash and recovery: seed=$seed, time=${average}ms")
   }
 
   def forAllCrashes (init: Random => ForCrashesRunner) {
     forAll (seeds -> "seed") { seed: Long =>
-      println (f"Checking crashes with seed 0x$seed%016X")
       forAllCrashes (seed) (init)
     }}}
 

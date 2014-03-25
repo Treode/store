@@ -99,7 +99,7 @@ private class Compactor (kit: DisksKit) {
       cleanreq = true
       for {
         iter <- disks.cleanable()
-        (segs, groups) <- pages.probeByUtil (iter, 0.9)
+        (segs, groups) <- pages.probeByUtil (iter, 9000)
       } yield compact (groups, segs, true)
     } run (ignore)
 

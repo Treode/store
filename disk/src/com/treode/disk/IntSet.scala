@@ -26,6 +26,9 @@ private class IntSet private (private val bitmap: Bitmap) {
     new IntSet (dup)
   }
 
+  def intersects (other: IntSet): Boolean =
+    bitmap.intersects (other.bitmap)
+
   def min: Int =
     bitmap.iterator.next
 

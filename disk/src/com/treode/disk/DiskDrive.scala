@@ -70,13 +70,17 @@ private class DiskDrive (
       } yield ()
     }
 
+  private def _protected: IntSet = {
+    val protect = new ArrayBuffer [Int] (logSegs.size + 1)
+    protect ++= logSegs
+    if (!draining)
+      protect += pageSeg.num
+    IntSet (protect.sorted: _*)
+  }
+
   private def _cleanable: Iterator [SegmentPointer] = {
-      val skip = new ArrayBuffer [Int] (logSegs.size + 1)
-      skip ++= logSegs
-      if (!draining)
-        skip += pageSeg.num
-      for (seg <- alloc.cleanable (skip))
-        yield SegmentPointer (this, geometry.segmentBounds (seg))
+    for (seg <- alloc.cleanable (_protected))
+      yield SegmentPointer (this, geometry.segmentBounds (seg))
   }
 
   def cleanable(): Async [Iterator [SegmentPointer]] =
@@ -87,6 +91,7 @@ private class DiskDrive (
   def free (segs: Seq [SegmentPointer]): Unit =
     fiber.execute {
       val nums = IntSet (segs.map (_.num) .sorted: _*)
+      assert (!(nums intersects _protected))
       alloc.free (nums)
       record (SegmentFree (nums)) run (ignore)
       if (draining && alloc.drained (logSegs))

@@ -11,7 +11,7 @@ class MinimumCollector [A] (count: Int) {
 
   def add (rank: Int, value: A) {
     candidates.enqueue ((Int.MaxValue - rank, value))
-    if (candidates.size >= count)
+    if (candidates.size > count)
       candidates.dequeue()
   }
 

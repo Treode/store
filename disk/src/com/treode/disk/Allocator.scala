@@ -25,10 +25,8 @@ private class Allocator private (private var _free: IntSet) {
 
   def free: IntSet = _free
 
-  def cleanable (skip: ArrayBuffer [Int]): Iterator [Int] = {
-    val nums = free.complement.remove (IntSet (skip: _*))
-    nums.iterator
-  }
+  def cleanable (protect: IntSet): Iterator [Int] =
+    free.complement.remove (protect) .iterator
 
   def drained (ignore: Seq [Int]): Boolean = {
     val alloc = free.complement.remove (IntSet (ignore.sorted: _*))

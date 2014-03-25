@@ -12,7 +12,7 @@ import org.scalatest.{Assertions, FreeSpec, ParallelTestExecution}
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.time.SpanSugar
 
-import Async.supply
+import Async.{guard, supply}
 import AsyncConversions._
 import CrashChecks._
 import DiskTestTools._
@@ -22,16 +22,16 @@ import SpanSugar._
 
 class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimitedTests {
 
-  val timeLimit = 5 minutes
+  val timeLimit = 15 minutes
 
   "The logger should replay items" - {
 
-    "without checkpoints" taggedAs (Intensive, Periodic) in { pending
+    "without checkpoints" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
         val geometry = DiskGeometry (10, 6, 1<<20)
-        val disk = new StubFile () (null)
+        val disk = new StubFile (size = 1<<20) (null)
         val tracker = new LogTracker
 
         setup { implicit scheduler =>
@@ -55,12 +55,12 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           replayer.check (tracker)
         }}}
 
-    "with checkpoints" taggedAs (Intensive, Periodic) in { pending
+    "with checkpoints" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 17, 1<<30, 1)
         val geometry = DiskGeometry (10, 6, 1<<20)
-        val disk = new StubFile () (null)
+        val disk = new StubFile (size=1<<20) (null)
         val tracker = new LogTracker
 
         setup { implicit scheduler =>
@@ -91,16 +91,16 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
 
   "The pager should" - {
 
-    "read after write and restart" taggedAs (Intensive, Periodic) in { pending
+    "read after write and restart" taggedAs (Intensive, Periodic) in {
       forAll (seeds) { seed =>
 
+        implicit val random = new Random (0)
         implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
         val geometry = DiskGeometry (10, 6, 1<<20)
-        val disk = new StubFile () (null)
+        val disk = new StubFile (size=1<<20) (null)
         var tracker = new StuffTracker
 
         {
-          implicit val random = new Random (0)
           implicit val scheduler = StubScheduler.random (random)
           disk.scheduler = scheduler
           implicit val recovery = Disks.recover()
@@ -109,30 +109,44 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
         }
 
         {
-          implicit val scheduler = StubScheduler.random()
+          implicit val scheduler = StubScheduler.random (random)
           disk.scheduler = scheduler
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.reattachAndLaunch (("a", disk))
           tracker.check()
         }}}
 
-    "clean" in {
-      forAll (Gen.const (0L)) {seed =>
+    "read and write with cleaning" in {
+      forAllCrashes { implicit random =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
         val geometry = DiskGeometry (10, 6, 1<<20)
         val disk = new StubFile () (null)
         var tracker = new StuffTracker
 
-        {
-          implicit val random = new Random (0)
+        setup { implicit scheduler =>
+          disk.scheduler = scheduler
+
+          implicit val recovery = Disks.recover()
+          implicit val launch = recovery.attachAndCapture (("a", disk, geometry)) .pass
+          import launch.disks
+          tracker.attach (launch)
+          launch.launch()
+
+          for {
+            _ <- tracker.batch (40, 10)
+          } yield {
+            assert (tracker.probed && tracker.compacted, "Expected cleaning.")
+          }}
+
+        .recover { implicit scheduler =>
           implicit val scheduler = StubScheduler.random (random)
           disk.scheduler = scheduler
           implicit val recovery = Disks.recover()
-          implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
-          tracker.batch (40, 10) .pass
-        }
-      }}}}
+          implicit val disks = recovery.reattachAndLaunch (("a", disk))
+          tracker.check()
+        }}
+      }}}
 
 object DiskSystemSpec {
   import Assertions._
@@ -154,7 +168,7 @@ object DiskSystemSpec {
       PageDescriptor (0x79, uint, map (uint, uint))
 
     val stuff =
-      PageDescriptor (0x26, uint, Stuff.pickler)
+      PageDescriptor (0x26, fixedLong, Stuff.pickler)
   }
 
   class LogTracker {
@@ -231,7 +245,7 @@ object DiskSystemSpec {
         this.reread = Some (pos)
       }}
 
-    def attach (implicit disks: Disks.Recovery) {
+    def attach (implicit recovery: Disks.Recovery) {
       records.put.replay ((put _).tupled)
       records.checkpoint.replay ((checkpoint _).tupled)
     }
@@ -248,28 +262,61 @@ object DiskSystemSpec {
     override def toString = s"Replayer(\n  $reread\n  $replayed)"
   }
 
-  class StuffTracker {
+  class StuffTracker (implicit random: Random) {
 
-    private val written = new ArrayList [(Position, Long)]
+    private var written = Map.empty [Long, Position]
+    private var _probed = false
+    private var _compacted = false
 
-    def write (seed: Long) (implicit disks: Disks): Async [Position] =
+    def probed = _probed
+
+    def compacted = _compacted
+
+    def write() (implicit disks: Disks): Async [Unit] = {
+      var seed = random.nextLong()
+      while (written contains seed)
+        seed = random.nextLong()
       for {
-        pos <- pagers.stuff.write (0, 0, Stuff (seed))
+        pos <- pagers.stuff.write (0, seed, Stuff (seed))
       } yield {
-        written.add (pos -> seed)
-        pos
-      }
+        written += seed -> pos
+      }}
 
-   def batch (nrounds: Int, nbatch: Int) (
-      implicit random: Random, scheduler: StubScheduler, disks: Disks): Async [Unit] =
+   def batch (nrounds: Int, nbatch: Int) (implicit
+      scheduler: StubScheduler, disks: Disks): Async [Unit] =
     for {
       _ <- (0 until nrounds) .async
-      seed <- random.nextSeeds (nbatch) .latch.unit
+      _ <- (0 until nbatch) .latch.unit
     } {
-      write (seed)
+      write()
+    }
+
+    def attach (implicit launch: Disks.Launch) {
+      import launch.disks
+
+      _probed = false
+      _compacted = false
+
+      pagers.stuff.handle (new PageHandler [Long] {
+
+        def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+          supply {
+            _probed = true
+            val keep = groups filter (_ => random.nextInt (3) == 0)
+            written --= keep
+            keep
+          }
+
+        def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
+          guard {
+            _compacted = true
+            for (seed <- groups.latch.unit)
+              for (pos <- pagers.stuff.write (0, seed, Stuff (seed)))
+                yield written += seed -> pos
+          }})
     }
 
     def check () (implicit scheduler: StubScheduler, disks: Disks) {
-      for ((pos, seed) <- written)
+      for ((seed, pos) <- written)
         pagers.stuff.read (pos) .expect (Stuff (seed))
     }}}

@@ -10,9 +10,9 @@ import com.treode.buffer.PagedBuffer
 import Async.async
 import AsyncConversions._
 
-class StubFile (implicit _scheduler: StubScheduler) extends File (null) {
+class StubFile (size: Int = 0) (implicit _scheduler: StubScheduler) extends File (null) {
 
-  private var data = new Array [Byte] (0)
+  private var data = new Array [Byte] (size)
   private var stack = new ArrayDeque [Callback [Unit]]
 
   var scheduler: StubScheduler = _scheduler

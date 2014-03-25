@@ -10,7 +10,7 @@ import com.treode.buffer.PagedBuffer
 
 import Async.async
 import AsyncConversions._
-import RecordHeader.{Entry, LogAlloc, LogEnd, PageAlloc, PageWrite}
+import RecordHeader._
 import SuperBlocks.chooseSuperBlock
 
 private class LogIterator private (
@@ -29,6 +29,7 @@ private class LogIterator private (
     config: DisksConfig
 ) extends AsyncIterator [(Long, Unit => Any)] {
 
+  private var draining = superb.draining
   private var logPos = superb.logHead
   private var pagePos = superb.pagePos
 
@@ -53,6 +54,12 @@ private class LogIterator private (
       val start = buf.readPos
       val hdr = RecordHeader.pickler.unpickle (buf)
       hdr match {
+
+        case DiskDrain =>
+          draining = true
+          logPos += len + 4
+          file.deframe (buf, logPos) run (_read)
+
         case LogEnd =>
           logPos = -1L
           buf.clear()
@@ -78,14 +85,16 @@ private class LogIterator private (
           logPos += len + 4
           file.deframe (buf, logPos) run (_read)
 
+        case SegmentFree (nums) =>
+          alloc.free (nums)
+          logPos += len + 4
+          file.deframe (buf, logPos) run (_read)
+
         case Entry (time, id) =>
           val end = buf.readPos
           val entry = records.read (id.id, buf, len - end + start)
           logPos += len + 4
           f ((time, entry), _next)
-
-        case _ =>
-          fail (new MatchError)
       }}
 
     def next() {
@@ -98,7 +107,7 @@ private class LogIterator private (
   def close (kit: DisksKit): DiskDrive = {
     buf.clear()
     val disk = new DiskDrive (
-        superb.id, path, file, superb.geometry, alloc, kit, superb.draining, logSegs,
+        superb.id, path, file, superb.geometry, alloc, kit, draining, logSegs,
         superb.logHead, logPos, logSeg.limit, buf, pageSeg, superb.pagePos, pageLedger, false)
     disk
   }}

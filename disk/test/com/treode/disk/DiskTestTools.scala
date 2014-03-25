@@ -10,7 +10,8 @@ import Disks.Launch
 
 private object DiskTestTools extends AsyncTestTools {
 
-  implicit class RichDisksAgent (agent: DisksAgent) {
+  implicit class RichDisksAgent (_agent: Disks) {
+    val agent = _agent.asInstanceOf [DisksAgent]
     import agent.kit
     import kit.{disks, checkpointer, compactor}
 
@@ -22,13 +23,17 @@ private object DiskTestTools extends AsyncTestTools {
       assert (!compactor.engaged, "Expected compactor to be disengaged.")
     }
 
-    def clean() = compactor.clean()
+    def checkpoint(): Unit =
+      checkpointer.checkpoint()
+
+    def clean() =
+      compactor.clean()
   }
 
   implicit class RichPager [G, P] (pager: PageDescriptor [G, P]) {
 
-    def fetch (pos: Position) (implicit disks: DisksAgent): Async [P] =
-      disks.kit.disks.fetch (pager, pos)
+    def fetch (pos: Position) (implicit disks: Disks): Async [P] =
+      disks.asInstanceOf [DisksAgent] .kit.disks.fetch (pager, pos)
   }
 
   implicit class RichRandom (random: Random) {
@@ -51,28 +56,28 @@ private object DiskTestTools extends AsyncTestTools {
     type AttachItem = (String, File, DiskGeometry)
     type ReattachItem = (String, File)
 
-    def attachAndCapture (items: AttachItem*): Async [LaunchAgent] = {
+    def attachAndCapture (items: AttachItem*): Async [Launch] = {
       val _items = items map (v => (Paths.get (v._1), v._2, v._3))
-      recovery.attach (_items) .map (_.asInstanceOf [LaunchAgent])
+      recovery.attach (_items)
     }
 
-    def attachAndLaunch (items: AttachItem*): DisksAgent = {
+    def attachAndLaunch (items: AttachItem*): Disks = {
       val launch = attachAndCapture (items: _*) .pass
-      val disks = launch.disks.asInstanceOf [DisksAgent]
+      import launch.disks
       launch.launch()
       scheduler.runTasks()
       disks.assertLaunched()
       disks
     }
 
-    def reattachAndCapture (items: ReattachItem*): Async [LaunchAgent] = {
+    def reattachAndCapture (items: ReattachItem*): Async [Launch] = {
       val _items = items map (v => (Paths.get (v._1), v._2))
-      recovery.reattach (_items) .map (_.asInstanceOf [LaunchAgent])
+      recovery.reattach (_items)
     }
 
-    def reattachAndLaunch (items: ReattachItem*): DisksAgent = {
+    def reattachAndLaunch (items: ReattachItem*): Disks = {
       val launch = reattachAndCapture (items: _*) .pass
-      val disks = launch.disks.asInstanceOf [DisksAgent]
+      import launch.disks
       launch.launch()
       scheduler.runTasks()
       disks.assertLaunched()
