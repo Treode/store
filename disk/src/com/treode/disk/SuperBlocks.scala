@@ -53,8 +53,10 @@ private object SuperBlocks {
     val n0 = sb0 count (_.boot.gen == gen0)
     val gen1 = if (sb1.isEmpty) -1 else sb1.map (_.boot.gen) .max
     val n1 = sb1 count (_.boot.gen == gen1)
-    if (n0 != superbs.size && n1 != superbs.size)
+    if (n0 != superbs.size && n1 != superbs.size) {
+      println (superbs)
       throw new InconsistentSuperBlocksException
+    }
 
     (n0 == superbs.size) && (gen0 > gen1 || n1 != superbs.size)
   }

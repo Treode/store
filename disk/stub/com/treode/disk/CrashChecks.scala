@@ -53,7 +53,7 @@ trait CrashChecks extends PropertyChecks {
         throw t
     }}
 
-  def forAllCrashes (seed: Long) (init: Random => ForCrashesRunner) {
+  def forAllCrashes (seed: Long, quick: Boolean) (init: Random => ForCrashesRunner) {
 
     val start = System.currentTimeMillis
 
@@ -72,12 +72,18 @@ trait CrashChecks extends PropertyChecks {
 
     val end = System.currentTimeMillis
     val average = (end - start) / (if (count < limit) count else limit)
-    println (s"Crash and recovery: seed=$seed, time=${average}ms")
+    if (!quick)
+      println (s"Crash and recovery: seed=$seed, time=${average}ms")
   }
 
   def forAllCrashes (init: Random => ForCrashesRunner) {
     forAll (seeds -> "seed") { seed: Long =>
-      forAllCrashes (seed) (init)
+      forAllCrashes (seed, false) (init)
+    }}
+
+  def forAllQuickCrashes (init: Random => ForCrashesRunner) {
+    forAll (seeds -> "seed") { seed: Long =>
+      forAllCrashes (seed, true) (init)
     }}}
 
 object CrashChecks extends CrashChecks

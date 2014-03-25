@@ -183,13 +183,15 @@ private object DiskTestTools extends AsyncTestTools {
 
     def reopenAndWait (paths: String*) (items: ReattachItem*) (
         implicit scheduler: StubScheduler, config: DisksConfig): Async [Launch] = {
-      val paths = items .map (item => Paths.get (item._1))
-      val files = items .map { item =>
-        item._2.scheduler = scheduler
-        (Paths.get (item._1), item._2)
-      } .toMap
+      val _paths = paths map (Paths.get (_))
+      val _items =
+        for ((path, file) <- items) yield {
+          file.scheduler = scheduler
+          (Paths.get (path), file)
+        }
+      val files = _items.toMap
       def superbs (path: Path) = SuperBlocks.read (path, files (path))
-      agent._reattach (paths) (superbs _)
+      agent._reattach (_paths) (superbs _)
     }
 
     def reopenAndLaunch (paths: String*) (items: ReattachItem*) (

@@ -4,11 +4,12 @@ import java.nio.file.Paths
 
 import com.treode.async.StubScheduler
 import com.treode.async.io.StubFile
+import com.treode.tags.Periodic
 import org.scalatest.FreeSpec
 
 import DiskTestTools._
 
-class DiskDrivesSpec extends FreeSpec {
+class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
   implicit val config = DisksConfig (0, 8, 1<<10, 100, 3, 1)
   val geom = DiskGeometry (10, 4, 1<<20)
@@ -17,48 +18,60 @@ class DiskDrivesSpec extends FreeSpec {
 
     "when ready, should" - {
 
-      "allow attaching a new item" in {
+      "allow attaching a new item" taggedAs (Periodic) in {
+        forAllQuickCrashes { implicit random =>
 
-        val file1 = new StubFile () (null)
-        val file2 = new StubFile () (null)
+          val file1 = new StubFile () (null)
+          val file2 = new StubFile () (null)
+          var attached = false
 
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.attachAndControl (("a", file1, geom))
-          controller.assertDisks ("a")
-          controller.attachAndPass (("b", file2, geom))
-          controller.assertDisks ("a", "b")
-        }
+          setup { implicit scheduler =>
+            val recovery = Disks.recover()
+            attached = false
+            for {
+              launch <- recovery.attachAndWait (("a", file1, geom))
+              controller = launch.controller
+              _ <- controller.attachAndWait (("b", file2, geom))
+            } yield {
+              controller.assertDisks ("a", "b")
+              attached = true
+            }}
 
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.reattachAndLaunch (("a", file1), ("b", file2))
-          controller.assertDisks ("a", "b")
-        }}
+          .recover { implicit scheduler =>
+            val recovery = Disks.recover()
+            val controller = recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2))
+            if (attached)
+              controller.assertDisks ("a", "b")
+          }}}
 
-      "allow attaching multiple new items" in {
+      "allow attaching multiple new items" taggedAs (Periodic) in {
+        forAllQuickCrashes { implicit random =>
 
-        val file1 = new StubFile () (null)
-        val file2 = new StubFile () (null)
-        val file3 = new StubFile () (null)
+          val file1 = new StubFile () (null)
+          val file2 = new StubFile () (null)
+          val file3 = new StubFile () (null)
+          var attached = false
 
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.attachAndControl (("a", file1, geom))
-          controller.attachAndPass (("b", file2, geom), ("c", file3, geom))
-          controller.assertDisks ("a", "b", "c")
-        }
+          setup { implicit scheduler =>
+            val recovery = Disks.recover()
+            attached = false
+            for {
+              launch <- recovery.attachAndWait (("a", file1, geom))
+              controller = launch.controller
+              _ <- controller.attachAndWait (("b", file2, geom), ("c", file3, geom))
+            } yield {
+              controller.assertDisks ("a", "b", "c")
+              attached = true
+            }}
 
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller =
-            recovery.reattachAndLaunch (("a", file1), ("b", file2), ("c", file3))
-          controller.assertDisks ("a", "b", "c")
-        }}
+          .recover { implicit scheduler =>
+            implicit val scheduler = StubScheduler.random()
+            val recovery = Disks.recover()
+            val controller =
+              recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2), ("c", file3))
+            if (attached)
+              controller.assertDisks ("a", "b", "c")
+          }}}
 
       "reject attaching no items" in {
 
@@ -121,52 +134,63 @@ class DiskDrivesSpec extends FreeSpec {
           controller.assertDisks ("a")
         }}
 
-      "allow draining an item" in {
+      "allow draining an item" taggedAs (Periodic) in {
+        forAllQuickCrashes { implicit random =>
 
-        val file1 = new StubFile () (null)
-        val file2 = new StubFile () (null)
+          val file1 = new StubFile () (null)
+          val file2 = new StubFile () (null)
+          var drained = false
 
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.attachAndControl (("a", file1, geom), ("b", file2, geom))
-          controller.assertDisks ("a", "b")
-          controller.drainAndPass ("b")
-          assert (file2.closed)
-          controller.assertDisks ("a")
-        }
+          setup { implicit scheduler =>
+            val recovery = Disks.recover()
+            drained = false
+            for {
+              launch <- recovery.attachAndWait (("a", file1, geom), ("b", file2, geom))
+              controller = launch.controller
+              _ <- controller.drainAndWait ("b")
+            } yield {
+              assert (file2.closed)
+              controller.assertDisks ("a")
+              drained = true
+            }}
 
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.reattachAndLaunch (("a", file1))
-          controller.assertDisks ("a")
-        }}
+          .recover { implicit scheduler =>
+            val recovery = Disks.recover()
+            val controller = recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2))
+            if (drained)
+              controller.assertDisks ("a")
+          }}}
 
-      "allow draining multiple items" in {
+      "allow draining multiple items" taggedAs (Periodic) in {
+        forAllQuickCrashes { implicit random =>
 
-        val file1 = new StubFile () (null)
-        val file2 = new StubFile () (null)
-        val file3 = new StubFile () (null)
+          val file1 = new StubFile () (null)
+          val file2 = new StubFile () (null)
+          val file3 = new StubFile () (null)
+          var drained = false
 
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller =
-            recovery.attachAndControl (("a", file1, geom), ("b", file2, geom), ("c", file3, geom))
-          controller.assertDisks ("a", "b", "c")
-          controller.drainAndPass ("b", "c")
-          assert (file2.closed)
-          assert (file3.closed)
-          controller.assertDisks ("a")
-        }
+          setup { implicit scheduler =>
+            val recovery = Disks.recover()
+            drained = false
+            for {
+              launch <- recovery
+                  .attachAndWait (("a", file1, geom), ("b", file2, geom), ("c", file3, geom))
+              controller = launch.controller
+              _ <- controller.drainAndWait ("b", "c")
+            } yield {
+              assert (file2.closed)
+              assert (file3.closed)
+              controller.assertDisks ("a")
+              drained = true
+            }}
 
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.reattachAndLaunch (("a", file1))
-          controller.assertDisks ("a")
-        }}
+          .recover { implicit scheduler =>
+            val recovery = Disks.recover()
+            val controller = recovery
+              .reopenAndLaunch ("a") (("a", file1), ("b", file2), ("c", file3))
+            if (drained)
+              controller.assertDisks ("a")
+          }}}
 
       "reject draining no items" in {
 
@@ -228,23 +252,25 @@ class DiskDrivesSpec extends FreeSpec {
           controller.assertDisks ("a")
         }}
 
-      "allow a checkpoint" in {
+      "allow a checkpoint" taggedAs (Periodic) in {
+        forAllQuickCrashes { implicit random =>
 
-        val file = new StubFile () (null)
+          val file = new StubFile () (null)
 
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.attachAndControl (("a", file, geom))
-          controller.checkpoint() .pass
-        }
+          setup {  implicit scheduler =>
+            val recovery = Disks.recover()
+            for {
+              launch <- recovery.attachAndWait (("a", file, geom))
+              controller = launch.controller
+              _ <- controller.checkpoint()
+            } yield ()
+          }
 
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.reattachAndLaunch (("a", file))
-          controller.assertDisks ("a")
-        }}
+          .recover { implicit scheduler =>
+            val recovery = Disks.recover()
+            val controller = recovery.reattachAndLaunch (("a", file))
+            controller.assertDisks ("a")
+          }}}
 
       "reject a checkpoint when one is already waiting" in {
 
