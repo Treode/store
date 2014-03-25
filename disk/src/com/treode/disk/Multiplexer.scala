@@ -30,7 +30,7 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     t
   }
 
-  private def deliver (receiver: R, messages: UnrolledBuffer [M]): Unit =
+  def deliver (receiver: R, messages: UnrolledBuffer [M]): Unit =
     scheduler.execute (receiver (messages))
 
   private def _close() {
@@ -56,6 +56,8 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     } else {
       closer = Some (cb)
     }}
+
+  def isClosed: Boolean = closed
 
   private def dispatch (messages: UnrolledBuffer [M]): Unit = fiber.execute {
     enrolled = false

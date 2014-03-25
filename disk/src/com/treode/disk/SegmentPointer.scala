@@ -22,7 +22,7 @@ private class SegmentPointer private (val disk: DiskDrive, val bounds: SegmentBo
     (disk.id, bounds.num).hashCode
 
   override def toString: String =
-    s"SegmentPointer(${disk.id}, ${bounds.num}"
+    s"SegmentPointer(${disk.id}, ${bounds.num})"
 }
 
 private object SegmentPointer {

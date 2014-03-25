@@ -21,15 +21,15 @@ private class Allocator private (private var _free: IntSet) {
   }
 
   def free (nums: IntSet): Unit =
-    free.add (nums)
+    _free = _free.add (nums)
 
   def free: IntSet = _free
 
   def cleanable (protect: IntSet): Iterator [Int] =
     free.complement.remove (protect) .iterator
 
-  def drained (ignore: Seq [Int]): Boolean = {
-    val alloc = free.complement.remove (IntSet (ignore.sorted: _*))
+  def drained (ignore: IntSet): Boolean = {
+    val alloc = free.complement.remove (ignore)
     alloc.size == 0
   }}
 

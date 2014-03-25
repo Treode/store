@@ -14,4 +14,10 @@ private class ControllerAgent (kit: DisksKit, val disks: Disks) extends Disks.Co
 
   def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Unit] =
     drives.attach (items, exec)
+
+  def drain (items: Seq [Path]): Async [Unit] =
+    drives.drain (items)
+
+  def checkpoint(): Async [Unit] =
+    drives.checkpoint()
 }

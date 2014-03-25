@@ -26,6 +26,8 @@ object Disks {
     def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit]
 
     def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Unit]
+
+    def drain (items: Seq [Path]): Async [Unit]
   }
 
   trait Launch {

@@ -16,14 +16,15 @@ class StubFile (size: Int = 0) (implicit _scheduler: StubScheduler) extends File
   private var stack = new ArrayDeque [Callback [Unit]]
 
   var scheduler: StubScheduler = _scheduler
-
   var stop: Boolean = false
+  var closed = false
 
   def hasLast: Boolean = !stack.isEmpty
 
   def last: Callback [Unit] = stack.pop()
 
-  private def _stop (f: Callback [Unit] => Any): Async [Unit] =
+  private def _stop (f: Callback [Unit] => Any): Async [Unit] = {
+    require (!closed, "File has been closed")
     async { cb =>
       if (stop) {
         stack.push {
@@ -34,7 +35,7 @@ class StubFile (size: Int = 0) (implicit _scheduler: StubScheduler) extends File
         }
       } else {
         f (cb)
-      }}
+      }}}
 
   override def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
     _stop { cb =>
@@ -70,6 +71,9 @@ class StubFile (size: Int = 0) (implicit _scheduler: StubScheduler) extends File
       } catch {
         case t: Throwable => scheduler.fail (cb, t)
       }}
+
+  override def close(): Unit =
+    closed = true
 
   override def toString = s"StubFile(size=${data.length})"
 }

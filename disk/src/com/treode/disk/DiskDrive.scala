@@ -54,6 +54,14 @@ private class DiskDrive (
       logHead = logTail
     }
 
+  private def _protected: IntSet = {
+    val protect = new ArrayBuffer [Int] (logSegs.size + 1)
+    protect ++= logSegs
+    if (!draining)
+      protect += pageSeg.num
+    IntSet (protect.sorted: _*)
+  }
+
   private def writeLedger(): Async [Unit] = {
     when (pageLedgerDirty) {
       pageLedgerDirty = false
@@ -68,14 +76,6 @@ private class DiskDrive (
         _ <- writeLedger()
         _ <- SuperBlock.write (superb, file)
       } yield ()
-    }
-
-  private def _protected: IntSet = {
-    val protect = new ArrayBuffer [Int] (logSegs.size + 1)
-    protect ++= logSegs
-    if (!draining)
-      protect += pageSeg.num
-    IntSet (protect.sorted: _*)
   }
 
   private def _cleanable: Iterator [SegmentPointer] = {
@@ -94,22 +94,25 @@ private class DiskDrive (
       assert (!(nums intersects _protected))
       alloc.free (nums)
       record (SegmentFree (nums)) run (ignore)
-      if (draining && alloc.drained (logSegs))
+      if (draining && alloc.drained (_protected))
         disks.detach (this)
     }
 
   def drain(): Async [Iterator [SegmentPointer]] =
     fiber.guard {
+      assert (!draining)
       draining = true
       for {
         _ <- pagemp.close()
         _ <- latch (writeLedger(), record (DiskDrain))
         segs <- fiber.supply (_cleanable)
-      } yield segs
-    }
+      } yield {
+        segs
+      }}
 
   def detach(): Unit =
     fiber.guard {
+      assert (!logmp.isClosed)
       for (_ <- logmp.close())
         yield file.close()
     } run (ignore)
@@ -281,7 +284,10 @@ private class DiskDrive (
               advancePages (pos, ledger)
       } yield pos
       task run cb
-    }}
+    }
+
+  override def toString = s"DiskDrive($path, $geometry)"
+}
 
 private object DiskDrive {
 

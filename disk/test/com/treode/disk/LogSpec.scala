@@ -5,6 +5,7 @@ import scala.util.Random
 import com.treode.async.{Async, AsyncConversions, AsyncTestTools, Callback, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.pickle.{InvalidTagException, Picklers}
+import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
 import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks
@@ -29,14 +30,12 @@ class LogSpec extends FlatSpec with PropertyChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      disk.scheduler = scheduler
       implicit val recovery = Disks.recover()
       implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
     }
 
     {
       implicit val scheduler = StubScheduler.random()
-      disk.scheduler = scheduler
       implicit val recovery = Disks.recover()
       val replayed = Seq.newBuilder [String]
       record.replay (replayed += _)
@@ -50,7 +49,6 @@ class LogSpec extends FlatSpec with PropertyChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      disk.scheduler = scheduler
       implicit val recovery = Disks.recover()
       implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
       record.record ("one") .pass
@@ -58,7 +56,6 @@ class LogSpec extends FlatSpec with PropertyChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      disk.scheduler = scheduler
       implicit val recovery = Disks.recover()
       val replayed = Seq.newBuilder [String]
       record.replay (replayed += _)
@@ -72,7 +69,6 @@ class LogSpec extends FlatSpec with PropertyChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      disk.scheduler = scheduler
       implicit val recovery = Disks.recover()
       implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
       record.record ("one") .pass
@@ -80,9 +76,8 @@ class LogSpec extends FlatSpec with PropertyChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      disk.scheduler = scheduler
       implicit val recovery = Disks.recover()
-      recovery.reattachAndCapture (("a", disk)) .fail [InvalidTagException]
+      recovery.reattachAndWait (("a", disk)) .fail [InvalidTagException]
     }}
 
   it should "report an error from a replay function" in {
@@ -91,7 +86,6 @@ class LogSpec extends FlatSpec with PropertyChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      disk.scheduler = scheduler
       implicit val recovery = Disks.recover()
       implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
       record.record ("one") .pass
@@ -99,10 +93,9 @@ class LogSpec extends FlatSpec with PropertyChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      disk.scheduler = scheduler
       implicit val recovery = Disks.recover()
       record.replay (_ => throw new DistinguishedException)
-      recovery.reattachAndCapture (("a", disk)) .fail [DistinguishedException]
+      recovery.reattachAndWait (("a", disk)) .fail [DistinguishedException]
     }}
 
   it should "run one checkpoint at a time" in {
@@ -112,7 +105,7 @@ class LogSpec extends FlatSpec with PropertyChecks {
       implicit val scheduler = StubScheduler.random (random)
       val disk = new StubFile
       val recovery = Disks.recover()
-      val launch = recovery.attachAndCapture (("a", disk, geometry)) .pass
+      val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
       import launch.disks
 
       var checkpointed = false

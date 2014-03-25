@@ -9,11 +9,11 @@ import com.treode.async.io.File
 
 package disk {
 
-  class AlreadyAttachedException (paths: Seq [Path]) extends Exception {
+  class AlreadyAttachedException (paths: Seq [Path]) extends IllegalArgumentException {
     override def getMessage = s"Disks already attached: ${paths mkString ", "}"
   }
 
-  class CannotDrainAllException extends Exception {
+  class CannotDrainAllException extends IllegalArgumentException {
     override def getMessage = "Cannot drain all disks."
   }
 
@@ -25,7 +25,7 @@ package disk {
     override def getMessage = "Disk full."
   }
 
-  class ExtraDisksException (paths: Seq [Path]) extends Exception {
+  class ExtraDisksException (paths: Seq [Path]) extends IllegalArgumentException {
     override def getMessage = s"Extra disks in reattachment: ${paths mkString ", "}"
   }
 
@@ -33,7 +33,7 @@ package disk {
     override def getMessage = "Inconsistent superblocks."
   }
 
-  class MissingDisksException (paths: Seq [Path]) extends Exception {
+  class MissingDisksException (paths: Seq [Path]) extends IllegalArgumentException {
     override def getMessage = s"Missing disks in reattachment: ${paths mkString ", "}"
   }
 

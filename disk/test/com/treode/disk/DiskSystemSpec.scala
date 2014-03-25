@@ -4,7 +4,7 @@ import java.util.ArrayList
 import scala.collection.JavaConversions
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncConversions, AsyncTestTools, StubScheduler}
+import com.treode.async.{Async, AsyncConversions, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
@@ -35,10 +35,8 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
         val tracker = new LogTracker
 
         setup { implicit scheduler =>
-          disk.scheduler = scheduler
-
           implicit val recovery = Disks.recover()
-          val launch = recovery.attachAndCapture (("a", disk, geometry)) .pass
+          val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
           import launch.disks
           launch.checkpoint (fail ("Expected no checkpoints"))
           launch.launch()
@@ -46,8 +44,6 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
         }
 
         .recover { implicit scheduler =>
-          disk.scheduler = scheduler
-
           implicit val recovery = Disks.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
@@ -64,10 +60,8 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
         val tracker = new LogTracker
 
         setup { implicit scheduler =>
-          disk.scheduler = scheduler
-
           implicit val recovery = Disks.recover()
-          implicit val launch = recovery.attachAndCapture (("a", disk, geometry)) .pass
+          implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
           import launch.disks
           var checkpoint = false
           tracker.attach (launch)
@@ -80,8 +74,6 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           }}
 
         .recover { implicit scheduler =>
-          disk.scheduler = scheduler
-
           implicit val recovery = Disks.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
@@ -102,7 +94,6 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
 
         {
           implicit val scheduler = StubScheduler.random (random)
-          disk.scheduler = scheduler
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
           tracker.batch (40, 10) .pass
@@ -110,13 +101,12 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
 
         {
           implicit val scheduler = StubScheduler.random (random)
-          disk.scheduler = scheduler
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.reattachAndLaunch (("a", disk))
           tracker.check()
         }}}
 
-    "read and write with cleaning" in {
+    "read and write with cleaning" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
@@ -125,10 +115,8 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
         var tracker = new StuffTracker
 
         setup { implicit scheduler =>
-          disk.scheduler = scheduler
-
           implicit val recovery = Disks.recover()
-          implicit val launch = recovery.attachAndCapture (("a", disk, geometry)) .pass
+          implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
           import launch.disks
           tracker.attach (launch)
           launch.launch()
@@ -141,12 +129,10 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
 
         .recover { implicit scheduler =>
           implicit val scheduler = StubScheduler.random (random)
-          disk.scheduler = scheduler
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.reattachAndLaunch (("a", disk))
           tracker.check()
-        }}
-      }}}
+        }}}}}
 
 object DiskSystemSpec {
   import Assertions._

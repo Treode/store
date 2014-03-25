@@ -30,7 +30,6 @@ trait CrashChecks extends PropertyChecks {
   def forCrash (seed: Long, target: Int) (init: Random => ForCrashesRunner): Int = {
     try {
 
-
       val random = new Random (seed)
       val runner = init (random)
 

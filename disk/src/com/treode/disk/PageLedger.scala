@@ -76,6 +76,8 @@ class PageLedger (
     new Zipped (builder.map {case ((id, obj), groups) => (id, obj, groups)} .toSeq)
   }
 
+  override def isEmpty = ledger.isEmpty
+
   override def clone(): PageLedger =
     new PageLedger (ledger, objects, _byteSize)
 }

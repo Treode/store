@@ -12,7 +12,8 @@ private class Dispatcher [M] (scheduler: Scheduler) (implicit mtag: ClassTag [M]
   private val fiber = new Fiber (scheduler)
   private var engaged = false
   private var messages = new UnrolledBuffer [M]
-  private val receivers = new ArrayDeque [R]
+
+  val receivers = new ArrayDeque [R]
 
   private def singleton (m: M): UnrolledBuffer [M] =
     UnrolledBuffer (m)

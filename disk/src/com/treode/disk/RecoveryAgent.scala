@@ -36,13 +36,14 @@ extends Disks.Recovery {
 
   def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Launch] =
     guard {
+
+      val attaching = items.map (_._1) .toSet
       require (!items.isEmpty, "Must list at least one file or device to attach.")
+      require (attaching.size == items.size, "Cannot attach a path multiple times.")
       close()
 
       val kit = new DisksKit
-      val attaching = items.map (_._1) .toSet
       val boot = BootBlock.apply (cell, 0, items.size, attaching)
-
       for {
         drives <-
           for (((path, file, geometry), i) <- items.zipWithIndex.latch.indexed)
@@ -64,8 +65,12 @@ extends Disks.Recovery {
 
   def reattach (items: Seq [(Path, File)]): Async [Launch] =
     guard {
+
+      val reattaching = items.map (_._1) .toSet
       require (!items.isEmpty, "Must list at least one file or device to reaattach.")
+      require (reattaching.size == items.size, "Cannot reattach a path multiple times.")
       close()
+
       for {
         superbs <- reopen (items)
         _ = verifyReattachment (superbs)

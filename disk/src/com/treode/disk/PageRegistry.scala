@@ -72,7 +72,10 @@ private class PageRegistry (kit: DisksKit) {
       for {
         ledger <- seg.probe()
       } yield {
-        merger.add (ledger.groups)
+        if (ledger.isEmpty)
+          releaser.release (Seq (seg))
+        else
+          merger.add (ledger.groups)
       }
     } .map { _ =>
       merger.result

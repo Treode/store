@@ -92,20 +92,24 @@ private class DiskDrives (kit: DisksKit) {
       for {
         newDisks <-
           for (((path, file, geometry), i) <- items.zipWithIndex.latch.indexed)
-            DiskDrive.init (this.number + i, path, file, geometry, newBoot, kit)
+            DiskDrive.init (this.number + i + 1, path, file, geometry, newBoot, kit)
         _ <- priorDisks.latch.unit foreach (_.checkpoint (newBoot))
-
-      } yield {
+      } yield fiber.execute {
         disks ++= newDisks.mapBy (_.id)
         this.bootgen = bootgen
         this.number = number
+        newDisks foreach (_.added())
       }
     } run (cb)
   }
 
   def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit] =
     fiber.async { cb =>
+
+      val attaching = items.map (_._1) .toSet
       require (!items.isEmpty, "Must list at least one file or device to attach.")
+      require (attaching.size == items.size, "Cannot attach a path multiple times.")
+
       if (engaged)
         attachreqs = attachreqs.enqueue (items, cb)
       else
@@ -136,7 +140,7 @@ private class DiskDrives (kit: DisksKit) {
         items foreach (_.detach())
         println ("Detached " + (paths mkString ","))
       }
-    } run (ignore)
+    } run (leave (ignore))
   }
 
   def detach (disk: DiskDrive) {
@@ -204,15 +208,15 @@ private class DiskDrives (kit: DisksKit) {
     } run (cb)
   }
 
-  def checkpoint (): Async [Unit] =
+  def checkpoint(): Async [Unit] =
     fiber.async { cb =>
-      require (checkreqs.isEmpty, "A checkpoint is already in progress.")
-      if (engaged)
+      require (checkreqs.isEmpty, "A checkpoint is already waiting.")
+      if (engaged) {
         checkreqs = Some (cb)
-      else
+      } else {
         engaged = true
         _checkpoint (cb)
-    }
+      }}
 
   def cleanable(): Async [Iterator [SegmentPointer]] =  {
     fiber.guard {

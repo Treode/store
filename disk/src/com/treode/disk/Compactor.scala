@@ -113,6 +113,6 @@ private class Compactor (kit: DisksKit) {
   def drain (iter: Iterator [SegmentPointer]): Unit =
     guard {
       for (groups <- pages.probeForDrain (iter))
-        yield  compact (groups, iter.toSeq, false)
+        yield compact (groups, iter.toSeq, false)
     } run (ignore)
 }
