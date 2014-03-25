@@ -168,34 +168,24 @@ class RecoverySpec extends FreeSpec {
 
     "when given unopened paths should" - {
 
-      val path1 = Paths.get ("a")
-      val path2 = Paths.get ("b")
-      val path3 = Paths.get ("c")
-
       "pass when given all of the items" in {
         implicit val scheduler = StubScheduler.random()
         val file = new StubFile
         val file2 = new StubFile
-        var recovery = Disks.recover() .asInstanceOf [RecoveryAgent]
+        var recovery = Disks.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
-        recovery = Disks.recover() .asInstanceOf [RecoveryAgent]
-        recovery._reattach (Seq (path1, path2)) {
-          case `path1` => SuperBlocks.read (path1, file)
-          case `path2` => SuperBlocks.read (path2, file2)
-        } .pass
+        recovery = Disks.recover()
+        recovery.reopenAndLaunch ("a", "b") (("a", file), ("b", file2))
       }
 
       "pass when given a subset of the items" in {
         implicit val scheduler = StubScheduler.random()
         val file = new StubFile
         val file2 = new StubFile
-        var recovery = Disks.recover() .asInstanceOf [RecoveryAgent]
-        recovery.attach (Seq ((path1, file, geom), (path2, file2, geom))) .pass
-        recovery = Disks.recover() .asInstanceOf [RecoveryAgent]
-        recovery._reattach (Seq (path1)) {
-          case `path1` => SuperBlocks.read (path1, file)
-          case `path2` => SuperBlocks.read (path2, file2)
-        } .pass
+        var recovery = Disks.recover()
+        recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
+        recovery = Disks.recover()
+        recovery.reopenAndLaunch ("a") (("a", file), ("b", file2))
       }
 
       "fail when given extra uninitialized items" in {
@@ -203,14 +193,12 @@ class RecoverySpec extends FreeSpec {
         val file = new StubFile
         val file2 = new StubFile
         val file3 = new StubFile
-        var recovery = Disks.recover() .asInstanceOf [RecoveryAgent]
-        recovery.attach (Seq ((path1, file, geom), (path2, file2, geom))) .pass
-        recovery = Disks.recover() .asInstanceOf [RecoveryAgent]
-        recovery._reattach (Seq (path1, path3)) {
-          case `path1` => SuperBlocks.read (path1, file)
-          case `path2` => SuperBlocks.read (path2, file2)
-          case `path3` => SuperBlocks.read (path3, file3)
-        } .fail [InconsistentSuperBlocksException]
+        var recovery = Disks.recover()
+        recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
+        recovery = Disks.recover()
+        recovery
+            .reopenAndWait ("a", "c") (("a", file), ("b", file2), ("c", file3))
+            .fail [InconsistentSuperBlocksException]
       }
 
       "fail when given extra initialized items" in {
@@ -218,14 +206,12 @@ class RecoverySpec extends FreeSpec {
         val file = new StubFile
         val file2 = new StubFile
         val file3 = new StubFile
-        var recovery = Disks.recover() .asInstanceOf [RecoveryAgent]
-        recovery.attach (Seq ((path1, file, geom), (path2, file2, geom))) .pass
-        recovery = Disks.recover() .asInstanceOf [RecoveryAgent]
-        recovery.attach (Seq ((path3, file3, geom))) .pass
-        recovery = Disks.recover() .asInstanceOf [RecoveryAgent]
-        recovery._reattach (Seq (path1, path3)) {
-          case `path1` => SuperBlocks.read (path1, file)
-          case `path2` => SuperBlocks.read (path2, file2)
-          case `path3` => SuperBlocks.read (path3, file3)
-        } .fail [ExtraDisksException]
+        var recovery = Disks.recover()
+        recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
+        recovery = Disks.recover()
+        recovery.attachAndLaunch (("c", file3, geom))
+        recovery = Disks.recover()
+        recovery
+            .reopenAndWait ("a", "c") (("a", file), ("b", file2), ("c", file3))
+            .fail [ExtraDisksException]
       }}}}

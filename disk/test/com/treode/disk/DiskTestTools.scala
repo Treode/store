@@ -1,6 +1,6 @@
 package com.treode.disk
 
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 import scala.collection.JavaConversions
 import scala.collection.mutable.UnrolledBuffer
 import scala.reflect.ClassTag
@@ -141,6 +141,7 @@ private object DiskTestTools extends AsyncTestTools {
     }}
 
   implicit class RichRecovery (recovery: Disks.Recovery) {
+    val agent = recovery.asInstanceOf [RecoveryAgent]
 
     def attachAndWait (items: AttachItem*) (implicit scheduler: StubScheduler): Async [Launch] = {
       recovery.attach (
@@ -176,6 +177,24 @@ private object DiskTestTools extends AsyncTestTools {
 
     def reattachAndLaunch (items: ReattachItem*) (implicit scheduler: StubScheduler): Disks = {
       val launch = reattachAndWait (items: _*) .pass
+      launch.launchAndPass()
+      launch.disks
+    }
+
+    def reopenAndWait (paths: String*) (items: ReattachItem*) (
+        implicit scheduler: StubScheduler, config: DisksConfig): Async [Launch] = {
+      val paths = items .map (item => Paths.get (item._1))
+      val files = items .map { item =>
+        item._2.scheduler = scheduler
+        (Paths.get (item._1), item._2)
+      } .toMap
+      def superbs (path: Path) = SuperBlocks.read (path, files (path))
+      agent._reattach (paths) (superbs _)
+    }
+
+    def reopenAndLaunch (paths: String*) (items: ReattachItem*) (
+        implicit scheduler: StubScheduler, config: DisksConfig): Disks = {
+      val launch = reopenAndWait (paths: _*) (items: _*) .pass
       launch.launchAndPass()
       launch.disks
     }}}
