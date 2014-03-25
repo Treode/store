@@ -15,7 +15,7 @@ private class SuperBlocks (
     val sb1: Option [SuperBlock]) {
 
   def superb (useGen0: Boolean): SuperBlock =
-    if (useGen0) sb0.get else sb0.get
+    if (useGen0) sb0.get else sb1.get
 
   override def toString = s"SuperBlocks($path, $sb0, $sb1)"
 }
