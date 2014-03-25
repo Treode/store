@@ -7,10 +7,15 @@ import com.treode.async.{Async, Callback, Scheduler}
 import Async.{guard, latch}
 import Callback.ignore
 
-private class DisksKit (implicit val scheduler: Scheduler, val config: DisksConfig) {
+private class DisksKit (
+    logBatch: Long
+) (implicit
+    val scheduler: Scheduler,
+    val config: DisksConfig
+) {
 
-  val logd = new Dispatcher [PickledRecord] (scheduler)
-  val paged = new Dispatcher [PickledPage] (scheduler)
+  val logd = new Dispatcher [PickledRecord] (logBatch)
+  val paged = new Dispatcher [PickledPage] (0L)
   val disks = new DiskDrives (this)
   val checkpointer = new Checkpointer (this)
   val releaser = new Releaser

@@ -96,7 +96,7 @@ private object DiskTestTools extends AsyncTestTools {
     private def tickle [M] (dispatcher: Dispatcher [M]) (
         implicit tag: ClassTag [M], scheduler: StubScheduler): Int = {
       while (!dispatcher.receivers.isEmpty)
-        dispatcher.receivers.remove () (new UnrolledBuffer [M])
+        dispatcher.receivers.remove () (0L, new UnrolledBuffer [M])
       scheduler.runTasks()
     }
 

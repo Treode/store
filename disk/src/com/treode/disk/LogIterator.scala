@@ -90,11 +90,11 @@ private class LogIterator private (
           logPos += len + 4
           file.deframe (buf, logPos) run (_read)
 
-        case Entry (time, id) =>
+        case Entry (batch, id) =>
           val end = buf.readPos
           val entry = records.read (id.id, buf, len - end + start)
           logPos += len + 4
-          f ((time, entry), _next)
+          f ((batch, entry), _next)
       }}
 
     def next() {
@@ -152,12 +152,18 @@ private object LogIterator {
 
     val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
     val useGen0 = chooseSuperBlock (reads)
+    var logBatch = 0L
+
+    def replay (batch: Long, entry: Unit => Any) {
+      logBatch = batch
+      entry()
+    }
 
     for {
       logs <- reads.latch.map foreach (apply (useGen0, _, records))
       iter = AsyncIterator.merge (logs.values.toSeq) (ordering)
-      _ <- iter.foreach.f (_._2())
-      kit = new DisksKit
+      _ <- iter.foreach.f ((replay _).tupled)
+      kit = new DisksKit (logBatch)
       drives =
         for (read <- reads) yield {
           val superb = read.superb (useGen0)

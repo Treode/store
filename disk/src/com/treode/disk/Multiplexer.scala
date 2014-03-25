@@ -8,7 +8,7 @@ import com.treode.async.{Async, Callback, Fiber, Scheduler}
 class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     implicit scheduler: Scheduler, mtag: ClassTag [M]) {
 
-  private type R = UnrolledBuffer [M] => Any
+  private type R = (Long, UnrolledBuffer [M]) => Any
 
   private val fiber = new Fiber (scheduler)
   private var enrolled = false
@@ -30,8 +30,8 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     t
   }
 
-  def deliver (receiver: R, messages: UnrolledBuffer [M]): Unit =
-    scheduler.execute (receiver (messages))
+  def deliver (receiver: R, batch: Long, messages: UnrolledBuffer [M]): Unit =
+    scheduler.execute (receiver (batch, messages))
 
   private def _close() {
     scheduler.pass (closer.get, ())
@@ -42,7 +42,7 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     require (!closed, "Multiplexer has been closed.")
     if (!receivers.isEmpty) {
       exclusive = true
-      deliver (remove(), UnrolledBuffer (message))
+      deliver (remove(), 0L, UnrolledBuffer (message))
     } else {
       messages += message
     }}
@@ -59,11 +59,11 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
 
   def isClosed: Boolean = closed
 
-  private def dispatch (messages: UnrolledBuffer [M]): Unit = fiber.execute {
+  private def dispatch (batch: Long, messages: UnrolledBuffer [M]): Unit = fiber.execute {
     enrolled = false
     if (!receivers.isEmpty) {
       exclusive = false
-      deliver (remove(), messages)
+      deliver (remove(), batch, messages)
     } else {
       dispatcher.replace (messages)
     }}
@@ -74,7 +74,7 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     require (receivers.isEmpty)
     if (!messages.isEmpty) {
       exclusive = true
-      deliver (receiver, drain())
+      deliver (receiver, 0L, drain())
     } else if (!closer.isEmpty) {
       _close()
     } else {

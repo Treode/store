@@ -13,7 +13,8 @@ object DispatcherTestTools {
   def list [M] (messages: M*) (implicit mtag: ClassTag [M]): UnrolledBuffer [M] =
     UnrolledBuffer [M] (messages: _*)
 
-  class Receptor [M] (implicit mtag: ClassTag [M]) extends (UnrolledBuffer [M] => Unit) {
+  class Receptor [M] (implicit mtag: ClassTag [M])
+  extends ((Long, UnrolledBuffer [M]) => Unit) {
 
     private var _invokation: Array [StackTraceElement] = null
     private var _messages: UnrolledBuffer [M] = null
@@ -28,7 +29,7 @@ object DispatcherTestTools {
         assert (false, "DispatchReceptor was already invoked.")
       }}
 
-    def apply (messages: UnrolledBuffer [M]): Unit = {
+    def apply (batch: Long, messages: UnrolledBuffer [M]): Unit = {
       _invoked()
       _messages = messages
     }

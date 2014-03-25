@@ -42,7 +42,7 @@ extends Disks.Recovery {
       require (attaching.size == items.size, "Cannot attach a path multiple times.")
       close()
 
-      val kit = new DisksKit
+      val kit = new DisksKit (0)
       val boot = BootBlock.apply (cell, 0, items.size, attaching)
       for {
         drives <-

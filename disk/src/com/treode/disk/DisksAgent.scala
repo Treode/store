@@ -1,5 +1,6 @@
 package com.treode.disk
 
+import java.util.concurrent.atomic.AtomicLong
 import com.treode.async.Async
 
 import Async.async

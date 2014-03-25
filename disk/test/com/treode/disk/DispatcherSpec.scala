@@ -12,7 +12,7 @@ class DispatcherSpec extends FlatSpec {
 
   "The Dispatcher" should "send one message to a later receiver" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (scheduler)
+    val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
     dsp.expect (1)
     dsp.replace (list())
@@ -21,7 +21,7 @@ class DispatcherSpec extends FlatSpec {
 
   it should "send multiple messages to a later receiver" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (scheduler)
+    val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
     dsp.send (2)
     dsp.send (3)
@@ -32,7 +32,7 @@ class DispatcherSpec extends FlatSpec {
 
   it should "send one message to an earlier receiver" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (scheduler)
+    val dsp = new Dispatcher [Int] (0)
     val rcpt = dsp.receptor()
     dsp.send (1)
     rcpt.expect (1)
@@ -42,7 +42,7 @@ class DispatcherSpec extends FlatSpec {
 
   it should "send multiple messages to an earlier receiver" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (scheduler)
+    val dsp = new Dispatcher [Int] (0)
     val rcpt1 = dsp.receptor()
     val rcpt2 = dsp.receptor()
     dsp.send (1)
@@ -58,7 +58,7 @@ class DispatcherSpec extends FlatSpec {
 
   it should "send multiple messages to a later receiver when disengaged" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (scheduler)
+    val dsp = new Dispatcher [Int] (0)
     val rcpt1 = dsp.receptor()
     dsp.send (1)
     val rcpt2 = dsp.receptor()
@@ -74,7 +74,7 @@ class DispatcherSpec extends FlatSpec {
 
   it should "send rejects to the next receiver" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (scheduler)
+    val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
     dsp.send (2)
     dsp.expect (1, 2)
@@ -85,7 +85,7 @@ class DispatcherSpec extends FlatSpec {
 
   it should "send rejects to the next receiver from earlier" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (scheduler)
+    val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
     dsp.send (2)
     val rcpt1 = dsp.receptor()
@@ -99,7 +99,7 @@ class DispatcherSpec extends FlatSpec {
 
   it should "send rejects and queued messages to the next receiver" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (scheduler)
+    val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
     dsp.send (2)
     val rcpt1 = dsp.receptor()
@@ -114,7 +114,7 @@ class DispatcherSpec extends FlatSpec {
 
   it should "send rejects and queued messages to the next receiver from earlier" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (scheduler)
+    val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
     dsp.send (2)
     val rcpt1 = dsp.receptor()
@@ -130,14 +130,14 @@ class DispatcherSpec extends FlatSpec {
   it should "recycle rejects until accepted" in {
 
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (scheduler)
+    val dsp = new Dispatcher [Int] (0)
 
     var received = Set.empty [Int]
 
     /* Accept upto 5 messages m where (m % n == i).
      * Ensure m was not already accepted.
      */
-    def receive (n: Int, i: Int) (msgs: UnrolledBuffer [Int]) {
+    def receive (n: Int, i: Int) (num: Long, msgs: UnrolledBuffer [Int]) {
       assert (!(msgs exists (received contains _)))
       val (accepts, rejects) = msgs.partition (_ % n == i)
       dsp.replace ((accepts drop 5) ++ rejects)

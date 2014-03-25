@@ -17,7 +17,7 @@ private object RecordHeader {
   case class PageWrite (pos: Long, ledger: Zipped) extends RecordHeader
   case class PageAlloc (next: Int, ledger: Zipped) extends RecordHeader
   case class SegmentFree (nums: IntSet) extends RecordHeader
-  case class Entry (time: Long, id: TypeId) extends RecordHeader
+  case class Entry (batch: Long, id: TypeId) extends RecordHeader
 
   val pickler = {
     import DiskPicklers._
@@ -34,12 +34,12 @@ private object RecordHeader {
         0x6 -> wrap (intSet) .build (SegmentFree.apply _) .inspect (_.nums),
         0x7 -> wrap (fixedLong, typeId)
             .build ((Entry.apply _).tupled)
-            .inspect (v => (v.time, v.id)))
+            .inspect (v => (v.batch, v.id)))
   }
 
   val trailer = 10 // byte count, tag, next; 4 + 1 + 5
 
-  val overhead = 19 // byte count, tag, time, typeId; 4 + 1 + 9 + 5
+  val overhead = 19 // byte count, tag, batch, typeId; 4 + 1 + 9 + 5
 
   def write (entry: RecordHeader, file: File, pos: Long): Async [Unit] =
     guard {

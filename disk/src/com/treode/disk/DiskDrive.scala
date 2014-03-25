@@ -37,9 +37,9 @@ private class DiskDrive (
 
   val fiber = new Fiber (scheduler)
   val logmp = new Multiplexer [PickledRecord] (kit.logd)
-  val logr: UnrolledBuffer [PickledRecord] => Unit = (receiveRecords _)
+  val logr: (Long, UnrolledBuffer [PickledRecord]) => Unit = (receiveRecords _)
   val pagemp = new Multiplexer [PickledPage] (kit.paged)
-  val pager: UnrolledBuffer [PickledPage] => Unit = (receivePages _)
+  val pager: (Long, UnrolledBuffer [PickledPage]) => Unit = (receivePages _)
 
   def record (entry: RecordHeader): Async [Unit] =
     async (cb => logmp.send (PickledRecord (id, entry, cb)))
@@ -138,10 +138,10 @@ private class DiskDrive (
     (accepts, rejects, realloc)
   }
 
-  private def writeRecords (buf: PagedBuffer, entries: Seq [PickledRecord]) = {
+  private def writeRecords (buf: PagedBuffer, batch: Long, entries: Seq [PickledRecord]) = {
     val callbacks = new UnrolledBuffer [Callback [Unit]]
     for (entry <- entries) {
-      entry.write (buf)
+      entry.write (batch, buf)
       callbacks.add (entry.cb)
     }
     callbacks
@@ -178,13 +178,13 @@ private class DiskDrive (
     } yield ()
   }
 
-  def receiveRecords (entries: UnrolledBuffer [PickledRecord]): Unit =
+  def receiveRecords (batch: Long, entries: UnrolledBuffer [PickledRecord]): Unit =
     fiber.execute {
 
       val (accepts, rejects, realloc) = splitRecords (entries)
       logmp.replace (rejects)
 
-      val callbacks = writeRecords (logBuf, accepts)
+      val callbacks = writeRecords (logBuf, batch, accepts)
       val cb = fanout (callbacks, scheduler)
       assert (logTail + logBuf.readableBytes <= logLimit)
 
@@ -265,7 +265,7 @@ private class DiskDrive (
     } yield ()
   }
 
-  def receivePages (pages: UnrolledBuffer [PickledPage]): Unit =
+  def receivePages (batch: Long, pages: UnrolledBuffer [PickledPage]): Unit =
     fiber.execute {
 
       val (accepts, rejects, realloc) = splitPages (pages)
