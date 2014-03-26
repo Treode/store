@@ -12,7 +12,7 @@ import org.scalatest.{Assertions, FreeSpec, ParallelTestExecution}
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.time.SpanSugar
 
-import Async.{guard, supply}
+import Async.{guard, latch, supply}
 import AsyncConversions._
 import CrashChecks._
 import DiskTestTools._
@@ -26,7 +26,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
 
   "The logger should replay items" - {
 
-    "without checkpoints" taggedAs (Intensive, Periodic) in {
+    "without checkpoints using one disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
@@ -40,7 +40,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           import launch.disks
           launch.checkpoint (fail ("Expected no checkpoints"))
           launch.launch()
-          tracker.batch (100, 40, 10)
+          tracker.batches (100, 40, 10)
         }
 
         .recover { implicit scheduler =>
@@ -51,10 +51,43 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           replayer.check (tracker)
         }}}
 
-    "with checkpoints" taggedAs (Intensive, Periodic) in {
+    "without checkpoints using multiple disks" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
-        implicit val config = DisksConfig (0, 8, 1<<30, 17, 1<<30, 1)
+        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
+        val geometry = DiskGeometry (10, 6, 1<<20)
+        val disk1 = new StubFile (size = 1<<20) (null)
+        val disk2 = new StubFile (size = 1<<20) (null)
+        val disk3 = new StubFile (size = 1<<20) (null)
+        val tracker = new LogTracker
+
+        setup { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          val launch = recovery.attachAndWait (
+              ("a", disk1, geometry),
+              ("b", disk2, geometry),
+              ("c", disk3, geometry)) .pass
+          import launch.disks
+          launch.checkpoint (fail ("Expected no checkpoints"))
+          launch.launch()
+          tracker.batches (100, 40, 10)
+        }
+
+        .recover { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          val replayer = new LogReplayer
+          replayer.attach (recovery)
+          implicit val disks = recovery.reattachAndLaunch (
+              ("a", disk1),
+              ("b", disk2),
+              ("c", disk3))
+          replayer.check (tracker)
+        }}}
+
+    "with checkpoints using one disk" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+
+        implicit val config = DisksConfig (0, 8, 1<<30, 57, 1<<30, 1)
         val geometry = DiskGeometry (10, 6, 1<<20)
         val disk = new StubFile (size=1<<20) (null)
         val tracker = new LogTracker
@@ -68,7 +101,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           for {
-            _ <- tracker.batch (100, 40, 10)
+            _ <- tracker.batches (100, 40, 10)
           } yield {
             assert (checkpoint, "Expected a checkpoint")
           }}
@@ -79,7 +112,82 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           replayer.attach (recovery)
           implicit val disks = recovery.reattachAndLaunch (("a", disk))
           replayer.check (tracker)
-        }}}}
+        }}}
+
+    "with checkpoints using multiple disks" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+
+        implicit val config = DisksConfig (0, 8, 1<<30, 57, 1<<30, 1)
+        val geometry = DiskGeometry (10, 6, 1<<20)
+        val disk1 = new StubFile (size = 1<<20) (null)
+        val disk2 = new StubFile (size = 1<<20) (null)
+        val disk3 = new StubFile (size = 1<<20) (null)
+        val tracker = new LogTracker
+
+        setup { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          val launch = recovery.attachAndWait (
+              ("a", disk1, geometry),
+              ("b", disk2, geometry),
+              ("c", disk3, geometry)) .pass
+          import launch.disks
+          var checkpoint = false
+          tracker.attach (launch)
+          launch.checkpoint (supply (checkpoint = true))
+          launch.launch()
+          for {
+            _ <- tracker.batches (100, 40, 10)
+          } yield {
+            assert (checkpoint, "Expected a checkpoint")
+          }}
+
+        .recover { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          val replayer = new LogReplayer
+          replayer.attach (recovery)
+          implicit val disks = recovery.reattachAndLaunch (
+              ("a", disk1),
+              ("b", disk2),
+              ("c", disk3))
+          replayer.check (tracker)
+        }}}
+
+    "while attaching a new disk" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+
+        implicit val config = DisksConfig (0, 8, 1<<30, 17, 1<<30, 1)
+        val geometry = DiskGeometry (10, 6, 1<<20)
+        val disk1 = new StubFile (size=1<<20) (null)
+        val disk2 = new StubFile (size=1<<20) (null)
+        val tracker = new LogTracker
+
+        setup { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          implicit val launch =
+            recovery.attachAndWait (("a", disk1, geometry)) .pass
+          import launch.{disks, controller}
+          var checkpoint = false
+          tracker.attach (launch)
+          launch.checkpoint (supply (checkpoint = true))
+          launch.launch()
+          for {
+            _ <- tracker.batches (100, 2, 5, 0)
+            _ <- latch (
+                tracker.batch (100, 2, 5),
+                controller.attachAndWait (("b", disk2, geometry)))
+            _ <- tracker.batches (100, 2, 5, 3)
+          } yield {
+            assert (checkpoint, "Expected a checkpoint")
+          }}
+
+        .recover { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          val replayer = new LogReplayer
+          replayer.attach (recovery)
+          implicit val disks = recovery.reopenAndLaunch ("a") (("a", disk1), ("b", disk2))
+          replayer.check (tracker)
+        }}}
+  }
 
   "The pager should" - {
 
@@ -172,13 +280,18 @@ object DiskSystemSpec {
         accepted += k -> v
       }}
 
-    def batch (nkeys: Int, nrounds: Int, nbatch: Int) (
+    def batch (nkeys: Int, round: Int, nputs: Int) (
+        implicit random: Random, disks: Disks): Async [Unit] =
+      for (k <- random.nextInts (nputs, nkeys) .latch.unit)
+        put (round, k, random.nextInt (1<<20))
+
+    def batches (nkeys: Int, nbatches: Int, nputs: Int, start: Int = 0) (
         implicit random: Random, scheduler: StubScheduler, disks: Disks): Async [Unit] =
       for {
-        n <- (0 until nrounds) .async
-        k <- random.nextInts (nbatch, nkeys) .latch.unit
+        n <- (0 until nbatches) .async
+        k <- random.nextInts (nputs, nkeys) .latch.unit
       } {
-        put (n, k, random.nextInt (1<<20))
+        put (n + start, k, random.nextInt (1<<20))
       }
 
     def checkpoint () (implicit disks: Disks): Async [Unit] = {

@@ -201,16 +201,20 @@ private class DiskDrives (kit: DisksKit) {
   private def _checkpoint (req: CheckpointRequest) {
     val cb = leave [Unit] (req)
     engaged = true
-    fiber.guard {
+    fiber.supply {
+      val bootgen = this.bootgen + 1
       val attached = disks.values.map (_.path) .toSet
       val newBoot = BootBlock (cell, bootgen, number, attached)
-      disks.latch.unit foreach (_._2.checkpoint (newBoot))
-    } run (cb)
+      disks.latch.unit
+          .foreach (_._2.checkpoint (newBoot))
+          .map (_ => this.bootgen = bootgen)
+          .run (cb)
+    } defer (cb)
   }
 
   def checkpoint(): Async [Unit] =
     fiber.async { cb =>
-      require (checkreqs.isEmpty, "A checkpoint is already waiting.")
+      assert (checkreqs.isEmpty)
       if (engaged) {
         checkreqs = Some (cb)
       } else {

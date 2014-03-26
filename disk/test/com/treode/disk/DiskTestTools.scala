@@ -58,8 +58,8 @@ private object DiskTestTools extends AsyncTestTools {
       disks.assertReady()
     }
 
-    def checkpoint(): Async [Unit] =
-      agent.checkpoint()
+    def finishCheckpoint(): Async [Unit] =
+      disks.finishCheckpoint()
   }
 
   implicit class RichDisksAgent (disks: Disks) {
@@ -107,6 +107,9 @@ private object DiskTestTools extends AsyncTestTools {
 
     def checkpoint(): Unit =
       checkpointer.checkpoint()
+
+    def finishCheckpoint(): Async [Unit] =
+      drives.checkpoint()
 
     def clean() =
       compactor.clean()

@@ -252,7 +252,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           controller.assertDisks ("a")
         }}
 
-      "allow a checkpoint" taggedAs (Periodic) in {
+      "allow finishing a checkpoint" taggedAs (Periodic) in {
         forAllQuickCrashes { implicit random =>
 
           val file = new StubFile () (null)
@@ -262,7 +262,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
             for {
               launch <- recovery.attachAndWait (("a", file, geom))
               controller = launch.controller
-              _ <- controller.checkpoint()
+              _ <- controller.finishCheckpoint()
             } yield ()
           }
 
@@ -272,7 +272,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
             controller.assertDisks ("a")
           }}}
 
-      "reject a checkpoint when one is already waiting" in {
+      "reject finishing a checkpoint when one is already waiting" in {
 
         val file = new StubFile () (null)
 
@@ -280,9 +280,9 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           implicit val scheduler = StubScheduler.random()
           val recovery = Disks.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
-          val cb1 = controller.checkpoint() .capture()
-          val cb2 = controller.checkpoint() .capture()
-          controller.checkpoint() .fail [IllegalArgumentException]
+          val cb1 = controller.finishCheckpoint() .capture()
+          val cb2 = controller.finishCheckpoint() .capture()
+          controller.finishCheckpoint() .fail [AssertionError]
           cb1.passed
           cb2.passed
         }
@@ -395,7 +395,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           controller.assertDisks ("a")
         }}
 
-      "queue a checkpoint" in {
+      "queue finishing a checkpoint" in {
 
         val file = new StubFile () (null)
 
@@ -404,7 +404,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           val recovery = Disks.recover()
           val launch = recovery.attachAndWait (("a", file, geom)) .pass
           val controller = launch.controller
-          val cb = controller.checkpoint() .capture()
+          val cb = controller.finishCheckpoint() .capture()
           launch.launchAndPass()
           cb.passed
         }
@@ -416,7 +416,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           controller.assertDisks ("a")
         }}
 
-      "reject a checkpoint when one is already waiting" in {
+      "reject finishing a checkpoint when one is already waiting" in {
 
         val file = new StubFile () (null)
 
@@ -425,8 +425,8 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           val recovery = Disks.recover()
           val launch = recovery.attachAndWait (("a", file, geom)) .pass
           val controller = launch.controller
-          val cb = controller.checkpoint() .capture()
-          controller.checkpoint() .fail [IllegalArgumentException]
+          val cb = controller.finishCheckpoint() .capture()
+          controller.finishCheckpoint() .fail [AssertionError]
           launch.launchAndPass()
           cb.passed
         }

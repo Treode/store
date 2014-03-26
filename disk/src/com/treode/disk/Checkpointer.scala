@@ -10,7 +10,6 @@ private class Checkpointer (kit: DisksKit) {
 
   val fiber = new Fiber (scheduler)
   var checkpoints: CheckpointRegistry = null
-  var rootgen = 0
   var bytes = 0
   var entries = 0
   var checkreq = false
@@ -37,7 +36,6 @@ private class Checkpointer (kit: DisksKit) {
         _ <- checkpoints.checkpoint()
         _ <- disks.checkpoint()
       } yield fiber.execute {
-        rootgen += 1
         reengage()
       }
     } run (ignore)

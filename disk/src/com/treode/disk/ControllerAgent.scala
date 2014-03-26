@@ -17,7 +17,4 @@ private class ControllerAgent (kit: DisksKit, val disks: Disks) extends Disks.Co
 
   def drain (items: Seq [Path]): Async [Unit] =
     drives.drain (items)
-
-  def checkpoint(): Async [Unit] =
-    drives.checkpoint()
 }
