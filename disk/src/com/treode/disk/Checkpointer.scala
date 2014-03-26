@@ -32,9 +32,9 @@ private class Checkpointer (kit: DisksKit) {
       bytes = 0
       entries = 0
       for {
-        _ <- disks.mark()
+        marks <- disks.mark()
         _ <- checkpoints.checkpoint()
-        _ <- disks.checkpoint()
+        _ <- disks.checkpoint (marks)
       } yield fiber.execute {
         reengage()
       }

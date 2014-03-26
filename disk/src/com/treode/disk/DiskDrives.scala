@@ -21,7 +21,7 @@ private class DiskDrives (kit: DisksKit) {
   type AttachRequest = (Seq [AttachItem], Callback [Unit])
   type DrainRequest = (Seq [Path], Callback [Unit])
   type DetachRequest = DiskDrive
-  type CheckpointRequest = Callback [Unit]
+  type CheckpointRequest = (Map [Int, Long], Callback [Unit])
 
   val fiber = new Fiber (scheduler)
 
@@ -93,7 +93,7 @@ private class DiskDrives (kit: DisksKit) {
         newDisks <-
           for (((path, file, geometry), i) <- items.zipWithIndex.latch.indexed)
             DiskDrive.init (this.number + i + 1, path, file, geometry, newBoot, kit)
-        _ <- priorDisks.latch.unit foreach (_.checkpoint (newBoot))
+        _ <- priorDisks.latch.unit foreach (_.checkpoint (newBoot, None))
       } yield fiber.execute {
         disks ++= newDisks.mapBy (_.id)
         this.bootgen = bootgen
@@ -133,7 +133,7 @@ private class DiskDrives (kit: DisksKit) {
       val newboot = BootBlock (cell, bootgen, number, attached)
 
       for {
-        _ <- disks.latch.unit foreach (_._2.checkpoint (newboot))
+        _ <- disks.latch.unit foreach (_._2.checkpoint (newboot, None))
       } yield {
         this.disks = disks
         this.bootgen = bootgen
@@ -188,38 +188,38 @@ private class DiskDrives (kit: DisksKit) {
 
   def add (disks: Seq [DiskDrive]): Async [Unit] =
     fiber.supply {
-      for (disk <- disks) {
-        this.disks += disk.id -> disk
-        disk.added()
-      }}
+      this.disks ++= disks.mapBy (_.id)
+      disks foreach (_.added())
+    }
 
-  def mark(): Async [Unit] =
+  def mark(): Async [Map [Int, Long]] =
     fiber.guard {
-      disks.latch.unit foreach (_._2.mark())
+      disks.latch.map foreach (_._2.mark())
     }
 
   private def _checkpoint (req: CheckpointRequest) {
-    val cb = leave [Unit] (req)
+    val (marks, _cb) = req
+    val cb = leave (_cb)
     engaged = true
     fiber.supply {
       val bootgen = this.bootgen + 1
       val attached = disks.values.map (_.path) .toSet
       val newBoot = BootBlock (cell, bootgen, number, attached)
-      disks.latch.unit
-          .foreach (_._2.checkpoint (newBoot))
+      disks.values.latch.unit
+          .foreach (disk => disk.checkpoint (newBoot, marks.get (disk.id)))
           .map (_ => this.bootgen = bootgen)
           .run (cb)
     } defer (cb)
   }
 
-  def checkpoint(): Async [Unit] =
+  def checkpoint (marks: Map [Int, Long]): Async [Unit] =
     fiber.async { cb =>
       assert (checkreqs.isEmpty)
       if (engaged) {
-        checkreqs = Some (cb)
+        checkreqs = Some ((marks, cb))
       } else {
         engaged = true
-        _checkpoint (cb)
+        _checkpoint ((marks, cb))
       }}
 
   def cleanable(): Async [Iterator [SegmentPointer]] =  {

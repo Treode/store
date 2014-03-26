@@ -262,7 +262,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
             for {
               launch <- recovery.attachAndWait (("a", file, geom))
               controller = launch.controller
-              _ <- controller.finishCheckpoint()
+              _ <- controller.checkpoint (Map.empty)
             } yield ()
           }
 
@@ -280,9 +280,9 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           implicit val scheduler = StubScheduler.random()
           val recovery = Disks.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
-          val cb1 = controller.finishCheckpoint() .capture()
-          val cb2 = controller.finishCheckpoint() .capture()
-          controller.finishCheckpoint() .fail [AssertionError]
+          val cb1 = controller.checkpoint (Map.empty) .capture()
+          val cb2 = controller.checkpoint (Map.empty) .capture()
+          controller.checkpoint (Map.empty) .fail [AssertionError]
           cb1.passed
           cb2.passed
         }
@@ -404,7 +404,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           val recovery = Disks.recover()
           val launch = recovery.attachAndWait (("a", file, geom)) .pass
           val controller = launch.controller
-          val cb = controller.finishCheckpoint() .capture()
+          val cb = controller.checkpoint (Map.empty) .capture()
           launch.launchAndPass()
           cb.passed
         }
@@ -425,8 +425,8 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           val recovery = Disks.recover()
           val launch = recovery.attachAndWait (("a", file, geom)) .pass
           val controller = launch.controller
-          val cb = controller.finishCheckpoint() .capture()
-          controller.finishCheckpoint() .fail [AssertionError]
+          val cb = controller.checkpoint (Map.empty) .capture()
+          controller.checkpoint (Map.empty) .fail [AssertionError]
           launch.launchAndPass()
           cb.passed
         }

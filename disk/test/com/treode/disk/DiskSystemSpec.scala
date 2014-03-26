@@ -171,11 +171,11 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           for {
-            _ <- tracker.batches (100, 2, 5, 0)
+            _ <- tracker.batches (100, 2, 10, 0)
             _ <- latch (
-                tracker.batch (100, 2, 5),
+                tracker.batch (100, 2, 10),
                 controller.attachAndWait (("b", disk2, geometry)))
-            _ <- tracker.batches (100, 2, 5, 3)
+            _ <- tracker.batches (100, 2, 10, 3)
           } yield {
             assert (checkpoint, "Expected a checkpoint")
           }}

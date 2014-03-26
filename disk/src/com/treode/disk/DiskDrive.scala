@@ -49,9 +49,9 @@ private class DiskDrive (
     pagemp.receive (pager)
   }
 
-  def mark(): Async [Unit] =
+  def mark(): Async [(Int, Long)] =
     fiber.supply {
-      logHead = logTail
+      (id, logTail)
     }
 
   private def _protected: IntSet = {
@@ -68,8 +68,9 @@ private class DiskDrive (
       PageLedger.write (pageLedger.clone(), file, pageSeg.pos)
     }}
 
-  def checkpoint (boot: BootBlock): Async [Unit] =
+  def checkpoint (boot: BootBlock, mark: Option [Long]): Async [Unit] =
     fiber.guard {
+      mark foreach (logHead = _)
       val superb = SuperBlock (
           id, boot, geometry, draining, alloc.free, logSegs.head, logHead, pageSeg.num, pageHead)
       for {
