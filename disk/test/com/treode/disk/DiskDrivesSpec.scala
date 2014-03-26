@@ -250,48 +250,6 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           val recovery = Disks.recover()
           val controller = recovery.reattachAndLaunch (("a", file))
           controller.assertDisks ("a")
-        }}
-
-      "allow finishing a checkpoint" taggedAs (Periodic) in {
-        forAllQuickCrashes { implicit random =>
-
-          val file = new StubFile () (null)
-
-          setup {  implicit scheduler =>
-            val recovery = Disks.recover()
-            for {
-              launch <- recovery.attachAndWait (("a", file, geom))
-              controller = launch.controller
-              _ <- controller.checkpoint (Map.empty)
-            } yield ()
-          }
-
-          .recover { implicit scheduler =>
-            val recovery = Disks.recover()
-            val controller = recovery.reattachAndLaunch (("a", file))
-            controller.assertDisks ("a")
-          }}}
-
-      "reject finishing a checkpoint when one is already waiting" in {
-
-        val file = new StubFile () (null)
-
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.attachAndControl (("a", file, geom))
-          val cb1 = controller.checkpoint (Map.empty) .capture()
-          val cb2 = controller.checkpoint (Map.empty) .capture()
-          controller.checkpoint (Map.empty) .fail [AssertionError]
-          cb1.passed
-          cb2.passed
-        }
-
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.reattachAndLaunch (("a", file))
-          controller.assertDisks ("a")
         }}}
 
     "when engaged, should" - {
@@ -386,49 +344,6 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           launch.launchAndPass (tickle = true)
           cb.failed [IllegalArgumentException]
           controller.assertDisks ("a")
-        }
-
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.reattachAndLaunch (("a", file))
-          controller.assertDisks ("a")
-        }}
-
-      "queue finishing a checkpoint" in {
-
-        val file = new StubFile () (null)
-
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val launch = recovery.attachAndWait (("a", file, geom)) .pass
-          val controller = launch.controller
-          val cb = controller.checkpoint (Map.empty) .capture()
-          launch.launchAndPass()
-          cb.passed
-        }
-
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val controller = recovery.reattachAndLaunch (("a", file))
-          controller.assertDisks ("a")
-        }}
-
-      "reject finishing a checkpoint when one is already waiting" in {
-
-        val file = new StubFile () (null)
-
-        {
-          implicit val scheduler = StubScheduler.random()
-          val recovery = Disks.recover()
-          val launch = recovery.attachAndWait (("a", file, geom)) .pass
-          val controller = launch.controller
-          val cb = controller.checkpoint (Map.empty) .capture()
-          controller.checkpoint (Map.empty) .fail [AssertionError]
-          launch.launchAndPass()
-          cb.passed
         }
 
         {

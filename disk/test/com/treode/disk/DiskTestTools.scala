@@ -56,11 +56,7 @@ private object DiskTestTools extends AsyncTestTools {
       drainAndWait (items: _*) .pass
       disks.tickle()
       disks.assertReady()
-    }
-
-    def checkpoint (marks: Map [Int, Long]): Async [Unit] =
-      disks.checkpoint (marks)
-  }
+    }}
 
   implicit class RichDisksAgent (disks: Disks) {
     val agent = disks.asInstanceOf [DisksAgent]
@@ -105,11 +101,8 @@ private object DiskTestTools extends AsyncTestTools {
       tickle (paged)
     }
 
-    def checkpoint(): Unit =
+    def checkpoint(): Async [Unit] =
       checkpointer.checkpoint()
-
-    def checkpoint (marks: Map [Int, Long]): Async [Unit] =
-      drives.checkpoint (marks)
 
     def clean() =
       compactor.clean()

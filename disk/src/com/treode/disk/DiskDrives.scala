@@ -29,7 +29,6 @@ private class DiskDrives (kit: DisksKit) {
   var attachreqs = Queue.empty [AttachRequest]
   var detachreqs = List.empty [DetachRequest]
   var drainreqs = Queue.empty [DrainRequest]
-  var checkreqs = Option.empty [CheckpointRequest]
   var engaged = true
 
   var bootgen = 0
@@ -48,10 +47,6 @@ private class DiskDrives (kit: DisksKit) {
       val (first, rest) = drainreqs.dequeue
       drainreqs = rest
       _drain (first)
-    } else if (!checkreqs.isEmpty) {
-      val first = checkreqs.get
-      checkreqs = None
-      _checkpoint (first)
     } else {
       engaged = false
     }}
@@ -138,7 +133,7 @@ private class DiskDrives (kit: DisksKit) {
         this.disks = disks
         this.bootgen = bootgen
         items foreach (_.detach())
-        println ("Detached " + (paths mkString ","))
+        // TODO: add detach hooks
       }
     } run (leave (ignore))
   }
@@ -170,8 +165,8 @@ private class DiskDrives (kit: DisksKit) {
       val draining = items map (byPath.apply _)
       for {
         segs <- draining.latch.seq foreach (_.drain())
+        _ <- checkpointer.checkpoint()
       } yield {
-        checkpointer.checkpoint()
         compactor.drain (segs.iterator.flatten)
       }
     } run (cb)
@@ -197,11 +192,8 @@ private class DiskDrives (kit: DisksKit) {
       disks.latch.map foreach (_._2.mark())
     }
 
-  private def _checkpoint (req: CheckpointRequest) {
-    val (marks, _cb) = req
-    val cb = leave (_cb)
-    engaged = true
-    fiber.supply {
+  def checkpoint (marks: Map [Int, Long]): Async [Unit] =
+    fiber.async { cb =>
       val bootgen = this.bootgen + 1
       val attached = disks.values.map (_.path) .toSet
       val newBoot = BootBlock (cell, bootgen, number, attached)
@@ -209,18 +201,7 @@ private class DiskDrives (kit: DisksKit) {
           .foreach (disk => disk.checkpoint (newBoot, marks.get (disk.id)))
           .map (_ => this.bootgen = bootgen)
           .run (cb)
-    } defer (cb)
-  }
-
-  def checkpoint (marks: Map [Int, Long]): Async [Unit] =
-    fiber.async { cb =>
-      assert (checkreqs.isEmpty)
-      if (engaged) {
-        checkreqs = Some ((marks, cb))
-      } else {
-        engaged = true
-        _checkpoint ((marks, cb))
-      }}
+    }
 
   def cleanable(): Async [Iterator [SegmentPointer]] =  {
     fiber.guard {

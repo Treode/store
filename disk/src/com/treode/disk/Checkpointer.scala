@@ -1,5 +1,6 @@
 package com.treode.disk
 
+import scala.collection.immutable.Queue
 import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback, Fiber}
 
@@ -12,33 +13,32 @@ private class Checkpointer (kit: DisksKit) {
   var checkpoints: CheckpointRegistry = null
   var bytes = 0
   var entries = 0
-  var checkreq = false
+  var checkreqs = Queue.empty [Callback [Unit]]
   var engaged = true
 
   private def reengage() {
-    engaged = false
-    if (checkreq || config.checkpoint (bytes, entries))
-      _checkpoint()
-  }
+    if (!checkreqs.isEmpty) {
+      val (first, rest) = checkreqs.dequeue
+      checkreqs = rest
+      _checkpoint (first)
+    } else if (config.checkpoint (bytes, entries)) {
+      _checkpoint (ignore)
+    } else {
+      engaged = false
+    }}
 
-  private def _checkpoint() {
-    if (engaged) {
-      checkreq = true
-      return
-    }
-    checkreq = false
+  private def _checkpoint (cb: Callback [Unit]) {
     engaged = true
-    fiber.guard {
-      bytes = 0
-      entries = 0
-      for {
-        marks <- disks.mark()
-        _ <- checkpoints.checkpoint()
-        _ <- disks.checkpoint (marks)
-      } yield fiber.execute {
-        reengage()
-      }
-    } run (ignore)
+    bytes = 0
+    entries = 0
+    val task = for {
+      marks <- disks.mark()
+      _ <- checkpoints.checkpoint()
+      _ <- disks.checkpoint (marks)
+    } yield fiber.execute {
+      reengage()
+    }
+    task run (cb)
   }
 
   def launch (checkpoints: CheckpointRegistry): Async [Unit] =
@@ -47,15 +47,18 @@ private class Checkpointer (kit: DisksKit) {
       reengage()
     }
 
-  def checkpoint(): Unit = {
-    fiber.execute {
-      _checkpoint()
-    }}
+  def checkpoint(): Async [Unit] =
+    fiber.async { cb =>
+      if (engaged)
+        checkreqs = checkreqs.enqueue (cb)
+      else
+        _checkpoint (cb)
+    }
 
   def tally (bytes: Int, entries: Int): Unit =
     fiber.execute {
       this.bytes += bytes
       this.entries += entries
-      if (config.checkpoint (this.bytes, this.entries))
-        _checkpoint()
+      if (!engaged && checkreqs.isEmpty && config.checkpoint (this.bytes, this.entries))
+        _checkpoint (ignore)
     }}

@@ -10,7 +10,7 @@ import org.scalacheck.Gen
 import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks
 
-import Async.async
+import Async.{async, latch}
 import AsyncConversions._
 import DiskTestTools._
 import PropertyChecks._
@@ -109,19 +109,23 @@ class LogSpec extends FlatSpec with PropertyChecks {
       import launch.disks
 
       var checkpointed = false
-      var cb: Callback [Unit] = null
-      launch.checkpoint (async [Unit] { _cb =>
-        assert (cb == null, "Expected no callback.")
+      var checkpointing = false
+      launch.checkpoint (async [Unit] { cb =>
+        assert (!checkpointing, "Expected one checkpoint at a time.")
+        scheduler.execute {
+          checkpointing = false
+          cb.pass()
+        }
         checkpointed = true
-        cb = _cb.leave (cb = null)
+        checkpointing = true
       })
       launch.launch()
       scheduler.runTasks()
 
-      disks.checkpoint()
-      disks.checkpoint()
-      disks.checkpoint()
-      scheduler.runTasks()
+      latch (
+          disks.checkpoint(),
+          disks.checkpoint(),
+          disks.checkpoint()) .pass
       assert (checkpointed, "Expected a checkpoint")
     }}
 }

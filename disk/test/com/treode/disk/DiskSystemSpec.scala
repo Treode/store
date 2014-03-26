@@ -40,7 +40,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           import launch.disks
           launch.checkpoint (fail ("Expected no checkpoints"))
           launch.launch()
-          tracker.batches (100, 40, 10)
+          tracker.batches (80, 40, 10)
         }
 
         .recover { implicit scheduler =>
@@ -70,7 +70,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           import launch.disks
           launch.checkpoint (fail ("Expected no checkpoints"))
           launch.launch()
-          tracker.batches (100, 40, 10)
+          tracker.batches (80, 40, 10)
         }
 
         .recover { implicit scheduler =>
@@ -101,7 +101,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           for {
-            _ <- tracker.batches (100, 40, 10)
+            _ <- tracker.batches (80, 40, 10)
           } yield {
             assert (checkpoint, "Expected a checkpoint")
           }}
@@ -136,7 +136,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           for {
-            _ <- tracker.batches (100, 40, 10)
+            _ <- tracker.batches (80, 40, 10)
           } yield {
             assert (checkpoint, "Expected a checkpoint")
           }}
@@ -171,11 +171,47 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           for {
-            _ <- tracker.batches (100, 2, 10, 0)
+            _ <- tracker.batches (80, 2, 10, 0)
             _ <- latch (
-                tracker.batch (100, 2, 10),
+                tracker.batch (80, 2, 10),
                 controller.attachAndWait (("b", disk2, geometry)))
-            _ <- tracker.batches (100, 2, 10, 3)
+            _ <- tracker.batches (80, 2, 10, 3)
+          } yield {
+            assert (checkpoint, "Expected a checkpoint")
+          }}
+
+        .recover { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          val replayer = new LogReplayer
+          replayer.attach (recovery)
+          implicit val disks = recovery.reopenAndLaunch ("a") (("a", disk1), ("b", disk2))
+          replayer.check (tracker)
+        }}}
+
+    "while draining a disk" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+
+        implicit val config = DisksConfig (0, 8, 1<<30, 17, 1<<30, 1)
+        val geometry = DiskGeometry (10, 6, 1<<20)
+        val disk1 = new StubFile (size=1<<20) (null)
+        val disk2 = new StubFile (size=1<<20) (null)
+        val tracker = new LogTracker
+
+        setup { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          implicit val launch =
+            recovery.attachAndWait (("a", disk1, geometry), ("b", disk2, geometry)) .pass
+          import launch.{disks, controller}
+          var checkpoint = false
+          tracker.attach (launch)
+          launch.checkpoint (supply (checkpoint = true))
+          launch.launch()
+          for {
+            _ <- tracker.batches (80, 2, 3, 0)
+            _ <- latch (
+                tracker.batch (80, 2, 3),
+                controller.drainAndWait ("b"))
+            _ <- tracker.batches (80, 2, 3, 3)
           } yield {
             assert (checkpoint, "Expected a checkpoint")
           }}
@@ -402,7 +438,7 @@ object DiskSystemSpec {
           supply {
             _probed = true
             val keep = groups filter (_ => random.nextInt (3) == 0)
-            written --= keep
+            written = written filter (keep contains _)
             keep
           }
 
