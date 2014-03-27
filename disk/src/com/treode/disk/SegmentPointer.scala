@@ -2,11 +2,17 @@ package com.treode.disk
 
 import com.treode.async.Async
 
-private class SegmentPointer private (val disk: DiskDrive, val bounds: SegmentBounds) {
+private class SegmentPointer private (
+    val disk: DiskDrive,
+    val bounds: SegmentBounds
+) {
 
   def num = bounds.num
   def pos = bounds.pos
   def limit = bounds.limit
+
+  def compacting(): Unit =
+    disk.compacting (Seq (this))
 
   def probe(): Async [PageLedger] =
     PageLedger.read (disk.file, bounds.pos)

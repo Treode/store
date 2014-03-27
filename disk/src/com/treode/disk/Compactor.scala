@@ -20,25 +20,24 @@ private class Compactor (kit: DisksKit) {
   var drainq = Set.empty [(TypeId, ObjectId)]
   var book = Map.empty [(TypeId, ObjectId), (Set [PageGroup], List [Callback [Unit]])]
   var segments = 0
+  var cleanreq = false
   var engaged = true
-  var cleanreq = true
 
   private def reengage() {
     if (!cleanq.isEmpty) {
       val (typ, obj) = cleanq.head
       cleanq = cleanq.tail
-      compact (typ, obj)
-    } else if (config.clean (segments)) {
-      clean()
+      _compact (typ, obj)
+    } else if (cleanreq) {
+      cleanreq = false
+      _probe()
     } else if (!drainq.isEmpty) {
       val (typ, obj) = drainq.head
       drainq = drainq.tail
-      cleanreq = false
-      compact (typ, obj)
+      _compact (typ, obj)
     } else {
       book = Map.empty
       engaged = false
-      cleanreq = false
     }}
 
   private def compacted (latches: Seq [Callback [Unit]]): Callback [Unit] = {
@@ -50,12 +49,29 @@ private class Compactor (kit: DisksKit) {
       throw t
   }
 
-  private def compact (typ: TypeId, obj: ObjectId) {
+  private def _compact (typ: TypeId, obj: ObjectId) {
     val (groups, latches) = book (typ, obj)
     book -= ((typ, obj))
     engaged = true
     pages.compact (typ, obj, groups) .run (compacted  (latches))
   }
+
+  private def probed: Callback [Unit] = {
+    case Success (v) =>
+      fiber.execute (reengage())
+    case Failure (t) =>
+      throw t
+  }
+
+  private def _probe(): Unit =
+    guard {
+      segments = 0
+      engaged = true
+      for {
+        iter <- disks.cleanable()
+        (segs, groups) <- pages.probeByUtil (iter, 9000)
+      } yield compact (groups, segs, true)
+    } run (probed)
 
   private def release (segments: Seq [SegmentPointer]): Callback [Unit] = {
     case Success (v) =>
@@ -84,10 +100,7 @@ private class Compactor (kit: DisksKit) {
             book += id -> ((gs0 ++ gs1, latch :: ls0))
           case None =>
             book += id -> ((gs1, latch :: Nil))
-        }}
-      if (!engaged)
-        reengage()
-    }
+        }}}
 
   def launch (pages: PageRegistry): Async [Unit] =
     fiber.supply {
@@ -96,19 +109,21 @@ private class Compactor (kit: DisksKit) {
     }
 
   def clean(): Unit =
-    guard {
-      cleanreq = true
-      for {
-        iter <- disks.cleanable()
-        (segs, groups) <- pages.probeByUtil (iter, 9000)
-      } yield compact (groups, segs, true)
-    } run (ignore)
+    fiber.execute {
+      if (!engaged)
+        _probe()
+      else
+        cleanreq = true
+    }
 
   def tally (segments: Int): Unit =
     fiber.execute {
       this.segments += segments
-      if (!cleanreq && config.clean (this.segments))
-        clean()
+      if (config.clean (this.segments))
+        if (!engaged)
+          _probe()
+        else
+          cleanreq = true
     }
 
   def drain (iter: Iterator [SegmentPointer]): Unit =

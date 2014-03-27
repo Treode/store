@@ -188,8 +188,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           replayer.attach (recovery)
           implicit val disks = recovery.reopenAndLaunch ("a") (("a", disk1), ("b", disk2))
           replayer.check (tracker)
-        }}}
-  }
+        }}}}
 
   "The pager should read and write" - {
 
@@ -338,7 +337,26 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.reopenAndLaunch ("a") (("a", disk1), ("b", disk2))
           tracker.check()
-        }}}}}
+        }}}
+
+    "more data than disk" taggedAs (Intensive, Periodic) in {
+      forAll (seeds) { seed =>
+
+        implicit val random = new Random (seed)
+        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
+        val geometry = DiskGeometry (10, 6, 1<<20)
+        val disk = new StubFile () (null)
+        var tracker = new StuffTracker
+
+        implicit val scheduler = StubScheduler.random (random)
+        implicit val recovery = Disks.recover()
+        implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
+        import launch.disks
+        tracker.attach (launch)
+        launch.launch()
+        tracker.batch (1000, 10) .pass
+        assert (tracker.maximum < (2<<18), "Expected controlled growth.")
+      }}}}
 
 object DiskSystemSpec {
   import Assertions._
@@ -464,10 +482,11 @@ object DiskSystemSpec {
     private var written = Map.empty [Long, Position]
     private var _probed = false
     private var _compacted = false
+    private var _maximum = 0L
 
     def probed = _probed
-
     def compacted = _compacted
+    def maximum = _maximum
 
     def write() (implicit disks: Disks): Async [Unit] = {
       var seed = random.nextLong()
@@ -476,6 +495,8 @@ object DiskSystemSpec {
       for {
         pos <- pagers.stuff.write (0, seed, Stuff (seed))
       } yield {
+        if (pos.offset > _maximum)
+          _maximum = pos.offset
         written += seed -> pos
       }}
 

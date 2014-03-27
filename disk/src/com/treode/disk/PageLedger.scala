@@ -169,14 +169,14 @@ object PageLedger {
   def read (file: File, pos: Long): Async [PageLedger] =
     guard {
       val buf = PagedBuffer (12)
-      for (_ <- file.deframe (buf, pos))
+      for (_ <- file.deframe (checksum, buf, pos))
         yield Zipped.pickler.unpickle (buf) .unzip
     }
 
   def write (ledger: Zipped, file: File, pos: Long): Async [Unit] =
     guard {
       val buf = PagedBuffer (12)
-      Zipped.pickler.frame (ledger, buf)
+      Zipped.pickler.frame (checksum, ledger, buf)
       file.flush (buf, pos)
     }
 

@@ -50,6 +50,7 @@ private class PageRegistry (kit: DisksKit) {
         live <- probe (ledger)
       } yield {
         if (live == 0) {
+          seg.compacting()
           releaser.release (Seq (seg))
         } else {
           val util =

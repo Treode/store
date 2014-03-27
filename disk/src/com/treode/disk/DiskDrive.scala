@@ -40,7 +40,7 @@ private class DiskDrive (
   val logr: (Long, UnrolledBuffer [PickledRecord]) => Unit = (receiveRecords _)
   val pagemp = new Multiplexer [PickledPage] (kit.paged)
   val pager: (Long, UnrolledBuffer [PickledPage]) => Unit = (receivePages _)
-  val compacting = IntSet()
+  var compacting = IntSet()
 
   def record (entry: RecordHeader): Async [Unit] =
     async (cb => logmp.send (PickledRecord (id, entry, cb)))
@@ -83,7 +83,7 @@ private class DiskDrive (
 
   private def _cleanable: Iterator [SegmentPointer] = {
     val skip = _protected.add (compacting)
-    for (seg <- alloc.cleanable (skip))
+    for (seg <- alloc .cleanable (skip) .iterator)
       yield SegmentPointer (this, geometry.segmentBounds (seg))
   }
 
@@ -95,14 +95,14 @@ private class DiskDrive (
   def compacting (segs: Seq [SegmentPointer]): Unit =
     fiber.execute {
       val nums = IntSet (segs.map (_.num) .sorted: _*)
-      compacting.add (nums)
+      compacting = compacting.add (nums)
     }
 
   def free (segs: Seq [SegmentPointer]): Unit =
     fiber.execute {
       val nums = IntSet (segs.map (_.num) .sorted: _*)
       assert (!(nums intersects _protected))
-      compacting.remove (nums)
+      compacting = compacting.remove (nums)
       alloc.free (nums)
       record (SegmentFree (nums)) run (ignore)
       if (draining && alloc.drained (_protected))
@@ -162,33 +162,29 @@ private class DiskDrive (
   private def reallocRecords(): Async [Unit] = {
     val newBuf = PagedBuffer (12)
     val newSeg = alloc.alloc (geometry, config)
+    logSegs.add (newSeg.num)
     RecordHeader.pickler.frame (LogEnd, newBuf)
     RecordHeader.pickler.frame (LogAlloc (newSeg.num), logBuf)
     for {
       _ <- file.flush (newBuf, newSeg.pos)
       _ <- file.flush (logBuf, logTail)
-      _ <- fiber.supply {
-          logSegs.add (newSeg.num)
-          logTail = newSeg.pos
-          logLimit = newSeg.limit
-          logBuf.clear()
-          logmp.receive (logr)
-      }
-    } yield ()
-  }
+    } yield fiber.execute {
+      logTail = newSeg.pos
+      logLimit = newSeg.limit
+      logBuf.clear()
+      logmp.receive (logr)
+    }}
 
   private def advanceRecords(): Async [Unit] = {
     val len = logBuf.readableBytes
     RecordHeader.pickler.frame (LogEnd, logBuf)
     for {
       _ <- file.flush (logBuf, logTail)
-      _ <- fiber.supply {
-          logTail += len
-          logBuf.clear()
-          logmp.receive (logr)
-      }
-    } yield ()
-  }
+    } yield fiber.execute {
+      logTail += len
+      logBuf.clear()
+      logmp.receive (logr)
+    }}
 
   def receiveRecords (batch: Long, entries: UnrolledBuffer [PickledRecord]): Unit =
     fiber.execute {
