@@ -51,40 +51,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           replayer.check (tracker)
         }}}
 
-    "without checkpoints using multiple disks" taggedAs (Intensive, Periodic) in {
-      forAllCrashes { implicit random =>
-
-        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
-        val disk1 = new StubFile (size = 1<<20) (null)
-        val disk2 = new StubFile (size = 1<<20) (null)
-        val disk3 = new StubFile (size = 1<<20) (null)
-        val tracker = new LogTracker
-
-        setup { implicit scheduler =>
-          implicit val recovery = Disks.recover()
-          val launch = recovery.attachAndWait (
-              ("a", disk1, geometry),
-              ("b", disk2, geometry),
-              ("c", disk3, geometry)) .pass
-          import launch.disks
-          launch.checkpoint (fail ("Expected no checkpoints"))
-          launch.launch()
-          tracker.batches (80, 40, 10)
-        }
-
-        .recover { implicit scheduler =>
-          implicit val recovery = Disks.recover()
-          val replayer = new LogReplayer
-          replayer.attach (recovery)
-          implicit val disks = recovery.reattachAndLaunch (
-              ("a", disk1),
-              ("b", disk2),
-              ("c", disk3))
-          replayer.check (tracker)
-        }}}
-
-    "with checkpoints using one disk" taggedAs (Intensive, Periodic) in {
+    "using one disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 57, 1<<30, 1)
@@ -114,7 +81,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           replayer.check (tracker)
         }}}
 
-    "with checkpoints using multiple disks" taggedAs (Intensive, Periodic) in {
+    "using multiple disks" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 57, 1<<30, 1)
@@ -152,7 +119,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           replayer.check (tracker)
         }}}
 
-    "while attaching a new disk" taggedAs (Intensive, Periodic) in {
+    "while attaching a disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 17, 1<<30, 1)
@@ -163,8 +130,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
 
         setup { implicit scheduler =>
           implicit val recovery = Disks.recover()
-          implicit val launch =
-            recovery.attachAndWait (("a", disk1, geometry)) .pass
+          implicit val launch = recovery.attachAndWait (("a", disk1, geometry)) .pass
           import launch.{disks, controller}
           var checkpoint = false
           tracker.attach (launch)
@@ -225,32 +191,29 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
         }}}
   }
 
-  "The pager should" - {
+  "The pager should read and write" - {
 
-    "read after write and restart" taggedAs (Intensive, Periodic) in {
-      forAll (seeds) { seed =>
+    "without cleaning using one disk" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
 
-        implicit val random = new Random (0)
         implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
         val geometry = DiskGeometry (10, 6, 1<<20)
         val disk = new StubFile (size=1<<20) (null)
         var tracker = new StuffTracker
 
-        {
-          implicit val scheduler = StubScheduler.random (random)
+        setup { implicit scheduler =>
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
-          tracker.batch (40, 10) .pass
+          tracker.batch (40, 10)
         }
 
-        {
-          implicit val scheduler = StubScheduler.random (random)
+        .recover { implicit scheduler =>
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.reattachAndLaunch (("a", disk))
           tracker.check()
         }}}
 
-    "read and write with cleaning" taggedAs (Intensive, Periodic) in {
+    "using one disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
         implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
@@ -272,11 +235,111 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           }}
 
         .recover { implicit scheduler =>
-          implicit val scheduler = StubScheduler.random (random)
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.reattachAndLaunch (("a", disk))
           tracker.check()
-        }}}}}
+        }}}
+
+    "using multiple disks" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+
+        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
+        val geometry = DiskGeometry (10, 6, 1<<20)
+        val disk1 = new StubFile () (null)
+        val disk2 = new StubFile () (null)
+        val disk3 = new StubFile () (null)
+        var tracker = new StuffTracker
+
+        setup { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          val launch = recovery.attachAndWait (
+              ("a", disk1, geometry),
+              ("b", disk2, geometry),
+              ("c", disk3, geometry)) .pass
+          import launch.disks
+          tracker.attach (launch)
+          launch.launch()
+
+          for {
+            _ <- tracker.batch (40, 10)
+          } yield {
+            assert (tracker.probed && tracker.compacted, "Expected cleaning.")
+          }}
+
+        .recover { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          implicit val disks = recovery.reattachAndLaunch (
+              ("a", disk1),
+              ("b", disk2),
+              ("c", disk3))
+          tracker.check()
+        }}}
+
+    "while attaching a disk" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+
+        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
+        val geometry = DiskGeometry (10, 6, 1<<20)
+        val disk1 = new StubFile () (null)
+        val disk2 = new StubFile () (null)
+        var tracker = new StuffTracker
+
+        setup { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          implicit val launch = recovery.attachAndWait (("a", disk1, geometry)) .pass
+          import launch.{disks, controller}
+          tracker.attach (launch)
+          launch.launch()
+
+          for {
+            _ <- tracker.batch (7, 10)
+            _ <- latch (
+                tracker.batch (7, 10),
+                controller.attachAndWait (("b", disk2, geometry)))
+            _ <- tracker.batch (7, 10)
+          } yield {
+            assert (tracker.probed && tracker.compacted, "Expected cleaning.")
+          }}
+
+        .recover { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          implicit val disks = recovery.reopenAndLaunch ("a") (("a", disk1), ("b", disk2))
+          tracker.check()
+        }}}
+
+    "while draining a disk" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+
+        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
+        val geometry = DiskGeometry (10, 6, 1<<20)
+        val disk1 = new StubFile () (null)
+        val disk2 = new StubFile () (null)
+        var tracker = new StuffTracker
+
+        setup { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          implicit val launch =
+            recovery.attachAndWait (("a", disk1, geometry), ("b", disk2, geometry)) .pass
+          import launch.{disks, controller}
+          tracker.attach (launch)
+          launch.launch()
+
+          for {
+            _ <- tracker.batch (7, 10)
+            _ <- latch (
+                tracker.batch (7, 10),
+                controller.drainAndWait ("b"))
+            _ <- tracker.batch (7, 10)
+          } yield {
+            assert (tracker.probed && tracker.compacted, "Expected cleaning.")
+          }}
+
+        .recover { implicit scheduler =>
+          implicit val recovery = Disks.recover()
+          implicit val disks = recovery.reopenAndLaunch ("a") (("a", disk1), ("b", disk2))
+          tracker.check()
+        }}}
+    }}
 
 object DiskSystemSpec {
   import Assertions._
@@ -417,11 +480,11 @@ object DiskSystemSpec {
         written += seed -> pos
       }}
 
-   def batch (nrounds: Int, nbatch: Int) (implicit
+   def batch (nbatches: Int, nwrites: Int) (implicit
       scheduler: StubScheduler, disks: Disks): Async [Unit] =
     for {
-      _ <- (0 until nrounds) .async
-      _ <- (0 until nbatch) .latch.unit
+      _ <- (0 until nbatches) .async
+      _ <- (0 until nwrites) .latch.unit
     } {
       write()
     }

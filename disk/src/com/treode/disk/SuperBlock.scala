@@ -13,9 +13,7 @@ private case class SuperBlock (
     draining: Boolean,
     free: IntSet,
     logSeg: Int,
-    logHead: Long,
-    pageSeg: Int,
-    pagePos: Long)
+    logHead: Long)
 
 private object SuperBlock {
 
@@ -24,10 +22,10 @@ private object SuperBlock {
     // Tagged for forwards compatibility.
     tagged [SuperBlock] (
         0x0024811306495C5FL ->
-            wrap (uint, boot, geometry, boolean, intSet, uint, ulong, uint, ulong)
+            wrap (uint, boot, geometry, boolean, intSet, uint, ulong)
             .build ((SuperBlock.apply _).tupled)
             .inspect (v => (
-                v.id, v.boot, v.geometry, v.draining, v.free, v.logSeg, v.logHead, v.pageSeg, v.pagePos)))
+                v.id, v.boot, v.geometry, v.draining, v.free, v.logSeg, v.logHead)))
   }
 
   def position (gen: Int) (implicit config: DisksConfig): Long =

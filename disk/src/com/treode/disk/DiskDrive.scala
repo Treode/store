@@ -40,11 +40,13 @@ private class DiskDrive (
   val logr: (Long, UnrolledBuffer [PickledRecord]) => Unit = (receiveRecords _)
   val pagemp = new Multiplexer [PickledPage] (kit.paged)
   val pager: (Long, UnrolledBuffer [PickledPage]) => Unit = (receivePages _)
+  val compacting = IntSet()
 
   def record (entry: RecordHeader): Async [Unit] =
     async (cb => logmp.send (PickledRecord (id, entry, cb)))
 
   def added() {
+    // TODO: only add if not draining
     logmp.receive (logr)
     pagemp.receive (pager)
   }
@@ -71,8 +73,8 @@ private class DiskDrive (
   def checkpoint (boot: BootBlock, mark: Option [Long]): Async [Unit] =
     fiber.guard {
       mark foreach (logHead = _)
-      val superb = SuperBlock (
-          id, boot, geometry, draining, alloc.free, logSegs.head, logHead, pageSeg.num, pageHead)
+      val superb =
+          SuperBlock (id, boot, geometry, draining, alloc.free, logSegs.head, logHead)
       for {
         _ <- writeLedger()
         _ <- SuperBlock.write (superb, file)
@@ -80,7 +82,8 @@ private class DiskDrive (
   }
 
   private def _cleanable: Iterator [SegmentPointer] = {
-    for (seg <- alloc.cleanable (_protected))
+    val skip = _protected.add (compacting)
+    for (seg <- alloc.cleanable (skip))
       yield SegmentPointer (this, geometry.segmentBounds (seg))
   }
 
@@ -89,10 +92,17 @@ private class DiskDrive (
       _cleanable
     }
 
+  def compacting (segs: Seq [SegmentPointer]): Unit =
+    fiber.execute {
+      val nums = IntSet (segs.map (_.num) .sorted: _*)
+      compacting.add (nums)
+    }
+
   def free (segs: Seq [SegmentPointer]): Unit =
     fiber.execute {
       val nums = IntSet (segs.map (_.num) .sorted: _*)
       assert (!(nums intersects _protected))
+      compacting.remove (nums)
       alloc.free (nums)
       record (SegmentFree (nums)) run (ignore)
       if (draining && alloc.drained (_protected))
@@ -103,6 +113,7 @@ private class DiskDrive (
     fiber.guard {
       assert (!draining)
       draining = true
+      // TODO: should logmp.close() be here?
       for {
         _ <- pagemp.close()
         _ <- latch (writeLedger(), record (DiskDrain))
@@ -240,31 +251,24 @@ private class DiskDrive (
     pageLedgerDirty = true
     for {
       _ <- PageLedger.write (pageLedger, file, pageSeg.pos)
-      _ <- fiber.guard {
-          pageSeg = alloc.alloc (geometry, config)
-          pageHead = pageSeg.limit
-          pageLedger = new PageLedger
-          pageLedgerDirty = true
-          PageLedger.write (pageLedger, file, pageSeg.pos)
-      }
-      _ <- fiber.guard {
-          pageLedgerDirty = false
-          record (PageAlloc (pageSeg.num, ledger.zip))
-      }
-    } yield pagemp.receive (pager)
-  }
+      _ <- record (PageEnd)
+    } yield fiber.execute {
+      pageSeg = alloc.alloc (geometry, config)
+      pageHead = pageSeg.limit
+      pageLedger = new PageLedger
+      pageLedgerDirty = true
+      pagemp.receive (pager)
+    }}
 
   private def advancePages (pos: Long, ledger: PageLedger): Async [Unit] = {
     for {
       _ <- record (PageWrite (pos, ledger.zip))
-      _ <- fiber.supply {
-          pageHead = pos
-          pageLedger.add (ledger)
-          pageLedgerDirty = true
-          pagemp.receive (pager)
-      }
-    } yield ()
-  }
+    } yield fiber.execute {
+      pageHead = pos
+      pageLedger.add (ledger)
+      pageLedgerDirty = true
+      pagemp.receive (pager)
+    }}
 
   def receivePages (batch: Long, pages: UnrolledBuffer [PickledPage]): Unit =
     fiber.execute {
@@ -316,20 +320,19 @@ private object DiskDrive {
 
       val alloc = Allocator (geometry, config)
       val logSeg = alloc.alloc (geometry, config)
-      val pageSeg = alloc.alloc (geometry, config)
       val logSegs = new ArrayBuffer [Int]
       logSegs += logSeg.num
+      val pageSeg = alloc.alloc (geometry, config)
 
-      val superb = SuperBlock (
-          id, boot, geometry, false, alloc.free, logSeg.num, logSeg.pos, pageSeg.num, pageSeg.limit)
+      val superb =
+          SuperBlock (id, boot, geometry, false, alloc.free, logSeg.num, logSeg.pos)
 
       for {
         _ <- latch (
             SuperBlock.write (superb, file),
-            RecordHeader.write (LogEnd, file, logSeg.pos),
-            PageLedger.write (PageLedger.Zipped.empty, file, pageSeg.pos))
+            RecordHeader.write (LogEnd, file, logSeg.pos))
       } yield {
         new DiskDrive (
             id, path, file, geometry, alloc, kit, false, logSegs, logSeg.pos, logSeg.pos,
-            logSeg.limit, PagedBuffer (12), pageSeg, pageSeg.limit, new PageLedger, false)
+            logSeg.limit, PagedBuffer (12), pageSeg, pageSeg.limit, new PageLedger, true)
       }}}

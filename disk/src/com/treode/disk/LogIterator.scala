@@ -21,9 +21,7 @@ private class LogIterator private (
     superb: SuperBlock,
     alloc: Allocator,
     logSegs: ArrayBuffer [Int],
-    private var logSeg: SegmentBounds,
-    private var pageSeg: SegmentBounds,
-    private var pageLedger: PageLedger
+    private var logSeg: SegmentBounds
 ) (implicit
     scheduler: Scheduler,
     config: DisksConfig
@@ -31,7 +29,8 @@ private class LogIterator private (
 
   private var draining = superb.draining
   private var logPos = superb.logHead
-  private var pagePos = superb.pagePos
+  private var pagePos = Option.empty [Long]
+  private var pageLedger = new PageLedger
 
   class Foreach (f: ((Long, Unit => Any), Callback [Unit]) => Any, cb: Callback [Unit]) {
 
@@ -65,6 +64,12 @@ private class LogIterator private (
           buf.clear()
           scheduler.pass (cb, ())
 
+        case PageEnd =>
+          pagePos = None
+          pageLedger = new PageLedger
+          logPos += len + 4
+          file.deframe (buf, logPos) run (_read)
+
         case LogAlloc (next) =>
           logSeg = alloc.alloc (next, superb.geometry, config)
           logSegs += logSeg.num
@@ -73,15 +78,10 @@ private class LogIterator private (
           file.deframe (buf, logPos) run (_read)
 
         case PageWrite (pos, _ledger) =>
-          pagePos = pos
+          val num = (pos >> superb.geometry.segmentBits) .toInt
+          val seg = alloc.alloc (num, superb.geometry, config)
+          pagePos = Some (pos)
           pageLedger.add (_ledger)
-          logPos += len + 4
-          file.deframe (buf, logPos) run (_read)
-
-        case PageAlloc (next, _ledger) =>
-          pageSeg = alloc.alloc (next, superb.geometry, config)
-          pagePos = pageSeg.pos
-          pageLedger = _ledger.unzip
           logPos += len + 4
           file.deframe (buf, logPos) run (_read)
 
@@ -106,9 +106,18 @@ private class LogIterator private (
 
   def close (kit: DisksKit): DiskDrive = {
     buf.clear()
+    val (seg, pos) = pagePos match {
+      case Some (pos) =>
+        val num = (pos >> superb.geometry.segmentBits) .toInt
+        val seg = alloc.alloc (num, superb.geometry, config)
+        (seg, pos)
+      case None =>
+        val seg = alloc.alloc (superb.geometry, config)
+        (seg, seg.limit)
+    }
     val disk = new DiskDrive (
         superb.id, path, file, superb.geometry, alloc, kit, draining, logSegs,
-        superb.logHead, logPos, logSeg.limit, buf, pageSeg, superb.pagePos, pageLedger, false)
+        superb.logHead, logPos, logSeg.limit, buf, seg, pos, pageLedger, false)
     disk
   }}
 
@@ -130,15 +139,13 @@ private object LogIterator {
     val logSeg = alloc.alloc (superb.logSeg, superb.geometry, config)
     val logSegs = new ArrayBuffer [Int]
     logSegs += logSeg.num
-    val pageSeg = alloc.alloc (superb.pageSeg, superb.geometry, config)
     val buf = PagedBuffer (12)
 
     for {
-      ledger <- PageLedger.read (file, pageSeg.pos)
       _ <- file.fill (buf, superb.logHead, 1)
     } yield {
-      val iter = new LogIterator (
-          records, path, file, buf, superb, alloc, logSegs, logSeg, pageSeg, ledger)
+      val iter =
+          new LogIterator (records, path, file, buf, superb, alloc, logSegs, logSeg)
       (superb.id, iter)
     }}
 

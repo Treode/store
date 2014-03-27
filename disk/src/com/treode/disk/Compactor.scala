@@ -29,7 +29,6 @@ private class Compactor (kit: DisksKit) {
       cleanq = cleanq.tail
       compact (typ, obj)
     } else if (config.clean (segments)) {
-      engaged == false
       clean()
     } else if (!drainq.isEmpty) {
       val (typ, obj) = drainq.head
@@ -68,6 +67,8 @@ private class Compactor (kit: DisksKit) {
   private def compact (groups: Groups, segments: Seq [SegmentPointer], cleaning: Boolean): Unit =
     fiber.execute {
       val latch = Latch.unit [Unit] (groups.size, release (segments))
+      for ((disk, segs) <- segments groupBy (_.disk))
+        disk.compacting (segs)
       for ((id, gs1) <- groups) {
         if (cleaning) {
           if (!(cleanq contains id))

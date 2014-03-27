@@ -18,7 +18,7 @@ class SuperBlocksSpec extends FreeSpec {
   private def superb (gen: Int, disks: Set [Path] = Set (path)) = {
     val free = IntSet()
     val boot = BootBlock (0, gen, 0, disks)
-    new SuperBlock (0, boot, geom, false, free, 0, 0, 0, 0)
+    new SuperBlock (0, boot, geom, false, free, 0, 0)
   }
 
   private def superbs (

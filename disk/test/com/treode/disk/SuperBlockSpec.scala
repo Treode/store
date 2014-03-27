@@ -17,7 +17,7 @@ class SuperBlockSpec extends FlatSpec {
     val boot = BootBlock (0, 0, 0, Set.empty)
     val geom = DiskGeometry (8, 4, 1<<12) (config)
     val free = IntSet()
-    val superb = new SuperBlock (0, boot, geom, false, free, 0, 0, 0, 0)
+    val superb = new SuperBlock (0, boot, geom, false, free, 0, 0)
 
     // Write something known to the file.
     val buf = PagedBuffer (12)
