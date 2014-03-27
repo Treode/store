@@ -60,7 +60,7 @@ private object DiskTestTools extends AsyncTestTools {
 
   implicit class RichDisksAgent (disks: Disks) {
     val agent = disks.asInstanceOf [DisksAgent]
-    import agent.kit.{disks => drives, checkpointer, compactor, logd, paged}
+    import agent.kit.{disks => drives, checkpointer, compactor, config, logd, paged}
 
     def assertDisks (paths: String*) {
       val expected = paths.map (Paths.get (_)) .toSet
@@ -85,6 +85,20 @@ private object DiskTestTools extends AsyncTestTools {
       assert (!compactor.engaged, "Expected compactor to be disengaged.")
       assertResult (drives.disks.size) (logd.receivers.size)
       assertResult (drives.disks.size) (paged.receivers.size)
+    }
+
+    def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, grp: PageGroup)
+        (implicit scheduler: StubScheduler) {
+      val drive = drives.disks (pos.disk)
+      val num = (pos.offset >> drive.geometry.segmentBits).toInt
+      val ledger = if (num == drive.pageSeg.num) {
+        drive.pageLedger
+      } else {
+        assert (!drive.alloc.free.contains (num), "Expected segment to be allocated.")
+        val seg = drive.geometry.segmentBounds (num)
+        PageLedger.read (drive.file, seg.pos) .pass
+      }
+      assert (ledger.get (typ, obj, grp) > 0, s"Expected ($typ, $obj, $grp) in ledger.")
     }
 
     // After detaching, closed multiplexers may still reside in the dispatcher's receiver
@@ -121,6 +135,10 @@ private object DiskTestTools extends AsyncTestTools {
     }}
 
   implicit class RichPager [G, P] (pager: PageDescriptor [G, P]) {
+
+    def assertInLedger (pos: Position, obj: ObjectId, grp: G) (
+        implicit scheduler: StubScheduler, disks: Disks): Unit =
+      disks.assertInLedger (pos, pager.id, obj, PageGroup (pager.pgrp, grp))
 
     def fetch (pos: Position) (implicit disks: Disks): Async [P] =
       disks.asInstanceOf [DisksAgent] .kit.disks.fetch (pager, pos)

@@ -338,8 +338,7 @@ class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimite
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.reopenAndLaunch ("a") (("a", disk1), ("b", disk2))
           tracker.check()
-        }}}
-    }}
+        }}}}}
 
 object DiskSystemSpec {
   import Assertions._
@@ -515,6 +514,7 @@ object DiskSystemSpec {
     }
 
     def check () (implicit scheduler: StubScheduler, disks: Disks) {
-      for ((seed, pos) <- written)
+      for ((seed, pos) <- written) {
+        pagers.stuff.assertInLedger (pos, 0, seed)
         pagers.stuff.read (pos) .expect (Stuff (seed))
-    }}}
+      }}}}

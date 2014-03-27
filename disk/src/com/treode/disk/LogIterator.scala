@@ -64,12 +64,6 @@ private class LogIterator private (
           buf.clear()
           scheduler.pass (cb, ())
 
-        case PageEnd =>
-          pagePos = None
-          pageLedger = new PageLedger
-          logPos += len + 4
-          file.deframe (buf, logPos) run (_read)
-
         case LogAlloc (next) =>
           logSeg = alloc.alloc (next, superb.geometry, config)
           logSegs += logSeg.num
@@ -79,9 +73,16 @@ private class LogIterator private (
 
         case PageWrite (pos, _ledger) =>
           val num = (pos >> superb.geometry.segmentBits) .toInt
-          val seg = alloc.alloc (num, superb.geometry, config)
+          alloc.alloc (num, superb.geometry, config)
           pagePos = Some (pos)
           pageLedger.add (_ledger)
+          logPos += len + 4
+          file.deframe (buf, logPos) run (_read)
+
+        case PageClose (num) =>
+          alloc.alloc (num, superb.geometry, config)
+          pagePos = None
+          pageLedger = new PageLedger
           logPos += len + 4
           file.deframe (buf, logPos) run (_read)
 

@@ -251,7 +251,7 @@ private class DiskDrive (
     pageLedgerDirty = true
     for {
       _ <- PageLedger.write (pageLedger, file, pageSeg.pos)
-      _ <- record (PageEnd)
+      _ <- record (PageClose (pageSeg.num))
     } yield fiber.execute {
       pageSeg = alloc.alloc (geometry, config)
       pageHead = pageSeg.limit
