@@ -12,6 +12,8 @@ import PageLedger.Groups
 private class Compactor (kit: DisksKit) {
   import kit.{config, disks, releaser, scheduler}
 
+  type DrainReq = Iterator [SegmentPointer]
+
   val empty = (Set.empty [PageGroup], List.empty [Callback [Unit]])
 
   val fiber = new Fiber (scheduler)
@@ -21,20 +23,25 @@ private class Compactor (kit: DisksKit) {
   var book = Map.empty [(TypeId, ObjectId), (Set [PageGroup], List [Callback [Unit]])]
   var segments = 0
   var cleanreq = false
+  var drainreq = Queue.empty [DrainReq]
   var engaged = true
 
   private def reengage() {
     if (!cleanq.isEmpty) {
       val (typ, obj) = cleanq.head
       cleanq = cleanq.tail
-      _compact (typ, obj)
+      compactObject (typ, obj)
     } else if (cleanreq) {
       cleanreq = false
-      _probe()
+      probeForClean()
+    } else if (!drainreq.isEmpty) {
+      val (first, rest) = drainreq.dequeue
+      drainreq = rest
+      probeForDrain (first)
     } else if (!drainq.isEmpty) {
       val (typ, obj) = drainq.head
       drainq = drainq.tail
-      _compact (typ, obj)
+      compactObject (typ, obj)
     } else {
       book = Map.empty
       engaged = false
@@ -49,7 +56,7 @@ private class Compactor (kit: DisksKit) {
       throw t
   }
 
-  private def _compact (typ: TypeId, obj: ObjectId) {
+  private def compactObject (typ: TypeId, obj: ObjectId) {
     val (groups, latches) = book (typ, obj)
     book -= ((typ, obj))
     engaged = true
@@ -63,7 +70,7 @@ private class Compactor (kit: DisksKit) {
       throw t
   }
 
-  private def _probe(): Unit =
+  private def probeForClean(): Unit =
     guard {
       segments = 0
       engaged = true
@@ -71,6 +78,13 @@ private class Compactor (kit: DisksKit) {
         iter <- disks.cleanable()
         (segs, groups) <- pages.probeByUtil (iter, 9000)
       } yield compact (groups, segs, true)
+    } run (probed)
+
+  private def probeForDrain (iter: Iterator [SegmentPointer]): Unit =
+    guard {
+      engaged = true
+      for (groups <- pages.probeForDrain (iter))
+        yield compact (groups, iter.toSeq, false)
     } run (probed)
 
   private def release (segments: Seq [SegmentPointer]): Callback [Unit] = {
@@ -111,7 +125,7 @@ private class Compactor (kit: DisksKit) {
   def clean(): Unit =
     fiber.execute {
       if (!engaged)
-        _probe()
+        probeForClean()
       else
         cleanreq = true
     }
@@ -121,14 +135,15 @@ private class Compactor (kit: DisksKit) {
       this.segments += segments
       if (config.clean (this.segments))
         if (!engaged)
-          _probe()
+          probeForClean()
         else
           cleanreq = true
     }
 
   def drain (iter: Iterator [SegmentPointer]): Unit =
-    guard {
-      for (groups <- pages.probeForDrain (iter))
-        yield compact (groups, iter.toSeq, false)
-    } run (ignore)
-}
+    fiber.execute {
+      if (!engaged)
+        probeForDrain (iter)
+      else
+        drainreq = drainreq.enqueue (iter)
+    }}

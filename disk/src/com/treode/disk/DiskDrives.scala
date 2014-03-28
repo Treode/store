@@ -29,6 +29,7 @@ private class DiskDrives (kit: DisksKit) {
   var attachreqs = Queue.empty [AttachRequest]
   var detachreqs = List.empty [DetachRequest]
   var drainreqs = Queue.empty [DrainRequest]
+  var checkreqs = Queue.empty [CheckpointRequest]
   var engaged = true
 
   var bootgen = 0
@@ -47,6 +48,10 @@ private class DiskDrives (kit: DisksKit) {
       val (first, rest) = drainreqs.dequeue
       drainreqs = rest
       _drain (first)
+    } else if (!checkreqs.isEmpty) {
+      val (first, rest) = checkreqs.dequeue
+      checkreqs = rest
+      _checkpoint (first)
     } else {
       engaged = false
     }}
@@ -128,7 +133,7 @@ private class DiskDrives (kit: DisksKit) {
       val newboot = BootBlock (cell, bootgen, number, attached)
 
       for {
-        _ <- disks.latch.unit foreach (_._2.checkpoint (newboot, None))
+        _ <- disks.values.latch.unit foreach (_.checkpoint (newboot, None))
       } yield {
         this.disks = disks
         this.bootgen = bootgen
@@ -158,16 +163,17 @@ private class DiskDrives (kit: DisksKit) {
         throw new NotAttachedException (unattached)
       }
 
-      if (items.size == disks.size) {
+      if (items.size == disks.values.filterNot (_.draining) .size) {
         throw new CannotDrainAllException
       }
 
       val draining = items map (byPath.apply _)
       for {
         segs <- draining.latch.seq foreach (_.drain())
-        _ <- checkpointer.checkpoint()
       } yield {
-        compactor.drain (segs.iterator.flatten)
+        checkpointer.checkpoint()
+            .leave (compactor.drain (segs.iterator.flatten))
+            .run (ignore)
       }
     } run (cb)
   }
@@ -181,6 +187,30 @@ private class DiskDrives (kit: DisksKit) {
         _drain (items, cb)
     }
 
+  private def _checkpoint (req: CheckpointRequest) {
+    val (marks, _cb) = req
+    val cb = leave (_cb)
+    engaged = true
+    fiber.guard {
+      val bootgen = this.bootgen + 1
+      val attached = disks.values.map (_.path) .toSet
+      val newBoot = BootBlock (cell, bootgen, number, attached)
+      for {
+        _ <- disks.values.latch.unit foreach (disk => disk.checkpoint (newBoot, marks get disk.id))
+      } yield {
+        this.bootgen = bootgen
+      }
+    } run (cb)
+  }
+
+  def checkpoint (marks: Map [Int, Long]): Async [Unit] =
+    fiber.async { cb =>
+      if (engaged)
+        checkreqs = checkreqs.enqueue (marks, cb)
+      else
+        _checkpoint (marks, cb)
+    }
+
   def add (disks: Seq [DiskDrive]): Async [Unit] =
     fiber.supply {
       this.disks ++= disks.mapBy (_.id)
@@ -189,24 +219,13 @@ private class DiskDrives (kit: DisksKit) {
 
   def mark(): Async [Map [Int, Long]] =
     fiber.guard {
-      disks.latch.map foreach (_._2.mark())
-    }
-
-  def checkpoint (marks: Map [Int, Long]): Async [Unit] =
-    fiber.async { cb =>
-      val bootgen = this.bootgen + 1
-      val attached = disks.values.map (_.path) .toSet
-      val newBoot = BootBlock (cell, bootgen, number, attached)
-      disks.values.latch.unit
-          .foreach (disk => disk.checkpoint (newBoot, marks.get (disk.id)))
-          .map (_ => this.bootgen = bootgen)
-          .run (cb)
+      disks.values.latch.map foreach (_.mark())
     }
 
   def cleanable(): Async [Iterator [SegmentPointer]] =  {
     fiber.guard {
       for {
-        segs <- disks.latch.seq foreach (_._2.cleanable())
+        segs <- disks.values.filterNot (_.draining) .latch.seq.foreach (_.cleanable())
       } yield segs.iterator.flatten
     }}
 

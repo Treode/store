@@ -11,12 +11,27 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
   private type R = (Long, UnrolledBuffer [M]) => Any
 
   private val fiber = new Fiber (scheduler)
-  private var enrolled = false
-  private var exclusive = false
-  private var closed = false
   private var messages = new UnrolledBuffer [M]
-  private var receivers = Option.empty [R]
-  private var closer = Option.empty [Callback [Unit]]
+  private var exclusive = false
+  private var enrolled = false
+  private var receiver = Option.empty [R]
+  private var state: State = Open
+
+  sealed abstract class State
+  case object Open extends State
+  case object Discharged extends State
+  case object Closed extends State
+  case class Discharging (cb: Callback [Unit]) extends State
+  case class Closing (cb: Callback [Unit]) extends State
+
+  private def execute (f: State => Any): Unit =
+    fiber.execute (f (state))
+
+  private def async [A] (f: (Callback [A], State) => Any): Async [A] =
+    fiber.async (cb => f (cb, state))
+
+  private def singleton (m: M): UnrolledBuffer [M] =
+    UnrolledBuffer (m)
 
   private def drain(): UnrolledBuffer [M] = {
     val t = messages
@@ -24,71 +39,106 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     t
   }
 
+  private def add (receiver: R): Unit =
+    this.receiver = Some (receiver)
+
   private def remove(): R = {
-    val t = receivers.get
-    receivers = Option.empty
+    val t = receiver.get
+    receiver = None
     t
   }
 
-  def deliver (receiver: R, batch: Long, messages: UnrolledBuffer [M]): Unit =
-    scheduler.execute (receiver (batch, messages))
-
-  private def _close() {
-    scheduler.pass (closer.get, ())
-    closer = Option.empty
+  private def deliver (receiver: R, exclusive: Boolean, batch: Long, messages: UnrolledBuffer [M]) {
+    this.exclusive = exclusive
+    receiver (batch, messages)
   }
 
-  def send (message: M): Unit = fiber.execute {
-    require (!closed, "Multiplexer has been closed.")
-    if (!receivers.isEmpty) {
-      exclusive = true
-      deliver (remove(), 0L, UnrolledBuffer (message))
-    } else {
+  private def closedException =
+    new IllegalStateException ("Multiplexer is closed.")
+
+  def send (message: M): Unit = execute {
+    case Closing (_) =>
+      throw closedException
+    case Closed =>
+      throw closedException
+    case _ if receiver.isDefined =>
+      deliver (remove(), true, 0L, singleton (message))
+    case _ =>
       messages += message
-    }}
+  }
 
-  def close(): Async [Unit] = fiber.async { cb =>
-    require (!closed, "Multiplexer has been closed.")
-    closed = true
-    if (!receivers.isEmpty) {
-      receivers = Option.empty
-      scheduler.pass (cb, ())
-    } else {
-      closer = Some (cb)
-    }}
-
-  def isClosed: Boolean = closed
-
-  private def dispatch (batch: Long, messages: UnrolledBuffer [M]): Unit = fiber.execute {
-    enrolled = false
-    if (!receivers.isEmpty) {
-      exclusive = false
-      deliver (remove(), batch, messages)
-    } else {
+  private def _dispatch (batch: Long, messages: UnrolledBuffer [M]): Unit = execute {
+    case Open if receiver.isDefined =>
+      assert (enrolled)
+      enrolled = false
+      deliver (remove(), false, batch, messages)
+    case _ =>
+      assert (enrolled)
+      enrolled = false
       dispatcher.replace (messages)
-    }}
+  }
 
-  private val _dispatch: R = (dispatch _)
+  private val dispatch = (_dispatch _)
 
-  def receive (receiver: R): Unit = fiber.execute {
-    require (receivers.isEmpty)
-    if (!messages.isEmpty) {
-      exclusive = true
-      deliver (receiver, 0L, drain())
-    } else if (!closer.isEmpty) {
-      _close()
-    } else {
-      receivers = Some (receiver)
-      if (!closed && !enrolled) {
-        enrolled = true
-        dispatcher.receive (_dispatch)
-      }}}
+  def receive (receiver: R): Unit = execute {
+    case _ if !messages.isEmpty =>
+      deliver (receiver, true, 0L, drain())
+    case Open if !enrolled =>
+      enrolled = true
+      add (receiver)
+      dispatcher.receive (dispatch)
+    case Open =>
+      add (receiver)
+    case Discharged =>
+      add (receiver)
+    case Discharging (cb) =>
+      state = Discharged
+      add (receiver)
+      scheduler.pass (cb, ())
+    case Closed =>
+      ()
+    case Closing (cb) =>
+      state = Closed
+      scheduler.pass (cb, ())
+  }
 
-  def replace (rejects: UnrolledBuffer [M]) {
-    if (exclusive) {
-      rejects.concat (messages)
-      messages = rejects
-    } else {
+  def replace (rejects: UnrolledBuffer [M]): Unit = execute {
+    case _ if exclusive =>
+      messages = rejects.concat (messages)
+    case _ =>
+      assert (!enrolled)
       dispatcher.replace (rejects)
-    }}
-}
+  }
+
+  def enlist(): Unit = execute {
+    case Discharged =>
+      state = Open
+    case _ =>
+      ()
+  }
+
+  def discharge(): Async [Unit] = async {
+    case (cb, Open) if receiver.isDefined =>
+      state = Discharged
+      scheduler.pass (cb, ())
+    case (cb, Open) =>
+      state = Discharging (cb)
+    case (cb1, Closing (cb2)) =>
+      state = Closing (Callback.fanout (Seq (cb1, cb2), scheduler))
+    case (cb, _) =>
+      scheduler.pass (cb, ())
+  }
+
+  def close(): Async [Unit] = async {
+    case (cb, Closed) =>
+      scheduler.fail (cb, closedException)
+    case (cb, Closing (_)) =>
+      scheduler.fail (cb, closedException)
+    case (cb1, Discharging (cb2)) =>
+      state = Closing (Callback.fanout (Seq (cb1, cb2), scheduler))
+    case (cb, _) if receiver.isDefined =>
+      state = Closed
+      scheduler.pass (cb, ())
+    case (cb, _) =>
+      state = Closing (cb)
+  }}

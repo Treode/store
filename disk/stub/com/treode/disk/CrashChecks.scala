@@ -51,7 +51,8 @@ trait CrashChecks extends ParallelTestExecution with TimeLimitedTests {
       actual
     } catch {
       case t: Throwable =>
-        info (s"Crash and recovery failed; seed=${seed}L, target=$target")
+        info (s"Crash and recovery failed; seed = ${seed}L, target = $target")
+        t.printStackTrace()
         throw t
     }}
 

@@ -76,10 +76,12 @@ private class DiskDrive (
       val superb =
           SuperBlock (id, boot, geometry, draining, alloc.free, logSegs.head, logHead)
       for {
+        _ <- pagemp.discharge()
         _ <- writeLedger()
         _ <- SuperBlock.write (superb, file)
-      } yield ()
-  }
+      } yield {
+        pagemp.enlist()
+      }}
 
   private def _cleanable: Iterator [SegmentPointer] = {
     val skip = _protected.add (compacting)
@@ -113,10 +115,9 @@ private class DiskDrive (
     fiber.guard {
       assert (!draining)
       draining = true
-      // TODO: should logmp.close() be here?
       for {
-        _ <- pagemp.close()
-        _ <- latch (writeLedger(), record (DiskDrain))
+        _ <- latch (logmp.discharge(), pagemp.close(), record (DiskDrain))
+        _ <- writeLedger()
         segs <- fiber.supply (_cleanable)
       } yield {
         segs
@@ -124,7 +125,6 @@ private class DiskDrive (
 
   def detach(): Unit =
     fiber.guard {
-      assert (!logmp.isClosed)
       for (_ <- logmp.close())
         yield file.close()
     } run (ignore)
