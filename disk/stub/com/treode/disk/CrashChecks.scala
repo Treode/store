@@ -3,16 +3,20 @@ package com.treode.disk
 import scala.util.Random
 
 import com.treode.async.{Async, AsyncTestTools, StubScheduler}
-import org.scalacheck.Gen
-import org.scalatest.prop.PropertyChecks
+import org.scalatest.{Informing, ParallelTestExecution, Suite}
+import org.scalatest.concurrent.TimeLimitedTests
+import org.scalatest.time.SpanSugar
 
 import AsyncTestTools._
+import SpanSugar._
 
-trait CrashChecks extends PropertyChecks {
+trait CrashChecks extends ParallelTestExecution with TimeLimitedTests {
+  this: Suite with Informing =>
 
-  private val limit = 100
+  private val ncrashes = 100
+  private val nseeds = 100
 
-  val seeds = Gen.choose (0L, Long.MaxValue)
+  val timeLimit = 5 minutes
 
   class ForCrashesRunner (
       val setup: StubScheduler => Async [_],
@@ -44,46 +48,38 @@ trait CrashChecks extends PropertyChecks {
         runner.recover (scheduler)
       }
 
-
       actual
     } catch {
       case t: Throwable =>
-        println (s"Crash and recovery failed; seed=$seed, target=$target")
-        t.printStackTrace()
+        info (s"Crash and recovery failed; seed=${seed}L, target=$target")
         throw t
     }}
 
-  def forAllCrashes (seed: Long, quick: Boolean) (init: Random => ForCrashesRunner) {
-
-    val start = System.currentTimeMillis
+  def forAllCrashes (seed: Long) (init: Random => ForCrashesRunner): Int = {
 
     // Run the first time for as long as possible.
     val count = forCrash (seed, Int.MaxValue) (init)
 
     // Run the subsequent times for a portion of what was possible.
-    if (count < limit) {
+    if (count < ncrashes) {
       for (i <- 1 to count)
         forCrash (seed, i) (init)
+      count
     } else {
       val random = new Random (seed)
-      for (i <- 1 to limit)
+      for (i <- 1 to ncrashes)
         forCrash (seed, random.nextInt (count - 1) + 1) (init)
-    }
-
-    val end = System.currentTimeMillis
-    val average = (end - start) / (if (count < limit) count else limit)
-    if (!quick)
-      println (s"Crash and recovery: seed=$seed, time=${average}ms")
-  }
-
-  def forAllCrashes (init: Random => ForCrashesRunner) {
-    forAll (seeds -> "seed") { seed: Long =>
-      forAllCrashes (seed, false) (init)
+      ncrashes
     }}
 
-  def forAllQuickCrashes (init: Random => ForCrashesRunner) {
-    forAll (seeds -> "seed") { seed: Long =>
-      forAllCrashes (seed, true) (init)
-    }}}
-
-object CrashChecks extends CrashChecks
+  def forAllCrashes (init: Random => ForCrashesRunner) {
+    val start = System.currentTimeMillis
+    var count = 0
+    for (_ <- 0 until nseeds) {
+      val seed = Random.nextLong()
+      count += forAllCrashes (seed) (init)
+    }
+    val end = System.currentTimeMillis
+    val average = (end - start) / count
+    info (s"Crash and recovery average time ${average}ms")
+  }}

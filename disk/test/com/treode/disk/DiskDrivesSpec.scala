@@ -19,7 +19,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
     "when ready, should" - {
 
       "allow attaching a new item" taggedAs (Periodic) in {
-        forAllQuickCrashes { implicit random =>
+        forAllCrashes { implicit random =>
 
           val file1 = new StubFile () (null)
           val file2 = new StubFile () (null)
@@ -45,7 +45,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           }}}
 
       "allow attaching multiple new items" taggedAs (Periodic) in {
-        forAllQuickCrashes { implicit random =>
+        forAllCrashes { implicit random =>
 
           val file1 = new StubFile () (null)
           val file2 = new StubFile () (null)
@@ -135,7 +135,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
         }}
 
       "allow draining an item" taggedAs (Periodic) in {
-        forAllQuickCrashes { implicit random =>
+        forAllCrashes { implicit random =>
 
           val file1 = new StubFile () (null)
           val file2 = new StubFile () (null)
@@ -162,7 +162,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           }}}
 
       "allow draining multiple items" taggedAs (Periodic) in {
-        forAllQuickCrashes { implicit random =>
+        forAllCrashes { implicit random =>
 
           val file1 = new StubFile () (null)
           val file2 = new StubFile () (null)

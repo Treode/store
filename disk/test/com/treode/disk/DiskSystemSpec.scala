@@ -8,21 +8,23 @@ import com.treode.async.{Async, AsyncConversions, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
-import org.scalatest.{Assertions, FreeSpec, ParallelTestExecution}
-import org.scalatest.concurrent.TimeLimitedTests
+import org.scalatest.{Assertions, FreeSpec}
+import org.scalatest.prop.PropertyChecks
 import org.scalatest.time.SpanSugar
 
 import Async.{guard, latch, supply}
 import AsyncConversions._
-import CrashChecks._
 import DiskTestTools._
 import DiskSystemSpec._
 import JavaConversions._
+import PropertyChecks._
 import SpanSugar._
 
-class DiskSystemSpec extends FreeSpec with ParallelTestExecution with TimeLimitedTests {
+class DiskSystemSpec extends FreeSpec with CrashChecks {
 
-  val timeLimit = 15 minutes
+  override val timeLimit = 15 minutes
+
+  val seeds = Gen.choose (0L, Long.MaxValue)
 
   "The logger should replay items" - {
 
