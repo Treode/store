@@ -17,7 +17,7 @@ class DisksConfig private (
 
   val minimumSegmentBits = {
     val bytes = math.max (maximumRecordBytes, maximumPageBytes)
-    Integer.SIZE - Integer.numberOfLeadingZeros (bytes) + 1
+    Integer.SIZE - Integer.numberOfLeadingZeros (bytes - 1) + 1
   }
 
   def checkpoint (bytes: Int, entries: Int): Boolean =

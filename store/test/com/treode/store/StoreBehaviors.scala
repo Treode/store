@@ -233,9 +233,8 @@ trait StoreBehaviors {
       import scheduler.whilst
 
       val supply = size * opening
-      val create =
-        for (i <- 0 until size) yield Accounts.create (i, opening)
-      store.write (0, create: _*) .await()
+      for (i <- 0 until size)
+        store.write (0, Accounts.create (i, opening)) .await()
 
       val brokerLatch = new CountDownLatch (threads)
       val countAuditsPassed = new AtomicInteger (0)
