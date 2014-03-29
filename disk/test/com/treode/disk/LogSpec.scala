@@ -19,8 +19,8 @@ class LogSpec extends FlatSpec with PropertyChecks {
 
   class DistinguishedException extends Exception
 
-  implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
-  val geometry = DiskGeometry (10, 6, 1<<20)
+  implicit val config = TestDisksConfig()
+  val geometry = TestDiskGeometry()
   val record = RecordDescriptor (0xBF, Picklers.string)
   val seeds = Gen.choose (0, Long.MaxValue)
 

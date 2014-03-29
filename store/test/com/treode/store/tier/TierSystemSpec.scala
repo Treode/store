@@ -3,16 +3,16 @@ package com.treode.store.tier
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncConversions, AsyncTestTools, StubScheduler}
+import com.treode.async.{Async, AsyncConversions, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.disk.{CrashChecks, Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Bytes, StoreConfig}
+import com.treode.store.{Bytes, StoreConfig, TimedTestTools}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FlatSpec
 
 import Async.async
 import AsyncConversions._
-import AsyncTestTools._
+import TimedTestTools._
 
 class TierSystemSpec extends FlatSpec with CrashChecks {
 
@@ -61,7 +61,7 @@ class TierSystemSpec extends FlatSpec with CrashChecks {
   private def setup (disk: StubFile, geometry: DiskGeometry) (
       implicit scheduler: StubScheduler, config: StoreConfig): TestTable = {
 
-      implicit val disksConfig = DisksConfig (0, 14, 1<<24, 1<<16, 10, 1)
+      implicit val disksConfig = TestDisksConfig()
       implicit val recovery = Disks.recover()
       val _table = new TestRecovery (ID)
       val files = Seq ((Paths.get ("a"), disk, geometry))
@@ -72,7 +72,7 @@ class TierSystemSpec extends FlatSpec with CrashChecks {
   private def recover (disk: StubFile) (
       implicit scheduler: StubScheduler, storeConfig: StoreConfig): TestTable = {
 
-    implicit val config = DisksConfig (0, 14, 1<<24, 1<<16, 10, 1)
+    implicit val config = TestDisksConfig()
     implicit val recovery = Disks.recover()
     val _table = new TestRecovery (ID)
     val files = Seq ((Paths.get ("a"), disk))
@@ -82,9 +82,9 @@ class TierSystemSpec extends FlatSpec with CrashChecks {
 
   def check (nkeys: Int, nrounds: Int, nbatch: Int) (implicit random: Random) = {
 
-    implicit val disksConfig = DisksConfig (0, 10, 1<<30, 1<<30, 1<<30, 1)
+    implicit val disksConfig = TestDisksConfig()
     implicit val storeConfig = StoreConfig (8, 1 << 10)
-    val geometry = DiskGeometry (14, 8, 1<<30)
+    val geometry = TestDiskGeometry()
     val disk = new StubFile () (null)
     val tracker = new TrackingTable
 

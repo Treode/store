@@ -3,12 +3,12 @@ package com.treode.store.catalog
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async.{AsyncTestTools, StubScheduler}
+import com.treode.async.StubScheduler
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.pickle.{Pickler, Picklers}
-import com.treode.store.{Bytes, CatalogDescriptor, CatalogId, StoreConfig}
+import com.treode.store._
 import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
 import org.scalatest.{FreeSpec, PropSpec, ShouldMatchers, Suites}
@@ -16,9 +16,9 @@ import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.time.SpanSugar
 
-import AsyncTestTools._
 import SpanSugar._
 import StubCatalogHost.{cat1, cat2}
+import TimedTestTools._
 
 class BrokerSpec extends Suites (BrokerBehaviors, BrokerProperties)
 
@@ -48,10 +48,10 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
 
   private class RichBroker (implicit random: Random, scheduler: StubScheduler) {
 
-    implicit val disksConfig = DisksConfig (0, 10, 1<<24, 1<<16, 10, 1)
+    implicit val disksConfig = TestDisksConfig()
     implicit val recovery = Disks.recover()
     val disk = new StubFile
-    val geometry = DiskGeometry (12, 8, 1<<20)
+    val geometry = TestDiskGeometry()
     implicit val launch = recovery.attach (Seq ((Paths.get ("a"), disk, geometry))) .pass
     implicit val disks = launch.disks
     launch.launch()

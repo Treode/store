@@ -13,8 +13,8 @@ class PageSpec extends FreeSpec {
 
   class DistinguishedException extends Exception
 
-  implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
-  val geometry = DiskGeometry (10, 6, 1<<20)
+  implicit val config = TestDisksConfig()
+  val geometry = TestDiskGeometry()
 
   object pagers {
     import DiskPicklers._

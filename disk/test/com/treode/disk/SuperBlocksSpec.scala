@@ -11,9 +11,9 @@ import AsyncTestTools._
 
 class SuperBlocksSpec extends FreeSpec {
 
-  implicit val config = DisksConfig (0, 8, 1<<8, 10, 3, 1)
+  implicit val config = TestDisksConfig()
   val path = Paths.get ("a")
-  val geom = DiskGeometry (10, 4, 1<<20)
+  val geom = TestDiskGeometry()
 
   private def superb (gen: Int, disks: Set [Path] = Set (path)) = {
     val free = IntSet()
@@ -272,7 +272,7 @@ class SuperBlocksSpec extends FreeSpec {
       }}
 
     "require the config's cell match the boot block's cell" in {
-      val config2 = DisksConfig (1, 8, 1<<8, 10, 3, 1)
+      val config2 = TestDisksConfig (cell = 1)
       intercept [CellMismatchException] {
         verifyReattachment (superbs (0, 1)) (config2)
       }}
@@ -295,10 +295,7 @@ class SuperBlocksSpec extends FreeSpec {
             superbs (0, 1, path, disks),
             superbs (0, 1, pathb, disks),
             superbs (0, 1, pathc, disks))
-      }
-    }
-
-  }
+      }}}
 
   "SuperBlocks.read should" - {
 

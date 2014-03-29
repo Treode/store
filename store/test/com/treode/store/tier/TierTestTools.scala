@@ -1,19 +1,19 @@
 package com.treode.store.tier
 
-import com.treode.async.{Async, AsyncTestTools, StubScheduler}
-import com.treode.store.Bytes
+import com.treode.async.{Async, StubScheduler}
+import com.treode.store.{Bytes, TimedTestTools}
 import org.scalatest.Assertions
 
 import Assertions.assertResult
 import Async.async
 
-private object TierTestTools extends AsyncTestTools {
+private object TierTestTools extends TimedTestTools {
 
-  implicit class RichInt (v: Int) {
+  implicit class TierRichInt (v: Int) {
     def :: (k: Bytes): TierCell = TierCell (k, Some (Bytes (v)))
   }
 
-  implicit class RichOption (v: Option [Bytes]) {
+  implicit class TierRichOption (v: Option [Bytes]) {
     def :: (k: Bytes): TierCell = TierCell (k, v)
   }
 

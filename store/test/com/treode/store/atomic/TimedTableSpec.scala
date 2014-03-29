@@ -2,7 +2,7 @@ package com.treode.store.atomic
 
 import java.nio.file.Paths
 
-import com.treode.async.{AsyncTestTools, StubScheduler}
+import com.treode.async.StubScheduler
 import com.treode.async.io.StubFile
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store._
@@ -19,10 +19,10 @@ class TimedTableSpec extends FreeSpec {
 
   private def newTable(): (StubScheduler, TimedTable) = {
     implicit val scheduler = StubScheduler.random()
-    implicit val disksConfig = DisksConfig (0, 14, 1<<24, 1<<16, 10, 1)
+    implicit val disksConfig = TestDisksConfig()
     implicit val recovery = Disks.recover()
     val file = new StubFile
-    val geometry = DiskGeometry (20, 12, 1<<30)
+    val geometry = TestDiskGeometry()
     val item = (Paths.get ("a"), file, geometry)
     val launch = recovery.attach (Seq (item)) .pass
     launch.launch()

@@ -31,8 +31,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
     "without checkpoints using one disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
-        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
+        implicit val config = TestDisksConfig()
+        val geometry = TestDiskGeometry()
         val disk = new StubFile (size = 1<<20) (null)
         val tracker = new LogTracker
 
@@ -56,8 +56,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
     "using one disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
-        implicit val config = DisksConfig (0, 8, 1<<30, 57, 1<<30, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
+        implicit val config = TestDisksConfig (checkpointEntries = 57)
+        val geometry = TestDiskGeometry()
         val disk = new StubFile (size=1<<20) (null)
         val tracker = new LogTracker
 
@@ -86,8 +86,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
     "using multiple disks" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
-        implicit val config = DisksConfig (0, 8, 1<<30, 57, 1<<30, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
+        implicit val config = TestDisksConfig (checkpointEntries = 57)
+        val geometry = TestDiskGeometry()
         val disk1 = new StubFile (size = 1<<20) (null)
         val disk2 = new StubFile (size = 1<<20) (null)
         val disk3 = new StubFile (size = 1<<20) (null)
@@ -124,8 +124,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
     "while attaching a disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
-        implicit val config = DisksConfig (0, 8, 1<<30, 17, 1<<30, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
+        implicit val config = TestDisksConfig (checkpointEntries = 17)
+        val geometry = TestDiskGeometry()
         val disk1 = new StubFile (size=1<<20) (null)
         val disk2 = new StubFile (size=1<<20) (null)
         val tracker = new LogTracker
@@ -159,8 +159,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
     "while draining a disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
-        implicit val config = DisksConfig (0, 8, 1<<30, 17, 1<<30, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
+        implicit val config = TestDisksConfig (checkpointEntries = 17)
+        val geometry = TestDiskGeometry()
         val disk1 = new StubFile (size=1<<20) (null)
         val disk2 = new StubFile (size=1<<20) (null)
         val tracker = new LogTracker
@@ -197,8 +197,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
     "without cleaning using one disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
-        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 1<<30, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
+        implicit val config = TestDisksConfig()
+        val geometry = TestDiskGeometry()
         val disk = new StubFile (size=1<<20) (null)
         var tracker = new StuffTracker
 
@@ -217,8 +217,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
     "using one disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
-        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
+        implicit val config = TestDisksConfig (cleaningFrequency = 3)
+        val geometry = TestDiskGeometry()
         val disk = new StubFile () (null)
         var tracker = new StuffTracker
 
@@ -244,8 +244,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
     "using multiple disks" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
-        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
+        implicit val config = TestDisksConfig (cleaningFrequency = 3)
+        val geometry = TestDiskGeometry()
         val disk1 = new StubFile () (null)
         val disk2 = new StubFile () (null)
         val disk3 = new StubFile () (null)
@@ -279,8 +279,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
     "while attaching a disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
-        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
+        implicit val config = TestDisksConfig (cleaningFrequency = 3)
+        val geometry = TestDiskGeometry()
         val disk1 = new StubFile () (null)
         val disk2 = new StubFile () (null)
         var tracker = new StuffTracker
@@ -311,8 +311,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
     "while draining a disk" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
-        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
+        implicit val config = TestDisksConfig (cleaningFrequency = 3)
+        val geometry = TestDiskGeometry()
         val disk1 = new StubFile () (null)
         val disk2 = new StubFile () (null)
         var tracker = new StuffTracker
@@ -345,8 +345,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       forAll (seeds) { seed =>
 
         implicit val random = new Random (seed)
-        implicit val config = DisksConfig (0, 8, 1<<30, 1<<30, 3, 1)
-        val geometry = DiskGeometry (10, 6, 1<<20)
+        implicit val config = TestDisksConfig (cleaningFrequency = 3)
+        val geometry = TestDiskGeometry()
         val disk = new StubFile () (null)
         var tracker = new StuffTracker
 

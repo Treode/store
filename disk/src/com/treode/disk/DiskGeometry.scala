@@ -5,9 +5,6 @@ class DiskGeometry private (
     val blockBits: Int,
     val diskBytes: Long) {
 
-  if (segmentBits == 0)
-    Thread.dumpStack()
-
   val segmentBytes = 1 << segmentBits
   val segmentMask = ~(segmentBytes - 1)
 
@@ -40,7 +37,8 @@ class DiskGeometry private (
         false
     }
 
-  override def toString = s"DiskGeometry($segmentBits, $blockBits, $diskBytes)"
+  override def toString: String =
+    s"DiskGeometry($segmentBits, $blockBits, $diskBytes)"
 }
 
 object DiskGeometry {
@@ -53,11 +51,24 @@ object DiskGeometry {
       config: DisksConfig
   ): DiskGeometry = {
 
-    require (segmentBits > 0, "A segment must have more than 0 bytes")
-    require (blockBits > 0, "A block must have more than 0 bytes")
-    require (diskBytes > 0, "A disk must have more than 0 bytes")
-    require (segmentBits >= blockBits+2, "A segment must have at least 4 blocks")
-    require (config.superBlockBits >= blockBits, "A superblock must be at least one disk block.")
+    require (
+        segmentBits > 0,
+        "A segment must have more than 0 bytes.")
+    require (
+        blockBits > 0,
+        "A block must have more than 0 bytes.")
+    require (
+        diskBytes > 0,
+        "A disk must have more than 0 bytes.")
+    require (
+        segmentBits >= blockBits,
+        "A segment must be at least one block.")
+    require (
+        blockBits <= config.superBlockBits,
+        "A superblock must be at least one disk block.")
+    require (
+        segmentBits >= config.minimumSegmentBits,
+        "A segment must be larger than the largest record or page.")
 
     val free = (diskBytes >> segmentBits) - (config.diskLeadBytes >> segmentBits)
     require (free >= 16, "A disk must have at least 16 segments")
@@ -67,6 +78,18 @@ object DiskGeometry {
         blockBits,
         diskBytes)
   }
+
+  def standard (
+      segmentBits: Int = 30,
+      blockBits: Int = 13,
+      diskBytes: Long = -1
+  ) (implicit
+      config: DisksConfig
+   ): DiskGeometry =
+     DiskGeometry (
+         segmentBits,
+         blockBits,
+         diskBytes)
 
   val pickler = {
     import DiskPicklers._

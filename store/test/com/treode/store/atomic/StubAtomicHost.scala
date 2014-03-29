@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncTestTools, Callback, CallbackCaptor}
+import com.treode.async.{Async, Callback, CallbackCaptor}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
 import com.treode.store._
@@ -12,8 +12,8 @@ import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions
 
 import Assertions.assertResult
-import AsyncTestTools._
 import Callback.ignore
+import TimedTestTools._
 
 private class StubAtomicHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {
@@ -21,7 +21,7 @@ extends StubActiveHost (id, network) {
 
   implicit val cluster: Cluster = this
 
-  implicit val disksConfig = DisksConfig (0, 10, 1<<24, 1<<16, 10, 1)
+  implicit val disksConfig = TestDisksConfig()
   implicit val storeConfig = StoreConfig (4, 1<<16)
 
   implicit val recovery = Disks.recover()
@@ -29,7 +29,7 @@ extends StubActiveHost (id, network) {
   val _atomic = AtomicKit.recover()
 
   val file = new StubFile
-  val geometry = DiskGeometry (12, 8, 1<<20)
+  val geometry = TestDiskGeometry()
   val files = Seq ((Paths.get ("a"), file, geometry))
 
   val atlas = new AtlasKit

@@ -1,14 +1,13 @@
 package com.treode.store.paxos
 
 import java.nio.file.Paths
-import com.treode.async.{AsyncTestTools, CallbackCaptor}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Cohort, Paxos, StoreConfig}
+import com.treode.store.{Cohort, Paxos, StoreConfig, TimedTestTools}
 import com.treode.store.atlas.AtlasKit
 
-import AsyncTestTools._
+import TimedTestTools._
 
 private class StubPaxosHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {
@@ -16,14 +15,14 @@ extends StubActiveHost (id, network) {
 
   implicit val cluster: Cluster = this
 
-  implicit val disksConfig = DisksConfig (0, 10, 1<<24, 1<<16, 10, 1)
+  implicit val disksConfig = TestDisksConfig()
   implicit val storeConfig = StoreConfig (4, 1<<16)
 
   implicit val recovery = Disks.recover()
   val _paxos = Paxos.recover()
 
   val file = new StubFile
-  val geometry = DiskGeometry (12, 6, 1<<20)
+  val geometry = TestDiskGeometry()
   val files = Seq ((Paths.get ("a"), file, geometry))
 
   val atlas = new AtlasKit

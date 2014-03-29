@@ -15,13 +15,13 @@ class DiskDriveSpec extends FreeSpec {
 
   class DistinguishedException extends Exception
 
-  implicit val config = DisksConfig (0, 8, 1<<10, 100, 3, 1)
+  implicit val config = TestDisksConfig()
 
   private def init (file: File, kit: DisksKit) = {
     val path = Paths.get ("a")
     val free = IntSet()
     val boot = BootBlock (0, 0, 0, Set (path))
-    val geom = DiskGeometry (10, 4, 1<<20)
+    val geom = TestDiskGeometry()
     new SuperBlock (0, boot, geom, false, free, 0, 0)
     DiskDrive.init (0, path, file, geom, boot, kit)
   }

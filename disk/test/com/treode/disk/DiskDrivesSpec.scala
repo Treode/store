@@ -11,8 +11,8 @@ import DiskTestTools._
 
 class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
-  implicit val config = DisksConfig (0, 8, 1<<10, 100, 3, 1)
-  val geom = DiskGeometry (10, 4, 1<<20)
+  implicit val config = TestDisksConfig()
+  val geom = TestDiskGeometry()
 
   "The DiskDrives" - {
 
