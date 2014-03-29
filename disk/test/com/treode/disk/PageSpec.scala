@@ -82,8 +82,18 @@ class PageSpec extends FreeSpec {
         pagers.str.read (pos) .expect ("one")
         disk.stop = true
         pagers.str.read (pos) .expect ("one")
-      }}}
+      }}
 
+    "reject a large page" in {
+
+      val disk = new StubFile () (null)
+      var pos = Position (0, 0, 0)
+
+      {
+        implicit val scheduler = StubScheduler.random()
+        implicit val disks = setup (disk)
+        pagers.stuff.write (0, 0, Stuff (0, 1000)) .fail [OversizedPageException]
+      }}}
 
   "The compactor should" - {
 
@@ -94,8 +104,7 @@ class PageSpec extends FreeSpec {
       val disk = new StubFile
       val recovery = Disks.recover()
       implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
-
-      for (i <- 0 until 10)
+      for (i <- 0 until 40)
         pagers.stuff.write (0, 0, Stuff (random.nextLong)) .pass
       disks.clean()
       intercept [IllegalArgumentException] {
@@ -118,7 +127,7 @@ class PageSpec extends FreeSpec {
       })
       launch.launch()
 
-      for (i <- 0 until 10)
+      for (i <- 0 until 40)
         pagers.stuff.write (0, 0, Stuff (random.nextLong)) .pass
       disks.clean()
       intercept [DistinguishedException] {
@@ -141,7 +150,7 @@ class PageSpec extends FreeSpec {
       })
       launch.launch()
 
-      for (i <- 0 until 10)
+      for (i <- 0 until 40)
         pagers.stuff.write (0, i, Stuff (random.nextLong)) .pass
       disks.clean()
       intercept [DistinguishedException] {

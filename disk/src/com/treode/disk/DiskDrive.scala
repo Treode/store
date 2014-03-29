@@ -130,7 +130,6 @@ private class DiskDrive (
     } run (ignore)
 
   private def splitRecords (entries: UnrolledBuffer [PickledRecord]) = {
-    // TODO: reject records that are too large
     val accepts = new UnrolledBuffer [PickledRecord]
     val rejects = new UnrolledBuffer [PickledRecord]
     var pos = logTail
@@ -205,7 +204,6 @@ private class DiskDrive (
     }
 
   private def splitPages (pages: UnrolledBuffer [PickledPage]) = {
-    // TODO: reject pages that are too large
     val projector = pageLedger.project
     val limit = (pageHead - pageSeg.pos).toInt
     val accepts = new UnrolledBuffer [PickledPage]

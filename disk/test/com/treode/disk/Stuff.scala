@@ -24,6 +24,12 @@ object Stuff {
     new Stuff (seed, xs)
   }
 
+  def apply (seed: Long, length: Int): Stuff = {
+    val r = new Random (seed)
+    val xs = Seq.fill (length) (r.nextInt (valueLimit))
+    new Stuff (seed, xs)
+  }
+
   val pickler = {
     import DiskPicklers._
     wrap (fixedLong, seq (int))

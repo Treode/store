@@ -346,8 +346,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val random = new Random (seed)
         implicit val config = TestDisksConfig (cleaningFrequency = 3)
-        val geometry = TestDiskGeometry()
-        val disk = new StubFile () (null)
+        val geometry = TestDiskGeometry (diskBytes=1<<22)
+        val disk = new StubFile (1<<22) (null)
         var tracker = new StuffTracker
 
         implicit val scheduler = StubScheduler.random (random)
@@ -357,7 +357,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         tracker.attach (launch)
         launch.launch()
         tracker.batch (1000, 10) .pass
-        assert (tracker.maximum < (2<<18), "Expected controlled growth.")
+        assert (tracker.maximum > (1<<21), "Expected growth.")
       }}}}
 
 object DiskSystemSpec {

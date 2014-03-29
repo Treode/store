@@ -41,8 +41,16 @@ package disk {
     override def getMessage = "No superblocks."
   }
 
-  class NotAttachedException (paths: Seq [Path]) extends Exception {
+  class NotAttachedException (paths: Seq [Path]) extends IllegalArgumentException {
     override def getMessage = s"No such disks are attached: ${paths mkString ", "}"
+  }
+
+  class OversizedPageException (maximum: Int, found: Int) extends IllegalArgumentException {
+    override def getMessage = s"The page of $found bytes exceeds the limit of $maximum bytes."
+  }
+
+  class OversizedRecordException (maximum: Int, found: Int) extends IllegalArgumentException {
+    override def getMessage = s"The record of $found bytes exceeds the limit of $maximum bytes."
   }
 
   class SuperblockOverflowException extends Exception {

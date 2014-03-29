@@ -21,8 +21,12 @@ class LogSpec extends FlatSpec with PropertyChecks {
 
   implicit val config = TestDisksConfig()
   val geometry = TestDiskGeometry()
-  val record = RecordDescriptor (0xBF, Picklers.string)
   val seeds = Gen.choose (0, Long.MaxValue)
+
+  object records {
+    val str = RecordDescriptor (0xBF, Picklers.string)
+    val stuff = RecordDescriptor (0x2B, Stuff.pickler)
+  }
 
   "The logger" should "replay zero items" in {
 
@@ -38,7 +42,7 @@ class LogSpec extends FlatSpec with PropertyChecks {
       implicit val scheduler = StubScheduler.random()
       implicit val recovery = Disks.recover()
       val replayed = Seq.newBuilder [String]
-      record.replay (replayed += _)
+      records.str.replay (replayed += _)
       recovery.reattachAndLaunch (("a", disk))
       assertResult (Seq.empty) (replayed.result)
     }}
@@ -51,14 +55,14 @@ class LogSpec extends FlatSpec with PropertyChecks {
       implicit val scheduler = StubScheduler.random()
       implicit val recovery = Disks.recover()
       implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
-      record.record ("one") .pass
+      records.str.record ("one") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
       implicit val recovery = Disks.recover()
       val replayed = Seq.newBuilder [String]
-      record.replay (replayed += _)
+      records.str.replay (replayed += _)
       recovery.reattachAndLaunch (("a", disk))
       assertResult (Seq ("one")) (replayed.result)
     }}
@@ -71,7 +75,7 @@ class LogSpec extends FlatSpec with PropertyChecks {
       implicit val scheduler = StubScheduler.random()
       implicit val recovery = Disks.recover()
       implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
-      record.record ("one") .pass
+      records.str.record ("one") .pass
     }
 
     {
@@ -88,15 +92,27 @@ class LogSpec extends FlatSpec with PropertyChecks {
       implicit val scheduler = StubScheduler.random()
       implicit val recovery = Disks.recover()
       implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
-      record.record ("one") .pass
+      records.str.record ("one") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
       implicit val recovery = Disks.recover()
-      record.replay (_ => throw new DistinguishedException)
+      records.str.replay (_ => throw new DistinguishedException)
       recovery.reattachAndWait (("a", disk)) .fail [DistinguishedException]
     }}
+
+  it should "reject an oversized record" in {
+
+    val disk = new StubFile () (null)
+
+    {
+      implicit val scheduler = StubScheduler.random()
+      implicit val recovery = Disks.recover()
+      implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+      records.stuff.record (Stuff (0, 1000)) .fail [OversizedRecordException]
+    }}
+
 
   it should "run one checkpoint at a time" in {
     forAll (seeds) { seed =>
