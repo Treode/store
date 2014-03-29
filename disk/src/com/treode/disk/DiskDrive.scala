@@ -46,7 +46,10 @@ private class DiskDrive (
     async (cb => logmp.send (PickledRecord (id, entry, cb)))
 
   def added() {
-    // TODO: only add if not draining
+    if (draining) {
+      logmp.discharge()
+      pagemp.close() run (ignore)
+    }
     logmp.receive (logr)
     pagemp.receive (pager)
   }

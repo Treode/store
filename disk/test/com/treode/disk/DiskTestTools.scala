@@ -83,8 +83,10 @@ private object DiskTestTools extends AsyncTestTools {
       assert (!drives.engaged, "Expected disks to be disengaged.")
       assert (!checkpointer.engaged, "Expected checkpointer to be disengaged.")
       assert (!compactor.engaged, "Expected compactor to be disengaged.")
-      assertResult (drives.disks.size) (logd.receivers.size)
-      assertResult (drives.disks.size) (paged.receivers.size)
+      val nloggers = drives.disks.size
+      val npagers = drives.disks.values.filterNot (_.draining) .size
+      assertResult (nloggers) (logd.receivers.size)
+      assertResult (npagers) (paged.receivers.size)
     }
 
     def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, grp: PageGroup)

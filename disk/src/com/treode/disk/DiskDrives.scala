@@ -58,6 +58,11 @@ private class DiskDrives (kit: DisksKit) {
 
   def launch(): Async [Unit] =
     fiber.supply {
+      for {
+        segs <- disks.values.filter (_.draining) .latch.seq foreach (_.drain())
+      } yield {
+        compactor.drain (segs.iterator.flatten)
+      }
       reengage()
     }
 
