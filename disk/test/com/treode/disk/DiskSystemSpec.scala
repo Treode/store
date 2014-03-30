@@ -192,6 +192,26 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           replayer.check (tracker)
         }}}}
 
+  "The logger should" - {
+
+    "write more data than disk" taggedAs (Intensive, Periodic) in {
+      forAll (seeds) { seed =>
+
+        implicit val random = new Random (seed)
+        implicit val config = TestDisksConfig (checkpointEntries = 1000, cleaningFrequency = 3)
+        val geometry = TestDiskGeometry()
+        val disk = new StubFile (1<<20) (null)
+        var tracker = new LogTracker
+
+        implicit val scheduler = StubScheduler.random (random)
+        implicit val recovery = Disks.recover()
+        implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
+        import launch.disks
+        tracker.attach (launch)
+        launch.launch()
+        tracker.batches (80, 100000, 10) .pass
+      }}}
+
   "The pager should read and write" - {
 
     "without cleaning using one disk" taggedAs (Intensive, Periodic) in {
@@ -342,7 +362,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         }}}
 
     "more data than disk" taggedAs (Intensive, Periodic) in {
-      forAll (seeds) { seed =>
+      forAll (Gen.const (0L)) { seed =>
 
         implicit val random = new Random (seed)
         implicit val config = TestDisksConfig (cleaningFrequency = 3)
@@ -414,15 +434,27 @@ object DiskSystemSpec {
 
     def checkpoint () (implicit disks: Disks): Async [Unit] = {
       val save = attempted
+      val g = gen
+      gen += 1
       for {
-        pos <- pagers.table.write (0, gen, save)
-        _ <- records.checkpoint.record (gen, pos)
+        pos <- pagers.table.write (0, g, save)
+        _ <- records.checkpoint.record (g, pos)
       } yield ()
     }
 
     def attach (implicit launch: Disks.Launch) {
       import launch.disks
+
       launch.checkpoint (checkpoint())
+
+      pagers.table.handle (new PageHandler [Int] {
+
+        def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+          supply (groups)
+
+        def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+          checkpoint()
+      })
     }
 
     def check (found: Map [Int, Int]) {
@@ -437,7 +469,8 @@ object DiskSystemSpec {
 
   class LogReplayer {
 
-    private var replayed = Map.empty [Int, Int] .withDefaultValue (-1)
+    private var primary = Map.empty [Int, Int]
+    private var secondary = Map.empty [Int, Int]
     private var reread = Option.empty [Position]
     private var round = 0
     private var gen = 0
@@ -445,20 +478,25 @@ object DiskSystemSpec {
     def put (n: Int, g: Int, k: Int, v: Int) {
       assert (n >= round)
       round = n
-      if (g > this.gen) {
-        this.gen = g
-        this.replayed = Map.empty
-        this.reread = Option.empty
-      }
-      replayed += k -> v
-    }
+      if (g < gen && reread.isEmpty) {
+        secondary += k -> v
+      } else if (g == gen) {
+        primary += k -> v
+      } else if (g > gen) {
+        gen = g
+        secondary ++= primary
+        primary = Map.empty
+        primary += k -> v
+      }}
 
     def checkpoint (gen: Int, pos: Position) {
-      if (gen > this.gen) {
-        this.gen = gen
-        this.replayed = Map.empty
+      if (gen == this.gen - 1) {
+        this.secondary = Map.empty
         this.reread = Some (pos)
-      } else if (gen == this.gen) {
+      } else if (gen >= this.gen) {
+        this.gen = gen + 1
+        this.primary = Map.empty
+        this.secondary = Map.empty
         this.reread = Some (pos)
       }}
 
@@ -471,12 +509,12 @@ object DiskSystemSpec {
       reread match {
         case Some (pos) =>
           val saved = pagers.table.read (pos) .pass
-          tracker.check (saved ++ replayed)
+          tracker.check (saved ++ secondary ++ primary)
         case None =>
-          tracker.check (replayed)
+          tracker.check (secondary ++ primary)
       }}
 
-    override def toString = s"Replayer(\n  $reread\n  $replayed)"
+    override def toString = s"Replayer(\n  $reread\n  $primary)"
   }
 
   class StuffTracker (implicit random: Random) {

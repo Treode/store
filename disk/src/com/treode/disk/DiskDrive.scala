@@ -1,8 +1,9 @@
 package com.treode.disk
 
 import java.nio.file.Path
+import java.util.{Arrays, ArrayDeque}
 import scala.collection.JavaConversions._
-import scala.collection.mutable.{ArrayBuffer, UnrolledBuffer}
+import scala.collection.mutable.UnrolledBuffer
 import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch}
@@ -23,7 +24,7 @@ private class DiskDrive (
     val alloc: Allocator,
     val kit: DisksKit,
     var draining: Boolean,
-    var logSegs: ArrayBuffer [Int],
+    var logSegs: ArrayDeque [Int],
     var logHead: Long,
     var logTail: Long,
     var logLimit: Long,
@@ -60,11 +61,10 @@ private class DiskDrive (
     }
 
   private def _protected: IntSet = {
-    val protect = new ArrayBuffer [Int] (logSegs.size + 1)
-    protect ++= logSegs
-    if (!draining)
-      protect += pageSeg.num
-    IntSet (protect.sorted: _*)
+    if (draining)
+      IntSet (logSegs.toSeq.sorted: _*)
+    else
+      IntSet ((pageSeg.num +: logSegs.toSeq).sorted: _*)
   }
 
   private def writeLedger(): Async [Unit] = {
@@ -75,7 +75,15 @@ private class DiskDrive (
 
   def checkpoint (boot: BootBlock, mark: Option [Long]): Async [Unit] =
     fiber.guard {
+
       mark foreach (logHead = _)
+
+      val release = Seq.newBuilder [Int]
+      while (! (geometry.segmentBounds (logSegs.peek) .contains (logHead)))
+        release += logSegs.remove()
+      val nums = IntSet (release.result.sorted: _*)
+      alloc.free (nums)
+
       val superb =
           SuperBlock (id, boot, geometry, draining, alloc.free, logSegs.head, logHead)
       for {
@@ -317,8 +325,8 @@ private object DiskDrive {
 
       val alloc = Allocator (geometry, config)
       val logSeg = alloc.alloc (geometry, config)
-      val logSegs = new ArrayBuffer [Int]
-      logSegs += logSeg.num
+      val logSegs = new ArrayDeque [Int]
+      logSegs.add (logSeg.num)
       val pageSeg = alloc.alloc (geometry, config)
 
       val superb =

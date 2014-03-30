@@ -1,7 +1,7 @@
 package com.treode.disk
 
 import java.nio.file.Path
-import scala.collection.mutable.ArrayBuffer
+import java.util.ArrayDeque
 import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, AsyncConversions, AsyncIterator, Callback, Scheduler}
@@ -20,7 +20,7 @@ private class LogIterator private (
     buf: PagedBuffer,
     superb: SuperBlock,
     alloc: Allocator,
-    logSegs: ArrayBuffer [Int],
+    logSegs: ArrayDeque [Int],
     private var logSeg: SegmentBounds
 ) (implicit
     scheduler: Scheduler,
@@ -66,7 +66,7 @@ private class LogIterator private (
 
         case LogAlloc (next) =>
           logSeg = alloc.alloc (next, superb.geometry, config)
-          logSegs += logSeg.num
+          logSegs.add (logSeg.num)
           logPos = logSeg.pos
           buf.clear()
           file.deframe (buf, logPos) run (_read)
@@ -138,8 +138,8 @@ private object LogIterator {
     val superb = read.superb (useGen0)
     val alloc = Allocator (superb.free)
     val logSeg = alloc.alloc (superb.logSeg, superb.geometry, config)
-    val logSegs = new ArrayBuffer [Int]
-    logSegs += logSeg.num
+    val logSegs = new ArrayDeque [Int]
+    logSegs.add (logSeg.num)
     val buf = PagedBuffer (12)
 
     for {

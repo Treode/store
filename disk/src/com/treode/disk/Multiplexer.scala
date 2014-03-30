@@ -111,6 +111,10 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
   }
 
   def enlist(): Unit = execute {
+    case Discharged if !enrolled && receiver.isDefined =>
+      state = Open
+      enrolled = true
+      dispatcher.receive (dispatch)
     case Discharged =>
       state = Open
     case _ =>
