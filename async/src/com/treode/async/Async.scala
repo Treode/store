@@ -57,8 +57,8 @@ trait Async [A] {
   def on (s: Scheduler): Async [A] =
     _async (cb => run (cb on s))
 
-  def leave (f: => Any): Async [A] =
-    _async (cb => run (cb leave f))
+  def ensure (f: => Any): Async [A] =
+    _async (cb => run (cb ensure f))
 
   def recover (f: PartialFunction [Throwable, A]): Async [A] =
     _async (cb => run (cb recover f))

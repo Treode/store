@@ -36,7 +36,7 @@ private class ReadDirector (
         case Failed => failed (from)
       }}}
 
-  val timer = cb.leave {
+  val timer = cb.ensure {
     port.close()
   } .timeout (fiber, readBackoff) {
     broker.rouse()

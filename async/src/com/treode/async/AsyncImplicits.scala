@@ -44,7 +44,7 @@ trait AsyncImplicits {
     def on (s: Scheduler): Callback [A] =
       (v => s.execute (cb, v))
 
-    def leave (f: => Any): Callback [A] = { v =>
+    def ensure (f: => Any): Callback [A] = { v =>
       f
       cb (v)
     }

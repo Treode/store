@@ -177,7 +177,7 @@ private class DiskDrives (kit: DisksKit) {
         segs <- draining.latch.seq foreach (_.drain())
       } yield {
         checkpointer.checkpoint()
-            .leave (compactor.drain (segs.iterator.flatten))
+            .ensure (compactor.drain (segs.iterator.flatten))
             .run (ignore)
       }
     } run (cb)

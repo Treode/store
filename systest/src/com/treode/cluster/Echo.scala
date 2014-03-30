@@ -38,7 +38,7 @@ object Echo {
           hosts += from
         }}
 
-      val timer = cb.leave {
+      val timer = cb.ensure {
         port.close()
         count += 1
         if (count % period == 0) {

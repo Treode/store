@@ -82,10 +82,10 @@ class RichCallbackSpec extends FlatSpec {
     cb.failed [DistinguishedException]
   }
 
-  "RichCallback.leave" should "run the body on pass" in {
+  "RichCallback.ensure" should "run the body on pass" in {
     val cb1 = CallbackCaptor [Unit]
     var flag = false
-    val cb2 = cb1.leave (flag = true)
+    val cb2 = cb1.ensure (flag = true)
     cb2.pass()
     cb1.passed
     assertResult (true) (flag)
@@ -94,7 +94,7 @@ class RichCallbackSpec extends FlatSpec {
   it should "run the body on fail" in {
     val cb1 = CallbackCaptor [Unit]
     var flag = false
-    val cb2 = cb1.leave (flag = true)
+    val cb2 = cb1.ensure (flag = true)
     cb2.fail (new DistinguishedException)
     cb1.failed [DistinguishedException]
     assertResult (true) (flag)

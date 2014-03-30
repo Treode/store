@@ -52,7 +52,7 @@ private class Releaser {
 
   def join [A] (cb: Callback [A]): Callback [A] = {
     val epoch = join()
-    cb.leave (leave (epoch))
+    cb.ensure (leave (epoch))
   }
 
   def join [A] (task: Async [A]): Async [A] =

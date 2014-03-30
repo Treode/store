@@ -151,10 +151,10 @@ class AsyncSpec extends FlatSpec {
     cb.failed [DistinguishedException]
   }
 
-  "Async.leave" should "invoke the body on pass" in {
+  "Async.ensure" should "invoke the body on pass" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false
-    val a = supply (0) .leave (flag = true)
+    val a = supply (0) .ensure (flag = true)
     a.pass
     assertResult (true) (flag)
   }
@@ -162,7 +162,7 @@ class AsyncSpec extends FlatSpec {
   it should "invoke the body on fail" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false
-    val a = guard [Int] (throw new DistinguishedException) .leave (flag = true)
+    val a = guard [Int] (throw new DistinguishedException) .ensure (flag = true)
     a.fail [DistinguishedException]
     assertResult (true) (flag)
   }

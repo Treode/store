@@ -89,10 +89,10 @@ class TimeoutCallbackSpec extends FlatSpec {
     captor.failed [TimeoutException]
   }
 
-  it should "work with leave to close on pass" in {
+  it should "work with ensure to close on pass" in {
     implicit val (random, scheduler, fiber, captor) = setup()
     var flag = false
-    val timer = captor.leave (flag = true) .timeout (fiber, backoff) ()
+    val timer = captor.ensure (flag = true) .timeout (fiber, backoff) ()
     timer.pass()
     scheduler.runTasks (timers = true)
     assert (timer.invoked)
@@ -103,7 +103,7 @@ class TimeoutCallbackSpec extends FlatSpec {
   it should "work with leave to close on fail" in {
     implicit val (random, scheduler, fiber, captor) = setup()
     var flag = false
-    val timer = captor.leave (flag = true) .timeout (fiber, backoff) ()
+    val timer = captor.ensure (flag = true) .timeout (fiber, backoff) ()
     timer.fail (new DistinguishedException)
     scheduler.runTasks (timers = true)
     assert (timer.invoked)
@@ -114,7 +114,7 @@ class TimeoutCallbackSpec extends FlatSpec {
   it should "work with leave to close on timeout" in {
     implicit val (random, scheduler, fiber, captor) = setup()
     var flag = false
-    val timer = captor.leave (flag = true) .timeout (fiber, backoff) ()
+    val timer = captor.ensure (flag = true) .timeout (fiber, backoff) ()
     scheduler.runTasks (timers = true)
     assert (timer.invoked)
     captor.failed [TimeoutException]
