@@ -54,7 +54,7 @@ private class PageRegistry (kit: DisksKit) {
           releaser.release (Seq (seg))
         } else {
           val util =
-            ((live.toDouble / (seg.limit - seg.pos).toDouble) * 10000D).toInt
+            ((live.toDouble / (seg.limit - seg.base).toDouble) * 10000D).toInt
           if (util < threshold)
             candidates.add (util, (seg, ledger.groups))
         }}

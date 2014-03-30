@@ -70,7 +70,7 @@ private class DiskDrive (
   private def writeLedger(): Async [Unit] = {
     when (pageLedgerDirty) {
       pageLedgerDirty = false
-      PageLedger.write (pageLedger.clone(), file, pageSeg.pos)
+      PageLedger.write (pageLedger.clone(), file, pageSeg.base)
     }}
 
   def checkpoint (boot: BootBlock, mark: Option [Long]): Async [Unit] =
@@ -176,10 +176,10 @@ private class DiskDrive (
     RecordHeader.pickler.frame (LogEnd, newBuf)
     RecordHeader.pickler.frame (LogAlloc (newSeg.num), logBuf)
     for {
-      _ <- file.flush (newBuf, newSeg.pos)
+      _ <- file.flush (newBuf, newSeg.base)
       _ <- file.flush (logBuf, logTail)
     } yield fiber.execute {
-      logTail = newSeg.pos
+      logTail = newSeg.base
       logLimit = newSeg.limit
       logBuf.clear()
       logmp.receive (logr)
@@ -216,7 +216,7 @@ private class DiskDrive (
 
   private def splitPages (pages: UnrolledBuffer [PickledPage]) = {
     val projector = pageLedger.project
-    val limit = (pageHead - pageSeg.pos).toInt
+    val limit = (pageHead - pageSeg.base).toInt
     val accepts = new UnrolledBuffer [PickledPage]
     val rejects = new UnrolledBuffer [PickledPage]
     var totalBytes = 0
@@ -255,7 +255,7 @@ private class DiskDrive (
     pageLedger.add (ledger)
     pageLedgerDirty = true
     for {
-      _ <- PageLedger.write (pageLedger, file, pageSeg.pos)
+      _ <- PageLedger.write (pageLedger, file, pageSeg.base)
       _ <- record (PageClose (pageSeg.num))
     } yield fiber.execute {
       pageSeg = alloc.alloc (geometry, config)
@@ -283,7 +283,7 @@ private class DiskDrive (
 
       val (buffer, callbacks, ledger) = writePages (accepts)
       val pos = pageHead - buffer.readableBytes
-      assert (pos >= pageSeg.pos + geometry.blockBytes)
+      assert (pos >= pageSeg.base + geometry.blockBytes)
       val cb = fanout (callbacks, scheduler)
 
       val task = for {
@@ -330,14 +330,14 @@ private object DiskDrive {
       val pageSeg = alloc.alloc (geometry, config)
 
       val superb =
-          SuperBlock (id, boot, geometry, false, alloc.free, logSeg.num, logSeg.pos)
+          SuperBlock (id, boot, geometry, false, alloc.free, logSeg.num, logSeg.base)
 
       for {
         _ <- latch (
             SuperBlock.write (superb, file),
-            RecordHeader.write (LogEnd, file, logSeg.pos))
+            RecordHeader.write (LogEnd, file, logSeg.base))
       } yield {
         new DiskDrive (
-            id, path, file, geometry, alloc, kit, false, logSegs, logSeg.pos, logSeg.pos,
+            id, path, file, geometry, alloc, kit, false, logSegs, logSeg.base, logSeg.base,
             logSeg.limit, PagedBuffer (12), pageSeg, pageSeg.limit, new PageLedger, true)
       }}}

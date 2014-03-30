@@ -101,10 +101,10 @@ private object DiskTestTools extends AsyncTestTools {
       } else {
         assert (!drive.alloc.free.contains (num), "Expected segment to be allocated.")
         val seg = drive.geometry.segmentBounds (num)
-        val ledger = PageLedger.read (drive.file, seg.pos) .pass
+        val ledger = PageLedger.read (drive.file, seg.base) .pass
         assert (
             ledger.get (typ, obj, grp) > 0,
-            s"Expected ($typ, $obj, $grp) in ledger at ${seg.pos}.")
+            s"Expected ($typ, $obj, $grp) in ledger at ${seg.base}.")
       }}
 
     // After detaching, closed multiplexers may still reside in the dispatcher's receiver

@@ -67,7 +67,7 @@ private class LogIterator private (
         case LogAlloc (next) =>
           logSeg = alloc.alloc (next, superb.geometry, config)
           logSegs.add (logSeg.num)
-          logPos = logSeg.pos
+          logPos = logSeg.base
           buf.clear()
           file.deframe (buf, logPos) run (_read)
 

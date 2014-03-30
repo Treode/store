@@ -55,12 +55,6 @@ package disk {
 
   class SuperblockOverflowException extends Exception {
     override def getMessage = "The superblock data is to large for its allocated disk space."
-  }
-
-  private case class SegmentBounds (num: Int, pos: Long, limit: Long) {
-
-    def contains (pos: Long): Boolean =
-      this.pos <= pos && pos < limit
   }}
 
 package object disk {

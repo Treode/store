@@ -8,14 +8,14 @@ private class SegmentPointer private (
 ) {
 
   def num = bounds.num
-  def pos = bounds.pos
+  def base = bounds.base
   def limit = bounds.limit
 
   def compacting(): Unit =
     disk.compacting (Seq (this))
 
   def probe(): Async [PageLedger] =
-    PageLedger.read (disk.file, bounds.pos)
+    PageLedger.read (disk.file, bounds.base)
 
   override def equals (other: Any): Boolean =
     other match {
