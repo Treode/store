@@ -2,7 +2,7 @@ package com.treode.async
 
 import org.scalatest.FlatSpec
 
-import AsyncConversions._
+import AsyncImplicits._
 import AsyncIteratorTestTools._
 
 class MergeIteratorSpec extends FlatSpec {

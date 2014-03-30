@@ -2,11 +2,11 @@ package com.treode.disk
 
 import java.nio.file.Paths
 
-import com.treode.async.{AsyncConversions, AsyncTestTools, StubScheduler}
+import com.treode.async.{AsyncImplicits, AsyncTestTools, StubScheduler}
 import com.treode.async.io.StubFile
 import org.scalatest.FreeSpec
 
-import AsyncConversions._
+import AsyncImplicits._
 import DiskTestTools._
 
 class RecoverySpec extends FreeSpec {

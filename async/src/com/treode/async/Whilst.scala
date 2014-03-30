@@ -4,7 +4,7 @@ import java.util.concurrent.Executor
 import scala.util.{Failure, Success}
 
 import Async.async
-import AsyncConversions._
+import AsyncImplicits._
 import Scheduler.toRunnable
 
 class Whilst (executor: Executor) {

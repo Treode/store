@@ -3,9 +3,9 @@ package com.treode.disk
 import java.util.ArrayList
 import scala.collection.JavaConversions
 
-import com.treode.async.{Async, AsyncConversions, Callback, Scheduler}
+import com.treode.async.{Async, AsyncImplicits, Callback, Scheduler}
 
-import AsyncConversions._
+import AsyncImplicits._
 import JavaConversions._
 
 private class LaunchAgent (val kit: DisksKit) extends Disks.Launch {

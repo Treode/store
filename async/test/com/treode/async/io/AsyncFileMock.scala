@@ -8,10 +8,10 @@ import java.util.concurrent.Future
 import scala.collection.JavaConversions._
 import scala.util.{Success, Failure}
 
-import com.treode.async.{AsyncConversions, Callback, StubScheduler}
+import com.treode.async.{AsyncImplicits, Callback, StubScheduler}
 import org.scalatest.Assertions
 
-import AsyncConversions._
+import AsyncImplicits._
 
 /** ScalaMock refuses to mock AsynchronousFileChannel. */
 class AsyncFileMock extends AsynchronousFileChannel with Assertions {

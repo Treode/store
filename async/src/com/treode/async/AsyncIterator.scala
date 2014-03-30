@@ -3,7 +3,7 @@ package com.treode.async
 import java.lang.{Iterable => JIterable}
 import java.util.{Iterator => JIterator}
 
-import AsyncConversions._
+import AsyncImplicits._
 
 trait AsyncIterator [+A] {
 

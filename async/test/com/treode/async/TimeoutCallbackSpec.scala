@@ -5,7 +5,7 @@ import scala.util.Random
 
 import org.scalatest.FlatSpec
 
-import AsyncConversions._
+import AsyncImplicits._
 
 class TimeoutCallbackSpec extends FlatSpec {
 

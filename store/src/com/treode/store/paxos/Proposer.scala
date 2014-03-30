@@ -3,12 +3,12 @@ package com.treode.store.paxos
 import java.util.concurrent.TimeoutException
 import scala.language.postfixOps
 
-import com.treode.async.{AsyncConversions, Backoff, Callback, Fiber}
+import com.treode.async.{AsyncImplicits, Backoff, Callback, Fiber}
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{Peer, MessageDescriptor}
 import com.treode.store.Bytes
 
-import AsyncConversions._
+import AsyncImplicits._
 
 private class Proposer (key: Bytes, kit: PaxosKit) {
   import kit.proposers.remove

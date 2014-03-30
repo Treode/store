@@ -2,13 +2,13 @@ package com.treode.store.catalog
 
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncConversions, Fiber, Scheduler}
+import com.treode.async.{Async, AsyncImplicits, Fiber, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Atlas, Catalogs, CatalogDescriptor, CatalogId, StoreConfig}
 
 import Async.guard
-import AsyncConversions._
+import AsyncImplicits._
 import Poster.pager
 
 private class RecoveryKit (implicit

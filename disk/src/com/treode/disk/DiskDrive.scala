@@ -6,12 +6,12 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.UnrolledBuffer
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Latch}
+import com.treode.async.{Async, AsyncImplicits, Callback, Fiber, Latch}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
 import Async.{async, guard, latch, when}
-import AsyncConversions._
+import AsyncImplicits._
 import Callback.{fanout, ignore}
 import DiskDrive.offset
 import RecordHeader._

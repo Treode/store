@@ -2,7 +2,7 @@ package com.treode.store.atomic
 
 import java.util.concurrent.ConcurrentHashMap
 
-import com.treode.async.{Async, AsyncConversions, Callback, Latch}
+import com.treode.async.{Async, AsyncImplicits, Callback, Latch}
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disks, ObjectId, PageHandler, Position, RecordDescriptor}
 import com.treode.store.{ReadOp, TableId, TxClock, TxId, Value, WriteOp}
@@ -10,7 +10,7 @@ import com.treode.store.locks.LockSpace
 import com.treode.store.tier.{TierMedic, TierTable}
 
 import Async.{async, guard, supply}
-import AsyncConversions._
+import AsyncImplicits._
 
 private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
   import kit.{config, disks, scheduler}

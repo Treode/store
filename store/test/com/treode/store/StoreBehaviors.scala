@@ -11,7 +11,7 @@ import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
 import Async.{async, latch}
-import AsyncConversions._
+import AsyncImplicits._
 import Cardinals.{One, Two}
 import Fruits.Apple
 import TimedTestTools._

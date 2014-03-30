@@ -1,6 +1,6 @@
 package com.treode.async
 
-import AsyncConversions._
+import AsyncImplicits._
 
 private abstract class AbstractLatch [A] (private var count: Int, cb: Callback [A]) {
 

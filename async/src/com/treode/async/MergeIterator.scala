@@ -5,7 +5,7 @@ import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 import Async.async
-import AsyncConversions._
+import AsyncImplicits._
 
 private class MergeIterator [A] (iters: Seq [AsyncIterator [A]]) (implicit order: Ordering [A])
 extends AsyncIterator [A] {

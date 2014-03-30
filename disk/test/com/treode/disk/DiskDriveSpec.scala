@@ -2,13 +2,13 @@ package com.treode.disk
 
 import java.nio.file.Paths
 
-import com.treode.async.{Async, AsyncConversions, AsyncTestTools, CallbackCaptor, StubScheduler}
+import com.treode.async.{Async, AsyncImplicits, AsyncTestTools, CallbackCaptor, StubScheduler}
 import com.treode.async.io.{File, StubFile}
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
-import AsyncConversions._
+import AsyncImplicits._
 import AsyncTestTools._
 
 class DiskDriveSpec extends FreeSpec {

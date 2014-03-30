@@ -5,12 +5,12 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-import com.treode.async.{AsyncConversions, Backoff, Callback, Fiber}
+import com.treode.async.{AsyncImplicits, Backoff, Callback, Fiber}
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{Cluster, Peer}
 import com.treode.store._
 
-import AsyncConversions._
+import AsyncImplicits._
 
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
   import WriteDirector.deliberate

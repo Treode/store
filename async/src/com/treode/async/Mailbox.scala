@@ -3,7 +3,7 @@ package com.treode.async
 import java.util
 
 import Async.async
-import AsyncConversions._
+import AsyncImplicits._
 
 class Mailbox [M] {
 

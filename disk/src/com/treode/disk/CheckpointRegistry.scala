@@ -2,10 +2,10 @@ package com.treode.disk
 
 import java.util.ArrayList
 
-import com.treode.async.{Async, AsyncConversions}
+import com.treode.async.{Async, AsyncImplicits}
 
 import Async.guard
-import AsyncConversions._
+import AsyncImplicits._
 
 private class CheckpointRegistry {
 

@@ -4,7 +4,7 @@ import scala.util.{Failure, Success, Try}
 import org.scalatest.FlatSpec
 
 import Async.{async, guard, supply, when}
-import AsyncConversions._
+import AsyncImplicits._
 import AsyncTestTools._
 import Callback.{ignore => disregard}
 

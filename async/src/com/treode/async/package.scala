@@ -14,7 +14,7 @@ package async {
 
 package object async {
 
-  import AsyncConversions._
+  import AsyncImplicits._
   import Scheduler.toRunnable
 
   type Callback [A] = Try [A] => Any

@@ -2,7 +2,7 @@ package com.treode.disk
 
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncConversions, AsyncTestTools, Callback, StubScheduler}
+import com.treode.async.{Async, AsyncImplicits, AsyncTestTools, Callback, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.pickle.{InvalidTagException, Picklers}
 import com.treode.tags.{Intensive, Periodic}
@@ -11,7 +11,7 @@ import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks
 
 import Async.{async, latch}
-import AsyncConversions._
+import AsyncImplicits._
 import DiskTestTools._
 import PropertyChecks._
 

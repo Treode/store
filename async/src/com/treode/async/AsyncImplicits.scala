@@ -5,7 +5,7 @@ import java.util.{Iterator => JIterator}
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Random, Success, Try}
 
-trait AsyncConversions {
+trait AsyncImplicits {
 
   implicit class RichCallback [A] (cb: Try [A] => Any) {
 
@@ -84,4 +84,4 @@ trait AsyncConversions {
     object latch extends IterableLatch (iter, iter.size)
   }}
 
-object AsyncConversions extends AsyncConversions
+object AsyncImplicits extends AsyncImplicits

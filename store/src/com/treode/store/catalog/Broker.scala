@@ -1,11 +1,11 @@
 package com.treode.store.catalog
 
-import com.treode.async.{Async, AsyncConversions, Callback, Fiber, Scheduler}
+import com.treode.async.{Async, AsyncImplicits, Callback, Fiber, Scheduler}
 import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
 import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position}
 import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 
-import AsyncConversions._
+import AsyncImplicits._
 import Callback.ignore
 
 private class Broker (

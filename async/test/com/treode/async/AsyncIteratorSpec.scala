@@ -3,7 +3,7 @@ package com.treode.async
 import org.scalatest.FlatSpec
 
 import Async.supply
-import AsyncConversions._
+import AsyncImplicits._
 import AsyncIteratorTestTools._
 
 class AsyncIteratorSpec extends FlatSpec {

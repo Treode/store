@@ -4,7 +4,7 @@ import java.util.ArrayList
 import scala.collection.JavaConversions
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncConversions, StubScheduler}
+import com.treode.async.{Async, AsyncImplicits, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
@@ -13,7 +13,7 @@ import org.scalatest.prop.PropertyChecks
 import org.scalatest.time.SpanSugar
 
 import Async.{guard, latch, supply}
-import AsyncConversions._
+import AsyncImplicits._
 import DiskTestTools._
 import DiskSystemSpec._
 import JavaConversions._

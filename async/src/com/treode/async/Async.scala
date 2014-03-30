@@ -5,7 +5,7 @@ import scala.runtime.NonLocalReturnControl
 import scala.util.{Failure, Success, Try}
 
 import Async.{_async, async}
-import AsyncConversions._
+import AsyncImplicits._
 import Scheduler.toRunnable
 
 trait Async [A] {

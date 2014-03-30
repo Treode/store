@@ -4,11 +4,11 @@ import java.io.EOFException
 import java.util.{Arrays, ArrayDeque}
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncConversions, Callback, CallbackCaptor, StubScheduler}
+import com.treode.async.{Async, AsyncImplicits, Callback, CallbackCaptor, StubScheduler}
 import com.treode.buffer.PagedBuffer
 
 import Async.async
-import AsyncConversions._
+import AsyncImplicits._
 
 class StubFile (size: Int = 0) (implicit _scheduler: StubScheduler) extends File (null) {
 

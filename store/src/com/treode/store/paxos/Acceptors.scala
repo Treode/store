@@ -1,13 +1,13 @@
 package com.treode.store.paxos
 
-import com.treode.async.{Async, AsyncConversions, Latch}
+import com.treode.async.{Async, AsyncImplicits, Latch}
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position, RecordDescriptor}
 import com.treode.store.Bytes
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
 import Async.{guard, latch, supply}
-import AsyncConversions._
+import AsyncImplicits._
 
 private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   import kit.{archive, cluster, disks}
