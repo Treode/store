@@ -80,7 +80,7 @@ private object DiskTestTools extends AsyncTestTools {
     }
 
     def assertReady()  {
-      assert (!drives.engaged, "Expected disks to be disengaged.")
+      assert (!drives.queue.engaged, "Expected disks to be disengaged.")
       assert (!checkpointer.engaged, "Expected checkpointer to be disengaged.")
       assert (!compactor.engaged, "Expected compactor to be disengaged.")
       val nloggers = drives.disks.size

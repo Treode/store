@@ -48,8 +48,8 @@ private class DiskDrive (
 
   def added() {
     if (draining) {
-      logmp.discharge()
-      pagemp.close() run (ignore)
+      logmp.discharge() run (ignore)
+      pagemp.discharge() run (ignore)
     }
     logmp.receive (logr)
     pagemp.receive (pager)
@@ -124,7 +124,6 @@ private class DiskDrive (
 
   def drain(): Async [Iterator [SegmentPointer]] =
     fiber.guard {
-      assert (!draining)
       draining = true
       for {
         _ <- latch (logmp.discharge(), pagemp.close(), record (DiskDrain))

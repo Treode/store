@@ -30,56 +30,41 @@ private class DiskDrives (kit: DisksKit) {
   var detachreqs = List.empty [DetachRequest]
   var drainreqs = Queue.empty [DrainRequest]
   var checkreqs = Queue.empty [CheckpointRequest]
-  var engaged = true
 
   var bootgen = 0
   var number = 0
 
-  private def reengage() {
+  val queue = AsyncQueue (fiber) {
     if (!attachreqs.isEmpty) {
-      val (first, rest) = attachreqs.dequeue
+      val ((items, cb), rest) = attachreqs.dequeue
       attachreqs = rest
-      _attach (first)
+      _attach (items, cb)
     } else if (!detachreqs.isEmpty) {
       val all = detachreqs
       detachreqs = List.empty
       _detach (all)
     } else if (!drainreqs.isEmpty) {
-      val (first, rest) = drainreqs.dequeue
+      val ((items, cb), rest) = drainreqs.dequeue
       drainreqs = rest
-      _drain (first)
+      _drain (items, cb)
     } else if (!checkreqs.isEmpty) {
-      val (first, rest) = checkreqs.dequeue
+      val ((marks, cb), rest) = checkreqs.dequeue
       checkreqs = rest
-      _checkpoint (first)
+      _checkpoint (marks, cb)
     } else {
-      engaged = false
+      None
     }}
 
   def launch(): Async [Unit] =
-    fiber.supply {
+    queue.launch {
       for {
         segs <- disks.values.filter (_.draining) .latch.seq foreach (_.drain())
       } yield {
         compactor.drain (segs.iterator.flatten)
-      }
-      reengage()
-    }
+      }}
 
-  private def leave [A] (cb: Callback [A]): Callback [A] = {
-    case Success (v) =>
-      fiber.execute (reengage())
-      scheduler.pass (cb, v)
-    case Failure (t) =>
-      fiber.execute (reengage())
-      scheduler.fail (cb, t)
-  }
-
-  private def _attach (req: AttachRequest) {
-    val items = req._1
-    val cb = leave (req._2)
-    engaged = true
-    fiber.guard {
+  private def _attach (items: Seq [AttachItem], cb: Callback [Unit]): Option [Runnable] =
+    queue.run (cb) {
 
       val priorDisks = disks.values
       val priorPaths = priorDisks.setBy (_.path)
@@ -99,27 +84,20 @@ private class DiskDrives (kit: DisksKit) {
           for (((path, file, geometry), i) <- items.zipWithIndex.latch.indexed)
             DiskDrive.init (this.number + i + 1, path, file, geometry, newBoot, kit)
         _ <- priorDisks.latch.unit foreach (_.checkpoint (newBoot, None))
-      } yield fiber.execute {
+      } yield {
         disks ++= newDisks.mapBy (_.id)
         this.bootgen = bootgen
         this.number = number
         newDisks foreach (_.added())
-      }
-    } run (cb)
-  }
+      }}
 
-  def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit] =
-    fiber.async { cb =>
-
+  def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit] = {
+    queue.async { cb =>
       val attaching = items.map (_._1) .toSet
       require (!items.isEmpty, "Must list at least one file or device to attach.")
       require (attaching.size == items.size, "Cannot attach a path multiple times.")
-
-      if (engaged)
-        attachreqs = attachreqs.enqueue (items, cb)
-      else
-        _attach (items, cb)
-    }
+      attachreqs = attachreqs.enqueue (items, cb)
+    }}
 
   def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Unit] =
     guard {
@@ -127,9 +105,8 @@ private class DiskDrives (kit: DisksKit) {
       attach (files)
     }
 
-  private def _detach (items: List [DiskDrive]) {
-    engaged = true
-    fiber.guard {
+  private def _detach (items: List [DiskDrive]): Option [Runnable] =
+    queue.run (ignore) {
 
       val paths = items map (_.path)
       val disks = this.disks -- (items map (_.id))
@@ -144,23 +121,15 @@ private class DiskDrives (kit: DisksKit) {
         this.bootgen = bootgen
         items foreach (_.detach())
         // TODO: add detach hooks
-      }
-    } run (leave (ignore))
-  }
+      }}
 
-  def detach (disk: DiskDrive) {
-    fiber.execute {
-      if (engaged)
-        detachreqs ::= disk
-      else
-        _detach (List (disk))
-    }}
+  def detach (disk: DiskDrive): Unit =
+    queue.execute {
+      detachreqs ::= disk
+    }
 
-  private def _drain (req: DrainRequest) {
-    val (items, _cb) = req
-    val cb = leave (_cb)
-    engaged = true
-    fiber.guard {
+  private def _drain (items: Seq [Path], cb: Callback [Unit]): Option [Runnable] =
+    queue.run (cb) {
 
       val byPath = disks.values.mapBy (_.path)
       if (!(items forall (byPath contains _))) {
@@ -179,24 +148,16 @@ private class DiskDrives (kit: DisksKit) {
         checkpointer.checkpoint()
             .ensure (compactor.drain (segs.iterator.flatten))
             .run (ignore)
-      }
-    } run (cb)
-  }
+      }}
 
   def drain (items: Seq [Path]): Async [Unit] =
-    fiber.async { cb =>
+    queue.async { cb =>
       require (!items.isEmpty, "Must list at least one file or device to attach.")
-      if (engaged)
-        drainreqs = drainreqs.enqueue (items, cb)
-      else
-        _drain (items, cb)
+      drainreqs = drainreqs.enqueue (items, cb)
     }
 
-  private def _checkpoint (req: CheckpointRequest) {
-    val (marks, _cb) = req
-    val cb = leave (_cb)
-    engaged = true
-    fiber.guard {
+  private def _checkpoint (marks: Map [Int, Long], cb: Callback [Unit]): Option [Runnable] =
+    queue.run (cb) {
       val bootgen = this.bootgen + 1
       val attached = disks.values.map (_.path) .toSet
       val newBoot = BootBlock (cell, bootgen, number, attached)
@@ -204,16 +165,11 @@ private class DiskDrives (kit: DisksKit) {
         _ <- disks.values.latch.unit foreach (disk => disk.checkpoint (newBoot, marks get disk.id))
       } yield {
         this.bootgen = bootgen
-      }
-    } run (cb)
-  }
+      }}
 
   def checkpoint (marks: Map [Int, Long]): Async [Unit] =
-    fiber.async { cb =>
-      if (engaged)
-        checkreqs = checkreqs.enqueue (marks, cb)
-      else
-        _checkpoint (marks, cb)
+    queue.async { cb =>
+      checkreqs = checkreqs.enqueue (marks, cb)
     }
 
   def add (disks: Seq [DiskDrive]): Async [Unit] =
@@ -223,12 +179,12 @@ private class DiskDrives (kit: DisksKit) {
     }
 
   def mark(): Async [Map [Int, Long]] =
-    fiber.guard {
+    guard {
       disks.values.latch.map foreach (_.mark())
     }
 
   def cleanable(): Async [Iterator [SegmentPointer]] =  {
-    fiber.guard {
+    guard {
       for {
         segs <- disks.values.filterNot (_.draining) .latch.seq.foreach (_.cleanable())
       } yield segs.iterator.flatten

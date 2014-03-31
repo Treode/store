@@ -40,6 +40,7 @@ class StubFile (size: Int = 0) (implicit _scheduler: StubScheduler) extends File
   override def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
     _stop { cb =>
       try {
+        require (pos >= 0)
         require (pos + len < Int.MaxValue)
         if (len <= input.readableBytes) {
           scheduler.pass (cb, ())
@@ -63,6 +64,7 @@ class StubFile (size: Int = 0) (implicit _scheduler: StubScheduler) extends File
   override def flush (output: PagedBuffer, pos: Long): Async [Unit] =
     _stop { cb =>
       try {
+        require (pos >= 0)
         require (pos + output.readableBytes < Int.MaxValue)
         if (data.length < pos + output.readableBytes)
           data = Arrays.copyOf (data, pos.toInt + output.readableBytes)

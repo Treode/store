@@ -29,6 +29,7 @@ private class LogIterator private (
 
   private var draining = superb.draining
   private var logPos = superb.logHead
+  private var logTail = -1L
   private var pagePos = Option.empty [Long]
   private var pageLedger = new PageLedger
 
@@ -60,6 +61,7 @@ private class LogIterator private (
           file.deframe (buf, logPos) run (_read)
 
         case LogEnd =>
+          logTail = logPos
           logPos = -1L
           buf.clear()
           scheduler.pass (cb, ())
@@ -118,7 +120,7 @@ private class LogIterator private (
     }
     val disk = new DiskDrive (
         superb.id, path, file, superb.geometry, alloc, kit, draining, logSegs,
-        superb.logHead, logPos, logSeg.limit, buf, seg, pos, pageLedger, false)
+        superb.logHead, logTail, logSeg.limit, buf, seg, pos, pageLedger, false)
     disk
   }}
 

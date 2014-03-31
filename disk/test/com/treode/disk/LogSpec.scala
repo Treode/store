@@ -67,6 +67,36 @@ class LogSpec extends FlatSpec with PropertyChecks {
       assertResult (Seq ("one")) (replayed.result)
     }}
 
+  it should "replay twice" in {
+
+    val disk = new StubFile () (null)
+
+    {
+      implicit val scheduler = StubScheduler.random()
+      implicit val recovery = Disks.recover()
+      implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+      records.str.record ("one") .pass
+    }
+
+    {
+      implicit val scheduler = StubScheduler.random()
+      implicit val recovery = Disks.recover()
+      val replayed = Seq.newBuilder [String]
+      records.str.replay (replayed += _)
+      implicit val disks = recovery.reattachAndLaunch (("a", disk))
+      assertResult (Seq ("one")) (replayed.result)
+      records.str.record ("two") .pass
+    }
+
+    {
+      implicit val scheduler = StubScheduler.random()
+      implicit val recovery = Disks.recover()
+      val replayed = Seq.newBuilder [String]
+      records.str.replay (replayed += _)
+      recovery.reattachAndLaunch (("a", disk))
+      assertResult (Seq ("one", "two")) (replayed.result)
+    }}
+
   it should "report an unrecognized record" in {
 
     val disk = new StubFile () (null)

@@ -188,7 +188,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val recovery = Disks.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
-          implicit val disks = recovery.reopenAndLaunch ("a") (("a", disk1), ("b", disk2))
+          implicit val launch = recovery.reopenAndWait ("a") (("a", disk1), ("b", disk2)) .pass
+          import launch.disks
+          tracker.attach (launch)
+          launch.launch()
           replayer.check (tracker)
         }}}}
 
@@ -357,7 +360,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         .recover { implicit scheduler =>
           implicit val recovery = Disks.recover()
-          implicit val disks = recovery.reopenAndLaunch ("a") (("a", disk1), ("b", disk2))
+          implicit val launch = recovery.reopenAndWait ("a") (("a", disk1), ("b", disk2)) .pass
+          import launch.disks
+          tracker.attach (launch)
+          launch.launch()
           tracker.check()
         }}}
 

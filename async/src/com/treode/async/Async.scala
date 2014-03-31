@@ -114,11 +114,12 @@ object Async {
             try {
               cb (v)
             } catch {
+              case t: CallbackException => throw t
               case t: Throwable => throw new CallbackException (t)
             }}
         } catch {
           case t: NonLocalReturnControl [_] => cb.fail (new ReturnNotAllowedFromAsync)
-          case t: CallbackException => throw t.thrown
+          case t: CallbackException => throw t.getCause
           case t: Throwable => cb.fail (t)
         }}}
 
