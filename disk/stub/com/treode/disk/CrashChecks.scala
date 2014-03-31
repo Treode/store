@@ -13,8 +13,22 @@ import SpanSugar._
 trait CrashChecks extends ParallelTestExecution with TimeLimitedTests {
   this: Suite with Informing =>
 
-  private val ncrashes = 100
-  private val nseeds = 100
+  private val intensity: String = {
+    val env = System.getenv ("TEST_INTENSITY")
+    if (env == null) "standard" else env
+  }
+
+  private val ncrashes =
+    intensity match {
+      case "development" => 1
+      case _ => 100
+    }
+
+  private val nseeds =
+    intensity match {
+      case "development" => 1
+      case _ => 100
+    }
 
   val timeLimit = 5 minutes
 
@@ -83,4 +97,21 @@ trait CrashChecks extends ParallelTestExecution with TimeLimitedTests {
     val end = System.currentTimeMillis
     val average = (end - start) / count
     info (s"Crash and recovery average time ${average}ms")
-  }}
+  }
+
+  def forSeed (seed: Long) (test: Random => Any) {
+    try {
+      val random = new Random (seed)
+      test (random)
+    } catch {
+      case t: Throwable =>
+        info (s"Test failed; seed = ${seed}L")
+        t.printStackTrace()
+        throw t
+    }}
+
+  def forAllSeeds (test: Random => Any) {
+    for (_ <- 0 until nseeds) {
+      val random = new Random (Random.nextLong())
+      test (random)
+    }}}

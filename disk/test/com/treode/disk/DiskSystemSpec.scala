@@ -24,8 +24,6 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
   override val timeLimit = 15 minutes
 
-  val seeds = Gen.choose (0L, Long.MaxValue)
-
   "The logger should replay items" - {
 
     "without checkpoints using one disk" taggedAs (Intensive, Periodic) in {
@@ -198,9 +196,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
   "The logger should" - {
 
     "write more data than disk" taggedAs (Intensive, Periodic) in {
-      forAll (seeds) { seed =>
+      forAllSeeds { implicit random =>
 
-        implicit val random = new Random (seed)
         implicit val config = TestDisksConfig (checkpointEntries = 1000, cleaningFrequency = 3)
         val geometry = TestDiskGeometry()
         val disk = new StubFile (1<<20) (null)
@@ -368,9 +365,8 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         }}}
 
     "more data than disk" taggedAs (Intensive, Periodic) in {
-      forAll (Gen.const (0L)) { seed =>
+      forAllSeeds { implicit random =>
 
-        implicit val random = new Random (seed)
         implicit val config = TestDisksConfig (cleaningFrequency = 3)
         val geometry = TestDiskGeometry (diskBytes=1<<22)
         val disk = new StubFile (1<<22) (null)
