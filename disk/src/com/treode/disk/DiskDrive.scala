@@ -70,7 +70,7 @@ private class DiskDrive (
   private def writeLedger(): Async [Unit] = {
     when (pageLedgerDirty) {
       pageLedgerDirty = false
-      PageLedger.write (pageLedger.clone(), file, pageSeg.base)
+      PageLedger.write (pageLedger.clone(), file, pageSeg.base, pageHead)
     }}
 
   def checkpoint (boot: BootBlock, mark: Option [Long]): Async [Unit] =
@@ -254,7 +254,7 @@ private class DiskDrive (
     pageLedger.add (ledger)
     pageLedgerDirty = true
     for {
-      _ <- PageLedger.write (pageLedger, file, pageSeg.base)
+      _ <- PageLedger.write (pageLedger, file, pageSeg.base, pageHead)
       _ <- record (PageClose (pageSeg.num))
     } yield fiber.execute {
       pageSeg = alloc.alloc (geometry, config)

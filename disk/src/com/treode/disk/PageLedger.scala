@@ -173,14 +173,16 @@ object PageLedger {
         yield Zipped.pickler.unpickle (buf) .unzip
     }
 
-  def write (ledger: Zipped, file: File, pos: Long): Async [Unit] =
+  def write (ledger: Zipped, file: File, pos: Long, limit: Long): Async [Unit] =
     guard {
       val buf = PagedBuffer (12)
       Zipped.pickler.frame (checksum, ledger, buf)
+      if (buf.writePos > limit - pos)
+        throw new PageLedgerOverflowException
       file.flush (buf, pos)
     }
 
-  def write (ledger: PageLedger, file: File, pos: Long): Async [Unit] =
+  def write (ledger: PageLedger, file: File, pos: Long, limit: Long): Async [Unit] =
     guard {
-      write (ledger.zip, file, pos)
+      write (ledger.zip, file, pos, limit)
     }}

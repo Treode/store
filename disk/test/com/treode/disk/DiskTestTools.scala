@@ -158,7 +158,11 @@ private object DiskTestTools extends AsyncTestTools {
       while (ks.size < count)
         ks += random.nextInt (max)
       ks
-    }}
+    }
+
+    def nextGroup(): PageGroup =
+      PageGroup (DiskPicklers.fixedLong, random.nextLong())
+  }
 
   implicit class RichRecovery (recovery: Disks.Recovery) {
     val agent = recovery.asInstanceOf [RecoveryAgent]

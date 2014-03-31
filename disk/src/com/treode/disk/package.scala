@@ -53,6 +53,10 @@ package disk {
     override def getMessage = s"The record of $found bytes exceeds the limit of $maximum bytes."
   }
 
+  class PageLedgerOverflowException extends Exception {
+    override def getMessage = "The page ledger is to large for its allocated disk space."
+  }
+
   class SuperblockOverflowException extends Exception {
     override def getMessage = "The superblock data is to large for its allocated disk space."
   }}

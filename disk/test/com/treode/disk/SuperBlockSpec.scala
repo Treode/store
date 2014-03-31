@@ -1,11 +1,11 @@
 package com.treode.disk
 
-import com.treode.async.{AsyncTestTools, StubScheduler}
+import com.treode.async.StubScheduler
 import com.treode.async.io.StubFile
 import com.treode.buffer.PagedBuffer
 import org.scalatest.FlatSpec
 
-import AsyncTestTools._
+import DiskTestTools._
 
 class SuperBlockSpec extends FlatSpec {
 
@@ -26,7 +26,7 @@ class SuperBlockSpec extends FlatSpec {
     val buf = PagedBuffer (12)
     for (i <- 0 until 1024)
       buf.writeInt (i)
-    val file = new StubFile
+    val file = new StubFile (1<<12)
     file.flush (buf, 0) .pass
 
     // Check that the write throws an exception.
