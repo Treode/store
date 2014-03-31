@@ -19,9 +19,9 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
 
   sealed abstract class State
   case object Open extends State
-  case object Discharged extends State
+  case object Paused extends State
   case object Closed extends State
-  case class Discharging (cb: Callback [Unit]) extends State
+  case class Pausing (cb: Callback [Unit]) extends State
   case class Closing (cb: Callback [Unit]) extends State
 
   private def execute (f: State => Any): Unit =
@@ -89,10 +89,10 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
       dispatcher.receive (dispatch)
     case Open =>
       add (receiver)
-    case Discharged =>
+    case Paused =>
       add (receiver)
-    case Discharging (cb) =>
-      state = Discharged
+    case Pausing (cb) =>
+      state = Paused
       add (receiver)
       scheduler.pass (cb, ())
     case Closed =>
@@ -110,27 +110,27 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
       dispatcher.replace (rejects)
   }
 
-  def enlist(): Unit = execute {
-    case Discharged if !enrolled && receiver.isDefined =>
-      state = Open
-      enrolled = true
-      dispatcher.receive (dispatch)
-    case Discharged =>
-      state = Open
-    case _ =>
-      ()
-  }
-
-  def discharge(): Async [Unit] = async {
+  def pause(): Async [Unit] = async {
     case (cb, Open) if receiver.isDefined =>
-      state = Discharged
+      state = Paused
       scheduler.pass (cb, ())
     case (cb, Open) =>
-      state = Discharging (cb)
+      state = Pausing (cb)
     case (cb1, Closing (cb2)) =>
       state = Closing (Callback.fanout (Seq (cb1, cb2), scheduler))
     case (cb, _) =>
       scheduler.pass (cb, ())
+  }
+
+  def resume(): Unit = execute {
+    case Paused if !enrolled && receiver.isDefined =>
+      state = Open
+      enrolled = true
+      dispatcher.receive (dispatch)
+    case Paused =>
+      state = Open
+    case _ =>
+      ()
   }
 
   def close(): Async [Unit] = async {
@@ -138,7 +138,7 @@ class Multiplexer [M] (dispatcher: Dispatcher [M]) (
       scheduler.fail (cb, closedException)
     case (cb, Closing (_)) =>
       scheduler.fail (cb, closedException)
-    case (cb1, Discharging (cb2)) =>
+    case (cb1, Pausing (cb2)) =>
       state = Closing (Callback.fanout (Seq (cb1, cb2), scheduler))
     case (cb, _) if receiver.isDefined =>
       state = Closed

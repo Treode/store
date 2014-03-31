@@ -48,8 +48,8 @@ private class DiskDrive (
 
   def added() {
     if (draining) {
-      logmp.discharge() run (ignore)
-      pagemp.discharge() run (ignore)
+      logmp.pause() run (ignore)
+      pagemp.pause() run (ignore)
     }
     logmp.receive (logr)
     pagemp.receive (pager)
@@ -87,11 +87,11 @@ private class DiskDrive (
       val superb =
           SuperBlock (id, boot, geometry, draining, alloc.free, logSegs.head, logHead)
       for {
-        _ <- pagemp.discharge()
+        _ <- pagemp.pause()
         _ <- writeLedger()
         _ <- SuperBlock.write (superb, file)
       } yield {
-        pagemp.enlist()
+        pagemp.resume()
       }}
 
   private def _cleanable: Iterator [SegmentPointer] = {
@@ -126,7 +126,7 @@ private class DiskDrive (
     fiber.guard {
       draining = true
       for {
-        _ <- latch (logmp.discharge(), pagemp.close(), record (DiskDrain))
+        _ <- latch (logmp.pause(), pagemp.close(), record (DiskDrain))
         _ <- writeLedger()
         segs <- fiber.supply (_cleanable)
       } yield {
