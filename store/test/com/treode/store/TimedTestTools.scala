@@ -18,6 +18,10 @@ private trait TimedTestTools extends AsyncTestTools {
     def :: (cell: Cell) = Cell (cell.key, cell.time, Some (v))
   }
 
+  implicit class RichInt (v: Int) {
+    def :: (cell: Cell) = Cell (cell.key, cell.time, Some (Bytes (v)))
+  }
+
   implicit class RichOption (v: Option [Bytes]) {
     def :: (time: Int) = Value (TxClock (time), v)
     def :: (time: TxClock) = Value (time, v)
