@@ -3,21 +3,19 @@ package com.treode.store.atomic
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
-import com.treode.async.CallbackCaptor
+import com.treode.async.{AsyncChecks, CallbackCaptor}
 import com.treode.cluster.StubNetwork
 import com.treode.store._
 import com.treode.tags.{Intensive, Periodic}
-import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, FreeSpec, PropSpec, Suites}
 import org.scalatest.concurrent.TimeLimitedTests
-import org.scalatest.prop.PropertyChecks
 import org.scalatest.time.SpanSugar
 
 import AtomicTestTools._
 import SpanSugar._
 import WriteOp._
 
-class AtomicSpec extends Suites (AtomicBehaviors, AtomicProperties)
+class AtomicSpec extends Suites (AtomicBehaviors, new AtomicProperties)
 
 object AtomicBehaviors extends FreeSpec with StoreBehaviors with TimeLimitedTests {
 
@@ -59,7 +57,7 @@ object AtomicBehaviors extends FreeSpec with StoreBehaviors with TimeLimitedTest
     }
 
     val threaded = {
-      val kit = StubNetwork (0, true)
+      val kit = StubNetwork (multithreaded = true)
       val hs = kit.install (3, new StubAtomicHost (_, kit))
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
@@ -70,9 +68,7 @@ object AtomicBehaviors extends FreeSpec with StoreBehaviors with TimeLimitedTest
     behave like aMultithreadableStore (100, threaded)
   }}
 
-object AtomicProperties extends PropSpec with PropertyChecks {
-
-  val seeds = Gen.choose (0L, Long.MaxValue)
+class AtomicProperties extends PropSpec with AsyncChecks {
 
   implicit class RichWriteResult (cb: CallbackCaptor [WriteResult]) {
     import WriteResult._
@@ -87,15 +83,15 @@ object AtomicProperties extends PropSpec with PropertyChecks {
       cb.hasPassed && cb.passed.isInstanceOf [Collided]
   }
 
-  def checkConsensus (seed: Long, mf: Double) {
-    val kit = StubNetwork (seed)
+  def checkConsensus (random: Random, mf: Double) {
+    val kit = StubNetwork (random)
     val hs = kit.install (3, new StubAtomicHost (_, kit))
     val Seq (h1, h2, h3) = hs
 
     for (h <- hs)
       h.setCohorts((h1, h2, h3))
 
-    import kit.{random, scheduler}
+    import kit.scheduler
 
     // Setup.
     val xid1 = TxId (Bytes (random.nextLong))
@@ -125,5 +121,5 @@ object AtomicProperties extends PropSpec with PropertyChecks {
     }}
 
   property ("The atomic implemetation should work", Intensive, Periodic) {
-    forAll (seeds) (checkConsensus (_, 0.0))
+    forAllSeeds (checkConsensus (_, 0.0))
   }}

@@ -54,15 +54,11 @@ object StubNetwork {
   def apply (random: Random, scheduler: StubScheduler): StubNetwork =
     new StubNetwork () (random, scheduler)
 
-  def apply (seed: Long = 0, multithreaded: Boolean = false): StubNetwork = {
-
-    val random = new Random (seed)
-
+  def apply (random: Random = new Random (0), multithreaded: Boolean = false): StubNetwork = {
     val scheduler =
       if (multithreaded)
         StubScheduler.multithreaded (Executors.newScheduledThreadPool (8))
       else
         StubScheduler.random (random)
-
     new StubNetwork () (random, scheduler)
   }}

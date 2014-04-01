@@ -3,26 +3,22 @@ package com.treode.store.catalog
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async.StubScheduler
+import com.treode.async.{AsyncChecks, StubScheduler}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.pickle.{Pickler, Picklers}
 import com.treode.store._
 import com.treode.tags.{Intensive, Periodic}
-import org.scalacheck.Gen
-import org.scalatest.{FreeSpec, PropSpec, ShouldMatchers, Suites}
+import org.scalatest.{FreeSpec, PropSpec, Suites}
 import org.scalatest.concurrent.TimeLimitedTests
-import org.scalatest.prop.PropertyChecks
-import org.scalatest.time.SpanSugar
 
-import SpanSugar._
 import StubCatalogHost.{cat1, cat2}
 import TimedTestTools._
 
-class BrokerSpec extends Suites (BrokerBehaviors, BrokerProperties)
+class BrokerSpec extends Suites (BrokerBehaviors, new BrokerProperties)
 
-object BrokerBehaviors extends FreeSpec with ShouldMatchers {
+object BrokerBehaviors extends FreeSpec {
 
   val ID1 = CatalogId (0xCB)
   val ID2 = CatalogId (0x2D)
@@ -217,14 +213,12 @@ object BrokerBehaviors extends FreeSpec with ShouldMatchers {
       assertResult (values (1)) (v2)
     }}}
 
-object BrokerProperties extends PropSpec with PropertyChecks with TimeLimitedTests {
+class BrokerProperties extends PropSpec with AsyncChecks {
 
-  val seeds = Gen.choose (0L, Long.MaxValue)
   val values = BrokerBehaviors.values
-  val timeLimit = 5 minutes
 
-  def checkUnity (seed: Long, mf: Double) {
-    val kit = StubNetwork (seed)
+  def checkUnity (random: Random, mf: Double) {
+    val kit = StubNetwork (random)
     kit.messageFlakiness = mf
     val hs = kit.install (3, new StubCatalogHost (_, kit))
     for (h1 <- hs; h2 <- hs)
@@ -257,12 +251,11 @@ object BrokerProperties extends PropSpec with PropertyChecks with TimeLimitedTes
     }}
 
   property ("The broker should distribute catalogs", Intensive, Periodic) {
-    forAll (seeds) { seed =>
-      checkUnity (seed, 0.0)
+    forAllSeeds { random =>
+      checkUnity (random, 0.0)
     }}
 
   property ("The broker should distribute catalogs with a flakey network", Intensive, Periodic) {
-    forAll (seeds) { seed =>
-      checkUnity (seed, 0.1)
-    }}
-}
+    forAllSeeds { random =>
+      checkUnity (random, 0.1)
+    }}}

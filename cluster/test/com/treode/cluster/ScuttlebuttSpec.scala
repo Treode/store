@@ -2,13 +2,11 @@ package com.treode.cluster
 
 import scala.util.Random
 
-import com.treode.async.{AsyncTestTools, StubScheduler}
+import com.treode.async.{AsyncChecks, AsyncTestTools, StubScheduler}
 import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{Pickler, Picklers, PicklerRegistry}
-import org.scalacheck.Gen
 import org.scalatest.{FreeSpec, PropSpec, Suites}
-import org.scalatest.prop.PropertyChecks
 
 import AsyncTestTools._
 import PicklerRegistry.{BaseTag, FunctionTag}
@@ -196,9 +194,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
       assertResult (Map (PEER1 -> 1, PEER2 -> 2)) (vs)
     }}}
 
-object ScuttlebuttProperties extends PropSpec with PropertyChecks {
-
-  val seeds = Gen.choose (0L, Long.MaxValue)
+object ScuttlebuttProperties extends PropSpec with AsyncChecks {
 
   val r1 = RumorDescriptor (0x15, Picklers.int)
   val r2 = RumorDescriptor (0xEF, Picklers.int)
@@ -221,8 +217,8 @@ object ScuttlebuttProperties extends PropSpec with PropertyChecks {
     scuttlebutt.attach (this)
   }
 
-  def checkUnity (seed: Long, mf: Double) {
-    val kit = StubNetwork (seed)
+  def checkUnity (random: Random, mf: Double) {
+    val kit = StubNetwork (random)
     kit.messageFlakiness = mf
     val hs = kit.install (3, new StubHost (_, kit))
     for (h1 <- hs; h2 <- hs)
@@ -253,11 +249,11 @@ object ScuttlebuttProperties extends PropSpec with PropertyChecks {
   }
 
   property ("Scuttlebutt should spread rumors") {
-    forAll (seeds) { seed =>
-      checkUnity (seed, 0.0)
+    forAllSeeds { random =>
+      checkUnity (random, 0.0)
     }}
 
   property ("Scuttlebutt should spread rumors with a flakey network") {
-    forAll (seeds) { seed =>
-      checkUnity (seed, 0.1)
+    forAllSeeds { random =>
+      checkUnity (random, 0.1)
     }}}
