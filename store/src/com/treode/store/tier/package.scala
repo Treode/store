@@ -16,4 +16,9 @@ package object tier {
 
   private [tier] def newMemTier =
     new ConcurrentSkipListMap [Bytes, Option [Bytes]] (Bytes)
-}
+
+  private [tier] implicit class RichTierCellIterator (iter: TierCellIterator) {
+
+    def dedupe: TierCellIterator =
+      Filters.dedupe (iter)
+  }}

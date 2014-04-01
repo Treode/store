@@ -2,10 +2,12 @@ package com.treode.store.tier
 
 import com.treode.async.{AsyncIterator, Callback}
 
-/** Preserves first cell for key and eliminates subsequent ones. */
-object OverwritesFilter {
+private object Filters {
 
-  def apply (iter: TierCellIterator): TierCellIterator = {
+  /** Preserves first cell for key and eliminates subsequent ones.  Expects the input iterator
+    * to be sorted by key.
+    */
+  def dedupe (iter: TierCellIterator): TierCellIterator = {
     var prev: TierCell = null
     iter.filter { cell =>
       if (cell == prev) {
@@ -13,5 +15,4 @@ object OverwritesFilter {
       } else {
         prev = cell
         true
-      }}}
-}
+      }}}}

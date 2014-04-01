@@ -107,8 +107,7 @@ private class SynthTable [K, V] (
     } finally {
       readLock.unlock()
     }
-    val merged = TierIterator.merge (desc, primary, secondary, tiers)
-    OverwritesFilter (merged)
+    TierIterator.merge (desc, primary, secondary, tiers) .dedupe
   }
 
   def probe (groups: Set [Long]): Set [Long] = {
@@ -139,10 +138,9 @@ private class SynthTable [K, V] (
       writeLock.unlock()
     }
 
-    val merged = TierIterator.merge (desc, primary, emptyMemTier, tiers)
-    val filtered = OverwritesFilter (merged)
+    val iter = TierIterator.merge (desc, primary, emptyMemTier, tiers) .dedupe
     for {
-      tier <- TierBuilder.build (desc, obj, gen, filtered)
+      tier <- TierBuilder.build (desc, obj, gen, iter)
     } yield {
       val tiers = Tiers (tier)
       val meta = new Meta (gen, tiers)
