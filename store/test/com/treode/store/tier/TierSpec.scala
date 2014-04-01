@@ -11,7 +11,6 @@ import com.treode.disk.{Disks, DisksConfig, DiskGeometry, Position}
 import org.scalatest.WordSpec
 
 import AsyncImplicits._
-import Cardinals.One
 import Fruits._
 import TestTable.descriptor
 import TierTestTools._
@@ -65,7 +64,7 @@ class TierSpec extends WordSpec {
       implicit scheduler: StubScheduler, disks: Disks): Tier = {
     implicit val config = StoreConfig (4, pageBytes)
     val builder = new TierBuilder (descriptor, ID, 0)
-    AllFruits.async.foreach (builder.add (_, Some (One))) .pass
+    AllFruits.async.foreach (builder.add (_, Some (1))) .pass
     builder.result.pass
   }
 

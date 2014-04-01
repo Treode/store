@@ -14,7 +14,6 @@ import org.scalatest.prop.PropertyChecks
 import org.scalatest.time.SpanSugar
 
 import AtomicTestTools._
-import Cardinals.{One, Two}
 import SpanSugar._
 import WriteOp._
 
@@ -42,10 +41,10 @@ object AtomicBehaviors extends FreeSpec with StoreBehaviors with TimeLimitedTest
 
     "commit a write" in {
       val ts =
-        write (xid, TxClock.zero, Seq (Create (t, k, One)))
+        write (xid, TxClock.zero, Seq (Create (t, k, 1)))
             .pass.asInstanceOf [WriteResult.Written] .vt
       val ds = hs map (_.writer (k))
-      hs foreach (_.expectCells (t) (k##ts::One))
+      hs foreach (_.expectCells (t) (k##ts::1))
     }}
 
   "The AtomicKit should" - {
@@ -105,20 +104,20 @@ object AtomicProperties extends PropSpec with PropertyChecks {
     val k = Bytes (random.nextLong)
 
     // Write two values simultaneously.
-    val cb1 = h1.write (xid1, TxClock.zero, Seq (Create (t, k, One))) .capture()
-    val cb2 = h2.write (xid2, TxClock.zero, Seq (Create (t, k, Two))) .capture()
+    val cb1 = h1.write (xid1, TxClock.zero, Seq (Create (t, k, 1))) .capture()
+    val cb2 = h2.write (xid2, TxClock.zero, Seq (Create (t, k, 2))) .capture()
     kit.messageFlakiness = mf
     scheduler.runTasks (true, count = 400)
 
-    // One host might write and the other collide or timeout, or both might timeout.
+    // 1 host might write and the other collide or timeout, or both might timeout.
     if (cb1.hasWritten) {
       assert (cb2.hasCollided || cb2.hasTimedOut)
       val ts = cb1.written
-      hs foreach (_.expectCells (t) (k##ts::One))
+      hs foreach (_.expectCells (t) (k##ts::1))
     } else if (cb2.hasWritten) {
       assert (cb1.hasCollided || cb1.hasTimedOut)
       val ts = cb2.written
-      hs foreach (_.expectCells (t) (k##ts::Two))
+      hs foreach (_.expectCells (t) (k##ts::2))
     } else {
       assert (cb1.hasCollided || cb1.hasTimedOut)
       assert (cb2.hasCollided || cb2.hasTimedOut)

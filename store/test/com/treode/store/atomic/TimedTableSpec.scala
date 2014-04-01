@@ -8,7 +8,6 @@ import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store._
 import org.scalatest.FreeSpec
 
-import Cardinals._
 import Fruits._
 import TimedTable.keyToBytes
 import TimedTestTools._
@@ -54,29 +53,29 @@ class TimedTableSpec extends FreeSpec {
       t.get (Apple, 1) expect (0::None)
     }
 
-    "put Apple##1::One" in {
+    "put Apple##1::1" in {
       implicit val (s, t) = newTable()
-      t.put (Apple, 1, One)
+      t.put (Apple, 1, 1)
       t.iterator.toSeq
-      expectCells (Apple##1::One) (t)
+      expectCells (Apple##1::1) (t)
     }}
 
-  "When a TimedTable has Apple##7::One, it should " - {
+  "When a TimedTable has Apple##7::1, it should " - {
 
     def newTableWithData() = {
       val (s, t) = newTable()
-      t.put (Apple, 7, One)
+      t.put (Apple, 7, 1)
       (s, t)
     }
 
-    "find 7::One for Apple##8" in {
+    "find 7::1 for Apple##8" in {
       implicit val (s, t) = newTableWithData()
-      t.get (Apple, 8) expect (7::One)
+      t.get (Apple, 8) expect (7::1)
     }
 
-    "find 7::One for Apple##7" in {
+    "find 7::1 for Apple##7" in {
       implicit val (s, t) = newTableWithData()
-      t.get (Apple, 7) expect (7::One)
+      t.get (Apple, 7) expect (7::1)
     }
 
     "find 0::None for Apple##6" in {
@@ -84,50 +83,50 @@ class TimedTableSpec extends FreeSpec {
       t.get (Apple, 6) expect (0::None)
     }
 
-    "put 11::Two" in {
+    "put 11::2" in {
       implicit val (s, t) = newTableWithData()
-      t.put (Apple, 11, Two)
-      expectCells (Apple##11::Two, Apple##7::One) (t)
+      t.put (Apple, 11, 2)
+      expectCells (Apple##11::2, Apple##7::1) (t)
     }
 
-    "put Apple##3::Two" in {
+    "put Apple##3::2" in {
       implicit val (s, t) = newTableWithData()
-      t.put (Apple, 3, Two)
-      expectCells (Apple##7::One, Apple##3::Two) (t)
+      t.put (Apple, 3, 2)
+      expectCells (Apple##7::1, Apple##3::2) (t)
     }}
 
-  "When a TimedTable has Apple##14::Two and Apple##7::One, it should" -  {
+  "When a TimedTable has Apple##14::2 and Apple##7::1, it should" -  {
 
     def newTableWithData() = {
       val (s, t) = newTable()
-      t.put (Apple, 7, One)
-      t.put (Apple, 14, Two)
+      t.put (Apple, 7, 1)
+      t.put (Apple, 14, 2)
       (s, t)
     }
 
-    "find 14::Two for Apple##15" in {
+    "find 14::2 for Apple##15" in {
       implicit val (s, t) = newTableWithData()
-      t.get (Apple, 15) expect (14::Two)
+      t.get (Apple, 15) expect (14::2)
     }
 
-    "find 14::Two for Apple##14" in {
+    "find 14::2 for Apple##14" in {
       implicit val (s, t) = newTableWithData()
-      t.get (Apple, 14) expect (14::Two)
+      t.get (Apple, 14) expect (14::2)
     }
 
-    "find 7::One for Apple##13" in {
+    "find 7::1 for Apple##13" in {
       implicit val (s, t) = newTableWithData()
-      t.get (Apple, 13) expect (7::One)
+      t.get (Apple, 13) expect (7::1)
     }
 
-    "find 7::One for Apple##8" in {
+    "find 7::1 for Apple##8" in {
       implicit val (s, t) = newTableWithData()
-      t.get (Apple, 8) expect (7::One)
+      t.get (Apple, 8) expect (7::1)
     }
 
-    "find 7::One for Apple##7" in {
+    "find 7::1 for Apple##7" in {
       implicit val (s, t) = newTableWithData()
-      t.get (Apple, 7) expect (7::One)
+      t.get (Apple, 7) expect (7::1)
     }
 
     "find 0::None for Apple##6" in {

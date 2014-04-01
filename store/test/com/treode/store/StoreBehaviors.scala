@@ -12,7 +12,6 @@ import org.scalatest.FreeSpec
 
 import Async.{async, latch}
 import AsyncImplicits._
-import Cardinals.{One, Two}
 import Fruits.Apple
 import TimedTestTools._
 import WriteOp._
@@ -38,11 +37,11 @@ trait StoreBehaviors {
 
         "writing should" - {
 
-          "allow create Apple::One at ts=0" in {
+          "allow create Apple::1 at ts=0" in {
             implicit val scheduler = StubScheduler.random()
             val s = newStore (scheduler)
-            val ts = s.write (0, Create (T1, Apple, One)) .expectWritten
-            s.expectCells (T1) (Apple##ts::One)
+            val ts = s.write (0, Create (T1, Apple, 1)) .expectWritten
+            s.expectCells (T1) (Apple##ts::1)
           }
 
           "allow hold Apple at ts=0" in {
@@ -52,11 +51,11 @@ trait StoreBehaviors {
             s.expectCells (T1) ()
           }
 
-          "allow update Apple::One at ts=0" in {
+          "allow update Apple::1 at ts=0" in {
             implicit val scheduler = StubScheduler.random()
             val s = newStore (scheduler)
-            val ts = s.write (0, Update (T1, Apple, One)) .expectWritten
-            s.expectCells (T1) (Apple##ts::One)
+            val ts = s.write (0, Update (T1, Apple, 1)) .expectWritten
+            s.expectCells (T1) (Apple##ts::1)
           }
 
           "allow delete Apple at ts=0" in {
@@ -66,26 +65,26 @@ trait StoreBehaviors {
             s.expectCells (T1) (Apple##ts)
           }}}
 
-      "the table has Apple##ts::One" - {
+      "the table has Apple##ts::1" - {
 
         def setup() (implicit scheduler: StubScheduler) = {
           val s = newStore (scheduler)
-          val ts = s.write (0, Create (T1, Apple, One)) .expectWritten
+          val ts = s.write (0, Create (T1, Apple, 1)) .expectWritten
           (s, ts)
         }
 
         "reading should" -  {
 
-          "find ts::One for Apple##ts+1" in {
+          "find ts::1 for Apple##ts+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
-            s.read (ts+1, Get (T1, Apple)) .expectSeq (ts::One)
+            s.read (ts+1, Get (T1, Apple)) .expectSeq (ts::1)
           }
 
-          "find ts::One for Apple##ts" in {
+          "find ts::1 for Apple##ts" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
-            s.read (ts, Get (T1, Apple)) .expectSeq (ts::One)
+            s.read (ts, Get (T1, Apple)) .expectSeq (ts::1)
           }
 
           "find 0::None for Apple##ts-1" in {
@@ -99,7 +98,7 @@ trait StoreBehaviors {
           "reject create Apple##ts-1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
-            s.write (ts-1, Create (T1, Apple, One)) .expectCollided (0)
+            s.write (ts-1, Create (T1, Apple, 1)) .expectCollided (0)
           }
 
           "reject hold Apple##ts-1" in {
@@ -111,7 +110,7 @@ trait StoreBehaviors {
           "reject update Apple##ts-1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
-            s.write (ts-1, Update (T1, Apple, One)) .expectStale
+            s.write (ts-1, Update (T1, Apple, 1)) .expectStale
           }
 
           "reject delete Apple##ts-1" in {
@@ -124,92 +123,92 @@ trait StoreBehaviors {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
             s.write (ts+1, Hold (T1, Apple)) .expectWritten
-            s.expectCells (T1) (Apple##ts::One)
+            s.expectCells (T1) (Apple##ts::1)
           }
 
           "allow hold Apple at ts" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
             s.write (ts, Hold (T1, Apple)) .expectWritten
-            s.expectCells (T1) (Apple##ts::One)
+            s.expectCells (T1) (Apple##ts::1)
           }
 
-          "allow update Apple::Two at ts+1" in {
+          "allow update Apple::2 at ts+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
-            val ts2 = s.write (ts1+1, Update (T1, Apple, Two)) .expectWritten
-            s.expectCells (T1) (Apple##ts2::Two, Apple##ts1::One)
+            val ts2 = s.write (ts1+1, Update (T1, Apple, 2)) .expectWritten
+            s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
           }
 
-          "allow update Apple::Two at ts" in {
+          "allow update Apple::2 at ts" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
-            val ts2 = s.write (ts1, Update (T1, Apple, Two)) .expectWritten
-            s.expectCells (T1) (Apple##ts2::Two, Apple##ts1::One)
+            val ts2 = s.write (ts1, Update (T1, Apple, 2)) .expectWritten
+            s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
           }
 
-          "allow update Apple::One at ts+1" in {
+          "allow update Apple::1 at ts+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
-            val ts2 = s.write (ts1+1, Update (T1, Apple, One)) .expectWritten
-            s.expectCells (T1) (Apple##ts2::One, Apple##ts1::One)
+            val ts2 = s.write (ts1+1, Update (T1, Apple, 1)) .expectWritten
+            s.expectCells (T1) (Apple##ts2::1, Apple##ts1::1)
           }
 
-          "allow update Apple::One at ts" in {
+          "allow update Apple::1 at ts" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
-            val ts2 = s.write (ts1, Update (T1, Apple, One)) .expectWritten
-            s.expectCells (T1) (Apple##ts2::One, Apple##ts1::One)
+            val ts2 = s.write (ts1, Update (T1, Apple, 1)) .expectWritten
+            s.expectCells (T1) (Apple##ts2::1, Apple##ts1::1)
           }
 
           "allow delete Apple at ts+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
             val ts2 = s.write (ts1+1, Delete (T1, Apple)) .expectWritten
-            s.expectCells (T1) (Apple##ts2, Apple##ts1::One)
+            s.expectCells (T1) (Apple##ts2, Apple##ts1::1)
           }
 
           "allow delete Apple at ts" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
             val ts2 = s.write (ts1, Delete (T1, Apple)) .expectWritten
-            s.expectCells (T1) (Apple##ts2, Apple##ts1::One)
+            s.expectCells (T1) (Apple##ts2, Apple##ts1::1)
           }}}
 
-      "the table has Apple##ts2::Two and Apple##ts1::One" -  {
+      "the table has Apple##ts2::2 and Apple##ts1::1" -  {
 
         def setup() (implicit scheduler: StubScheduler) = {
           val s = newStore (scheduler)
-          val ts1 = s.write (0, Create (T1, Apple, One)) .expectWritten
-          val ts2 = s.write (ts1, Update (T1, Apple, Two)) .expectWritten
-          s.expectCells (T1) (Apple##ts2::Two, Apple##ts1::One)
+          val ts1 = s.write (0, Create (T1, Apple, 1)) .expectWritten
+          val ts2 = s.write (ts1, Update (T1, Apple, 2)) .expectWritten
+          s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
           (s, ts1, ts2)
         }
 
         "a read should" - {
 
-          "find ts2::Two for Apple##ts2+1" in {
+          "find ts2::2 for Apple##ts2+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1, ts2) = setup()
-            s.read (ts2+1, Get (T1, Apple)) .expectSeq (ts2::Two)
+            s.read (ts2+1, Get (T1, Apple)) .expectSeq (ts2::2)
           }
 
-          "find ts2::Two for Apple##ts2" in {
+          "find ts2::2 for Apple##ts2" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1, ts2) = setup()
-            s.read (ts2, Get (T1, Apple)) .expectSeq (ts2::Two)
+            s.read (ts2, Get (T1, Apple)) .expectSeq (ts2::2)
           }
 
-          "find ts1::One for Apple##ts2-1" in {
+          "find ts1::1 for Apple##ts2-1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1, ts2) = setup()
-            s.read (ts2-1, Get (T1, Apple)) .expectSeq (ts1::One)
+            s.read (ts2-1, Get (T1, Apple)) .expectSeq (ts1::1)
           }
 
-          "find ts1::One for Apple##ts1" in {
+          "find ts1::1 for Apple##ts1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1, ts2) = setup()
-            s.read (ts1, Get (T1, Apple)) .expectSeq (ts1::One)
+            s.read (ts1, Get (T1, Apple)) .expectSeq (ts1::1)
           }
 
           "find 0::None for Apple##ts1-1" in {

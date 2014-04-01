@@ -4,9 +4,8 @@ import java.nio.file.Paths
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
-import com.treode.async.AsyncTestTools
 import com.treode.cluster.StubNetwork
-import com.treode.store.{Bytes, Cardinals}
+import com.treode.store.Bytes
 import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
 import org.scalatest.{BeforeAndAfterAll, PropSpec, Suites, WordSpec}
@@ -14,8 +13,6 @@ import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.time.SpanSugar
 
-import AsyncTestTools._
-import Cardinals.{Zero, One, Two}
 import PaxosTestTools._
 import SpanSugar._
 
@@ -41,7 +38,7 @@ object PaxosBehaviors extends WordSpec {
     val k = Bytes (random.nextLong)
 
     "yield a value for the leader" in {
-      lead (k, One) .expect (One)
+      lead (k, 1) .expect (1)
     }
 
     "leave all acceptors closed and consistent" in {
@@ -72,8 +69,8 @@ object PaxosProperties extends PropSpec with PropertyChecks with TimeLimitedTest
       val k = Bytes (random.nextLong)
 
       // Proposed two values simultaneously, expect one choice.
-      val cb1 = h1.paxos.propose (k, One) .capture()
-      val cb2 = h2.paxos.propose (k, Two) .capture()
+      val cb1 = h1.paxos.propose (k, 1) .capture()
+      val cb2 = h2.paxos.propose (k, 2) .capture()
       kit.messageFlakiness = mf
       kit.runTasks (true, count = 500)
       val v = cb1.passed

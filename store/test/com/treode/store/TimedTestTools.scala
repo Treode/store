@@ -1,5 +1,6 @@
 package com.treode.store
 
+import scala.language.implicitConversions
 import scala.util.Random
 
 import com.treode.async.{Async, AsyncTestTools, CallbackCaptor, StubScheduler}
@@ -19,6 +20,7 @@ private trait TimedTestTools extends AsyncTestTools {
   }
 
   implicit class RichInt (v: Int) {
+    def :: (time: TxClock) = Value (time, Some (Bytes (v)))
     def :: (cell: Cell) = Cell (cell.key, cell.time, Some (Bytes (v)))
   }
 
@@ -91,6 +93,9 @@ private trait TimedTestTools extends AsyncTestTools {
 
   def Get (id: TableId, key: Bytes): ReadOp =
     ReadOp (id, key)
+
+  implicit def intToBytes (v: Int): Bytes =
+    Bytes (v)
 }
 
 private object TimedTestTools extends TimedTestTools
