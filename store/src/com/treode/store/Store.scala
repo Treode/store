@@ -19,7 +19,7 @@ object Store {
 
     def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any)
 
-    def launch (cohort: Cohort) (implicit launch: Disks.Launch): Async [Store]
+    def launch (launch: Disks.Launch): Async [Store]
   }
 
   def recover() (implicit

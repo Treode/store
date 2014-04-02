@@ -11,11 +11,6 @@ private trait Atlas {
 
 private object Atlas {
 
-  trait Recovery {
-
-    def launch (cohort: Cohort): Async [Atlas]
-  }
-
-  def recover (recovery: Catalogs.Recovery): Recovery =
+  def recover (recovery: Catalogs.Recovery): Atlas =
    AtlasKit.recover (recovery)
 }

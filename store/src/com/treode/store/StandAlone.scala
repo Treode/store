@@ -48,7 +48,7 @@ object StandAlone {
 
     for {
       launch <- _disks.attach (items, executor)
-      store <- _store.launch (Cohort.settled (localId)) (launch)
+      store <- _store.launch (launch)
     } yield {
       new Controller (executor, cluster, launch.controller) (store)
     }}
@@ -75,7 +75,7 @@ object StandAlone {
 
     for {
       launch <- _disks.reattach (items, executor)
-      store <- _store.launch (Cohort.settled (localId)) (launch)
+      store <- _store.launch (launch)
     } yield {
       new Controller (executor, cluster, launch.controller) (store)
     }}}
