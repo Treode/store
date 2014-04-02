@@ -5,7 +5,7 @@ import scala.util.Random
 
 import com.treode.async.{Async, Callback, CallbackCaptor}
 import com.treode.async.io.StubFile
-import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
+import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
 import com.treode.store._
 import com.treode.store.atlas.AtlasKit
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
@@ -54,6 +54,15 @@ extends StubActiveHost (id, network) {
   while (!captor.wasInvoked)
     Thread.sleep (10)
   implicit val (disks, catalogs) = captor.passed
+
+  val acceptors = catalogs.acceptors
+
+  def setCohorts (cohorts: (StubHost, StubHost, StubHost)*) {
+    val _cohorts =
+      for ((h1, h2, h3) <- cohorts)
+        yield Cohort.settled (h1.localId, h2.localId, h3.localId)
+    atlas.set (_cohorts.toArray)
+  }
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) {
     val broker = catalogs.broker

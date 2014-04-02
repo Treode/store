@@ -37,6 +37,8 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
 
     def choose (chosen: Update): Unit =
       state = new Getting (_.choose (chosen))
+
+    override def toString = "Acceptor.Opening"
   }
 
   class Getting (var op: State => Unit) extends State {
@@ -61,6 +63,8 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
 
     def choose (chosen: Update): Unit =
       op = (_.choose (chosen))
+
+    override def toString = "Acceptor.Getting"
   }
 
   class Deliberating (handler: Handler) extends State {
@@ -109,7 +113,9 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
 
     broker.patch (key, chosen) run {
       case Success (v) =>
-        fiber.delay (closedLifetime) (remove (key, Acceptor.this))
+        // TODO: Purge acceptor from memory.
+        // if (state == Closed.this)
+        //   fiber.delay (closedLifetime) (remove (key, Acceptor.this))
       case Failure (t) => fiber.execute {
         if (state == Closed.this)
           state = new Panicked (t)

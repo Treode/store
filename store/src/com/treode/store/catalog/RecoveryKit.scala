@@ -66,8 +66,12 @@ private class RecoveryKit (implicit
       import launch.disks
       for {
         handlers <- (medics.keySet ++ makers.keySet) .latch.map foreach (close (_))
+        broker = new Broker (handlers)
+        kit = new CatalogKit (broker)
       } yield {
-        val broker = new Broker (handlers)
+        import kit.{acceptors, proposers}
+        acceptors.attach()
+        proposers.attach()
         broker.attach()
-        new CatalogKit (broker)
+        kit
       }}}
