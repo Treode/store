@@ -35,7 +35,9 @@ private class CatalogKit (val broker: Broker) (implicit
       chosen <- lead (desc.id, patch)
       _ <- broker.patch (desc.id, chosen)
     } yield {
-      require (patch.checksum == chosen.checksum, "Could not issue new catalog over stale one.")
+      require (
+          patch.checksum == chosen.checksum,
+          "Could not propose new issue for version $version; it was already issued.")
     }}
 }
 

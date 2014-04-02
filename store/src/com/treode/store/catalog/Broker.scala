@@ -5,6 +5,7 @@ import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
 import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position}
 import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 
+import Async.guard
 import AsyncImplicits._
 import Callback.ignore
 
@@ -37,11 +38,12 @@ private class Broker (
       _get (cat)
     }
 
-  def diff [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Patch] = {
-    val bytes = Bytes (desc.pcat, cat)
-    fiber.supply {
-      _get (desc.id) diff (version, bytes)
-    }}
+  def diff [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Patch] =
+    guard {
+      val bytes = Bytes (desc.pcat, cat)
+      fiber.supply {
+        _get (desc.id) diff (version, bytes)
+      }}
 
   def patch (id: CatalogId, update: Update): Async [Unit] =
     fiber.supply {

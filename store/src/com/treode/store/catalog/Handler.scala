@@ -66,7 +66,9 @@ private class Handler (
     }
 
   def diff (version: Int, bytes: Bytes): Patch = {
-    require (version == this.version + 1, "Could not diff catalog against stale one.")
+    require (
+        version == this.version + 1,
+        s"Could not diff new version $version against old version ${this.version}.")
     Patch (version, checksum, Seq (Patch.diff (this.bytes, bytes)))
   }
 

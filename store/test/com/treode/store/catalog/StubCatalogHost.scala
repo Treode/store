@@ -65,8 +65,8 @@ extends StubActiveHost (id, network) {
   }
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) {
-    val broker = catalogs.broker
-    broker.patch (desc.id, broker.diff (desc) (version, cat) .pass) .pass
+    import catalogs.broker.{diff, patch}
+    patch (desc.id, diff (desc) (version, cat) .pass) .pass
   }}
 
 private object StubCatalogHost {

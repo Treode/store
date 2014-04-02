@@ -241,10 +241,6 @@ class BrokerProperties extends PropSpec with AsyncChecks {
     h1.issue (cat2) (4, vs4)
     kit.runTasks (timers = true, count = 400)
 
-    // Hosts do not receive their own issues.
-    h1.v1 = 0x4A048A835ED3A0A6L
-    h1.v2 = vs4
-
     for (h <- hs) {
       assertResult (0x4A048A835ED3A0A6L) (h.v1)
       assertResult (vs4) (h.v2)
