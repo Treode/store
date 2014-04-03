@@ -189,7 +189,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val launch = recovery.reopenAndWait ("a") (("a", disk1), ("b", disk2)) .pass
           import launch.disks
           tracker.attach (launch)
-          launch.launch()
+          launch.launchAndPass (tickle = true)
           replayer.check (tracker)
         }}}}
 
@@ -208,7 +208,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
         import launch.disks
         tracker.attach (launch)
-        launch.launch()
+        launch.launchAndPass()
         tracker.batches (80, 100000, 10) .pass
       }}}
 
@@ -360,7 +360,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val launch = recovery.reopenAndWait ("a") (("a", disk1), ("b", disk2)) .pass
           import launch.disks
           tracker.attach (launch)
-          launch.launch()
+          launch.launchAndPass (tickle = true)
           tracker.check()
         }}}
 
@@ -562,8 +562,8 @@ object DiskSystemSpec {
         def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
           supply {
             _probed = true
-            val keep = groups filter (_ => random.nextInt (3) == 0)
-            written = written filter (keep contains _)
+            val (keep, remove) = groups partition (_ => random.nextInt (3) == 0)
+            written --= remove
             keep
           }
 
