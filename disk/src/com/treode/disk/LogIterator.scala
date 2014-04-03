@@ -110,6 +110,8 @@ private class LogIterator private (
   def close (kit: DisksKit): DiskDrive = {
     buf.clear()
     val (seg, pos) = pagePos match {
+      case _ if draining =>
+        (SegmentBounds (-1, -1L, -1L), -1L)
       case Some (pos) =>
         val num = (pos >> superb.geometry.segmentBits) .toInt
         val seg = alloc.alloc (num, superb.geometry, config)

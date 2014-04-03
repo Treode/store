@@ -128,7 +128,7 @@ private class DiskDrive (
       for {
         _ <- latch (logmp.pause(), pagemp.close(), record (DiskDrain))
         _ <- writeLedger()
-        segs <- fiber.supply (_cleanable)
+        segs <- cleanable()
       } yield {
         segs
       }}

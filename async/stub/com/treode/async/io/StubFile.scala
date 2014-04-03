@@ -52,8 +52,7 @@ class StubFile (size: Int = 0) (implicit _scheduler: StubScheduler) extends File
           val n = math.min (data.length - p, input.writeableBytes)
           input.writeBytes (data, pos.toInt + input.readableBytes, n)
           if (data.length < pos + len) {
-            val e = new EOFException
-            scheduler.fail (cb, e)
+            scheduler.fail (cb, new EOFException)
           } else {
             scheduler.pass (cb, ())
           }}
