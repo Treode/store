@@ -26,6 +26,9 @@ private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
     d1
   }
 
+  def remove (xid: TxId, w: WriteDeputy): Unit =
+    deputies.remove (xid, w)
+
   def recover (medics: Seq [Medic]): Async [Unit] = {
     for {
       _ <-

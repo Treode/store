@@ -13,7 +13,8 @@ import Async.{guard, supply, when}
 import WriteDeputy.ArchiveStatus
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
-  import kit.{archive, disks, scheduler, tables}
+  import kit.{archive, disks, scheduler, tables, writers}
+  import kit.config.closedLifetime
 
   type WriteMediator = RequestMediator [WriteResponse]
 
@@ -26,9 +27,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def abort (mdtr: WriteMediator)
     def checkpoint(): Async [Unit]
     def timeout()
-
-    def shutdown(): Unit =
-      state = new Shutdown (this)
   }
 
   class Opening extends State {
@@ -239,11 +237,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     def timeout(): Unit =
       throw new IllegalStateException
-
-    override def shutdown() {
-      state = new Shutdown (this)
-      locks.release()
-    }}
+  }
 
   class Deliberating (ops: Seq [WriteOp], rsp: Option [WriteResponse]) extends State {
 
@@ -266,8 +260,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Tardy (mdtr: WriteMediator, wt: TxClock) extends State {
 
-    // TODO: Purge deputy from memory.
-
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit =
       new Committing (mdtr, wt, ops, None)
 
@@ -289,7 +281,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       wt: TxClock,
       ops: Seq [WriteOp],
       locks: Option [LockSet]) extends State {
-
 
     val gen = archive.put (xid.id, Bytes (ArchiveStatus.pickler, ArchiveStatus.Committed (wt)))
     val gens = tables.commit (wt, ops)
@@ -335,7 +326,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Committed (gen: Long, gens: Seq [Long], wt: TxClock) extends State {
 
-    // TODO: Purge deputy from memory.
+    fiber.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit =
       mdtr.respond (WriteResponse.Committed)
@@ -396,7 +387,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Aborted (gen: Long) extends State {
 
-    // TODO: Purge deputy from memory.
+    fiber.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def status = None
 
@@ -417,7 +408,9 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     override def toString = "Deputy.Aborted"
   }
 
-  class Shutdown (s: State) extends State {
+  class Panicked (s: State, thrown: Throwable) extends State {
+
+    fiber.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def checkpoint(): Async [Unit] =
       s.checkpoint()
@@ -426,13 +419,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def commit (mdtr: WriteMediator, wt: TxClock) = ()
     def abort (mdtr: WriteMediator) = ()
     def timeout() = ()
-
-    override def shutdown() = ()
-
-    override def toString = s"Deputy.Shutdown"
-  }
-
-  class Panicked (s: State, thrown: Throwable) extends Shutdown (s) {
 
     override def toString = s"Deputy.Panicked ($thrown)"
   }
@@ -448,9 +434,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   def checkpoint(): Async [Unit] =
     fiber.guard (state.checkpoint())
-
-  def shutdown(): Unit =
-    fiber.execute (state.shutdown())
 
   override def toString = state.toString
 }
