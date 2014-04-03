@@ -10,21 +10,16 @@ import com.treode.store.paxos.BallotNumber
 import Callback.ignore
 
 private class Acceptor (val key: CatalogId, kit: CatalogKit) {
-  import kit.{broker, cluster, scheduler}
-  import kit.acceptors.remove
+  import kit.{acceptors, broker, cluster, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
 
   private val fiber = new Fiber (scheduler)
   var state: State = null
 
   trait State {
-
     def query (proposer: Peer, ballot: Long)
     def propose (proposer: Peer, ballot: Long, patch: Patch)
     def choose (chosen: Update)
-
-    def shutdown(): Unit =
-      state = new Shutdown
   }
 
   class Opening extends State {
@@ -113,9 +108,7 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
 
     broker.patch (key, chosen) run {
       case Success (v) =>
-        // TODO: Purge acceptor from memory.
-        // if (state == Closed.this)
-        //   fiber.delay (closedLifetime) (remove (key, Acceptor.this))
+        fiber.delay (closedLifetime) (acceptors.remove (key, Acceptor.this))
       case Failure (t) => fiber.execute {
         if (state == Closed.this)
           state = new Panicked (t)
@@ -133,20 +126,13 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
     override def toString = s"Acceptor.Closed($key, $chosen)"
   }
 
-  class Shutdown extends State {
+  class Panicked (thrown: Throwable) extends State {
 
-    fiber.delay (closedLifetime) (remove (key, Acceptor.this))
+    fiber.delay (closedLifetime) (acceptors.remove (key, Acceptor.this))
 
     def query (proposer: Peer, ballot: Long): Unit = ()
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit = ()
     def choose (chosen: Update): Unit = ()
-
-    override def shutdown() = ()
-
-    override def toString = s"Acceptor.Shutdown($key)"
-  }
-
-  class Panicked (thrown: Throwable) extends Shutdown {
 
     override def toString = s"Acceptor.Panicked($key, $thrown)"
   }
@@ -159,9 +145,6 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
 
   def choose (chosen: Update): Unit =
     fiber.execute (state.choose (chosen))
-
-  def shutdown(): Unit =
-    fiber.execute (state.shutdown())
 
   override def toString = state.toString
 }

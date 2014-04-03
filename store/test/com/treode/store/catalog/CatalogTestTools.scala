@@ -6,7 +6,6 @@ private object CatalogTestTools extends TimedTestTools {
 
   implicit class TestableAcceptor (a: Acceptor) {
 
-    def isOpening = a.state.isInstanceOf [Acceptor#Opening]
     def isDeliberating = a.state.isInstanceOf  [Acceptor#Deliberating]
     def isClosed = a.state.isInstanceOf [Acceptor#Closed]
 

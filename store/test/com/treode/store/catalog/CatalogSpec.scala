@@ -18,47 +18,51 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
   val val1 = Bytes (cat1.pcat, 0x9E587C3979DFCFFFL)
   val val2 = Bytes (cat1.pcat, 0x8041608E94F55C6DL)
 
-  private val p1 =
+  private val patch1 =
     Patch (0, val0.hashCode, Seq (Patch.diff (val0, val1)))
 
-  private val p2 =
+  private val patch2 =
     Patch (0, val0.hashCode, Seq (Patch.diff (val0, val2)))
 
-  private case class Summary (timedout: Boolean, chosen: Set [Update]) {
+  private class Summary (var timedout: Boolean, var chosen: Set [Update]) {
+
+    def this() = this (false, Set.empty)
+
+    def chose (v: Update): Unit =
+      chosen += v
 
     def check (domain: Set [Update]) {
       if (intensity == "standard")
         assertResult (domain) (chosen)
     }}
 
-  private def checkConsensus (random: Random, mf: Double, summary: Summary): Summary = {
-    val kit = StubNetwork (random)
-    import kit.scheduler
-
-    val hs = kit.install (3, new StubCatalogHost (_, kit))
-    val Seq (h1, h2, h3) = hs
-    for (h <- hs)
-      h.setCohorts ((h1, h2, h3))
-
+  // Propose two patches simultaneously, expect one choice.
+  def check (
+      kit: StubNetwork,
+      p1: StubCatalogHost,         // First host that will submit a proposal.
+      p2: StubCatalogHost,         // Second host that will submit a proposal.
+      as: Seq [StubCatalogHost],   // Hosts that we expect will accept.
+      mf: Double,
+      summary: Summary
+  ) {
     try {
 
-      // Propose two patches simultaneously, expect one choice.
-      val cb1 = h1.catalogs.propose (cat1.id, p1) .capture()
-      val cb2 = h2.catalogs.propose (cat1.id, p2) .capture()
+      val cb1 = p1.catalogs.propose (cat1.id, patch1) .capture()
+      val cb2 = p2.catalogs.propose (cat1.id, patch2) .capture()
       kit.messageFlakiness = mf
       kit.runTasks (timers = true, count = 500)
       val v = cb1.passed
       assertResult (v) (cb2.passed)
 
-      // Expect all acceptors closed and in agreement.
-      val as = hs map (_.acceptors.get (cat1.id))
-      assert (as forall (_.isClosed))
-      assertResult (1) (as.map (_.getChosen) .flatten.toSet.size)
+      for (h <- as)
+        assert (
+            !h.catalogs.acceptors.acceptors.contains (cat1.id),
+            "Expected acceptor to have been removed.")
 
-      Summary (summary.timedout, summary.chosen + v)
+      summary.chose (v)
     } catch {
       case e: TimeoutException =>
-        Summary (true, summary.chosen)
+        summary.timedout = true
     }}
 
   "The acceptors should" - {
@@ -66,19 +70,29 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
     "achieve consensus with" - {
 
       "stable hosts and a reliable network" taggedAs (Intensive, Periodic) in {
-        var summary = Summary (false, Set.empty)
+        var summary = new Summary
         forAllSeeds { random =>
-          summary = checkConsensus (random, 0.0, summary)
+          val kit = StubNetwork (random)
+          val hs = kit.install (3, new StubCatalogHost (_, kit))
+          val Seq (h1, h2, h3) = hs
+          for (h <- hs)
+            h.setCohorts ((h1, h2, h3))
+          check (kit, h1, h2, hs, 0.0, summary)
         }
-        summary.check (Set (p1, p2))
+        summary.check (Set (patch1, patch2))
       }
 
       "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in {
-        var summary = Summary (false, Set.empty)
+        var summary = new Summary
         forAllSeeds { random =>
-          summary = checkConsensus (random, 0.1, summary)
+          val kit = StubNetwork (random)
+          val hs = kit.install (3, new StubCatalogHost (_, kit))
+          val Seq (h1, h2, h3) = hs
+          for (h <- hs)
+            h.setCohorts ((h1, h2, h3))
+          check (kit, h1, h2, hs, 0.1, summary)
         }
-        summary.check (Set (p1, p2))
+        summary.check (Set (patch1, patch2))
       }}}
 
   "The kit should" - {
