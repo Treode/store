@@ -25,6 +25,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
         assertResult (domain) (chosen)
     }}
 
+  // Propose two values simultaneously, expect one choice.
   def check (
       kit: StubNetwork,
       p1: StubPaxosHost,         // First host that will submit a proposal.
@@ -34,10 +35,10 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       summary: Summary
   ) {
     try {
+      import kit.scheduler
 
       val k = Bytes (0x9E360154E51197A8L)
 
-      // Propose two values simultaneously, expect one choice.
       val cb1 = p1.paxos.propose (k, 1) .capture()
       val cb2 = p2.paxos.propose (k, 2) .capture()
       kit.messageFlakiness = mf
@@ -45,10 +46,12 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       val v = cb1.passed
       assertResult (v) (cb2.passed)
 
-      // Expect all acceptors closed and in agreement.
-      val _as = as map (_.acceptors.get (k))
-      assert (_as forall (_.isClosed))
-      assertResult (1) (_as.map (_.getChosen) .flatten.toSet.size)
+      for (a <- as)
+        assert (
+            !a.paxos.acceptors.acceptors.contains (k),
+            "Expected acceptor to have been removed.")
+      for (a <- as)
+        a.paxos.archive.get (k) .expect (Some (v))
 
       summary.chose (v.int)
     } catch {

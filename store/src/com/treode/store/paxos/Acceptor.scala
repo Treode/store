@@ -12,21 +12,17 @@ import Callback.ignore
 
 private class Acceptor (val key: Bytes, kit: PaxosKit) {
   import Acceptor.{NoPost, Post}
-  import kit.{archive, cluster, disks, scheduler}
+  import kit.{acceptors, archive, cluster, disks, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
 
   private val fiber = new Fiber (scheduler)
   var state: State = null
 
   trait State {
-
     def query (proposer: Peer, ballot: Long, default: Bytes)
     def propose (proposer: Peer, ballot: Long, value: Bytes)
     def choose (chosen: Bytes)
     def checkpoint(): Async [Unit]
-
-    def shutdown(): Unit =
-      state = new Shutdown (this)
   }
 
   class Opening extends State {
@@ -219,10 +215,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
   class Closed (val chosen: Bytes, gen: Long) extends State {
 
-    // TODO: Purge acceptor from memory.
-    // fiber.delay (closedLifetime) (remove (key, Acceptor.this))
-
-    def status = None
+    fiber.delay (closedLifetime) (acceptors.remove (key, Acceptor.this))
 
     def query (proposer: Peer, ballot: Long, default: Bytes): Unit =
       Proposer.chosen (key, chosen) (proposer)
@@ -239,25 +232,18 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     override def toString = s"Acceptor.Closed($key, $chosen)"
   }
 
-  class Shutdown (s: State) extends State {
 
-    // TODO: Purge acceptor from memory.
+  class Panicked (s: State, thrown: Throwable) extends State {
 
-    def checkpoint(): Async [Unit] =
-      s.checkpoint()
+    fiber.delay (closedLifetime) (acceptors.remove (key, Acceptor.this))
 
-    def status = None
     def query (proposer: Peer, ballot: Long, default: Bytes): Unit = ()
+
     def propose (proposer: Peer, ballot: Long, value: Bytes): Unit = ()
+
     def choose (chosen: Bytes): Unit = ()
 
-    override def shutdown() = ()
-
-    override def toString = s"Acceptor.Shutdown($key)"
-  }
-
-  class Panicked (s: State, thrown: Throwable)
-  extends Shutdown (s) {
+    def checkpoint(): Async [Unit] = supply()
 
     override def toString = s"Acceptor.Panicked($key, $thrown)"
   }
@@ -273,9 +259,6 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
   def checkpoint(): Async [Unit] =
     fiber.guard (state.checkpoint())
-
-  def shutdown(): Unit =
-    fiber.execute (state.shutdown())
 
   override def toString = state.toString
 }

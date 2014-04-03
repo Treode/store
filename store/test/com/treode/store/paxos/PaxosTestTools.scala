@@ -8,8 +8,6 @@ private object PaxosTestTools extends TimedTestTools {
 
   implicit class TestableAcceptor (a: Acceptor) {
 
-    def isOpening = a.state.isInstanceOf [Acceptor#Opening]
-    def isRestoring = a.state.isInstanceOf [Acceptor#Restoring]
     def isDeliberating = a.state.isInstanceOf  [Acceptor#Deliberating]
     def isClosed = a.state.isInstanceOf [Acceptor#Closed]
 
@@ -21,7 +19,6 @@ private object PaxosTestTools extends TimedTestTools {
       else
         None
     }}
-
 
   def settled (h1: StubHost, h2: StubHost, h3: StubHost): Cohort =
     Cohort.settled (h1.localId, h2.localId, h3.localId)

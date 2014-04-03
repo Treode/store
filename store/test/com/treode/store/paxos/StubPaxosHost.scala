@@ -46,8 +46,6 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, catalogs, paxos) = captor.passed
 
-  val acceptors = paxos.acceptors
-
   def setCohorts (cohorts: Cohort*): Unit =
     atlas.set (cohorts.toArray)
 
