@@ -12,7 +12,7 @@ import AsyncTestTools._
 import PicklerRegistry.{BaseTag, FunctionTag}
 import Scuttlebutt.{Handler, Sync}
 
-class ScuttlebuttSpec extends Suites (ScuttlebuttBehaviors, ScuttlebuttProperties)
+class ScuttlebuttSpec extends Suites (ScuttlebuttBehaviors, new ScuttlebuttProperties)
 
 object ScuttlebuttBehaviors extends FreeSpec {
 
@@ -194,7 +194,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
       assertResult (Map (PEER1 -> 1, PEER2 -> 2)) (vs)
     }}}
 
-object ScuttlebuttProperties extends PropSpec with AsyncChecks {
+class ScuttlebuttProperties extends PropSpec with AsyncChecks {
 
   val r1 = RumorDescriptor (0x15, Picklers.int)
   val r2 = RumorDescriptor (0xEF, Picklers.int)
