@@ -9,6 +9,7 @@ class StoreConfig private (
     val targetPageBytes: Int) {
 
   val deliberatingTimeout = 2 seconds
+  val preparingTimeout = 5 seconds
   val readBackoff = Backoff (100, 100, 1 seconds, 7)
   val prepareBackoff = Backoff (100, 100, 1 seconds, 7)
   val closedLifetime = 2 seconds
@@ -28,5 +29,4 @@ object StoreConfig {
     require (targetPageBytes > 0, "The target size of a page must be more than zero bytes.")
 
     new StoreConfig (lockSpaceBits, targetPageBytes)
-  }
-}
+  }}

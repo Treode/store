@@ -25,6 +25,13 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     def checkpoint(): Async [Unit]
   }
 
+  private def panic (s: State, t: Throwable): Unit =
+    fiber.execute {
+      if (state == s) {
+        state = new Panicked (state, t)
+        throw t
+      }}
+
   class Opening extends State {
 
     def query (proposer: Peer, ballot: Long, default: Bytes) {
@@ -65,25 +72,24 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     def accept (ballot: BallotNumber, value: Bytes, proposer: Peer): Unit =
       postable = (_.accept (ballot, value, proposer))
 
+    def restore (chosen: Option [Bytes]): Unit =
+      fiber.execute {
+        if (state == Restoring.this) {
+          state = chosen match {
+            case Some (value) =>
+              Proposer.chosen (key, value) (proposers)
+              new Closed (value, 0)
+            case None =>
+              val s = new Deliberating (default, ballot, proposal, proposers)
+              postable (s)
+              s
+          }}}
+
     def restore() {
       archive.get (key) run {
-        case Success (chosen) => fiber.execute {
-          if (state == Restoring.this) {
-            state = chosen match {
-              case Some (value) =>
-                Proposer.chosen (key, value) (proposers)
-                new Closed (value, 0)
-              case None =>
-                val s = new Deliberating (default, ballot, proposal, proposers)
-                postable (s)
-                s
-            }}}
-        case Failure (t) => fiber.execute {
-          if (state == Restoring.this) {
-            state = new Panicked (Restoring.this, t)
-            throw t
-          }}}
-    }
+        case Success (chosen) => restore (chosen)
+        case Failure (t) => panic (Restoring.this, t)
+      }}
 
     def query (proposer: Peer, _ballot: Long, default: Bytes) {
       proposers += proposer
@@ -124,18 +130,19 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
     var posting: Post = NoPost
     var postable: Post = NoPost
 
-    val posted: Callback [Unit] = {
-      case Success (v) => fiber.execute {
+    def _posted(): Unit =
+      fiber.execute {
         if (state == Deliberating.this) {
           posting.reply()
           posting = postable
           postable = NoPost
           posting.record()
         }}
-      case Failure (t) => fiber.execute {
-        if (state == Deliberating.this) {
-          state = new Panicked (Deliberating.this, t)
-        }}}
+
+    val posted: Callback [Unit] = {
+      case Success (v) => _posted()
+      case Failure (t) => panic (Deliberating.this, t)
+    }
 
     def post (post: Post) {
       if (posting == NoPost) {
@@ -147,8 +154,10 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
     fiber.delay (deliberatingTimeout) {
       if (state == Deliberating.this)
-        kit.propose (key, default) .map (Acceptor.this.choose (_)) .run (ignore)
-    }
+        kit.propose (key, default) .run {
+          case Success (v) => Acceptor.this.choose (v)
+          case Failure (t) => panic (Deliberating.this, t)
+        }}
 
     def open (ballot: Long, default: Bytes, proposer: Peer): Unit =
       post (new Post {
@@ -231,7 +240,6 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
     override def toString = s"Acceptor.Closed($key, $chosen)"
   }
-
 
   class Panicked (s: State, thrown: Throwable) extends State {
 

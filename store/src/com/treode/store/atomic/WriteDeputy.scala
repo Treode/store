@@ -13,10 +13,13 @@ import Async.{guard, supply, when}
 import WriteDeputy.ArchiveStatus
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
-  import kit.{archive, disks, scheduler, tables, writers}
-  import kit.config.closedLifetime
+  import kit.{archive, disks, paxos, scheduler, tables, writers}
+  import kit.config.{closedLifetime, preparingTimeout}
 
   type WriteMediator = RequestMediator [WriteResponse]
+  object WriteMediator {
+    val void = RequestMediator.void [WriteResponse]
+  }
 
   val fiber = new Fiber (scheduler)
   var state: State = new Opening
@@ -26,8 +29,26 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def commit (mdtr: WriteMediator, wt: TxClock)
     def abort (mdtr: WriteMediator)
     def checkpoint(): Async [Unit]
-    def timeout()
   }
+
+  private def panic (s: State, t: Throwable): Unit =
+    fiber.execute {
+      if (state == s) {
+        state = new Panicked (state, t)
+        throw t
+      }}
+
+  private def timeout (s: State): Unit =
+    fiber.delay (preparingTimeout) {
+      if (state == s)
+        WriteDirector.deliberate.propose (xid.id, TxStatus.Aborted) .run {
+          case Success (TxStatus.Aborted) =>
+            WriteDeputy.this.abort (WriteMediator.void)
+          case Success (TxStatus.Committed (wt)) =>
+            WriteDeputy.this.commit (WriteMediator.void, wt)
+          case Failure (t) =>
+            panic (s, t)
+        }}
 
   class Opening extends State {
 
@@ -53,9 +74,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     }
 
     def checkpoint(): Async [Unit] =
-      throw new IllegalStateException
-
-    def timeout(): Unit =
       throw new IllegalStateException
 
     override def toString = "Deputy.Opening"
@@ -116,9 +134,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       supply()
 
-    def timeout(): Unit =
-      throw new IllegalStateException
-
     override def toString = "Deputy.Restoring"
   }
 
@@ -135,9 +150,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     def checkpoint(): Async [Unit] =
       supply()
-
-    def timeout(): Unit =
-      throw new IllegalStateException
 
     override def toString = "Deputy.Open"
   }
@@ -215,11 +227,11 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.preparing.record (xid, ops)
 
-    def timeout(): Unit =
-      throw new IllegalStateException
   }
 
   class Prepared (ops: Seq [WriteOp], ft: TxClock, locks: LockSet) extends State {
+
+    timeout (Prepared.this)
 
     private def rsp = WriteResponse.Prepared (ft)
 
@@ -234,12 +246,11 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     def checkpoint(): Async [Unit] =
       WD.preparing.record (xid, ops)
-
-    def timeout(): Unit =
-      throw new IllegalStateException
   }
 
   class Deliberating (ops: Seq [WriteOp], rsp: Option [WriteResponse]) extends State {
+
+    timeout (Deliberating.this)
 
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit =
       rsp foreach (mdtr.respond _)
@@ -253,12 +264,12 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.preparing.record (xid, ops)
 
-    def timeout() = ()
-
     override def toString = "Deputy.Deliberating"
   }
 
   class Tardy (mdtr: WriteMediator, wt: TxClock) extends State {
+
+    timeout (Tardy.this)
 
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit =
       new Committing (mdtr, wt, ops, None)
@@ -270,8 +281,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     def checkpoint(): Async [Unit] =
       supply()
-
-    def timeout() = ()
 
     override def toString = "Deputy.Tardy"
   }
@@ -319,8 +328,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.committed.record (xid, gen, gens, wt)
 
-    def timeout() = ()
-
     override def toString = "Deputy.Committing"
   }
 
@@ -339,8 +346,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     def checkpoint(): Async [Unit] =
       WD.committed.record (xid, gen, gens, wt)
-
-    def timeout() = ()
 
     override def toString = "Deputy.Committed"
   }
@@ -380,8 +385,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.aborted.record (xid, gen)
 
-    def timeout() = ()
-
     override def toString = "Deputy.Aborted"
   }
 
@@ -403,8 +406,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.aborted.record (xid, gen)
 
-    def timeout() = ()
-
     override def toString = "Deputy.Aborted"
   }
 
@@ -418,7 +419,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]) = ()
     def commit (mdtr: WriteMediator, wt: TxClock) = ()
     def abort (mdtr: WriteMediator) = ()
-    def timeout() = ()
 
     override def toString = s"Deputy.Panicked ($thrown)"
   }

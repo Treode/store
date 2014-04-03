@@ -22,6 +22,13 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
     def choose (chosen: Update)
   }
 
+  private def panic (s: State, t: Throwable): Unit =
+    fiber.execute {
+      if (state == s) {
+        state = new Panicked (t)
+        throw t
+      }}
+
   class Opening extends State {
 
     def query (proposer: Peer, ballot: Long): Unit =
@@ -39,16 +46,16 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
   class Getting (var op: State => Unit) extends State {
 
     broker.get (key) run {
-      case Success (cat) => fiber.execute {
+      case Success (cat) => got (cat)
+      case Failure (t) => panic (Getting.this, t)
+    }
+
+    def got (cat: Handler): Unit =
+      fiber.execute {
         if (state == Getting.this) {
           state = new Deliberating (cat)
           op (state)
         }}
-      case Failure (t) => fiber.execute {
-        if (state == Getting.this) {
-          state = new Panicked (t)
-          throw t
-        }}}
 
     def query (proposer: Peer, ballot: Long): Unit =
       op = (_.query (proposer, ballot))
@@ -71,10 +78,10 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
     fiber.delay (deliberatingTimeout) {
       if (state == Deliberating.this) {
         val default = Patch (handler.version, handler.checksum, Seq.empty)
-        kit.propose (key, default)
-            .map (Acceptor.this.choose (_))
-            .run (ignore)
-      }}
+        kit.propose (key, default) run {
+          case Success (patch) => Acceptor.this.choose (patch)
+          case Failure (t) => panic (Deliberating.this, t)
+        }}}
 
     def query (proposer: Peer, _ballot: Long) {
       proposers += proposer
@@ -109,10 +116,9 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
     broker.patch (key, chosen) run {
       case Success (v) =>
         fiber.delay (closedLifetime) (acceptors.remove (key, Acceptor.this))
-      case Failure (t) => fiber.execute {
-        if (state == Closed.this)
-          state = new Panicked (t)
-      }}
+      case Failure (t) =>
+        panic (Closed.this, t)
+    }
 
     def query (proposer: Peer, ballot: Long): Unit =
       Proposer.chosen (key, chosen) (proposer)

@@ -9,3 +9,9 @@ class RequestMediator [A] private [cluster] (prsp: Pickler [A], port: PortId, pe
 
   override def toString = "RequestMediator" + (port, peer)
 }
+
+object RequestMediator {
+
+  def void [A]: RequestMediator [A] =
+    new RequestMediator (ClusterPicklers.void, 0, Peer.void)
+}
