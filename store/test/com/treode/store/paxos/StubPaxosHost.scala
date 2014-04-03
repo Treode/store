@@ -48,17 +48,9 @@ extends StubActiveHost (id, network) {
 
   val acceptors = paxos.acceptors
 
-  def setCohorts (cohorts: (StubHost, StubHost, StubHost)*) {
-    val _cohorts =
-      for ((h1, h2, h3) <- cohorts)
-        yield Cohort.settled (h1.localId, h2.localId, h3.localId)
-    atlas.set (_cohorts.toArray)
-  }
+  def setCohorts (cohorts: Cohort*): Unit =
+    atlas.set (cohorts.toArray)
 
-  def issueCohorts (cohorts: (StubHost, StubHost, StubHost)*): Async [Unit] =
-    guard {
-      val _cohorts =
-        for ((h1, h2, h3) <- cohorts)
-          yield Cohort.settled (h1.localId, h2.localId, h3.localId)
-      atlas.issue (_cohorts.toArray)
-    }}
+  def issueCohorts (cohorts: Cohort*): Async [Unit] =
+    atlas.issue (cohorts.toArray)
+}

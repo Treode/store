@@ -96,6 +96,9 @@ private trait TimedTestTools extends AsyncTestTools {
 
   implicit def intToBytes (v: Int): Bytes =
     Bytes (v)
+
+  implicit def longToBytes (v: Long): Bytes =
+    Bytes (v)
 }
 
 private object TimedTestTools extends TimedTestTools

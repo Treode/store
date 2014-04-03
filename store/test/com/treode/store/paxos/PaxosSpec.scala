@@ -34,9 +34,8 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       summary: Summary
   ) {
     try {
-      import kit.random
 
-      val k = Bytes (random.nextLong)
+      val k = Bytes (0x9E360154E51197A8L)
 
       // Propose two values simultaneously, expect one choice.
       val cb1 = p1.paxos.propose (k, 1) .capture()
@@ -68,7 +67,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
           val hs = kit.install (3, new StubPaxosHost (_, kit))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
-            h.setCohorts ((h1, h2, h3))
+            h.setCohorts (settled (h1, h2, h3))
           check (kit, h1, h2, hs, 0.0, summary)
         }
         summary.check (Set (1, 2))
@@ -81,7 +80,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
           val hs = kit.install (3, new StubPaxosHost (_, kit))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
-            h.setCohorts ((h1, h2, h3))
+            h.setCohorts (settled (h1, h2, h3))
           check (kit, h1, h2, hs, 0.1, summary)
         }
         summary.check (Set (1, 2))
@@ -97,11 +96,30 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
           val Seq (h1, h2, h3) = hs
           for (h1 <- hs; h2 <- hs)
             h1.hail (h2.localId, null)
-          h1.setCohorts ((h1, h2, h3))
-          h1.issueCohorts ((h1, h2, h3)) .pass
+          h1.setCohorts (settled (h1, h2, h3))
+          h1.issueCohorts (settled (h1, h2, h3)) .pass
           kit.runTasks (timers = true, count = 500)
 
           check (kit, h1, h2, hs, 0.1, summary)
         }
         summary.check (Set (1, 2))
-      }}}}
+      }}
+
+    "rebalance" in { pending
+      val kit = StubNetwork()
+      import kit.scheduler
+
+      val hs = kit.install (4, new StubPaxosHost (_, kit))
+      val Seq (h1, h2, h3, h4) = hs
+      for (h <- hs)
+        h.setCohorts (settled (h1, h2, h3))
+
+      val k = Bytes (0xB3334572873016E4L)
+      h1.paxos.propose (k, 1) .expect (1)
+
+      for (h <- hs)
+        h.setCohorts (moving ((h1, h2, h3), (h1, h2, h4)))
+
+      for (h <- hs)
+        h.paxos.archive.get (k) .expect (Some (1))
+    }}}

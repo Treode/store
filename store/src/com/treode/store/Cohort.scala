@@ -31,7 +31,7 @@ object Cohort {
       new Moving (active, target)
 
   def settled (hosts: Set [HostId]): Cohort =
-    new Settled (hosts.toSet)
+    new Settled (hosts)
 
   def settled (hosts: HostId*): Cohort =
     settled (hosts.toSet)
