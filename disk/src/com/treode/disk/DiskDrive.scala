@@ -60,39 +60,45 @@ private class DiskDrive (
       (id, logTail)
     }
 
+  private def _checkpoint (boot: BootBlock): Async [Unit] =
+    fiber.guard {
+      val superb =
+          SuperBlock (id, boot, geometry, draining, alloc.free, logSegs.head, logHead)
+      SuperBlock.write (superb, file)
+    }
+
+  private def _checkpoint (mark: Long): Async [Unit] =
+    fiber.supply {
+      logHead = mark
+      val release = Seq.newBuilder [Int]
+      while (! (geometry.segmentBounds (logSegs.peek) .contains (logHead)))
+        release += logSegs.remove()
+      val nums = IntSet (release.result.sorted: _*)
+      alloc.free (nums)
+    }
+
+  private def _checkpoint (boot: BootBlock, mark: Long): Async [Unit] = {
+    for {
+      _ <- _checkpoint (mark)
+      _ <- pagemp.pause()
+      _ <- record (Checkpoint (pageLedger.zip))
+      _ <- _checkpoint (boot)
+    } yield {
+      pagemp.resume()
+    }}
+
+  def checkpoint (boot: BootBlock, mark: Option [Long]): Async [Unit] =
+    mark match {
+      case Some (mark) => _checkpoint (boot, mark)
+      case None => _checkpoint (boot)
+    }
+
   private def _protected: IntSet = {
     if (draining)
       IntSet (logSegs.toSeq.sorted: _*)
     else
       IntSet ((pageSeg.num +: logSegs.toSeq).sorted: _*)
   }
-
-  private def writeLedger(): Async [Unit] = {
-    when (pageLedgerDirty) {
-      pageLedgerDirty = false
-      PageLedger.write (pageLedger.clone(), file, pageSeg.base, pageHead)
-    }}
-
-  def checkpoint (boot: BootBlock, mark: Option [Long]): Async [Unit] =
-    fiber.guard {
-
-      mark foreach (logHead = _)
-
-      val release = Seq.newBuilder [Int]
-      while (! (geometry.segmentBounds (logSegs.peek) .contains (logHead)))
-        release += logSegs.remove()
-      val nums = IntSet (release.result.sorted: _*)
-      alloc.free (nums)
-
-      val superb =
-          SuperBlock (id, boot, geometry, draining, alloc.free, logSegs.head, logHead)
-      for {
-        _ <- pagemp.pause()
-        _ <- writeLedger()
-        _ <- SuperBlock.write (superb, file)
-      } yield {
-        pagemp.resume()
-      }}
 
   private def _cleanable: Iterator [SegmentPointer] = {
     val skip = _protected.add (compacting)
@@ -122,12 +128,18 @@ private class DiskDrive (
         disks.detach (this)
     }
 
+  private def _writeLedger(): Async [Unit] =
+    when (pageLedgerDirty) {
+      pageLedgerDirty = false
+      PageLedger.write (pageLedger.clone(), file, pageSeg.base, pageHead)
+    }
+
   def drain(): Async [Iterator [SegmentPointer]] =
     fiber.guard {
       draining = true
       for {
         _ <- latch (logmp.pause(), pagemp.close(), record (DiskDrain))
-        _ <- writeLedger()
+        _ <- _writeLedger()
         segs <- cleanable()
       } yield {
         segs

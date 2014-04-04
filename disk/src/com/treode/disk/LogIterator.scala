@@ -8,7 +8,7 @@ import com.treode.async.{Async, AsyncImplicits, AsyncIterator, Callback, Schedul
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
-import Async.async
+import Async.{async, guard, supply}
 import AsyncImplicits._
 import RecordHeader._
 import SuperBlocks.chooseSuperBlock
@@ -66,6 +66,11 @@ private class LogIterator private (
           buf.clear()
           scheduler.pass (cb, ())
 
+        case Checkpoint (_ledger) =>
+          pageLedger = _ledger.unzip
+          logPos += len + 4
+          file.deframe (buf, logPos) run (_read)
+
         case LogAlloc (next) =>
           logSeg = alloc.alloc (next, superb.geometry, config)
           logSegs.add (logSeg.num)
@@ -107,23 +112,25 @@ private class LogIterator private (
   def _foreach (f: ((Long, Unit => Any), Callback [Unit]) => Any): Async [Unit] =
     async (new Foreach (f, _) .next())
 
-  def close (kit: DisksKit): DiskDrive = {
-    buf.clear()
-    val (seg, pos) = pagePos match {
+  def pages(): (SegmentBounds, Long, PageLedger) =
+    pagePos match {
       case _ if draining =>
-        (SegmentBounds (-1, -1L, -1L), -1L)
+        val seg = SegmentBounds (-1, -1L, -1L)
+        (seg, -1L, new PageLedger)
       case Some (pos) =>
         val num = (pos >> superb.geometry.segmentBits) .toInt
         val seg = alloc.alloc (num, superb.geometry, config)
-        (seg, pos)
+        (seg, pos, pageLedger)
       case None =>
         val seg = alloc.alloc (superb.geometry, config)
-        (seg, seg.limit)
+        (seg, seg.limit, pageLedger)
     }
-    val disk = new DiskDrive (
+
+  def close (kit: DisksKit): DiskDrive = {
+    val (seg, head, ledger) = pages()
+    new DiskDrive (
         superb.id, path, file, superb.geometry, alloc, kit, draining, logSegs,
-        superb.logHead, logTail, logSeg.limit, buf, seg, pos, pageLedger, false)
-    disk
+        superb.logHead, logTail, logSeg.limit, buf, seg, head, ledger, false)
   }}
 
 private object LogIterator {
