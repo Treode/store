@@ -60,14 +60,7 @@ private class DiskDrive (
       (id, logTail)
     }
 
-  private def _checkpoint (boot: BootBlock): Async [Unit] =
-    fiber.guard {
-      val superb =
-          SuperBlock (id, boot, geometry, draining, alloc.free, logSegs.head, logHead)
-      SuperBlock.write (superb, file)
-    }
-
-  private def _checkpoint (mark: Long): Async [Unit] =
+  private def _checkpoint1 (mark: Long): Async [Unit] =
     fiber.supply {
       logHead = mark
       val release = Seq.newBuilder [Int]
@@ -77,12 +70,24 @@ private class DiskDrive (
       alloc.free (nums)
     }
 
+  private def _checkpoint2(): Async [Unit] =
+    fiber.guard {
+      record (Checkpoint (pageHead, pageLedger.zip))
+    }
+
+  private def _checkpoint3 (boot: BootBlock): Async [Unit] =
+    fiber.guard {
+      val superb =
+          SuperBlock (id, boot, geometry, draining, alloc.free, logSegs.head, logHead)
+      SuperBlock.write (superb, file)
+    }
+
   private def _checkpoint (boot: BootBlock, mark: Long): Async [Unit] = {
     for {
-      _ <- _checkpoint (mark)
+      _ <- _checkpoint1 (mark)
       _ <- pagemp.pause()
-      _ <- record (Checkpoint (pageLedger.zip))
-      _ <- _checkpoint (boot)
+      _ <- _checkpoint2()
+      _ <- _checkpoint3 (boot)
     } yield {
       pagemp.resume()
     }}
@@ -90,7 +95,7 @@ private class DiskDrive (
   def checkpoint (boot: BootBlock, mark: Option [Long]): Async [Unit] =
     mark match {
       case Some (mark) => _checkpoint (boot, mark)
-      case None => _checkpoint (boot)
+      case None => _checkpoint3 (boot)
     }
 
   private def _protected: IntSet = {
@@ -138,8 +143,9 @@ private class DiskDrive (
     fiber.guard {
       draining = true
       for {
-        _ <- latch (logmp.pause(), pagemp.close(), record (DiskDrain))
+        _ <- latch (logmp.pause(), pagemp.close())
         _ <- _writeLedger()
+        _ <- record (DiskDrain)
         segs <- cleanable()
       } yield {
         segs

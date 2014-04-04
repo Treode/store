@@ -16,9 +16,9 @@ private object RecordHeader {
   case class LogAlloc (next: Int) extends RecordHeader
   case class PageWrite (pos: Long, ledger: Zipped) extends RecordHeader
   case class PageClose (num: Int) extends RecordHeader
+  case class Checkpoint (pos: Long, ledger: Zipped) extends RecordHeader
   case class SegmentFree (nums: IntSet) extends RecordHeader
   case class Entry (batch: Long, id: TypeId) extends RecordHeader
-  case class Checkpoint (ledger: Zipped) extends RecordHeader
 
   val pickler = {
     import DiskPicklers._
@@ -30,11 +30,14 @@ private object RecordHeader {
             .build ((PageWrite.apply _).tupled)
             .inspect (v => (v.pos, v.ledger)),
         0x5 -> wrap (uint) .build (PageClose.apply _) .inspect (_.num),
-        0x6 -> wrap (intSet) .build (SegmentFree.apply _) .inspect (_.nums),
-        0x7 -> wrap (fixedLong, typeId)
+        0x6 -> wrap (ulong, pageLedger)
+            .build ((Checkpoint.apply _).tupled)
+            .inspect (v => (v.pos, v.ledger)),
+        0x7 -> wrap (intSet) .build (SegmentFree.apply _) .inspect (_.nums),
+        0x8 -> wrap (fixedLong, typeId)
             .build ((Entry.apply _).tupled)
-            .inspect (v => (v.batch, v.id)),
-        0x8 -> wrap (pageLedger) .build (Checkpoint.apply _) .inspect (_.ledger))
+            .inspect (v => (v.batch, v.id)))
+
   }
 
   val trailer = 10 // byte count, tag, next; 4 + 1 + 5
