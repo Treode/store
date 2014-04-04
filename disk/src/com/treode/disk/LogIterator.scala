@@ -89,7 +89,7 @@ private class LogIterator private (
           file.deframe (buf, logPos) run (_read)
 
         case Checkpoint (pos, _ledger) =>
-          val num = (pos >> superb.geometry.segmentBits) .toInt
+          val num = ((pos - 1) >> superb.geometry.segmentBits) .toInt
           alloc.alloc (num, superb.geometry, config)
           pagePos = Some (pos)
           pageLedger = _ledger.unzip
@@ -115,25 +115,25 @@ private class LogIterator private (
   def _foreach (f: ((Long, Unit => Any), Callback [Unit]) => Any): Async [Unit] =
     async (new Foreach (f, _) .next())
 
-  def pages(): (SegmentBounds, Long, PageLedger) =
+  def pages(): (SegmentBounds, Long, PageLedger, Boolean) =
     pagePos match {
       case _ if draining =>
         val seg = SegmentBounds (-1, -1L, -1L)
-        (seg, -1L, new PageLedger)
+        (seg, -1L, new PageLedger, false)
       case Some (pos) =>
-        val num = (pos >> superb.geometry.segmentBits) .toInt
+        val num = ((pos - 1) >> superb.geometry.segmentBits) .toInt
         val seg = alloc.alloc (num, superb.geometry, config)
-        (seg, pos, pageLedger)
+        (seg, pos, pageLedger, true)
       case None =>
         val seg = alloc.alloc (superb.geometry, config)
-        (seg, seg.limit, pageLedger)
+        (seg, seg.limit, pageLedger, true)
     }
 
   def close (kit: DisksKit): DiskDrive = {
-    val (seg, head, ledger) = pages()
+    val (seg, head, ledger, dirty) = pages()
     new DiskDrive (
         superb.id, path, file, superb.geometry, alloc, kit, draining, logSegs,
-        superb.logHead, logTail, logSeg.limit, buf, seg, head, ledger, false)
+        superb.logHead, logTail, logSeg.limit, buf, seg, head, ledger, dirty)
   }}
 
 private object LogIterator {
