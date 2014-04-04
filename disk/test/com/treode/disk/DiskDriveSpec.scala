@@ -22,7 +22,7 @@ class DiskDriveSpec extends FreeSpec {
     val free = IntSet()
     val boot = BootBlock (0, 0, 0, Set (path))
     val geom = TestDiskGeometry()
-    new SuperBlock (0, boot, geom, false, free, 0, 0)
+    new SuperBlock (0, boot, geom, false, free, 0)
     DiskDrive.init (0, path, file, geom, boot, kit)
   }
 

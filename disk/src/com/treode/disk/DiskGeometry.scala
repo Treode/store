@@ -16,6 +16,9 @@ class DiskGeometry private (
   def blockAlignLength (length: Int): Int =
     (length + blockBytes - 1) & blockMask
 
+  private [disk] def segmentNum (pos: Long): Int =
+    (pos >> segmentBits) .toInt
+
   private [disk] def segmentBounds (num: Int) (implicit config: DisksConfig): SegmentBounds = {
     require (0 <= num && num < segmentCount)
     val pos = if (num == 0) config.diskLeadBytes else num << segmentBits

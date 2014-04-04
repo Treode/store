@@ -74,7 +74,7 @@ private class LogIterator private (
           file.deframe (buf, logPos) run (_read)
 
         case PageWrite (pos, _ledger) =>
-          val num = (pos >> superb.geometry.segmentBits) .toInt
+          val num = superb.geometry.segmentNum (pos)
           alloc.alloc (num, superb.geometry, config)
           pagePos = Some (pos)
           pageLedger.add (_ledger)
@@ -89,7 +89,7 @@ private class LogIterator private (
           file.deframe (buf, logPos) run (_read)
 
         case Checkpoint (pos, _ledger) =>
-          val num = ((pos - 1) >> superb.geometry.segmentBits) .toInt
+          val num = superb.geometry.segmentNum (pos - 1)
           alloc.alloc (num, superb.geometry, config)
           pagePos = Some (pos)
           pageLedger = _ledger.unzip
@@ -121,7 +121,7 @@ private class LogIterator private (
         val seg = SegmentBounds (-1, -1L, -1L)
         (seg, -1L, new PageLedger, false)
       case Some (pos) =>
-        val num = ((pos - 1) >> superb.geometry.segmentBits) .toInt
+        val num = superb.geometry.segmentNum (pos - 1)
         val seg = alloc.alloc (num, superb.geometry, config)
         (seg, pos, pageLedger, true)
       case None =>
@@ -151,7 +151,8 @@ private object LogIterator {
     val file = read.file
     val superb = read.superb (useGen0)
     val alloc = Allocator (superb.free)
-    val logSeg = alloc.alloc (superb.logSeg, superb.geometry, config)
+    val num = superb.geometry.segmentNum (superb.logHead)
+    val logSeg = alloc.alloc (num, superb.geometry, config)
     val logSegs = new ArrayDeque [Int]
     logSegs.add (logSeg.num)
     val buf = PagedBuffer (12)

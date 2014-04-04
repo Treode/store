@@ -77,8 +77,7 @@ private class DiskDrive (
 
   private def _checkpoint3 (boot: BootBlock): Async [Unit] =
     fiber.guard {
-      val superb =
-          SuperBlock (id, boot, geometry, draining, alloc.free, logSegs.head, logHead)
+      val superb = SuperBlock (id, boot, geometry, draining, alloc.free, logHead)
       SuperBlock.write (superb, file)
     }
 
@@ -204,6 +203,7 @@ private class DiskDrive (
 
   private def advanceRecords(): Async [Unit] = {
     val len = logBuf.readableBytes
+    assert (logTail + len <= logLimit)
     RecordHeader.pickler.frame (LogEnd, logBuf)
     for {
       _ <- file.flush (logBuf, logTail)
@@ -346,8 +346,7 @@ private object DiskDrive {
       logSegs.add (logSeg.num)
       val pageSeg = alloc.alloc (geometry, config)
 
-      val superb =
-          SuperBlock (id, boot, geometry, false, alloc.free, logSeg.num, logSeg.base)
+      val superb = SuperBlock (id, boot, geometry, false, alloc.free, logSeg.base)
 
       for {
         _ <- latch (
