@@ -14,11 +14,10 @@ private class Compactor (kit: DisksKit) {
 
   type DrainReq = Iterator [SegmentPointer]
 
-  val empty = (Set.empty [PageGroup], List.empty [Callback [Unit]])
-
   val fiber = new Fiber (scheduler)
   var pages: PageRegistry = null
   var cleanq = Set.empty [(TypeId, ObjectId)]
+  var compactq = Set.empty [(TypeId, ObjectId)]
   var drainq = Set.empty [(TypeId, ObjectId)]
   var book = Map.empty [(TypeId, ObjectId), (Set [PageGroup], List [Callback [Unit]])]
   var segments = 0
@@ -27,21 +26,19 @@ private class Compactor (kit: DisksKit) {
   var engaged = true
 
   private def reengage() {
-    if (!cleanq.isEmpty) {
-      val (typ, obj) = cleanq.head
-      cleanq = cleanq.tail
-      compactObject (typ, obj)
-    } else if (cleanreq) {
+    if (cleanreq) {
       cleanreq = false
       probeForClean()
     } else if (!drainreq.isEmpty) {
       val (first, rest) = drainreq.dequeue
       drainreq = rest
       probeForDrain (first)
+    } else if (!cleanq.isEmpty) {
+      compactObject (cleanq.head)
+    } else if (!compactq.isEmpty) {
+      compactObject (compactq.head)
     } else if (!drainq.isEmpty) {
-      val (typ, obj) = drainq.head
-      drainq = drainq.tail
-      compactObject (typ, obj)
+      compactObject (drainq.head)
     } else {
       book = Map.empty
       engaged = false
@@ -56,9 +53,13 @@ private class Compactor (kit: DisksKit) {
       throw t
   }
 
-  private def compactObject (typ: TypeId, obj: ObjectId) {
+  private def compactObject (id: (TypeId, ObjectId)) {
+    val (typ, obj) = id
     val (groups, latches) = book (typ, obj)
-    book -= ((typ, obj))
+    cleanq -= id
+    compactq -= id
+    drainq -= id
+    book -= id
     engaged = true
     pages.compact (typ, obj, groups) .run (compacted  (latches))
   }
@@ -94,6 +95,15 @@ private class Compactor (kit: DisksKit) {
       // Exception already reported by compacted callback
   }
 
+  private def compact (id: (TypeId, ObjectId), groups: Set [PageGroup]): Async [Unit] =
+    async { cb =>
+      book.get (id) match {
+        case Some ((groups0, cbs0)) =>
+          book += id -> ((groups0 ++ groups, cb :: cbs0))
+        case None =>
+          book += id -> ((groups, cb :: Nil))
+      }}
+
   private def compact (groups: Groups, segments: Seq [SegmentPointer], cleaning: Boolean): Unit =
     fiber.execute {
       val latch = Latch.unit [Unit] (groups.size, release (segments))
@@ -109,25 +119,13 @@ private class Compactor (kit: DisksKit) {
           if (!(cleanq contains id) && !(drainq contains id))
             drainq += id
         }
-        book.get (id) match {
-          case Some ((gs0, ls0)) =>
-            book += id -> ((gs0 ++ gs1, latch :: ls0))
-          case None =>
-            book += id -> ((gs1, latch :: Nil))
-        }}}
+        compact (id, gs1) run (latch)
+      }}
 
   def launch (pages: PageRegistry): Async [Unit] =
     fiber.supply {
       this.pages = pages
       reengage()
-    }
-
-  def clean(): Unit =
-    fiber.execute {
-      if (!engaged)
-        probeForClean()
-      else
-        cleanreq = true
     }
 
   def tally (segments: Int): Unit =
@@ -138,6 +136,21 @@ private class Compactor (kit: DisksKit) {
           probeForClean()
         else
           cleanreq = true
+    }
+
+  def compact (typ: TypeId, obj: ObjectId): Async [Unit] =
+    fiber.async { cb =>
+      compact ((typ, obj), Set.empty [PageGroup]) run (cb)
+      if (!engaged)
+        reengage()
+    }
+
+  def clean(): Unit =
+    fiber.execute {
+      if (!engaged)
+        probeForClean()
+      else
+        cleanreq = true
     }
 
   def drain (iter: Iterator [SegmentPointer]): Unit =

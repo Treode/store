@@ -3,10 +3,10 @@ package com.treode.disk
 import java.util.concurrent.atomic.AtomicLong
 import com.treode.async.Async
 
-import Async.async
+import Async.{async, guard}
 
 private class DisksAgent (val kit: DisksKit) extends Disks {
-  import kit.{disks, logd, paged, releaser}
+  import kit.{compactor, disks, logd, paged, releaser}
   import kit.config.{maximumPageBytes, maximumRecordBytes}
 
   val cache = new PageCache (disks)
@@ -32,6 +32,9 @@ private class DisksAgent (val kit: DisksKit) extends Disks {
       cache.write (pos, page)
       pos
     }
+
+  def compact (desc: PageDescriptor [_, _], obj: ObjectId): Async [Unit] =
+    compactor.compact (desc.id, obj)
 
   def join [A] (task: Async [A]): Async [A] =
     releaser.join (task)

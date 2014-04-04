@@ -14,6 +14,8 @@ trait Disks {
 
   def write [G, P] (desc: PageDescriptor [G, P], obj: ObjectId, group: G, page: P): Async [Position]
 
+  def compact (desc: PageDescriptor [_, _], obj: ObjectId): Async [Unit]
+
   def join [A] (task: Async [A]): Async [A]
 }
 
