@@ -11,7 +11,7 @@ private class AsyncQueue (fiber: Fiber) (deque: => Option [Runnable]) {
 
   private [this] var _engaged = true
 
-  private def reengage(): Unit = fiber.execute {
+  private def _reengage() {
     deque match {
       case Some (task) =>
         _engaged = true
@@ -20,6 +20,11 @@ private class AsyncQueue (fiber: Fiber) (deque: => Option [Runnable]) {
         _engaged = false
     }}
 
+  private def reengage(): Unit =
+    fiber.execute {
+      _reengage()
+    }
+
   def engaged: Boolean = _engaged
 
   def run [A] (cb: Callback [A]) (task: => Async [A]): Option [Runnable] =
@@ -27,22 +32,21 @@ private class AsyncQueue (fiber: Fiber) (deque: => Option [Runnable]) {
       def run(): Unit = Async.guard (task) ensure (reengage()) run (cb)
     })
 
-  def launch (f: => Async [Unit]): Async [Unit] = fiber.guard {
-    Async.guard (f) ensure (reengage())
-  }
+  def launch (f: => Async [Unit]): Async [Unit] =
+    fiber.guard (f) ensure (reengage())
 
   def execute (f: => Any): Unit =
     fiber.execute {
       f
       if (!_engaged)
-        reengage()
+        _reengage()
     }
 
   def async [A] (f: Callback [A] => Any): Async [A] =
     fiber.async  { cb =>
       f (cb)
       if (!_engaged)
-        reengage()
+        _reengage()
     }}
 
 private object AsyncQueue {
