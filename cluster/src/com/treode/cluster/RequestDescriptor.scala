@@ -25,6 +25,8 @@ class RequestDescriptor [Q, A] private (id: PortId, preq: Pickler [Q], prsp: Pic
 
   def open (f: (A, Peer) => Any) (implicit c: Cluster): Port =
     c.open (prsp) (f)
+
+  override def toString = s"RequestDescriptor($id)"
 }
 
 object RequestDescriptor {

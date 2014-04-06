@@ -25,7 +25,7 @@ private object Paxos {
       random: Random,
       scheduler: Scheduler,
       cluster: Cluster,
-      recover: Disks.Recovery,
+      recovery: Disks.Recovery,
       config: StoreConfig
   ): Recovery =
    PaxosKit.recover()

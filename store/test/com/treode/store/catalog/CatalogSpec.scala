@@ -33,7 +33,9 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
 
     def check (domain: Set [Update]) {
       if (intensity == "standard")
-        assertResult (domain) (chosen)
+        assert (domain forall (chosen contains _))
+      val domain0 = domain + Update.empty
+      assert (chosen forall (domain0 contains _))
     }}
 
   // Propose two patches simultaneously, expect one choice.

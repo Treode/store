@@ -17,6 +17,8 @@ class TierDescriptor [K, V] private (
 
   def handle (handler: PageHandler [Long]) (implicit launch: Disks.Launch): Unit =
     pager.handle (handler)
+
+  override def toString = s"TierDescriptor($id)"
 }
 
 object TierDescriptor {

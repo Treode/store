@@ -10,7 +10,7 @@ class CatalogDescriptor [C] (val id: CatalogId, val pcat: Pickler [C]) {
   def issue (cat: C): Unit =
     ???
 
-  override def toString = s"CatalogDescriptor($id,$pcat)"
+  override def toString = s"CatalogDescriptor($id)"
 }
 
 object CatalogDescriptor {

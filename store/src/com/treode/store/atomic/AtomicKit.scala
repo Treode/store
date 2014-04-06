@@ -56,7 +56,7 @@ private [store] object AtomicKit {
       random: Random,
       scheduler: Scheduler,
       cluster: Cluster,
-      recover: Disks.Recovery,
+      recovery: Disks.Recovery,
       config: StoreConfig
   ): Recovery =
     new RecoveryKit

@@ -19,7 +19,7 @@ class AtomicSpec extends Suites (AtomicBehaviors, new AtomicProperties)
 
 object AtomicBehaviors extends FreeSpec with StoreBehaviors with TimeLimitedTests {
 
-  val timeLimit = 5 minutes
+  val timeLimit = 15 minutes
 
   private val kit = StubNetwork()
   private val hs = kit.install (3, new StubAtomicHost (_, kit))

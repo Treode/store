@@ -9,6 +9,8 @@ class RumorDescriptor [M] (val id: RumorId, val pmsg: Pickler [M]) {
 
   def spread (msg: M) (implicit c: Cluster): Unit =
     c.spread (this) (msg)
+
+  override def toString = s"RumorDescriptor($id)"
 }
 
 object RumorDescriptor {

@@ -18,6 +18,8 @@ class MessageDescriptor [M] private (val id: PortId, val pmsg: Pickler [M]) {
     c.listen (this) (f)
 
   def apply (msg: M) = MessageSender (id, pmsg, msg)
+
+  override def toString = s"MessageDescriptor($id)"
 }
 
 object MessageDescriptor {
