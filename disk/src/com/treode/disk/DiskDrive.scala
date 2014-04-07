@@ -140,11 +140,11 @@ private class DiskDrive (
 
   def drain(): Async [Iterator [SegmentPointer]] =
     fiber.guard {
-      draining = true
       for {
         _ <- latch (logmp.pause(), pagemp.close())
         _ <- _writeLedger()
-        _ <- record (DiskDrain)
+        _ <- record (DiskDrain (pageSeg.num))
+        _ = draining = true
         segs <- cleanable()
       } yield {
         segs

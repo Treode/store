@@ -55,11 +55,6 @@ private class LogIterator private (
       val hdr = RecordHeader.pickler.unpickle (buf)
       hdr match {
 
-        case DiskDrain =>
-          draining = true
-          logPos += len + 4
-          file.deframe (buf, logPos) run (_read)
-
         case LogEnd =>
           logTail = logPos
           logPos = -1L
@@ -88,6 +83,11 @@ private class LogIterator private (
           logPos += len + 4
           file.deframe (buf, logPos) run (_read)
 
+        case SegmentFree (nums) =>
+          alloc.free (nums)
+          logPos += len + 4
+          file.deframe (buf, logPos) run (_read)
+
         case Checkpoint (pos, _ledger) =>
           val num = superb.geometry.segmentNum (pos - 1)
           alloc.alloc (num, superb.geometry, config)
@@ -96,8 +96,10 @@ private class LogIterator private (
           logPos += len + 4
           file.deframe (buf, logPos) run (_read)
 
-        case SegmentFree (nums) =>
-          alloc.free (nums)
+        case DiskDrain (num) =>
+          draining = true
+          pagePos = None
+          pageLedger = new PageLedger
           logPos += len + 4
           file.deframe (buf, logPos) run (_read)
 
