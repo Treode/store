@@ -9,7 +9,13 @@ import com.treode.store.{Bytes, StorePicklers}
 import Async.async
 import AsyncImplicits._
 
-private case class Tier (gen: Long, root: Position) {
+private case class Tier (
+    gen: Long,
+    root: Position,
+    entries: Long,
+    entryBytes: Long,
+    diskBytes: Long
+) {
 
   private def ceiling (
       desc: TierDescriptor [_, _],
@@ -60,7 +66,7 @@ private object Tier {
 
   val pickler = {
     import StorePicklers._
-    wrap (ulong, pos)
+    wrap (ulong, pos, ulong, ulong, ulong)
     .build ((Tier.apply _).tupled)
-    .inspect (v => (v.gen, v.root))
+    .inspect (v => (v.gen, v.root, v.entries, v.entryBytes, v.diskBytes))
   }}

@@ -48,6 +48,9 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
   private val stack = new ArrayDeque [IndexNode]
   private val rstack = new ArrayDeque [IndexNode]
   private var cells = new CellsNode
+  private var totalEntries = 0L
+  private var totalEntryBytes = 0L
+  private var totalDiskBytes = 0L
 
   private def push (key: Bytes, pos: Position, height: Int) {
     val node = new IndexNode (height)
@@ -70,6 +73,8 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
 
   private def add (key: Bytes, pos: Position, height: Int): Async [Unit] =
     guard {
+
+      totalDiskBytes += pos.length
 
       val node = stack.peek
 
@@ -109,6 +114,9 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
       // Require that user adds entries in sorted order.
       require (cells.isEmpty || cells.last < cell)
 
+      totalEntries += 1
+      totalEntryBytes += cell.byteSize
+
       // Ensure that a value page has at least one entry.
       if (cells.byteSize + cellByteSize < config.targetPageBytes || cells.size < 1) {
         cells.add (cell, cellByteSize)
@@ -139,7 +147,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
         if (!stack.isEmpty)
           add (page.last.key, pos1, node.height+1)
         else
-          supply()
+          supply (totalDiskBytes += pos1.length)
     } yield pos1
   }
 
@@ -150,7 +158,7 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
       _ <- pager.write (obj, gen, page) .map (pos = _)
       _ <- when (cells.size > 0) (add (page.last.key, pos, 0))
       _ <- whilst (!stack.isEmpty) (pop (page, pos) .map (pos = _))
-    } yield Tier (gen, pos)
+    } yield Tier (gen, pos, totalEntries, totalEntryBytes, totalDiskBytes)
   }}
 
 private object TierBuilder {

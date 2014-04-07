@@ -108,14 +108,6 @@ class TierSpec extends WordSpec {
       builder.add (Apple, None) .fail [IllegalArgumentException]
     }
 
-    "require that added entries are reverse sorted by time" in {
-      implicit val (scheduler, disks) = setup()
-      implicit val config = StoreConfig (4, 1 << 16)
-      val builder = new TierBuilder (descriptor, ID, 0)
-      builder.add (Apple, None) .pass
-      builder.add (Apple, None) .fail [IllegalArgumentException]
-    }
-
     "allow properly sorted entries" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (4, 1 << 16)
@@ -125,25 +117,28 @@ class TierSpec extends WordSpec {
       builder.add (Watermelon, None) .pass
     }
 
-    "build a blanced tree with all keys" when {
+    "build a balanced tree with all keys" when {
 
-      def checkBuild (pageBytes: Int) {
+      def checkBuild (pageBytes: Int, expectedDiskBytes: Int) {
         implicit val (scheduler, disks) = setup()
         val tier = buildTier (pageBytes)
         expectBalanced (tier)
         assertResult (AllFruits.toSeq) (toSeq (tier) .map (_.key))
+        assertResult (AllFruits.length) (tier.entries)
+        assertResult (1870) (tier.entryBytes)
+        assertResult (expectedDiskBytes) (tier.diskBytes)
       }
 
       "the pages are limited to one byte" in {
-        checkBuild (1)
+        checkBuild (1, 9152)
       }
 
       "the pages are limited to 256 bytes" in {
-        checkBuild (1 << 6)
+        checkBuild (1 << 8, 1536)
       }
 
       "the pages are limited to 64K" in {
-        checkBuild (1 << 16)
+        checkBuild (1 << 16, 2048)
       }}}
 
   "The TierIterator" should {
@@ -161,7 +156,7 @@ class TierSpec extends WordSpec {
       }
 
       "the pages are limited to 256 bytes" in {
-        checkIterator (1 << 6)
+        checkIterator (1 << 8)
       }
 
       "the pages are limited to 64K" in {
@@ -197,7 +192,7 @@ class TierSpec extends WordSpec {
       }
 
       "the pages are limited to 256 bytes" in {
-        checkFind (1 << 6)
+        checkFind (1 << 8)
       }
 
       "the pages are limited to 64K" in {
