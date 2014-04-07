@@ -15,12 +15,9 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
   import desc.pager
   import scheduler.whilst
 
-  private def newIndexEntries = new ArrayList [IndexEntry] (1024)
-  private def newCellEntries = new ArrayList [TierCell] (256)
-
   private class IndexNode (val height: Int) {
 
-    val entries = newIndexEntries
+    val entries = new ArrayList [IndexEntry] (1024)
 
     def size = entries.size
 
@@ -31,10 +28,26 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
       this.byteSize += byteSize
     }}
 
+  private class CellsNode {
+
+    val entries = new ArrayList [TierCell] (256)
+
+    def size = entries.size
+
+    def isEmpty = entries.isEmpty
+
+    def last = entries.last
+
+    var byteSize = 0
+
+    def add (entry: TierCell, byteSize: Int) {
+      entries.add (entry)
+      this.byteSize += byteSize
+    }}
+
   private val stack = new ArrayDeque [IndexNode]
   private val rstack = new ArrayDeque [IndexNode]
-  private var entries = newCellEntries
-  private var byteSize = 0
+  private var cells = new CellsNode
 
   private def push (key: Bytes, pos: Position, height: Int) {
     val node = new IndexNode (height)
@@ -90,23 +103,21 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
   def add (key: Bytes, value: Option [Bytes]): Async [Unit] =
     guard {
 
-      val entry = TierCell (key, value)
-      val entryByteSize = entry.byteSize
+      val cell = TierCell (key, value)
+      val cellByteSize = cell.byteSize
 
       // Require that user adds entries in sorted order.
-      require (entries.isEmpty || entries.last < entry)
+      require (cells.isEmpty || cells.last < cell)
 
       // Ensure that a value page has at least one entry.
-      if (byteSize + entryByteSize < config.targetPageBytes || entries.size < 1) {
-        entries.add (entry)
-        byteSize += entryByteSize
+      if (cells.byteSize + cellByteSize < config.targetPageBytes || cells.size < 1) {
+        cells.add (cell, cellByteSize)
         supply()
 
       } else {
-        val page = TierCellPage (entries)
-        entries = newCellEntries
-        entries.add (entry)
-        byteSize = entryByteSize
+        val page = TierCellPage (cells.entries)
+        cells = new CellsNode
+        cells.add (cell, cellByteSize)
         val last = page.last
         for {
           pos <- pager.write (obj, gen, page)
@@ -133,11 +144,11 @@ private class TierBuilder (desc: TierDescriptor [_, _], obj: ObjectId, gen: Long
   }
 
   def result(): Async [Tier] = {
-    val page = TierCellPage (entries)
+    val page = TierCellPage (cells.entries)
     var pos: Position = null
     for {
       _ <- pager.write (obj, gen, page) .map (pos = _)
-      _ <- when (entries.size > 0) (add (page.last.key, pos, 0))
+      _ <- when (cells.size > 0) (add (page.last.key, pos, 0))
       _ <- whilst (!stack.isEmpty) (pop (page, pos) .map (pos = _))
     } yield Tier (gen, pos)
   }}
