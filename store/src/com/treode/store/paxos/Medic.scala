@@ -36,7 +36,7 @@ private class Medic (
 
   def closed (chosen: Bytes, gen: Long): Unit = fiber.execute {
     this.chosen = Some (chosen)
-    archive.put (gen, key, chosen)
+    archive.put (gen, key, 0, chosen)
   }
 
   def close (kit: PaxosKit): Async [Acceptor] = fiber.supply {

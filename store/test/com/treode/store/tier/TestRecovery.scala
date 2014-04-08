@@ -22,11 +22,11 @@ private class TestRecovery (
   }
 
   put.replay { case (gen, key, value) =>
-    medic.put (gen, Bytes (key), Bytes (value))
+    medic.put (gen, Bytes (key), 0, Bytes (value))
   }
 
   delete.replay { case (gen, key) =>
-    medic.delete (gen, Bytes (key))
+    medic.delete (gen, Bytes (key), 0)
   }
 
   def launch (implicit launch: Disks.Launch): Async [TestTable] = supply {

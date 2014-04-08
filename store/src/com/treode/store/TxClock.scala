@@ -8,9 +8,9 @@ import com.treode.pickle.Picklers
 
 class TxClock private (val time: Long) extends AnyVal with Ordered [TxClock] {
 
-  def + (n: Int): TxClock = new TxClock (time+n)
+  def + (n: Int): TxClock = TxClock (time+n)
 
-  def - (n: Int): TxClock = new TxClock (time-n)
+  def - (n: Int): TxClock = TxClock (time-n)
 
   def byteSize: Int = Longs.BYTES
 
@@ -22,14 +22,18 @@ class TxClock private (val time: Long) extends AnyVal with Ordered [TxClock] {
 
 object TxClock extends Ordering [TxClock] {
 
+  private [store] val sentinel = new TxClock (-1)
+
   val zero = new TxClock (0)
 
   val max = new TxClock (Long.MaxValue)
 
   def now = new TxClock (System.currentTimeMillis * 1000)
 
-  implicit def apply (time: Long): TxClock =
+  implicit def apply (time: Long): TxClock = {
+    require (time >= 0, "Time must be non-negative.")
     new TxClock (time)
+  }
 
   def parse (s: String): Option [TxClock] =
     parseLong (s) .map (apply (_))

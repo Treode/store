@@ -10,8 +10,8 @@ private class IndexPage (val entries: Array [IndexEntry]) extends TierPage {
   def get (i: Int): IndexEntry =
     entries (i)
 
-  def ceiling (key: Bytes): Int = {
-    val i = Arrays.binarySearch (entries, IndexEntry (key, 0, 0, 0), IndexEntry)
+  def ceiling (key: Bytes, time: TxClock): Int = {
+    val i = Arrays.binarySearch (entries, IndexEntry (key, time, 0, 0, 0), IndexEntry)
     if (i < 0) -i-1 else i
   }
 
@@ -21,9 +21,11 @@ private class IndexPage (val entries: Array [IndexEntry]) extends TierPage {
 
   def last: IndexEntry = entries (entries.size - 1)
 
-  override def toString =
-    s"IndexPage(${entries.head.key}, ${entries.last.key})"
-}
+  override def toString = {
+    val first = entries.head
+    val last = entries.last
+    s"IndexPage(${first.key}:{first.time}, ${last.key}:${last.time})"
+  }}
 
 private object IndexPage {
 
@@ -38,12 +40,14 @@ private object IndexPage {
   val pickler: Pickler [IndexPage] =
     new AbstractPagePickler [IndexPage, IndexEntry] {
 
+      private [this] val time = TxClock.pickler
       private [this] val disk = Picklers.uint
       private [this] val offset = Picklers.ulong
       private [this] val length = Picklers.uint
 
       protected def writeEntry (entry: IndexEntry, ctx: PickleContext) {
         writeKey (entry.key, ctx)
+        time.p (entry.time, ctx)
         disk.p (entry.disk, ctx)
         offset.p (entry.offset, ctx)
         length.p (entry.length, ctx)
@@ -51,14 +55,16 @@ private object IndexPage {
 
       protected def readEntry (ctx: UnpickleContext): IndexEntry = {
         val key = readKey (ctx)
+        val _time = time.u (ctx)
         val _disk = disk.u (ctx)
         val _offset = offset.u (ctx)
         val _length = length.u (ctx)
-        IndexEntry (key, _disk, _offset, _length)
+        IndexEntry (key, _time, _disk, _offset, _length)
       }
 
       protected def writeEntry (prev: IndexEntry, entry: IndexEntry, ctx: PickleContext) {
         writeKey (prev.key, entry.key, ctx)
+        time.p (entry.time, ctx)
         disk.p (entry.disk, ctx)
         offset.p (entry.offset, ctx)
         length.p (entry.length, ctx)
@@ -66,10 +72,11 @@ private object IndexPage {
 
       protected def readEntry (prev: IndexEntry, ctx: UnpickleContext): IndexEntry = {
         val key = readKey (prev.key, ctx)
+        val _time = time.u (ctx)
         val _disk = disk.u (ctx)
         val _offset = offset.u (ctx)
         val _length = length.u (ctx)
-        IndexEntry (key, _disk, _offset, _length)
+        IndexEntry (key, _time, _disk, _offset, _length)
       }
 
       def p (page: IndexPage, ctx: PickleContext): Unit =

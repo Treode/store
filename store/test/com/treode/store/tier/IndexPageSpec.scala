@@ -8,7 +8,7 @@ class IndexPageSpec extends WordSpec {
   import Fruits.{Apple, Banana, Kiwi, Kumquat, Orange}
 
   private def entry (key: Bytes): IndexEntry =
-    new IndexEntry (key, 0, 0, 0)
+    new IndexEntry (key, 0, 0, 0, 0)
 
   private def newPage (entries: IndexEntry*): IndexPage =
     new IndexPage (Array (entries: _*))
@@ -38,7 +38,7 @@ class IndexPageSpec extends WordSpec {
       val page = newPage ()
 
       "find nothing" in {
-        assertResult (0) (page.ceiling (Apple))
+        assertResult (0) (page.ceiling (Apple, 0))
       }
 
       "pickle and unpickle to the same value" in {
@@ -50,15 +50,15 @@ class IndexPageSpec extends WordSpec {
       val page = newPage (entry (Kiwi))
 
       "find apple before kiwi" in {
-        assertResult (0) (page.ceiling (Apple))
+        assertResult (0) (page.ceiling (Apple, 0))
       }
 
       "find kiwi using kiwi" in {
-        assertResult (0) (page.ceiling (Kiwi))
+        assertResult (0) (page.ceiling (Kiwi, 0))
       }
 
       "find orange after kiwi" in {
-        assertResult (1) (page.ceiling (Orange))
+        assertResult (1) (page.ceiling (Orange, 0))
       }
 
       "pickle and unpickle to the same value" in {
@@ -73,23 +73,23 @@ class IndexPageSpec extends WordSpec {
           entry (Orange))
 
       "find apple using apple" in {
-        assertResult (0) (page.ceiling (Apple))
+        assertResult (0) (page.ceiling (Apple, 0))
       }
 
       "find kiwi using banana" in {
-        assertResult (1) (page.ceiling (Banana))
+        assertResult (1) (page.ceiling (Banana, 0))
       }
 
       "find kiwi using kiwi" in {
-        assertResult (1) (page.ceiling (Kiwi))
+        assertResult (1) (page.ceiling (Kiwi, 0))
       }
 
       "find orange using kumquat" in {
-        assertResult (2) (page.ceiling (Kumquat))
+        assertResult (2) (page.ceiling (Kumquat, 0))
       }
 
       "find orange using orange" in {
-        assertResult (2) (page.ceiling (Orange))
+        assertResult (2) (page.ceiling (Orange, 0))
       }
 
       "pickle and unpickle to the same value" in {

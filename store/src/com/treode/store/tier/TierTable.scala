@@ -2,22 +2,22 @@ package com.treode.store.tier
 
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.disk.{Disks, ObjectId}
-import com.treode.store.{Bytes, StoreConfig, StorePicklers}
+import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, StorePicklers, TxClock}
 
 import Async.async
 import TierTable.Meta
 
 trait TierTable {
 
-  def ceiling (key: Bytes, limit: Bytes): Async [TierCell]
+  def ceiling (key: Bytes, time: TxClock): Async [Cell]
 
   def get (key: Bytes): Async [Option [Bytes]]
 
-  def iterator: TierCellIterator
+  def iterator: CellIterator
 
-  def put (key: Bytes, value: Bytes): Long
+  def put (key: Bytes, time: TxClock, value: Bytes): Long
 
-  def delete (key: Bytes): Long
+  def delete (key: Bytes, time: TxClock): Long
 
   def probe (groups: Set [Long]): Set [Long]
 

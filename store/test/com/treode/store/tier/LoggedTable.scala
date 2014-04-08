@@ -16,12 +16,12 @@ private class LoggedTable (table: TierTable) (implicit disks: Disks) extends Tes
     table.iterator.map (new TestCell (_))
 
   def put (key: Int, value: Int): Async [Unit] = guard {
-    val gen = table.put (Bytes (key), Bytes (value))
+    val gen = table.put (Bytes (key), 0, Bytes (value))
     TestTable.put.record (gen, key, value)
   }
 
   def delete (key: Int): Async [Unit] = guard {
-    val gen = table.delete (Bytes (key))
+    val gen = table.delete (Bytes (key), 0)
     TestTable.delete.record (gen, key)
   }
 

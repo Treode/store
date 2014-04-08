@@ -1,7 +1,6 @@
 package com.treode.store
 
-case class Cell (val key: Bytes, val time: TxClock, val value: Option [Bytes])
-extends Ordered [Cell] {
+case class Cell (key: Bytes, time: TxClock, value: Option [Bytes]) extends Ordered [Cell] {
 
   def byteSize = Cell.pickler.byteSize (this)
 
@@ -9,15 +8,12 @@ extends Ordered [Cell] {
     var r = key compare that.key
     if (r != 0) return r
     // Reverse chronological order
-    r = that.time compare time
-    if (r != 0) return r
-    value compare that.value
-  }
-
-  override def toString = "Cell" + (key, time, value)
-}
+    that.time compare time
+  }}
 
 object Cell extends Ordering [Cell] {
+
+  private [store] val sentinel = Cell (Bytes.empty, TxClock.sentinel, None)
 
   def compare (x: Cell, y: Cell): Int =
     x compare y

@@ -7,7 +7,6 @@ import com.treode.store.{TableId, TxClock, WriteOp}
 import com.treode.store.tier.{TierMedic, TierTable}
 
 import Async.guard
-import TimedTable.keyToBytes
 
 private class TimedMedic (kit: RecoveryKit) {
   import kit.{config, scheduler}
@@ -25,12 +24,11 @@ private class TimedMedic (kit: RecoveryKit) {
     require (gens.length == ops.length)
     for ((gen, op) <- gens zip ops) {
       val t = get (op.table)
-      val k = keyToBytes (op.key, wt)
       op match {
-        case op: Create => t.put (gen, k, op.value)
+        case op: Create => t.put (gen, op.key, wt, op.value)
         case op: Hold   => 0
-        case op: Update => t.put (gen, k, op.value)
-        case op: Delete => t.delete (gen, k)
+        case op: Update => t.put (gen, op.key, wt, op.value)
+        case op: Delete => t.delete (gen, op.key, wt)
       }}}
 
   def checkpoint (id: TableId, meta: TierTable.Meta): Unit =

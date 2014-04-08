@@ -41,7 +41,7 @@ class TierSpec extends WordSpec {
       implicit scheduler: StubScheduler, disks: Disks): Set [Int] = {
     descriptor.pager.read (pos) .pass match {
       case b: IndexPage => getDepths (b.entries, depth+1)
-      case b: TierCellPage => Set (depth)
+      case b: CellPage => Set (depth)
     }}
 
   /** Check that tree rooted at `pos` has all ValueBlocks at the same depth, expect those under
@@ -55,7 +55,7 @@ class TierSpec extends WordSpec {
         val d = ds1.head
         val ds2 = getDepths (b.last.pos, 1)
         assertResult (true, "Expected final ValueBlocks at depth < $d") (ds2 forall (_ < d))
-      case b: TierCellPage =>
+      case b: CellPage =>
         ()
     }}
 
@@ -64,28 +64,28 @@ class TierSpec extends WordSpec {
       implicit scheduler: StubScheduler, disks: Disks): Tier = {
     implicit val config = StoreConfig (4, pageBytes)
     val builder = new TierBuilder (descriptor, ID, 0)
-    AllFruits.async.foreach (builder.add (_, Some (1))) .pass
+    AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .pass
     builder.result.pass
   }
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier) (
-      implicit scheduler: StubScheduler, disks: Disks): Seq [TierCell] =
+      implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] =
     TierIterator (descriptor, tier.root) .toSeq
 
-  private def toSeq (builder: Builder [TierCell, _], pos: Position) (
+  private def toSeq (builder: Builder [Cell, _], pos: Position) (
       implicit scheduler: StubScheduler, disks: Disks) {
     descriptor.pager.read (pos) .pass match {
       case page: IndexPage =>
         page.entries foreach (e => toSeq (builder, e.pos))
-      case page: TierCellPage =>
+      case page: CellPage =>
         page.entries foreach (builder += _)
     }}
 
   /** Build a sequence of the cells in the tier using old-fashioned recursion. */
   private def toSeq (tier: Tier) (
-      implicit scheduler: StubScheduler, disks: Disks): Seq [TierCell] = {
-    val builder = Seq.newBuilder [TierCell]
+      implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] = {
+    val builder = Seq.newBuilder [Cell]
     toSeq (builder, tier.root)
     builder.result
   }
@@ -96,25 +96,25 @@ class TierSpec extends WordSpec {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (4, 1 << 16)
       val builder = new TierBuilder (descriptor, ID, 0)
-      builder.add (Apple, None) .pass
-      builder.add (Apple, None) .fail [IllegalArgumentException]
+      builder.add (Cell (Apple, 0, None)) .pass
+      builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
 
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (4, 1 << 16)
       val builder = new TierBuilder (descriptor, ID, 0)
-      builder.add (Orange, None) .pass
-      builder.add (Apple, None) .fail [IllegalArgumentException]
+      builder.add (Cell (Orange, 0, None)) .pass
+      builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
 
     "allow properly sorted entries" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (4, 1 << 16)
       val builder = new TierBuilder (descriptor, ID, 0)
-      builder.add (Apple, None) .pass
-      builder.add (Orange, None) .pass
-      builder.add (Watermelon, None) .pass
+      builder.add (Cell (Apple, 0, None)) .pass
+      builder.add (Cell (Orange, 0, None)) .pass
+      builder.add (Cell (Watermelon, 0, None)) .pass
     }
 
     "build a balanced tree with all keys" when {
@@ -125,7 +125,7 @@ class TierSpec extends WordSpec {
         expectBalanced (tier)
         assertResult (AllFruits.toSeq) (toSeq (tier) .map (_.key))
         assertResult (AllFruits.length) (tier.entries)
-        assertResult (1870) (tier.entryBytes)
+        assertResult (2500) (tier.entryBytes)
         assertResult (expectedDiskBytes) (tier.diskBytes)
       }
 
@@ -134,11 +134,11 @@ class TierSpec extends WordSpec {
       }
 
       "the pages are limited to 256 bytes" in {
-        checkBuild (1 << 8, 1536)
+        checkBuild (1 << 8, 1664)
       }
 
       "the pages are limited to 64K" in {
-        checkBuild (1 << 16, 2048)
+        checkBuild (1 << 16, 2176)
       }}}
 
   "The TierIterator" should {
@@ -177,7 +177,7 @@ class TierSpec extends WordSpec {
         val tier = buildTier (pageBytes)
 
         def ceiling (key: Bytes): Option [Bytes] =
-          tier.ceiling (descriptor, key) .pass.map (_.key)
+          tier.ceiling (descriptor, key, 0) .pass.map (_.key)
 
         assertResult (Apple) (ceiling (Apple) .get)
         assertResult (Apricot) (ceiling (AppleX) .get)

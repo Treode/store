@@ -22,14 +22,14 @@ private class Medic (val xid: TxId, kit: RecoveryKit)  {
   def committed (gen: Long, gens: Seq [Long], wt: TxClock): Unit = fiber.execute {
     import ArchiveStatus._
     _committed = Some (wt)
-    archive.put (gen, xid.id, Bytes (pickler, Committed (wt)))
+    archive.put (gen, xid.id, 0, Bytes (pickler, Committed (wt)))
     tables.commit (gens, wt, _preparing.get)
   }
 
   def aborted (gen: Long): Unit = fiber.execute {
     import ArchiveStatus._
     _aborted = true
-    archive.put (gen, xid.id, Bytes (pickler, Aborted))
+    archive.put (gen, xid.id, 0, Bytes (pickler, Aborted))
   }
 
   def close (kit: AtomicKit): Async [WriteDeputy] =

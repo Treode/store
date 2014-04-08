@@ -4,7 +4,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, AsyncImplicits, Callback}
 import com.treode.disk.{Disks, Position}
-import com.treode.store.{Bytes, StorePicklers}
+import com.treode.store.{Bytes, Cell, StorePicklers, TxClock}
 
 import Async.async
 import AsyncImplicits._
@@ -20,7 +20,8 @@ private case class Tier (
   private def ceiling (
       desc: TierDescriptor [_, _],
       key: Bytes,
-      cb: Callback [Option [TierCell]]
+      time: TxClock,
+      cb: Callback [Option [Cell]]
   ) (
       implicit disks: Disks
   ) {
@@ -30,7 +31,7 @@ private case class Tier (
     val loop = Callback.fix [TierPage] { loop => {
 
       case Success (p: IndexPage) =>
-        val i = p.ceiling (key)
+        val i = p.ceiling (key, time)
         if (i == p.size) {
           cb.pass (None)
         } else {
@@ -38,8 +39,8 @@ private case class Tier (
           pager.read (e.pos) .run (loop)
         }
 
-      case Success (p: TierCellPage) =>
-        val i = p.ceiling (key)
+      case Success (p: CellPage) =>
+        val i = p.ceiling (key, time)
         if (i == p.size)
           cb.pass (None)
         else
@@ -55,8 +56,8 @@ private case class Tier (
     pager.read (root) .run (loop)
   }
 
-  def ceiling (desc: TierDescriptor [_, _], key: Bytes) (implicit disks: Disks): Async [Option [TierCell]] =
-    async (ceiling (desc, key, _))
+  def ceiling (desc: TierDescriptor [_, _], key: Bytes, time: TxClock) (implicit disks: Disks): Async [Option [Cell]] =
+    async (ceiling (desc, key, time, _))
 
   override def toString: String =
     s"Tier($gen, $root)"

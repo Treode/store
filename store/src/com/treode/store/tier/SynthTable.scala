@@ -4,7 +4,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.disk.{Disks, ObjectId, PageHandler, PageDescriptor, Position}
-import com.treode.store.{Bytes, StoreConfig}
+import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, TxClock}
 
 import Async.{async, supply}
 import TierTable.Meta
@@ -33,8 +33,8 @@ private class SynthTable [K, V] (
     // The position of each tier on disk.
     var tiers: Tiers
 
-) (
-    implicit scheduler: Scheduler,
+) (implicit
+    scheduler: Scheduler,
     disks: Disks,
     config: StoreConfig
 ) extends TierTable {
@@ -43,7 +43,9 @@ private class SynthTable [K, V] (
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
 
-  private def read (key: Bytes, limit: Bytes): Async [TierCell] = {
+  def ceiling (key: Bytes, time: TxClock): Async [Cell] = {
+
+    val mkey = MemKey (key, time)
 
     readLock.lock()
     val (primary, secondary, tiers) = try {
@@ -52,55 +54,63 @@ private class SynthTable [K, V] (
       readLock.unlock()
     }
 
-    var entry = primary.ceilingEntry (key)
-    if (entry != null && entry.getKey <= limit)
-      return supply (TierCell (entry.getKey, entry.getValue))
+    var candidate = Cell.sentinel
+    var entry = primary.ceilingEntry (mkey)
+    if (entry != null) {
+      val MemKey (k, t) = entry.getKey
+      if (key == k && candidate.time < t) {
+        candidate = memTierEntryToCell (entry)
+      }}
 
-    entry = secondary.ceilingEntry (key)
-    if (entry != null && entry.getKey <= limit)
-      return supply (TierCell (entry.getKey, entry.getValue))
+    entry = secondary.ceilingEntry (mkey)
+    if (entry != null) {
+      val MemKey (k, t) = entry.getKey
+      if (key == k && candidate.time < t) {
+        candidate = memTierEntryToCell (entry)
+      }}
 
-    var cell = Option.empty [TierCell]
     var i = 0
     for {
       _ <-
-        whilst (i < tiers.size && (cell.isEmpty || cell.get.key > limit)) {
-          for (c <- tiers (i) .ceiling (desc, key)) yield {
-            cell = c
+        whilst (i < tiers.size) {
+          for (cell <- tiers (i) .ceiling (desc, key, time)) yield {
+            cell match {
+              case Some (c @ Cell (k, t, v)) if key == k && candidate.time < t =>
+                candidate = c
+              case _ =>
+                ()
+            }
             i += 1
           }}
     } yield {
-      if (cell.isDefined && cell.get.key <= limit)
-        TierCell (cell.get.key, cell.get.value)
+      if (candidate == Cell.sentinel)
+        Cell (key, 0, None)
       else
-        TierCell (limit, None)
+        candidate
     }}
-
-  def ceiling (key: Bytes, limit: Bytes): Async [TierCell] =
-    read (key, limit)
 
   def get (key: Bytes): Async [Option [Bytes]] =
-    read (key, key) .map (_.value)
+    ceiling (key, TxClock.max) .map (_.value)
 
-  def put (key: Bytes, value: Bytes): Long = {
+  def put (key: Bytes, time: TxClock, value: Bytes): Long = {
     readLock.lock()
     try {
-      primary.put (key, Some (value))
+      primary.put (MemKey (key, time), Some (value))
       gen
     } finally {
       readLock.unlock()
     }}
 
-  def delete (key: Bytes): Long = {
+  def delete (key: Bytes, time: TxClock): Long = {
     readLock.lock()
     try {
-      primary.put (key, None)
+      primary.put (MemKey (key, time), None)
       gen
     } finally {
       readLock.unlock()
     }}
 
-  def iterator: TierCellIterator = {
+  def iterator: CellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)

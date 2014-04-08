@@ -109,7 +109,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       }}
 
     def choose (chosen: Bytes) {
-      val gen  = archive.put (key, chosen)
+      val gen  = archive.put (key, 0, chosen)
       state = new Closed (chosen, gen)
       Acceptor.close.record (key, chosen, gen) .run (Callback.ignore)
       Proposer.chosen (key, chosen) (proposers)
@@ -208,7 +208,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       }}
 
     def choose (chosen: Bytes) {
-      val gen  = archive.put (key, chosen)
+      val gen  = archive.put (key, 0, chosen)
       state = new Closed (chosen, gen)
       Acceptor.close.record (key, chosen, gen) .run (ignore)
     }

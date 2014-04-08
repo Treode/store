@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.buffer.PagedBuffer
-import com.treode.store.{Bytes, Fruits}
+import com.treode.store.{Bytes, Cell, Fruits}
 import org.scalatest.WordSpec
 
 import Fruits.{AllFruits, Apple, Banana, Kiwi, Kumquat, Orange}
@@ -9,21 +9,21 @@ import TierTestTools._
 
 class CellPageSpec extends WordSpec {
 
-  private def newPage (entries: TierCell*): TierCellPage =
-    new TierCellPage (Array (entries: _*))
+  private def newPage (entries: Cell*): CellPage =
+    new CellPage (Array (entries: _*))
 
-  private def entriesEqual (expected: TierCell, actual: TierCell) {
+  private def entriesEqual (expected: Cell, actual: Cell) {
     assertResult (expected.key) (actual.key)
     assertResult (expected.value) (actual.value)
   }
 
-  private def pagesEqual (expected: TierCellPage, actual: TierCellPage) {
+  private def pagesEqual (expected: CellPage, actual: CellPage) {
     assertResult (expected.entries.length) (actual.entries.length)
     for (i <- 0 until expected.entries.length)
       entriesEqual (expected.entries (i), actual.entries (i))
   }
 
-  private def checkPickle (page: TierCellPage) {
+  private def checkPickle (page: CellPage) {
     val buffer = PagedBuffer (12)
     TierCellPage.pickler.pickle (page, buffer)
     val result = TierCellPage.pickler.unpickle (buffer)
@@ -37,7 +37,7 @@ class CellPageSpec extends WordSpec {
       val page = newPage ()
 
       "find nothing" in {
-        assertResult (0) (page.ceiling (Apple))
+        assertResult (0) (page.ceiling (Apple, 0))
       }
 
       "pickle and unpickle to the same value" in {
@@ -46,7 +46,7 @@ class CellPageSpec extends WordSpec {
 
     "holding a list of fruits" should {
 
-      val page = newPage (AllFruits.map (_::None): _*)
+      val page = newPage (AllFruits.map (_##0): _*)
 
       "pickle and unpickle to the same value" in {
         checkPickle (page)
@@ -54,7 +54,7 @@ class CellPageSpec extends WordSpec {
 
     "holding a list of repeated keys" should {
 
-      val page = newPage (Apple::None, Apple::None, Apple::None)
+      val page = newPage (Apple##0, Apple##0, Apple##0)
 
       "pickle and unpickle to the same value" in {
         checkPickle (page)
@@ -62,18 +62,18 @@ class CellPageSpec extends WordSpec {
 
     "holding one entry k=kiwi" should {
 
-      val page = newPage (Kiwi::None)
+      val page = newPage (Kiwi##0)
 
       "find apple before kiwi" in {
-        assertResult (0) (page.ceiling (Apple))
+        assertResult (0) (page.ceiling (Apple, 0))
       }
 
       "find kiwi using kiwi" in {
-        assertResult (0) (page.ceiling (Kiwi))
+        assertResult (0) (page.ceiling (Kiwi, 0))
       }
 
       "find orange after kiwi" in {
-        assertResult (1) (page.ceiling (Orange))
+        assertResult (1) (page.ceiling (Orange, 0))
       }
 
       "pickle and unpickle to the same value" in {
@@ -82,26 +82,26 @@ class CellPageSpec extends WordSpec {
 
     "holding three entries" should {
 
-      val page = newPage (Apple::None, Kiwi::None, Orange::None)
+      val page = newPage (Apple##0, Kiwi##0, Orange##0)
 
       "find apple using apple" in {
-        assertResult (0) (page.ceiling (Apple))
+        assertResult (0) (page.ceiling (Apple, 0))
       }
 
       "find kiwi using banana" in {
-        assertResult (1) (page.ceiling (Banana))
+        assertResult (1) (page.ceiling (Banana, 0))
       }
 
       "find kiwi using kiwi" in {
-        assertResult (1) (page.ceiling (Kiwi))
+        assertResult (1) (page.ceiling (Kiwi, 0))
       }
 
       "find orange using kumquat" in {
-        assertResult (2) (page.ceiling (Kumquat))
+        assertResult (2) (page.ceiling (Kumquat, 0))
       }
 
       "find orange using orange" in {
-        assertResult (2) (page.ceiling (Orange))
+        assertResult (2) (page.ceiling (Orange, 0))
       }
 
       "pickle and unpickle to the same value" in {

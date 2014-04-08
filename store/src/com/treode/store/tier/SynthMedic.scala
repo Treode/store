@@ -4,7 +4,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.Scheduler
 import com.treode.disk.{Disks, ObjectId, Position}
-import com.treode.store.{Bytes, StoreConfig}
+import com.treode.store.{Bytes, StoreConfig, TxClock}
 
 private class SynthMedic [K, V] (
     desc: TierDescriptor [K, V],
@@ -29,15 +29,15 @@ private class SynthMedic [K, V] (
   // The position of each tier on disk.
   private var tiers = Tiers.empty
 
-  private def replay (gen: Long, key: Bytes, value: Option [Bytes]) {
+  private def replay (gen: Long, key: Bytes, time: TxClock, value: Option [Bytes]) {
 
     readLock.lock()
     val needWrite = try {
       if (gen == this.gen - 1) {
-        secondary.put (key, value)
+        secondary.put (MemKey (key, time), value)
         false
       } else if (gen == this.gen) {
-        primary.put (key, value)
+        primary.put (MemKey (key, time), value)
         false
       } else {
         true
@@ -50,29 +50,29 @@ private class SynthMedic [K, V] (
       writeLock.lock()
       try {
         if (gen == this.gen - 1) {
-          secondary.put (key, value)
+          secondary.put (MemKey (key, time), value)
         } else if (gen == this.gen) {
-          primary.put (key, value)
+          primary.put (MemKey (key, time), value)
         } else if (gen == this.gen + 1) {
           this.gen = gen
           secondary = primary
           primary = newMemTier
-          primary.put (key, value)
+          primary.put (MemKey (key, time), value)
         } else if (gen > this.gen + 1) {
           this.gen = gen
           primary = newMemTier
           secondary = newMemTier
-          primary.put (key, value)
+          primary.put (MemKey (key, time), value)
         }
       } finally {
         writeLock.unlock()
       }}}
 
-  def put (gen: Long, key: Bytes, value: Bytes): Unit =
-    replay (gen, key, Some (value))
+  def put (gen: Long, key: Bytes, time: TxClock, value: Bytes): Unit =
+    replay (gen, key, time, Some (value))
 
-  def delete (gen: Long, key: Bytes): Unit =
-    replay (gen, key, None)
+  def delete (gen: Long, key: Bytes, time: TxClock): Unit =
+    replay (gen, key, time, None)
 
   def checkpoint (meta: TierTable.Meta) {
     writeLock.lock()

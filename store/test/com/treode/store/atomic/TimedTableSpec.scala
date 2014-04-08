@@ -9,7 +9,6 @@ import com.treode.store._
 import org.scalatest.FreeSpec
 
 import Fruits._
-import TimedTable.keyToBytes
 import TimedTestTools._
 
 class TimedTableSpec extends FreeSpec {
@@ -33,18 +32,6 @@ class TimedTableSpec extends FreeSpec {
 
   def expectCells (cs: Cell*) (t: TimedTable) (implicit s: StubScheduler): Unit =
     assertResult (cs) (t.iterator.toSeq)
-
-  "TimedTable.keyToBytes should" - {
-
-    "preserve the sort of the embedded key" in {
-      assert (Boysenberry < Grape)
-      assert (Bytes (Bytes.pickler, Boysenberry) > Bytes (Bytes.pickler, Grape))
-      assert (keyToBytes (Boysenberry, 0) < keyToBytes (Grape, 0))
-    }
-
-    "reverse the sort order of time" in {
-      assert (keyToBytes (Grape, 1) < keyToBytes (Grape, 0))
-    }}
 
   "When a TimedTable is empty, it should" - {
 

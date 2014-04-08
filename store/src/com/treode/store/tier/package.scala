@@ -1,24 +1,24 @@
 package com.treode.store
 
+import java.util.{Map => JMap}
 import java.util.concurrent.ConcurrentSkipListMap
-import com.treode.async.AsyncIterator
 
 package object tier {
 
   private [tier] type MemTier =
-    ConcurrentSkipListMap [Bytes, Option [Bytes]]
+    ConcurrentSkipListMap [MemKey, Option [Bytes]]
 
-  private [tier] type TierCellIterator =
-    AsyncIterator [TierCell]
+  private [tier] val emptyMemTier: MemTier =
+    new ConcurrentSkipListMap [MemKey, Option [Bytes]] (MemKey)
 
-  private [tier] val emptyMemTier =
-    new ConcurrentSkipListMap [Bytes, Option [Bytes]] (Bytes)
+  private [tier] def newMemTier: MemTier =
+    new ConcurrentSkipListMap [MemKey, Option [Bytes]] (MemKey)
 
-  private [tier] def newMemTier =
-    new ConcurrentSkipListMap [Bytes, Option [Bytes]] (Bytes)
+  private [tier] def memTierEntryToCell (entry: JMap.Entry [MemKey, Option [Bytes]]): Cell =
+    Cell (entry.getKey.key, entry.getKey.time, entry.getValue)
 
-  private [tier] implicit class RichTierCellIterator (iter: TierCellIterator) {
+  private [tier] implicit class RichCellIterator (iter: CellIterator) {
 
-    def dedupe: TierCellIterator =
+    def dedupe: CellIterator =
       Filters.dedupe (iter)
   }}

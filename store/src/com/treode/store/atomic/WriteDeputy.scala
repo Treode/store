@@ -291,7 +291,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       ops: Seq [WriteOp],
       locks: Option [LockSet]) extends State {
 
-    val gen = archive.put (xid.id, Bytes (ArchiveStatus.pickler, ArchiveStatus.Committed (wt)))
+    val gen = archive.put (xid.id, 0, Bytes (ArchiveStatus.pickler, ArchiveStatus.Committed (wt)))
     val gens = tables.commit (wt, ops)
     guard {
       for {
@@ -352,7 +352,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Aborting (mdtr: WriteMediator, locks: Option [LockSet]) extends State {
 
-    val gen = archive.put (xid.id, Bytes (ArchiveStatus.pickler, ArchiveStatus.Aborted))
+    val gen = archive.put (xid.id, 0, Bytes (ArchiveStatus.pickler, ArchiveStatus.Aborted))
     guard {
       locks foreach (_.release())
       WD.aborted.record (xid, gen)
