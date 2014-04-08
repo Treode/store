@@ -55,6 +55,8 @@ private class TierBuilder (
   private val stack = new ArrayDeque [IndexNode]
   private val rstack = new ArrayDeque [IndexNode]
   private var cells = new CellsNode
+  private var earliestTime = TxClock.max
+  private var latestTime = TxClock.zero
   private var totalEntries = 0L
   private var totalEntryBytes = 0L
   private var totalDiskBytes = 0L
@@ -115,23 +117,26 @@ private class TierBuilder (
   def add (cell: Cell): Async [Unit] =
     guard {
 
-      val cellByteSize = cell.byteSize
+      val time = cell.time
+      val byteSize = cell.byteSize
 
       // Require that user adds entries in sorted order.
       require (cells.isEmpty || cells.last < cell)
 
+      if (earliestTime > time) earliestTime = time
+      if (latestTime < time) latestTime = time
       totalEntries += 1
       totalEntryBytes += cell.byteSize
 
       // Ensure that a value page has at least one entry.
-      if (cells.byteSize + cellByteSize < config.targetPageBytes || cells.size < 1) {
-        cells.add (cell, cellByteSize)
+      if (cells.byteSize + byteSize < config.targetPageBytes || cells.size < 1) {
+        cells.add (cell, byteSize)
         supply()
 
       } else {
         val page = TierCellPage (cells.entries)
         cells = new CellsNode
-        cells.add (cell, cellByteSize)
+        cells.add (cell, byteSize)
         val last = page.last
         for {
           pos <- pager.write (obj, gen, page)
@@ -164,7 +169,7 @@ private class TierBuilder (
       _ <- pager.write (obj, gen, page) .map (pos = _)
       _ <- when (cells.size > 0) (add (page.last.key, page.last.time, pos, 0))
       _ <- whilst (!stack.isEmpty) (pop (page, pos) .map (pos = _))
-    } yield Tier (gen, pos, totalEntries, totalEntryBytes, totalDiskBytes)
+    } yield Tier (gen, pos, totalEntries, earliestTime, latestTime, totalEntryBytes, totalDiskBytes)
   }}
 
 private object TierBuilder {

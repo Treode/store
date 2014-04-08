@@ -13,6 +13,8 @@ private case class Tier (
     gen: Long,
     root: Position,
     entries: Long,
+    earliest: TxClock,
+    latest: TxClock,
     entryBytes: Long,
     diskBytes: Long
 ) {
@@ -67,7 +69,7 @@ private object Tier {
 
   val pickler = {
     import StorePicklers._
-    wrap (ulong, pos, ulong, ulong, ulong)
+    wrap (ulong, pos, ulong, txClock, txClock, ulong, ulong)
     .build ((Tier.apply _).tupled)
-    .inspect (v => (v.gen, v.root, v.entries, v.entryBytes, v.diskBytes))
+    .inspect (v => (v.gen, v.root, v.entries, v.earliest, v.latest, v.entryBytes, v.diskBytes))
   }}

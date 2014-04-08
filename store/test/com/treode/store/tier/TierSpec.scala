@@ -17,8 +17,6 @@ import TierTestTools._
 
 class TierSpec extends WordSpec {
 
-  val ID = 0x1E
-
   private def setup(): (StubScheduler, Disks) = {
     implicit val scheduler = StubScheduler.random()
     implicit val disksConfig = TestDisksConfig (maximumPageBytes=1<<17)
@@ -63,7 +61,7 @@ class TierSpec extends WordSpec {
   private def buildTier (pageBytes: Int) (
       implicit scheduler: StubScheduler, disks: Disks): Tier = {
     implicit val config = StoreConfig (4, pageBytes)
-    val builder = new TierBuilder (descriptor, ID, 0)
+    val builder = new TierBuilder (descriptor, 0, 0)
     AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .pass
     builder.result.pass
   }
@@ -95,7 +93,7 @@ class TierSpec extends WordSpec {
     "require that added entries are not duplicated" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (4, 1 << 16)
-      val builder = new TierBuilder (descriptor, ID, 0)
+      val builder = new TierBuilder (descriptor, 0, 0)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
@@ -103,7 +101,7 @@ class TierSpec extends WordSpec {
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (4, 1 << 16)
-      val builder = new TierBuilder (descriptor, ID, 0)
+      val builder = new TierBuilder (descriptor, 0, 0)
       builder.add (Cell (Orange, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
@@ -111,10 +109,22 @@ class TierSpec extends WordSpec {
     "allow properly sorted entries" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = StoreConfig (4, 1 << 16)
-      val builder = new TierBuilder (descriptor, ID, 0)
+      val builder = new TierBuilder (descriptor, 0, 0)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Orange, 0, None)) .pass
       builder.add (Cell (Watermelon, 0, None)) .pass
+    }
+
+    "track the bounds on the times" in {
+      implicit val (scheduler, disks) = setup()
+      implicit val config = StoreConfig (4, 1 << 16)
+      val builder = new TierBuilder (descriptor, 0, 0)
+      builder.add (Cell (Apple, 3, None)) .pass
+      builder.add (Cell (Orange, 5, None)) .pass
+      builder.add (Cell (Watermelon, 7, None)) .pass
+      val tier = builder.result(). pass
+      assertResult (3) (tier.earliest.time)
+      assertResult (7) (tier.latest.time)
     }
 
     "build a balanced tree with all keys" when {

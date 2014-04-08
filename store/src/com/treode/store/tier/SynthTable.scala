@@ -6,7 +6,7 @@ import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.disk.{Disks, ObjectId, PageHandler, PageDescriptor, Position}
 import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, TxClock}
 
-import Async.{async, supply}
+import Async.{async, supply, when}
 import TierTable.Meta
 
 private class SynthTable [K, V] (
@@ -70,19 +70,17 @@ private class SynthTable [K, V] (
       }}
 
     var i = 0
-    for {
-      _ <-
-        whilst (i < tiers.size) {
-          for (cell <- tiers (i) .ceiling (desc, key, time)) yield {
-            cell match {
-              case Some (c @ Cell (k, t, v)) if key == k && candidate.time < t =>
-                candidate = c
-              case _ =>
-                ()
-            }
-            i += 1
-          }}
-    } yield {
+    whilst (i < tiers.size) {
+      val tier = tiers (i)
+      i += 1
+      when (tier.earliest <= time && candidate.time < tier.latest) {
+        tier.ceiling (desc, key, time) .map {
+         case Some (c @ Cell (k, t, v)) if key == k && candidate.time < t =>
+            candidate = c
+          case _ =>
+            ()
+        }}
+    } .map { _ =>
       if (candidate == Cell.sentinel)
         Cell (key, 0, None)
       else
