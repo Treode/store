@@ -167,5 +167,5 @@ private object SynthTable {
   def apply [K, V] (desc: TierDescriptor [K,V], obj: ObjectId) (
       implicit scheduler: Scheduler, disk: Disks, config: StoreConfig): SynthTable [K, V] = {
     val lock = new ReentrantReadWriteLock
-    new SynthTable (desc, obj, lock, 0, new MemTier, new MemTier, Tiers.empty)
+    new SynthTable (desc, obj, lock, 0, newMemTier, newMemTier, Tiers.empty)
   }}

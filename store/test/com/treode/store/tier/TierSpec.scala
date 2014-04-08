@@ -71,6 +71,11 @@ class TierSpec extends WordSpec {
       implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] =
     TierIterator (descriptor, tier.root) .toSeq
 
+  /** Build a sequence of the cells in the tier by using the TierIterator. */
+  private def iterateTier (tier: Tier, key: Bytes, time: TxClock) (
+      implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] =
+    TierIterator (descriptor, tier.root, key, time) .toSeq
+
   private def toSeq (builder: Builder [Cell, _], pos: Position) (
       implicit scheduler: StubScheduler, disks: Disks) {
     descriptor.pager.read (pos) .pass match {
@@ -151,27 +156,55 @@ class TierSpec extends WordSpec {
         checkBuild (1 << 16, 2176)
       }}}
 
-  "The TierIterator" should {
+  "The TierIterator" when {
 
-    "iterate all keys" when {
+    "starting from the beginning" should {
 
-      def checkIterator (pageBytes: Int) {
-        implicit val (scheduler, disks) = setup()
-        val tier = buildTier (pageBytes)
-        assertResult (AllFruits.toSeq) (iterateTier (tier) map (_.key))
-      }
+      "iterate all keys" when {
 
-      "the pages are limited to one byte" in {
-        checkIterator (1)
-      }
+        def checkIterator (pageBytes: Int) {
+          implicit val (scheduler, disks) = setup()
+          val tier = buildTier (pageBytes)
+          assertResult (AllFruits.toSeq) (iterateTier (tier) map (_.key))
+        }
 
-      "the pages are limited to 256 bytes" in {
-        checkIterator (1 << 8)
-      }
+        "the pages are limited to one byte" in {
+          checkIterator (1)
+        }
 
-      "the pages are limited to 64K" in {
-        checkIterator (1 << 16)
-      }}}
+        "the pages are limited to 256 bytes" in {
+          checkIterator (1 << 8)
+        }
+
+        "the pages are limited to 64K" in {
+          checkIterator (1 << 16)
+        }}}
+
+    "starting from the middle" should {
+
+      "iterate all remaining keys" when {
+
+        def checkIterator (pageBytes: Int) {
+          implicit val (scheduler, disks) = setup()
+          val tier = buildTier (pageBytes)
+          for (start <- AllFruits) {
+            val expected = AllFruits.dropWhile (_ != start) .toSeq
+            val actual = iterateTier (tier, start, 0) map (_.key)
+            assertResult (expected) (actual)
+          }}
+
+        "the pages are limited to one byte" in {
+          checkIterator (1)
+        }
+
+        "the pages are limited to 256 bytes" in {
+          checkIterator (1 << 8)
+        }
+
+        "the pages are limited to 64K" in {
+          checkIterator (1 << 16)
+        }}}
+  }
 
   "The Tier" should {
 

@@ -1,12 +1,12 @@
 package com.treode.store
 
 import java.util.{Map => JMap}
-import java.util.concurrent.ConcurrentSkipListMap
+import java.util.concurrent.{ConcurrentNavigableMap, ConcurrentSkipListMap}
 
 package object tier {
 
   private [tier] type MemTier =
-    ConcurrentSkipListMap [MemKey, Option [Bytes]]
+    ConcurrentNavigableMap [MemKey, Option [Bytes]]
 
   private [tier] val emptyMemTier: MemTier =
     new ConcurrentSkipListMap [MemKey, Option [Bytes]] (MemKey)
