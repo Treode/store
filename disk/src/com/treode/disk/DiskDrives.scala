@@ -6,7 +6,7 @@ import scala.collection.immutable.Queue
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncImplicits, Callback, Fiber, Latch, Scheduler}
+import com.treode.async.{Async, AsyncImplicits, AsyncQueue, Callback, Fiber}
 import com.treode.async.io.File
 
 import Async.{async, guard}

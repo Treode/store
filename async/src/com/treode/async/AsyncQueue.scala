@@ -1,4 +1,4 @@
-package com.treode.disk
+package com.treode.async
 
 import scala.runtime.NonLocalReturnControl
 
@@ -7,7 +7,7 @@ import com.treode.async._
 import AsyncImplicits._
 import Callback.ignore
 
-private class AsyncQueue (fiber: Fiber) (deque: => Option [Runnable]) {
+class AsyncQueue (fiber: Fiber) (deque: => Option [Runnable]) {
 
   private [this] var _engaged = true
 
@@ -49,7 +49,7 @@ private class AsyncQueue (fiber: Fiber) (deque: => Option [Runnable]) {
         _reengage()
     }}
 
-private object AsyncQueue {
+object AsyncQueue {
 
   def apply (fiber: Fiber) (deque: => Option [Runnable]): AsyncQueue =
     new AsyncQueue (fiber) (deque)
