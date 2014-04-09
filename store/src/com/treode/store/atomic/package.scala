@@ -3,7 +3,7 @@ package com.treode.store
 import java.util.concurrent.ConcurrentHashMap
 import com.treode.async.AsyncIterator
 import com.treode.store.locks.LockSet
-import com.treode.store.tier.TierMedic
+import com.treode.store.tier.{TierMedic, TierTable}
 
 package atomic {
 
@@ -17,12 +17,12 @@ package atomic {
 
 package object atomic {
 
-  private [atomic] type TablesMap = ConcurrentHashMap [TableId, TimedTable]
+  private [atomic] type TablesMap = ConcurrentHashMap [TableId, TierTable]
   private [atomic] type TableMedicsMap = ConcurrentHashMap [TableId, TierMedic]
   private [atomic] type WritersMap = ConcurrentHashMap [TxId, WriteDeputy]
   private [atomic] type WriterMedicsMap = ConcurrentHashMap [TxId, Medic]
 
-  private [atomic] def newTablesMap = new ConcurrentHashMap [TableId, TimedTable]
+  private [atomic] def newTablesMap = new ConcurrentHashMap [TableId, TierTable]
   private [atomic] def newTableMedicsMap = new ConcurrentHashMap [TableId, TierMedic]
   private [atomic] def newWritersMap = new ConcurrentHashMap [TxId, WriteDeputy]
   private [atomic] def newWriterMedicsMap = new ConcurrentHashMap [TxId, Medic]

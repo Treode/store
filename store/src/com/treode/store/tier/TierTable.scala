@@ -9,7 +9,7 @@ import TierTable.Meta
 
 trait TierTable {
 
-  def ceiling (key: Bytes, time: TxClock): Async [Cell]
+  def get (key: Bytes, time: TxClock): Async [Cell]
 
   def get (key: Bytes): Async [Option [Bytes]]
 

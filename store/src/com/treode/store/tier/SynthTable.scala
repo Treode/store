@@ -43,7 +43,7 @@ private class SynthTable (
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
 
-  def ceiling (key: Bytes, time: TxClock): Async [Cell] = {
+  def get (key: Bytes, time: TxClock): Async [Cell] = {
 
     val mkey = MemKey (key, time)
 
@@ -88,7 +88,7 @@ private class SynthTable (
     }}
 
   def get (key: Bytes): Async [Option [Bytes]] =
-    ceiling (key, TxClock.max) .map (_.value)
+    get (key, TxClock.max) .map (_.value)
 
   def put (key: Bytes, time: TxClock, value: Bytes): Long = {
     readLock.lock()

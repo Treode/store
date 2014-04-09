@@ -14,7 +14,7 @@ private class TimedMedic (kit: RecoveryKit) {
   val tables = newTableMedicsMap
 
   def get (id: TableId): TierMedic = {
-    val m1 = TierMedic (TimedTable.table, id.id)
+    val m1 = TierMedic (TimedStore.table, id.id)
     val m0 = tables.putIfAbsent (id, m1)
     if (m0 == null) m1 else m0
   }
@@ -34,10 +34,10 @@ private class TimedMedic (kit: RecoveryKit) {
   def checkpoint (id: TableId, meta: TierTable.Meta): Unit =
     get (id) .checkpoint (meta)
 
-  def close() (implicit launch: Disks.Launch): Seq [(TableId, TimedTable)] = {
+  def close() (implicit launch: Disks.Launch): Seq [(TableId, TierTable)] = {
     materialize (tables.entrySet) map { entry =>
       val id = entry.getKey
-      val t = new TimedTable (entry.getValue.close())
+      val t = entry.getValue.close()
       (id, t)
     }}
 }

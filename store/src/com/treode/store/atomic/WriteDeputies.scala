@@ -63,7 +63,7 @@ private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
 
     WriteDeputies.archive.handle (this)
 
-    TimedTable.table.handle (tables)
+    TimedStore.table.handle (tables)
 
     prepare.listen { case ((xid, ct, ops), mdtr) =>
       get (xid) .prepare (mdtr, ct, ops)

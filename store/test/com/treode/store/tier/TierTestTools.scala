@@ -36,13 +36,13 @@ private object TierTestTools extends TimedTestTools {
         require (Apple < c1.key && c1.key < Tomato, "Key must be between Apple and Tomato.")
       }
       assertResult (cells) (table.iterator.toSeq)
-      table.ceiling (Apple, 0) .expect (Apple##0)
-      table.ceiling (Tomato, 0) .expect (Tomato##0)
+      table.get (Apple, 0) .expect (Apple##0)
+      table.get (Tomato, 0) .expect (Tomato##0)
       for (Seq (c1, c2) <- cells.sliding (2)) {
-        table.ceiling (c1.key, c1.time + 1) .expect (c1)
-        table.ceiling (c1.key, c1.time) .expect (c1)
+        table.get (c1.key, c1.time + 1) .expect (c1)
+        table.get (c1.key, c1.time) .expect (c1)
         if (c1.key == c2.key)
-          table.ceiling (c1.key, c1.time - 1) .expect (c2)
+          table.get (c1.key, c1.time - 1) .expect (c2)
         else
-          table.ceiling (c1.key, c1.time - 1) .expect (Cell (c1.key, 0, None))
+          table.get (c1.key, c1.time - 1) .expect (Cell (c1.key, 0, None))
       }}}}

@@ -5,9 +5,9 @@ import java.util.concurrent.ConcurrentHashMap
 import com.treode.async.{Async, AsyncImplicits, Callback, Latch}
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disks, ObjectId, PageHandler, Position, RecordDescriptor}
-import com.treode.store.{ReadOp, TableId, TxClock, TxId, Value, WriteOp}
+import com.treode.store.{Cell, ReadOp, TableId, TxClock, TxId, Value, WriteOp}
 import com.treode.store.locks.LockSpace
-import com.treode.store.tier.{TierMedic, TierTable}
+import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
 
 import Async.{async, guard, supply}
 import AsyncImplicits._
@@ -18,11 +18,11 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
   val space = new LockSpace
   val tables = newTablesMap
 
-  private def getTable (id: TableId): TimedTable = {
+  private def getTable (id: TableId): TierTable = {
     var t0 = tables.get (id)
     if (t0 != null)
       return t0
-    val t1 = TimedTable (id)
+    val t1 = TierTable (TimedStore.table, id.id)
     t0 = tables.putIfAbsent (id, t1)
     if (t0 != null)
       return t0
@@ -34,18 +34,20 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     val ids = ops map (op => (op.table, op.key).hashCode)
     for {
       _ <- space.read (rt, ids)
-      vs <-
+      cells <-
         for ((op, i) <- ops.zipWithIndex.latch.indexed)
           getTable (op.table) .get (op.key, rt)
-    } yield vs
+    } yield {
+      for (Cell (_, time, value) <- cells) yield Value (time, value)
+    }
   }
 
-  private def collided (op: WriteOp, value: Value): Boolean =
-    op.isInstanceOf [WriteOp.Create] && value.value.isDefined
+  private def collided (op: WriteOp, cell: Cell): Boolean =
+    op.isInstanceOf [WriteOp.Create] && cell.value.isDefined
 
   private def prepare (ct: TxClock, op: WriteOp): Async [(Boolean, TxClock)] = {
-    for (value <- getTable (op.table) .get (op.key, TxClock.max))
-      yield (collided (op, value), value.time)
+    for (cell <- getTable (op.table) .get (op.key, TxClock.max))
+      yield (collided (op, cell), cell.time)
   }
 
   def prepare (ct: TxClock, ops: Seq [WriteOp]): Async [PrepareResult] = {
@@ -81,8 +83,8 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
         case op: Delete => t.delete (op.key, wt)
       }}}
 
-  def recover (ts: Seq [(TableId, TimedTable)]) {
-    for ((id, t) <-ts)
+  def recover (ts: Seq [(TableId, TierTable)]) {
+    for ((id, t) <- ts)
       tables.put (id, t)
   }
 
@@ -98,7 +100,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
       } yield ()
     }
 
-  private def checkpoint (id: TableId, table: TimedTable): Async [Unit] =
+  private def checkpoint (id: TableId, table: TierTable): Async [Unit] =
     table.checkpoint() .flatMap (TimedStore.checkpoint.record (id, _))
 
   def checkpoint(): Async [Unit] = {
@@ -108,6 +110,11 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
   }}
 
 private object TimedStore {
+
+  val table = {
+    import com.treode.store.StorePicklers._
+    TierDescriptor (0xB500D51FACAEA961L)
+  }
 
   val checkpoint = {
     import AtomicPicklers._
