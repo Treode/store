@@ -11,7 +11,7 @@ import Async.async
 import AsyncImplicits._
 
 private abstract class TierIterator (
-    desc: TierDescriptor [_, _],
+    desc: TierDescriptor,
     root: Position
 ) (implicit
     disks: Disks
@@ -130,7 +130,7 @@ private abstract class TierIterator (
 private object TierIterator {
 
   class FromBeginning (
-      desc: TierDescriptor [_, _],
+      desc: TierDescriptor,
       root: Position
   ) (implicit
       disks: Disks
@@ -141,7 +141,7 @@ private object TierIterator {
   }
 
   class FromKey (
-      desc: TierDescriptor [_, _],
+      desc: TierDescriptor,
       root: Position,
       key: Bytes,
       time: TxClock
@@ -154,7 +154,7 @@ private object TierIterator {
   }
 
   def apply (
-      desc: TierDescriptor [_, _],
+      desc: TierDescriptor,
       root: Position
   ) (implicit
       disks: Disks
@@ -162,7 +162,7 @@ private object TierIterator {
     new FromBeginning (desc, root)
 
   def apply (
-      desc: TierDescriptor [_, _],
+      desc: TierDescriptor,
       root: Position,
       key: Bytes,
       time: TxClock
@@ -178,7 +178,7 @@ private object TierIterator {
     adapt (tier.tailMap (MemKey (key, time), true))
 
   def merge (
-      desc: TierDescriptor [_, _],
+      desc: TierDescriptor,
       primary: MemTier,
       secondary: MemTier,
       tiers: Tiers
@@ -197,7 +197,7 @@ private object TierIterator {
   }
 
   def merge (
-      desc: TierDescriptor [_, _],
+      desc: TierDescriptor,
       key: Bytes,
       time: TxClock,
       primary: MemTier,

@@ -16,10 +16,10 @@ import TierTestTools._
 
 class SynthTableSpec extends FreeSpec {
 
-  val tier = TierDescriptor (0x56, Picklers.int, Picklers.int)
+  val tier = TierDescriptor (0x56)
 
   private def mkTable (disk: File) (
-      implicit scheduler: StubScheduler): SynthTable [Int, Int] = {
+      implicit scheduler: StubScheduler): SynthTable = {
 
     implicit val disksConfig = TestDisksConfig()
     implicit val recovery = Disks.recover()
@@ -31,7 +31,7 @@ class SynthTableSpec extends FreeSpec {
     SynthTable (tier, 0x62)
   }
 
-  private def aNonEmptyTable (setup: StubScheduler => SynthTable [_, _]) {
+  private def aNonEmptyTable (setup: StubScheduler => SynthTable) {
 
     "iterate and get those values" in {
       implicit val scheduler = StubScheduler.random()
@@ -123,7 +123,7 @@ class SynthTableSpec extends FreeSpec {
       table.check (Kiwi##21::3, Kiwi##14, Kiwi##7::1)
     }}
 
-  private def aCheckpointedTable (setup: StubScheduler => SynthTable [_, _]) {
+  private def aCheckpointedTable (setup: StubScheduler => SynthTable) {
     "handle a checkpoint" in {
       implicit val scheduler = StubScheduler.random()
       val table = setup (scheduler)
@@ -135,7 +135,7 @@ class SynthTableSpec extends FreeSpec {
     }}
 
   private def aCheckpointingTable (
-      setup: StubScheduler => (StubFile, SynthTable [Int, Int], CallbackCaptor [Meta])) {
+      setup: StubScheduler => (StubFile, SynthTable, CallbackCaptor [Meta])) {
 
     "finish the checkpoint" in {
       implicit val scheduler = StubScheduler.random()
@@ -152,7 +152,7 @@ class SynthTableSpec extends FreeSpec {
 
     "only empty tiers, it should" - {
 
-      def setup () (implicit scheduler: StubScheduler): SynthTable [Int, Int] = {
+      def setup () (implicit scheduler: StubScheduler): SynthTable = {
         val disk = new StubFile
         val table = mkTable (disk)
         assert (table.primary.isEmpty)
@@ -199,7 +199,7 @@ class SynthTableSpec extends FreeSpec {
 
     "a non-empty primary tier, it should" - {
 
-      def setup () (implicit scheduler: StubScheduler): SynthTable [Int, Int] = {
+      def setup () (implicit scheduler: StubScheduler): SynthTable = {
         val disk = new StubFile
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
@@ -261,7 +261,7 @@ class SynthTableSpec extends FreeSpec {
 
     "non-empty tertiary tiers, it should" - {
 
-      def setup () (implicit scheduler: StubScheduler): SynthTable [Int, Int] = {
+      def setup () (implicit scheduler: StubScheduler): SynthTable = {
         val disk = new StubFile
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
@@ -279,7 +279,7 @@ class SynthTableSpec extends FreeSpec {
 
     "non-empty primary and tertiary tiers, it should" - {
 
-      def setup () (implicit scheduler: StubScheduler): SynthTable [Int, Int] = {
+      def setup () (implicit scheduler: StubScheduler): SynthTable = {
         val disk = new StubFile
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2)

@@ -9,9 +9,9 @@ import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, TxClock}
 import Async.{async, supply, when}
 import TierTable.Meta
 
-private class SynthTable [K, V] (
+private class SynthTable (
 
-    val desc: TierDescriptor [K, V],
+    val desc: TierDescriptor,
 
     val obj: ObjectId,
 
@@ -164,8 +164,8 @@ private class SynthTable [K, V] (
 
 private object SynthTable {
 
-  def apply [K, V] (desc: TierDescriptor [K,V], obj: ObjectId) (
-      implicit scheduler: Scheduler, disk: Disks, config: StoreConfig): SynthTable [K, V] = {
+  def apply (desc: TierDescriptor, obj: ObjectId) (
+      implicit scheduler: Scheduler, disk: Disks, config: StoreConfig): SynthTable = {
     val lock = new ReentrantReadWriteLock
     new SynthTable (desc, obj, lock, 0, newMemTier, newMemTier, Tiers.empty)
   }}

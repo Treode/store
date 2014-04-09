@@ -17,8 +17,8 @@ trait TierMedic {
 
 object TierMedic {
 
-  def apply [K, V] (
-      desc: TierDescriptor [K, V],
+  def apply (
+      desc: TierDescriptor,
       obj: ObjectId
   ) (implicit
       scheduler: Scheduler,

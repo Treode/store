@@ -20,7 +20,7 @@ private case class Tier (
 ) {
 
   private def ceiling (
-      desc: TierDescriptor [_, _],
+      desc: TierDescriptor,
       key: Bytes,
       time: TxClock,
       cb: Callback [Option [Cell]]
@@ -58,7 +58,7 @@ private case class Tier (
     pager.read (root) .run (loop)
   }
 
-  def ceiling (desc: TierDescriptor [_, _], key: Bytes, time: TxClock) (implicit disks: Disks): Async [Option [Cell]] =
+  def ceiling (desc: TierDescriptor, key: Bytes, time: TxClock) (implicit disks: Disks): Async [Option [Cell]] =
     async (ceiling (desc, key, time, _))
 
   override def toString: String =

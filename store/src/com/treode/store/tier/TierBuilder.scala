@@ -10,7 +10,7 @@ import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, TxClock}
 import Async.{async, guard, supply, when}
 
 private class TierBuilder (
-    desc: TierDescriptor [_, _],
+    desc: TierDescriptor,
     obj: ObjectId,
     gen: Long
 ) (implicit
@@ -174,7 +174,7 @@ private class TierBuilder (
 
 private object TierBuilder {
 
-  def build [K, V] (desc: TierDescriptor [K, V], obj: ObjectId, gen: Long, iter: CellIterator) (
+  def build (desc: TierDescriptor, obj: ObjectId, gen: Long, iter: CellIterator) (
       implicit scheduler: Scheduler, disks: Disks, config: StoreConfig): Async [Tier] = {
     val builder = new TierBuilder (desc, obj, gen)
     for {

@@ -36,7 +36,7 @@ private object TimedTable {
 
   val table = {
     import com.treode.store.StorePicklers._
-    TierDescriptor (0xB500D51FACAEA961L, unit, unit)
+    TierDescriptor (0xB500D51FACAEA961L)
   }
 
   def apply (id: TableId) (implicit scheduler: Scheduler, disks: Disks, config: StoreConfig): TimedTable =

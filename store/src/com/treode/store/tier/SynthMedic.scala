@@ -6,8 +6,8 @@ import com.treode.async.Scheduler
 import com.treode.disk.{Disks, ObjectId, Position}
 import com.treode.store.{Bytes, StoreConfig, TxClock}
 
-private class SynthMedic [K, V] (
-    desc: TierDescriptor [K, V],
+private class SynthMedic (
+    desc: TierDescriptor,
     obj: ObjectId
 ) (implicit
     scheduler: Scheduler,

@@ -45,7 +45,7 @@ object TierTable {
       .inspect (v => (v.gen, v.tiers))
     }}
 
-  def apply (desc: TierDescriptor [_, _], obj: ObjectId) (
+  def apply (desc: TierDescriptor, obj: ObjectId) (
       implicit scheduler: Scheduler, disk: Disks, config: StoreConfig): TierTable =
     SynthTable (desc, obj)
 }

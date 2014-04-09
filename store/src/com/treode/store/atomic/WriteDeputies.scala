@@ -86,5 +86,5 @@ private object WriteDeputies {
 
   val archive = {
     import AtomicPicklers._
-    TierDescriptor (0x36D62E3F7EF580CEL, bytes, const (true))
+    TierDescriptor (0x36D62E3F7EF580CEL)
   }}

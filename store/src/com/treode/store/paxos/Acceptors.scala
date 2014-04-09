@@ -84,5 +84,5 @@ private object Acceptors {
 
   val archive = {
     import PaxosPicklers._
-    TierDescriptor (0x9F59C4262C8190E8L, bytes, const (true))
+    TierDescriptor (0x9F59C4262C8190E8L)
   }}

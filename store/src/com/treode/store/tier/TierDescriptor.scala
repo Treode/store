@@ -4,11 +4,7 @@ import com.treode.disk.{Disks, PageDescriptor, PageHandler, TypeId}
 import com.treode.store.StorePicklers
 import com.treode.pickle.Pickler
 
-class TierDescriptor [K, V] private (
-    val id: TypeId,
-    val pkey: Pickler [K],
-    val pval: Pickler [V]
-) {
+class TierDescriptor private (val id: TypeId) {
 
   private [tier] val pager = {
     import StorePicklers._
@@ -23,6 +19,6 @@ class TierDescriptor [K, V] private (
 
 object TierDescriptor {
 
-  def apply [K, V] (id: TypeId, pkey: Pickler [K], pval: Pickler [V]): TierDescriptor [K, V] =
-    new TierDescriptor (id, pkey, pval)
+  def apply (id: TypeId): TierDescriptor =
+    new TierDescriptor (id)
 }
