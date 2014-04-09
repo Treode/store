@@ -25,7 +25,7 @@ extends AsyncIterator [A] {
       x compare y
   }
 
-  private def _foreach (f: (A, Callback [Unit]) => Any, cb: Callback [Unit]) {
+  def foreach (f: A => Async [Unit]): Async [Unit] = async { cb =>
 
     val pq = new PriorityQueue [Element]
     var count = iters.size
@@ -41,7 +41,7 @@ extends AsyncIterator [A] {
       require (count > 0, "MergeIterator was already closed.")
       count -= 1
       if (count > 0 && thrown.isEmpty && count == pq.size)
-        cb.defer (f (pq.head.x, next))
+        cb.defer (f (pq.head.x) run (next))
       else if (count == pq.size && !thrown.isEmpty)
         cb.fail (MultiException.fit (thrown))
       else if (count == 0 && thrown.isEmpty)
@@ -59,18 +59,14 @@ extends AsyncIterator [A] {
           _close()
         }}
 
-    def loop (n: Int) (x: A, cbi: Callback [Unit]): Unit = pq.synchronized {
+    def loop (n: Int) (x: A): Async [Unit] = async { cbi => pq.synchronized {
       pq.enqueue (Element (x, n, cbi))
       if (thrown.isEmpty && count == pq.size)
-        cb.defer (f (pq.head.x, next))
-    }
+        cb.defer (f (pq.head.x) run (next))
+    }}
 
     if (count == 0)
       cb.pass()
     for ((iter, n) <- iters zipWithIndex)
-      iter.foreach.cb (loop (n) _) run (close)
-  }
-
-  def _foreach (f: (A, Callback [Unit]) => Any): Async [Unit] =
-    async (_foreach (f, _))
-}
+      iter.foreach (loop (n)) run (close)
+  }}

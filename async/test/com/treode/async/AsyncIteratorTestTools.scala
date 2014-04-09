@@ -3,6 +3,7 @@ package com.treode.async
 import org.scalatest.Assertions
 
 import Assertions.assertResult
+import Async.supply
 
 object AsyncIteratorTestTools extends AsyncTestTools {
 
@@ -13,23 +14,23 @@ object AsyncIteratorTestTools extends AsyncTestTools {
 
   def track [A] (iter: AsyncIterator [A]) (f: A => Any): AsyncIterator [A] =
     new AsyncIterator [A] {
-      def _foreach (g: (A, Callback [Unit]) => Any): Async [Unit] = {
-        iter._foreach { case (x, cb) =>
+      def foreach (g: A => Async [Unit]): Async [Unit] = {
+        iter.foreach { x =>
           f (x)
-          g (x, cb)
+          g (x)
         }}}
 
   def failWhen [A] (iter: AsyncIterator [A]) (p: A => Boolean): AsyncIterator [A] =
     new AsyncIterator [A] {
-      def _foreach (g: (A, Callback [Unit]) => Any): Async [Unit] = {
-        iter._foreach { case (x, cb) =>
+      def foreach (g: A => Async [Unit]): Async [Unit] = {
+        iter.foreach { x =>
           if (p (x)) throw new DistinguishedException
-          g (x, cb)
+          g (x)
         }}}
 
   def assertSeq [A] (expected: A*) (actual: AsyncIterator [A]) (implicit s: StubScheduler): Unit =
     assertResult (expected) (actual.toSeq)
 
   def assertFail [E] (iter: AsyncIterator [_]) (implicit s: StubScheduler, m: Manifest [E]): Unit =
-    iter.foreach.f (_ => ()) .fail [E]
+    iter.foreach (_ => supply()) .fail [E]
 }

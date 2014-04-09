@@ -17,7 +17,7 @@ private abstract class TierIterator (
     disks: Disks
 ) extends CellIterator {
 
-  class Foreach (f: (Cell, Callback [Unit]) => Any, cb: Callback [Unit]) {
+  class Foreach (f: Cell => Async [Unit], cb: Callback [Unit]) {
 
     import desc.pager
 
@@ -107,7 +107,7 @@ private abstract class TierIterator (
       if (index < page.size) {
         val entry = page.get (index)
         index += 1
-        f (entry, _next)
+        f (entry) run (_next)
       } else if (!stack.isEmpty) {
         var b = stack.head._1
         var i = stack.head._2 + 1
@@ -136,7 +136,7 @@ private object TierIterator {
       disks: Disks
   ) extends TierIterator (desc, root) {
 
-    def _foreach (f: (Cell, Callback [Unit]) => Any): Async [Unit] =
+    def foreach (f: Cell => Async [Unit]): Async [Unit] =
       async (new Foreach (f, _) .start())
   }
 
@@ -149,7 +149,7 @@ private object TierIterator {
       disks: Disks
   ) extends TierIterator (desc, root) {
 
-    def _foreach (f: (Cell, Callback [Unit]) => Any): Async [Unit] =
+    def foreach (f: Cell => Async [Unit]): Async [Unit] =
       async (new Foreach (f, _) .start (key, time))
   }
 

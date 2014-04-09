@@ -3,6 +3,7 @@ package com.treode.async
 import org.scalatest.Assertions
 
 import Assertions.assertResult
+import Async.supply
 
 trait AsyncTestTools {
 
@@ -38,7 +39,7 @@ trait AsyncTestTools {
     /** Iterate the entire asynchronous iterator and build a standard sequence. */
     def toSeq (implicit scheduler: StubScheduler): Seq [A] = {
       val builder = Seq.newBuilder [A]
-      iter.foreach.f (builder += _) .pass
+      iter.foreach (x => supply (builder += x)) .pass
       builder.result
     }}}
 

@@ -33,7 +33,7 @@ private class LogIterator private (
   private var pagePos = Option.empty [Long]
   private var pageLedger = new PageLedger
 
-  class Foreach (f: ((Long, Unit => Any), Callback [Unit]) => Any, cb: Callback [Unit]) {
+  class Foreach (f: ((Long, Unit => Any)) => Async [Unit], cb: Callback [Unit]) {
 
     val _read: Callback [Int] = {
       case Success (v) => cb.defer (read (v))
@@ -107,14 +107,14 @@ private class LogIterator private (
           val end = buf.readPos
           val entry = records.read (id.id, buf, len - end + start)
           logPos += len + 4
-          f ((batch, entry), _next)
+          f ((batch, entry)) run (_next)
       }}
 
     def next() {
       file.deframe (buf, logPos) run (_read)
     }}
 
-  def _foreach (f: ((Long, Unit => Any), Callback [Unit]) => Any): Async [Unit] =
+  def foreach (f: ((Long, Unit => Any)) => Async [Unit]): Async [Unit] =
     async (new Foreach (f, _) .next())
 
   def pages(): (SegmentBounds, Long, PageLedger, Boolean) =
@@ -179,7 +179,8 @@ private object LogIterator {
     val useGen0 = chooseSuperBlock (reads)
     var logBatch = 0L
 
-    def replay (batch: Long, entry: Unit => Any) {
+    def replay (_entry: (Long, Unit => Any)) {
+      val (batch, entry) = _entry
       logBatch = batch
       entry()
     }
@@ -187,7 +188,7 @@ private object LogIterator {
     for {
       logs <- reads.latch.map foreach (apply (useGen0, _, records))
       iter = AsyncIterator.merge (logs.values.toSeq) (ordering)
-      _ <- iter.foreach.f ((replay _).tupled)
+      _ <- iter.foreach (entry => supply (replay (entry)))
       kit = new DisksKit (logBatch)
       drives =
         for (read <- reads) yield {

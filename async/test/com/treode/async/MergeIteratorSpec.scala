@@ -2,6 +2,7 @@ package com.treode.async
 
 import org.scalatest.FlatSpec
 
+import Async.supply
 import AsyncImplicits._
 import AsyncIteratorTestTools._
 
@@ -200,13 +201,13 @@ class MergeIteratorSpec extends FlatSpec {
   it should "report and exception from the body (1)" in {
     implicit val scheduler = StubScheduler.random()
     val i1 = merge [Int] (Seq (1))
-    val i2 = i1.foreach.f (_ => throw new DistinguishedException)
+    val i2 = i1.foreach (_ => supply (throw new DistinguishedException))
     i2.fail [DistinguishedException]
   }
 
   it should "report and exception from the body (2)" in {
     implicit val scheduler = StubScheduler.random()
     val i1 = merge [Int] (Seq (1), Seq (2))
-    val i2 = i1.foreach.f (x => if (x == 2) throw new DistinguishedException)
+    val i2 = i1.foreach (x => supply (if (x == 2) throw new DistinguishedException))
     i2.fail [DistinguishedException]
   }}
