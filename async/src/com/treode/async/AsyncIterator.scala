@@ -2,14 +2,12 @@ package com.treode.async
 
 import java.lang.{Iterable => JIterable}
 import java.util.{Iterator => JIterator}
+import scala.util.{Failure, Success}
 
-import Async.when
+import Async.{async, when}
 import AsyncImplicits._
 
 trait AsyncIterator [+A] {
-
-  def _foreach (f: (A, Callback [Unit]) => Any): Async [Unit] =
-    foreach (v => Async.async (cb => f (v, cb)))
 
   def foreach (f: A => Async [Unit]): Async [Unit]
 
@@ -29,9 +27,28 @@ trait AsyncIterator [+A] {
 
   def withFilter (p: A => Boolean): AsyncIterator [A] =
     filter (p)
-}
+
+  def whilst [B >: A] (p: A => Boolean) (f: A => Async [Unit]): Async [Option [B]] =
+    async { close =>
+      foreach { x =>
+        async { next =>
+          if (p (x))
+            f (x) run (next)
+          else
+            close.pass (Some (x))
+        }
+      } run {
+        case Success (v) => close.pass (None)
+        case Failure (t) => close.fail (t)
+      }}}
 
 object AsyncIterator {
+
+  def empty [A] =
+    new AsyncIterator [A] {
+      def foreach (f: A => Async [Unit]): Async [Unit] =
+        async (_.pass())
+    }
 
   /** Transform a Scala iterator into an AsyncIterator. */
   def adapt [A] (iter: Iterator [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
