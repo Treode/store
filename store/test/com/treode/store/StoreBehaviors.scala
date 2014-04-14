@@ -217,22 +217,22 @@ trait StoreBehaviors {
             s.read (ts1-1, Get (T1, Apple)) .expectSeq (0::None)
           }}}}}
 
-  def aMultithreadableStore (size: Int, store: TestableStore) {
+  def aMultithreadableStore (transfers: Int, store: TestableStore) {
 
     "serialize concurrent operations" taggedAs (Intensive, Periodic) in {
 
       object Accounts extends Accessor (1, Picklers.fixedInt, Picklers.fixedInt)
 
+      val accounts = 100
       val threads = 8
-      val transfers = 100
       val opening = 1000
 
       val executor = Executors.newScheduledThreadPool (threads)
       implicit val scheduler = Scheduler (executor)
       import scheduler.whilst
 
-      val supply = size * opening
-      for (i <- 0 until size)
+      val supply = accounts * opening
+      for (i <- 0 until accounts)
         store.write (0, Accounts.create (i, opening)) .await()
 
       val brokerLatch = new CountDownLatch (threads)
@@ -245,7 +245,7 @@ trait StoreBehaviors {
 
       // Check that the sum of the account balances equals the supply
       def audit(): Async [Unit] = {
-        val ops = for (i <- 0 until size) yield Accounts.read (i)
+        val ops = for (i <- 0 until accounts) yield Accounts.read (i)
         for {
           accounts <- store.read (TxClock.now, ops: _*)
           total = accounts.map (Accounts.value (_) .get) .sum
@@ -258,10 +258,10 @@ trait StoreBehaviors {
 
       // Transfer a random amount between two random accounts.
       def transfer(): Async [Unit] = {
-        val x = Random.nextInt (size)
-        var y = Random.nextInt (size)
+        val x = Random.nextInt (accounts)
+        var y = Random.nextInt (accounts)
         while (x == y)
-          y = Random.nextInt (size)
+          y = Random.nextInt (accounts)
         val rops = Seq (Accounts.read (x), Accounts.read (y))
         for {
           vs <- store.read (TxClock.now, rops: _*)
