@@ -13,19 +13,21 @@ extends AbstractLatch [(A, B)] (2, cb) {
   init()
 
   val cbA: Callback [A] = {
-    case Success (v) =>
-      require (va == null, "Value 'a' was already set.")
-      va = v
-      release()
-    case Failure (t) =>
+    case Success (v) => synchronized {
+        require (va == null, "Value 'a' was already set.")
+        va = v
+        release()
+    }
+    case Failure (t) => synchronized {
       failure (t)
-  }
+    }}
 
   val cbB: Callback [B] = {
-    case Success (v) =>
-      require (vb == null, "Value 'b' was already set.")
+    case Success (v) => synchronized {
+      require (vb == null, "Value 'b'  was already set.")
       vb = v
       release()
-    case Failure (t) =>
+    }
+    case Failure (t) => synchronized {
       failure (t)
-  }}
+    }}}

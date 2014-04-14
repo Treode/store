@@ -65,7 +65,7 @@ object AtomicBehaviors extends FreeSpec with StoreBehaviors with TimeLimitedTest
       new TestableCluster (hs, kit)
     }
 
-    behave like aMultithreadableStore (10, threaded)
+    behave like aMultithreadableStore (100, threaded)
   }}
 
 class AtomicProperties extends PropSpec with AsyncChecks {
