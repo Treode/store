@@ -18,7 +18,7 @@ extends StubActiveHost (id, network) {
   implicit val cluster: Cluster = this
 
   implicit val disksConfig = TestDisksConfig()
-  implicit val storeConfig = StoreConfig (4, 1<<16)
+  implicit val storeConfig = TestStoreConfig()
 
   implicit val recovery = Disks.recover()
   val _catalogs = Catalogs.recover()

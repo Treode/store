@@ -11,7 +11,9 @@ import JavaConversions._
 
 class StubStore extends Store {
 
-  private implicit val config = StoreConfig.apply (8, 1<<20)
+  // The stub uses only the lockSpaceBits.
+  private implicit val config =
+    StoreConfig (4, Int.MaxValue, Int.MaxValue, Int.MaxValue)
 
   private val space = new LockSpace
   private val data = new ConcurrentSkipListMap [Key, Option [Bytes]]

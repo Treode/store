@@ -27,7 +27,7 @@ class SynthTableSpec extends FreeSpec {
     implicit val launch = recovery.attach (Seq ((Paths.get ("a"), disk, geometry))) .pass
     implicit val disks = launch.disks
     launch.launch()
-    implicit val storeConfig = StoreConfig (4, 1<<12)
+    implicit val storeConfig = TestStoreConfig()
     SynthTable (tier, 0x62)
   }
 

@@ -103,7 +103,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   ) = {
 
     implicit val disksConfig = TestDisksConfig()
-    implicit val storeConfig = StoreConfig (8, 1 << 10)
+    implicit val storeConfig = TestStoreConfig()
     val geometry = TestDiskGeometry()
     val disk = new StubFile () (null)
     val tracker = new TrackingTable
@@ -124,7 +124,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   "When given large limits for checkpointing and cleaning" - {
 
     implicit val disksConfig = TestDisksConfig()
-    implicit val storeConfig = StoreConfig (8, 1<<10)
+    implicit val storeConfig = TestStoreConfig()
     implicit val geometry = TestDiskGeometry()
 
     "it can recover" taggedAs (Intensive, Periodic) in {
@@ -145,7 +145,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   "When given a small threshold for checkpointing" - {
 
     implicit val disksConfig = TestDisksConfig (checkpointEntries = 57)
-    implicit val storeConfig = StoreConfig (8, 1<<10)
+    implicit val storeConfig = TestStoreConfig()
     implicit val geometry = TestDiskGeometry()
 
     "it can recover" taggedAs (Intensive, Periodic) in {

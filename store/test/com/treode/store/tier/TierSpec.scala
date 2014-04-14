@@ -60,7 +60,7 @@ class TierSpec extends WordSpec {
   /** Build a tier from fruit. */
   private def buildTier (pageBytes: Int) (
       implicit scheduler: StubScheduler, disks: Disks): Tier = {
-    implicit val config = StoreConfig (4, pageBytes)
+    implicit val config = TestStoreConfig (targetPageBytes = pageBytes)
     val builder = new TierBuilder (descriptor, 0, 0)
     AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .pass
     builder.result.pass
@@ -97,7 +97,7 @@ class TierSpec extends WordSpec {
 
     "require that added entries are not duplicated" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = StoreConfig (4, 1 << 16)
+      implicit val config = TestStoreConfig()
       val builder = new TierBuilder (descriptor, 0, 0)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
@@ -105,7 +105,7 @@ class TierSpec extends WordSpec {
 
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = StoreConfig (4, 1 << 16)
+      implicit val config = TestStoreConfig()
       val builder = new TierBuilder (descriptor, 0, 0)
       builder.add (Cell (Orange, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
@@ -113,7 +113,7 @@ class TierSpec extends WordSpec {
 
     "allow properly sorted entries" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = StoreConfig (4, 1 << 16)
+      implicit val config = TestStoreConfig()
       val builder = new TierBuilder (descriptor, 0, 0)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Orange, 0, None)) .pass
@@ -122,7 +122,7 @@ class TierSpec extends WordSpec {
 
     "track the bounds on the times" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = StoreConfig (4, 1 << 16)
+      implicit val config = TestStoreConfig()
       val builder = new TierBuilder (descriptor, 0, 0)
       builder.add (Cell (Apple, 3, None)) .pass
       builder.add (Cell (Orange, 5, None)) .pass

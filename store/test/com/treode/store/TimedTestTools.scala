@@ -84,11 +84,26 @@ private trait TimedTestTools extends AsyncTestTools {
         diskBytes: Long = 1<<20
     ) (implicit
         config: DisksConfig
-     ): DiskGeometry =
+    ): DiskGeometry =
        DiskGeometry (
            segmentBits,
            blockBits,
            diskBytes)
+  }
+
+  object TestStoreConfig {
+
+    def apply (
+        lockSpaceBits: Int = 4,
+        targetPageBytes: Int = 1<<10,
+        rebalanceBytes: Int = Int.MaxValue,
+        rebalanceEntries: Int = Int.MaxValue
+    ): StoreConfig =
+      StoreConfig (
+          lockSpaceBits,
+          targetPageBytes,
+          rebalanceBytes,
+          rebalanceEntries)
   }
 
   def Get (id: TableId, key: Bytes): ReadOp =

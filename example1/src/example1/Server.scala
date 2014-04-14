@@ -15,7 +15,7 @@ class Server extends AsyncFinatraServer {
         localId = 0x288ACE6509E0CA47L,
         localAddr = InetSocketAddress.createUnresolved ("*", 6782),
         disksConfig = disksConfig,
-        storeConfig = StoreConfig (12, 1<<20),
+        storeConfig = StoreConfig.recommended(),
         items = Seq (Paths.get ("store.db") -> DiskGeometry (28, 13, 1L<<38)))
     c.await()
   }
