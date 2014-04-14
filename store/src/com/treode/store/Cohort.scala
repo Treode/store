@@ -2,21 +2,30 @@ package com.treode.store
 
 import com.treode.cluster.{ReplyTracker, HostId}
 
-trait Cohort {
+sealed abstract class Cohort {
 
+  def num: Int
   def hosts: Set [HostId]
   def track: ReplyTracker
 }
 
 object Cohort {
 
-  private class Settled (val hosts: Set [HostId]) extends Cohort {
+  case class Settled (num: Int, hosts: Set [HostId]) extends Cohort {
 
     def track: ReplyTracker =
       ReplyTracker.settled (hosts)
   }
 
-  private class Moving (val origin: Set [HostId], val target: Set [HostId]) extends Cohort {
+  case class Issuing (num: Int, origin: Set [HostId], target: Set [HostId]) extends Cohort {
+
+    def hosts = origin ++ target
+
+    def track: ReplyTracker =
+      ReplyTracker.settled (hosts)
+  }
+
+  case class Moving (num: Int, origin: Set [HostId], target: Set [HostId]) extends Cohort {
 
     def hosts = origin ++ target
 
@@ -24,25 +33,28 @@ object Cohort {
       ReplyTracker (origin, target)
   }
 
-  def apply (active: Set [HostId], target: Set [HostId]): Cohort =
+  def apply (num: Int, active: Set [HostId], target: Set [HostId]): Cohort =
     if (active == target)
-      new Settled (active)
+      new Settled (num, active)
     else
-      new Moving (active, target)
+      new Moving (num, active, target)
 
-  def settled (hosts: Set [HostId]): Cohort =
-    new Settled (hosts)
+  def settled (num: Int, hosts: Set [HostId]): Cohort =
+    new Settled (num, hosts)
 
-  def settled (hosts: HostId*): Cohort =
-    settled (hosts.toSet)
+  def settled (num: Int, hosts: HostId*): Cohort =
+    settled (num, hosts.toSet)
 
   val pickler = {
     import StorePicklers._
     tagged [Cohort] (
-        0x1 -> wrap (set (hostId))
-               .build (new Settled (_))
-               .inspect (_.hosts),
-        0x2 -> wrap (set (hostId), set (hostId))
-               .build (v => new Moving (v._1, v._2))
-               .inspect (v => (v.origin, v.target)))
+        0x1 -> wrap (uint, set (hostId))
+               .build (v => new Settled (v._1, v._2))
+               .inspect (v => (v.num, v.hosts)),
+        0x2 -> wrap (uint, set (hostId), set (hostId))
+               .build (v => new Issuing (v._1, v._2, v._3))
+               .inspect (v => (v.num, v.origin, v.target)),
+        0x3 -> wrap (uint, set (hostId), set (hostId))
+               .build (v => new Moving (v._1, v._2, v._3))
+               .inspect (v => (v.num, v.origin, v.target)))
   }}

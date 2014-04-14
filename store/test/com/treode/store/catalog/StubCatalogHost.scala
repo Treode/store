@@ -59,8 +59,8 @@ extends StubActiveHost (id, network) {
 
   def setCohorts (cohorts: (StubHost, StubHost, StubHost)*) {
     val _cohorts =
-      for ((h1, h2, h3) <- cohorts)
-        yield Cohort.settled (h1.localId, h2.localId, h3.localId)
+      for (((h1, h2, h3), i) <- cohorts.zipWithIndex)
+        yield Cohort.settled (i, h1.localId, h2.localId, h3.localId)
     atlas.set (_cohorts.toArray)
   }
 
