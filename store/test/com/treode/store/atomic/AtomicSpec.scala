@@ -19,7 +19,7 @@ class AtomicSpec extends Suites (AtomicBehaviors, new AtomicProperties)
 
 object AtomicBehaviors extends FreeSpec with StoreBehaviors with TimeLimitedTests {
 
-  val timeLimit = 15 minutes
+  val timeLimit = 5 minutes
 
   private val kit = StubNetwork()
   private val hs = kit.install (3, new StubAtomicHost (_, kit))
@@ -56,17 +56,14 @@ object AtomicBehaviors extends FreeSpec with StoreBehaviors with TimeLimitedTest
       new TestableCluster (hs, kit)
     }
 
-    val threaded = {
-      val kit = StubNetwork (multithreaded = true)
+    behave like aMultithreadableStore (100) {
+      val kit = StubNetwork (Random, true)
       val hs = kit.install (3, new StubAtomicHost (_, kit))
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
         h.setCohorts((h1, h2, h3))
       new TestableCluster (hs, kit)
-    }
-
-    behave like aMultithreadableStore (100, threaded)
-  }}
+    }}}
 
 class AtomicProperties extends PropSpec with AsyncChecks {
 

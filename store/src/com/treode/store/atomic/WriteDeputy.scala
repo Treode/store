@@ -385,7 +385,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.aborted.record (xid, gen)
 
-    override def toString = "Deputy.Aborted"
+    override def toString = "Deputy.Aborting"
   }
 
   class Aborted (gen: Long) extends State {

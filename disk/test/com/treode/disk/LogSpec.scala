@@ -2,26 +2,22 @@ package com.treode.disk
 
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncImplicits, AsyncTestTools, Callback, StubScheduler}
+import com.treode.async._
 import com.treode.async.io.StubFile
 import com.treode.pickle.{InvalidTagException, Picklers}
-import com.treode.tags.{Intensive, Periodic}
-import org.scalacheck.Gen
+import com.treode.tags.Periodic
 import org.scalatest.FlatSpec
-import org.scalatest.prop.PropertyChecks
 
 import Async.{async, latch}
 import AsyncImplicits._
 import DiskTestTools._
-import PropertyChecks._
 
-class LogSpec extends FlatSpec with PropertyChecks {
+class LogSpec extends FlatSpec with CrashChecks {
 
   class DistinguishedException extends Exception
 
   implicit val config = TestDisksConfig()
   val geometry = TestDiskGeometry()
-  val seeds = Gen.choose (0, Long.MaxValue)
 
   object records {
     val str = RecordDescriptor (0xBF, Picklers.string)
@@ -144,10 +140,9 @@ class LogSpec extends FlatSpec with PropertyChecks {
     }}
 
 
-  it should "run one checkpoint at a time" in {
-    forAll (seeds) { seed =>
+  it should "run one checkpoint at a time" taggedAs (Periodic) in {
+    forAllSeeds { implicit random =>
 
-      implicit val random = new Random (seed)
       implicit val scheduler = StubScheduler.random (random)
       val disk = new StubFile
       val recovery = Disks.recover()
@@ -173,5 +168,4 @@ class LogSpec extends FlatSpec with PropertyChecks {
           disks.checkpoint(),
           disks.checkpoint()) .pass
       assert (checkpointed, "Expected a checkpoint")
-    }}
-}
+    }}}

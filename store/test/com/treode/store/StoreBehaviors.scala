@@ -1,16 +1,16 @@
 package com.treode.store
 
-import java.util.concurrent.{CountDownLatch, Executors, TimeUnit}
+import java.util.concurrent.{CountDownLatch, Executors, TimeUnit, TimeoutException}
 import java.util.concurrent.atomic.AtomicInteger
 import scala.language.postfixOps
-import scala.util.Random
+import scala.util.{Random, Success}
 
 import com.treode.async._
 import com.treode.pickle.Picklers
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
-import Async.{async, latch}
+import Async.{async, guard, latch}
 import AsyncImplicits._
 import Fruits.Apple
 import TimedTestTools._
@@ -217,7 +217,9 @@ trait StoreBehaviors {
             s.read (ts1-1, Get (T1, Apple)) .expectSeq (0::None)
           }}}}}
 
-  def aMultithreadableStore (transfers: Int, store: TestableStore) {
+  def aMultithreadableStore (transfers: Int) (newStore: => TestableStore) {
+
+    val store = newStore
 
     "serialize concurrent operations" taggedAs (Intensive, Periodic) in {
 
@@ -244,39 +246,47 @@ trait StoreBehaviors {
       var running = true
 
       // Check that the sum of the account balances equals the supply
-      def audit(): Async [Unit] = {
-        val ops = for (i <- 0 until accounts) yield Accounts.read (i)
-        for {
-          accounts <- store.read (TxClock.now, ops: _*)
-          total = accounts.map (Accounts.value (_) .get) .sum
-        } yield {
-          if (supply == total)
-            countAuditsPassed.incrementAndGet()
-          else
-            countAuditsFailed.incrementAndGet()
-        }}
+      def audit(): Async [Unit] =
+        guard [Unit] {
+          val ops = for (i <- 0 until accounts) yield Accounts.read (i)
+          for {
+            accounts <- store.read (TxClock.now, ops: _*)
+            total = accounts.map (Accounts.value (_) .get) .sum
+          } yield {
+            if (supply == total)
+              countAuditsPassed.incrementAndGet()
+            else
+              countAuditsFailed.incrementAndGet()
+          }
+        } .recover {
+          case t: TimeoutException => ()
+        }
 
       // Transfer a random amount between two random accounts.
-      def transfer(): Async [Unit] = {
-        val x = Random.nextInt (accounts)
-        var y = Random.nextInt (accounts)
-        while (x == y)
-          y = Random.nextInt (accounts)
-        val rops = Seq (Accounts.read (x), Accounts.read (y))
-        for {
-          vs <- store.read (TxClock.now, rops: _*)
-          ct = vs.map (_.time) .max
-          Seq (b1, b2) = vs map (Accounts.value (_) .get)
-          n = Random.nextInt (b1)
-          wops = Seq (Accounts.update (x, b1-n), Accounts.update (y, b2+n))
-          result <- store.write (ct, wops: _*)
-        } yield {
-          import WriteResult._
-          result match {
-            case Written (_) => countTransferPassed.incrementAndGet()
-            case Collided (_) => throw new IllegalArgumentException
-            case Stale => countTransferAdvanced.incrementAndGet()
-          }}}
+      def transfer(): Async [Unit] =
+        guard [Unit] {
+          val x = Random.nextInt (accounts)
+          var y = Random.nextInt (accounts)
+          while (x == y)
+            y = Random.nextInt (accounts)
+          val rops = Seq (Accounts.read (x), Accounts.read (y))
+          for {
+            vs <- store.read (TxClock.now, rops: _*)
+            ct = vs.map (_.time) .max
+            Seq (b1, b2) = vs map (Accounts.value (_) .get)
+            n = Random.nextInt (b1)
+            wops = Seq (Accounts.update (x, b1-n), Accounts.update (y, b2+n))
+            result <- store.write (ct, wops: _*)
+          } yield {
+            import WriteResult._
+            result match {
+              case Written (_) => countTransferPassed.incrementAndGet()
+              case Collided (_) => throw new IllegalArgumentException
+              case Stale => countTransferAdvanced.incrementAndGet()
+            }}
+        } .recover {
+          case t: TimeoutException => ()
+        }
 
       // Conduct many transfers.
       def broker (num: Int): Async [Unit] = {

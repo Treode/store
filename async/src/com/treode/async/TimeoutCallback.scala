@@ -26,7 +26,7 @@ class TimeoutCallback [A] private [async] (
     _cb (v)
   }
 
-  private def timeout() {
+  private def timeout(): Unit = synchronized {
     if (cb != null) {
       if (iter.hasNext) {
         try {

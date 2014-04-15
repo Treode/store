@@ -1,6 +1,7 @@
 package com.treode.disk
 
 import java.util.ArrayList
+import java.util.concurrent.Executors
 import scala.collection.JavaConversions
 import scala.util.Random
 
@@ -193,7 +194,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           replayer.check (tracker)
         }}}}
 
-  "The logger should" - {
+  "The logger should write more data than disk" - {
 
     "write more data than disk" taggedAs (Intensive, Periodic) in {
       forAllSeeds { implicit random =>
@@ -210,7 +211,24 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         tracker.attach (launch)
         launch.launchAndPass()
         tracker.batches (80, 100000, 10) .pass
-      }}}
+      }}
+
+    "when multithreaded" taggedAs (Intensive, Periodic) in {
+
+      implicit val config = TestDisksConfig (checkpointEntries = 1000, cleaningFrequency = 3)
+      val geometry = TestDiskGeometry()
+      val disk = new StubFile (1<<20) (null)
+      var tracker = new LogTracker
+
+      implicit val random = Random
+      implicit val scheduler = StubScheduler.multithreaded (Executors.newScheduledThreadPool (8))
+      implicit val recovery = Disks.recover()
+      implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .await()
+      import launch.disks
+      tracker.attach (launch)
+      launch.launch()
+      tracker.batches (80, 100000, 10) .await()
+    }}
 
   "The pager should read and write" - {
 

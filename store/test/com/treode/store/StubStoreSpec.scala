@@ -25,5 +25,5 @@ class StubStoreSpec extends FreeSpec with StoreBehaviors {
 
     behave like aStore (_ => new TestableStubStore)
 
-    behave like aMultithreadableStore (10000, new TestableStubStore)
+    behave like aMultithreadableStore (10000) (new TestableStubStore)
   }}
