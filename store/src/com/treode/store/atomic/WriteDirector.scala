@@ -1,6 +1,5 @@
 package com.treode.store.atomic
 
-import java.util.concurrent.TimeoutException
 import scala.collection.mutable
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
@@ -123,7 +122,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Aborting (true)
-        cb.fail (new TimeoutException)
+        cb.pass (WriteResult.Timeout)
       }}
 
     override def toString = "Director.Preparing"
@@ -141,7 +140,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
             cb.pass (WriteResult.Written (wt))
           case Aborted =>
             state = new Aborting (false)
-            cb.fail (new TimeoutException)
+            cb.pass (WriteResult.Timeout)
         }}
 
       case Failure (t) => fiber.execute {

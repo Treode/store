@@ -1,9 +1,8 @@
 package com.treode.store
 
-import java.util.concurrent.{CountDownLatch, Executors, TimeUnit, TimeoutException}
+import java.util.concurrent.{CountDownLatch, Executors}
 import java.util.concurrent.atomic.AtomicInteger
-import scala.language.postfixOps
-import scala.util.{Random, Success}
+import scala.util.Random
 
 import com.treode.async._
 import com.treode.pickle.Picklers
@@ -258,8 +257,6 @@ trait StoreBehaviors {
             else
               countAuditsFailed.incrementAndGet()
           }
-        } .recover {
-          case t: TimeoutException => ()
         }
 
       // Transfer a random amount between two random accounts.
@@ -283,10 +280,8 @@ trait StoreBehaviors {
               case Written (_) => countTransferPassed.incrementAndGet()
               case Collided (_) => throw new IllegalArgumentException
               case Stale => countTransferAdvanced.incrementAndGet()
-            }}
-        } .recover {
-          case t: TimeoutException => ()
-        }
+              case Timeout => ()
+            }}}
 
       // Conduct many transfers.
       def broker (num: Int): Async [Unit] = {

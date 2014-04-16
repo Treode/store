@@ -21,6 +21,7 @@ package store {
     case class Written (vt: TxClock) extends WriteResult
     case class Collided (ks: Seq [Int]) extends WriteResult
     case object Stale extends WriteResult
+    case object Timeout extends WriteResult
   }}
 
 package object store {

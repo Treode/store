@@ -1,6 +1,5 @@
 package com.treode.cluster
 
-import java.util.concurrent.TimeoutException
 import scala.util.Random
 
 import com.treode.async.{Async, AsyncImplicits, Backoff, Callback, Fiber, Scheduler}
