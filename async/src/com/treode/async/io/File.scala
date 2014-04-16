@@ -8,7 +8,7 @@ import java.util.concurrent.{Executor, ExecutorService}
 import scala.collection.JavaConversions._
 
 import com.google.common.hash.{HashCode, HashFunction}
-import com.treode.async.{Async, Callback, Scheduler, Whilst}
+import com.treode.async.{Async, Callback, RichExecutor, Scheduler}
 import com.treode.buffer.PagedBuffer
 
 import Async.async
@@ -22,7 +22,8 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
   private def write (src: ByteBuffer, pos: Long): Async [Int] =
     async (file.write (src, pos, _, Callback.IntHandler))
 
-  private def whilst = new Whilst (exec)
+  private def whilst (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
+    new RichExecutor (exec) .whilst (p) (f)
 
   def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] = {
     input.capacity (input.readPos + len)

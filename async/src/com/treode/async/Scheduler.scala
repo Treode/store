@@ -35,7 +35,8 @@ trait Scheduler extends Executor {
   def fail [A] (cb: Callback [A], t: Throwable): Unit =
     execute (cb, Failure (t))
 
-  val whilst = new Whilst (this)
+  def whilst [A] (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
+    new RichExecutor (this) .whilst (p) (f)
 }
 
 object Scheduler {

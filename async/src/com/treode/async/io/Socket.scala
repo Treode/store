@@ -6,7 +6,7 @@ import java.net.SocketAddress
 import java.util.concurrent.{Executor, TimeUnit}
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncImplicits, Callback, Scheduler, Whilst}
+import com.treode.async.{Async, AsyncImplicits, Callback, RichExecutor, Scheduler}
 import com.treode.buffer.PagedBuffer
 
 import Async.async
@@ -19,7 +19,8 @@ class Socket (socket: AsynchronousSocketChannel) (implicit exec: Executor) {
   private def fail (cb: Callback [Unit], t: Throwable): Unit =
     exec.execute (Scheduler.toRunnable (cb, Failure (t)))
 
-  private def whilst = new Whilst (exec)
+  private def whilst (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
+    new RichExecutor (exec) .whilst (p) (f)
 
   def connect (addr: SocketAddress): Async [Unit] =
     async { cb =>
