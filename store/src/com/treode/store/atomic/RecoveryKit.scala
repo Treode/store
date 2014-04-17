@@ -19,7 +19,6 @@ private class RecoveryKit (implicit
     val config: StoreConfig
 ) extends AtomicKit.Recovery {
 
-  val archive = TierMedic (WriteDeputies.archive, 0)
   val tables = new TimedMedic (this)
   val writers = newWriterMedicsMap
 
@@ -33,26 +32,22 @@ private class RecoveryKit (implicit
     get (xid) .preparing (ops)
   }
 
-  committed.replay { case (xid, gen, gens, wt) =>
-    get (xid) .committed (gen, gens, wt)
+  committed.replay { case (xid, gens, wt) =>
+    get (xid) .committed (gens, wt)
   }
 
-  aborted.replay { case (xid, gen) =>
-    get (xid) .aborted (gen)
+  aborted.replay { xid =>
+    get (xid) .aborted()
   }
 
   TimedStore.checkpoint.replay { case (tab, meta) =>
     tables.checkpoint (tab, meta)
   }
 
-  WriteDeputies.checkpoint.replay { case meta =>
-    archive.checkpoint (meta)
-  }
-
   def launch (implicit launch: Disks.Launch, atlas: Atlas, paxos: Paxos): Async [Store] = {
     import launch.disks
 
-    val kit = new AtomicKit (archive.close())
+    val kit = new AtomicKit()
     kit.tables.recover (tables.close())
 
     for {

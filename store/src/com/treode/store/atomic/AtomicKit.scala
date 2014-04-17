@@ -11,9 +11,7 @@ import com.treode.store.tier.TierTable
 import Async.async
 import AsyncImplicits._
 
-private class AtomicKit (
-    val archive: TierTable
-) (implicit
+private class AtomicKit (implicit
     val random: Random,
     val scheduler: Scheduler,
     val cluster: Cluster,

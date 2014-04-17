@@ -1,13 +1,10 @@
 package com.treode.store.atomic
 
 import com.treode.async.{Async, Fiber}
-import com.treode.store.{Bytes, TxClock, TxId, WriteOp}
-import com.treode.store.tier.TierMedic
-
-import WriteDeputy.ArchiveStatus
+import com.treode.store.{TxClock, TxId, WriteOp}
 
 private class Medic (val xid: TxId, kit: RecoveryKit)  {
-  import kit.{archive, scheduler, tables}
+  import kit.{scheduler, tables}
 
   val fiber = new Fiber (scheduler)
 
@@ -19,17 +16,13 @@ private class Medic (val xid: TxId, kit: RecoveryKit)  {
     _preparing = Some (ops)
   }
 
-  def committed (gen: Long, gens: Seq [Long], wt: TxClock): Unit = fiber.execute {
-    import ArchiveStatus._
+  def committed (gens: Seq [Long], wt: TxClock): Unit = fiber.execute {
     _committed = Some (wt)
-    archive.put (gen, xid.id, 0, Bytes (pickler, Committed (wt)))
     tables.commit (gens, wt, _preparing.get)
   }
 
-  def aborted (gen: Long): Unit = fiber.execute {
-    import ArchiveStatus._
+  def aborted(): Unit = fiber.execute {
     _aborted = true
-    archive.put (gen, xid.id, 0, Bytes (pickler, Aborted))
   }
 
   def close (kit: AtomicKit): Async [WriteDeputy] =

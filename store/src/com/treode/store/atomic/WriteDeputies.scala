@@ -1,17 +1,16 @@
 package com.treode.store.atomic
 
-import com.treode.async.{Async, AsyncImplicits, Latch}
+import com.treode.async.{Async, AsyncImplicits}
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disks, ObjectId, PageHandler, Position, RecordDescriptor}
-import com.treode.store.{Bytes, TableId, TxId}
-import com.treode.store.tier.{TierDescriptor, TierTable}
+import com.treode.disk.Disks
+import com.treode.store.TxId
 
-import Async.{guard, latch, supply}
+import Async.{guard, latch}
 import AsyncImplicits._
 
-private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
+private class WriteDeputies (kit: AtomicKit) {
   import WriteDeputy._
-  import kit.{archive, cluster, disks, tables}
+  import kit.{cluster, tables}
 
   private val deputies = newWritersMap
 
@@ -38,30 +37,16 @@ private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
     } yield ()
   }
 
-  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
-    supply (archive.probe (groups))
-
-  def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
-    guard {
-      for {
-        meta <- archive.compact (groups)
-        _ <- WriteDeputies.checkpoint.record (meta)
-      } yield ()
-    }
-
   def checkpoint(): Async [Unit] =
     guard {
       for {
         _ <- latch (
-            archive.checkpoint() .flatMap (WriteDeputies.checkpoint.record (_)),
             tables.checkpoint(),
             materialize (deputies.values) .latch.unit foreach (_.checkpoint()))
       } yield ()
     }
 
   def attach () (implicit launch: Disks.Launch) {
-
-    WriteDeputies.archive.handle (this)
 
     TimedStore.table.handle (tables)
 
@@ -76,15 +61,3 @@ private class WriteDeputies (kit: AtomicKit) extends PageHandler [Long] {
     abort.listen { case (xid, mdtr) =>
       get (xid) .abort (mdtr)
     }}}
-
-private object WriteDeputies {
-
-  val checkpoint = {
-    import AtomicPicklers._
-    RecordDescriptor (0x3D121F46F3D82362L, tierMeta)
-  }
-
-  val archive = {
-    import AtomicPicklers._
-    TierDescriptor (0x36D62E3F7EF580CEL)
-  }}

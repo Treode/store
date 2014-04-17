@@ -10,10 +10,9 @@ import com.treode.store.atomic.{WriteDeputy => WD}
 import com.treode.store.locks.LockSet
 
 import Async.{guard, supply, when}
-import WriteDeputy.ArchiveStatus
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
-  import kit.{archive, disks, paxos, scheduler, tables, writers}
+  import kit.{disks, paxos, scheduler, tables, writers}
   import kit.config.{closedLifetime, preparingTimeout}
 
   type WriteMediator = RequestMediator [WriteResponse]
@@ -22,7 +21,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   }
 
   val fiber = new Fiber (scheduler)
-  var state: State = new Opening
+  var state: State = new Open
 
   trait State {
     def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp])
@@ -49,93 +48,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
           case Failure (t) =>
             panic (s, t)
         }}
-
-  class Opening extends State {
-
-    def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]) {
-      val s = new Restoring
-      s.prepare (mdtr, ct, ops)
-      s.restore()
-      state = s
-    }
-
-    def abort (mdtr: WriteMediator) {
-      val s = new Restoring
-      s.abort (mdtr)
-      s.restore()
-      state = s
-    }
-
-    def commit (mdtr: WriteMediator, wt: TxClock) {
-      val s = new Restoring
-      s.commit (mdtr, wt)
-      s.restore()
-      state = s
-    }
-
-    def checkpoint(): Async [Unit] =
-      throw new IllegalStateException
-
-    override def toString = "Deputy.Opening"
-  }
-
-  class Restoring extends State {
-
-    var _prepare = Option.empty [(WriteMediator, TxClock, Seq [WriteOp])]
-    var _commit = Option.empty [(WriteMediator, TxClock)]
-    var _abort = Option.empty [WriteMediator]
-
-    def catchup() {
-      _commit match {
-        case Some ((mdtr, wt)) => state.commit (mdtr, wt)
-        case None => ()
-      }
-      _abort match {
-        case Some (mdtr) => state.abort (mdtr)
-        case None => ()
-      }
-      _prepare match {
-        case Some ((mdtr, ct, ops)) => state.prepare (mdtr, ct, ops)
-        case None => ()
-      }}
-
-    def restore() {
-      archive.get (xid.id) run {
-
-        case Success (_status) => fiber.execute {
-          val status = _status map (_.unpickle (ArchiveStatus.pickler))
-          if (state == Restoring.this) {
-            state = status match {
-              case Some (ArchiveStatus.Aborted) =>
-                new Aborted (0)
-              case Some (ArchiveStatus.Committed (wt)) =>
-                new Committed (0, Seq.empty, wt)
-              case None =>
-                new Open
-            }}
-          catchup()
-        }
-
-        case Failure (t) => fiber.execute {
-          if (state == Restoring.this) {
-            state = new Panicked (Restoring.this, t)
-            throw t
-          }}}}
-
-    def prepare (mdtr: WriteMediator, ct: TxClock, ops: Seq [WriteOp]): Unit =
-      _prepare = Some ((mdtr, ct, ops))
-
-    def abort (mdtr: WriteMediator): Unit =
-      _abort = Some (mdtr)
-
-    def commit (mdtr: WriteMediator, wt: TxClock): Unit =
-      _commit = Some ((mdtr, wt))
-
-    def checkpoint(): Async [Unit] =
-      supply()
-
-    override def toString = "Deputy.Restoring"
-  }
 
   class Open extends State {
 
@@ -291,12 +203,11 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       ops: Seq [WriteOp],
       locks: Option [LockSet]) extends State {
 
-    val gen = archive.put (xid.id, 0, Bytes (ArchiveStatus.pickler, ArchiveStatus.Committed (wt)))
     val gens = tables.commit (wt, ops)
     guard {
       for {
         _ <- when (locks.isEmpty) (WD.preparing.record (xid, ops))
-        _ <- WD.committed.record (xid, gen, gens, wt)
+        _ <- WD.committed.record (xid, gens, wt)
       } yield ()
     } run {
       case Success (v) => logged()
@@ -305,7 +216,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     private def logged(): Unit = fiber.execute {
       if (state == Committing.this) {
-        state = new Committed (gen, gens, wt)
+        state = new Committed (gens, wt)
         mdtr.respond (WriteResponse.Committed)
         locks foreach (_.release())
       }}
@@ -326,12 +237,12 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       throw new IllegalStateException
 
     def checkpoint(): Async [Unit] =
-      WD.committed.record (xid, gen, gens, wt)
+      WD.committed.record (xid, gens, wt)
 
     override def toString = "Deputy.Committing"
   }
 
-  class Committed (gen: Long, gens: Seq [Long], wt: TxClock) extends State {
+  class Committed (gens: Seq [Long], wt: TxClock) extends State {
 
     fiber.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
@@ -345,17 +256,16 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       throw new IllegalStateException
 
     def checkpoint(): Async [Unit] =
-      WD.committed.record (xid, gen, gens, wt)
+      WD.committed.record (xid, gens, wt)
 
     override def toString = "Deputy.Committed"
   }
 
   class Aborting (mdtr: WriteMediator, locks: Option [LockSet]) extends State {
 
-    val gen = archive.put (xid.id, 0, Bytes (ArchiveStatus.pickler, ArchiveStatus.Aborted))
     guard {
       locks foreach (_.release())
-      WD.aborted.record (xid, gen)
+      WD.aborted.record (xid)
     } run {
       case Success (v) => logged()
       case Failure (t) => failed (t)
@@ -363,7 +273,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     private def logged(): Unit = fiber.execute {
       if (state == Aborting.this) {
-        state = new Aborted (gen)
+        state = new Aborted
         mdtr.respond (WriteResponse.Aborted)
       }}
 
@@ -383,12 +293,12 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def abort (mdtr: WriteMediator): Unit = ()
 
     def checkpoint(): Async [Unit] =
-      WD.aborted.record (xid, gen)
+      WD.aborted.record (xid)
 
     override def toString = "Deputy.Aborting"
   }
 
-  class Aborted (gen: Long) extends State {
+  class Aborted extends State {
 
     fiber.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
@@ -404,7 +314,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       mdtr.respond (WriteResponse.Aborted)
 
     def checkpoint(): Async [Unit] =
-      WD.aborted.record (xid, gen)
+      WD.aborted.record (xid)
 
     override def toString = "Deputy.Aborted"
   }
@@ -465,25 +375,10 @@ private object WriteDeputy {
 
   val committed = {
     import AtomicPicklers._
-    RecordDescriptor (0x5A5C7DA53F8C60F6L, tuple (txId, ulong, seq (ulong), txClock))
+    RecordDescriptor (0x5A5C7DA53F8C60F6L, tuple (txId, seq (ulong), txClock))
   }
 
   val aborted = {
     import AtomicPicklers._
-    RecordDescriptor (0xF83F939483B72F77L, tuple (txId, ulong))
-  }
-
-  sealed abstract class ArchiveStatus
-
-  object ArchiveStatus {
-
-    case object Aborted extends ArchiveStatus
-
-    case class Committed (wt: TxClock) extends ArchiveStatus
-
-    val pickler = {
-      import AtomicPicklers._
-      tagged [ArchiveStatus] (
-          0x1 -> const (Aborted),
-          0x2 -> wrap (txClock) .build (Committed.apply _) .inspect (_.wt))
-    }}}
+    RecordDescriptor (0xF83F939483B72F77L, txId)
+  }}
