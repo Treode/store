@@ -12,8 +12,8 @@ import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions
 
 import Assertions.assertResult
+import AtomicTestTools._
 import Callback.ignore
-import TimedTestTools._
 
 private class StubAtomicHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {

@@ -3,7 +3,7 @@ package com.treode.store
 import org.scalatest.FlatSpec
 
 import Fruits.{Apple, Orange}
-import TimedTestTools._
+import StoreTestTools._
 
 class CellSpec extends FlatSpec {
 

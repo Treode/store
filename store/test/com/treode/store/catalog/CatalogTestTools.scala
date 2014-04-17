@@ -1,8 +1,8 @@
 package com.treode.store.catalog
 
-import com.treode.store.TimedTestTools
+import com.treode.store.StoreTestTools
 
-private object CatalogTestTools extends TimedTestTools {
+private object CatalogTestTools extends StoreTestTools {
 
   implicit class TestableAcceptor (a: Acceptor) {
 

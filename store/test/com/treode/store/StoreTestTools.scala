@@ -9,7 +9,7 @@ import org.scalatest.Assertions
 
 import Assertions.{assertResult, fail}
 
-private trait TimedTestTools extends AsyncTestTools {
+private trait StoreTestTools extends AsyncTestTools {
 
   implicit class RichBytes (v: Bytes) {
     def ## (time: Int) = Cell (v, TxClock (time), None)
@@ -116,4 +116,4 @@ private trait TimedTestTools extends AsyncTestTools {
     Bytes (v)
 }
 
-private object TimedTestTools extends TimedTestTools
+private object StoreTestTools extends StoreTestTools

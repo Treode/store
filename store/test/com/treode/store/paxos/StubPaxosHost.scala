@@ -5,11 +5,11 @@ import com.treode.async.Async
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Atlas, Catalogs, Cohort, Paxos, StoreConfig, TimedTestTools}
+import com.treode.store.{Atlas, Catalogs, Cohort, Paxos}
 import com.treode.store.atlas.AtlasKit
 
 import Async.guard
-import TimedTestTools._
+import PaxosTestTools._
 
 private class StubPaxosHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {

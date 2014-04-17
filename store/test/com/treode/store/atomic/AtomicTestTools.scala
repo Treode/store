@@ -1,13 +1,13 @@
 package com.treode.store.atomic
 
 import com.treode.async.{Async, StubScheduler}
-import com.treode.store.{Bytes, TimedTestTools, TxClock}
+import com.treode.store.{Bytes, StoreTestTools, TxClock}
 import com.treode.store.locks.LockSet
 import org.scalatest.Assertions
 
 import Assertions.fail
 
-private trait AtomicTestTools extends TimedTestTools {
+private trait AtomicTestTools extends StoreTestTools {
 
 
   implicit class RichPrepareResult (actual: Async [PrepareResult]) {

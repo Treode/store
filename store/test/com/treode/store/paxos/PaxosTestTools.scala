@@ -2,9 +2,9 @@ package com.treode.store.paxos
 
 import com.treode.async.{CallbackCaptor, StubScheduler}
 import com.treode.cluster.StubHost
-import com.treode.store.{Cohort, TimedTestTools}
+import com.treode.store.{Cohort, StoreTestTools}
 
-private object PaxosTestTools extends TimedTestTools {
+private object PaxosTestTools extends StoreTestTools {
 
   implicit class TestableAcceptor (a: Acceptor) {
 

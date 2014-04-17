@@ -4,10 +4,10 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.WordSpec
 
 import com.treode.async.{Async, StubScheduler}
-import com.treode.store.{Bytes, StoreConfig, TimedTestTools, TxClock}
+import com.treode.store.{Bytes, StoreConfig, StoreTestTools, TxClock}
 import com.treode.pickle.Picklers
 
-import TimedTestTools._
+import StoreTestTools._
 
 class LockSpec extends WordSpec with MockFactory {
 

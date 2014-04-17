@@ -12,7 +12,7 @@ import org.scalatest.FreeSpec
 import Async.{async, guard, latch}
 import AsyncImplicits._
 import Fruits.Apple
-import TimedTestTools._
+import StoreTestTools._
 import WriteOp._
 
 trait StoreBehaviors {

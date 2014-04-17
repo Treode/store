@@ -13,8 +13,8 @@ import org.scalatest.Assertions
 
 import Assertions.assertResult
 import Callback.ignore
+import CatalogTestTools._
 import StubCatalogHost.{cat1, cat2}
-import TimedTestTools._
 
 private class StubCatalogHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {

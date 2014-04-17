@@ -1,14 +1,14 @@
 package com.treode.store.tier
 
 import com.treode.async.{Async, StubScheduler}
-import com.treode.store.{Bytes, Cell, Fruits, TimedTestTools, TxClock}
+import com.treode.store.{Bytes, Cell, Fruits, StoreTestTools, TxClock}
 import org.scalatest.Assertions
 
 import Assertions.assertResult
 import Async.async
 import Fruits.{Apple, Tomato}
 
-private object TierTestTools extends TimedTestTools {
+private object TierTestTools extends StoreTestTools {
 
   implicit class RichTierTable (table: TierTable) (implicit scheduler: StubScheduler) {
 

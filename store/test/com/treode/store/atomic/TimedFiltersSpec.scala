@@ -1,12 +1,12 @@
 package com.treode.store.atomic
 
 import com.treode.async.{AsyncImplicits, StubScheduler}
-import com.treode.store.{Bytes, Cell, Fruits, TimedTestTools}
+import com.treode.store.{Bytes, Cell, Fruits}
 import org.scalatest.FreeSpec
 
 import AsyncImplicits._
+import AtomicTestTools._
 import Fruits.{Apple, Banana}
-import TimedTestTools._
 
 class TimedFiltersSpec extends FreeSpec {
 
