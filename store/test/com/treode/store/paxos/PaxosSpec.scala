@@ -59,7 +59,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
         summary.timedout = true
     }}
 
-  "The acceptors should" - {
+  "The paxos implementation should" - {
 
     "achieve consensus with" - {
 
