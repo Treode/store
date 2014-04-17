@@ -56,12 +56,12 @@ private class DiskDrives (kit: DisksKit) {
     }}
 
   def launch(): Async [Unit] =
-    queue.launch {
-      for {
-        segs <- disks.values.filter (_.draining) .latch.seq foreach (_.drain())
-      } yield {
-        compactor.drain (segs.iterator.flatten)
-      }}
+    for {
+      segs <- disks.values.filter (_.draining) .latch.seq foreach (_.drain())
+    } yield {
+      compactor.drain (segs.iterator.flatten)
+      queue.launch()
+    }
 
   private def _attach (items: Seq [AttachItem], cb: Callback [Unit]): Option [Runnable] =
     queue.run (cb) {

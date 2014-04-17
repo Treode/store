@@ -32,8 +32,8 @@ class AsyncQueue (fiber: Fiber) (deque: => Option [Runnable]) {
       def run(): Unit = Async.guard (task) ensure (reengage()) run (cb)
     })
 
-  def launch (f: => Async [Unit]): Async [Unit] =
-    fiber.guard (f) ensure (reengage())
+  def launch(): Unit =
+    reengage()
 
   def execute (f: => Any): Unit =
     fiber.execute {

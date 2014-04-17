@@ -23,6 +23,8 @@ private class Rebalancer (kit: AtomicKit) {
   private var tracker = new Tracker
   private var callbacks = List.empty [Callback [Unit]]
 
+  queue.launch()
+
   def split (start: Point.Middle, limit: Point, targets: Targets): Async [(TableId, Batch, Point)] = {
 
     var batch = Map.empty [Int, List [Cell]]
@@ -121,7 +123,6 @@ private class Rebalancer (kit: AtomicKit) {
 
   def attach() {
     atlas.rebalance (rebalance _)
-    queue.launch (supply()) run (ignore)
   }}
 
 private object Rebalancer {

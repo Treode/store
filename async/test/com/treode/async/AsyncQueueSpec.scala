@@ -44,12 +44,7 @@ class AsyncQueueSpec extends FlatSpec {
     var callbacks = new ArrayDeque [Callback [Unit]]
     var captor = new AsyncCaptor [Unit]
 
-    {
-      val cb = queue.launch (captor.start()) .capture()
-      scheduler.runTasks()
-      captor.pass()
-      cb.passed
-    }
+    queue.launch()
 
     def next(): Option [Runnable] = {
       if (callbacks.isEmpty) {
