@@ -113,7 +113,7 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
         forAllSeeds (check (_, 0.0))
       }}
 
-    "rebalance" in { pending
+    "rebalance" in {
       val kit = StubNetwork()
       import kit.scheduler
 

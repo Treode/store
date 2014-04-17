@@ -13,9 +13,11 @@ class StoreConfig private (
 
   val deliberatingTimeout = 2 seconds
   val preparingTimeout = 5 seconds
-  val readBackoff = Backoff (100, 100, 1 seconds, 7)
-  val prepareBackoff = Backoff (100, 100, 1 seconds, 7)
   val closedLifetime = 2 seconds
+
+  val prepareBackoff = Backoff (100, 100, 1 seconds, 7)
+  val readBackoff = Backoff (100, 100, 1 seconds, 7)
+  val rebalanceBackoff = Backoff (500, 500, 5 minutes)
 }
 
 object StoreConfig {

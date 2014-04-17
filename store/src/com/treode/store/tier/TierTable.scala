@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.async.{Async, Callback, Scheduler}
-import com.treode.disk.{Disks, ObjectId}
+import com.treode.disk.{Disks, ObjectId, TypeId}
 import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, StorePicklers, TxClock}
 
 import Async.async
@@ -9,17 +9,27 @@ import TierTable.Meta
 
 trait TierTable {
 
+  def typ: TypeId
+
+  def obj: ObjectId
+
   def get (key: Bytes, time: TxClock): Async [Cell]
 
   def get (key: Bytes): Async [Option [Bytes]]
 
   def iterator: CellIterator
 
+  def iterator (key: Bytes, time: TxClock): CellIterator
+
   def put (key: Bytes, time: TxClock, value: Bytes): Long
 
   def delete (key: Bytes, time: TxClock): Long
 
+  def receive (cells: Seq [Cell]): (Long, Seq [Cell])
+
   def probe (groups: Set [Long]): Set [Long]
+
+  def compact(): Async [Unit]
 
   def compact (groups: Set [Long]): Async [Meta]
 

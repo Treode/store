@@ -1,6 +1,7 @@
 package com.treode.store.atomic
 
 import java.util.concurrent.ConcurrentHashMap
+import scala.collection.JavaConversions
 
 import com.treode.async.{Async, AsyncImplicits, Callback, Latch}
 import com.treode.async.misc.materialize
@@ -11,6 +12,7 @@ import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
 
 import Async.{async, guard, supply}
 import AsyncImplicits._
+import JavaConversions._
 
 private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
   import kit.{config, disks, scheduler}
@@ -27,6 +29,14 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     if (t0 != null)
       return t0
     t1
+  }
+
+  def ceiling (id: TableId): Option [TierTable] = {
+    var table = tables.get (id)
+    if (table != null) return Some (table)
+    val rest = tables.entrySet.filter (_.getKey > id)
+    if (rest.isEmpty) return None
+    Some (rest.minBy (_.getKey) .getValue)
   }
 
   def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] = {
@@ -83,13 +93,20 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
         case op: Delete => t.delete (op.key, wt)
       }}}
 
-  def recover (ts: Seq [(TableId, TierTable)]) {
-    for ((id, t) <- ts)
-      tables.put (id, t)
+  def receive (table: TableId, cells: Seq [Cell]): Async [Unit] = {
+    val (gen, novel) = getTable (table) .receive (cells)
+    TimedStore.receive.record (table, gen, novel)
   }
 
   def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
     supply (getTable (obj.id) .probe (groups))
+
+  def compact(): Async [Unit] =
+    guard {
+      val tables = materialize (this.tables.values)
+      for (table <- tables.latch.unit)
+        table.compact()
+    }
 
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
@@ -101,19 +118,29 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     }
 
   private def checkpoint (id: TableId, table: TierTable): Async [Unit] =
-    table.checkpoint() .flatMap (TimedStore.checkpoint.record (id, _))
+    for {
+      meta <- table.checkpoint()
+      _ <- TimedStore.checkpoint.record (id, meta)
+    } yield ()
 
   def checkpoint(): Async [Unit] = {
     val tables = materialize (this.tables.entrySet)
     for (e <- tables.latch.unit)
       checkpoint (e.getKey, e.getValue)
+  }
+
+  def recover (ts: Seq [(TableId, TierTable)]) {
+    for ((id, t) <- ts)
+      tables.put (id, t)
   }}
 
 private object TimedStore {
 
-  val table = {
-    import com.treode.store.StorePicklers._
-    TierDescriptor (0xB500D51FACAEA961L)
+  val table = TierDescriptor (0xB500D51FACAEA961L)
+
+  val receive = {
+    import AtomicPicklers._
+    RecordDescriptor (0xBFD53CF2C3C0F5CAL, tuple (tableId, ulong, seq (cell)))
   }
 
   val checkpoint = {

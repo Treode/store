@@ -39,9 +39,12 @@ private class SynthTable (
     config: StoreConfig
 ) extends TierTable {
   import scheduler.whilst
+  import desc.pager
 
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
+
+  def typ = desc.id
 
   def get (key: Bytes, time: TxClock): Async [Cell] = {
 
@@ -118,6 +121,31 @@ private class SynthTable (
     TierIterator.merge (desc, primary, secondary, tiers) .dedupe
   }
 
+  def iterator (key: Bytes, time: TxClock): CellIterator = {
+    readLock.lock()
+    val (primary, secondary, tiers) = try {
+      (this.primary, this.secondary, this.tiers)
+    } finally {
+      readLock.unlock()
+    }
+    TierIterator.merge (desc, key, time, primary, secondary, tiers) .dedupe
+  }
+
+  def receive (cells: Seq [Cell]): (Long, Seq [Cell]) = {
+    readLock.lock()
+    try {
+      val novel = Seq.newBuilder [Cell]
+      for {
+        cell <- cells
+        key = MemKey (cell.key, cell.time)
+        if secondary.get (key) == null
+        if primary.put (key, cell.value) == null
+      } novel += cell
+      (gen, novel.result)
+    } finally {
+      readLock.unlock()
+    }}
+
   def probe (groups: Set [Long]): Set [Long] = {
     readLock.lock()
     val (tiers) = try {
@@ -127,6 +155,9 @@ private class SynthTable (
     }
     tiers.active
   }
+
+  def compact(): Async [Unit] =
+    pager.compact (obj)
 
   def compact (groups: Set [Long]): Async [Meta] =
     checkpoint()
