@@ -4,6 +4,7 @@ import scala.language.implicitConversions
 import scala.util.Random
 
 import com.treode.async.{Async, AsyncTestTools, CallbackCaptor, StubScheduler}
+import com.treode.cluster.StubHost
 import com.treode.disk.{CellId, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions
 
@@ -108,6 +109,22 @@ private trait StoreTestTools extends AsyncTestTools {
 
   def Get (id: TableId, key: Bytes): ReadOp =
     ReadOp (id, key)
+
+  def settled (num: Int, h1: StubHost, h2: StubHost, h3: StubHost): Cohort =
+    Cohort.settled (num, h1.localId, h2.localId, h3.localId)
+
+  def moving (
+      num: Int,
+      origin: (StubHost, StubHost, StubHost),
+      target: (StubHost, StubHost, StubHost)
+  ): Cohort = {
+    val (o1, o2, o3) = origin
+    val (t1, t2, t3) = target
+    Cohort (
+        num,
+        Set (o1.localId, o2.localId, o3.localId),
+        Set (t1.localId, t2.localId, t3.localId))
+  }
 
   implicit def intToBytes (v: Int): Bytes =
     Bytes (v)

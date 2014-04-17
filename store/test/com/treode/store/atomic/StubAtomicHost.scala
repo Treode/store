@@ -25,6 +25,7 @@ extends StubActiveHost (id, network) {
   implicit val storeConfig = TestStoreConfig()
 
   implicit val recovery = Disks.recover()
+  val _catalogs = Catalogs.recover()
   val _paxos = Paxos.recover()
   val _atomic = AtomicKit.recover()
 
@@ -32,30 +33,30 @@ extends StubActiveHost (id, network) {
   val geometry = TestDiskGeometry()
   val files = Seq ((Paths.get ("a"), file, geometry))
 
-  val atlas = new AtlasKit
+  val atlas = Atlas.recover (_catalogs) .asInstanceOf [AtlasKit]
 
   val _launch =
     for {
       launch <- recovery.attach (files)
+      catalogs <- _catalogs.launch (launch, atlas)
       paxos <- _paxos.launch (launch, atlas)
       atomic <- _atomic.launch (launch, atlas, paxos) .map (_.asInstanceOf [AtomicKit])
     } yield {
       launch.launch()
-      (launch.disks, atomic)
+      (launch.disks, catalogs, atomic)
     }
 
   val captor = _launch.capture()
   scheduler.runTasks()
   while (!captor.wasInvoked)
     Thread.sleep (10)
-  implicit val (disks, atomic) = captor.passed
+  implicit val (disks, catalogs, atomic) = captor.passed
 
-  def setCohorts (cohorts: (StubHost, StubHost, StubHost)*) {
-    val _cohorts =
-      for (((h1, h2, h3), i) <- cohorts.zipWithIndex)
-        yield Cohort.settled (i, h1.localId, h2.localId, h3.localId)
-    atlas.set (_cohorts.toArray)
-  }
+  def setCohorts (cohorts: Cohort*): Unit =
+    atlas.set (cohorts.toArray)
+
+  def issueCohorts (cohorts: Cohort*): Async [Unit] =
+    atlas.issue (cohorts.toArray)
 
   def writer (xid: TxId) = atomic.writers.get (xid)
 
