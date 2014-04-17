@@ -78,7 +78,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
           val hs = kit.install (3, new StubCatalogHost (_, kit))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
-            h.setCohorts ((h1, h2, h3))
+            h.setCohorts (1, settled (0, h1, h2, h3))
           check (kit, h1, h2, hs, 0.0, summary)
         }
         summary.check (Set (patch1, patch2))
@@ -91,7 +91,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
           val hs = kit.install (3, new StubCatalogHost (_, kit))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
-            h.setCohorts ((h1, h2, h3))
+            h.setCohorts (1, settled (0, h1, h2, h3))
           check (kit, h1, h2, hs, 0.1, summary)
         }
         summary.check (Set (patch1, patch2))
@@ -104,7 +104,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       val hs = kit.install (3, new StubCatalogHost (_, kit))
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
-        h.setCohorts ((h1, h2, h3))
+        h.setCohorts (1, settled (0, h1, h2, h3))
       (kit, hs, h1, h2)
     }
 

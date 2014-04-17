@@ -15,14 +15,14 @@ private class RecoveryKit (implicit
     config: StoreConfig
 ) extends Store.Recovery {
 
-  val _catalogs = Catalogs.recover()
+  implicit val _catalogs = Catalogs.recover()
   val _paxos = Paxos.recover()
   val _atomic = AtomicKit.recover()
 
-  val atlas = Atlas.recover (_catalogs)
+  val atlas = Atlas.recover()
 
   def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =
-    _catalogs.listen (desc) (f)
+    desc.listen (f)
 
   def launch (launch: Disks.Launch): Async [Store] = {
     import launch.disks

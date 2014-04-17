@@ -26,6 +26,7 @@ private class AtomicKit (
   val tables = new TimedStore (this)
   val reader = new ReadDeputy (this)
   val writers = new WriteDeputies (this)
+  val rebalancer = new Rebalancer (this)
 
   def locate (table: TableId, key: Bytes): Cohort =
     atlas.locate ((table, key).hashCode)

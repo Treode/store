@@ -70,7 +70,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
           val hs = kit.install (3, new StubPaxosHost (_, kit))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
-            h.setCohorts (settled (0, h1, h2, h3))
+            h.setCohorts (1, settled (0, h1, h2, h3))
           check (kit, h1, h2, hs, 0.0, summary)
         }
         summary.check (Set (1, 2))
@@ -83,7 +83,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
           val hs = kit.install (3, new StubPaxosHost (_, kit))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
-            h.setCohorts (settled (0, h1, h2, h3))
+            h.setCohorts (1, settled (0, h1, h2, h3))
           check (kit, h1, h2, hs, 0.1, summary)
         }
         summary.check (Set (1, 2))
@@ -99,7 +99,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
           val Seq (h1, h2, h3) = hs
           for (h1 <- hs; h2 <- hs)
             h1.hail (h2.localId, null)
-          h1.setCohorts (settled (0, h1, h2, h3))
+          h1.setCohorts (1, settled (0, h1, h2, h3))
           h1.issueCohorts (settled (0, h1, h2, h3)) .pass
           kit.runTasks (timers = true, count = 500)
 
@@ -115,13 +115,13 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       val hs = kit.install (4, new StubPaxosHost (_, kit))
       val Seq (h1, h2, h3, h4) = hs
       for (h <- hs)
-        h.setCohorts (settled (0, h1, h2, h3))
+        h.setCohorts (1, settled (0, h1, h2, h3))
 
       val k = Bytes (0xB3334572873016E4L)
       h1.paxos.propose (k, 1) .expect (1)
 
       for (h <- hs)
-        h.setCohorts (moving (0, (h1, h2, h3), (h1, h2, h4)))
+        h.setCohorts (1, moving (0, (h1, h2, h3), (h1, h2, h4)))
 
       for (h <- hs)
         h.paxos.archive.get (k) .expect (Some (1))

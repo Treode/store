@@ -26,7 +26,7 @@ extends StubActiveHost (id, network) {
   implicit val storeConfig = TestStoreConfig()
 
   implicit val recovery = Disks.recover()
-  val _catalogs = Catalogs.recover()
+  implicit val _catalogs = Catalogs.recover()
 
   var v1 = 0L
   var v2 = Seq.empty [Long]
@@ -57,12 +57,8 @@ extends StubActiveHost (id, network) {
 
   val acceptors = catalogs.acceptors
 
-  def setCohorts (cohorts: (StubHost, StubHost, StubHost)*) {
-    val _cohorts =
-      for (((h1, h2, h3), i) <- cohorts.zipWithIndex)
-        yield Cohort.settled (i, h1.localId, h2.localId, h3.localId)
-    atlas.set (_cohorts.toArray)
-  }
+  def setCohorts (version: Int, cohorts: Cohort*): Unit =
+    atlas.set (version, cohorts.toArray)
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) {
     import catalogs.broker.{diff, patch}

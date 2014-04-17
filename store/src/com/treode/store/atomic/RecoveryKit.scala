@@ -60,5 +60,6 @@ private class RecoveryKit (implicit
     } yield {
       kit.reader.attach()
       kit.writers.attach()
+      kit.rebalancer.attach()
       kit
     }}}

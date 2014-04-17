@@ -21,14 +21,14 @@ extends StubActiveHost (id, network) {
   implicit val storeConfig = TestStoreConfig()
 
   implicit val recovery = Disks.recover()
-  val _catalogs = Catalogs.recover()
+  implicit val _catalogs = Catalogs.recover()
   val _paxos = Paxos.recover()
 
   val file = new StubFile
   val geometry = TestDiskGeometry()
   val files = Seq ((Paths.get ("a"), file, geometry))
 
-  val atlas = Atlas.recover (_catalogs) .asInstanceOf [AtlasKit]
+  val atlas = Atlas.recover() .asInstanceOf [AtlasKit]
 
   val _launch =
     for {
@@ -46,8 +46,8 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, catalogs, paxos) = captor.passed
 
-  def setCohorts (cohorts: Cohort*): Unit =
-    atlas.set (cohorts.toArray)
+  def setCohorts (version: Int, cohorts: Cohort*): Unit =
+    atlas.set (version, cohorts.toArray)
 
   def issueCohorts (cohorts: Cohort*): Async [Unit] =
     atlas.issue (cohorts.toArray)
