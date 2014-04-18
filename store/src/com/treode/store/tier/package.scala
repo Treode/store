@@ -21,4 +21,7 @@ package object tier {
 
     def dedupe: CellIterator =
       Filters.dedupe (iter)
+
+    def retire (limit: TxClock): CellIterator =
+      Filters.retire (iter, limit)
   }}

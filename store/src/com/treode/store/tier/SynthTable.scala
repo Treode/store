@@ -39,8 +39,9 @@ private class SynthTable (
     disks: Disks,
     config: StoreConfig
 ) extends TierTable {
-  import scheduler.whilst
+  import config.priorValueEpoch
   import desc.pager
+  import scheduler.whilst
 
   private val readLock = lock.readLock()
   private val writeLock = lock.writeLock()
@@ -119,7 +120,10 @@ private class SynthTable (
     } finally {
       readLock.unlock()
     }
-    TierIterator.merge (desc, primary, secondary, tiers) .dedupe
+    TierIterator
+        .merge (desc, primary, secondary, tiers)
+        .dedupe
+        .retire (priorValueEpoch.limit)
   }
 
   def iterator (key: Bytes, time: TxClock): CellIterator = {
@@ -129,7 +133,10 @@ private class SynthTable (
     } finally {
       readLock.unlock()
     }
-    TierIterator.merge (desc, key, time, primary, secondary, tiers) .dedupe
+    TierIterator
+        .merge (desc, key, time, primary, secondary, tiers)
+        .dedupe
+        .retire (priorValueEpoch.limit)
   }
 
   def receive (cells: Seq [Cell]): (Long, Seq [Cell]) = {
