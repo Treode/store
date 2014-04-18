@@ -32,9 +32,6 @@ class StubNetwork (implicit val random: Random, val scheduler: StubScheduler) {
         hosts.remove (host.localId, host),
         s"Host ${host.localId} could not be removed.")
 
-  def locate (id: Int): ReplyTracker =
-    ReplyTracker.settled (hosts.keys.toSeq: _*)
-
   def deliver [M] (p: Pickler [M], from: HostId, to: HostId, port: PortId, msg: M) {
     if (messageFlakiness != 0.0 && random.nextDouble < messageFlakiness)
       return

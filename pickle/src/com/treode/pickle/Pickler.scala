@@ -1,6 +1,6 @@
 package com.treode.pickle
 
-import com.google.common.hash.HashFunction
+import com.google.common.hash.{HashCode, HashFunction, Hashing}
 import com.treode.buffer.{ArrayBuffer, Buffer, Input, PagedBuffer, Output, OutputBuffer}
 
 /** How to read and write an object of a particular type. */
@@ -20,6 +20,20 @@ trait Pickler [A] {
     val sizer = new SizingPickleContext
     p (v, sizer)
     sizer.result
+  }
+
+  def hash (v: A, hashf: HashFunction): HashCode = {
+    val hasher = hashf.newHasher
+    p (v, new HashingPickleContext (hasher))
+    hasher.hash
+  }
+
+  def murmur32 (v: A): Int =
+    hash (v, Hashing.murmur3_32) .asInt
+
+  def murmur128 (v: A): (Long, Long) = {
+    val b = ArrayBuffer (hash (v, Hashing.murmur3_128) .asBytes)
+    (b.readLong(), b.readLong())
   }
 
   def toByteArray (v: A): Array [Byte] = {

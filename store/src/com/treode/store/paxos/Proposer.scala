@@ -78,8 +78,8 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     var ballot = _ballot
     var refused = ballot
     var proposed = Option.empty [(BallotNumber, Bytes)]
-    val promised = locate (key)
-    val accepted = locate (key)
+    val promised = locate (key, time)
+    val accepted = locate (key, time)
 
     // Ballot number zero was implicitly accepted.
     if (ballot == 0)
@@ -113,7 +113,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
         accepted += from
         if (accepted.quorum) {
           val v = agreement (proposed, value)
-          Acceptor.choose (key, time, v) (locate (key))
+          Acceptor.choose (key, time, v) (locate (key, time))
           learners foreach (_.pass (v))
           state = new Closed (v)
         }}}

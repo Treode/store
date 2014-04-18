@@ -46,7 +46,7 @@ private class Rebalancer (kit: AtomicKit) {
       bytes < rebalanceBytes &&
       Point.Middle (start.table, cell.key, cell.time) < limit
     } { cell =>
-      val cohort = locate (start.table, cell.key)
+      val cohort = locate (table, cell.key)
       if (targets contains cohort.num) {
         batch.get (cohort.num) match {
           case Some (cs) => batch += cohort.num -> (cell::cs)

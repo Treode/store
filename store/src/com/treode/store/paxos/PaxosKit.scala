@@ -9,6 +9,7 @@ import com.treode.store.{Atlas, Bytes, Paxos, StoreConfig, TxClock}
 import com.treode.store.tier.TierTable
 
 import Async.async
+import PaxosKit.locator
 
 private class PaxosKit (
     val archive: TierTable
@@ -25,8 +26,8 @@ private class PaxosKit (
 
   val proposers = new Proposers (this)
 
-  def locate (key: Bytes): ReplyTracker =
-    atlas.locate (key.hashCode) .track
+  def locate (key: Bytes, time: TxClock): ReplyTracker =
+    atlas.locate (locator, (key, time)) .track
 
   def lead (key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
     proposers.propose (0, key, time, value)
@@ -36,6 +37,11 @@ private class PaxosKit (
 }
 
 private [store] object PaxosKit {
+
+  val locator = {
+    import PaxosPicklers._
+    tuple (bytes, txClock)
+  }
 
   def recover () (implicit
     random: Random,

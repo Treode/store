@@ -5,6 +5,8 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.util.Arrays
 
 import com.google.common.primitives.UnsignedBytes
+import com.google.common.hash.{HashCode, HashFunction, Hashing}
+import com.treode.buffer.ArrayBuffer
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 
 class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
@@ -13,6 +15,17 @@ class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
 
   def unpickle [A] (p: Pickler [A]): A =
     p.fromByteArray (bytes)
+
+  def hash (hashf: HashFunction): HashCode =
+    hashf.hashBytes (bytes)
+
+  def murmur32: Int =
+    hash (Hashing.murmur3_32) .asInt
+
+  def murmur128: (Long, Long) = {
+    val b = ArrayBuffer (hash (Hashing.murmur3_128) .asBytes)
+    (b.readLong(), b.readLong())
+  }
 
   /** Only applies if this was created using `Bytes (String, Charset)`. */
   def string (cs: Charset): String = {

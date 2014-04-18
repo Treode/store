@@ -10,6 +10,7 @@ import com.treode.store.tier.TierTable
 
 import Async.{async, supply}
 import AsyncImplicits._
+import AtomicKit.locator
 import Rebalancer.Targets
 
 private class AtomicKit (implicit
@@ -28,7 +29,7 @@ private class AtomicKit (implicit
   val rebalancer = new Rebalancer (this)
 
   def locate (table: TableId, key: Bytes): Cohort =
-    atlas.locate ((table, key).hashCode)
+    atlas.locate (locator, (table, key))
 
   def locate (op: Op): Cohort =
     locate (op.table, op.key)
@@ -54,6 +55,11 @@ private class AtomicKit (implicit
     }}}
 
 private [store] object AtomicKit {
+
+  val locator = {
+    import AtomicPicklers._
+    tuple (tableId, bytes)
+  }
 
   trait Recovery {
 
