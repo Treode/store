@@ -1,10 +1,12 @@
 package com.treode.store
 
 import scala.language.postfixOps
+
 import com.treode.async.Backoff
 import com.treode.async.misc.RichInt
 
 class StoreConfig private (
+    val priorValueEpoch: Epoch,
     val lockSpaceBits: Int,
     val targetPageBytes: Int,
     val rebalanceBytes: Int,
@@ -23,6 +25,7 @@ class StoreConfig private (
 object StoreConfig {
 
   def apply (
+      priorValueEpoch: Epoch,
       lockSpaceBits: Int,
       targetPageBytes: Int,
       rebalanceBytes: Int,
@@ -43,6 +46,7 @@ object StoreConfig {
         "The rebalance batch size must be more than 0 entries.")
 
     new StoreConfig (
+        priorValueEpoch,
         lockSpaceBits,
         targetPageBytes,
         rebalanceBytes,
@@ -50,12 +54,14 @@ object StoreConfig {
   }
 
   def recommended (
+      priorValueEpoch: Epoch = Epoch.StartOfYesterday,
       lockSpaceBits: Int = 10,
       targetPageBytes: Int = 1<<20,
       rebalanceBytes: Int = 1<<20,
       rebalanceEntries: Int = 10000
   ): StoreConfig =
     StoreConfig (
+        priorValueEpoch,
         lockSpaceBits,
         targetPageBytes,
         rebalanceBytes,

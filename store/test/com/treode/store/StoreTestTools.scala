@@ -104,12 +104,14 @@ private trait StoreTestTools extends AsyncTestTools {
   object TestStoreConfig {
 
     def apply (
+        priorValueEpoch: Epoch = Epoch.zero,
         lockSpaceBits: Int = 4,
         targetPageBytes: Int = 1<<10,
         rebalanceBytes: Int = Int.MaxValue,
         rebalanceEntries: Int = Int.MaxValue
     ): StoreConfig =
       StoreConfig (
+          priorValueEpoch,
           lockSpaceBits,
           targetPageBytes,
           rebalanceBytes,

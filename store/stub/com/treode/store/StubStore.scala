@@ -13,7 +13,7 @@ class StubStore extends Store {
 
   // The stub uses only the lockSpaceBits.
   private implicit val config =
-    StoreConfig (4, Int.MaxValue, Int.MaxValue, Int.MaxValue)
+    StoreConfig (Epoch.zero, 4, Int.MaxValue, Int.MaxValue, Int.MaxValue)
 
   private val space = new LockSpace
   private val data = new ConcurrentSkipListMap [Key, Option [Bytes]]
