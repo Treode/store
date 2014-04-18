@@ -92,9 +92,6 @@ private class SynthTable (
         candidate
     }}
 
-  def get (key: Bytes): Async [Option [Bytes]] =
-    get (key, TxClock.max) .map (_.value)
-
   def put (key: Bytes, time: TxClock, value: Bytes): Long = {
     readLock.lock()
     try {

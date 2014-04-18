@@ -1,21 +1,20 @@
 package com.treode.store
 
-import scala.language.implicitConversions
+import org.joda.time.Instant
 
-class TxId private (val id: Bytes) extends AnyVal {
+case class TxId (id: Bytes, time: Instant) {
 
-  override def toString = f"TxId:$id"
+  override def toString = f"TxId:$id:0x${time.getMillis}%X"
 }
 
 object TxId {
 
-  implicit def apply (id: Bytes): TxId =
-    new TxId (id)
-
-  implicit def apply (id: Long): TxId =
-    new TxId (Bytes (id))
+  def apply (id: Long, time: Long): TxId =
+    new TxId (Bytes (id), new Instant (time))
 
   val pickler = {
     import StorePicklers._
-    wrap (bytes) build (apply _) inspect (_.id)
+    wrap (bytes, instant)
+    .build (v => new TxId (v._1, v._2))
+    .inspect (v => (v.id, v.time))
   }}

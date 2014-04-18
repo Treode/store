@@ -19,7 +19,7 @@ private class WriteDeputies (kit: AtomicKit) {
     if (d0 != null)
       return d0
     val d1 = new WriteDeputy (xid, kit)
-    d0 = deputies.putIfAbsent (xid.id, d1)
+    d0 = deputies.putIfAbsent (xid, d1)
     if (d0 != null)
       return d0
     d1

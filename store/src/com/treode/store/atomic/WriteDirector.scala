@@ -10,9 +10,9 @@ import com.treode.cluster.{Cluster, Peer}
 import com.treode.store._
 
 import AsyncImplicits._
+import WriteDirector.deliberate
 
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
-  import WriteDirector.deliberate
   import kit.{cluster, paxos, random, scheduler}
   import kit.config.prepareBackoff
 
@@ -131,7 +131,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
   class Deliberating (wt: TxClock, cb: Callback [WriteResult]) extends State {
     import TxStatus._
 
-    WriteDirector.deliberate.lead (xid.id, Committed (wt)) run {
+    deliberate.lead (xid.id, xid.time, Committed (wt)) run {
 
       case Success (status) => fiber.execute {
         status match {
@@ -200,7 +200,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     }
 
     if (lead)
-      WriteDirector.deliberate.lead (xid.id, TxStatus.Aborted) run (Callback.ignore)
+      deliberate.lead (xid.id, xid.time, TxStatus.Aborted) run (Callback.ignore)
     aborts.rouse()
 
     override def aborted (from: Peer) {

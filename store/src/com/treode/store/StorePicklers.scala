@@ -5,8 +5,11 @@ import com.treode.disk.{ObjectId, Position, TypeId}
 import com.treode.pickle.Picklers
 import com.treode.store.paxos.BallotNumber
 import com.treode.store.tier.TierTable
+import org.joda.time.Instant
 
 private trait StorePicklers extends Picklers {
+
+  lazy val instant = wrap (ulong) build (new Instant (_)) inspect (_.getMillis)
 
   def ballotNumber = BallotNumber.pickler
   def bytes = Bytes.pickler

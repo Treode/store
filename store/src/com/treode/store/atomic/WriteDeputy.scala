@@ -10,6 +10,7 @@ import com.treode.store.atomic.{WriteDeputy => WD}
 import com.treode.store.locks.LockSet
 
 import Async.{guard, supply, when}
+import WriteDirector.deliberate
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   import kit.{disks, paxos, scheduler, tables, writers}
@@ -40,7 +41,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   private def timeout (s: State): Unit =
     fiber.delay (preparingTimeout) {
       if (state == s)
-        WriteDirector.deliberate.propose (xid.id, TxStatus.Aborted) .run {
+        deliberate.propose (xid.id, xid.time, TxStatus.Aborted) .run {
           case Success (TxStatus.Aborted) =>
             WriteDeputy.this.abort (WriteMediator.void)
           case Success (TxStatus.Committed (wt)) =>

@@ -15,7 +15,7 @@ extends TestableStore {
     randomHost.read (rt, ops)
 
   def write (ct: TxClock, ops: WriteOp*): Async [WriteResult] =
-    randomHost.write (TxId (random.nextLong), ct, ops)
+    randomHost.write (TxId (random.nextLong, 0), ct, ops)
 
   def expectCells (t: TableId) (expected: Cell*): Unit =
     hosts foreach (_.expectCells (t) (expected: _*))

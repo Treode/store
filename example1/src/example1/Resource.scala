@@ -6,6 +6,7 @@ import com.treode.async.Async
 import com.treode.async.misc.{RichOption, parseLong}
 import com.treode.store.{Bytes, ReadOp, Store, TxClock, TxId, WriteOp, WriteResult}
 import com.twitter.finatra.Request
+import org.joda.time.Instant
 
 import Async.supply
 import WriteOp._
@@ -17,7 +18,7 @@ class Resource (store: Store) extends AsyncFinatraController {
 
   private def nextTx = {
     tx += 1
-    TxId (tx)
+    TxId (Bytes (tx), Instant.now)
   }
 
   private def parseRead (request: Request): Async [(TxClock, TxClock, Seq [ReadOp])] =

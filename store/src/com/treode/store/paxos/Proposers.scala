@@ -1,7 +1,7 @@
 package com.treode.store.paxos
 
 import com.treode.async.Async
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, TxClock}
 
 import Async.async
 
@@ -9,12 +9,12 @@ private class Proposers (kit: PaxosKit) {
 
   private val proposers = newProposersMap
 
-  def get (key: Bytes): Proposer = {
-    var p0 = proposers.get (key)
+  def get (key: Bytes, time: TxClock): Proposer = {
+    var p0 = proposers.get ((key, time))
     if (p0 != null)
       return p0
-    val p1 = new Proposer (key, kit)
-    p0 = proposers.putIfAbsent (key, p1)
+    val p1 = new Proposer (key, time, kit)
+    p0 = proposers.putIfAbsent ((key, time), p1)
     if (p0 != null)
       return p0
     p1
@@ -23,9 +23,9 @@ private class Proposers (kit: PaxosKit) {
   def remove (key: Bytes, p: Proposer): Unit =
     proposers.remove (key, p)
 
-  def propose (ballot: Long, key: Bytes, value: Bytes): Async [Bytes] =
+  def propose (ballot: Long, key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
     async { cb =>
-      val p = get (key)
+      val p = get (key, time)
       p.open (ballot, value)
       p.learn (cb)
     }
@@ -34,18 +34,18 @@ private class Proposers (kit: PaxosKit) {
     import Proposer.{accept, chosen, promise, refuse}
     import kit.cluster
 
-    refuse.listen { case ((key, ballot), c) =>
-      get (key) refuse (ballot)
+    refuse.listen { case ((key, time, ballot), c) =>
+      get (key, time) refuse (ballot)
     }
 
-    promise.listen { case ((key, ballot, proposal), c) =>
-      get (key) promise (c, ballot, proposal)
+    promise.listen { case ((key, time, ballot, proposal), c) =>
+      get (key, time) promise (c, ballot, proposal)
     }
 
-    accept.listen { case ((key, ballot), c) =>
-      get (key) accept (c, ballot)
+    accept.listen { case ((key, time, ballot), c) =>
+      get (key, time) accept (c, ballot)
     }
 
-    chosen.listen { case ((key, v), _) =>
-      get (key) chosen (v)
+    chosen.listen { case ((key, time, v), _) =>
+      get (key, time) chosen (v)
     }}}

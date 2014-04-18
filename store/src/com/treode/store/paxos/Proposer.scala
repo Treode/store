@@ -6,11 +6,11 @@ import scala.language.postfixOps
 import com.treode.async.{AsyncImplicits, Backoff, Callback, Fiber}
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{Peer, MessageDescriptor}
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, TxClock}
 
 import AsyncImplicits._
 
-private class Proposer (key: Bytes, kit: PaxosKit) {
+private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   import kit.proposers.remove
   import kit.{cluster, locate, random, scheduler}
 
@@ -83,9 +83,9 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
 
     // Ballot number zero was implicitly accepted.
     if (ballot == 0)
-      Acceptor.propose (key, ballot, value) (promised)
+      Acceptor.propose (key, time, ballot, value) (promised)
     else
-      Acceptor.query (key, ballot, value) (promised)
+      Acceptor.query (key, time, ballot, value) (promised)
 
     val backoff = proposingBackoff.iterator
     fiber.delay (backoff.next) (state.timeout())
@@ -105,7 +105,7 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
         proposed = max (proposed, proposal)
         if (promised.quorum) {
           val v = agreement (proposed, value)
-          Acceptor.propose (key, ballot, v) (accepted)
+          Acceptor.propose (key, time, ballot, v) (accepted)
         }}}
 
     def accept (from: Peer, ballot: Long) {
@@ -113,7 +113,7 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
         accepted += from
         if (accepted.quorum) {
           val v = agreement (proposed, value)
-          Acceptor.choose (key, v) (locate (key))
+          Acceptor.choose (key, time, v) (locate (key))
           learners foreach (_.pass (v))
           state = new Closed (v)
         }}}
@@ -129,7 +129,7 @@ private class Proposer (key: Bytes, kit: PaxosKit) {
         accepted.clear()
         ballot = refused + random.nextInt (17) + 1
         refused = ballot
-        Acceptor.query (key, ballot, value) (promised)
+        Acceptor.query (key, time, ballot, value) (promised)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         remove (key, Proposer.this)
@@ -197,20 +197,20 @@ private object Proposer {
 
   val refuse = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF3725D9448D98D0L, tuple (bytes, ulong))
+    MessageDescriptor (0xFF3725D9448D98D0L, tuple (bytes, txClock, ulong))
   }
 
   val promise = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF52232E0CCEE1D2L, tuple (bytes, ulong, proposal))
+    MessageDescriptor (0xFF52232E0CCEE1D2L, tuple (bytes, txClock, ulong, proposal))
   }
 
   val accept = {
     import PaxosPicklers._
-    MessageDescriptor (0xFFB799D0E495804BL, tuple (bytes, ulong))
+    MessageDescriptor (0xFFB799D0E495804BL, tuple (bytes, txClock, ulong))
   }
 
   val chosen = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF3D8DDECF0F6CBEL, tuple (bytes, bytes))
+    MessageDescriptor (0xFF3D8DDECF0F6CBEL, tuple (bytes, txClock, bytes))
   }}

@@ -61,8 +61,8 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
     import kit.scheduler
 
     // Setup.
-    val xid1 = TxId (Bytes (random.nextLong))
-    val xid2 = TxId (Bytes (random.nextLong))
+    val xid1 = TxId (random.nextLong, 0)
+    val xid2 = TxId (random.nextLong, 0)
     val t = TableId (random.nextLong)
     val k = Bytes (random.nextLong)
 
@@ -122,7 +122,7 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
       for (h <- hs)
         h.setCohorts (1, settled (0, h1, h2, h3))
 
-      val xid = TxId (0x6196E3A0F6804B8FL)
+      val xid = TxId (0x6196E3A0F6804B8FL, 0)
       val t = TableId (0xA49381B59A722319L)
       val k = Bytes (0xB3334572873016E4L)
       val ts = h1.write (xid, TxClock.zero, Seq (Create (t, k, 1))) .pass.vt

@@ -5,12 +5,12 @@ import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.disk.RecordDescriptor
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{Bytes, Cell, TxClock}
 
 import Async.supply
 import Callback.ignore
 
-private class Acceptor (val key: Bytes, kit: PaxosKit) {
+private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
   import Acceptor.{NoPost, Post}
   import kit.{acceptors, archive, cluster, disks, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
@@ -77,7 +77,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
         if (state == Restoring.this) {
           state = chosen match {
             case Some (value) =>
-              Proposer.chosen (key, value) (proposers)
+              Proposer.chosen (key, time, value) (proposers)
               new Closed (value, 0)
             case None =>
               val s = new Deliberating (default, ballot, proposal, proposers)
@@ -86,8 +86,9 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
           }}}
 
     def restore() {
-      archive.get (key) run {
-        case Success (chosen) => restore (chosen)
+      archive.get (key, time) run {
+        case Success (Cell (_, found, chosen)) if found == time => restore (chosen)
+        case Success (_) => restore (None)
         case Failure (t) => panic (Restoring.this, t)
       }}
 
@@ -109,10 +110,10 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       }}
 
     def choose (chosen: Bytes) {
-      val gen  = archive.put (key, TxClock.zero, chosen)
+      val gen  = archive.put (key, time, chosen)
       state = new Closed (chosen, gen)
-      Acceptor.close.record (key, chosen, gen) .run (Callback.ignore)
-      Proposer.chosen (key, chosen) (proposers)
+      Acceptor.close.record (key, time, chosen, gen) .run (Callback.ignore)
+      Proposer.chosen (key, time, chosen) (proposers)
     }
 
     def checkpoint(): Async [Unit] =
@@ -154,40 +155,40 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
     fiber.delay (deliberatingTimeout) {
       if (state == Deliberating.this)
-        kit.propose (key, default) .run {
+        kit.propose (key, time, default) .run {
           case Success (v) => Acceptor.this.choose (v)
           case Failure (t) => panic (Deliberating.this, t)
         }}
 
     def open (ballot: Long, default: Bytes, proposer: Peer): Unit =
       post (new Post {
-        def record = Acceptor.open.record (key, default) .run (posted)
-        def reply() = Proposer.promise (key, ballot, None) (proposer)
+        def record = Acceptor.open.record (key, time, default) .run (posted)
+        def reply() = Proposer.promise (key, time, ballot, None) (proposer)
       })
 
     def promise (ballot: BallotNumber, proposal: Proposal, proposer: Peer): Unit =
       post (new Post {
-        def record = Acceptor.promise.record (key, ballot) .run (posted)
-        def reply() = Proposer.promise (key, ballot.number, proposal) (proposer)
+        def record = Acceptor.promise.record (key, time, ballot) .run (posted)
+        def reply() = Proposer.promise (key, time, ballot.number, proposal) (proposer)
       })
 
     def accept (ballot: BallotNumber, value: Bytes, proposer: Peer): Unit =
       post (new Post {
-        def record() = Acceptor.accept.record (key, ballot, value) .run (posted)
-        def reply() = Proposer.accept (key, ballot.number) (proposer)
+        def record() = Acceptor.accept.record (key, time, ballot, value) .run (posted)
+        def reply() = Proposer.accept (key, time, ballot.number) (proposer)
       })
 
     def reaccept (ballot: BallotNumber, proposer: Peer): Unit =
       post (new Post {
-        def record() = Acceptor.reaccept.record (key, ballot) .run (posted)
-        def reply() = Proposer.accept (key, ballot.number) (proposer)
+        def record() = Acceptor.reaccept.record (key, time, ballot) .run (posted)
+        def reply() = Proposer.accept (key, time, ballot.number) (proposer)
       })
 
     def query (proposer: Peer, _ballot: Long, default: Bytes) {
       proposers += proposer
       val ballot = BallotNumber (_ballot, proposer.id)
       if (ballot < this.ballot) {
-        Proposer.refuse (key, this.ballot.number) (proposer)
+        Proposer.refuse (key, time, this.ballot.number) (proposer)
       } else {
         promise (ballot, proposal, proposer)
         this.ballot = ballot
@@ -197,7 +198,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       proposers += proposer
       val ballot = BallotNumber (_ballot, proposer.id)
       if (ballot < this.ballot) {
-        Proposer.refuse (key, this.ballot.number) (proposer)
+        Proposer.refuse (key, time, this.ballot.number) (proposer)
       } else {
         if (proposal.isDefined && value == proposal.get._2)
           reaccept (ballot, proposer)
@@ -208,15 +209,15 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       }}
 
     def choose (chosen: Bytes) {
-      val gen  = archive.put (key, TxClock.zero, chosen)
+      val gen  = archive.put (key, time, chosen)
       state = new Closed (chosen, gen)
-      Acceptor.close.record (key, chosen, gen) .run (ignore)
+      Acceptor.close.record (key, time, chosen, gen) .run (ignore)
     }
 
     def checkpoint(): Async [Unit] = {
       proposal match {
-        case Some ((ballot, value)) => Acceptor.accept.record (key, ballot, value)
-        case None => Acceptor.open.record (key, default)
+        case Some ((ballot, value)) => Acceptor.accept.record (key, time, ballot, value)
+        case None => Acceptor.open.record (key, time, default)
       }}
 
     override def toString = s"Acceptor.Deliberating($key, $proposal)"
@@ -224,26 +225,26 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
 
   class Closed (val chosen: Bytes, gen: Long) extends State {
 
-    fiber.delay (closedLifetime) (acceptors.remove (key, Acceptor.this))
+    fiber.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
 
     def query (proposer: Peer, ballot: Long, default: Bytes): Unit =
-      Proposer.chosen (key, chosen) (proposer)
+      Proposer.chosen (key, time, chosen) (proposer)
 
     def propose (proposer: Peer, ballot: Long, value: Bytes): Unit =
-      Proposer.chosen (key, chosen) (proposer)
+      Proposer.chosen (key, time, chosen) (proposer)
 
     def choose (chosen: Bytes): Unit =
       require (chosen == this.chosen, "Paxos disagreement")
 
     def checkpoint(): Async [Unit] =
-      Acceptor.close.record (key, chosen, gen)
+      Acceptor.close.record (key, time, chosen, gen)
 
     override def toString = s"Acceptor.Closed($key, $chosen)"
   }
 
   class Panicked (s: State, thrown: Throwable) extends State {
 
-    fiber.delay (closedLifetime) (acceptors.remove (key, Acceptor.this))
+    fiber.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
 
     def query (proposer: Peer, ballot: Long, default: Bytes): Unit = ()
 
@@ -275,42 +276,42 @@ private object Acceptor {
 
   val query = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF14D4F00908FB59L, tuple (bytes, ulong, bytes))
+    MessageDescriptor (0xFF14D4F00908FB59L, tuple (bytes, txClock, ulong, bytes))
   }
 
   val propose = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF09AFD4F9B688D9L, tuple (bytes, ulong, bytes))
+    MessageDescriptor (0xFF09AFD4F9B688D9L, tuple (bytes, txClock, ulong, bytes))
   }
 
   val choose = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF761FFCDF5DEC8BL, tuple (bytes, bytes))
+    MessageDescriptor (0xFF761FFCDF5DEC8BL, tuple (bytes, txClock, bytes))
   }
 
   val open = {
     import PaxosPicklers._
-    RecordDescriptor (0x77784AB1, tuple (bytes, bytes))
+    RecordDescriptor (0x77784AB1, tuple (bytes, txClock, bytes))
   }
 
   val promise = {
     import PaxosPicklers._
-    RecordDescriptor (0x32A1544B, tuple (bytes, ballotNumber))
+    RecordDescriptor (0x32A1544B, tuple (bytes, txClock, ballotNumber))
   }
 
   val accept = {
     import PaxosPicklers._
-    RecordDescriptor (0xD6CCC0BE, tuple (bytes, ballotNumber, bytes))
+    RecordDescriptor (0xD6CCC0BE, tuple (bytes, txClock, ballotNumber, bytes))
   }
 
   val reaccept = {
     import PaxosPicklers._
-    RecordDescriptor (0x52720640, tuple (bytes, ballotNumber))
+    RecordDescriptor (0x52720640, tuple (bytes, txClock, ballotNumber))
   }
 
   val close = {
     import PaxosPicklers._
-    RecordDescriptor (0xAE980885, tuple (bytes, bytes, long))
+    RecordDescriptor (0xAE980885, tuple (bytes, txClock, bytes, long))
   }
 
   trait Post {

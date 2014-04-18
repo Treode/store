@@ -6,6 +6,7 @@ import com.treode.store.tier.TierMedic
 
 private class Medic (
     val key: Bytes,
+    val time: TxClock,
     val default: Bytes,
     var ballot: BallotNumber,
     var proposal: Proposal,
@@ -36,11 +37,11 @@ private class Medic (
 
   def closed (chosen: Bytes, gen: Long): Unit = fiber.execute {
     this.chosen = Some (chosen)
-    archive.put (gen, key, TxClock.zero, chosen)
+    archive.put (gen, key, time, chosen)
   }
 
   def close (kit: PaxosKit): Async [Acceptor] = fiber.supply {
-    val a = new Acceptor (key, kit)
+    val a = new Acceptor (key, time, kit)
     if (chosen.isDefined)
       a.state = new a.Closed (chosen.get, 0)
     else
@@ -53,6 +54,6 @@ private class Medic (
 
 private object Medic {
 
-  def apply (key: Bytes, default: Bytes, kit: RecoveryKit): Medic =
-    new Medic (key, default, BallotNumber.zero, Option.empty, None, kit)
+  def apply (key: Bytes, time: TxClock, default: Bytes, kit: RecoveryKit): Medic =
+    new Medic (key, time, default, BallotNumber.zero, Option.empty, None, kit)
 }

@@ -1,6 +1,6 @@
 package example1
 
-import com.treode.store.{Bytes, Cell, StubStore, TxClock, WriteOp, WriteResult}
+import com.treode.store.{Bytes, Cell, StubStore, TxClock, TxId, WriteOp, WriteResult}
 import com.twitter.finagle.http.MediaType
 import com.twitter.finatra.test.{MockApp, MockResult}
 import org.scalatest.{FreeSpec, Matchers}
@@ -45,7 +45,7 @@ class ResourceSpec extends FreeSpec with Matchers with SpecTools {
       val store = StubStore()
       val mock = newMock (store)
       val WriteResult.Written (ts) =
-        store.write (1, TxClock.zero, Seq (Create (123, Bytes ("abc"), entity.readJson.toBytes))) .await
+        store.write (TxId (1, 0), TxClock.zero, Seq (Create (123, Bytes ("abc"), entity.readJson.toBytes))) .await
       (store, mock, ts)
     }
 

@@ -3,7 +3,7 @@ package com.treode.store.paxos
 import com.treode.async.{Async, AsyncImplicits, Latch}
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position, RecordDescriptor}
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, TxClock}
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
 import Async.{guard, latch, supply}
@@ -14,27 +14,27 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
 
   val acceptors = newAcceptorsMap
 
-  def get (key: Bytes): Acceptor = {
-    var a0 = acceptors.get (key)
+  def get (key: Bytes, time: TxClock): Acceptor = {
+    var a0 = acceptors.get ((key, time))
     if (a0 != null)
       return a0
-    val a1 = new Acceptor (key, kit)
+    val a1 = new Acceptor (key, time, kit)
     a1.state = new a1.Opening
-    a0 = acceptors.putIfAbsent (key, a1)
+    a0 = acceptors.putIfAbsent ((key, time), a1)
     if (a0 != null)
       return a0
     a1
   }
 
-  def remove (key: Bytes, a: Acceptor): Unit =
-    acceptors.remove (key, a)
+  def remove (key: Bytes, time: TxClock, a: Acceptor): Unit =
+    acceptors.remove ((key, time), a)
 
   def recover (medics: Seq [Medic]): Async [Unit] = {
     for {
       _ <-
         for (m <- medics.latch.unit)
           for (a <- m.close (kit))
-            yield acceptors.put (m.key, a)
+            yield acceptors.put ((m.key, m.time), a)
     } yield ()
   }
 
@@ -63,16 +63,16 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
 
     Acceptors.archive.handle (this)
 
-    query.listen { case ((key, ballot, default), c) =>
-      get (key) query (c, ballot, default)
+    query.listen { case ((key, time, ballot, default), c) =>
+      get (key, time) query (c, ballot, default)
     }
 
-    propose.listen { case ((key, ballot, value), c) =>
-      get (key) propose (c, ballot, value)
+    propose.listen { case ((key, time, ballot, value), c) =>
+      get (key, time) propose (c, ballot, value)
     }
 
-    choose.listen { case ((key, chosen), c) =>
-      get (key) choose (chosen)
+    choose.listen { case ((key, time, chosen), c) =>
+      get (key, time) choose (chosen)
     }}}
 
 private object Acceptors {

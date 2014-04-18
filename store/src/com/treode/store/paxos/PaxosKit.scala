@@ -5,7 +5,7 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.{Cluster, ReplyTracker}
 import com.treode.disk.Disks
-import com.treode.store.{Atlas, Bytes, Paxos, StoreConfig}
+import com.treode.store.{Atlas, Bytes, Paxos, StoreConfig, TxClock}
 import com.treode.store.tier.TierTable
 
 import Async.async
@@ -28,11 +28,11 @@ private class PaxosKit (
   def locate (key: Bytes): ReplyTracker =
     atlas.locate (key.hashCode) .track
 
-  def lead (key: Bytes, value: Bytes): Async [Bytes] =
-    proposers.propose (0, key, value)
+  def lead (key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
+    proposers.propose (0, key, time, value)
 
-  def propose (key: Bytes, value: Bytes): Async [Bytes] =
-    proposers.propose (random.nextInt (17) + 1, key, value)
+  def propose (key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
+    proposers.propose (random.nextInt (17) + 1, key, time, value)
 }
 
 private [store] object PaxosKit {

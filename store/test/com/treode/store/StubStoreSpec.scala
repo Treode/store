@@ -15,7 +15,7 @@ class StubStoreSpec extends FreeSpec with StoreBehaviors {
       delegate.read (rt, ops)
 
     def write (ct: TxClock, ops: WriteOp*): Async [WriteResult] =
-      delegate.write (TxId (Random.nextLong), ct, ops)
+      delegate.write (TxId (Random.nextLong, 0), ct, ops)
 
     def expectCells (t: TableId) (expected: Cell*): Unit =
       assertResult (expected.sorted) (delegate.scan (t))

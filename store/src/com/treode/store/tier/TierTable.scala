@@ -15,8 +15,6 @@ trait TierTable {
 
   def get (key: Bytes, time: TxClock): Async [Cell]
 
-  def get (key: Bytes): Async [Option [Bytes]]
-
   def iterator: CellIterator
 
   def iterator (key: Bytes, time: TxClock): CellIterator

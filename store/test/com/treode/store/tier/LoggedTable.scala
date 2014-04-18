@@ -9,7 +9,8 @@ import Async.guard
 private class LoggedTable (table: TierTable) (implicit disks: Disks) extends TestTable {
 
   def get (key: Int): Async [Option [Int]] = guard {
-    table.get (Bytes (key)) .map (_.map (_.int))
+    for (cell <- table.get (Bytes (key), TxClock.max))
+      yield cell.value.map (_.int)
   }
 
   def iterator: AsyncIterator [TestCell] =

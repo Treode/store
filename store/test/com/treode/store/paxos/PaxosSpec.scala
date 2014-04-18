@@ -5,7 +5,7 @@ import scala.util.Random
 
 import com.treode.async.AsyncChecks
 import com.treode.cluster.StubNetwork
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, Cell}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
@@ -39,8 +39,8 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
 
       val k = Bytes (0x9E360154E51197A8L)
 
-      val cb1 = p1.paxos.propose (k, 1) .capture()
-      val cb2 = p2.paxos.propose (k, 2) .capture()
+      val cb1 = p1.paxos.propose (k, 0, 1) .capture()
+      val cb2 = p2.paxos.propose (k, 0, 2) .capture()
       kit.messageFlakiness = mf
       kit.runTasks (timers = true, count = 1000)
       val v = cb1.passed
@@ -51,7 +51,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
             !a.paxos.acceptors.acceptors.contains (k),
             "Expected acceptor to have been removed.")
       for (a <- as)
-        a.paxos.archive.get (k) .expect (Some (v))
+        a.paxos.archive.get (k, 0) .expect (k##0::v)
 
       summary.chose (v.int)
     } catch {
@@ -118,11 +118,11 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
         h.setCohorts (1, settled (0, h1, h2, h3))
 
       val k = Bytes (0xB3334572873016E4L)
-      h1.paxos.propose (k, 1) .expect (1)
+      h1.paxos.propose (k, 0, 1) .expect (1)
 
       for (h <- hs)
         h.setCohorts (1, moving (0, (h1, h2, h3), (h1, h2, h4)))
 
       for (h <- hs)
-        h.paxos.archive.get (k) .expect (Some (1))
+        h.paxos.archive.get (k, 0) .expect (k##0::1)
     }}}

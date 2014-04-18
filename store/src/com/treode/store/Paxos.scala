@@ -9,9 +9,9 @@ import com.treode.store.paxos.PaxosKit
 
 private trait Paxos {
 
-  def lead (key: Bytes, value: Bytes): Async [Bytes]
+  def lead (key: Bytes, time: TxClock, value: Bytes): Async [Bytes]
 
-  def propose (key: Bytes, value: Bytes): Async [Bytes]
+  def propose (key: Bytes, time: TxClock, value: Bytes): Async [Bytes]
 }
 
 private object Paxos {
