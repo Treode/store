@@ -1,13 +1,13 @@
 package com.treode.store.atomic
 
-import com.treode.store.{Bytes, CellIterator}
+import com.treode.store.{Bytes, CellIterator, TxClock}
 
 private object TimedFilters {
 
   /** Keep all that are newer than the limit; keep only the one newest that's older than the
     * limit.  Expects the input iterator to be sorted by key and reverse sorted by time.
     */
-  def clean (iter: CellIterator, limit: Long): CellIterator = {
+  def clean (iter: CellIterator, limit: TxClock): CellIterator = {
     var key = Option.empty [Bytes]
     iter.filter { cell =>
       if (cell.time >= limit) {

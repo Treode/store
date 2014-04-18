@@ -32,6 +32,8 @@ object TreodeBuild extends Build {
       "com.google.guava" % "guava" % "16.0.1",
       "com.googlecode.javaewah" % "JavaEWAH" % "0.8.3",
       "com.nothome" % "javaxdelta" % "2.0.1",
+      "joda-time" % "joda-time" % "2.3",
+      "org.joda" % "joda-convert" % "1.2",
       "org.slf4j" % "slf4j-api" % "1.7.6",
       "org.slf4j" % "slf4j-simple" % "1.7.6"))
 

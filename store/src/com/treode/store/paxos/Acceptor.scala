@@ -5,7 +5,7 @@ import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.disk.RecordDescriptor
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, TxClock}
 
 import Async.supply
 import Callback.ignore
@@ -109,7 +109,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       }}
 
     def choose (chosen: Bytes) {
-      val gen  = archive.put (key, 0, chosen)
+      val gen  = archive.put (key, TxClock.zero, chosen)
       state = new Closed (chosen, gen)
       Acceptor.close.record (key, chosen, gen) .run (Callback.ignore)
       Proposer.chosen (key, chosen) (proposers)
@@ -208,7 +208,7 @@ private class Acceptor (val key: Bytes, kit: PaxosKit) {
       }}
 
     def choose (chosen: Bytes) {
-      val gen  = archive.put (key, 0, chosen)
+      val gen  = archive.put (key, TxClock.zero, chosen)
       state = new Closed (chosen, gen)
       Acceptor.close.record (key, chosen, gen) .run (ignore)
     }

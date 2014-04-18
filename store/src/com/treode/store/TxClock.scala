@@ -5,12 +5,13 @@ import scala.language.implicitConversions
 import com.google.common.primitives.Longs
 import com.treode.async.misc.parseLong
 import com.treode.pickle.Picklers
+import org.joda.time.{DateTime, Instant}
 
-class TxClock private (val time: Long) extends AnyVal with Ordered [TxClock] {
+class TxClock private [store] (val time: Long) extends AnyVal with Ordered [TxClock] {
 
-  def + (n: Int): TxClock = TxClock (time+n)
+  def + (n: Int): TxClock = new TxClock (time+n)
 
-  def - (n: Int): TxClock = TxClock (time-n)
+  def - (n: Int): TxClock = new TxClock (time-n)
 
   def byteSize: Int = Longs.BYTES
 
@@ -30,13 +31,14 @@ object TxClock extends Ordering [TxClock] {
 
   def now = new TxClock (System.currentTimeMillis * 1000)
 
-  implicit def apply (time: Long): TxClock = {
-    require (time >= 0, "Time must be non-negative.")
-    new TxClock (time)
-  }
+  implicit def apply (time: Instant): TxClock =
+    new TxClock (time.getMillis * 1000)
+
+  implicit def apply (time: DateTime): TxClock =
+    new TxClock (time.getMillis * 1000)
 
   def parse (s: String): Option [TxClock] =
-    parseLong (s) .map (apply (_))
+    parseLong (s) .map (new TxClock (_))
 
   def compare (x: TxClock, y: TxClock): Int =
     x compare y

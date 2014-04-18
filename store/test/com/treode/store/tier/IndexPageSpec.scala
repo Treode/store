@@ -4,6 +4,8 @@ import com.treode.buffer.PagedBuffer
 import com.treode.store.{Bytes, Fruits, TxClock}
 import org.scalatest.WordSpec
 
+import TierTestTools._
+
 class IndexPageSpec extends WordSpec {
   import Fruits.{Apple, Banana, Kiwi, Kumquat, Orange}
 

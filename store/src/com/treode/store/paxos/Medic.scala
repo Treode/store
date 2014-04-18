@@ -1,7 +1,7 @@
 package com.treode.store.paxos
 
 import com.treode.async.{Async, Fiber}
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, TxClock}
 import com.treode.store.tier.TierMedic
 
 private class Medic (
@@ -36,7 +36,7 @@ private class Medic (
 
   def closed (chosen: Bytes, gen: Long): Unit = fiber.execute {
     this.chosen = Some (chosen)
-    archive.put (gen, key, 0, chosen)
+    archive.put (gen, key, TxClock.zero, chosen)
   }
 
   def close (kit: PaxosKit): Async [Acceptor] = fiber.supply {

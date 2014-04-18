@@ -86,7 +86,7 @@ private class SynthTable (
         }}
     } .map { _ =>
       if (candidate == Cell.sentinel)
-        Cell (key, 0, None)
+        Cell (key, TxClock.zero, None)
       else
         candidate
     }}

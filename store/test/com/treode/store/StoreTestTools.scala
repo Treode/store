@@ -12,10 +12,19 @@ import Assertions.{assertResult, fail}
 
 private trait StoreTestTools extends AsyncTestTools {
 
+  implicit def intToBytes (v: Int): Bytes =
+    Bytes (v)
+
+  implicit def longToBytes (v: Long): Bytes =
+    Bytes (v)
+
+  implicit def longToTxClock (v: Long): TxClock =
+    new TxClock (v)
+
   implicit class RichBytes (v: Bytes) {
-    def ## (time: Int) = Cell (v, TxClock (time), None)
+    def ## (time: Int) = Cell (v, time, None)
     def ## (time: TxClock) = Cell (v, time, None)
-    def :: (time: Int) = Value (TxClock (time), Some (v))
+    def :: (time: Int) = Value (time, Some (v))
     def :: (time: TxClock) = Value (time, Some (v))
     def :: (cell: Cell) = Cell (cell.key, cell.time, Some (v))
   }
@@ -26,13 +35,13 @@ private trait StoreTestTools extends AsyncTestTools {
   }
 
   implicit class RichOption (v: Option [Bytes]) {
-    def :: (time: Int) = Value (TxClock (time), v)
+    def :: (time: Int) = Value (time, v)
     def :: (time: TxClock) = Value (time, v)
   }
 
   implicit class RichTxClock (v: TxClock) {
-    def + (n: Int) = TxClock (v.time + n)
-    def - (n: Int) = TxClock (v.time - n)
+    def + (n: Int) = new TxClock (v.time + n)
+    def - (n: Int) = new TxClock (v.time - n)
   }
 
   implicit class RichWriteResult (actual: Async [WriteResult]) {
@@ -124,13 +133,6 @@ private trait StoreTestTools extends AsyncTestTools {
         num,
         Set (o1.localId, o2.localId, o3.localId),
         Set (t1.localId, t2.localId, t3.localId))
-  }
-
-  implicit def intToBytes (v: Int): Bytes =
-    Bytes (v)
-
-  implicit def longToBytes (v: Long): Bytes =
-    Bytes (v)
-}
+  }}
 
 private object StoreTestTools extends StoreTestTools

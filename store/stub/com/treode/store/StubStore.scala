@@ -19,12 +19,12 @@ class StubStore extends Store {
   private val data = new ConcurrentSkipListMap [Key, Option [Bytes]]
 
   private def get (table: TableId, key: Bytes, time: TxClock): Value = {
-    val limit = Key (table, key, 0)
+    val limit = Key (table, key, TxClock.zero)
     var entry = data.ceilingEntry (Key (table, key, time))
     if (entry != null && entry.getKey <= limit)
       Value (entry.getKey.time, entry.getValue)
     else
-      Value (0, None)
+      Value (TxClock.zero, None)
   }
 
   def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] = {

@@ -2,7 +2,7 @@ package com.treode.store.tier
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.disk.Disks
-import com.treode.store.{Bytes, StoreConfig, TableId}
+import com.treode.store.{Bytes, StoreConfig, TableId, TxClock}
 
 import Async.supply
 import TestTable.{checkpoint, delete, descriptor, put}
@@ -22,11 +22,11 @@ private class TestRecovery (
   }
 
   put.replay { case (gen, key, value) =>
-    medic.put (gen, Bytes (key), 0, Bytes (value))
+    medic.put (gen, Bytes (key), TxClock.zero, Bytes (value))
   }
 
   delete.replay { case (gen, key) =>
-    medic.delete (gen, Bytes (key), 0)
+    medic.delete (gen, Bytes (key), TxClock.zero)
   }
 
   def launch (implicit launch: Disks.Launch): Async [TestTable] = supply {
