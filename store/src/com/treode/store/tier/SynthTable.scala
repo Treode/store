@@ -7,6 +7,7 @@ import com.treode.disk.{Disks, ObjectId, PageHandler, PageDescriptor, Position}
 import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, TxClock}
 
 import Async.{async, supply, when}
+import Callback.ignore
 import TierTable.Meta
 
 private class SynthTable (
@@ -156,8 +157,8 @@ private class SynthTable (
     tiers.active
   }
 
-  def compact(): Async [Unit] =
-    pager.compact (obj)
+  def compact(): Unit =
+    pager.compact (obj) run (ignore)
 
   def compact (groups: Set [Long]): Async [Meta] =
     checkpoint()

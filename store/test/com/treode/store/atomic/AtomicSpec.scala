@@ -129,7 +129,10 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
       for (h <- hs)
         h.setCohorts (1, moving (0, (h1, h2, h3), (h1, h2, h4)))
-
+      scheduler.runTasks()
       for (h <- hs)
         h.expectCells (t) (k##ts::1)
+      for (h <- hs)
+        h.setCohorts (1, settled (0, h1, h2, h4))
+      scheduler.runTasks()
     }}}

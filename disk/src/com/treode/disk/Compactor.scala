@@ -110,15 +110,10 @@ private class Compactor (kit: DisksKit) {
       for ((disk, segs) <- segments groupBy (_.disk))
         disk.compacting (segs)
       for ((id, gs1) <- groups) {
-        if (cleaning) {
-          if (!(cleanq contains id))
-            cleanq += id
-          if (drainq contains id)
-            drainq -= id
-        } else {
-          if (!(cleanq contains id) && !(drainq contains id))
-            drainq += id
-        }
+        if (cleaning)
+          cleanq += id
+        else
+          drainq += id
         compact (id, gs1) run (latch)
       }}
 
@@ -140,7 +135,9 @@ private class Compactor (kit: DisksKit) {
 
   def compact (typ: TypeId, obj: ObjectId): Async [Unit] =
     fiber.async { cb =>
-      compact ((typ, obj), Set.empty [PageGroup]) run (cb)
+      val id = (typ, obj)
+      compactq += id
+      compact (id, Set.empty [PageGroup]) run (cb)
       if (!engaged)
         reengage()
     }

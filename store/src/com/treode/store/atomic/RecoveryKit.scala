@@ -6,9 +6,10 @@ import com.treode.async.{Async, Latch, Scheduler}
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
-import com.treode.store.{Atlas, Paxos, Store, StoreConfig, TxId}
+import com.treode.store.{Atlas, Cohort, Paxos, Store, StoreConfig, TxId}
 import com.treode.store.tier.TierMedic
 
+import Rebalancer.Targets
 import WriteDeputy.{aborted, committed, preparing}
 
 private class RecoveryKit (implicit
@@ -55,6 +56,6 @@ private class RecoveryKit (implicit
     } yield {
       kit.reader.attach()
       kit.writers.attach()
-      kit.rebalancer.attach()
+      atlas.rebalance (kit.rebalance _)
       kit
     }}}

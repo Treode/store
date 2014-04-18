@@ -115,15 +115,11 @@ private class Rebalancer (kit: AtomicKit) {
         None
     }
 
-  def rebalance (cohorts: Array [Cohort]): Async [Unit] =
+  def rebalance (targets: Targets): Async [Unit] =
     queue.async { cb =>
       callbacks ::= cb
-      tracker.start (Targets (cohorts))
-    }
-
-  def attach() {
-    atlas.rebalance (rebalance _)
-  }}
+      tracker.start (targets)
+    }}
 
 private object Rebalancer {
 

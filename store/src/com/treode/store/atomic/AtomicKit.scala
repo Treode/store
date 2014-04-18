@@ -8,8 +8,9 @@ import com.treode.disk.Disks
 import com.treode.store._
 import com.treode.store.tier.TierTable
 
-import Async.async
+import Async.{async, supply}
 import AsyncImplicits._
+import Rebalancer.Targets
 
 private class AtomicKit (implicit
     val random: Random,
@@ -42,7 +43,15 @@ private class AtomicKit (implicit
 
   def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult] =
     async (write (xid, ct, ops, _))
-}
+
+  def rebalance (cohorts: Array [Cohort]): Async [Unit] = {
+    val targets = Targets (cohorts)
+    for {
+      _ <- rebalancer.rebalance (targets)
+    } yield {
+      if (targets.isEmpty)
+        tables.compact()
+    }}}
 
 private [store] object AtomicKit {
 

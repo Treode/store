@@ -29,7 +29,7 @@ trait TierTable {
 
   def probe (groups: Set [Long]): Set [Long]
 
-  def compact(): Async [Unit]
+  def compact()
 
   def compact (groups: Set [Long]): Async [Meta]
 

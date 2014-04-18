@@ -101,12 +101,10 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
   def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
     supply (getTable (obj.id) .probe (groups))
 
-  def compact(): Async [Unit] =
-    guard {
-      val tables = materialize (this.tables.values)
-      for (table <- tables.latch.unit)
-        table.compact()
-    }
+  def compact() {
+    for (table <- tables.values)
+      table.compact()
+  }
 
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
