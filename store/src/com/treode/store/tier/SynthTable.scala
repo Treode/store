@@ -79,7 +79,7 @@ private class SynthTable (
       val tier = tiers (i)
       i += 1
       when (tier.earliest <= time && candidate.time < tier.latest) {
-        tier.ceiling (desc, key, time) .map {
+        tier.get (desc, key, time) .map {
          case Some (c @ Cell (k, t, v)) if key == k && candidate.time < t =>
             candidate = c
           case _ =>

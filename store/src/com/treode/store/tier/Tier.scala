@@ -20,7 +20,7 @@ private case class Tier (
     diskBytes: Long
 ) {
 
-  def ceiling (desc: TierDescriptor, key: Bytes, time: TxClock) (implicit disks: Disks): Async [Option [Cell]] =
+  def get (desc: TierDescriptor, key: Bytes, time: TxClock) (implicit disks: Disks): Async [Option [Cell]] =
     async { cb =>
 
       import desc.pager

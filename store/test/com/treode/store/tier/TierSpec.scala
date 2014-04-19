@@ -242,12 +242,12 @@ class TierSpec extends WordSpec {
         implicit val (scheduler, disks) = setup()
         val tier = buildTier (pageBytes)
 
-        def ceiling (key: Bytes): Option [Bytes] =
-          tier.ceiling (descriptor, key, TxClock.max) .pass.map (_.key)
+        def get (key: Bytes): Bytes =
+          tier.get (descriptor, key, TxClock.max) .pass.get.key
 
-        assertResult (Apple) (ceiling (Apple) .get)
-        assertResult (Orange) (ceiling (Orange) .get)
-        assertResult (Watermelon) (ceiling (Watermelon). get)
+        assertResult (Apple) (get (Apple))
+        assertResult (Orange) (get (Orange))
+        assertResult (Watermelon) (get (Watermelon))
       }
 
       "the pages are limited to one byte" in {
