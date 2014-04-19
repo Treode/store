@@ -10,5 +10,6 @@ private object TierPage {
     import StorePicklers._
     tagged [TierPage] (
         0x1 -> IndexPage.pickler,
-        0x2 -> TierCellPage.pickler)
+        0x2 -> TierCellPage.pickler,
+        0x3 -> BloomFilter.pickler)
   }}

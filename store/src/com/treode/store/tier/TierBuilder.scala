@@ -12,7 +12,8 @@ import Async.{async, guard, supply, when}
 private class TierBuilder (
     desc: TierDescriptor,
     obj: ObjectId,
-    gen: Long
+    gen: Long,
+    bloom: BloomFilter
 ) (implicit
     scheduler: Scheduler,
     disks: Disks,
@@ -57,8 +58,8 @@ private class TierBuilder (
   private var cells = new CellsNode
   private var earliestTime = TxClock.max
   private var latestTime = TxClock.zero
+  private var totalKeys = 0L
   private var totalEntries = 0L
-  private var totalEntryBytes = 0L
   private var totalDiskBytes = 0L
 
   private def push (key: Bytes, time: TxClock, pos: Position, height: Int) {
@@ -80,10 +81,16 @@ private class TierBuilder (
       stack.push (rstack.pop())
   }
 
+  private def write (page: TierPage): Async [Position] =
+    for {
+      pos <- pager.write (obj, gen, page)
+    } yield {
+      totalDiskBytes += pos.length
+      pos
+    }
+
   private def add (key: Bytes, time: TxClock, pos: Position, height: Int): Async [Unit] =
     guard {
-
-      totalDiskBytes += pos.length
 
       val node = stack.peek
 
@@ -108,7 +115,7 @@ private class TierBuilder (
           val page = IndexPage (node.entries)
           val last = page.last
           for {
-            pos2 <- pager.write (obj, gen, page)
+            pos2 <- write (page)
             _ = rpush (key, time, pos, height)
             _ <- add (last.key, last.time, pos2, height+1)
           } yield ()
@@ -120,13 +127,20 @@ private class TierBuilder (
       val time = cell.time
       val byteSize = cell.byteSize
 
-      // Require that user adds entries in sorted order.
-      require (cells.isEmpty || cells.last < cell)
+      // Require that user adds entries in sorted order; count unique keys.
+      if (cells.isEmpty) {
+        totalKeys += 1
+      } else {
+        val last = cells.last
+        require (last < cell, "Cells must be added to builder in order.")
+        if (last.key != cell.key) totalKeys += 1
+      }
 
       if (earliestTime > time) earliestTime = time
       if (latestTime < time) latestTime = time
       totalEntries += 1
-      totalEntryBytes += cell.byteSize
+
+      bloom.put (Bytes.pickler, cell.key)
 
       // Ensure that a value page has at least one entry.
       if (cells.byteSize + byteSize < config.targetPageBytes || cells.size < 1) {
@@ -139,7 +153,7 @@ private class TierBuilder (
         cells.add (cell, byteSize)
         val last = page.last
         for {
-          pos <- pager.write (obj, gen, page)
+          pos <- write (page)
           _ <- add (last.key, last.time, pos, 0)
         } yield ()
       }}
@@ -148,35 +162,34 @@ private class TierBuilder (
     val node = stack.pop()
     for {
       pos1 <-
-        if (node.size > 1) {
-          val page = IndexPage (node.entries)
-          pager.write (obj, gen, page)
-        } else {
-          supply (pos0)
-        }
-      _ <-
-        if (!stack.isEmpty)
-          add (page.last.key, page.last.time, pos1, node.height+1)
+        if (node.size > 1)
+          write (IndexPage (node.entries))
         else
-          supply (totalDiskBytes += pos1.length)
+          supply (pos0)
+      _ <- when (!stack.isEmpty) (add (page.last.key, page.last.time, pos1, node.height+1))
     } yield pos1
   }
 
   def result(): Async [Tier] = {
     val page = TierCellPage (cells.entries)
-    var pos: Position = null
+    var pagePos: Position = null
     for {
-      _ <- pager.write (obj, gen, page) .map (pos = _)
-      _ <- when (cells.size > 0) (add (page.last.key, page.last.time, pos, 0))
-      _ <- whilst (!stack.isEmpty) (pop (page, pos) .map (pos = _))
-    } yield Tier (gen, pos, totalEntries, earliestTime, latestTime, totalEntryBytes, totalDiskBytes)
-  }}
+      _ <- write (page) .map (pagePos = _)
+      _ <- when (cells.size > 0) (add (page.last.key, page.last.time, pagePos, 0))
+      _ <- whilst (!stack.isEmpty) (pop (page, pagePos) .map (pagePos = _))
+      bloomPos <- write (bloom)
+    } yield {
+      Tier (
+          gen, pagePos, bloomPos, totalKeys, totalEntries, earliestTime, latestTime,
+          totalDiskBytes)
+    }}}
 
 private object TierBuilder {
 
-  def build (desc: TierDescriptor, obj: ObjectId, gen: Long, iter: CellIterator) (
+  def build (desc: TierDescriptor, obj: ObjectId, gen: Long, est: Long, iter: CellIterator) (
       implicit scheduler: Scheduler, disks: Disks, config: StoreConfig): Async [Tier] = {
-    val builder = new TierBuilder (desc, obj, gen)
+    val bloom = BloomFilter (math.max (1L, est), config.falsePositiveProbability)
+    val builder = new TierBuilder (desc, obj, gen, bloom)
     for {
       _ <- iter.foreach (builder.add (_))
       tier <- builder.result()

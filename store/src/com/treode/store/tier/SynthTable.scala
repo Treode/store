@@ -183,8 +183,9 @@ private class SynthTable (
     }
 
     val iter = TierIterator.merge (desc, primary, emptyMemTier, tiers) .dedupe
+    val est = countMemTierKeys (primary) + tiers.keys
     for {
-      tier <- TierBuilder.build (desc, obj, gen, iter)
+      tier <- TierBuilder.build (desc, obj, gen, est, iter)
     } yield {
       val tiers = Tiers (tier)
       val meta = new Meta (gen, tiers)

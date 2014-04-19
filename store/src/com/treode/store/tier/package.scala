@@ -2,6 +2,7 @@ package com.treode.store
 
 import java.util.{Map => JMap}
 import java.util.concurrent.{ConcurrentNavigableMap, ConcurrentSkipListMap}
+import scala.collection.JavaConversions._
 
 package object tier {
 
@@ -16,6 +17,16 @@ package object tier {
 
   private [tier] def memTierEntryToCell (entry: JMap.Entry [MemKey, Option [Bytes]]): Cell =
     Cell (entry.getKey.key, entry.getKey.time, entry.getValue)
+
+  private [tier] def countMemTierKeys (tier: MemTier): Long = {
+    var count = 0L
+    var key = Bytes.empty
+    for (k <- tier.keySet; if k.key != k) {
+      key = k.key
+      count += 1
+    }
+    count
+  }
 
   private [tier] implicit class RichCellIterator (iter: CellIterator) {
 

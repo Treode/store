@@ -15,6 +15,9 @@ import com.treode.store.StorePicklers
   def active: Set [Long] =
     tiers .map (_.gen) .toSet
 
+  def keys: Long =
+    tiers .map (_.keys) .sum
+
   def size: Int =
     tiers.length
 

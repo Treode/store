@@ -7,7 +7,7 @@ private class BloomFilter private (
     val numBits: Int,
     val numHashes: Int,
     val bits: Array [Long]
-) {
+) extends TierPage {
 
   private def getBit (bit: Int): Boolean = {
     val longOfBits = bit >>> 6

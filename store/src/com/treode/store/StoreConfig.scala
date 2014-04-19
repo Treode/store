@@ -7,6 +7,7 @@ import com.treode.async.misc.RichInt
 
 class StoreConfig private (
     val priorValueEpoch: Epoch,
+    val falsePositiveProbability: Double,
     val lockSpaceBits: Int,
     val targetPageBytes: Int,
     val rebalanceBytes: Int,
@@ -26,12 +27,16 @@ object StoreConfig {
 
   def apply (
       priorValueEpoch: Epoch,
+      falsePositiveProbability: Double,
       lockSpaceBits: Int,
       targetPageBytes: Int,
       rebalanceBytes: Int,
       rebalanceEntries: Int
   ): StoreConfig = {
 
+    require (
+        0 < falsePositiveProbability && falsePositiveProbability < 1,
+        "The false positive probability must be between 0 and 1 exclusive.")
     require (
         0 <= lockSpaceBits && lockSpaceBits <= 14,
         "The size of the lock space must be between 0 and 14 bits.")
@@ -47,6 +52,7 @@ object StoreConfig {
 
     new StoreConfig (
         priorValueEpoch,
+        falsePositiveProbability,
         lockSpaceBits,
         targetPageBytes,
         rebalanceBytes,
@@ -55,6 +61,7 @@ object StoreConfig {
 
   def recommended (
       priorValueEpoch: Epoch = Epoch.StartOfYesterday,
+      falsePositiveProbability: Double = 0.01,
       lockSpaceBits: Int = 10,
       targetPageBytes: Int = 1<<20,
       rebalanceBytes: Int = 1<<20,
@@ -62,6 +69,7 @@ object StoreConfig {
   ): StoreConfig =
     StoreConfig (
         priorValueEpoch,
+        falsePositiveProbability,
         lockSpaceBits,
         targetPageBytes,
         rebalanceBytes,

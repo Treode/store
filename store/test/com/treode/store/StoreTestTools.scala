@@ -105,6 +105,7 @@ private trait StoreTestTools extends AsyncTestTools {
 
     def apply (
         priorValueEpoch: Epoch = Epoch.zero,
+        falsePositiveProbability: Double = 0.01,
         lockSpaceBits: Int = 4,
         targetPageBytes: Int = 1<<10,
         rebalanceBytes: Int = Int.MaxValue,
@@ -112,6 +113,7 @@ private trait StoreTestTools extends AsyncTestTools {
     ): StoreConfig =
       StoreConfig (
           priorValueEpoch,
+          falsePositiveProbability,
           lockSpaceBits,
           targetPageBytes,
           rebalanceBytes,

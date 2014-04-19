@@ -29,6 +29,10 @@ class TierSpec extends WordSpec {
     (scheduler, launch.disks)
   }
 
+  private def newBuilder (est: Long) (
+      implicit scheduler: StubScheduler, disks: Disks, config: StoreConfig) =
+    new TierBuilder (descriptor, 0, 0, BloomFilter (est, config.falsePositiveProbability))
+
   /** Get the depths of ValueBlocks reached from the index entries. */
   private def getDepths (entries: Iterable [IndexEntry], depth: Int) (
       implicit scheduler: StubScheduler, disks: Disks): Set [Int] =
@@ -61,7 +65,7 @@ class TierSpec extends WordSpec {
   private def buildTier (pageBytes: Int) (
       implicit scheduler: StubScheduler, disks: Disks): Tier = {
     implicit val config = TestStoreConfig (targetPageBytes = pageBytes)
-    val builder = new TierBuilder (descriptor, 0, 0)
+    val builder = newBuilder (AllFruits.length)
     AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .pass
     builder.result.pass
   }
@@ -98,7 +102,7 @@ class TierSpec extends WordSpec {
     "require that added entries are not duplicated" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = TestStoreConfig()
-      val builder = new TierBuilder (descriptor, 0, 0)
+      val builder = newBuilder (2)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
@@ -106,7 +110,7 @@ class TierSpec extends WordSpec {
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = TestStoreConfig()
-      val builder = new TierBuilder (descriptor, 0, 0)
+      val builder = newBuilder (2)
       builder.add (Cell (Orange, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
@@ -114,22 +118,45 @@ class TierSpec extends WordSpec {
     "allow properly sorted entries" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = TestStoreConfig()
-      val builder = new TierBuilder (descriptor, 0, 0)
+      val builder = newBuilder (3)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Orange, 0, None)) .pass
       builder.add (Cell (Watermelon, 0, None)) .pass
     }
 
+    "track the number of entries and keys" in {
+      implicit val (scheduler, disks) = setup()
+      implicit val config = TestStoreConfig()
+      val builder = newBuilder (3)
+      builder.add (Cell (Apple, 3, None)) .pass
+      builder.add (Cell (Apple, 1, None)) .pass
+      builder.add (Cell (Orange, 5, None)) .pass
+      builder.add (Cell (Orange, 3, None)) .pass
+      builder.add (Cell (Orange, 1, None)) .pass
+      builder.add (Cell (Watermelon, 3, None)) .pass
+      val tier = builder.result(). pass
+      assertResult (3) (tier.keys)
+    }
+
     "track the bounds on the times" in {
       implicit val (scheduler, disks) = setup()
       implicit val config = TestStoreConfig()
-      val builder = new TierBuilder (descriptor, 0, 0)
+      val builder = newBuilder (3)
       builder.add (Cell (Apple, 3, None)) .pass
       builder.add (Cell (Orange, 5, None)) .pass
       builder.add (Cell (Watermelon, 7, None)) .pass
       val tier = builder.result(). pass
       assertResult (3) (tier.earliest.time)
       assertResult (7) (tier.latest.time)
+    }
+
+    "track the number of bytes" in {
+      implicit val (scheduler, disks) = setup()
+      implicit val config = TestStoreConfig()
+      val builder = newBuilder (3)
+      builder.add (Cell (Apple, 1, None)) .pass
+      val tier = builder.result(). pass
+      assertResult (128) (tier.diskBytes)
     }
 
     "build a balanced tree with all keys" when {
@@ -139,21 +166,21 @@ class TierSpec extends WordSpec {
         val tier = buildTier (pageBytes)
         expectBalanced (tier)
         assertResult (AllFruits.toSeq) (toSeq (tier) .map (_.key))
+        assertResult (AllFruits.length) (tier.keys)
         assertResult (AllFruits.length) (tier.entries)
-        assertResult (2500) (tier.entryBytes)
         assertResult (expectedDiskBytes) (tier.diskBytes)
       }
 
       "the pages are limited to one byte" in {
-        checkBuild (1, 9152)
+        checkBuild (1, 9024)
       }
 
       "the pages are limited to 256 bytes" in {
-        checkBuild (1 << 8, 1664)
+        checkBuild (1 << 8, 1792)
       }
 
       "the pages are limited to 64K" in {
-        checkBuild (1 << 16, 2176)
+        checkBuild (1 << 16, 1216)
       }}}
 
   "The TierIterator" when {
@@ -212,22 +239,15 @@ class TierSpec extends WordSpec {
 
       def checkFind (pageBytes: Int) {
 
-        val AppleX = Bytes ("applex")
-        val OrangeX = Bytes ("orangex")
-        val WatermelonX = Bytes ("watermelonx")
-
         implicit val (scheduler, disks) = setup()
         val tier = buildTier (pageBytes)
 
         def ceiling (key: Bytes): Option [Bytes] =
-          tier.ceiling (descriptor, key, 0) .pass.map (_.key)
+          tier.ceiling (descriptor, key, TxClock.max) .pass.map (_.key)
 
         assertResult (Apple) (ceiling (Apple) .get)
-        assertResult (Apricot) (ceiling (AppleX) .get)
         assertResult (Orange) (ceiling (Orange) .get)
-        assertResult (Papaya) (ceiling (OrangeX) .get)
         assertResult (Watermelon) (ceiling (Watermelon). get)
-        assertResult (None) (ceiling (WatermelonX))
       }
 
       "the pages are limited to one byte" in {
