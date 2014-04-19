@@ -9,7 +9,6 @@ import Assertions.fail
 
 private trait AtomicTestTools extends StoreTestTools {
 
-
   implicit class RichPrepareResult (actual: Async [PrepareResult]) {
     import PrepareResult._
 

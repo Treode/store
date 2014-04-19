@@ -1,10 +1,14 @@
 package com.treode.store.tier
 
 import com.treode.disk.{Disks, PageDescriptor, PageHandler, TypeId}
-import com.treode.store.StorePicklers
+import com.treode.store.{Cell, Residents, StorePicklers, TableId}
 import com.treode.pickle.Pickler
 
-class TierDescriptor private (val id: TypeId) {
+private [store] class TierDescriptor private (
+    val id: TypeId
+) (
+    val residency: (Residents, TableId, Cell) => Boolean
+) {
 
   private [tier] val pager = {
     import StorePicklers._
@@ -17,8 +21,8 @@ class TierDescriptor private (val id: TypeId) {
   override def toString = s"TierDescriptor($id)"
 }
 
-object TierDescriptor {
+private [store] object TierDescriptor {
 
-  def apply (id: TypeId): TierDescriptor =
-    new TierDescriptor (id)
+  def apply (id: TypeId) (residency: (Residents, TableId, Cell) => Boolean): TierDescriptor =
+    new TierDescriptor (id) (residency)
 }

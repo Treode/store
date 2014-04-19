@@ -18,7 +18,7 @@ private [store] class AtlasKit (implicit cluster: Cluster) extends Atlas {
   var version = 0
   var cohorts = new Array [Cohort] (0)
   var mask = 0
-  var residents = Residents.empty
+  var residents = Residents.all
 
   def rebalance (f: Array [Cohort] => Async [Unit]): Unit =
     rebalancers.rebalance (f)

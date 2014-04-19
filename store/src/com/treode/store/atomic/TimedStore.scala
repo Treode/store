@@ -107,16 +107,12 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
       table.compact()
   }
 
-  def resident (table: TableId, residents: Residents): Cell => Boolean = {
-    cell => residents.contains (locator, (table, cell.key))
-  }
-
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
       val id = TableId (obj.id)
       val residents = atlas.residents
       for {
-        meta <- getTable (id) .compact (groups, residents) (resident (id, residents))
+        meta <- getTable (id) .compact (groups, residents)
         _ <- TimedStore.checkpoint.record (id, meta)
       } yield ()
     }
@@ -124,7 +120,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
   private def checkpoint (id: TableId, table: TierTable): Async [Unit] = {
     val residents = atlas.residents
     for {
-      meta <- table.checkpoint (residents) (resident (id, residents))
+      meta <- table.checkpoint (residents)
       _ <- TimedStore.checkpoint.record (id, meta)
     } yield ()
   }
@@ -142,7 +138,9 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
 
 private object TimedStore {
 
-  val table = TierDescriptor (0xB500D51FACAEA961L)
+  val table = TierDescriptor (0xB500D51FACAEA961L) { (residents, obj, cell) =>
+    residents contains (AtomicKit.locator, (TableId (obj.id), cell.key))
+  }
 
   val receive = {
     import AtomicPicklers._

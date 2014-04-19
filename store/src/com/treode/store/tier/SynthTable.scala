@@ -39,7 +39,6 @@ private class SynthTable (
     disks: Disks,
     config: StoreConfig
 ) extends TierTable {
-  import config.priorValueEpoch
   import desc.pager
   import scheduler.whilst
 
@@ -110,7 +109,7 @@ private class SynthTable (
       readLock.unlock()
     }}
 
-  def iterator: CellIterator = {
+  def iterator (residents: Residents): CellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -119,11 +118,10 @@ private class SynthTable (
     }
     TierIterator
         .merge (desc, primary, secondary, tiers)
-        .dedupe
-        .retire (priorValueEpoch.limit)
+        .clean (desc, obj.id, residents)
   }
 
-  def iterator (key: Bytes, time: TxClock): CellIterator = {
+  def iterator (key: Bytes, time: TxClock, residents: Residents): CellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -132,8 +130,7 @@ private class SynthTable (
     }
     TierIterator
         .merge (desc, key, time, primary, secondary, tiers)
-        .dedupe
-        .retire (priorValueEpoch.limit)
+        .clean (desc, obj.id, residents)
   }
 
   def receive (cells: Seq [Cell]): (Long, Seq [Cell]) = {
@@ -164,10 +161,10 @@ private class SynthTable (
   def compact(): Unit =
     pager.compact (obj) run (ignore)
 
-  def compact (groups: Set [Long], residents: Residents) (p: Cell => Boolean): Async [Meta] =
-    checkpoint (residents) (p)
+  def compact (groups: Set [Long], residents: Residents): Async [Meta] =
+    checkpoint (residents)
 
-  def checkpoint (residents: Residents) (p: Cell => Boolean): Async [Meta] = disks.join {
+  def checkpoint (residents: Residents): Async [Meta] = disks.join {
 
     writeLock.lock()
     val (gen, primary, tiers) = try {
@@ -182,7 +179,9 @@ private class SynthTable (
       writeLock.unlock()
     }
 
-    val iter = TierIterator.merge (desc, primary, emptyMemTier, tiers) .dedupe
+    val iter = TierIterator
+        .merge (desc, primary, emptyMemTier, tiers)
+        .clean (desc, obj.id, residents)
     val est = countMemTierKeys (primary) + tiers.keys
     for {
       tier <- TierBuilder.build (desc, obj, gen, est, residents, iter)

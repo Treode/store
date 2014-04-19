@@ -23,7 +23,7 @@ private object TestTable {
 
   val descriptor = {
     import StorePicklers._
-    TierDescriptor (0x28)
+    TierDescriptor (0x28) ((_, _, _) => true)
   }
 
   val put = {

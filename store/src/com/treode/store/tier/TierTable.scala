@@ -15,9 +15,9 @@ trait TierTable {
 
   def get (key: Bytes, time: TxClock): Async [Cell]
 
-  def iterator: CellIterator
+  def iterator (residents: Residents): CellIterator
 
-  def iterator (key: Bytes, time: TxClock): CellIterator
+  def iterator (key: Bytes, time: TxClock, residents: Residents): CellIterator
 
   def put (key: Bytes, time: TxClock, value: Bytes): Long
 
@@ -29,9 +29,9 @@ trait TierTable {
 
   def compact()
 
-  def compact (groups: Set [Long], residents: Residents) (p: Cell => Boolean): Async [Meta]
+  def compact (groups: Set [Long], residents: Residents): Async [Meta]
 
-  def checkpoint (residents: Residents) (p: Cell => Boolean): Async [Meta]
+  def checkpoint (residents: Residents): Async [Meta]
 }
 
 object TierTable {

@@ -31,12 +31,13 @@ private class Rebalancer (kit: AtomicKit) {
     var entries = 0
     var bytes = 0
 
+    val residents = atlas.residents
     val (table, iter, next) =
       tables.ceiling (start.table) match {
         case Some (table) if table.obj.id == start.table.id =>
-          (table.obj.id, table.iterator (start.key, start.time), Point.Middle (table.obj.id))
+          (table.obj.id, table.iterator (start.key, start.time, residents), Point.Middle (table.obj.id))
         case Some (table) if Point.Middle (table.obj.id) < limit =>
-          (table.obj.id, table.iterator, Point.Middle (table.obj.id+1))
+          (table.obj.id, table.iterator (residents), Point.Middle (table.obj.id+1))
         case _ =>
           (0L, AsyncIterator.empty [Cell], limit)
       }

@@ -26,7 +26,7 @@ private object TierTestTools extends StoreTestTools {
     }
 
     def checkpoint(): Async [Meta] =
-      table.checkpoint (Residents.empty) (_ => true)
+      table.checkpoint (Residents.all)
 
     /** Requires that
       *   - cells are in order
@@ -39,7 +39,7 @@ private object TierTestTools extends StoreTestTools {
         require (c1.key != c2.key || c1.time > c2.time+1, s"Times must have gaps.")
         require (Apple < c1.key && c1.key < Tomato, "Key must be between Apple and Tomato.")
       }
-      assertResult (cells) (table.iterator.toSeq)
+      assertResult (cells) (table .iterator (Residents.all) .toSeq)
       table.get (Apple, 0) .expect (Apple##0)
       table.get (Tomato, 0) .expect (Tomato##0)
       for (Seq (c1, c2) <- cells.sliding (2)) {

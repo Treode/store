@@ -68,5 +68,5 @@ extends StubActiveHost (id, network) {
 
   def expectCells (id: TableId) (cs: Cell*) {
     val t = atomic.tables.tables.get (id)
-    assertResult (cs) (t.iterator.toSeq)
+    assertResult (cs) (t .iterator (Residents.all) .toSeq)
   }}

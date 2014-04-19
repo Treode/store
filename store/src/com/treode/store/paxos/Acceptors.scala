@@ -42,15 +42,11 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
     supply (archive.probe (groups))
 
-  def resident (residents: Residents): Cell => Boolean = {
-    cell => residents.contains (locator, (cell.key, cell.time))
-  }
-
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
       val residents = atlas.residents
       for {
-        meta <- archive.compact (groups, residents) (resident (residents))
+        meta <- archive.compact (groups, residents)
         _ <- Acceptors.checkpoint.record (meta)
       } yield ()
     }
@@ -60,9 +56,7 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
       val residents = atlas.residents
       for {
         _ <- latch (
-            archive
-                .checkpoint (residents) (resident (residents))
-                .flatMap (Acceptors.checkpoint.record (_)),
+            archive.checkpoint (residents) .flatMap (Acceptors.checkpoint.record (_)),
             materialize (acceptors.values) .latch.unit foreach (_.checkpoint()))
       } yield ()
     }
@@ -91,7 +85,6 @@ private object Acceptors {
     RecordDescriptor (0x42A17DC354412E17L, tierMeta)
   }
 
-  val archive = {
-    import PaxosPicklers._
-    TierDescriptor (0x9F59C4262C8190E8L)
+  val archive = TierDescriptor (0x9F59C4262C8190E8L) { (residents, _, cell) =>
+    residents contains (PaxosKit.locator, (cell.key, cell.time))
   }}

@@ -16,7 +16,7 @@ import TierTestTools._
 
 class SynthTableSpec extends FreeSpec {
 
-  val tier = TierDescriptor (0x56)
+  val tier = TierDescriptor (0x56) ((_, _, _) => true)
 
   private def mkTable (disk: File) (
       implicit scheduler: StubScheduler): SynthTable = {

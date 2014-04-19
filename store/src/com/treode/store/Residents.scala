@@ -19,7 +19,7 @@ private object Residents {
     new Residents (nums.toSet, cohorts.size - 1)
   }
 
-  val empty = new Residents (Set.empty, 0)
+  val all = new Residents (Set (0), 0)
 
   val pickler = {
     import StorePicklers._

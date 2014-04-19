@@ -2,7 +2,7 @@ package com.treode.store.tier
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
 import com.treode.disk.Disks
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{Bytes, Residents, TxClock}
 
 import Async.guard
 import TierTestTools._
@@ -15,7 +15,7 @@ private class LoggedTable (table: TierTable) (implicit disks: Disks) extends Tes
   }
 
   def iterator: AsyncIterator [TestCell] =
-    table.iterator.map (new TestCell (_))
+    table.iterator (Residents.all) .map (new TestCell (_))
 
   def put (key: Int, value: Int): Async [Unit] = guard {
     val gen = table.put (Bytes (key), TxClock.zero, Bytes (value))
