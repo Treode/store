@@ -10,6 +10,8 @@ import com.treode.pickle.Pickler
 
 trait Cluster {
 
+  def localId: HostId
+
   def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any)
 
   def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any)
@@ -51,7 +53,7 @@ object Cluster {
 
       val listener = new Listener (localId, localAddr, group, peers)
 
-      new ClusterLive (ports, peers, listener, scuttlebutt)
+      new ClusterLive (localId, ports, peers, listener, scuttlebutt)
 
     } catch {
 

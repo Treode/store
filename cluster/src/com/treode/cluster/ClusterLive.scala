@@ -5,6 +5,7 @@ import java.net.SocketAddress
 import com.treode.pickle.Pickler
 
 private class ClusterLive (
+    val localId: HostId,
     ports: PortRegistry,
     peers: PeerRegistry,
     listener: Listener,

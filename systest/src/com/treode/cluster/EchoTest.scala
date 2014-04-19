@@ -100,7 +100,9 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
     val cluster = new Cluster {
 
       private val scuttlebutt: Scuttlebutt =
-        new Scuttlebutt (localId, _peers) (_scheduler)
+        new Scuttlebutt (EchoTest.this.localId, _peers) (_scheduler)
+
+      def localId = EchoTest.this.localId
 
       def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
         _ports.listen (desc.pmsg, desc.id) (f)

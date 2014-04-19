@@ -6,16 +6,17 @@ import scala.collection.JavaConversions
 import com.treode.async.{Async, AsyncImplicits, Callback, Latch}
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disks, ObjectId, PageHandler, Position, RecordDescriptor}
-import com.treode.store.{Cell, ReadOp, TableId, TxClock, TxId, Value, WriteOp}
+import com.treode.store.{Cell, ReadOp, Residents, TableId, TxClock, TxId, Value, WriteOp}
 import com.treode.store.locks.LockSpace
 import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
 
 import Async.{async, guard, supply}
 import AsyncImplicits._
+import AtomicKit.locator
 import JavaConversions._
 
 private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
-  import kit.{config, disks, scheduler}
+  import kit.{atlas, config, disks, scheduler}
 
   val space = new LockSpace
   val tables = newTablesMap
@@ -109,8 +110,10 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
       val id = TableId (obj.id)
+      val residents = atlas.residents
+      def resident (cell: Cell) = residents.contains (locator, (id, cell.key))
       for {
-        meta <- getTable (id) .compact (groups)
+        meta <- getTable (id) .compact (groups) (resident _)
         _ <- TimedStore.checkpoint.record (id, meta)
       } yield ()
     }

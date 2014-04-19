@@ -3,7 +3,7 @@ package com.treode.store.tier
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
-import com.treode.disk.{Disks, ObjectId, PageHandler, PageDescriptor, Position}
+import com.treode.disk.{Disks, ObjectId, PageDescriptor, Position}
 import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, TxClock}
 
 import Async.{async, supply, when}
@@ -164,7 +164,7 @@ private class SynthTable (
   def compact(): Unit =
     pager.compact (obj) run (ignore)
 
-  def compact (groups: Set [Long]): Async [Meta] =
+  def compact (groups: Set [Long]) (p: Cell => Boolean): Async [Meta] =
     checkpoint()
 
   def checkpoint(): Async [Meta] = disks.join {

@@ -29,7 +29,7 @@ trait TierTable {
 
   def compact()
 
-  def compact (groups: Set [Long]): Async [Meta]
+  def compact (groups: Set [Long]) (p: Cell => Boolean): Async [Meta]
 
   def checkpoint(): Async [Meta]
 }

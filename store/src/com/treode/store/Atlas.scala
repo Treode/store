@@ -14,6 +14,8 @@ private trait Atlas {
   def locate [A] (p: Pickler [A], v: A): Cohort =
     locate (p.murmur32 (v))
 
+  def residents: Residents
+
   def issue (cohorts: Array [Cohort]) (implicit catalogs: Catalogs): Async [Unit]
 }
 

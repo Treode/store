@@ -3,14 +3,15 @@ package com.treode.store.paxos
 import com.treode.async.{Async, AsyncImplicits, Latch}
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position, RecordDescriptor}
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{Bytes, Cell, Residents, TxClock}
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
 import Async.{guard, latch, supply}
 import AsyncImplicits._
+import PaxosKit.locator
 
 private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
-  import kit.{archive, cluster, disks}
+  import kit.{archive, atlas, cluster, disks}
 
   val acceptors = newAcceptorsMap
 
@@ -43,8 +44,10 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
 
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
+      val residents = atlas.residents
+      def resident (cell: Cell) = residents.contains (locator, (cell.key, cell.time))
       for {
-        meta <- archive.compact (groups)
+        meta <- archive.compact (groups) (resident _)
         _ <- Acceptors.checkpoint.record (meta)
       } yield ()
     }
