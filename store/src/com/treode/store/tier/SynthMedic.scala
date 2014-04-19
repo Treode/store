@@ -3,12 +3,12 @@ package com.treode.store.tier
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.Scheduler
-import com.treode.disk.{Disks, ObjectId, Position}
-import com.treode.store.{Bytes, StoreConfig, TxClock}
+import com.treode.disk.{Disks, Position}
+import com.treode.store.{Bytes, StoreConfig, TableId, TxClock}
 
 private class SynthMedic (
     desc: TierDescriptor,
-    obj: ObjectId
+    id: TableId
 ) (implicit
     scheduler: Scheduler,
     config: StoreConfig
@@ -104,5 +104,5 @@ private class SynthMedic (
       writeLock.unlock()
     }
 
-    new SynthTable (desc, obj, lock, gem, primary, secondary, tiers)
+    new SynthTable (desc, id, lock, gem, primary, secondary, tiers)
   }}

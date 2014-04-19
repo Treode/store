@@ -3,8 +3,8 @@ package com.treode.store.tier
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
-import com.treode.disk.{Disks, ObjectId, PageDescriptor, Position}
-import com.treode.store.{Bytes, Cell, CellIterator, Residents, StoreConfig, TxClock}
+import com.treode.disk.{Disks, PageDescriptor, Position}
+import com.treode.store.{Bytes, Cell, CellIterator, Residents, StoreConfig, TableId, TxClock}
 
 import Async.{async, supply, when}
 import Callback.ignore
@@ -14,7 +14,7 @@ private class SynthTable (
 
     val desc: TierDescriptor,
 
-    val obj: ObjectId,
+    val id: TableId,
 
     // To lock the generation and references to the primary and secondary; this locks the references
     // only, while the skip list manages concurrent readers and writers of entries.  Writing to the
@@ -118,7 +118,7 @@ private class SynthTable (
     }
     TierIterator
         .merge (desc, primary, secondary, tiers)
-        .clean (desc, obj.id, residents)
+        .clean (desc, id, residents)
   }
 
   def iterator (key: Bytes, time: TxClock, residents: Residents): CellIterator = {
@@ -130,7 +130,7 @@ private class SynthTable (
     }
     TierIterator
         .merge (desc, key, time, primary, secondary, tiers)
-        .clean (desc, obj.id, residents)
+        .clean (desc, id, residents)
   }
 
   def receive (cells: Seq [Cell]): (Long, Seq [Cell]) = {
@@ -159,7 +159,7 @@ private class SynthTable (
   }
 
   def compact(): Unit =
-    pager.compact (obj) run (ignore)
+    pager.compact (id.id) run (ignore)
 
   def compact (groups: Set [Long], residents: Residents): Async [Meta] =
     checkpoint (residents)
@@ -181,10 +181,10 @@ private class SynthTable (
 
     val iter = TierIterator
         .merge (desc, primary, emptyMemTier, tiers)
-        .clean (desc, obj.id, residents)
+        .clean (desc, id, residents)
     val est = countMemTierKeys (primary) + tiers.keys
     for {
-      tier <- TierBuilder.build (desc, obj, gen, est, residents, iter)
+      tier <- TierBuilder.build (desc, id, gen, est, residents, iter)
     } yield {
       val tiers = Tiers (tier)
       val meta = new Meta (gen, tiers)
@@ -200,8 +200,8 @@ private class SynthTable (
 
 private object SynthTable {
 
-  def apply (desc: TierDescriptor, obj: ObjectId) (
+  def apply (desc: TierDescriptor, id: TableId) (
       implicit scheduler: Scheduler, disk: Disks, config: StoreConfig): SynthTable = {
     val lock = new ReentrantReadWriteLock
-    new SynthTable (desc, obj, lock, 0, newMemTier, newMemTier, Tiers.empty)
+    new SynthTable (desc, id, lock, 0, newMemTier, newMemTier, Tiers.empty)
   }}

@@ -4,14 +4,14 @@ import java.util.{ArrayDeque, ArrayList}
 import scala.collection.JavaConversions._
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.disk.{Disks, ObjectId, Position}
-import com.treode.store.{Bytes, Cell, CellIterator, Residents, StoreConfig, TxClock}
+import com.treode.disk.{Disks, Position}
+import com.treode.store.{Bytes, Cell, CellIterator, Residents, StoreConfig, TableId, TxClock}
 
 import Async.{async, guard, supply, when}
 
 private class TierBuilder (
     desc: TierDescriptor,
-    obj: ObjectId,
+    id: TableId,
     gen: Long,
     residents: Residents,
     bloom: BloomFilter
@@ -84,7 +84,7 @@ private class TierBuilder (
 
   private def write (page: TierPage): Async [Position] =
     for {
-      pos <- pager.write (obj, gen, page)
+      pos <- pager.write (id.id, gen, page)
     } yield {
       totalDiskBytes += pos.length
       pos
@@ -189,7 +189,7 @@ private object TierBuilder {
 
   def build (
       desc: TierDescriptor,
-      obj: ObjectId,
+      id: TableId,
       gen: Long,
       est: Long,
       residents: Residents,
@@ -200,7 +200,7 @@ private object TierBuilder {
       config: StoreConfig
   ): Async [Tier] = {
     val bloom = BloomFilter (math.max (1L, est), config.falsePositiveProbability)
-    val builder = new TierBuilder (desc, obj, gen, residents, bloom)
+    val builder = new TierBuilder (desc, id, gen, residents, bloom)
     for {
       _ <- iter.foreach (builder.add (_))
       tier <- builder.result()

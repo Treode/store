@@ -34,12 +34,12 @@ private class Rebalancer (kit: AtomicKit) {
     val residents = atlas.residents
     val (table, iter, next) =
       tables.ceiling (start.table) match {
-        case Some (table) if table.obj.id == start.table.id =>
-          (table.obj.id, table.iterator (start.key, start.time, residents), Point.Middle (table.obj.id))
-        case Some (table) if Point.Middle (table.obj.id) < limit =>
-          (table.obj.id, table.iterator (residents), Point.Middle (table.obj.id+1))
+        case Some (table) if table.id == start.table =>
+          (table.id, table.iterator (start.key, start.time, residents), Point.Middle (table.id))
+        case Some (table) if Point.Middle (table.id) < limit =>
+          (table.id, table.iterator (residents), Point.Middle (table.id.id+1))
         case _ =>
-          (0L, AsyncIterator.empty [Cell], limit)
+          (TableId (0), AsyncIterator.empty [Cell], limit)
       }
 
     iter.whilst { cell =>
