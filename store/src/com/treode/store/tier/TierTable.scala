@@ -2,7 +2,7 @@ package com.treode.store.tier
 
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.disk.{Disks, ObjectId, TypeId}
-import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, StorePicklers, TxClock}
+import com.treode.store._
 
 import Async.async
 import TierTable.Meta
@@ -29,9 +29,9 @@ trait TierTable {
 
   def compact()
 
-  def compact (groups: Set [Long]) (p: Cell => Boolean): Async [Meta]
+  def compact (groups: Set [Long], residents: Residents) (p: Cell => Boolean): Async [Meta]
 
-  def checkpoint(): Async [Meta]
+  def checkpoint (residents: Residents) (p: Cell => Boolean): Async [Meta]
 }
 
 object TierTable {

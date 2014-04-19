@@ -5,7 +5,7 @@ import scala.collection.JavaConversions._
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.disk.{Disks, ObjectId, Position}
-import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, TxClock}
+import com.treode.store.{Bytes, Cell, CellIterator, Residents, StoreConfig, TxClock}
 
 import Async.{async, guard, supply, when}
 
@@ -13,6 +13,7 @@ private class TierBuilder (
     desc: TierDescriptor,
     obj: ObjectId,
     gen: Long,
+    residents: Residents,
     bloom: BloomFilter
 ) (implicit
     scheduler: Scheduler,
@@ -180,16 +181,26 @@ private class TierBuilder (
       bloomPos <- write (bloom)
     } yield {
       Tier (
-          gen, pagePos, bloomPos, totalKeys, totalEntries, earliestTime, latestTime,
+          gen, pagePos, bloomPos, residents, totalKeys, totalEntries, earliestTime, latestTime,
           totalDiskBytes)
     }}}
 
 private object TierBuilder {
 
-  def build (desc: TierDescriptor, obj: ObjectId, gen: Long, est: Long, iter: CellIterator) (
-      implicit scheduler: Scheduler, disks: Disks, config: StoreConfig): Async [Tier] = {
+  def build (
+      desc: TierDescriptor,
+      obj: ObjectId,
+      gen: Long,
+      est: Long,
+      residents: Residents,
+      iter: CellIterator
+  ) (implicit
+      scheduler: Scheduler,
+      disks: Disks,
+      config: StoreConfig
+  ): Async [Tier] = {
     val bloom = BloomFilter (math.max (1L, est), config.falsePositiveProbability)
-    val builder = new TierBuilder (desc, obj, gen, bloom)
+    val builder = new TierBuilder (desc, obj, gen, residents, bloom)
     for {
       _ <- iter.foreach (builder.add (_))
       tier <- builder.result()

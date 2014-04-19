@@ -20,6 +20,7 @@ private trait StorePicklers extends Picklers {
   def portId = PortId.pickler
   def pos = Position.pickler
   def readOp = ReadOp.pickler
+  def residents = Residents.pickler
   def tableId = TableId.pickler
   def tierMeta = TierTable.Meta.pickler
   def txClock = TxClock.pickler

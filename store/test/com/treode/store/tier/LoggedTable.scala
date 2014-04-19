@@ -1,10 +1,11 @@
 package com.treode.store.tier
 
-import com.treode.async.{Async, AsyncIterator}
+import com.treode.async.{Async, AsyncIterator, Scheduler}
 import com.treode.disk.Disks
 import com.treode.store.{Bytes, TxClock}
 
 import Async.guard
+import TierTestTools._
 
 private class LoggedTable (table: TierTable) (implicit disks: Disks) extends TestTable {
 

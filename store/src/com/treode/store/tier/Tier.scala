@@ -4,7 +4,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, AsyncImplicits, Callback}
 import com.treode.disk.{Disks, Position}
-import com.treode.store.{Bytes, Cell, StorePicklers, TxClock}
+import com.treode.store.{Bytes, Cell, Residents, StorePicklers, TxClock}
 
 import Async.{async, supply}
 import AsyncImplicits._
@@ -13,6 +13,7 @@ private case class Tier (
     gen: Long,
     root: Position,
     bloom: Position,
+    residents: Residents,
     keys: Long,
     entries: Long,
     earliest: TxClock,
@@ -73,7 +74,8 @@ private object Tier {
 
   val pickler = {
     import StorePicklers._
-    wrap (ulong, pos, pos, ulong, ulong, txClock, txClock, ulong)
+    wrap (ulong, pos, pos, residents, ulong, ulong, txClock, txClock, ulong)
     .build ((Tier.apply _).tupled)
-    .inspect (v => (v.gen, v.root, v.bloom, v.keys, v.entries, v.earliest, v.latest, v.diskBytes))
+    .inspect (v =>
+      (v.gen, v.root, v.bloom, v.residents, v.keys, v.entries, v.earliest, v.latest, v.diskBytes))
   }}

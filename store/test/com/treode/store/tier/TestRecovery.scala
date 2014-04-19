@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-import com.treode.async.{Async, Scheduler}
+import com.treode.async.{Async, StubScheduler}
 import com.treode.disk.Disks
 import com.treode.store.{Bytes, StoreConfig, TableId, TxClock}
 
@@ -10,7 +10,7 @@ import TestTable.{checkpoint, delete, descriptor, put}
 private class TestRecovery (
     id: TableId
 ) (implicit
-    scheduler: Scheduler,
+    scheduler: StubScheduler,
     recovery: Disks.Recovery,
     config: StoreConfig
 ) extends TestTable.Recovery {

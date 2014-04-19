@@ -107,22 +107,27 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
       table.compact()
   }
 
+  def resident (table: TableId, residents: Residents): Cell => Boolean = {
+    cell => residents.contains (locator, (table, cell.key))
+  }
+
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
       val id = TableId (obj.id)
       val residents = atlas.residents
-      def resident (cell: Cell) = residents.contains (locator, (id, cell.key))
       for {
-        meta <- getTable (id) .compact (groups) (resident _)
+        meta <- getTable (id) .compact (groups, residents) (resident (id, residents))
         _ <- TimedStore.checkpoint.record (id, meta)
       } yield ()
     }
 
-  private def checkpoint (id: TableId, table: TierTable): Async [Unit] =
+  private def checkpoint (id: TableId, table: TierTable): Async [Unit] = {
+    val residents = atlas.residents
     for {
-      meta <- table.checkpoint()
+      meta <- table.checkpoint (residents) (resident (id, residents))
       _ <- TimedStore.checkpoint.record (id, meta)
     } yield ()
+  }
 
   def checkpoint(): Async [Unit] = {
     val tables = materialize (this.tables.entrySet)

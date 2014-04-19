@@ -4,7 +4,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.disk.{Disks, ObjectId, PageDescriptor, Position}
-import com.treode.store.{Bytes, Cell, CellIterator, StoreConfig, TxClock}
+import com.treode.store.{Bytes, Cell, CellIterator, Residents, StoreConfig, TxClock}
 
 import Async.{async, supply, when}
 import Callback.ignore
@@ -164,10 +164,10 @@ private class SynthTable (
   def compact(): Unit =
     pager.compact (obj) run (ignore)
 
-  def compact (groups: Set [Long]) (p: Cell => Boolean): Async [Meta] =
-    checkpoint()
+  def compact (groups: Set [Long], residents: Residents) (p: Cell => Boolean): Async [Meta] =
+    checkpoint (residents) (p)
 
-  def checkpoint(): Async [Meta] = disks.join {
+  def checkpoint (residents: Residents) (p: Cell => Boolean): Async [Meta] = disks.join {
 
     writeLock.lock()
     val (gen, primary, tiers) = try {
@@ -185,7 +185,7 @@ private class SynthTable (
     val iter = TierIterator.merge (desc, primary, emptyMemTier, tiers) .dedupe
     val est = countMemTierKeys (primary) + tiers.keys
     for {
-      tier <- TierBuilder.build (desc, obj, gen, est, iter)
+      tier <- TierBuilder.build (desc, obj, gen, est, residents, iter)
     } yield {
       val tiers = Tiers (tier)
       val meta = new Meta (gen, tiers)

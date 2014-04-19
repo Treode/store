@@ -1,35 +1,39 @@
 package com.treode.store.tier
 
-import com.treode.async.{Async, StubScheduler}
-import com.treode.store.{Bytes, Cell, Fruits, StoreTestTools, TxClock}
+import com.treode.async.{Async, Scheduler, StubScheduler}
+import com.treode.store.{Bytes, Cell, Fruits, Residents, StoreTestTools, TxClock}
 import org.scalatest.Assertions
 
 import Assertions.assertResult
 import Async.async
 import Fruits.{Apple, Tomato}
+import TierTable.Meta
 
 private object TierTestTools extends StoreTestTools {
 
-  implicit class RichTierTable (table: TierTable) (implicit scheduler: StubScheduler) {
+  implicit class RichTierTable (table: TierTable) {
 
-    def putCells (cells: Cell*) {
+    def putCells (cells: Cell*) (implicit scheduler: StubScheduler) {
       for (Cell (key, time, value) <- cells)
         table.put (key, time, value.get)
       scheduler.runTasks()
     }
 
-    def deleteCells (cells: Cell*) {
+    def deleteCells (cells: Cell*) (implicit scheduler: StubScheduler) {
       for (Cell (key, time, _) <- cells)
         table.delete (key, time)
       scheduler.runTasks()
     }
+
+    def checkpoint(): Async [Meta] =
+      table.checkpoint (Residents.empty) (_ => true)
 
     /** Requires that
       *   - cells are in order
       *   - cell times have gaps
       *   - keys are between Apple and Tomato, exclusive
       */
-    def check (cells: Cell*) {
+    def check (cells: Cell*) (implicit scheduler: StubScheduler) {
       for (Seq (c1, c2) <- cells.sliding (2)) {
         require (c1 < c2, "Cells must be in order.")
         require (c1.key != c2.key || c1.time > c2.time+1, s"Times must have gaps.")

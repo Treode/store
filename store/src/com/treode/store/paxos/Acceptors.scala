@@ -42,21 +42,27 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
     supply (archive.probe (groups))
 
+  def resident (residents: Residents): Cell => Boolean = {
+    cell => residents.contains (locator, (cell.key, cell.time))
+  }
+
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
       val residents = atlas.residents
-      def resident (cell: Cell) = residents.contains (locator, (cell.key, cell.time))
       for {
-        meta <- archive.compact (groups) (resident _)
+        meta <- archive.compact (groups, residents) (resident (residents))
         _ <- Acceptors.checkpoint.record (meta)
       } yield ()
     }
 
   def checkpoint(): Async [Unit] =
     guard {
+      val residents = atlas.residents
       for {
         _ <- latch (
-            archive.checkpoint() .flatMap (Acceptors.checkpoint.record (_)),
+            archive
+                .checkpoint (residents) (resident (residents))
+                .flatMap (Acceptors.checkpoint.record (_)),
             materialize (acceptors.values) .latch.unit foreach (_.checkpoint()))
       } yield ()
     }

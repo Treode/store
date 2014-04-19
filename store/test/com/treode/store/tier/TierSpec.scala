@@ -31,7 +31,7 @@ class TierSpec extends WordSpec {
 
   private def newBuilder (est: Long) (
       implicit scheduler: StubScheduler, disks: Disks, config: StoreConfig) =
-    new TierBuilder (descriptor, 0, 0, BloomFilter (est, config.falsePositiveProbability))
+    new TierBuilder (descriptor, 0, 0, Residents.empty, BloomFilter (est, config.falsePositiveProbability))
 
   /** Get the depths of ValueBlocks reached from the index entries. */
   private def getDepths (entries: Iterable [IndexEntry], depth: Int) (
