@@ -140,7 +140,7 @@ private class TierBuilder (
       if (latestTime < time) latestTime = time
       totalEntries += 1
 
-      bloom.put (Bytes.pickler, cell.key)
+      bloom.put (cell.key)
 
       // Ensure that a value page has at least one entry.
       if (cells.byteSize + byteSize < config.targetPageBytes || cells.size < 1) {

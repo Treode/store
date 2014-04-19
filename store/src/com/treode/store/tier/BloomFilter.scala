@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.pickle.Pickler
-import com.treode.store.StorePicklers
+import com.treode.store.{Bytes, StorePicklers}
 
 private class BloomFilter private (
     val numBits: Int,
@@ -29,7 +29,8 @@ private class BloomFilter private (
   // for more about how this computes multiple hashes.
   // See Guava's BloomFilter for another implementation of this technique.
 
-  private def getHash (h1: Long, h2: Long): Boolean = {
+  private def getHash (h: (Long, Long)): Boolean = {
+    val (h1, h2) = h
     var k = h1
     var i = 0
     while (i < numHashes) {
@@ -41,7 +42,8 @@ private class BloomFilter private (
     return true
   }
 
-  private def putHash (h1: Long, h2: Long) {
+  private def putHash (h: (Long, Long)) {
+    val (h1, h2) = h
     var k = h1
     var i = 0
     while (i < numHashes) {
@@ -50,15 +52,18 @@ private class BloomFilter private (
       i += 1
     }}
 
-  def contains [A] (p: Pickler [A], v: A): Boolean = {
-    val (h1, h2) = p.murmur128 (v)
-    getHash (h1, h2)
-  }
+  def contains (v: Bytes): Boolean =
+    getHash (v.murmur128)
 
-  def put [A] (p: Pickler [A], v: A) {
-    val (h1, h2) = p.murmur128 (v)
-    putHash (h1, h2)
-  }}
+  def contains [A] (p: Pickler [A], v: A): Boolean =
+    getHash (p.murmur128 (v))
+
+  def put (v: Bytes): Unit =
+    putHash (v.murmur128)
+
+  def put [A] (p: Pickler [A], v: A): Unit =
+    putHash (p.murmur128 (v))
+}
 
 private object BloomFilter {
 

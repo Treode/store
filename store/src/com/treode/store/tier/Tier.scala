@@ -52,7 +52,7 @@ private case class Tier (
 
       pager.read (bloom) .run {
 
-        case Success (bloom: BloomFilter) if bloom.contains (Bytes.pickler, key) =>
+        case Success (bloom: BloomFilter) if bloom.contains (key) =>
           pager.read (root) .run (loop)
 
         case Success (_: BloomFilter) =>
