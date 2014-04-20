@@ -10,11 +10,29 @@ private case class Residents (nums: Set [Int], mask: Int) {
 
   def contains [A] (p: Pickler [A], v: A): Boolean =
     contains (p.murmur32 (v) & mask)
+
+  def stability (other: Residents): Double = {
+    val adjust =
+      if (mask == other.mask)
+        nums
+      else if  (mask < other.mask)
+        (0 to other.mask) .filter (i => nums contains (i & mask)) .toSet
+      else
+        nums .map (_ & other.mask) .toSet
+    if (adjust.size == 0)
+      1.0D
+    else
+      (adjust intersect other.nums).size.toDouble / adjust.size.toDouble
+  }
+
+  def exodus (other: Residents) (implicit config: StoreConfig): Boolean =
+    1 - stability (other) > config.exodusThreshold
 }
 
 private object Residents {
 
   def apply (host: HostId, cohorts: Array [Cohort]): Residents = {
+    require (Integer.highestOneBit (cohorts.length) == cohorts.length)
     val nums = for (c <- cohorts; if c.hosts contains host) yield c.num
     new Residents (nums.toSet, cohorts.size - 1)
   }

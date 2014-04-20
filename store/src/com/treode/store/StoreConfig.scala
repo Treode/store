@@ -14,6 +14,8 @@ class StoreConfig private (
     val rebalanceEntries: Int
 ) {
 
+  val exodusThreshold = 0.2D
+
   val deliberatingTimeout = 2 seconds
   val preparingTimeout = 5 seconds
   val closedLifetime = 2 seconds

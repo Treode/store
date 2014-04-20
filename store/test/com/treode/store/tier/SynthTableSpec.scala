@@ -130,7 +130,7 @@ class SynthTableSpec extends FreeSpec {
       table.checkpoint() .pass
       assert (table.primary.isEmpty)
       assert (table.secondary.isEmpty)
-      assert (!table.tiers.isEmpty)
+      assert (table.tiers.size > 0)
       table.check (Kiwi##21::3, Kiwi##14::2, Kiwi##7::1)
     }}
 
@@ -144,7 +144,7 @@ class SynthTableSpec extends FreeSpec {
       scheduler.runTasks()
       cb.passed
       assert (table.secondary.isEmpty)
-      assert (!table.tiers.isEmpty)
+      assert (table.tiers.size > 0)
       table.check (Kiwi##21::3, Kiwi##14::2, Kiwi##7::1)
     }}
 
@@ -157,7 +157,7 @@ class SynthTableSpec extends FreeSpec {
         val table = mkTable (disk)
         assert (table.primary.isEmpty)
         assert (table.secondary.isEmpty)
-        assert (table.tiers.isEmpty)
+        assert (table.tiers.size == 0)
         table
       }
 
@@ -173,7 +173,7 @@ class SynthTableSpec extends FreeSpec {
         table.checkpoint() .pass
         assert (table.primary.isEmpty)
         assert (table.secondary.isEmpty)
-        assert (!table.tiers.isEmpty)
+        assert (table.tiers.size > 0)
         table.check ()
       }
 
@@ -183,7 +183,7 @@ class SynthTableSpec extends FreeSpec {
         table.putCells (Kiwi##7::1)
         assert (!table.primary.isEmpty)
         assert (table.secondary.isEmpty)
-        assert (table.tiers.isEmpty)
+        assert (table.tiers.size == 0)
         table.check (Kiwi##7::1)
       }
 
@@ -193,7 +193,7 @@ class SynthTableSpec extends FreeSpec {
         table.deleteCells (Kiwi##1)
         assert (!table.primary.isEmpty)
         assert (table.secondary.isEmpty)
-        assert (table.tiers.isEmpty)
+        assert (table.tiers.size == 0)
         table.check (Kiwi##1)
       }}
 
@@ -205,7 +205,7 @@ class SynthTableSpec extends FreeSpec {
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
         assert (!table.primary.isEmpty)
         assert (table.secondary.isEmpty)
-        assert (table.tiers.isEmpty)
+        assert (table.tiers.size == 0)
         table
       }
 
@@ -226,7 +226,7 @@ class SynthTableSpec extends FreeSpec {
         cb.assertNotInvoked()
         assert (table.primary.isEmpty)
         assert (!table.secondary.isEmpty)
-        assert (table.tiers.isEmpty)
+        assert (table.tiers.size == 0)
         disk.stop = false
         (disk, table, cb)
       }
@@ -250,7 +250,7 @@ class SynthTableSpec extends FreeSpec {
         table.putCells (Kiwi##21::3)
         assert (!table.primary.isEmpty)
         assert (!table.secondary.isEmpty)
-        assert (table.tiers.isEmpty)
+        assert (table.tiers.size == 0)
         (disk, table, cb)
       }
 
@@ -268,7 +268,7 @@ class SynthTableSpec extends FreeSpec {
         table.checkpoint() .pass
         assert (table.primary.isEmpty)
         assert (table.secondary.isEmpty)
-        assert (!table.tiers.isEmpty)
+        assert (table.tiers.size > 0)
         table
       }
 
@@ -287,7 +287,7 @@ class SynthTableSpec extends FreeSpec {
         table.putCells (Kiwi##21::3)
         assert (!table.primary.isEmpty)
         assert (table.secondary.isEmpty)
-        assert (!table.tiers.isEmpty)
+        assert (table.tiers.size > 0)
         table
       }
 

@@ -6,7 +6,7 @@ import com.treode.async.{Async, AsyncImplicits, Callback}
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, Cell, Residents, StorePicklers, TxClock}
 
-import Async.{async, supply}
+import Async.async
 import AsyncImplicits._
 
 private case class Tier (
