@@ -28,6 +28,9 @@ private class AtomicKit (implicit
   val writers = new WriteDeputies (this)
   val rebalancer = new Rebalancer (this)
 
+  def place (table: TableId, key: Bytes): Int =
+    atlas.place (locator, (table, key))
+
   def locate (table: TableId, key: Bytes): Cohort =
     atlas.locate (locator, (table, key))
 

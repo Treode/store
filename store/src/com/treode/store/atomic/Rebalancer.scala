@@ -15,7 +15,7 @@ import Cohort.Moving
 import Rebalancer.{Batch, Point, Range, Targets, Tracker, move}
 
 private class Rebalancer (kit: AtomicKit) {
-  import kit.{atlas, cluster, locate, random, scheduler, tables}
+  import kit.{atlas, cluster, place, random, scheduler, tables}
   import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
 
   private val fiber = new Fiber (scheduler)
@@ -47,11 +47,11 @@ private class Rebalancer (kit: AtomicKit) {
       bytes < rebalanceBytes &&
       Point.Middle (start.table, cell.key, cell.time) < limit
     } { cell =>
-      val cohort = locate (table, cell.key)
-      if (targets contains cohort.num) {
-        batch.get (cohort.num) match {
-          case Some (cs) => batch += cohort.num -> (cell::cs)
-          case None => batch += cohort.num -> List (cell)
+      val num = place (table, cell.key)
+      if (targets contains num) {
+        batch.get (num) match {
+          case Some (cs) => batch += num -> (cell::cs)
+          case None => batch += num -> List (cell)
         }
         entries += 1
         bytes += cell.byteSize
@@ -166,7 +166,7 @@ private object Rebalancer {
 
     private def targets (cohort: Cohort): Set [HostId] =
       cohort match {
-        case Moving (_, origin, target) => target -- origin
+        case Moving (origin, target) => target -- origin
         case _ => Set.empty
       }
 

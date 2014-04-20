@@ -3,15 +3,13 @@ package com.treode.store
 import scala.util.Random
 import org.scalatest.FlatSpec
 
-import Cohort.Settled
+import Cohort.settled
 import StoreTestTools._
 
 class ResidentsSpec extends FlatSpec {
 
-  private def residents (cohorts: Int*): Residents = {
-    val cs = for ((h, i) <- cohorts.zipWithIndex) yield Settled (i, Set (h))
-    Residents (0, cs.toArray [Cohort])
-  }
+  private def residents (cohorts: Int*): Residents =
+    Residents (0, cohorts .map (settled (_)) .toArray)
 
   "Residents.all" should "contain all ids" in {
     for (id <- Stream.fill (100) (Random.nextInt))

@@ -7,8 +7,9 @@ import com.treode.cluster.{Cluster, HostId, Peer, StubActiveHost, StubNetwork}
 import com.treode.store.{Bytes, Cohort, StoreTestTools, TxClock}
 import org.scalatest.{FreeSpec, ShouldMatchers}
 
+import Cohort.{issuing, moving, settled}
 import Rebalancer.{Point, Range, Targets, Tracker}
-import StoreTestTools._
+import StoreTestTools.{intToBytes, longToTxClock}
 
 class RebalancerSpec extends FreeSpec with ShouldMatchers {
 
@@ -65,20 +66,20 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
     "find no targets when no cohorts are moving" in {
       implicit val (random, scheduler, cluster) = setup()
       val ts = targets (
-          Cohort.Settled (0, Set (1, 2, 3)),
-          Cohort.Settled (1, Set (4, 5, 6)),
-          Cohort.Settled (2, Set (7, 8, 9)),
-          Cohort.Settled (3, Set (10, 11, 12)))
+          settled (1, 2, 3),
+          settled (4, 5, 6),
+          settled (7, 8, 9),
+          settled (10, 11, 12))
       assert (ts.isEmpty)
     }
 
     "find targets only from the cohorts that are moving" in {
       implicit val (random, scheduler, cluster) = setup()
       val ts = targets (
-          Cohort.Settled (0, Set (1, 2, 3)),
-          Cohort.Issuing (1, Set (1, 2, 3), Set (1, 2, 4)),
-          Cohort.Moving (2, Set (1, 2, 3), Set (1, 2, 5)),
-          Cohort.Moving (3, Set (1, 2, 3), Set (1, 6, 7)))
+          settled (1, 2, 3),
+          issuing (1, 2, 3) (1, 2, 4),
+          moving (1, 2, 3) (1, 2, 5),
+          moving (1, 2, 3) (1, 6, 7))
       assert (!ts.isEmpty)
       assert (!(ts contains 0))
       assert (!(ts contains 1))
@@ -118,7 +119,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
 
         "rebalance is started with all cohorts settled, it should yield no work" in {
           implicit val (random, scheduler, cluster, t) = setup()
-          t.start (Cohort.Settled (0, Set (1, 2, 3)))
+          t.start (settled (1, 2, 3))
           assertNone (t.deque())
           assertNone (t.deque())
           intercept [AssertionError] (t.continue (0))
@@ -126,7 +127,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
 
         "rebalance is started with a cohort moving, it should start work" in {
           implicit val (random, scheduler, cluster, t) = setup()
-          t.start (Cohort.Moving (0, Set (1, 2, 3), Set (1, 2, 4)))
+          t.start (moving (1, 2, 3) (1, 2, 4))
           assertTask (begin (0), 0 -> Set (4)) (t.deque())
           intercept [AssertionError] (t.deque())
           t.continue (Point.End)
@@ -142,7 +143,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
           implicit val scheduler = StubScheduler.random (random)
           implicit val cluster = new StubActiveHost (0, new StubNetwork)
           val t = new RichTracker
-          t.start (Cohort.Moving (0, Set (1, 2, 3), Set (1, 2, 4)))
+          t.start (moving (1, 2, 3) (1, 2, 4))
           assertTask (begin (0), 0 -> Set (4)) (t.deque())
           t.continue (7)
           (random, scheduler, cluster, t)
@@ -159,13 +160,13 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
 
           "with all cohorts settled, it should yield no work" in {
             implicit val (random, scheduler, cluster, t) = setup()
-            t.start (Cohort.Settled (0, Set (1, 2, 3)))
+            t.start (settled (1, 2, 3))
             assertNone (t.deque())
           }
 
           "with the same cohort moving the same way, it should continue work" in {
             implicit val (random, scheduler, cluster, t) = setup()
-            t.start (Cohort.Moving (0, Set (1, 2, 3), Set (1, 2, 4)))
+            t.start (moving (1, 2, 3) (1, 2, 4))
             assertTask (begin (7), 0 -> Set (4)) (t.deque())
             t.continue (Point.End)
             assertNone (t.deque())
@@ -173,7 +174,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
 
           "with the same cohort moving the same way and more, it should restart work" in {
             implicit val (random, scheduler, cluster, t) = setup()
-            t.start (Cohort.Moving (0, Set (1, 2, 3), Set (1, 4, 5)))
+            t.start (moving (1, 2, 3) (1, 4, 5))
             assertTask (range (0, 7), 0 -> Set (5)) (t.deque())
             intercept [AssertionError] (t.deque())
             t.continue (7)
@@ -184,7 +185,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
 
           "with the same cohort moving a different way, it should restart work" in {
             implicit val (random, scheduler, cluster, t) = setup()
-            t.start (Cohort.Moving (0, Set (1, 2, 3), Set (1, 2, 5)))
+            t.start (moving (1, 2, 3) (1, 2, 5))
             assertTask (begin (0), 0 -> Set (5)) (t.deque())
             t.continue (Point.End)
             assertNone (t.deque())
@@ -193,8 +194,8 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
           "with a different cohort moving, it should restart work" in {
             implicit val (random, scheduler, cluster, t) = setup()
             t.start (
-                Cohort.Settled (0, Set (1, 2, 3)),
-                Cohort.Moving (1, Set (1, 2, 3), Set (1, 2, 4)))
+                settled (1, 2, 3),
+                moving (1, 2, 3) (1, 2, 4))
             assertTask (begin (0), 1 -> Set (4)) (t.deque())
             t.continue (Point.End)
             assertNone (t.deque())
@@ -209,9 +210,9 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
           implicit val scheduler = StubScheduler.random (random)
           implicit val cluster = new StubActiveHost (0, new StubNetwork)
           val t = new RichTracker
-          t.start (Cohort.Moving (0, Set (1, 2, 3), Set (1, 2, 4)))
+          t.start (moving (1, 2, 3) (1, 2, 4))
           assertTask (begin (0), 0 -> Set (4)) (t.deque())
-          t.start (Cohort.Moving (0, Set (1, 2, 3), Set (1, 4, 5)))
+          t.start (moving (1, 2, 3) (1, 4, 5))
           t.continue (7)
           assertTask (range (0, 7), 0 -> Set (5)) (t.deque())
           t.continue (3)
@@ -231,13 +232,13 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
 
           "with all cohorts settled, it should yield no work" in {
             implicit val (random, scheduler, cluster, t) = setup()
-            t.start (Cohort.Settled (0, Set (1, 2, 3)))
+            t.start (settled (1, 2, 3))
             assertNone (t.deque())
           }
 
           "with the same cohort moving the same way, it should continue work" in {
             implicit val (random, scheduler, cluster, t) = setup()
-            t.start (Cohort.Moving (0, Set (1, 2, 3), Set (1, 4, 5)))
+            t.start (moving (1, 2, 3) (1, 4, 5))
             assertTask (range (3, 7), 0 -> Set (5)) (t.deque())
             t.continue (7)
             assertTask (begin (7), 0 -> Set (4, 5)) (t.deque())
@@ -247,7 +248,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
 
           "with the same cohort moving a different way, it should restart work" in {
             implicit val (random, scheduler, cluster, t) = setup()
-            t.start (Cohort.Moving (0, Set (1, 2, 3), Set (1, 2, 6)))
+            t.start (moving (1, 2, 3) (1, 2, 6))
             assertTask (begin (0), 0 -> Set (6)) (t.deque())
             t.continue (Point.End)
             assertNone (t.deque())
@@ -256,8 +257,8 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
           "with a different cohort moving, it should restart work" in {
             implicit val (random, scheduler, cluster, t) = setup()
             t.start (
-                Cohort.Settled (0, Set (1, 2, 3)),
-                Cohort.Moving (1, Set (1, 2, 3), Set (1, 2, 4)))
+                settled (1, 2, 3),
+                moving (1, 2, 3) (1, 2, 4))
             assertTask (begin (0), 1 -> Set (4)) (t.deque())
             t.continue (Point.End)
             assertNone (t.deque())

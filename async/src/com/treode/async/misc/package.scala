@@ -26,6 +26,9 @@ package object misc {
     def seconds = v * 1000
     def minutes = v * 1000 * 60
     def hours = v * 1000 * 60 * 60
+
+    def isEven = (v & 1) == 0
+    def isOdd = (v & 1) == 1
   }
 
   implicit class RichOption [A] (v: Option [A]) {

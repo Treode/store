@@ -138,8 +138,8 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
 
 private object TimedStore {
 
-  val table = TierDescriptor (0xB500D51FACAEA961L) { (residents, obj, cell) =>
-    residents contains (AtomicKit.locator, (TableId (obj.id), cell.key))
+  val table = TierDescriptor (0xB500D51FACAEA961L) { (residents, id, cell) =>
+    residents contains (AtomicKit.locator, (id, cell.key))
   }
 
   val receive = {

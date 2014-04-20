@@ -4,7 +4,7 @@ import com.treode.disk.Position
 import com.treode.store.{Cohort, Residents}
 import org.scalatest.FreeSpec
 
-import Cohort.Settled
+import Cohort.settled
 import Residents.all
 import TierTestTools._
 
@@ -12,10 +12,8 @@ class TiersSpec extends FreeSpec {
 
   implicit val config = TestStoreConfig()
 
-  private def residents (cohorts: Int*): Residents = {
-    val cs = for ((h, i) <- cohorts.zipWithIndex) yield Settled (i, Set (h))
-    Residents (0, cs.toArray [Cohort])
-  }
+  private def residents (cohorts: Int*): Residents =
+    Residents (0, cohorts .map (settled (_)) .toArray)
 
   private def tier (gen: Int, res: Residents = all, bytes: Int = 0): Tier = {
     val pos = Position (-1, -1, -1)

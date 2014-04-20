@@ -3,7 +3,7 @@ package com.treode.store.atlas
 import scala.util.{Failure, Success}
 
 import com.treode.async.Async
-import com.treode.cluster.{Cluster, RumorDescriptor}
+import com.treode.cluster.{Cluster, Peer, RumorDescriptor}
 import com.treode.store.{Atlas, Catalogs, CatalogDescriptor, Cohort, Residents, StorePicklers}
 
 import Async.{guard, supply}
@@ -30,6 +30,9 @@ private [store] class AtlasKit (implicit cluster: Cluster) extends Atlas {
       case Success (_) => AtlasKit.version.spread (version)
       case Failure (t) => throw t
     }
+
+  def place (id: Int): Int =
+    id & mask
 
   def locate (id: Int): Cohort =
     cohorts (id & mask)

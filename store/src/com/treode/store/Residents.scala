@@ -33,7 +33,7 @@ private object Residents {
 
   def apply (host: HostId, cohorts: Array [Cohort]): Residents = {
     require (Integer.highestOneBit (cohorts.length) == cohorts.length)
-    val nums = for (c <- cohorts; if c.hosts contains host) yield c.num
+    val nums = for ((c, i) <- cohorts.zipWithIndex; if c.hosts contains host) yield i
     new Residents (nums.toSet, cohorts.size - 1)
   }
 
