@@ -3,12 +3,12 @@ package com.treode.store.atomic
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async.{Async, Callback, CallbackCaptor}
+import com.treode.async.{Async, Callback}
 import com.treode.async.io.StubFile
-import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
+import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
 import com.treode.store.atlas.AtlasKit
-import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
+import com.treode.disk.Disks
 import org.scalatest.Assertions
 
 import Assertions.assertResult

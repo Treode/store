@@ -21,43 +21,48 @@ class CallbackCaptor [T] protected extends (Try [T] => Unit) with Assertions {
       assert (false, "Callback was already invoked.")
     }}
 
-  def apply (v: Try [T]) {
+  def apply (v: Try [T]): Unit = synchronized {
     invoked()
     v match {
       case Success (v) => _v = v
       case Failure (t) => _t = t
     }}
 
-  def wasInvoked: Boolean =
+  def wasInvoked: Boolean = synchronized {
     _invokation != null
+  }
 
-  def hasPassed: Boolean =
+  def hasPassed: Boolean = synchronized {
     _v != null
+  }
 
-  def hasFailed: Boolean =
+  def hasFailed: Boolean = synchronized {
     _t != null
+  }
 
-  def hasTimedOut: Boolean =
+  def hasTimedOut: Boolean = synchronized {
     _t != null && _t.isInstanceOf [TimeoutException]
+  }
 
-  def assertInvoked(): Unit =
+  def assertInvoked(): Unit = synchronized {
     assert (_invokation != null, "Expected callback to have been invoked, but it was not.")
+  }
 
-  def assertNotInvoked() {
+  def assertNotInvoked(): Unit = synchronized {
     if (_invokation != null)
       fail (
           "Expected callback to not have been invoked, but it was:\n" +
           (_invokation take (10) mkString "\n"))
   }
 
-  def passed: T = {
+  def passed: T = synchronized {
     assertInvoked()
     if (_t != null)
       throw _t
     _v
   }
 
-  def failed [E] (implicit m: Manifest [E]): E = {
+  def failed [E] (implicit m: Manifest [E]): E = synchronized {
     assertInvoked()
     if (_v != null)
       fail (
@@ -69,14 +74,14 @@ class CallbackCaptor [T] protected extends (Try [T] => Unit) with Assertions {
     _t.asInstanceOf [E]
   }
 
-  override def toString: String =
+  override def toString: String = synchronized {
     if (_v != null)
       s"CallbackCaptor:Passed(${_v})"
     else if (_t != null)
       s"CallbackCaptor:Failed(${_t})"
     else
       s"CallbackCaptor:NotInvoked"
-}
+  }}
 
 object CallbackCaptor {
 
