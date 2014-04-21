@@ -3,7 +3,10 @@ package com.treode.store
 import com.treode.cluster.HostId
 import com.treode.pickle.Pickler
 
-private case class Residents (nums: Set [Int], mask: Int) {
+class Residents private [store] (
+    private val nums: Set [Int],
+    private val mask: Int
+) {
 
   def contains (id: Int): Boolean =
     nums contains (id & mask)
@@ -29,13 +32,7 @@ private case class Residents (nums: Set [Int], mask: Int) {
     1 - stability (other) > config.exodusThreshold
 }
 
-private object Residents {
-
-  def apply (host: HostId, cohorts: Array [Cohort]): Residents = {
-    require (Integer.highestOneBit (cohorts.length) == cohorts.length)
-    val nums = for ((c, i) <- cohorts.zipWithIndex; if c.hosts contains host) yield i
-    new Residents (nums.toSet, cohorts.size - 1)
-  }
+object Residents {
 
   val all = new Residents (Set (0), 0)
 

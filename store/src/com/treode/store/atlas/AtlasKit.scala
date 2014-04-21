@@ -40,7 +40,7 @@ private [store] class AtlasKit (implicit cluster: Cluster) extends Atlas {
 
   def set (cohorts: Cohorts) {
     this.cohorts = cohorts
-    this.residents = Residents (localId, cohorts.cohorts)
+    this.residents = cohorts.residents (localId)
     rebalance (cohorts)
   }}
 

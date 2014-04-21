@@ -1,5 +1,6 @@
 package com.treode.store
 
+import com.treode.cluster.HostId
 import com.treode.pickle.Pickler
 
 import Integer.highestOneBit
@@ -16,7 +17,11 @@ class Cohorts private (
 
   def locate (id: Int): Cohort =
     cohorts (id & mask)
-}
+
+  def residents (host: HostId): Residents = {
+    val nums = for ((c, i) <- cohorts.zipWithIndex; if c.hosts contains host) yield i
+    new Residents (nums.toSet, cohorts.size - 1)
+  }}
 
 object Cohorts {
 
