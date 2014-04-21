@@ -17,8 +17,6 @@ object Store {
 
   trait Recovery {
 
-    def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any)
-
     def launch (launch: Disks.Launch): Async [Store]
   }
 

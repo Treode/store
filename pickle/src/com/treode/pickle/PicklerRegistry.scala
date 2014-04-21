@@ -3,7 +3,7 @@ package com.treode.pickle
 import java.util.concurrent.ConcurrentHashMap
 import scala.reflect.ClassTag
 
-import com.treode.buffer.PagedBuffer
+import com.treode.buffer.{InputBuffer, PagedBuffer}
 
 import PicklerRegistry._
 
@@ -63,6 +63,16 @@ class PicklerRegistry [T <: Tag] private (default: Long => T) {
 
   def unpickle (buf: PagedBuffer, len: Int): T =
     unpickle (buf.readVarULong(), buf, len)
+
+  def unpickle (id: Long, buf: InputBuffer): T = {
+    val u = openers.get (id)
+    if (u == null)
+      return default (id)
+    val v = u.read (buf)
+    if (buf.readableBytes > 0)
+      throw new FrameBoundsException
+    v
+  }
 
   def loopback [P] (p: Pickler [P], id: Long, v: P): T = {
     val buf = PagedBuffer (12)
@@ -181,7 +191,7 @@ object PicklerRegistry {
 
   private trait Opener [T] {
     def read (ctx: UnpickleContext): T
-    def read (buf: PagedBuffer): T
+    def read (buf: InputBuffer): T
   }
 
   private object Opener {
@@ -192,7 +202,7 @@ object PicklerRegistry {
         def read (ctx: UnpickleContext): T =
           reader (p.u (ctx))
 
-        def read (buf: PagedBuffer): T =
+        def read (buf: InputBuffer): T =
           reader (p.unpickle (buf))
 
         override def toString = f"Opener($id%X)"

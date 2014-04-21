@@ -33,7 +33,7 @@ extends StubActiveHost (id, network) {
   val geometry = TestDiskGeometry()
   val files = Seq ((Paths.get ("a"), file, geometry))
 
-  val atlas = Atlas.recover() .asInstanceOf [AtlasKit]
+  val atlas = new AtlasKit
 
   val _launch =
     for {
@@ -43,6 +43,7 @@ extends StubActiveHost (id, network) {
       atomic <- _atomic.launch (launch, atlas, paxos) .map (_.asInstanceOf [AtomicKit])
     } yield {
       launch.launch()
+      atlas.attach (cluster, catalogs)
       (launch.disks, catalogs, atomic)
     }
 
@@ -53,7 +54,7 @@ extends StubActiveHost (id, network) {
   implicit val (disks, catalogs, atomic) = captor.passed
 
   def setCohorts (cohorts: Cohort*): Unit =
-    atlas.set (Cohorts (cohorts.toArray, 1))
+    atlas.set (cluster) (Cohorts (cohorts.toArray, 1))
 
   def issueCohorts (cohorts: Cohort*): Async [Unit] =
     atlas.issue (Cohorts (cohorts.toArray, 1))

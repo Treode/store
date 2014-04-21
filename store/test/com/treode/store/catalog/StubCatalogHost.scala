@@ -31,9 +31,6 @@ extends StubActiveHost (id, network) {
   var v1 = 0L
   var v2 = Seq.empty [Long]
 
-  _catalogs.listen (cat1) (v1 = _)
-  _catalogs.listen (cat2) (v2 = _)
-
   val file = new StubFile
   val geometry = TestDiskGeometry()
   val files = Seq ((Paths.get ("a"), file, geometry))
@@ -46,6 +43,9 @@ extends StubActiveHost (id, network) {
       catalogs <- _catalogs.launch (launch, atlas) .map (_.asInstanceOf [CatalogKit])
     } yield {
       launch.launch()
+      atlas.attach (cluster, catalogs)
+      catalogs.listen (cat1) (v1 = _)
+      catalogs.listen (cat2) (v2 = _)
       (launch.disks, catalogs)
     }
 
@@ -58,7 +58,7 @@ extends StubActiveHost (id, network) {
   val acceptors = catalogs.acceptors
 
   def setCohorts (cohorts: Cohort*): Unit =
-    atlas.set (Cohorts (cohorts.toArray, 1))
+    atlas.set (cluster) (Cohorts (cohorts.toArray, 1))
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) {
     import catalogs.broker.{diff, patch}

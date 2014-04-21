@@ -29,6 +29,9 @@ private class CatalogKit (val broker: Broker) (implicit
   def propose (key: CatalogId, patch: Patch): Async [Update] =
     proposers.propose (random.nextInt (17) + 1, key, patch)
 
+  def listen [C] (desc: CatalogDescriptor [C]) (handler: C => Any): Unit =
+    broker.listen (desc) (handler)
+
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit] = {
     for {
       patch <- broker.diff (desc) (version, cat)

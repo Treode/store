@@ -4,21 +4,24 @@ import java.util.ArrayDeque
 import scala.collection.JavaConversions._
 
 import com.nothome.delta.{Delta, GDiffPatcher}
-import com.treode.async.{Async, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disks, Position}
+import com.treode.disk.{Disks, PageDescriptor, Position, RecordDescriptor}
 import com.treode.store.{Bytes, CatalogId}
 
 import Async.{guard, when}
-import Poster.Meta
+import Callback.ignore
+import Handler.{Meta, pager}
 
 private class Handler (
-  var version: Int,
-  var checksum: Int,
-  var bytes:  Bytes,
-  var history: ArrayDeque [Bytes],
-  var saved: Option [Meta],
-  poster: Poster
+    val id: CatalogId,
+    var version: Int,
+    var checksum: Int,
+    var bytes:  Bytes,
+    var history: ArrayDeque [Bytes],
+    var saved: Option [Meta]
+) (implicit
+    disks: Disks
 ) {
 
   def diff (other: Int): Update = {
@@ -31,33 +34,37 @@ private class Handler (
       Patch (version, checksum, history.drop (start) .toSeq)
     }}
 
-  def patch (version: Int, bytes: Bytes, history: Seq [Bytes]) {
-    if (this.version < version) {
-      this.version = version
-      this.checksum = bytes.hashCode
-      this.bytes = bytes
-      this.history.clear()
-      this.history.addAll (history)
-      poster.post (Assign (version, bytes, history), bytes)
-    }}
+  def patch (version: Int, bytes: Bytes, history: Seq [Bytes]): Boolean = {
+    if (version <= this.version)
+      return false
+    this.version = version
+    this.checksum = bytes.hashCode
+    this.bytes = bytes
+    this.history.clear()
+    this.history.addAll (history)
+    Handler.update.record ((id, Assign (version, bytes, history))) run (ignore)
+    true
+  }
 
-  def patch (end: Int, patches: Seq [Bytes]) {
+  def patch (end: Int, patches: Seq [Bytes]) : Boolean ={
     val span = end - version
-    if (0 < span && span <= patches.length) {
-      val future = patches drop (patches.length - span)
-      var bytes = this.bytes
-      for (patch <- future)
-        bytes = Patch.patch (bytes, patch)
-      this.version += span
-      this.checksum = bytes.hashCode
-      this.bytes = bytes
-      for (_ <- 0 until history.size + span - catalogHistoryLimit)
-        history.remove()
-      history.addAll (future)
-      poster.post (Patch (version, checksum, future), bytes)
-    }}
+    if (span <= 0 || patches.length < span)
+      return false
+    val future = patches drop (patches.length - span)
+    var bytes = this.bytes
+    for (patch <- future)
+      bytes = Patch.patch (bytes, patch)
+    this.version += span
+    this.checksum = bytes.hashCode
+    this.bytes = bytes
+    for (_ <- 0 until history.size + span - catalogHistoryLimit)
+      history.remove()
+    history.addAll (future)
+    Handler.update.record ((id, Patch (version, checksum, future))) run (ignore)
+    true
+  }
 
-  def patch (update: Update): Unit =
+  def patch (update: Update): Boolean =
     update match {
       case Assign (version, bytes, history) =>
         patch (version, bytes, history)
@@ -80,8 +87,11 @@ private class Handler (
 
   def save(): Async [Unit] =
     guard {
+      val history = materialize (this.history)
       for {
-        meta <- poster.checkpoint (version, bytes, materialize (history))
+        pos <- pager.write (id.id, version, (version, bytes, history))
+        meta = Meta (version, pos)
+        _ <- Handler.checkpoint.record (id, meta)
       } yield {
         this.saved = Some (meta)
       }}
@@ -91,14 +101,43 @@ private class Handler (
 
   def checkpoint(): Async [Unit] =
     guard {
-      if (saved.isDefined && saved.get.version == version)
-        poster.checkpoint (saved.get)
-      else
-        save()
-  }}
+      saved match {
+        case Some (meta) if meta.version == version =>
+          Handler.checkpoint.record (id, saved.get)
+        case _ =>
+          save()
+      }}}
 
 private object Handler {
 
-  def apply (poster: Poster): Handler =
-    new Handler (0, 0, Bytes.empty, new ArrayDeque, None, poster)
+  case class Meta (version: Int, pos: Position)
+
+  object Meta {
+
+    val pickler = {
+      import CatalogPicklers._
+      wrap (uint, pos)
+      .build ((Meta.apply _).tupled)
+      .inspect (v => (v.version, v.pos))
+    }}
+
+  case class Post (update: Update, bytes: Bytes)
+
+  val update = {
+    import CatalogPicklers._
+    RecordDescriptor (0x7F5551148920906EL, tuple (catId, Update.pickler))
+  }
+
+  val checkpoint = {
+    import CatalogPicklers._
+    RecordDescriptor (0x79C3FDABEE2C9FDFL, tuple (catId, Meta.pickler))
+  }
+
+  val pager = {
+    import CatalogPicklers._
+    PageDescriptor (0x8407E7035A50C6CFL, uint, tuple (uint, bytes, seq (bytes)))
+  }
+
+  def apply (id: CatalogId) (implicit disks: Disks): Handler =
+    new Handler (id, 0, 0, Bytes.empty, new ArrayDeque, None)
 }

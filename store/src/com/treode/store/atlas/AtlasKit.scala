@@ -10,8 +10,7 @@ import Async.{guard, supply}
 import AtlasKit.catalog
 import Integer.highestOneBit
 
-private [store] class AtlasKit (implicit cluster: Cluster) extends Atlas {
-  import cluster.localId
+private [store] class AtlasKit extends Atlas {
 
   private val rebalancers = new RebalanceRegistry
 
@@ -25,7 +24,7 @@ private [store] class AtlasKit (implicit cluster: Cluster) extends Atlas {
     guard {
       rebalancers.rebalance (cohorts)
     } .run {
-      case Success (_) => AtlasKit.version.spread (cohorts.version)
+      case Success (_) => ()
       case Failure (t) => throw t
     }
 
@@ -38,19 +37,17 @@ private [store] class AtlasKit (implicit cluster: Cluster) extends Atlas {
   def issue (cohorts: Cohorts) (implicit catalogs: Catalogs): Async [Unit] =
     catalogs.issue (catalog) (1, cohorts)
 
-  def set (cohorts: Cohorts) {
+  def set (cluster: Cluster) (cohorts: Cohorts) {
     this.cohorts = cohorts
-    this.residents = cohorts.residents (localId)
+    this.residents = cohorts.residents (cluster.localId)
     rebalance (cohorts)
+  }
+
+  def attach (implicit cluster: Cluster, catalogs: Catalogs) {
+    catalog.listen (set (cluster) _)
   }}
 
 private [store] object AtlasKit {
-
-  def recover () (implicit cluster: Cluster, catalogs: Catalogs.Recovery): Atlas = {
-    val atlas = new AtlasKit
-    catalog.listen (atlas.set _)
-    atlas
-  }
 
   val catalog = {
     import StorePicklers._

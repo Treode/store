@@ -22,10 +22,6 @@ private trait Atlas {
 
   def locate [A] (p: Pickler [A], v: A): Cohort =
     locate (p.murmur32 (v))
-}
 
-private object Atlas {
-
-  def recover () (implicit cluster: Cluster, catalogs: Catalogs.Recovery): Atlas =
-   AtlasKit.recover()
+  def attach (implicit cluster: Cluster, catalogs: Catalogs)
 }

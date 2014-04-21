@@ -5,12 +5,12 @@ import scala.collection.JavaConversions._
 
 import com.treode.async.Async
 import com.treode.disk.Disks
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, CatalogId}
 
 import Async.{guard, when}
-import Poster.{Meta, pager}
+import Handler.{Meta, pager}
 
-private class Medic {
+private class Medic (id: CatalogId) {
 
   var version = 0
   var bytes = Bytes.empty
@@ -64,11 +64,11 @@ private class Medic {
   def checkpoint (meta: Meta): Unit =
     this.saved = Some (meta)
 
-  def close (poster: Poster) (implicit disks: Disks): Async [Handler] =
+  def close() (implicit disks: Disks): Async [Handler] =
     guard {
       for {
         _ <- when (saved.isDefined) (patch (saved.get))
       } yield {
-        new Handler (version, bytes.hashCode, bytes, history, saved, poster)
+        new Handler (id, version, bytes.hashCode, bytes, history, saved)
       }}
 }

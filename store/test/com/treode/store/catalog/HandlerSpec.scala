@@ -1,14 +1,16 @@
 package com.treode.store.catalog
 
+import java.nio.file.Paths
 import scala.collection.JavaConversions._
 
 import org.scalatest.FreeSpec
-import com.treode.async.Async
-import com.treode.disk.Position
+import com.treode.async.{Async, StubScheduler}
+import com.treode.async.io.StubFile
+import com.treode.disk.{Disks, Position}
 import com.treode.pickle.Picklers
-import com.treode.store.{Bytes, CatalogId}
+import com.treode.store.{Bytes, CatalogId, StoreTestTools}
 
-import Poster.Meta
+import StoreTestTools._
 
 class HandlerSpec extends FreeSpec {
 
@@ -31,25 +33,15 @@ class HandlerSpec extends FreeSpec {
       p
     }}
 
-  private class TestPoster (handler: Long => Any) extends Poster {
-
-    def this() = this (_ => ())
-
-    def dispatch (bytes: Bytes): Unit =
-      handler (bytes.unpickle (Picklers.fixedLong))
-
-    def post (update: Update, bytes: Bytes): Unit =
-      dispatch (bytes)
-
-    def checkpoint (version: Int, bytes: Bytes, history: Seq [Bytes]): Async [Meta] =
-      ???
-
-    def checkpoint (meta: Meta): Async [Unit] =
-      ???
-  }
-
   private def newCatalog (issues: Int): Handler = {
-    val cat = Handler (new TestPoster)
+    implicit val scheduler = StubScheduler.random()
+    implicit val file = new StubFile()
+    implicit val config = TestDisksConfig()
+    implicit val disks = Disks
+        .recover()
+        .attach (Seq ((Paths.get ("a"), file, TestDiskGeometry())))
+        .pass.disks
+    val cat = Handler (0)
     for ((v, i) <- values.take (issues) .zipWithIndex)
       cat.patch (cat.diff (i+1, Bytes (Picklers.fixedLong, v)))
     cat

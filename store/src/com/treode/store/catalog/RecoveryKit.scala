@@ -9,7 +9,6 @@ import com.treode.store.{Atlas, Catalogs, CatalogDescriptor, CatalogId, StoreCon
 
 import Async.guard
 import AsyncImplicits._
-import Poster.pager
 
 private class RecoveryKit (implicit
     random: Random,
@@ -21,51 +20,37 @@ private class RecoveryKit (implicit
 
   private val fiber = new Fiber (scheduler)
   private var medics = Map.empty [CatalogId, Medic]
-  private var makers = Map.empty [CatalogId, Disks => Poster]
 
   private def getMedic (id: CatalogId): Medic = {
     medics get (id) match {
       case Some (m) =>
         m
       case None =>
-        val m = new Medic
+        val m = new Medic (id)
         medics += id -> m
         m
     }}
 
-  private def getMaker (id: CatalogId): Disks => Poster =
-    makers get (id) match {
-      case Some (m) => m
-      case None => (Poster (id) (scheduler, _))
-    }
-
-  Poster.update.replay { case (id, update) =>
+  Handler.update.replay { case (id, update) =>
     fiber.execute (getMedic (id) patch (update))
   }
 
-  Poster.checkpoint.replay { case (id, meta) =>
+  Handler.checkpoint.replay { case (id, meta) =>
     fiber.execute (getMedic (id) checkpoint (meta))
   }
 
-  def listen [C] (desc: CatalogDescriptor [C]) (handler: C => Any): Unit = fiber.execute {
-    require (!(makers contains desc.id), f"Catalog ${desc.id.id}%X already registered")
-    makers += desc.id -> (Poster (desc, handler) (scheduler, _))
-  }
-
-  private def close (id: CatalogId) (implicit disks: Disks): Async [(CatalogId, Handler)] = {
-    val medic = getMedic (id)
-    val maker = getMaker (id) .apply (disks)
+  private def close (id: CatalogId) (implicit disks: Disks): Async [(CatalogId, Handler)] =
     for {
-      handler <- medic.close (maker)
+      handler <- getMedic (id) .close()
     } yield {
       (id, handler)
-    }}
+    }
 
   def launch (implicit launch: Disks.Launch, atlas: Atlas): Async [Catalogs] =
     fiber.guard {
       import launch.disks
       for {
-        handlers <- (medics.keySet ++ makers.keySet) .latch.map foreach (close (_))
+        handlers <- medics.keySet.latch.map foreach (close (_))
         broker = new Broker (handlers)
         kit = new CatalogKit (broker)
       } yield {

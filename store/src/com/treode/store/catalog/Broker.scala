@@ -1,13 +1,17 @@
 package com.treode.store.catalog
 
 import com.treode.async.{Async, AsyncImplicits, Callback, Fiber, Scheduler}
+import com.treode.buffer.ArrayBuffer
 import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
 import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position}
 import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
+import com.treode.pickle.PicklerRegistry
 
 import Async.guard
 import AsyncImplicits._
 import Callback.ignore
+import Handler.pager
+import PicklerRegistry.Tag
 
 private class Broker (
     private var catalogs: Map [CatalogId, Handler]
@@ -18,20 +22,32 @@ private class Broker (
 
   private val fiber = new Fiber (scheduler)
 
+  private val ports = PicklerRegistry [Tag] { id: Long =>
+    PicklerRegistry.const [Unit, Any] (id, ())
+  }
+
   private def _get (id: CatalogId): Handler = {
     catalogs get (id) match {
       case Some (cat) =>
         cat
       case None =>
-        val cat = Handler (Poster (id))
+        val cat = Handler (id)
         catalogs += id -> cat
         cat
     }}
 
-  def listen [C] (desc: CatalogDescriptor [C]) (handler: C => Any): Unit = fiber.execute {
-    require (!(catalogs contains desc.id), f"Catalog ${desc.id.id}%X already registered")
-    catalogs += desc.id -> Handler (Poster (desc, handler))
-  }
+  private def deliver (id: CatalogId, cat: Handler): Unit =
+    scheduler.execute {
+      ports.unpickle (id.id, ArrayBuffer (cat.bytes.bytes))
+    }
+
+  def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =
+    fiber.execute {
+      PicklerRegistry.action (ports, desc.pcat, desc.id.id) (f)
+      catalogs get (desc.id) match {
+        case Some (cat) => deliver (desc.id, cat)
+        case None => ()
+      }}
 
   def get (cat: CatalogId): Async [Handler] =
     fiber.supply {
@@ -47,8 +63,10 @@ private class Broker (
 
   def patch (id: CatalogId, update: Update): Async [Unit] =
     fiber.supply {
-      _get (id) patch (update)
-    }
+      val cat = _get (id)
+      if (cat.patch (update))
+        deliver (id, cat)
+  }
 
   private def _status: Ping =
     for ((id, cat) <- catalogs.toSeq)
@@ -74,9 +92,11 @@ private class Broker (
 
   def sync (updates: Sync): Unit =
     fiber.execute {
-      for ((id, update) <- updates)
-        _get (id) .patch (update)
-    }
+      for ((id, update) <- updates) {
+        val cat = _get (id)
+        if (cat.patch (update))
+          deliver (id, cat)
+      }}
 
   def gab () (implicit cluster: Cluster) {
     scheduler.delay (200) {
@@ -104,7 +124,7 @@ private class Broker (
 
   def attach () (implicit launch: Disks.Launch, cluster: Cluster) {
 
-    Poster.pager.handle (this)
+    pager.handle (this)
 
     Broker.ping.listen { (values, from) =>
       val task = for {
