@@ -52,11 +52,11 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, catalogs, atomic) = captor.passed
 
-  def setCohorts (version: Int, cohorts: Cohort*): Unit =
-    atlas.set (version, cohorts.toArray)
+  def setCohorts (cohorts: Cohort*): Unit =
+    atlas.set (Cohorts (cohorts.toArray, 1))
 
   def issueCohorts (cohorts: Cohort*): Async [Unit] =
-    atlas.issue (cohorts.toArray)
+    atlas.issue (Cohorts (cohorts.toArray, 1))
 
   def writer (xid: TxId) = atomic.writers.get (xid)
 

@@ -57,8 +57,8 @@ extends StubActiveHost (id, network) {
 
   val acceptors = catalogs.acceptors
 
-  def setCohorts (version: Int, cohorts: Cohort*): Unit =
-    atlas.set (version, cohorts.toArray)
+  def setCohorts (cohorts: Cohort*): Unit =
+    atlas.set (Cohorts (cohorts.toArray, 1))
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) {
     import catalogs.broker.{diff, patch}

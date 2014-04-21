@@ -11,6 +11,14 @@ sealed abstract class Cohort {
 
 object Cohort {
 
+  case object Empty extends Cohort {
+
+    def hosts = Set.empty
+
+    def track: ReplyTracker =
+      ReplyTracker.empty
+  }
+
   case class Settled (hosts: Set [HostId]) extends Cohort {
 
     require (hosts.size.isOdd, "The cohort needs an odd number of hosts.")
@@ -51,6 +59,8 @@ object Cohort {
 
   def moving (active: HostId*) (target: HostId*): Cohort =
     new Moving (active.toSet, target.toSet)
+
+  val empty = Empty
 
   val pickler = {
     import StorePicklers._

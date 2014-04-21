@@ -170,10 +170,10 @@ private object Rebalancer {
         case _ => Set.empty
       }
 
-    def apply (cohorts: Array [Cohort]) (implicit cluster: Cluster): Targets = {
+    def apply (cohorts: Cohorts) (implicit cluster: Cluster): Targets = {
       val builder = Map.newBuilder [Int, Set [Peer]]
       for {
-        (c, i) <- cohorts.zipWithIndex
+        (c, i) <- cohorts.cohorts.zipWithIndex
         ts = targets (c)
         if !ts.isEmpty
       }  builder += i -> (ts map (cluster.peer _))

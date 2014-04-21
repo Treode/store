@@ -7,7 +7,7 @@ import com.treode.pickle.Pickler
 
 private trait Atlas {
 
-  def rebalance (f: Array [Cohort] => Async [Unit])
+  def rebalance (f: Cohorts => Async [Unit])
 
   def place (id: Int): Int
 
@@ -15,7 +15,7 @@ private trait Atlas {
 
   def residents: Residents
 
-  def issue (cohorts: Array [Cohort]) (implicit catalogs: Catalogs): Async [Unit]
+  def issue (cohorts: Cohorts) (implicit catalogs: Catalogs): Async [Unit]
 
   def place [A] (p: Pickler [A], v: A): Int =
     place (p.murmur32 (v))

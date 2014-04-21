@@ -5,7 +5,7 @@ import com.treode.async.Async
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Atlas, Catalogs, Cohort, Paxos}
+import com.treode.store.{Atlas, Catalogs, Cohort, Cohorts, Paxos}
 import com.treode.store.atlas.AtlasKit
 
 import Async.guard
@@ -46,9 +46,9 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, catalogs, paxos) = captor.passed
 
-  def setCohorts (version: Int, cohorts: Cohort*): Unit =
-    atlas.set (version, cohorts.toArray)
+  def setCohorts (cohorts: Cohort*): Unit =
+    atlas.set (Cohorts (cohorts.toArray, 1))
 
   def issueCohorts (cohorts: Cohort*): Async [Unit] =
-    atlas.issue (cohorts.toArray)
+    atlas.issue (Cohorts (cohorts.toArray, 1))
 }

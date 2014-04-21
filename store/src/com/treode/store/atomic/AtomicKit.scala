@@ -48,7 +48,7 @@ private class AtomicKit (implicit
   def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult] =
     async (write (xid, ct, ops, _))
 
-  def rebalance (cohorts: Array [Cohort]): Async [Unit] = {
+  def rebalance (cohorts: Cohorts): Async [Unit] = {
     val targets = Targets (cohorts)
     for {
       _ <- rebalancer.rebalance (targets)
