@@ -15,7 +15,7 @@ import Cohort.Moving
 import Rebalancer.{Batch, Point, Range, Targets, Tracker, move}
 
 private class Rebalancer (kit: AtomicKit) {
-  import kit.{atlas, cluster, place, random, scheduler, tables}
+  import kit.{cluster, library, place, random, scheduler, tables}
   import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
 
   private val fiber = new Fiber (scheduler)
@@ -31,7 +31,7 @@ private class Rebalancer (kit: AtomicKit) {
     var entries = 0
     var bytes = 0
 
-    val residents = atlas.residents
+    val residents = library.residents
     val (table, iter, next) =
       tables.ceiling (start.table) match {
         case Some (table) if table.id == start.table =>

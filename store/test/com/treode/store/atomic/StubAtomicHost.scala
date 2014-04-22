@@ -7,7 +7,6 @@ import com.treode.async.{Async, Callback}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.store._
-import com.treode.store.atlas.AtlasKit
 import com.treode.disk.Disks
 import org.scalatest.Assertions
 
@@ -20,6 +19,7 @@ extends StubActiveHost (id, network) {
   import network.{random, scheduler}
 
   implicit val cluster: Cluster = this
+  implicit val library = new Library
 
   implicit val disksConfig = TestDisksConfig()
   implicit val storeConfig = TestStoreConfig()
@@ -33,17 +33,14 @@ extends StubActiveHost (id, network) {
   val geometry = TestDiskGeometry()
   val files = Seq ((Paths.get ("a"), file, geometry))
 
-  val atlas = new AtlasKit
-
   val _launch =
     for {
       launch <- recovery.attach (files)
-      catalogs <- _catalogs.launch (launch, atlas)
-      paxos <- _paxos.launch (launch, atlas)
-      atomic <- _atomic.launch (launch, atlas, paxos) .map (_.asInstanceOf [AtomicKit])
+      catalogs <- _catalogs.launch (launch)
+      paxos <- _paxos.launch (launch)
+      atomic <- _atomic.launch (launch, paxos) .map (_.asInstanceOf [AtomicKit])
     } yield {
       launch.launch()
-      atlas.attach (cluster, catalogs)
       (launch.disks, catalogs, atomic)
     }
 
@@ -53,11 +50,12 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, catalogs, atomic) = captor.passed
 
-  def setCohorts (cohorts: Cohort*): Unit =
-    atlas.set (cluster) (Cohorts (cohorts.toArray, 1))
-
-  def issueCohorts (cohorts: Cohort*): Async [Unit] =
-    atlas.issue (Cohorts (cohorts.toArray, 1))
+  def setCohorts (cohorts: Cohort*) {
+    val atlas = Cohorts (cohorts.toArray, 1)
+    library.atlas = atlas
+    library.residents = atlas.residents (localId)
+    atomic.rebalance (atlas) run (ignore)
+  }
 
   def writer (xid: TxId) = atomic.writers.get (xid)
 

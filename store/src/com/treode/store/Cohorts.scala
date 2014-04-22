@@ -15,8 +15,14 @@ class Cohorts private (
   def place (id: Int): Int =
     id & mask
 
+  def place [A] (p: Pickler [A], v: A): Int =
+    place (p.murmur32 (v))
+
   def locate (id: Int): Cohort =
     cohorts (id & mask)
+
+  def locate [A] (p: Pickler [A], v: A): Cohort =
+    locate (p.murmur32 (v))
 
   def residents (host: HostId): Residents = {
     val nums = for ((c, i) <- cohorts.zipWithIndex; if c.hosts contains host) yield i
@@ -44,4 +50,9 @@ object Cohorts {
     wrap (array (cohort), uint)
     .build (v => new Cohorts (v._1, v._2))
     .inspect (v => (v.cohorts, v.version))
+  }
+
+  val catalog = {
+    import StorePicklers._
+    CatalogDescriptor (0x693799787FDC9106L, cohorts)
   }}

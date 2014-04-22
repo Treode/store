@@ -11,7 +11,7 @@ import AsyncImplicits._
 import PaxosKit.locator
 
 private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
-  import kit.{archive, atlas, cluster, disks}
+  import kit.{archive, cluster, disks, library}
 
   val acceptors = newAcceptorsMap
 
@@ -44,7 +44,7 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
 
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
-      val residents = atlas.residents
+      val residents = library.residents
       for {
         meta <- archive.compact (groups, residents)
         _ <- Acceptors.checkpoint.record (meta)
@@ -53,7 +53,7 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
 
   def checkpoint(): Async [Unit] =
     guard {
-      val residents = atlas.residents
+      val residents = library.residents
       for {
         _ <- latch (
             archive.checkpoint (residents) .flatMap (Acceptors.checkpoint.record (_)),

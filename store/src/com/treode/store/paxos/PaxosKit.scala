@@ -5,7 +5,7 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.{Cluster, ReplyTracker}
 import com.treode.disk.Disks
-import com.treode.store.{Atlas, Bytes, Paxos, StoreConfig, TxClock}
+import com.treode.store.{Bytes, Library, Paxos, StoreConfig, TxClock}
 import com.treode.store.tier.TierTable
 
 import Async.async
@@ -18,9 +18,11 @@ private class PaxosKit (
     val scheduler: Scheduler,
     val cluster: Cluster,
     val disks: Disks,
-    val atlas: Atlas,
+    val library: Library,
     val config: StoreConfig
 ) extends Paxos {
+
+  import library.atlas
 
   val acceptors = new Acceptors (this)
 
@@ -47,6 +49,7 @@ private [store] object PaxosKit {
     random: Random,
     scheduler: Scheduler,
     cluster: Cluster,
+    library: Library,
     recovery: Disks.Recovery,
     config: StoreConfig): Paxos.Recovery =
   new RecoveryKit

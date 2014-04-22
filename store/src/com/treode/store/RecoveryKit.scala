@@ -5,7 +5,6 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
-import com.treode.store.atlas.AtlasKit
 import com.treode.store.atomic.AtomicKit
 
 private class RecoveryKit (implicit
@@ -16,19 +15,19 @@ private class RecoveryKit (implicit
     config: StoreConfig
 ) extends Store.Recovery {
 
+  implicit val library = new Library
+
   implicit val _catalogs = Catalogs.recover()
   val _paxos = Paxos.recover()
   val _atomic = AtomicKit.recover()
-
-  val atlas = new AtlasKit
 
   def launch (launch: Disks.Launch): Async [Store] = {
     import launch.disks
 
     for {
-      catalogs <- _catalogs.launch (launch, atlas)
-      paxos <- _paxos.launch (launch, atlas)
-      atomic <- _atomic.launch (launch, atlas, paxos)
+      catalogs <- _catalogs.launch (launch)
+      paxos <- _paxos.launch (launch)
+      atomic <- _atomic.launch (launch, paxos)
     } yield {
       atomic
     }}}

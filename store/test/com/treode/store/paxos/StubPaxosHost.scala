@@ -5,8 +5,7 @@ import com.treode.async.Async
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Atlas, Catalogs, Cohort, Cohorts, Paxos}
-import com.treode.store.atlas.AtlasKit
+import com.treode.store.{Catalogs, Cohort, Cohorts, Library, Paxos}
 
 import Async.guard
 import PaxosTestTools._
@@ -16,6 +15,7 @@ extends StubActiveHost (id, network) {
   import network.{random, scheduler}
 
   implicit val cluster: Cluster = this
+  implicit val library = new Library
 
   implicit val disksConfig = TestDisksConfig()
   implicit val storeConfig = TestStoreConfig()
@@ -28,16 +28,13 @@ extends StubActiveHost (id, network) {
   val geometry = TestDiskGeometry()
   val files = Seq ((Paths.get ("a"), file, geometry))
 
-  val atlas = new AtlasKit
-
   val _launch =
     for {
       launch <- recovery.attach (files)
-      catalogs <- _catalogs.launch (launch, atlas)
-      paxos <- _paxos.launch (launch, atlas) .map (_.asInstanceOf [PaxosKit])
+      catalogs <- _catalogs.launch (launch)
+      paxos <- _paxos.launch (launch) .map (_.asInstanceOf [PaxosKit])
     } yield {
       launch.launch()
-      atlas.attach (cluster, catalogs)
       (launch.disks, catalogs, paxos)
     }
 
@@ -47,9 +44,17 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, catalogs, paxos) = captor.passed
 
-  def setCohorts (cohorts: Cohort*): Unit =
-    atlas.set (cluster) (Cohorts (cohorts.toArray, 1))
+  Cohorts.catalog.listen { atlas =>
+    library.atlas = atlas
+    library.residents = atlas.residents (localId)
+  }
+
+  def setCohorts (cohorts: Cohort*) {
+    val _cohorts = Cohorts (cohorts.toArray, 1)
+    library.atlas = _cohorts
+    library.residents = _cohorts.residents (localId)
+  }
 
   def issueCohorts (cohorts: Cohort*): Async [Unit] =
-    atlas.issue (Cohorts (cohorts.toArray, 1))
+    Cohorts.catalog.issue (1, Cohorts (cohorts.toArray, 1))
 }

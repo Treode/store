@@ -18,10 +18,12 @@ private class AtomicKit (implicit
     val scheduler: Scheduler,
     val cluster: Cluster,
     val disks: Disks,
-    val atlas: Atlas,
+    val library: Library,
     val paxos: Paxos,
     val config: StoreConfig
 ) extends Store {
+
+  import library.atlas
 
   val tables = new TimedStore (this)
   val reader = new ReadDeputy (this)
@@ -66,13 +68,14 @@ private [store] object AtomicKit {
 
   trait Recovery {
 
-    def launch (implicit launch: Disks.Launch, atlas: Atlas, paxos: Paxos): Async [Store]
+    def launch (implicit launch: Disks.Launch, paxos: Paxos): Async [Store]
   }
 
   def recover() (implicit
       random: Random,
       scheduler: Scheduler,
       cluster: Cluster,
+      library: Library,
       recovery: Disks.Recovery,
       config: StoreConfig
   ): Recovery =

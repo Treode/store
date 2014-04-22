@@ -5,16 +5,18 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.{Cluster, ReplyTracker}
 import com.treode.disk.Disks
-import com.treode.store.{Atlas, Bytes, Catalogs, CatalogDescriptor, CatalogId, StoreConfig}
+import com.treode.store.{Bytes, Catalogs, CatalogDescriptor, CatalogId, Library, StoreConfig}
 
 private class CatalogKit (val broker: Broker) (implicit
     val random: Random,
     val scheduler: Scheduler,
     val cluster: Cluster,
     val disks: Disks,
-    val atlas: Atlas,
+    val library: Library,
     val config: StoreConfig
 ) extends Catalogs {
+
+  import library.atlas
 
   val acceptors = new Acceptors (this)
 
@@ -50,6 +52,7 @@ private [store] object CatalogKit {
       random: Random,
       scheduler: Scheduler,
       cluster: Cluster,
+      library: Library,
       recovery: Disks.Recovery,
       config: StoreConfig): Catalogs.Recovery =
     new RecoveryKit

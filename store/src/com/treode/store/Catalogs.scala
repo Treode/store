@@ -18,13 +18,14 @@ private object Catalogs {
 
   trait Recovery {
 
-    def launch (implicit disks: Disks.Launch, atlas: Atlas): Async [Catalogs]
+    def launch (implicit disks: Disks.Launch): Async [Catalogs]
   }
 
   def recover () (implicit
       random: Random,
       scheduler: Scheduler,
       cluster: Cluster,
+      library: Library,
       recovery: Disks.Recovery,
       config: StoreConfig
   ): Recovery =

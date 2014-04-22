@@ -16,7 +16,7 @@ import AtomicKit.locator
 import JavaConversions._
 
 private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
-  import kit.{atlas, config, disks, scheduler}
+  import kit.{config, disks, library, scheduler}
 
   val space = new LockSpace
   val tables = newTablesMap
@@ -110,7 +110,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
       val id = TableId (obj.id)
-      val residents = atlas.residents
+      val residents = library.residents
       for {
         meta <- getTable (id) .compact (groups, residents)
         _ <- TimedStore.checkpoint.record (id, meta)
@@ -118,7 +118,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     }
 
   private def checkpoint (id: TableId, table: TierTable): Async [Unit] = {
-    val residents = atlas.residents
+    val residents = library.residents
     for {
       meta <- table.checkpoint (residents)
       _ <- TimedStore.checkpoint.record (id, meta)

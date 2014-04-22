@@ -7,7 +7,6 @@ import com.treode.async.{Async, Callback, CallbackCaptor}
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
 import com.treode.store._
-import com.treode.store.atlas.AtlasKit
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions
 
@@ -20,10 +19,11 @@ private class StubCatalogHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {
   import network.{random, scheduler}
 
-  implicit val cluster: Cluster = this
-
   implicit val disksConfig = TestDisksConfig()
   implicit val storeConfig = TestStoreConfig()
+
+  implicit val cluster: Cluster = this
+  implicit val library = new Library
 
   implicit val recovery = Disks.recover()
   implicit val _catalogs = Catalogs.recover()
@@ -35,15 +35,12 @@ extends StubActiveHost (id, network) {
   val geometry = TestDiskGeometry()
   val files = Seq ((Paths.get ("a"), file, geometry))
 
-  val atlas = new AtlasKit
-
   val _launch =
     for {
       launch <- recovery.attach (files)
-      catalogs <- _catalogs.launch (launch, atlas) .map (_.asInstanceOf [CatalogKit])
+      catalogs <- _catalogs.launch (launch) .map (_.asInstanceOf [CatalogKit])
     } yield {
       launch.launch()
-      atlas.attach (cluster, catalogs)
       catalogs.listen (cat1) (v1 = _)
       catalogs.listen (cat2) (v2 = _)
       (launch.disks, catalogs)
@@ -57,8 +54,11 @@ extends StubActiveHost (id, network) {
 
   val acceptors = catalogs.acceptors
 
-  def setCohorts (cohorts: Cohort*): Unit =
-    atlas.set (cluster) (Cohorts (cohorts.toArray, 1))
+  def setCohorts (cohorts: Cohort*) {
+    val _cohorts = Cohorts (cohorts.toArray, 1)
+    library.atlas = _cohorts
+    library.residents = _cohorts.residents (localId)
+  }
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) {
     import catalogs.broker.{diff, patch}
