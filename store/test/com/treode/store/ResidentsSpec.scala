@@ -9,7 +9,7 @@ import StoreTestTools._
 class ResidentsSpec extends FlatSpec {
 
   private def residents (cohorts: Int*): Residents =
-    Cohorts (cohorts .map (settled (_)) .toArray, 1) .residents (0)
+    Atlas (cohorts .map (settled (_)) .toArray, 1) .residents (0)
 
   "Residents.all" should "contain all ids" in {
     for (id <- Stream.fill (100) (Random.nextInt))

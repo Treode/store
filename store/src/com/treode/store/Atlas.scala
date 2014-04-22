@@ -5,7 +5,7 @@ import com.treode.pickle.Pickler
 
 import Integer.highestOneBit
 
-class Cohorts private (
+class Atlas private (
     val cohorts: Array [Cohort],
     val version: Int
 ) {
@@ -29,9 +29,9 @@ class Cohorts private (
     new Residents (nums.toSet, cohorts.size - 1)
   }}
 
-object Cohorts {
+object Atlas {
 
-  def apply (cohorts: Array [Cohort], version: Int): Cohorts = {
+  def apply (cohorts: Array [Cohort], version: Int): Atlas = {
 
     require (
         highestOneBit (cohorts.length) == cohorts.length,
@@ -40,19 +40,19 @@ object Cohorts {
         version > 0,
         "Atlas version must be positive.")
 
-    new Cohorts (cohorts, version)
+    new Atlas (cohorts, version)
   }
 
-  val empty = new Cohorts (Array (Cohort.empty), 0)
+  val empty = new Atlas (Array (Cohort.empty), 0)
 
   val pickler = {
     import StorePicklers._
     wrap (array (cohort), uint)
-    .build (v => new Cohorts (v._1, v._2))
+    .build (v => new Atlas (v._1, v._2))
     .inspect (v => (v.cohorts, v.version))
   }
 
   val catalog = {
     import StorePicklers._
-    CatalogDescriptor (0x693799787FDC9106L, cohorts)
+    CatalogDescriptor (0x693799787FDC9106L, atlas)
   }}

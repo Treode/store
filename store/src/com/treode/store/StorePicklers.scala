@@ -11,12 +11,12 @@ private trait StorePicklers extends Picklers {
 
   lazy val instant = wrap (ulong) build (new Instant (_)) inspect (_.getMillis)
 
+  def atlas = Atlas.pickler
   def ballotNumber = BallotNumber.pickler
   def bytes = Bytes.pickler
   def catId = CatalogId.pickler
   def cell = Cell.pickler
   def cohort = Cohort.pickler
-  def cohorts = Cohorts.pickler
   def hostId = HostId.pickler
   def portId = PortId.pickler
   def pos = Position.pickler

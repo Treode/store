@@ -4,7 +4,7 @@ import scala.util.Random
 
 import com.treode.async.StubScheduler
 import com.treode.cluster.{Cluster, HostId, Peer, StubActiveHost, StubNetwork}
-import com.treode.store.{Bytes, Cohort, Cohorts, StoreTestTools, TxClock}
+import com.treode.store.{Atlas, Bytes, Cohort, StoreTestTools, TxClock}
 import org.scalatest.{FreeSpec, ShouldMatchers}
 
 import Cohort.{issuing, moving, settled}
@@ -14,7 +14,7 @@ import StoreTestTools.{intToBytes, longToTxClock}
 class RebalancerSpec extends FreeSpec with ShouldMatchers {
 
   private def targets (cohorts: Cohort*) (implicit cluster: Cluster): Targets =
-    Targets (Cohorts (cohorts.toArray, 1))
+    Targets (Atlas (cohorts.toArray, 1))
 
   private def begin (start: Int): Range =
     Range (Point.Middle (start, Bytes.empty, TxClock.max), Point.End)

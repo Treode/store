@@ -50,8 +50,8 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, catalogs, atomic) = captor.passed
 
-  def setCohorts (cohorts: Cohort*) {
-    val atlas = Cohorts (cohorts.toArray, 1)
+  def setAtlas (cohorts: Cohort*) {
+    val atlas = Atlas (cohorts.toArray, 1)
     library.atlas = atlas
     library.residents = atlas.residents (localId)
     atomic.rebalance (atlas) run (ignore)

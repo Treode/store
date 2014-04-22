@@ -5,7 +5,7 @@ import com.treode.async.Async
 import com.treode.async.io.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Catalogs, Cohort, Cohorts, Library, Paxos}
+import com.treode.store.{Atlas, Catalogs, Cohort, Library, Paxos}
 
 import Async.guard
 import PaxosTestTools._
@@ -44,17 +44,17 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, catalogs, paxos) = captor.passed
 
-  Cohorts.catalog.listen { atlas =>
+  Atlas.catalog.listen { atlas =>
     library.atlas = atlas
     library.residents = atlas.residents (localId)
   }
 
-  def setCohorts (cohorts: Cohort*) {
-    val _cohorts = Cohorts (cohorts.toArray, 1)
+  def setAtlas (cohorts: Cohort*) {
+    val _cohorts = Atlas (cohorts.toArray, 1)
     library.atlas = _cohorts
     library.residents = _cohorts.residents (localId)
   }
 
-  def issueCohorts (cohorts: Cohort*): Async [Unit] =
-    Cohorts.catalog.issue (1, Cohorts (cohorts.toArray, 1))
+  def issueAtlas (cohorts: Cohort*): Async [Unit] =
+    Atlas.catalog.issue (1, Atlas (cohorts.toArray, 1))
 }

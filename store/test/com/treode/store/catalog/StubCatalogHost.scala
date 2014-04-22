@@ -54,10 +54,10 @@ extends StubActiveHost (id, network) {
 
   val acceptors = catalogs.acceptors
 
-  def setCohorts (cohorts: Cohort*) {
-    val _cohorts = Cohorts (cohorts.toArray, 1)
-    library.atlas = _cohorts
-    library.residents = _cohorts.residents (localId)
+  def setAtlas (cohorts: Cohort*) {
+    val atlas = Atlas (cohorts.toArray, 1)
+    library.atlas = atlas
+    library.residents = atlas.residents (localId)
   }
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) {
