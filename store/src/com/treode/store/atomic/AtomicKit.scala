@@ -28,7 +28,7 @@ private class AtomicKit (implicit
   val tables = new TimedStore (this)
   val reader = new ReadDeputy (this)
   val writers = new WriteDeputies (this)
-  val rebalancer = new Rebalancer (this)
+  val mover = new AtomicMover (this)
 
   def place (table: TableId, key: Bytes): Int =
     atlas.place (locator, (table, key))
@@ -53,7 +53,7 @@ private class AtomicKit (implicit
   def rebalance (atlas: Atlas): Async [Unit] = {
     val targets = Targets (atlas)
     for {
-      _ <- rebalancer.rebalance (targets)
+      _ <- mover.rebalance (targets)
     } yield {
       if (targets.isEmpty)
         tables.compact()

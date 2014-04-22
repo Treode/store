@@ -14,7 +14,7 @@ import Callback.ignore
 import Cohort.Moving
 import Rebalancer.{Batch, Point, Range, Targets, Tracker, move}
 
-private class Rebalancer (kit: AtomicKit) {
+private class AtomicMover (kit: AtomicKit) {
   import kit.{cluster, library, place, random, scheduler, tables}
   import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
 
