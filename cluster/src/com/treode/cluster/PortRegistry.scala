@@ -5,18 +5,14 @@ import com.treode.async.io.Socket
 import com.treode.buffer.{Input, PagedBuffer, Output}
 import com.treode.pickle.{InvalidTagException, Pickler, Picklers, PicklerRegistry}
 
-import PicklerRegistry.FunctionTag
-
 class PortRegistry {
 
-  private type Handler = FunctionTag [Peer, Any]
+  private type Handler = Peer => Any
 
   private val ports =
-    PicklerRegistry [Handler] { id: Long =>
+    PicklerRegistry [Handler] { id: Long => from: Peer =>
       if (PortId (id) .isFixed)
         throw new InvalidTagException ("port", id)
-      else
-        PicklerRegistry.const [Peer, Any] (id, ())
     }
 
   private [cluster] def deliver [M] (p: Pickler [M], from: Peer, port: PortId, msg: M) {
@@ -30,7 +26,7 @@ class PortRegistry {
   }
 
   def listen [M] (p: Pickler [M], id: PortId) (f: (M, Peer) => Any): Unit =
-    PicklerRegistry.tupled (ports, p, id.id) (f)
+    ports.register (p, id.id) (f.curried)
 
   private class EphemeralPortImpl [M] (val id: PortId) extends EphemeralPort [M] {
 
@@ -41,7 +37,7 @@ class PortRegistry {
   def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralPort [M] = {
     val id = ports.open (p) {
       val id = PortId.newEphemeral
-      (id.id, PicklerRegistry.tupled (p, id.id) (f))
+      (id.id, f.curried)
     }
     new EphemeralPortImpl (id)
   }}

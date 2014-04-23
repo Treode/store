@@ -6,6 +6,7 @@ private trait ClusterPicklers extends Picklers {
 
   def hostId = HostId.pickler
   def portId = PortId.pickler
+  def rumorId = RumorId.pickler
 
   def void [A] = new Pickler [A] {
     def p (v: A, ctx: PickleContext): Unit = throw new IllegalArgumentException

@@ -1,10 +1,10 @@
 package com.treode.cluster
 
 import com.treode.async.{Async, Callback, Fiber, Scheduler}
+import com.treode.buffer.ArrayBuffer
 import com.treode.pickle.{InvalidTagException, Pickler, PicklerRegistry}
 
 import Callback.ignore
-import PicklerRegistry.{BaseTag, FunctionTag}
 import Scuttlebutt.{Handler, Ping, Sync, Universe}
 
 class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Scheduler) {
@@ -14,23 +14,23 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
   private var universe: Universe = Map.empty .withDefaultValue (Map.empty)
   private var next = 1
 
-  private val ports =
-    PicklerRegistry [Handler] { id: Long =>
-      PicklerRegistry.const [Peer, Any] (id, ())
-    }
+  private val ports = PicklerRegistry [Handler] { id: Long => from: Peer => () }
 
-  def loopback [M] (desc: RumorDescriptor [M]) (msg: M): Handler =
+  def loopback [M] (desc: RumorDescriptor [M], msg: M): Handler =
     ports.loopback (desc.pmsg, desc.id.id, msg)
 
+  def unpickle (id: RumorId, msg: Array [Byte]): Handler =
+    ports.unpickle (id.id, ArrayBuffer (msg))
+
   def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
-    PicklerRegistry.tupled (ports, desc.pmsg, desc.id.id) (f)
+    ports.register (desc.pmsg, desc.id.id) (f.curried)
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
     fiber.execute {
-      val handler = loopback (desc) (msg)
-      universe += (localId -> (universe (localId) + (desc.id -> ((handler, next)))))
+      val value = desc.pmsg.toByteArray (msg)
+      universe += (localId -> (universe (localId) + (desc.id -> ((value, next)))))
       next += 1
-      scheduler.execute (handler (localHost))
+      scheduler.execute (loopback (desc, msg) (localHost))
     }
 
   private def _status: Ping =
@@ -46,7 +46,8 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
       for {
         (host, state) <- universe.toSeq
         n = _hosts (host)
-        deltas = state.values.toSeq.filter (_._2 > n)
+        deltas =
+          (for ((id, (v1, n1)) <- state; if n1 > n) yield (id, v1, n1)) .toSeq
         if !deltas.isEmpty
       } yield (host -> deltas)
     }
@@ -61,13 +62,12 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
       for ((host, deltas) <- updates) {
         val peer = peers.get (host)
         var state = universe (host)
-        for ((r1, n1) <- deltas) {
-          val k = RumorId (r1.id)
-          val v0 = state.get (k)
+        for ((id, v1, n1) <- deltas) {
+          val v0 = state.get (id)
           if (v0.isEmpty || v0.get._2 < n1) {
-            state += k -> (r1, n1)
+            state += id -> (v1, n1)
             if (next < n1) next = n1 + 1
-            scheduler.execute (r1 (peer))
+            scheduler.execute (unpickle (id, v1) (peer))
           }}
         universe += host -> state
       }}
@@ -83,17 +83,15 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
 
   def attach (implicit cluster: Cluster) {
 
-    val _sync = Scuttlebutt.sync (ports.pickler)
-
     Scuttlebutt.ping.listen { (hosts, from) =>
       val task = for {
         updates <- ping (hosts)
         if !updates.isEmpty
-      } yield _sync (updates) (from)
+      } yield Scuttlebutt.sync (updates) (from)
       task run (ignore)
     }
 
-    _sync.listen { (updates, from) =>
+    Scuttlebutt.sync.listen { (updates, from) =>
       sync (updates)
     }
 
@@ -102,10 +100,11 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
 
 object Scuttlebutt {
 
-  type Handler = FunctionTag [Peer, Any]
+  type Handler = Peer => Any
+  type Value = Array [Byte]
   type Ping = Seq [(HostId, Int)]
-  type Sync = Seq [(HostId, Seq [(Handler, Int)])]
-  type Universe = Map [HostId, Map [RumorId, (Handler, Int)]]
+  type Sync = Seq [(HostId, Seq [(RumorId, Value, Int)])]
+  type Universe = Map [HostId, Map [RumorId, (Value, Int)]]
 
   val ping: MessageDescriptor [Ping] = {
     import ClusterPicklers._
@@ -114,9 +113,9 @@ object Scuttlebutt {
         seq (tuple (hostId, uint)))
   }
 
-  def sync (pval: Pickler [Handler]): MessageDescriptor [Sync] = {
+  val sync: MessageDescriptor [Sync] = {
     import ClusterPicklers._
     MessageDescriptor (
         0xFF3FBB2A507B2F73L,
-        seq (tuple (hostId, seq (tuple (pval, uint)))))
+        seq (tuple (hostId, seq (tuple (rumorId, array (byte), uint)))))
   }}

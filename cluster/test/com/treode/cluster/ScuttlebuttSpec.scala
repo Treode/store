@@ -1,5 +1,6 @@
 package com.treode.cluster
 
+import java.util.Arrays
 import scala.util.Random
 
 import com.treode.async.{AsyncChecks, AsyncTestTools, StubScheduler}
@@ -9,8 +10,7 @@ import com.treode.pickle.{Pickler, Picklers, PicklerRegistry}
 import org.scalatest.{FreeSpec, PropSpec, Suites}
 
 import AsyncTestTools._
-import PicklerRegistry.{BaseTag, FunctionTag}
-import Scuttlebutt.{Handler, Sync}
+import Scuttlebutt.{Handler, Sync, Value}
 
 class ScuttlebuttSpec extends Suites (ScuttlebuttBehaviors, new ScuttlebuttProperties)
 
@@ -25,16 +25,17 @@ object ScuttlebuttBehaviors extends FreeSpec {
   def assertSeq [T] (xs: T*) (test: => Seq [T]): Unit =
     assertResult (xs) (test)
 
-  def tag [M] (desc: RumorDescriptor [M]) (msg: M): Handler = {
-    new BaseTag (desc.pmsg, desc.id.id, msg) with FunctionTag [Peer, Any] {
-      def apply (from: Peer) = throw new IllegalArgumentException
-      override def toString: String = f"Tag($id%X,$msg)"
-    }}
+  def assertSync [T] (xs: (HostId, Seq [(RumorId, Value, Int)])*) (test: => Sync): Unit = {
+    def f (xs: Seq [(RumorId, Value, Int)]) =
+      for ((id, v, n) <- xs) yield (id, Arrays.hashCode (v), n)
+    def g (x: (HostId, Seq [(RumorId, Value, Int)])) = (x._1, f (x._2))
+    assertResult (xs map (g _)) (test map (g _))
+  }
 
   def delta (host: HostId, deltas: (Int, Int)*) = {
     val _deltas =
       for ((msg, vers) <- deltas)
-        yield (tag (rumor) (msg) -> vers)
+        yield (rumor.id, rumor.pmsg.toByteArray (msg), vers)
     host -> _deltas
   }
 
@@ -64,14 +65,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
     def ping (hosts: (HostId, Int)*) =
       sb.ping (hosts) .pass
 
-    def delta (host: HostId, deltas: (Int, Int)*) = {
-      val _deltas =
-        for ((msg, vers) <- deltas)
-          yield (sb.loopback (rumor) (msg) -> vers)
-      host -> _deltas
-    }
-
-    def sync (updates: (HostId, Seq [(Handler, Int)])*) {
+    def sync (updates: (HostId, Seq [(RumorId, Value, Int)])*) {
       sb.sync (updates)
       scheduler.runTasks()
     }}
@@ -119,22 +113,21 @@ object ScuttlebuttBehaviors extends FreeSpec {
       implicit val (scheduler, sb) = mkScuttlebutt
       sb.listen ((_v, from) => ())
       sb.spread (1)
-      assertSeq (delta (LOCAL, (1, 1))) (sb.ping())
+      assertSync (delta (LOCAL, (1, 1))) (sb.ping())
     }
-
 
     "yield non-empty deltas on ping missing this host" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       sb.listen ((_v, from) => ())
       sb.spread (1)
-      assertSeq (delta (LOCAL, (1, 1))) (sb.ping (PEER1 -> 1))
+      assertSync (delta (LOCAL, (1, 1))) (sb.ping (PEER1 -> 1))
     }
 
     "yield non-empty deltas on ping out-of-date with this host" in {
       implicit val (scheduler, sb) = mkScuttlebutt
       sb.listen ((_v, from) => ())
       sb.spread (1)
-      assertSeq (delta (LOCAL, (1, 1))) (sb.ping (LOCAL -> 0))
+      assertSync (delta (LOCAL, (1, 1))) (sb.ping (LOCAL -> 0))
     }
 
     "yield empty deltas on ping up-to-date with this host" in {
@@ -147,13 +140,13 @@ object ScuttlebuttBehaviors extends FreeSpec {
 
     "yield a status that contains the peer" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.sync (sb.delta (PEER1, (1, 1)))
+      sb.sync (delta (PEER1, (1, 1)))
       assertSeq (PEER1 -> 1) (sb.status)
     }
 
     "raise the local version number" in {
       implicit val (scheduler, sb) = mkScuttlebutt
-      sb.sync (sb.delta (PEER1, (1, 3745)))
+      sb.sync (delta (PEER1, (1, 3745)))
       sb.spread (2)
       assertSeq (PEER1 -> 3745, LOCAL -> 3746) (sb.status)
     }
@@ -162,7 +155,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
       implicit val (scheduler, sb) = mkScuttlebutt
       var v = 0
       sb.listen ((_v, from) => v = _v)
-      sb.sync (sb.delta (PEER1, (1, 1)))
+      sb.sync (delta (PEER1, (1, 1)))
       assertResult (1) (v)
     }
 
@@ -170,8 +163,8 @@ object ScuttlebuttBehaviors extends FreeSpec {
       implicit val (scheduler, sb) = mkScuttlebutt
       var v = 0
       sb.listen ((_v, from) => v = _v)
-      sb.sync (sb.delta (PEER1, (1, 1)))
-      sb.sync (sb.delta (PEER1, (2, 2)))
+      sb.sync (delta (PEER1, (1, 1)))
+      sb.sync (delta (PEER1, (2, 2)))
       assertResult (2) (v)
     }
 
@@ -179,8 +172,8 @@ object ScuttlebuttBehaviors extends FreeSpec {
       implicit val (scheduler, sb) = mkScuttlebutt
       var count = 0
       sb.listen ((v, from) => count += 1)
-      sb.sync (sb.delta (PEER1, (1, 1)))
-      sb.sync (sb.delta (PEER1, (1, 1)))
+      sb.sync (delta (PEER1, (1, 1)))
+      sb.sync (delta (PEER1, (1, 1)))
       assertResult (1) (count)
     }}
 
@@ -190,7 +183,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
       implicit val (scheduler, sb) = mkScuttlebutt
       var vs = Map.empty [HostId, Int]
       sb.listen ((v, from) => vs += from.id -> v)
-      sb.sync (sb.delta (PEER1, (1, 1)), sb.delta (PEER2, (2, 1)))
+      sb.sync (delta (PEER1, (1, 1)), delta (PEER2, (2, 1)))
       assertResult (Map (PEER1 -> 1, PEER2 -> 2)) (vs)
     }}}
 

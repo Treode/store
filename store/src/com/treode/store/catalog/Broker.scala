@@ -11,7 +11,6 @@ import Async.guard
 import AsyncImplicits._
 import Callback.ignore
 import Handler.pager
-import PicklerRegistry.Tag
 
 private class Broker (
     private var catalogs: Map [CatalogId, Handler]
@@ -22,9 +21,7 @@ private class Broker (
 
   private val fiber = new Fiber (scheduler)
 
-  private val ports = PicklerRegistry [Tag] { id: Long =>
-    PicklerRegistry.const [Unit, Any] (id, ())
-  }
+  private val ports = PicklerRegistry [Any] {id: Long => ()}
 
   private def _get (id: CatalogId): Handler = {
     catalogs get (id) match {
@@ -43,7 +40,7 @@ private class Broker (
 
   def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =
     fiber.execute {
-      PicklerRegistry.action (ports, desc.pcat, desc.id.id) (f)
+      ports.register (desc.pcat, desc.id.id) (f)
       catalogs get (desc.id) match {
         case Some (cat) => deliver (desc.id, cat)
         case None => ()

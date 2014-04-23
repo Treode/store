@@ -3,15 +3,13 @@ package com.treode.disk
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{Pickler, PicklerRegistry}
 
-import PicklerRegistry.FunctionTag
-
 private class RecordRegistry {
 
   private val records =
-    PicklerRegistry [FunctionTag [Unit, Any]] ("RecordRegistry")
+    PicklerRegistry [Unit => Any] ("RecordRegistry")
 
   def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
-    PicklerRegistry.delayed (records, desc.prec, desc.id.id) (f)
+    records.register (desc.prec, desc.id.id) (msg => _ => f (msg))
 
   def read (id: Long, buf: PagedBuffer, len: Int): Unit => Any =
     records.unpickle (id, buf, len)

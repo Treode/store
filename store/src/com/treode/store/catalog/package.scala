@@ -6,11 +6,7 @@ import com.treode.async.Callback
 import com.treode.store.paxos.BallotNumber
 import com.treode.pickle.PicklerRegistry
 
-import PicklerRegistry.FunctionTag
-
 package object catalog {
-
-  private [catalog] type Handler2 = FunctionTag [Unit, Any]
 
   private [catalog] type Ping = Seq [(CatalogId, Int)]
   private [catalog] type Sync = Seq [(CatalogId, Update)]
