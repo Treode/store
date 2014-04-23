@@ -37,7 +37,6 @@ trait AsyncChecks extends ParallelTestExecution with TimeLimitedTests {
     }}
 
   def forAllSeeds (test: Random => Any) {
-    for (_ <- 0 until nseeds) {
-      val random = new Random (Random.nextLong())
-      test (random)
-    }}}
+    for (_ <- 0 until nseeds)
+      forSeed (Random.nextLong) (test)
+  }}

@@ -30,6 +30,7 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
       val handler = loopback (desc) (msg)
       universe += (localId -> (universe (localId) + (desc.id -> ((handler, next)))))
       next += 1
+      scheduler.execute (handler (localHost))
     }
 
   private def _status: Ping =

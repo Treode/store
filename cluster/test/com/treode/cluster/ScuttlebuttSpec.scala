@@ -228,17 +228,13 @@ class ScuttlebuttProperties extends PropSpec with AsyncChecks {
     val Seq (h1, h2, h3) = hs
     h1.spread (r1) (1)
     h2.spread (r2) (2)
+    kit.runTasks()
     h2.spread (r2) (3)
     h3.spread (r2) (4)
     h3.spread (r3) (5)
+    kit.runTasks()
     h3.spread (r3) (6)
     kit.runTasks (timers = true, count = 200)
-
-    // Hosts do not hear their own rumors.
-    h1.heard += entry (h1.localId, r1, 1)
-    h2.heard += entry (h2.localId, r2, 3)
-    h3.heard += entry (h3.localId, r2, 4)
-    h3.heard += entry (h3.localId, r3, 6)
 
     val expected = Map (
         entry (h1.localId, r1, 1),
