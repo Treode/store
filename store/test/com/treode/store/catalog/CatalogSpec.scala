@@ -5,7 +5,7 @@ import scala.util.Random
 
 import com.treode.async.AsyncChecks
 import com.treode.cluster.StubNetwork
-import com.treode.store.{Bytes, CatalogDescriptor}
+import com.treode.store.{Bytes, CatalogDescriptor, StaleException}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
@@ -123,7 +123,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       import kit.scheduler
       h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .pass
       scheduler.runTasks (timers = true, count = 500)
-      h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [IllegalArgumentException]
+      h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [StaleException]
       scheduler.runTasks (timers = true, count = 500)
       for (h <- hs)
         assertResult (0x658C1274DE7CFA8EL) (h.v1)
@@ -134,7 +134,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       import kit.scheduler
       h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .pass
       scheduler.runTasks (timers = true, count = 500)
-      h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [IllegalArgumentException]
+      h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [StaleException]
       scheduler.runTasks (timers = true, count = 500)
       for (h <- hs)
         assertResult (0x658C1274DE7CFA8EL) (h.v1)

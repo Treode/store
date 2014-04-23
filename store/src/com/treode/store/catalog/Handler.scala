@@ -7,7 +7,7 @@ import com.nothome.delta.{Delta, GDiffPatcher}
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disks, PageDescriptor, Position, RecordDescriptor}
-import com.treode.store.{Bytes, CatalogId}
+import com.treode.store.{Bytes, CatalogId, StaleException}
 
 import Async.{guard, when}
 import Callback.ignore
@@ -73,9 +73,8 @@ private class Handler (
     }
 
   def diff (version: Int, bytes: Bytes): Patch = {
-    require (
-        version == this.version + 1,
-        s"Could not diff new version $version against old version ${this.version}.")
+    if (version != this.version + 1)
+      throw new StaleException
     Patch (version, checksum, Seq (Patch.diff (this.bytes, bytes)))
   }
 

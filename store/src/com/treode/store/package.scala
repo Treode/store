@@ -10,6 +10,8 @@ package store {
 
   class DeputyException extends Exception
 
+  class StaleException extends Exception
+
   trait Op {
     def table: TableId
     def key: Bytes
