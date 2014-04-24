@@ -5,7 +5,7 @@ import scala.util.{Failure, Success, Try}
 
 import org.scalatest.Assertions
 
-class CallbackCaptor [T] protected extends (Try [T] => Unit) with Assertions {
+class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
 
   private var _invokation: Array [StackTraceElement] = null
   private var _v: T = null.asInstanceOf [T]

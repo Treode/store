@@ -13,36 +13,12 @@ class AsyncQueueSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
 
-  class AsyncCaptor [A] {
-
-    private var cb: Callback [A] = null
-
-    def start(): Async [A] =
-      async { cb =>
-        require (this.cb == null)
-        this.cb = cb
-      }
-
-    def pass (v: A) {
-      require (this.cb != null)
-      val cb = this.cb
-      this.cb = null
-      cb.pass (v)
-    }
-
-    def fail (t: Throwable) {
-      require (this.cb != null)
-      val cb = this.cb
-      this.cb = null
-      cb.fail (t)
-    }}
-
   class TestQueue (implicit scheduler: StubScheduler) {
 
     val fiber = new Fiber (scheduler)
     val queue = AsyncQueue (fiber) (next())
     var callbacks = new ArrayDeque [Callback [Unit]]
-    var captor = new AsyncCaptor [Unit]
+    var captor = AsyncCaptor [Unit]
 
     queue.launch()
 
