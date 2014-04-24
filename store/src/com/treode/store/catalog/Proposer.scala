@@ -11,7 +11,7 @@ import com.treode.store.paxos.BallotNumber
 
 import AsyncImplicits._
 
-private class Proposer (key: CatalogId, kit: CatalogKit) {
+private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
   import kit.proposers.remove
   import kit.{cluster, locate, random, scheduler}
 
@@ -84,9 +84,9 @@ private class Proposer (key: CatalogId, kit: CatalogKit) {
 
     // Ballot number zero was implicitly accepted.
     if (ballot == 0)
-      Acceptor.propose (key, ballot, patch) (promised)
+      Acceptor.propose (key, version, ballot, patch) (promised)
     else
-      Acceptor.query (key, ballot) (promised)
+      Acceptor.query (key, version, ballot) (promised)
 
     val backoff = proposingBackoff.iterator
     fiber.delay (backoff.next) (state.timeout())
@@ -106,7 +106,7 @@ private class Proposer (key: CatalogId, kit: CatalogKit) {
         proposed = max (proposed, proposal)
         if (promised.quorum) {
           val v = agreement (proposed, patch)
-          Acceptor.propose (key, ballot, v) (accepted)
+          Acceptor.propose (key, version, ballot, v) (accepted)
         }}}
 
     def accept (from: Peer, ballot: Long) {
@@ -114,7 +114,7 @@ private class Proposer (key: CatalogId, kit: CatalogKit) {
         accepted += from
         if (accepted.quorum) {
           val v = agreement (proposed, patch)
-          Acceptor.choose (key, v) (locate())
+          Acceptor.choose (key, version, v) (locate())
           learners foreach (_.pass (v))
           state = new Closed (v)
         }}}
@@ -130,10 +130,10 @@ private class Proposer (key: CatalogId, kit: CatalogKit) {
         accepted.clear()
         ballot = refused + random.nextInt (17) + 1
         refused = ballot
-        Acceptor.query (key, ballot) (promised)
+        Acceptor.query (key, version, ballot) (promised)
         fiber.delay (backoff.next) (state.timeout())
       } else {
-        remove (key, Proposer.this)
+        remove (key, version, Proposer.this)
         learners foreach (_.fail (new TimeoutException))
       }}
 
@@ -142,7 +142,7 @@ private class Proposer (key: CatalogId, kit: CatalogKit) {
 
   class Closed (update: Update) extends State {
 
-    fiber.delay (closedLifetime) (remove (key, Proposer.this))
+    fiber.delay (closedLifetime) (remove (key, version, Proposer.this))
 
     def learn (k: Learner) =
       k.pass (update)
@@ -198,20 +198,20 @@ private object Proposer {
 
   val refuse = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF8562E9071168EAL, tuple (catId, ulong))
+    MessageDescriptor (0xFF8562E9071168EAL, tuple (catId, uint, ulong))
   }
 
   val promise = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF3F6FFC9993CD75L, tuple (catId, ulong, proposal))
+    MessageDescriptor (0xFF3F6FFC9993CD75L, tuple (catId, uint, ulong, proposal))
   }
 
   val accept = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF0E7973CC65E95FL, tuple (catId, ulong))
+    MessageDescriptor (0xFF0E7973CC65E95FL, tuple (catId, uint, ulong))
   }
 
   val chosen = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF2259321F9D4EF9L, tuple (catId, update))
+    MessageDescriptor (0xFF2259321F9D4EF9L, tuple (catId, uint, update))
   }}

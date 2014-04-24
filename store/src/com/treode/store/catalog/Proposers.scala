@@ -9,23 +9,23 @@ private class Proposers (kit: CatalogKit) {
 
   private val proposers = newProposersMap
 
-  def get (key: CatalogId): Proposer = {
-    var p0 = proposers.get (key)
+  def get (key: CatalogId, version: Int): Proposer = {
+    var p0 = proposers.get ((key, version))
     if (p0 != null)
       return p0
-    val p1 = new Proposer (key, kit)
-    p0 = proposers.putIfAbsent (key, p1)
+    val p1 = new Proposer (key, version, kit)
+    p0 = proposers.putIfAbsent ((key, version), p1)
     if (p0 != null)
       return p0
     p1
   }
 
-  def remove (key: CatalogId, p: Proposer): Unit =
-    proposers.remove (key, p)
+  def remove (key: CatalogId, version: Int, p: Proposer): Unit =
+    proposers.remove ((key, version), p)
 
   def propose (ballot: Long, key: CatalogId, patch: Patch): Async [Update] =
     async { cb =>
-      val p = get (key)
+      val p = get (key, patch.version)
       p.open (ballot, patch)
       p.learn (cb)
     }
@@ -34,18 +34,18 @@ private class Proposers (kit: CatalogKit) {
     import Proposer.{accept, chosen, promise, refuse}
     import kit.cluster
 
-    refuse.listen { case ((key, ballot), c) =>
-      get (key) refuse (ballot)
+    refuse.listen { case ((key, version, ballot), c) =>
+      get (key, version) refuse (ballot)
     }
 
-    promise.listen { case ((key, ballot, proposal), c) =>
-      get (key) promise (c, ballot, proposal)
+    promise.listen { case ((key, version, ballot, proposal), c) =>
+      get (key, version) promise (c, ballot, proposal)
     }
 
-    accept.listen { case ((key, ballot), c) =>
-      get (key) accept (c, ballot)
+    accept.listen { case ((key, version, ballot), c) =>
+      get (key, version) accept (c, ballot)
     }
 
-    chosen.listen { case ((key, v), _) =>
-      get (key) chosen (v)
+    chosen.listen { case ((key, version, v), _) =>
+      get (key, version) chosen (v)
     }}}

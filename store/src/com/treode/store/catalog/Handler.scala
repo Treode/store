@@ -38,7 +38,7 @@ private class Handler (
     if (version <= this.version)
       return false
     this.version = version
-    this.checksum = bytes.hashCode
+    this.checksum = bytes.murmur32
     this.bytes = bytes
     this.history.clear()
     this.history.addAll (history)
@@ -46,7 +46,7 @@ private class Handler (
     true
   }
 
-  def patch (end: Int, patches: Seq [Bytes]) : Boolean ={
+  def patch (end: Int, checksum: Int, patches: Seq [Bytes]) : Boolean ={
     val span = end - version
     if (span <= 0 || patches.length < span)
       return false
@@ -54,8 +54,9 @@ private class Handler (
     var bytes = this.bytes
     for (patch <- future)
       bytes = Patch.patch (bytes, patch)
+    assert (bytes.murmur32 == checksum, "Patch application went awry.")
     this.version += span
-    this.checksum = bytes.hashCode
+    this.checksum = checksum
     this.bytes = bytes
     for (_ <- 0 until history.size + span - catalogHistoryLimit)
       history.remove()
@@ -69,13 +70,13 @@ private class Handler (
       case Assign (version, bytes, history) =>
         patch (version, bytes, history)
       case Patch (end, checksum, patches) =>
-        patch (end, patches)
+        patch (end, checksum, patches)
     }
 
   def diff (version: Int, bytes: Bytes): Patch = {
     if (version != this.version + 1)
       throw new StaleException
-    Patch (version, checksum, Seq (Patch.diff (this.bytes, bytes)))
+    Patch (version, bytes.murmur32, Seq (Patch.diff (this.bytes, bytes)))
   }
 
   def probe (groups: Set [Int]): Set [Int] =
@@ -138,5 +139,5 @@ private object Handler {
   }
 
   def apply (id: CatalogId) (implicit disks: Disks): Handler =
-    new Handler (id, 0, 0, Bytes.empty, new ArrayDeque, None)
+    new Handler (id, 0, Bytes.empty.murmur32, Bytes.empty, new ArrayDeque, None)
 }

@@ -37,7 +37,7 @@ private object Patch {
 
 private case class Assign (version: Int, bytes: Bytes, history: Seq [Bytes]) extends Update {
 
-  def checksum = bytes.hashCode
+  def checksum = bytes.murmur32
   def isEmpty: Boolean = false
 }
 

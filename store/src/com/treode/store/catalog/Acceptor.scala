@@ -9,7 +9,7 @@ import com.treode.store.paxos.BallotNumber
 
 import Callback.ignore
 
-private class Acceptor (val key: CatalogId, kit: CatalogKit) {
+private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
   import kit.{acceptors, broker, cluster, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
 
@@ -87,21 +87,21 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
       proposers += proposer
       val ballot = BallotNumber (_ballot, proposer.id)
       if (ballot < this.ballot) {
-        Proposer.refuse (key, this.ballot.number) (proposer)
+        Proposer.refuse (key, version, this.ballot.number) (proposer)
       } else {
         this.ballot = ballot
-        Proposer.promise (key, ballot.number, proposal) (proposer)
+        Proposer.promise (key, version, ballot.number, proposal) (proposer)
       }}
 
     def propose (proposer: Peer, _ballot: Long, patch: Patch) {
       proposers += proposer
       val ballot = BallotNumber (_ballot, proposer.id)
       if (ballot < this.ballot) {
-        Proposer.refuse (key, this.ballot.number) (proposer)
+        Proposer.refuse (key, version, this.ballot.number) (proposer)
       } else {
         this.ballot = ballot
         this.proposal = Some ((ballot, patch))
-        Proposer.accept (key, ballot.number) (proposer)
+        Proposer.accept (key, version, ballot.number) (proposer)
       }}
 
     def choose (chosen: Update) {
@@ -115,16 +115,16 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
 
     broker.patch (key, chosen) run {
       case Success (v) =>
-        fiber.delay (closedLifetime) (acceptors.remove (key, Acceptor.this))
+        fiber.delay (closedLifetime) (acceptors.remove (key, version, Acceptor.this))
       case Failure (t) =>
         panic (Closed.this, t)
     }
 
     def query (proposer: Peer, ballot: Long): Unit =
-      Proposer.chosen (key, chosen) (proposer)
+      Proposer.chosen (key, version, chosen) (proposer)
 
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit =
-      Proposer.chosen (key, chosen) (proposer)
+      Proposer.chosen (key, version, chosen) (proposer)
 
     def choose (chosen: Update): Unit =
       require (chosen.checksum == this.chosen.checksum, "Paxos disagreement")
@@ -134,7 +134,7 @@ private class Acceptor (val key: CatalogId, kit: CatalogKit) {
 
   class Panicked (thrown: Throwable) extends State {
 
-    fiber.delay (closedLifetime) (acceptors.remove (key, Acceptor.this))
+    fiber.delay (closedLifetime) (acceptors.remove (key, version, Acceptor.this))
 
     def query (proposer: Peer, ballot: Long): Unit = ()
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit = ()
@@ -159,15 +159,15 @@ private object Acceptor {
 
   val query = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF9BFCEDF7D2E129L, tuple (catId, ulong))
+    MessageDescriptor (0xFF9BFCEDF7D2E129L, tuple (catId, uint, ulong))
   }
 
   val propose = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF3E59E358D49679L, tuple (catId, ulong, patch))
+    MessageDescriptor (0xFF3E59E358D49679L, tuple (catId, uint, ulong, patch))
   }
 
   val choose = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF3CF1687A498C79L, tuple (catId, patch))
+    MessageDescriptor (0xFF3CF1687A498C79L, tuple (catId, uint, patch))
   }}

@@ -131,7 +131,7 @@ object BrokerBehaviors extends FreeSpec {
     def patch (drop: Int, take: Int): Update = {
       val version  = take + drop
       val bytes = Bytes (values (version - 1))
-      Patch (version, bytes.hashCode, patches drop (drop) take (take))
+      Patch (version, bytes.murmur32, patches drop (drop) take (take))
     }
 
     "yield non-empty deltas on empty ping" in {

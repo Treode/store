@@ -14,8 +14,8 @@ package object catalog {
   private [catalog] type Proposal = Option [(BallotNumber, Patch)]
   private [catalog] type Learner = Callback [Update]
 
-  private [catalog] def newAcceptorsMap = new ConcurrentHashMap [CatalogId, Acceptor]
-  private [catalog] def newProposersMap = new ConcurrentHashMap [CatalogId, Proposer]
+  private [catalog] def newAcceptorsMap = new ConcurrentHashMap [(CatalogId, Int), Acceptor]
+  private [catalog] def newProposersMap = new ConcurrentHashMap [(CatalogId, Int), Proposer]
 
   private [catalog] val catalogChunkSize = 16
   private [catalog] val catalogHistoryLimit = 16

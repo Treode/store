@@ -19,10 +19,10 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
   val val2 = Bytes (cat1.pcat, 0x8041608E94F55C6DL)
 
   private val patch1 =
-    Patch (0, val0.hashCode, Seq (Patch.diff (val0, val1)))
+    Patch (0, val1.murmur32, Seq (Patch.diff (val0, val1)))
 
   private val patch2 =
-    Patch (0, val0.hashCode, Seq (Patch.diff (val0, val2)))
+    Patch (0, val2.murmur32, Seq (Patch.diff (val0, val2)))
 
   private class Summary (var timedout: Boolean, var chosen: Set [Update]) {
 
@@ -108,7 +108,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       (kit, hs, h1, h2)
     }
 
-    "distribute a catalog" in {
+    "distribute one issue of a catalog" in {
       forAllSeeds { random =>
         val (kit, hs, h1, _) = setup (random)
         import kit.scheduler
@@ -116,6 +116,17 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
         scheduler.runTasks (timers = true, count = 500)
         for (h <- hs)
           assertResult (0x658C1274DE7CFA8EL) (h.v1)
+      }}
+
+    "distribute two issues of a catalog, one after the other" in {
+      forAllSeeds { random =>
+        val (kit, hs, h1, _) = setup (random)
+        import kit.scheduler
+        h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .pass
+        h1.catalogs.issue (cat1) (2, 0x48B944DD188FD6D1L) .pass
+        scheduler.runTasks (timers = true, count = 500)
+        for (h <- hs)
+          assertResult (0x48B944DD188FD6D1L) (h.v1)
       }}
 
     "reject a new issue when its version number is behind" in {
