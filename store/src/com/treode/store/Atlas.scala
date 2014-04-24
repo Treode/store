@@ -1,8 +1,10 @@
 package com.treode.store
 
-import com.treode.cluster.HostId
+import java.util.{Arrays, Objects}
+import com.treode.cluster.{HostId, RumorDescriptor}
 import com.treode.pickle.Pickler
 
+import Cohort.{Issuing, Moving, Settled}
 import Integer.highestOneBit
 
 class Atlas private (
@@ -27,7 +29,25 @@ class Atlas private (
   def residents (host: HostId): Residents = {
     val nums = for ((c, i) <- cohorts.zipWithIndex; if c.hosts contains host) yield i
     new Residents (nums.toSet, cohorts.size - 1)
-  }}
+  }
+
+  private def cohortsAsObjects: Array [Object] =
+    cohorts.asInstanceOf [Array [Object]]
+
+  override def equals (other: Any): Boolean =
+    other match {
+      case that: Atlas =>
+         Arrays.equals (cohortsAsObjects, that.cohortsAsObjects) && version == that.version
+      case _ =>
+        false
+    }
+
+  override def hashCode: Int =
+    Objects.hashCode (Arrays.hashCode (cohortsAsObjects), version)
+
+  override def toString: String =
+    s"Atlas($version,\n   ${cohorts mkString "\n    "})"
+}
 
 object Atlas {
 
@@ -55,4 +75,14 @@ object Atlas {
   val catalog = {
     import StorePicklers._
     CatalogDescriptor (0x693799787FDC9106L, atlas)
+  }
+
+  val received = {
+    import StorePicklers._
+    RumorDescriptor (0x6E73ED5CBD7E357CL, uint)
+  }
+
+  val moved = {
+    import StorePicklers._
+    RumorDescriptor (0x24111C0F37C3C0E1L, uint)
   }}

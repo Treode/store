@@ -87,8 +87,10 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
       val hs = kit.install (4, new StubAtomicHost (_, kit))
       val Seq (h1, h2, h3, h4) = hs
-      for (h <- hs)
-        h.setAtlas (settled (h1, h2, h3))
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId, null)
+      h1.issueAtlas (settled (h1, h2, h3))
+      h1.issueAtlas (moving (h1, h2, h3) (h1, h2, h4))
 
       val xid = TxId (0x6196E3A0F6804B8FL, 0)
       val t = TableId (0xA49381B59A722319L)
@@ -96,11 +98,10 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
       val ts = h1.write (xid, TxClock.zero, Seq (Create (t, k, 1))) .pass
 
       for (h <- hs)
-        h.setAtlas (moving (h1, h2, h3) (h1, h2, h4))
-      scheduler.runTasks()
-      for (h <- hs)
         h.expectCells (t) (k##ts::1)
-      for (h <- hs)
-        h.setAtlas (settled (h1, h2, h4))
-      scheduler.runTasks()
+      kit.runTasks (count = 1000, timers = true)
+      expectAtlas (3, settled (h1, h2, h4)) (hs)
+      for (h <- Seq (h1, h2, h4))
+        h.expectCells (t) (k##ts::1)
+      h3.expectCells (t) ()
     }}}

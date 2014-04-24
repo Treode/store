@@ -1,7 +1,7 @@
 package com.treode.store.atomic
 
 import com.treode.async.{Async, StubScheduler}
-import com.treode.store.{Bytes, StoreTestTools, TxClock}
+import com.treode.store.{Atlas, Cohort, Bytes, StoreTestTools, TxClock}
 import com.treode.store.locks.LockSet
 import org.scalatest.Assertions
 
@@ -30,6 +30,12 @@ private trait AtomicTestTools extends StoreTestTools {
     def abort() (implicit s: StubScheduler) {
       val (vt, locks) = expectPrepared
       locks.release()
-    }}}
+    }}
+
+  def expectAtlas (version: Int, cohorts: Cohort*) (hosts: Seq [StubAtomicHost]) {
+    val atlas = Atlas (cohorts.toArray, version)
+    for (host <- hosts)
+      host.expectAtlas (atlas)
+  }}
 
 private object AtomicTestTools extends AtomicTestTools

@@ -50,11 +50,23 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, catalogs, atomic) = captor.passed
 
+  val librarian = new Librarian (atomic.rebalance _)
+
+  scuttlebutt.attach (this)
+
   def setAtlas (cohorts: Cohort*) {
-    val atlas = Atlas (cohorts.toArray, 1)
+    val version = library.atlas.version + 1
+    val atlas = Atlas (cohorts.toArray, version)
     library.atlas = atlas
     library.residents = atlas.residents (localId)
-    atomic.rebalance (atlas) run (ignore)
+  }
+
+  def issueAtlas (cohorts: Cohort*) {
+    val version = library.atlas.version + 1
+    val atlas = Atlas (cohorts.toArray, version)
+    library.atlas = atlas
+    library.residents = atlas.residents (localId)
+    Atlas.catalog.issue (version, atlas) .pass
   }
 
   def writer (xid: TxId) = atomic.writers.get (xid)
@@ -65,7 +77,13 @@ extends StubActiveHost (id, network) {
   def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [TxClock] =
     atomic.write (xid, ct, ops)
 
+  def expectAtlas (atlas: Atlas) {
+    assertResult (atlas) (library.atlas)
+    assertResult (librarian.issued) (atlas.version)
+    assert (librarian.receipts forall (_._2 == atlas.version))
+  }
+
   def expectCells (id: TableId) (cs: Cell*) {
     val t = atomic.tables.tables.get (id)
-    assertResult (cs) (t .iterator (Residents.all) .toSeq)
+    assertResult (cs) (t .iterator (library.residents) .toSeq)
   }}

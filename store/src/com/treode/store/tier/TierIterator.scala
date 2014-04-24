@@ -179,6 +179,21 @@ private object TierIterator {
 
   def merge (
       desc: TierDescriptor,
+      tiers: Tiers
+  ) (implicit
+      scheduler: Scheduler,
+      disks: Disks
+  ): CellIterator = {
+
+    val allTiers = new Array [CellIterator] (tiers.size)
+    for (i <- 0 until tiers.size)
+      allTiers (i) = TierIterator (desc, tiers (i) .root)
+
+    AsyncIterator.merge (allTiers)
+  }
+
+  def merge (
+      desc: TierDescriptor,
       primary: MemTier,
       secondary: MemTier,
       tiers: Tiers

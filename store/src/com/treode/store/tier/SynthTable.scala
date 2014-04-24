@@ -25,13 +25,13 @@ private class SynthTable (
 
     var gen: Long,
 
-    // This resides in memory and it is the only tier that is written.
+    // This resides in memory and it is the only tier that receives puts.
     var primary: MemTier,
 
-    // This tier resides in memory and is being compacted and written to disk.
+    // This tier resides in memory and is being written to disk.
     var secondary: MemTier,
 
-    // The position of each tier on disk.
+    // The position of each tier written on disk.
     var tiers: Tiers
 
 ) (implicit
@@ -150,53 +150,70 @@ private class SynthTable (
 
   def probe (groups: Set [Long]): Set [Long] = {
     readLock.lock()
-    val (tiers) = try {
-      this.tiers
+    val (active) = try {
+      tiers.active
     } finally {
       readLock.unlock()
     }
-    tiers.active
+    active
   }
 
   def compact(): Unit =
     pager.compact (id.id) run (ignore)
 
-  def compact (groups: Set [Long], residents: Residents): Async [Meta] =
-    checkpoint (residents)
+  def compact (groups: Set [Long], residents: Residents): Async [Meta] = {
+
+    readLock.lock()
+    val (gen, chosen) = try {
+      val g = this.gen
+      val c = tiers.choose (groups, residents)
+      this.gen += 1
+      (g, c)
+    } finally {
+      readLock.unlock()
+    }
+
+    val iter = TierIterator .merge (desc, chosen) .clean (desc, id, residents)
+    val est = countMemTierKeys (primary) + chosen.keys
+    for {
+      tier <- TierBuilder.build (desc, id, gen, est, residents, iter)
+    } yield {
+      writeLock.lock()
+      try {
+        tiers = tiers.compacted (tier, chosen)
+        new Meta (this.gen, tiers)
+      } finally {
+        writeLock.unlock()
+      }}}
 
   def checkpoint (residents: Residents): Async [Meta] = disks.join {
 
     writeLock.lock()
-    val (gen, primary, tiers) = try {
-      require (secondary.isEmpty)
+    val (gen, primary) = try {
+      require (secondary.isEmpty, "Checkpoint already in progress.")
       val g = this.gen
       val p = this.primary
       this.gen += 1
       this.primary = secondary
-      this.secondary = p
-      (g, p, this.tiers)
+      secondary = p
+      (g, p)
     } finally {
       writeLock.unlock()
     }
 
-    val iter = TierIterator
-        .merge (desc, primary, emptyMemTier, tiers)
-        .clean (desc, id, residents)
-    val est = countMemTierKeys (primary) + tiers.keys
+    val iter = TierIterator .adapt (primary) .clean (desc, id, residents)
+    val est = countMemTierKeys (primary)
     for {
       tier <- TierBuilder.build (desc, id, gen, est, residents, iter)
     } yield {
-      val tiers = Tiers (tier)
-      val meta = new Meta (gen, tiers)
       writeLock.lock()
       try {
-        this.secondary = newMemTier
-        this.tiers = tiers
+        secondary = newMemTier
+        tiers = tiers.compacted (tier, Tiers.empty)
+        new Meta (this.gen, tiers)
       } finally {
         writeLock.unlock()
-      }
-      meta
-    }}}
+      }}}}
 
 private object SynthTable {
 
