@@ -62,7 +62,7 @@ extends StubActiveHost (id, network) {
   def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] =
     atomic.read (rt, ops)
 
-  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult] =
+  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [TxClock] =
     atomic.write (xid, ct, ops)
 
   def expectCells (id: TableId) (cs: Cell*) {

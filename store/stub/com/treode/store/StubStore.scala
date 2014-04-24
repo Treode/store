@@ -59,9 +59,9 @@ class StubStore extends Store {
         case op: Delete => delete (op.table, op.key, wt)
       }}}
 
-  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult] =
+  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [TxClock] =
     guard {
-      import WriteResult._
+      import TxClock._
       val ids = ops map (op => (op.table, op.key).hashCode)
       for {
         locks <- space.write (ct, ids)
@@ -71,13 +71,13 @@ class StubStore extends Store {
           val collisions = for (((c, t), i) <- results.zipWithIndex; if c) yield i
           val vt = results.filterNot (_._1) .map (_._2) .fold (TxClock.zero) (TxClock.max _)
           if (ct < vt) {
-            Stale
+            throw new StaleException
           } else if (!collisions.isEmpty) {
-            Collided (collisions)
+            throw new CollisionException (collisions)
           } else {
             val wt = TxClock.max (vt, locks.ft) + 1
             commit (wt, ops)
-            Written (wt)
+            wt
           }
         } finally {
           locks.release()

@@ -31,7 +31,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     def isOpen = true
 
-    def open (cb: Callback [WriteResult]): Unit =
+    def open (cb: Callback [TxClock]): Unit =
       throw new IllegalStateException
 
     def prepared (ft: TxClock, from: Peer) = ()
@@ -54,7 +54,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
   class Opening extends State {
 
-    override def open (cb: Callback [WriteResult]): Unit =
+    override def open (cb: Callback [TxClock]): Unit =
       state = new Preparing (cb)
 
     override def prepared (ft: TxClock, from: Peer): Unit =
@@ -67,7 +67,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
       throw new IllegalStateException
   }
 
-  class Preparing (cb: Callback [WriteResult]) extends State {
+  class Preparing (cb: Callback [TxClock]) extends State {
 
     var failure = false
     var advance = false
@@ -81,10 +81,10 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
       if (prepares.quorum) {
         if (advance) {
           state = new Aborting (true)
-          cb.pass (WriteResult.Stale)
+          cb.fail (new StaleException)
         } else if (!ks.isEmpty) {
           state = new Aborting (true)
-          cb.pass (WriteResult.Collided (ks.toSeq))
+          cb.fail (new CollisionException (ks.toSeq))
         } else if (failure) {
           state = new Aborting (true)
           cb.fail (new DeputyException)
@@ -122,13 +122,13 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Aborting (true)
-        cb.pass (WriteResult.Timeout)
+        cb.fail (new TimeoutException)
       }}
 
     override def toString = "Director.Preparing"
   }
 
-  class Deliberating (wt: TxClock, cb: Callback [WriteResult]) extends State {
+  class Deliberating (wt: TxClock, cb: Callback [TxClock]) extends State {
     import TxStatus._
 
     deliberate.lead (xid.id, xid.time, Committed (wt)) run {
@@ -137,10 +137,10 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
         status match {
           case Committed (wt) =>
             state = new Committing (wt)
-            cb.pass (WriteResult.Written (wt))
+            cb.pass (wt)
           case Aborted =>
             state = new Aborting (false)
-            cb.pass (WriteResult.Timeout)
+            cb.fail (new TimeoutException)
         }}
 
       case Failure (t) => fiber.execute {
@@ -245,7 +245,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
       case Failed          => state.failed (from)
     }}
 
-  def open (cb: Callback [WriteResult]): Unit =
+  def open (cb: Callback [TxClock]): Unit =
     fiber.execute (state.open (cb))
 }
 

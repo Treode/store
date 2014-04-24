@@ -10,7 +10,7 @@ trait Store {
 
   def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]]
 
-  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult]
+  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [TxClock]
 }
 
 object Store {

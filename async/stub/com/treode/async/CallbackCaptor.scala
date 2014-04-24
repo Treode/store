@@ -36,12 +36,8 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
     _v != null
   }
 
-  def hasFailed: Boolean = synchronized {
-    _t != null
-  }
-
-  def hasTimedOut: Boolean = synchronized {
-    _t != null && _t.isInstanceOf [TimeoutException]
+  def hasFailed [A] (implicit m: Manifest [A]): Boolean = synchronized {
+    _t != null && m.runtimeClass.isInstance (_t)
   }
 
   def assertInvoked(): Unit = synchronized {

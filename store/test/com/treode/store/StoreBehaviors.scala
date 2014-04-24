@@ -39,28 +39,28 @@ trait StoreBehaviors {
           "allow create Apple::1 at ts=0" in {
             implicit val scheduler = StubScheduler.random()
             val s = newStore (scheduler)
-            val ts = s.write (0, Create (T1, Apple, 1)) .expectWritten
+            val ts = s.write (0, Create (T1, Apple, 1)) .pass
             s.expectCells (T1) (Apple##ts::1)
           }
 
           "allow hold Apple at ts=0" in {
             implicit val scheduler = StubScheduler.random()
             val s = newStore (scheduler)
-            s.write (0, Hold (T1, Apple)) .expectWritten
+            s.write (0, Hold (T1, Apple)) .pass
             s.expectCells (T1) ()
           }
 
           "allow update Apple::1 at ts=0" in {
             implicit val scheduler = StubScheduler.random()
             val s = newStore (scheduler)
-            val ts = s.write (0, Update (T1, Apple, 1)) .expectWritten
+            val ts = s.write (0, Update (T1, Apple, 1)) .pass
             s.expectCells (T1) (Apple##ts::1)
           }
 
           "allow delete Apple at ts=0" in {
             implicit val scheduler = StubScheduler.random()
             val s = newStore (scheduler)
-            val ts = s.write (0, Delete (T1, Apple)) .expectWritten
+            val ts = s.write (0, Delete (T1, Apple)) .pass
             s.expectCells (T1) (Apple##ts)
           }}}
 
@@ -68,7 +68,7 @@ trait StoreBehaviors {
 
         def setup() (implicit scheduler: StubScheduler) = {
           val s = newStore (scheduler)
-          val ts = s.write (0, Create (T1, Apple, 1)) .expectWritten
+          val ts = s.write (0, Create (T1, Apple, 1)) .pass
           (s, ts)
         }
 
@@ -97,80 +97,81 @@ trait StoreBehaviors {
           "reject create Apple##ts-1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
-            s.write (ts-1, Create (T1, Apple, 1)) .expectCollided (0)
+            val exn = s.write (ts-1, Create (T1, Apple, 1)) .fail [CollisionException]
+            assertResult (Seq (0)) (exn.indexes)
           }
 
           "reject hold Apple##ts-1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
-            s.write (ts-1, Hold (T1, Apple)) .expectStale
+            s.write (ts-1, Hold (T1, Apple)) .fail [StaleException]
           }
 
           "reject update Apple##ts-1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
-            s.write (ts-1, Update (T1, Apple, 1)) .expectStale
+            s.write (ts-1, Update (T1, Apple, 1)) .fail [StaleException]
           }
 
           "reject delete Apple##ts-1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
-            s.write (ts-1, Delete (T1, Apple)) .expectStale
+            s.write (ts-1, Delete (T1, Apple)) .fail [StaleException]
           }
 
           "allow hold Apple at ts+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
-            s.write (ts+1, Hold (T1, Apple)) .expectWritten
+            s.write (ts+1, Hold (T1, Apple)) .pass
             s.expectCells (T1) (Apple##ts::1)
           }
 
           "allow hold Apple at ts" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts) = setup()
-            s.write (ts, Hold (T1, Apple)) .expectWritten
+            s.write (ts, Hold (T1, Apple)) .pass
             s.expectCells (T1) (Apple##ts::1)
           }
 
           "allow update Apple::2 at ts+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
-            val ts2 = s.write (ts1+1, Update (T1, Apple, 2)) .expectWritten
+            val ts2 = s.write (ts1+1, Update (T1, Apple, 2)) .pass
             s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
           }
 
           "allow update Apple::2 at ts" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
-            val ts2 = s.write (ts1, Update (T1, Apple, 2)) .expectWritten
+            val ts2 = s.write (ts1, Update (T1, Apple, 2)) .pass
             s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
           }
 
           "allow update Apple::1 at ts+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
-            val ts2 = s.write (ts1+1, Update (T1, Apple, 1)) .expectWritten
+            val ts2 = s.write (ts1+1, Update (T1, Apple, 1)) .pass
             s.expectCells (T1) (Apple##ts2::1, Apple##ts1::1)
           }
 
           "allow update Apple::1 at ts" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
-            val ts2 = s.write (ts1, Update (T1, Apple, 1)) .expectWritten
+            val ts2 = s.write (ts1, Update (T1, Apple, 1)) .pass
             s.expectCells (T1) (Apple##ts2::1, Apple##ts1::1)
           }
 
           "allow delete Apple at ts+1" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
-            val ts2 = s.write (ts1+1, Delete (T1, Apple)) .expectWritten
+            val ts2 = s.write (ts1+1, Delete (T1, Apple)) .pass
             s.expectCells (T1) (Apple##ts2, Apple##ts1::1)
           }
 
           "allow delete Apple at ts" in {
             implicit val scheduler = StubScheduler.random()
             val (s, ts1) = setup()
-            val ts2 = s.write (ts1, Delete (T1, Apple)) .expectWritten
+            val ts2 = s.write (ts1, Delete (T1, Apple)) .pass
             s.expectCells (T1) (Apple##ts2, Apple##ts1::1)
           }}}
 
@@ -178,8 +179,8 @@ trait StoreBehaviors {
 
         def setup() (implicit scheduler: StubScheduler) = {
           val s = newStore (scheduler)
-          val ts1 = s.write (0, Create (T1, Apple, 1)) .expectWritten
-          val ts2 = s.write (ts1, Update (T1, Apple, 2)) .expectWritten
+          val ts1 = s.write (0, Create (T1, Apple, 1)) .pass
+          val ts2 = s.write (ts1, Update (T1, Apple, 2)) .pass
           s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
           (s, ts1, ts2)
         }
@@ -275,13 +276,13 @@ trait StoreBehaviors {
             wops = Seq (Accounts.update (x, b1-n), Accounts.update (y, b2+n))
             result <- store.write (ct, wops: _*)
           } yield {
-            import WriteResult._
-            result match {
-              case Written (_) => countTransferPassed.incrementAndGet()
-              case Collided (_) => throw new IllegalArgumentException
-              case Stale => countTransferAdvanced.incrementAndGet()
-              case Timeout => ()
-            }}}
+            countTransferPassed.incrementAndGet()
+          }
+        } .recover {
+          case _: CollisionException => throw new IllegalArgumentException
+          case _: StaleException => countTransferAdvanced.incrementAndGet()
+          case _: TimeoutException => ()
+        }
 
       // Conduct many transfers.
       def broker (num: Int): Async [Unit] = {

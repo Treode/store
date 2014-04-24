@@ -4,13 +4,12 @@ import scala.util.Random
 
 import com.treode.async.Async
 import com.treode.async.misc.{RichOption, parseLong}
-import com.treode.store.{Bytes, ReadOp, Store, TxClock, TxId, WriteOp, WriteResult}
+import com.treode.store._
 import com.twitter.finatra.Request
 import org.joda.time.Instant
 
-import Async.supply
+import Async.{guard, supply}
 import WriteOp._
-import WriteResult._
 
 class Resource (store: Store) extends AsyncFinatraController {
 
@@ -57,17 +56,18 @@ class Resource (store: Store) extends AsyncFinatraController {
       }}}
 
   put ("/table/:name") { request =>
-    for {
-      (ct, ops) <- parseWrite (request)
-      result <- store.write (nextTx, ct, ops)
-    } yield {
-      result match {
-        case Written (vt) =>
-          render.ok.header (ETag, vt.toString) .nothing
-        case Collided (ks: Seq [Int]) =>
-          render.status (Conflict) .nothing
-        case Stale =>
-          render.status (PreconditionFailed) .nothing
-        case Timeout =>
-          render.status (500) .nothing
-      }}}}
+    guard {
+      for {
+        (ct, ops) <- parseWrite (request)
+        vt <- store.write (nextTx, ct, ops)
+      } yield {
+        render.ok.header (ETag, vt.toString) .nothing
+      }
+    } .recover {
+      case _: CollisionException =>
+        render.status (Conflict) .nothing
+      case _: StaleException =>
+        render.status (PreconditionFailed) .nothing
+      case _: TimeoutException =>
+        render.status (500) .nothing
+    }}}

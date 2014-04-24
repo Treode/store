@@ -44,25 +44,6 @@ private trait StoreTestTools extends AsyncTestTools {
     def - (n: Int) = new TxClock (v.time - n)
   }
 
-  implicit class RichWriteResult (actual: Async [WriteResult]) {
-    import WriteResult._
-
-    def expectWritten (implicit s: StubScheduler): TxClock =
-      actual.pass match {
-        case Written (wt) =>
-          wt
-        case _ =>
-          fail (s"Expected Written, found ${actual}")
-          throw new Exception
-      }
-
-    def expectCollided (ks: Int*) (implicit s: StubScheduler): Unit =
-       actual.expect (Collided (ks))
-
-    def expectStale (implicit s: StubScheduler): Unit =
-      actual.expect (Stale)
-  }
-
   object TestDisksConfig {
 
     def apply (

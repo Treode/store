@@ -17,38 +17,6 @@ import WriteOp._
 
 class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
-  implicit class RichWriteResult (w: WriteResult) {
-    import WriteResult._
-
-    def hasWritten: Boolean =
-      w.isInstanceOf [Written]
-
-    def vt: TxClock =
-      w.asInstanceOf [Written] .vt
-
-    def hasCollided: Boolean =
-      w.isInstanceOf [Collided]
-
-    def hasTimedOut: Boolean =
-      w == Timeout
-  }
-
-  implicit class RichWriteCaptor (cb: CallbackCaptor [WriteResult]) {
-    import WriteResult._
-
-    def writeHasPassed: Boolean =
-      cb.hasPassed && cb.passed.hasWritten
-
-    def vt: TxClock =
-      cb.passed.vt
-
-    def writeHasCollided: Boolean =
-      cb.hasPassed && cb.passed.hasCollided
-
-    def writeHasTimedOut: Boolean =
-      cb.hasPassed && cb.passed.hasTimedOut
-  }
-
   def check (random: Random, mf: Double) {
 
     val kit = StubNetwork (random)
@@ -73,17 +41,17 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
     scheduler.runTasks (true, count = 400)
 
     // 1 host might write and the other collide or timeout, or both might timeout.
-    if (cb1.writeHasPassed) {
-      assert (cb2.writeHasCollided || cb2.writeHasTimedOut)
-      val ts = cb1.vt
+    if (cb1.hasPassed) {
+      assert (cb2.hasFailed [CollisionException] || cb2.hasFailed [TimeoutException])
+      val ts = cb1.passed
       hs foreach (_.expectCells (t) (k##ts::1))
-    } else if (cb2.writeHasPassed) {
-      assert (cb1.writeHasCollided || cb1.writeHasTimedOut)
-      val ts = cb2.vt
+    } else if (cb2.hasPassed) {
+      assert (cb1.hasFailed [CollisionException] || cb1.hasFailed [TimeoutException])
+      val ts = cb2.passed
       hs foreach (_.expectCells (t) (k##ts::2))
     } else {
-      assert (cb1.writeHasCollided || cb1.writeHasTimedOut)
-      assert (cb2.writeHasCollided || cb2.writeHasTimedOut)
+      assert (cb1.hasFailed [CollisionException] || cb1.hasFailed [TimeoutException])
+      assert (cb2.hasFailed [CollisionException] || cb2.hasFailed [TimeoutException])
       hs foreach (_.expectCells (t) (k##0))
     }}
 
@@ -125,7 +93,7 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
       val xid = TxId (0x6196E3A0F6804B8FL, 0)
       val t = TableId (0xA49381B59A722319L)
       val k = Bytes (0xB3334572873016E4L)
-      val ts = h1.write (xid, TxClock.zero, Seq (Create (t, k, 1))) .pass.vt
+      val ts = h1.write (xid, TxClock.zero, Seq (Create (t, k, 1))) .pass
 
       for (h <- hs)
         h.setAtlas (moving (h1, h2, h3) (h1, h2, h4))

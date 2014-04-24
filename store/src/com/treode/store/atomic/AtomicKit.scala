@@ -42,12 +42,12 @@ private class AtomicKit (implicit
   def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] =
     async (new ReadDirector (rt, ops, this, _))
 
-  private def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: Callback [WriteResult]): Unit =
+  private def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: Callback [TxClock]): Unit =
     cb.defer {
       new WriteDirector (xid, ct, ops, this) .open (cb)
     }
 
-  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [WriteResult] =
+  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [TxClock] =
     async (write (xid, ct, ops, _))
 
   def rebalance (atlas: Atlas): Async [Unit] = {
