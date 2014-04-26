@@ -12,10 +12,10 @@ class StubStoreSpec extends FreeSpec with StoreBehaviors {
     private val delegate = new StubStore
 
     def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
-      delegate.read (rt, ops)
+      delegate.read (rt, ops:_*)
 
     def write (ct: TxClock, ops: WriteOp*): Async [TxClock] =
-      delegate.write (TxId (Random.nextLong, 0), ct, ops)
+      delegate.write (TxId (Random.nextLong, 0), ct, ops:_*)
 
     def expectCells (t: TableId) (expected: Cell*): Unit =
       assertResult (expected.sorted) (delegate.scan (t))

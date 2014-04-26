@@ -71,11 +71,11 @@ extends StubActiveHost (id, network) {
 
   def writer (xid: TxId) = atomic.writers.get (xid)
 
-  def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] =
-    atomic.read (rt, ops)
+  def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
+    atomic.read (rt, ops:_*)
 
-  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [TxClock] =
-    atomic.write (xid, ct, ops)
+  def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock] =
+    atomic.write (xid, ct, ops:_*)
 
   def expectAtlas (atlas: Atlas) {
     assertResult (atlas) (library.atlas)

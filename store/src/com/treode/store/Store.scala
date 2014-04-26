@@ -8,9 +8,9 @@ import com.treode.disk.Disks
 
 trait Store {
 
-  def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]]
+  def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]]
 
-  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [TxClock]
+  def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock]
 }
 
 object Store {

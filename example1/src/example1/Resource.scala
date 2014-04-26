@@ -43,7 +43,7 @@ class Resource (store: Store) extends AsyncFinatraController {
   get ("/table/:name") { request =>
     for {
       (rt, ct, ops) <- parseRead (request)
-      vs <- store.read (rt, ops)
+      vs <- store.read (rt, ops:_*)
     } yield {
       val v = vs.head
       v.value match {
@@ -59,7 +59,7 @@ class Resource (store: Store) extends AsyncFinatraController {
     guard {
       for {
         (ct, ops) <- parseWrite (request)
-        vt <- store.write (nextTx, ct, ops)
+        vt <- store.write (nextTx, ct, ops:_*)
       } yield {
         render.ok.header (ETag, vt.toString) .nothing
       }

@@ -43,8 +43,8 @@ class ResourceSpec extends FreeSpec with Matchers with SpecTools {
     def setup() = {
       val store = StubStore()
       val mock = newMock (store)
-      val ts =
-        store.write (TxId (1, 0), TxClock.zero, Seq (Create (123, Bytes ("abc"), entity.readJson.toBytes))) .await
+      val ts = store.write (TxId (1, 0), TxClock.zero,
+          Create (123, Bytes ("abc"), entity.readJson.toBytes)) .await
       (store, mock, ts)
     }
 

@@ -27,7 +27,7 @@ class StubStore extends Store {
       Value (TxClock.zero, None)
   }
 
-  def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] = {
+  def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] = {
     val ids = ops map (op => (op.table, op.key).hashCode)
     for {
       _ <- space.read (rt, ids)
@@ -59,7 +59,7 @@ class StubStore extends Store {
         case op: Delete => delete (op.table, op.key, wt)
       }}}
 
-  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [TxClock] =
+  def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock] =
     guard {
       import TxClock._
       val ids = ops map (op => (op.table, op.key).hashCode)

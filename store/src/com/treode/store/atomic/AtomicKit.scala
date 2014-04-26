@@ -39,16 +39,13 @@ private class AtomicKit (implicit
   def locate (op: Op): Cohort =
     locate (op.table, op.key)
 
-  def read (rt: TxClock, ops: Seq [ReadOp]): Async [Seq [Value]] =
+  def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
     async (new ReadDirector (rt, ops, this, _))
 
-  private def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], cb: Callback [TxClock]): Unit =
-    cb.defer {
+  def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock] =
+    async { cb =>
       new WriteDirector (xid, ct, ops, this) .open (cb)
     }
-
-  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp]): Async [TxClock] =
-    async (write (xid, ct, ops, _))
 
   def rebalance (atlas: Atlas): Async [Unit] = {
     val targets = Targets (atlas)

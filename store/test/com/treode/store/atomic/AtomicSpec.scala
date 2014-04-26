@@ -35,8 +35,8 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
     val k = Bytes (random.nextLong)
 
     // Write two values simultaneously.
-    val cb1 = h1.write (xid1, TxClock.zero, Seq (Create (t, k, 1))) .capture()
-    val cb2 = h2.write (xid2, TxClock.zero, Seq (Create (t, k, 2))) .capture()
+    val cb1 = h1.write (xid1, TxClock.zero, Create (t, k, 1)) .capture()
+    val cb2 = h2.write (xid2, TxClock.zero, Create (t, k, 2)) .capture()
     kit.messageFlakiness = mf
     scheduler.runTasks (true, count = 400)
 
@@ -95,7 +95,7 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
       val xid = TxId (0x6196E3A0F6804B8FL, 0)
       val t = TableId (0xA49381B59A722319L)
       val k = Bytes (0xB3334572873016E4L)
-      val ts = h1.write (xid, TxClock.zero, Seq (Create (t, k, 1))) .pass
+      val ts = h1.write (xid, TxClock.zero, Create (t, k, 1)) .pass
 
       for (h <- hs)
         h.expectCells (t) (k##ts::1)
