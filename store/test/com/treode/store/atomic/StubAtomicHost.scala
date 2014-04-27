@@ -77,6 +77,12 @@ extends StubActiveHost (id, network) {
   def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock] =
     atomic.write (xid, ct, ops:_*)
 
+  def scan (table: TableId, key: Bytes, time: TxClock): CellIterator =
+    atomic.scan (table, key,  time)
+
+  def putCells (id: TableId, cs: Cell*): Unit =
+    atomic.tables.receive (id, cs) .pass
+
   def expectAtlas (atlas: Atlas) {
     assertResult (atlas) (library.atlas)
     assertResult (librarian.issued) (atlas.version)

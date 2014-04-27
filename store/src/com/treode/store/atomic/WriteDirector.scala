@@ -4,11 +4,12 @@ import scala.collection.mutable
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-import com.treode.async.{AsyncImplicits, Backoff, Callback, Fiber}
+import com.treode.async.{Async, AsyncImplicits, Backoff, Callback, Fiber}
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{Cluster, Peer}
 import com.treode.store._
 
+import Async.async
 import AsyncImplicits._
 import WriteDirector.deliberate
 
@@ -254,4 +255,8 @@ private object WriteDirector {
   val deliberate = {
     import AtomicPicklers._
     PaxosAccessor.value (txStatus)
-  }}
+  }
+
+  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit): Async [TxClock] =
+    async (cb => new WriteDirector (xid, ct, ops, kit) .open (cb))
+}

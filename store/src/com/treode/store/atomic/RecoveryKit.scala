@@ -57,5 +57,6 @@ private class RecoveryKit (implicit
     } yield {
       kit.reader.attach()
       kit.writers.attach()
+      kit.scanner.attach()
       kit
     }}}

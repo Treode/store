@@ -14,6 +14,10 @@ class StoreConfig private (
     val rebalanceEntries: Int
 ) {
 
+  val scanBatchBytes = 1<<16
+  val scanBatchEntries = 1000
+  val scanBatchBackoff = Backoff (500, 500, 10 seconds, 7)
+
   val exodusThreshold = 0.2D
 
   val deliberatingTimeout = 2 seconds

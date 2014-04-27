@@ -7,6 +7,7 @@ import com.treode.async.misc.RichInt
 import com.treode.cluster.{HostId, Peer}
 import com.treode.store.{DeputyException, ReadOp, TxClock, Value}
 
+import Async.async
 import AsyncImplicits._
 
 private class ReadDirector (
@@ -56,3 +57,9 @@ private class ReadDirector (
     if (timer.invoked) return
     timer.fail (new DeputyException)
   }}
+
+private object ReadDirector {
+
+  def read (rt: TxClock, ops: Seq [ReadOp], kit: AtomicKit): Async [Seq [Value]] =
+    async (new ReadDirector (rt, ops, kit, _))
+}

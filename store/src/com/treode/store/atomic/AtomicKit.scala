@@ -28,6 +28,7 @@ private class AtomicKit (implicit
   val tables = new TimedStore (this)
   val reader = new ReadDeputy (this)
   val writers = new WriteDeputies (this)
+  val scanner = new ScanDeputy (this)
   val mover = new AtomicMover (this)
 
   def place (table: TableId, key: Bytes): Int =
@@ -40,12 +41,13 @@ private class AtomicKit (implicit
     locate (op.table, op.key)
 
   def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
-    async (new ReadDirector (rt, ops, this, _))
+    ReadDirector.read (rt, ops, this)
 
   def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock] =
-    async { cb =>
-      new WriteDirector (xid, ct, ops, this) .open (cb)
-    }
+    WriteDirector.write (xid, ct, ops, this)
+
+  def scan (table: TableId, key: Bytes, time: TxClock): CellIterator =
+    ScanDirector.scan (table, key,  time, this)
 
   def rebalance (atlas: Atlas): Async [Unit] = {
     val targets = Targets (atlas)
