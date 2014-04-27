@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.async.{AsyncIterator, Callback}
-import com.treode.store.{Bytes, CellIterator, Residents, TxClock}
+import com.treode.store.{Bytes, CellIterator, Key, Residents, TxClock}
 
 private object Filters {
 
@@ -9,9 +9,9 @@ private object Filters {
     * iterator to be sorted by key and time.
     */
   def dedupe (iter: CellIterator): CellIterator = {
-    var prev: MemKey = null
+    var prev: Key = null
     iter.filter { cell =>
-      val key = MemKey (cell)
+      val key = cell.timedKey
       if (key == prev) {
         false
       } else {

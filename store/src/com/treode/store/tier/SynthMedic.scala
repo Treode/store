@@ -4,7 +4,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.Scheduler
 import com.treode.disk.{Disks, Position}
-import com.treode.store.{Bytes, StoreConfig, TableId, TxClock}
+import com.treode.store.{Bytes, Key, StoreConfig, TableId, TxClock}
 
 private class SynthMedic (
     desc: TierDescriptor,
@@ -34,10 +34,10 @@ private class SynthMedic (
     readLock.lock()
     val needWrite = try {
       if (gen == this.gen - 1) {
-        secondary.put (MemKey (key, time), value)
+        secondary.put (Key (key, time), value)
         false
       } else if (gen == this.gen) {
-        primary.put (MemKey (key, time), value)
+        primary.put (Key (key, time), value)
         false
       } else {
         true
@@ -50,19 +50,19 @@ private class SynthMedic (
       writeLock.lock()
       try {
         if (gen == this.gen - 1) {
-          secondary.put (MemKey (key, time), value)
+          secondary.put (Key (key, time), value)
         } else if (gen == this.gen) {
-          primary.put (MemKey (key, time), value)
+          primary.put (Key (key, time), value)
         } else if (gen == this.gen + 1) {
           this.gen = gen
           secondary = primary
           primary = newMemTier
-          primary.put (MemKey (key, time), value)
+          primary.put (Key (key, time), value)
         } else if (gen > this.gen + 1) {
           this.gen = gen
           primary = newMemTier
           secondary = newMemTier
-          primary.put (MemKey (key, time), value)
+          primary.put (Key (key, time), value)
         }
       } finally {
         writeLock.unlock()

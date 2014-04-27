@@ -4,8 +4,12 @@ case class Cell (key: Bytes, time: TxClock, value: Option [Bytes]) extends Order
 
   def byteSize = Cell.pickler.byteSize (this)
 
+  def timedKey: Key = Key (key, time)
+
+  def timedValue: Value = Value (time, value)
+
   def compare (that: Cell): Int = {
-    var r = key compare that.key
+    val r = key compare that.key
     if (r != 0) return r
     // Reverse chronological order
     that.time compare time
@@ -13,7 +17,7 @@ case class Cell (key: Bytes, time: TxClock, value: Option [Bytes]) extends Order
 
 object Cell extends Ordering [Cell] {
 
-  private [store] val sentinel = Cell (Bytes.empty, TxClock.sentinel, None)
+  val sentinel = Cell (Bytes.empty, TxClock.sentinel, None)
 
   def compare (x: Cell, y: Cell): Int =
     x compare y

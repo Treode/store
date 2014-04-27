@@ -7,15 +7,15 @@ import scala.collection.JavaConversions._
 package object tier {
 
   private [tier] type MemTier =
-    ConcurrentNavigableMap [MemKey, Option [Bytes]]
+    ConcurrentNavigableMap [Key, Option [Bytes]]
 
   private [tier] val emptyMemTier: MemTier =
-    new ConcurrentSkipListMap [MemKey, Option [Bytes]] (MemKey)
+    new ConcurrentSkipListMap [Key, Option [Bytes]] (Key)
 
   private [tier] def newMemTier: MemTier =
-    new ConcurrentSkipListMap [MemKey, Option [Bytes]] (MemKey)
+    new ConcurrentSkipListMap [Key, Option [Bytes]] (Key)
 
-  private [tier] def memTierEntryToCell (entry: JMap.Entry [MemKey, Option [Bytes]]): Cell =
+  private [tier] def memTierEntryToCell (entry: JMap.Entry [Key, Option [Bytes]]): Cell =
     Cell (entry.getKey.key, entry.getKey.time, entry.getValue)
 
   private [tier] def countMemTierKeys (tier: MemTier): Long = {

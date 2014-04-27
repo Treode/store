@@ -5,7 +5,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, AsyncImplicits, AsyncIterator, Callback, Scheduler}
 import com.treode.disk.{Disks, Position}
-import com.treode.store.{Bytes, Cell, CellIterator, TxClock}
+import com.treode.store.{Bytes, Cell, CellIterator, Key, TxClock}
 
 import Async.async
 import AsyncImplicits._
@@ -175,7 +175,7 @@ private object TierIterator {
     tier.entrySet.iterator.map (memTierEntryToCell _) .async
 
   def adapt (tier: MemTier, key: Bytes, time: TxClock) (implicit scheduler: Scheduler): CellIterator =
-    adapt (tier.tailMap (MemKey (key, time), true))
+    adapt (tier.tailMap (Key (key, time), true))
 
   def merge (
       desc: TierDescriptor,

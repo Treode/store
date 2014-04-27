@@ -4,7 +4,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.disk.{Disks, PageDescriptor, Position}
-import com.treode.store.{Bytes, Cell, CellIterator, Residents, StoreConfig, TableId, TxClock}
+import com.treode.store._
 
 import Async.{async, supply, when}
 import Callback.ignore
@@ -49,7 +49,7 @@ private class SynthTable (
 
   def get (key: Bytes, time: TxClock): Async [Cell] = {
 
-    val mkey = MemKey (key, time)
+    val mkey = Key (key, time)
 
     readLock.lock()
     val (primary, secondary, tiers) = try {
@@ -61,14 +61,14 @@ private class SynthTable (
     var candidate = Cell.sentinel
     var entry = primary.ceilingEntry (mkey)
     if (entry != null) {
-      val MemKey (k, t) = entry.getKey
+      val Key (k, t) = entry.getKey
       if (key == k && candidate.time < t) {
         candidate = memTierEntryToCell (entry)
       }}
 
     entry = secondary.ceilingEntry (mkey)
     if (entry != null) {
-      val MemKey (k, t) = entry.getKey
+      val Key (k, t) = entry.getKey
       if (key == k && candidate.time < t) {
         candidate = memTierEntryToCell (entry)
       }}
@@ -94,7 +94,7 @@ private class SynthTable (
   def put (key: Bytes, time: TxClock, value: Bytes): Long = {
     readLock.lock()
     try {
-      primary.put (MemKey (key, time), Some (value))
+      primary.put (Key (key, time), Some (value))
       gen
     } finally {
       readLock.unlock()
@@ -103,7 +103,7 @@ private class SynthTable (
   def delete (key: Bytes, time: TxClock): Long = {
     readLock.lock()
     try {
-      primary.put (MemKey (key, time), None)
+      primary.put (Key (key, time), None)
       gen
     } finally {
       readLock.unlock()
@@ -139,7 +139,7 @@ private class SynthTable (
       val novel = Seq.newBuilder [Cell]
       for {
         cell <- cells
-        key = MemKey (cell.key, cell.time)
+        key = Key (cell.key, cell.time)
         if secondary.get (key) == null
         if primary.put (key, cell.value) == null
       } novel += cell

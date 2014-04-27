@@ -23,7 +23,7 @@ class TxClock private [store] (val time: Long) extends AnyVal with Ordered [TxCl
 
 object TxClock extends Ordering [TxClock] {
 
-  private [store] val sentinel = new TxClock (-1)
+  val sentinel = new TxClock (-1)
 
   val zero = new TxClock (0)
 

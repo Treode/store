@@ -16,11 +16,11 @@ class StubStore extends Store {
     StoreConfig (Epoch.zero, 0.01, 4, Int.MaxValue, Int.MaxValue, Int.MaxValue)
 
   private val space = new LockSpace
-  private val data = new ConcurrentSkipListMap [Key, Option [Bytes]]
+  private val data = new ConcurrentSkipListMap [StubKey, Option [Bytes]]
 
   private def get (table: TableId, key: Bytes, time: TxClock): Value = {
-    val limit = Key (table, key, TxClock.zero)
-    var entry = data.ceilingEntry (Key (table, key, time))
+    val limit = StubKey (table, key, TxClock.zero)
+    var entry = data.ceilingEntry (StubKey (table, key, time))
     if (entry != null && entry.getKey <= limit)
       Value (entry.getKey.time, entry.getValue)
     else
@@ -36,10 +36,10 @@ class StubStore extends Store {
     }}
 
   private def put (table: TableId, key: Bytes, time: TxClock, value: Bytes): Unit =
-    data.put (Key (table, key, time), Some (value))
+    data.put (StubKey (table, key, time), Some (value))
 
   private def delete (table: TableId, key: Bytes, time: TxClock): Unit =
-    data.put (Key (table, key, time), None)
+    data.put (StubKey (table, key, time), None)
 
   private def collided (op: WriteOp, value: Value): Boolean =
     op.isInstanceOf [WriteOp.Create] && value.value.isDefined

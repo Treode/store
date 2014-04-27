@@ -18,6 +18,7 @@ private trait StorePicklers extends Picklers {
   def cell = Cell.pickler
   def cohort = Cohort.pickler
   def hostId = HostId.pickler
+  def key = Key.pickler
   def portId = PortId.pickler
   def pos = Position.pickler
   def readOp = ReadOp.pickler
