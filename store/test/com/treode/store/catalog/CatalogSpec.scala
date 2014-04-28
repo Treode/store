@@ -4,7 +4,7 @@ import java.util.concurrent.TimeoutException
 import scala.util.Random
 
 import com.treode.async.stubs.AsyncChecks
-import com.treode.cluster.StubNetwork
+import com.treode.cluster.stubs.StubNetwork
 import com.treode.store.{Bytes, CatalogDescriptor, StaleException}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec

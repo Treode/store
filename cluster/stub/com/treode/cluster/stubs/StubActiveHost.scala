@@ -1,9 +1,10 @@
-package com.treode.cluster
+package com.treode.cluster.stubs
 
 import java.net.SocketAddress
 import scala.util.Random
 
 import com.treode.async.Scheduler
+import com.treode.cluster._
 import com.treode.pickle.Pickler
 
 class StubActiveHost (val localId: HostId, network: StubNetwork) extends Cluster with StubHost {

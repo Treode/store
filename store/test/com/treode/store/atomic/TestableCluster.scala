@@ -1,7 +1,7 @@
 package com.treode.store.atomic
 
 import com.treode.async.Async
-import com.treode.cluster.StubNetwork
+import com.treode.cluster.stubs.StubNetwork
 import com.treode.store._
 
 private class TestableCluster (hosts: Seq [StubAtomicHost], network: StubNetwork)

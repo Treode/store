@@ -3,7 +3,8 @@ package com.treode.store.atomic
 import scala.util.Random
 
 import com.treode.async.stubs.StubScheduler
-import com.treode.cluster.{Cluster, HostId, Peer, StubActiveHost, StubNetwork}
+import com.treode.cluster.{Cluster, HostId, Peer}
+import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
 import com.treode.store.{Atlas, Bytes, Cohort, StoreTestTools, TxClock}
 import org.scalatest.{FreeSpec, ShouldMatchers}
 

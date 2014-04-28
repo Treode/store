@@ -5,7 +5,8 @@ import scala.util.Random
 
 import com.treode.async.{Async, Callback}
 import com.treode.async.io.stubs.StubFile
-import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
+import com.treode.cluster.{Cluster, HostId}
+import com.treode.cluster.stubs.{StubActiveHost, StubHost, StubNetwork}
 import com.treode.store._
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions

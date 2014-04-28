@@ -1,5 +1,6 @@
-package com.treode.cluster
+package com.treode.cluster.stubs
 
+import com.treode.cluster.{HostId, PortId}
 import com.treode.pickle.Pickler
 
 trait StubHost {

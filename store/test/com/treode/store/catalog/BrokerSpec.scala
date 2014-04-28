@@ -5,7 +5,8 @@ import scala.util.Random
 
 import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.io.stubs.StubFile
-import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
+import com.treode.cluster.{Cluster, HostId}
+import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.pickle.{Pickler, Picklers}
 import com.treode.store._

@@ -4,7 +4,8 @@ import java.nio.file.Paths
 
 import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
-import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubHost, StubNetwork}
+import com.treode.cluster.{Cluster, HostId}
+import com.treode.cluster.stubs.{StubActiveHost, StubHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Atlas, Catalogs, Cohort, Library, Paxos}
 

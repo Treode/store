@@ -1,9 +1,10 @@
-package com.treode.cluster
+package com.treode.cluster.stubs
 
 import java.net.SocketAddress
 
 import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
+import com.treode.cluster.{HostId, Peer, PortId}
 import com.treode.pickle.Pickler
 
 private class StubConnection (val id: HostId, localId: HostId, network: StubNetwork)
