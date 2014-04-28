@@ -2,9 +2,10 @@ package com.treode.store.tier
 
 import java.nio.file.Paths
 
-import com.treode.async.{CallbackCaptor, StubScheduler}
 import com.treode.async.implicits._
-import com.treode.async.io.{File, StubFile}
+import com.treode.async.io.File
+import com.treode.async.io.stubs.StubFile
+import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Fruits, StoreConfig}
 import com.treode.pickle.Picklers

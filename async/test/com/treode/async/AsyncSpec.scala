@@ -4,6 +4,7 @@ import scala.util.{Failure, Success, Try}
 import org.scalatest.FlatSpec
 
 import com.treode.async.implicits._
+import com.treode.async.stubs.{AsyncTestTools, CallbackCaptor, StubScheduler}
 
 import Async.{async, guard, supply, when}
 import AsyncTestTools._

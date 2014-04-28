@@ -6,6 +6,7 @@ import scala.util.Random
 
 import com.treode.async._
 import com.treode.async.implicits._
+import com.treode.async.stubs.StubScheduler
 import com.treode.pickle.Picklers
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec

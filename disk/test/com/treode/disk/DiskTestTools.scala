@@ -6,8 +6,9 @@ import scala.collection.mutable.UnrolledBuffer
 import scala.reflect.ClassTag
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncTestTools, CallbackCaptor, StubScheduler}
-import com.treode.async.io.StubFile
+import com.treode.async.Async
+import com.treode.async.io.stubs.StubFile
+import com.treode.async.stubs.{AsyncTestTools, CallbackCaptor, StubScheduler}
 import org.scalatest.Assertions
 
 import Assertions.assertResult

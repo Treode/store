@@ -3,7 +3,7 @@ package com.treode.disk
 import scala.collection.mutable.UnrolledBuffer
 import scala.util.Random
 
-import com.treode.async.StubScheduler
+import com.treode.async.stubs.StubScheduler
 import org.scalatest.FlatSpec
 
 import DispatcherTestTools._

@@ -1,6 +1,7 @@
 package com.treode.store.tier
 
-import com.treode.async.{Async, StubScheduler}
+import com.treode.async.Async
+import com.treode.async.stubs.StubScheduler
 import com.treode.disk.Disks
 import com.treode.store.{Bytes, StoreConfig, TableId, TxClock}
 

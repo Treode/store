@@ -2,8 +2,8 @@ package com.treode.disk
 
 import scala.util.Random
 
-import com.treode.async.StubScheduler
-import com.treode.async.io.StubFile
+import com.treode.async.stubs.StubScheduler
+import com.treode.async.io.stubs.StubFile
 import com.treode.buffer.PagedBuffer
 import org.scalatest.FlatSpec
 

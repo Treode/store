@@ -2,7 +2,7 @@ package com.treode.disk
 
 import scala.collection.mutable.UnrolledBuffer
 
-import com.treode.async.{AsyncTestTools, StubScheduler}
+import com.treode.async.stubs.{AsyncTestTools, StubScheduler}
 import org.scalatest.FlatSpec
 
 import AsyncTestTools._

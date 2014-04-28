@@ -4,6 +4,7 @@ import java.util.concurrent.TimeoutException
 import scala.util.Random
 
 import com.treode.async.implicits._
+import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import org.scalatest.FlatSpec
 
 class TimeoutCallbackSpec extends FlatSpec {

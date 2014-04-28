@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
-import com.treode.async.StubScheduler
 import com.treode.async.implicits._
+import com.treode.async.stubs.StubScheduler
 import com.treode.store.{Bytes, Cell, Fruits}
 import org.scalatest.FreeSpec
 

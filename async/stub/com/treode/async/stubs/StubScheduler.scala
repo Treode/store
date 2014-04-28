@@ -1,7 +1,9 @@
-package com.treode.async
+package com.treode.async.stubs
 
 import java.util.concurrent.ScheduledExecutorService
 import scala.util.Random
+
+import com.treode.async.Scheduler
 
 trait StubScheduler extends Scheduler {
 

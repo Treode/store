@@ -3,6 +3,7 @@ package com.treode.async
 import org.scalatest.FlatSpec
 
 import com.treode.async.implicits._
+import com.treode.async.stubs.CallbackCaptor
 
 class TripleLatchSpec extends FlatSpec {
 

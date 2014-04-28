@@ -3,7 +3,7 @@ package com.treode.disk
 import scala.collection.mutable.UnrolledBuffer
 import scala.reflect.ClassTag
 
-import com.treode.async.StubScheduler
+import com.treode.async.stubs.StubScheduler
 import org.scalatest.Assertions
 
 import Assertions.{assertResult, fail}

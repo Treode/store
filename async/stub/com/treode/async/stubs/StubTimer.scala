@@ -1,4 +1,4 @@
-package com.treode.async
+package com.treode.async.stubs
 
 private case class StubTimer (time: Long, task: Runnable) extends Ordered [StubTimer] {
 

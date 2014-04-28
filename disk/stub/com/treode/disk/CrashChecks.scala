@@ -2,7 +2,8 @@ package com.treode.disk
 
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncChecks, AsyncTestTools, StubScheduler}
+import com.treode.async.Async
+import com.treode.async.stubs.{AsyncChecks, AsyncTestTools, StubScheduler}
 import org.scalatest.{Informing, Suite}
 
 import AsyncTestTools._

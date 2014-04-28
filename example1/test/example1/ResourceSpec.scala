@@ -1,6 +1,6 @@
 package example1
 
-import com.treode.async.StubScheduler
+import com.treode.async.stubs.StubScheduler
 import com.treode.store.{Bytes, Cell, StubStore, TxClock, TxId, WriteOp}
 import com.twitter.finagle.http.MediaType
 import com.twitter.finatra.test.{MockApp, MockResult}

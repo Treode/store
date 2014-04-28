@@ -1,6 +1,7 @@
 package com.treode.store.atomic
 
-import com.treode.async.{Async, StubScheduler}
+import com.treode.async.Async
+import com.treode.async.stubs.StubScheduler
 import com.treode.store.{Atlas, Cohort, Bytes, StoreTestTools, TxClock}
 import com.treode.store.locks.LockSet
 import org.scalatest.Assertions

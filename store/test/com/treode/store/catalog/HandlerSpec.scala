@@ -4,8 +4,8 @@ import java.nio.file.Paths
 import scala.collection.JavaConversions._
 
 import org.scalatest.FreeSpec
-import com.treode.async.{Async, StubScheduler}
-import com.treode.async.io.StubFile
+import com.treode.async.stubs.StubScheduler
+import com.treode.async.io.stubs.StubFile
 import com.treode.disk.{Disks, Position}
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, CatalogId, StoreTestTools}

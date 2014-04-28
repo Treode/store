@@ -3,7 +3,8 @@ package com.treode.store
 import java.util.concurrent.Executors
 import scala.util.Random
 
-import com.treode.async.{Async, Scheduler, StubScheduler}
+import com.treode.async.{Async, Scheduler}
+import com.treode.async.stubs.StubScheduler
 import org.scalatest.FreeSpec
 
 class StubStoreSpec extends FreeSpec with StoreBehaviors {

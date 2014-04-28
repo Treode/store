@@ -202,6 +202,9 @@ object TreodeBuild extends Build {
         "-doc-title", "TreodeDB 0.1", 
         "-doc-root-content", baseDirectory.value + "/rootdoc.txt"),
 
+      unidocConfigurationFilter in (ScalaUnidoc, unidoc) := 
+        inConfigurations (Compile, Stub),
+
       unidocProjectFilter in (ScalaUnidoc, unidoc) := 
         inAnyProject -- inProjects (systest, example1))
 }

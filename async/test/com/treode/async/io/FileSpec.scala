@@ -3,7 +3,9 @@ package com.treode.async.io
 import scala.util.Random
 
 import com.google.common.hash.Hashing
-import com.treode.async.{AsyncTestTools, Callback, StubScheduler}
+import com.treode.async.Callback
+import com.treode.async.io.stubs.StubFile
+import com.treode.async.stubs.{AsyncTestTools, StubScheduler}
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec

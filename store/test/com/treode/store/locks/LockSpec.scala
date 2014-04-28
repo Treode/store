@@ -3,7 +3,8 @@ package com.treode.store.locks
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.WordSpec
 
-import com.treode.async.{Async, StubScheduler}
+import com.treode.async.Async
+import com.treode.async.stubs.StubScheduler
 import com.treode.store.{Bytes, StoreConfig, StoreTestTools, TxClock}
 import com.treode.pickle.Picklers
 

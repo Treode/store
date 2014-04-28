@@ -3,7 +3,7 @@ package com.treode.store.catalog
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
-import com.treode.async.AsyncChecks
+import com.treode.async.stubs.AsyncChecks
 import com.treode.cluster.StubNetwork
 import com.treode.store.{Bytes, CatalogDescriptor, StaleException}
 import com.treode.tags.{Intensive, Periodic}

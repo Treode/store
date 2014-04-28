@@ -1,11 +1,13 @@
-package com.treode.async.io
+package com.treode.async.io.stubs
 
 import java.io.EOFException
 import java.util.{Arrays, ArrayDeque}
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, Callback, CallbackCaptor, StubScheduler}
+import com.treode.async.{Async, Callback}
 import com.treode.async.implicits._
+import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
+import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
 import Async.async

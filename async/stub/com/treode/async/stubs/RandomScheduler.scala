@@ -1,4 +1,4 @@
-package com.treode.async
+package com.treode.async.stubs
 
 import scala.collection.mutable.{ArrayBuffer, PriorityQueue}
 import scala.util.Random

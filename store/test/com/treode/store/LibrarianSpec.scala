@@ -2,8 +2,9 @@ package com.treode.store
 
 import java.nio.file.Paths
 
-import com.treode.async.{Async, AsyncCaptor, AsyncChecks, StubScheduler}
-import com.treode.async.io.StubFile
+import com.treode.async.Async
+import com.treode.async.io.stubs.StubFile
+import com.treode.async.stubs.{AsyncCaptor, AsyncChecks, StubScheduler}
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.disk.Disks
 import org.scalatest.FlatSpec

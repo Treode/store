@@ -3,8 +3,8 @@ package com.treode.cluster
 import java.util.Arrays
 import scala.util.Random
 
-import com.treode.async.{AsyncChecks, AsyncTestTools, StubScheduler}
 import com.treode.async.io.Socket
+import com.treode.async.stubs.{AsyncChecks, AsyncTestTools, StubScheduler}
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.{Pickler, Picklers, PicklerRegistry}
 import org.scalatest.{FreeSpec, PropSpec, Suites}

@@ -3,7 +3,7 @@ package com.treode.store.paxos
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
-import com.treode.async.AsyncChecks
+import com.treode.async.stubs.AsyncChecks
 import com.treode.cluster.StubNetwork
 import com.treode.store.{Bytes, Cell}
 import com.treode.tags.{Intensive, Periodic}

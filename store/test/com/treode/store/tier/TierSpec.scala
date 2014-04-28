@@ -3,9 +3,10 @@ package com.treode.store.tier
 import java.nio.file.Paths
 import scala.collection.mutable.Builder
 
-import com.treode.async.StubScheduler
+
 import com.treode.async.implicits._
-import com.treode.async.io.StubFile
+import com.treode.async.io.stubs.StubFile
+import com.treode.async.stubs.StubScheduler
 import com.treode.pickle.Picklers
 import com.treode.store._
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry, Position}

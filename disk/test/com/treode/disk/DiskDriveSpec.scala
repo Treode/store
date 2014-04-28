@@ -2,9 +2,11 @@ package com.treode.disk
 
 import java.nio.file.Paths
 
-import com.treode.async.{Async, AsyncTestTools, CallbackCaptor, StubScheduler}
-import com.treode.async.io.{File, StubFile}
+import com.treode.async.Async
+import com.treode.async.io.File
+import com.treode.async.io.stubs.StubFile
 import com.treode.async.implicits._
+import com.treode.async.stubs.{AsyncTestTools, CallbackCaptor, StubScheduler}
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec

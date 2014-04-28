@@ -2,8 +2,8 @@ package com.treode.disk
 
 import java.nio.file.Paths
 
-import com.treode.async.StubScheduler
-import com.treode.async.io.StubFile
+import com.treode.async.stubs.StubScheduler
+import com.treode.async.io.stubs.StubFile
 import com.treode.tags.Periodic
 import org.scalatest.FreeSpec
 

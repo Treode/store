@@ -3,7 +3,8 @@ package com.treode.store
 import scala.language.implicitConversions
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncTestTools, CallbackCaptor, StubScheduler}
+import com.treode.async.Async
+import com.treode.async.stubs.{AsyncTestTools, CallbackCaptor, StubScheduler}
 import com.treode.cluster.{StubHost, HostId}
 import com.treode.disk.{CellId, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions

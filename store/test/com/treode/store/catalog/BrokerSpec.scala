@@ -3,8 +3,8 @@ package com.treode.store.catalog
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async.{AsyncChecks, StubScheduler}
-import com.treode.async.io.StubFile
+import com.treode.async.stubs.{AsyncChecks, StubScheduler}
+import com.treode.async.io.stubs.StubFile
 import com.treode.cluster.{Cluster, HostId, StubActiveHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.pickle.{Pickler, Picklers}

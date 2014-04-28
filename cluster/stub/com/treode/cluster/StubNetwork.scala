@@ -3,7 +3,8 @@ package com.treode.cluster
 import java.util.concurrent.{ConcurrentHashMap, Executors}
 import scala.collection.JavaConversions._
 import scala.util.Random
-import com.treode.async.StubScheduler
+
+import com.treode.async.stubs.StubScheduler
 import com.treode.pickle.Pickler
 
 class StubNetwork (implicit val random: Random, val scheduler: StubScheduler) {

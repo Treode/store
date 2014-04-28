@@ -2,7 +2,8 @@ package com.treode.async.io
 
 import scala.util.Random
 
-import com.treode.async.{AsyncTestTools, Callback, StubScheduler}
+import com.treode.async.Callback
+import com.treode.async.stubs.{AsyncTestTools, StubScheduler}
 import com.treode.buffer.PagedBuffer
 import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks

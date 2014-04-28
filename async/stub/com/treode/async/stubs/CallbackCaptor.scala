@@ -1,6 +1,5 @@
-package com.treode.async
+package com.treode.async.stubs
 
-import java.util.concurrent.TimeoutException
 import scala.util.{Failure, Success, Try}
 
 import org.scalatest.Assertions

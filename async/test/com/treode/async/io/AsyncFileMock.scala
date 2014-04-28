@@ -8,8 +8,9 @@ import java.util.concurrent.Future
 import scala.collection.JavaConversions._
 import scala.util.{Success, Failure}
 
-import com.treode.async.{Callback, StubScheduler}
+import com.treode.async.Callback
 import com.treode.async.implicits._
+import com.treode.async.stubs.StubScheduler
 import org.scalatest.Assertions
 
 /** ScalaMock refuses to mock AsynchronousFileChannel. */

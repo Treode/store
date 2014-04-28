@@ -2,9 +2,9 @@ package com.treode.disk
 
 import java.nio.file.Paths
 
-import com.treode.async.{AsyncTestTools, StubScheduler}
 import com.treode.async.implicits._
-import com.treode.async.io.StubFile
+import com.treode.async.io.stubs.StubFile
+import com.treode.async.stubs.{AsyncTestTools, StubScheduler}
 import org.scalatest.FreeSpec
 
 import DiskTestTools._

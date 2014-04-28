@@ -1,6 +1,7 @@
 package com.treode.async
 
 import com.treode.async.implicits._
+import com.treode.async.stubs.CallbackCaptor
 import org.scalatest.FlatSpec
 
 class PairLatchSpec extends FlatSpec {

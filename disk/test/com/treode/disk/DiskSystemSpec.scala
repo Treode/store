@@ -5,9 +5,10 @@ import java.util.concurrent.Executors
 import scala.collection.JavaConversions
 import scala.util.Random
 
-import com.treode.async.{Async, StubScheduler}
-import com.treode.async.io.StubFile
+import com.treode.async.Async
+import com.treode.async.io.stubs.StubFile
 import com.treode.async.implicits._
+import com.treode.async.stubs.StubScheduler
 import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
 import org.scalatest.{Assertions, FreeSpec}

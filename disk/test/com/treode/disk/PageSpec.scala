@@ -2,8 +2,9 @@ package com.treode.disk
 
 import scala.util.Random
 
-import com.treode.async.{Async, Callback, StubScheduler}
-import com.treode.async.io.StubFile
+import com.treode.async.{Async, Callback}
+import com.treode.async.io.stubs.StubFile
+import com.treode.async.stubs.StubScheduler
 import org.scalatest.FreeSpec
 
 import Async.supply

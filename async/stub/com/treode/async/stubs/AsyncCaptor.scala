@@ -1,5 +1,6 @@
-package com.treode.async
+package com.treode.async.stubs
 
+import com.treode.async.{Async, Callback}
 import com.treode.async.implicits._
 
 import Async.async

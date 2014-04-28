@@ -1,5 +1,6 @@
 package com.treode.async
 
+import com.treode.async.stubs.{AsyncTestTools, StubScheduler}
 import org.scalatest.Assertions
 
 import Assertions.assertResult

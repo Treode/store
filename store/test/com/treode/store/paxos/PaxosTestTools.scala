@@ -1,6 +1,5 @@
 package com.treode.store.paxos
 
-import com.treode.async.{CallbackCaptor, StubScheduler}
 import com.treode.cluster.StubHost
 import com.treode.store.{Cohort, StoreTestTools}
 
