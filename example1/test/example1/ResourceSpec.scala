@@ -1,5 +1,6 @@
 package example1
 
+import com.treode.async.StubScheduler
 import com.treode.store.{Bytes, Cell, StubStore, TxClock, TxId, WriteOp}
 import com.twitter.finagle.http.MediaType
 import com.twitter.finatra.test.{MockApp, MockResult}
@@ -17,6 +18,7 @@ class ResourceSpec extends FreeSpec with Matchers with SpecTools {
   "When the database is empty" - {
 
     "GET /table/123?key=abc should respond Not Found" in {
+      implicit val scheduler = StubScheduler.random()
       val store = StubStore()
       val mock = newMock (store)
       val response = mock.get ("/table/123?key=abc")
@@ -24,9 +26,10 @@ class ResourceSpec extends FreeSpec with Matchers with SpecTools {
     }
 
     "PUT /table/123?key=abc with a condition should respond Ok with an etag" in {
-      val body = "\"i have been stored\""
+      implicit val scheduler = StubScheduler.random()
       val store = StubStore()
       val mock = newMock (store)
+      val body = "\"i have been stored\""
       val response = mock.put (
           "/table/123?key=abc",
           headers = Map (ContentType -> MediaType.Json),
@@ -41,6 +44,7 @@ class ResourceSpec extends FreeSpec with Matchers with SpecTools {
     val entity = "\"you found me\""
 
     def setup() = {
+      implicit val scheduler = StubScheduler.random()
       val store = StubStore()
       val mock = newMock (store)
       val ts = store.write (TxId (1, 0), TxClock.zero,

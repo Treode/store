@@ -3,13 +3,14 @@ package com.treode.store
 import java.util.concurrent.ConcurrentSkipListMap
 import scala.collection.JavaConversions
 
-import com.treode.async.Async
+import com.treode.async.{Async, AsyncImplicits, AsyncIterator, Scheduler, StubScheduler}
 import com.treode.store.locks.LockSpace
 
 import Async.guard
+import AsyncImplicits._
 import JavaConversions._
 
-class StubStore extends Store {
+class StubStore (implicit scheduler: Scheduler) extends Store {
 
   // The stub uses only the lockSpaceBits.
   private implicit val config =
@@ -83,6 +84,12 @@ class StubStore extends Store {
           locks.release()
         }}}
 
+  def scan (table: TableId, key: Bytes, time: TxClock): AsyncIterator [Cell] = {
+    val entries = data .tailMap (StubKey (table, key, time)) .takeWhile (_._1.table == table)
+    for ((key, value) <- entries.async)
+      yield Cell (key.key, key.time, value)
+  }
+
   def scan (table: TableId): Seq [Cell] =
     for ((key, value) <- data.toSeq; if key.table == table)
       yield Cell (key.key, key.time, value)
@@ -90,6 +97,6 @@ class StubStore extends Store {
 
 object StubStore {
 
-  def apply(): StubStore =
+  def apply () (implicit scheduler: Scheduler): StubStore =
     new StubStore
 }

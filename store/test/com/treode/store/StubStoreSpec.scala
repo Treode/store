@@ -1,13 +1,14 @@
 package com.treode.store
 
+import java.util.concurrent.Executors
 import scala.util.Random
 
-import com.treode.async.Async
+import com.treode.async.{Async, Scheduler, StubScheduler}
 import org.scalatest.FreeSpec
 
 class StubStoreSpec extends FreeSpec with StoreBehaviors {
 
-  private class TestableStubStore extends TestableStore {
+  private class TestableStubStore (implicit scheduler: Scheduler) extends TestableStore {
 
     private val delegate = new StubStore
 
@@ -23,7 +24,10 @@ class StubStoreSpec extends FreeSpec with StoreBehaviors {
 
   "The StubStore should" - {
 
-    behave like aStore (_ => new TestableStubStore)
+    behave like aStore (implicit scheduler => new TestableStubStore)
 
-    behave like aMultithreadableStore (10000) (new TestableStubStore)
-  }}
+    behave like aMultithreadableStore (10000) {
+      val executor = Executors.newScheduledThreadPool (4)
+      val scheduler = StubScheduler.multithreaded (executor)
+      new TestableStubStore () (scheduler)
+    }}}
