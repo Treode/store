@@ -1,9 +1,12 @@
-import sbt._
-import Keys._
-
 import com.typesafe.sbteclipse.plugin.EclipsePlugin.EclipseKeys
-import sbtassembly.Plugin.AssemblyKeys._
+import sbtassembly.Plugin.AssemblyKeys
 import sbtassembly.Plugin.assemblySettings
+import sbtunidoc.Plugin.{ScalaUnidoc, UnidocKeys, unidocSettings}
+
+import sbt._
+import AssemblyKeys._
+import Keys._
+import UnidocKeys._
 
 object TreodeBuild extends Build {
 
@@ -22,7 +25,8 @@ object TreodeBuild extends Build {
     unmanagedSourceDirectories in Compile <<=
       (baseDirectory ((base: File) => Seq (base / "src"))),
 
-    scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", "-Yinline-warnings"),
+    scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", 
+      "-Yinline-warnings"),
 
     libraryDependencies <+= (scalaVersion) ("org.scala-lang" % "scala-reflect" % _),
 
@@ -153,39 +157,54 @@ object TreodeBuild extends Build {
   // A standalone server for system tests.  Separated to keep system
   // testing components out of production code (these components are
   // in the "default" Ivy configuration in this project).
-  lazy val systestSettings =
-    standardSettings ++
-    assemblySettings ++
-  Seq (
-    name := "systest",
-    test in assembly := {})
-
   lazy val systest = Project ("systest", file ("systest"))
     .configs (IntensiveTest, PeriodicTest)
     .dependsOn (store)
-    .settings (systestSettings: _*)
+    .settings (standardSettings: _*)
+    .settings (assemblySettings: _*)
+    .settings (
 
-  lazy val exampleSettings = Seq (
+      name := "systest",
 
-    organization := "com.treode",
-    version := "0.1",
-    scalaVersion := "2.10.3",
-
-    unmanagedSourceDirectories in Compile <<=
-      (baseDirectory ((base: File) => Seq (base / "src"))),
-
-    unmanagedSourceDirectories in TestWithStub <<=
-      (baseDirectory ((base: File) => Seq (base / "test"))),
-
-    scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", "-Yinline-warnings"),
-
-    libraryDependencies ++= Seq (
-      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.3.2",
-      "com.twitter" %% "finatra" % "1.5.2"),
-
-    resolvers += "Twitter" at "http://maven.twttr.com")
+      test in assembly := {})
 
   lazy val example1 = Project ("example1", file ("example1"))
     .dependsOn (store % "compile;test->stub")
-    .settings (exampleSettings: _*)
+    .settings (
+
+      organization := "com.treode",
+      version := "0.1",
+      scalaVersion := "2.10.3",
+
+      unmanagedSourceDirectories in Compile <<=
+        (baseDirectory ((base: File) => Seq (base / "src"))),
+
+      unmanagedSourceDirectories in TestWithStub <<=
+        (baseDirectory ((base: File) => Seq (base / "test"))),
+
+      scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked",
+        "-Yinline-warnings"),
+
+      libraryDependencies ++= Seq (
+        "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.3.2",
+        "com.twitter" %% "finatra" % "1.5.2"),
+
+      resolvers += "Twitter" at "http://maven.twttr.com")
+
+  lazy val root = Project ("root", file ("."))
+    .aggregate (buffer, pickle, async, cluster, disk, store, systest, example1)
+    .settings (unidocSettings: _*)
+    .settings (
+
+      name := "root",
+
+      scalacOptions in (ScalaUnidoc, unidoc) ++= Seq (
+        "-doc-title", "TreodeDB 0.1", 
+        "-doc-root-content", baseDirectory.value + "/rootdoc.txt"),
+
+      unidocConfigurationFilter in (ScalaUnidoc, unidoc) := 
+        inConfigurations (Compile, Stub),
+
+      unidocProjectFilter in (ScalaUnidoc, unidoc) := 
+        inAnyProject -- inProjects (systest, example1))
 }
