@@ -1,9 +1,9 @@
 package com.treode.async
 
+import com.treode.async.implicits._
 import org.scalatest.FlatSpec
 
 import Async.supply
-import AsyncImplicits._
 import AsyncIteratorTestTools._
 
 class AsyncIteratorSpec extends FlatSpec {

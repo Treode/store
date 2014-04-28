@@ -2,12 +2,12 @@ package com.treode.store.tier
 
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncImplicits, Callback}
+import com.treode.async.{Async, Callback}
+import com.treode.async.implicits._
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, Cell, Residents, StorePicklers, TxClock}
 
 import Async.async
-import AsyncImplicits._
 
 private case class Tier (
     gen: Long,

@@ -3,13 +3,12 @@ package com.treode.store.catalog
 import java.util.concurrent.TimeoutException
 import scala.language.postfixOps
 
-import com.treode.async.{AsyncImplicits, Backoff, Fiber}
+import com.treode.async.{Backoff, Fiber}
+import com.treode.async.implicits._
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.store.CatalogId
 import com.treode.store.paxos.BallotNumber
-
-import AsyncImplicits._
 
 private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
   import kit.proposers.remove

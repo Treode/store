@@ -4,12 +4,12 @@ import java.nio.file.Path
 import java.util.ArrayDeque
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncImplicits, AsyncIterator, Callback, Scheduler}
+import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
+import com.treode.async.implicits._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
 import Async.{async, guard, supply}
-import AsyncImplicits._
 import RecordHeader._
 import SuperBlocks.chooseSuperBlock
 

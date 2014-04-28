@@ -2,14 +2,14 @@ package com.treode.store.tier
 
 import java.nio.file.Paths
 
-import com.treode.async.{AsyncImplicits, CallbackCaptor, StubScheduler}
+import com.treode.async.{CallbackCaptor, StubScheduler}
+import com.treode.async.implicits._
 import com.treode.async.io.{File, StubFile}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Fruits, StoreConfig}
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
-import AsyncImplicits._
 import Fruits.{Grape, Kiwi, Orange}
 import TierTable.Meta
 import TierTestTools._

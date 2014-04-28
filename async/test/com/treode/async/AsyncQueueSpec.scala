@@ -2,10 +2,10 @@ package com.treode.async
 
 import java.util.ArrayDeque
 
+import com.treode.async.implicits._
 import org.scalatest.FlatSpec
 
 import Async.{async, supply}
-import AsyncImplicits._
 import AsyncTestTools._
 import Callback.{ignore => disregard}
 

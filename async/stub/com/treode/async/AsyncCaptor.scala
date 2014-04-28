@@ -1,7 +1,8 @@
 package com.treode.async
 
+import com.treode.async.implicits._
+
 import Async.async
-import AsyncImplicits._
 
 class AsyncCaptor [A] private {
 

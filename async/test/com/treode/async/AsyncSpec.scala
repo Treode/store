@@ -3,8 +3,9 @@ package com.treode.async
 import scala.util.{Failure, Success, Try}
 import org.scalatest.FlatSpec
 
+import com.treode.async.implicits._
+
 import Async.{async, guard, supply, when}
-import AsyncImplicits._
 import AsyncTestTools._
 import Callback.{ignore => disregard}
 

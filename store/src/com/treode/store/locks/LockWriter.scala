@@ -1,10 +1,9 @@
 package com.treode.store.locks
 
 import scala.collection.SortedSet
-import com.treode.async.{AsyncImplicits, Callback}
+import com.treode.async.Callback
+import com.treode.async.implicits._
 import com.treode.store.TxClock
-
-import AsyncImplicits._
 
 // Tracks the acquisition of locks and invokes the callback when they have all been granted.
 private class LockWriter (

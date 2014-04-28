@@ -3,12 +3,11 @@ package com.treode.store.atomic
 import scala.collection.mutable.PriorityQueue
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncImplicits, Callback, Fiber}
+import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.Peer
 import com.treode.store.{Bytes, Cell, CellIterator, Key, TableId, TimeoutException, TxClock}
 
 import Async.async
-import AsyncImplicits._
 import ScanDeputy.{Cells, Point}
 import ScanDirector._
 

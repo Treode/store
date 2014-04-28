@@ -3,7 +3,7 @@ package com.treode.async
 import java.util.ArrayDeque
 import scala.runtime.NonLocalReturnControl
 
-import AsyncImplicits._
+import com.treode.async.implicits._
 
 class Fiber (scheduler: Scheduler) extends Scheduler {
 

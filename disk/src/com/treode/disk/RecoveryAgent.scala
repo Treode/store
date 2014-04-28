@@ -4,11 +4,11 @@ import java.nio.file.Path
 import java.util.ArrayList
 import java.util.concurrent.ExecutorService
 
-import com.treode.async.{Async, AsyncImplicits, Scheduler}
+import com.treode.async.{Async, Scheduler}
+import com.treode.async.implicits._
 import com.treode.async.io.File
 
 import Async.guard
-import AsyncImplicits._
 import Disks.Launch
 import SuperBlocks.{chooseSuperBlock, verifyReattachment}
 

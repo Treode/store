@@ -1,6 +1,7 @@
 package com.treode.store.catalog
 
-import com.treode.async.{Async, AsyncImplicits, Callback, Fiber, Scheduler}
+import com.treode.async.{Async, Callback, Fiber, Scheduler}
+import com.treode.async.implicits._
 import com.treode.buffer.ArrayBuffer
 import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
 import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position}
@@ -8,7 +9,6 @@ import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 import com.treode.pickle.PicklerRegistry
 
 import Async.guard
-import AsyncImplicits._
 import Callback.ignore
 import Handler.pager
 

@@ -3,13 +3,13 @@ package com.treode.disk
 import scala.util.Random
 
 import com.treode.async._
+import com.treode.async.implicits._
 import com.treode.async.io.StubFile
 import com.treode.pickle.{InvalidTagException, Picklers}
 import com.treode.tags.Periodic
 import org.scalatest.FlatSpec
 
 import Async.{async, latch}
-import AsyncImplicits._
 import DiskTestTools._
 
 class LogSpec extends FlatSpec with CrashChecks {

@@ -2,8 +2,9 @@ package com.treode.async
 
 import java.util
 
+import com.treode.async.implicits._
+
 import Async.async
-import AsyncImplicits._
 
 class Mailbox [M] {
 

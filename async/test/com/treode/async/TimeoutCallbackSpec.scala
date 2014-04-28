@@ -3,9 +3,8 @@ package com.treode.async
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
+import com.treode.async.implicits._
 import org.scalatest.FlatSpec
-
-import AsyncImplicits._
 
 class TimeoutCallbackSpec extends FlatSpec {
 

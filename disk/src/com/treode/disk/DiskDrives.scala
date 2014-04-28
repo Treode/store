@@ -6,11 +6,11 @@ import scala.collection.immutable.Queue
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncImplicits, AsyncQueue, Callback, Fiber}
+import com.treode.async.{Async, AsyncQueue, Callback, Fiber}
+import com.treode.async.implicits._
 import com.treode.async.io.File
 
 import Async.{async, guard}
-import AsyncImplicits._
 import Callback.ignore
 
 private class DiskDrives (kit: DisksKit) {

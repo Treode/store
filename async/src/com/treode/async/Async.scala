@@ -4,8 +4,9 @@ import java.util.concurrent.{Future => JFuture, Callable, Executor, FutureTask, 
 import scala.runtime.NonLocalReturnControl
 import scala.util.{Failure, Success, Try}
 
+import com.treode.async.implicits._
+
 import Async.{_async, async}
-import AsyncImplicits._
 import Scheduler.toRunnable
 
 trait Async [A] {

@@ -2,13 +2,13 @@ package com.treode.store.catalog
 
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncImplicits, Fiber, Scheduler}
+import com.treode.async.{Async, Fiber, Scheduler}
+import com.treode.async.implicits._
 import com.treode.cluster.Cluster
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Catalogs, CatalogDescriptor, CatalogId, Library, StoreConfig}
 
 import Async.guard
-import AsyncImplicits._
 
 private class RecoveryKit (implicit
     random: Random,

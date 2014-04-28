@@ -1,8 +1,7 @@
 package com.treode.async
 
+import com.treode.async.implicits._
 import org.scalatest.FlatSpec
-
-import AsyncImplicits._
 
 class SeqLatchSpec extends FlatSpec {
 

@@ -3,8 +3,9 @@ package com.treode.async
 import java.util.concurrent.Executor
 import scala.util.{Failure, Success}
 
+import com.treode.async.implicits._
+
 import Async.async
-import AsyncImplicits._
 import Scheduler.toRunnable
 
 private class RichExecutor (executor: Executor) {

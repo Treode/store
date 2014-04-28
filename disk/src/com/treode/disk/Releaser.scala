@@ -1,9 +1,9 @@
 package com.treode.disk
 
 import scala.collection.mutable.Builder
-import com.treode.async.{Async, AsyncImplicits, Callback}
 
-import AsyncImplicits._
+import com.treode.async.{Async, Callback}
+import com.treode.async.implicits._
 
 private class Releaser {
 

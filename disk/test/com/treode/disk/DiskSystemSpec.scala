@@ -5,8 +5,9 @@ import java.util.concurrent.Executors
 import scala.collection.JavaConversions
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncImplicits, StubScheduler}
+import com.treode.async.{Async, StubScheduler}
 import com.treode.async.io.StubFile
+import com.treode.async.implicits._
 import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen
 import org.scalatest.{Assertions, FreeSpec}
@@ -14,7 +15,6 @@ import org.scalatest.prop.PropertyChecks
 import org.scalatest.time.SpanSugar
 
 import Async.{guard, latch, supply}
-import AsyncImplicits._
 import DiskTestTools._
 import DiskSystemSpec._
 import JavaConversions._

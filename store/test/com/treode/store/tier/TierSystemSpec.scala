@@ -3,7 +3,8 @@ package com.treode.store.tier
 import java.nio.file.Paths
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncImplicits, StubScheduler}
+import com.treode.async.{Async, StubScheduler}
+import com.treode.async.implicits._
 import com.treode.async.io.StubFile
 import com.treode.disk.{CrashChecks, Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Bytes, StoreConfig}
@@ -11,7 +12,6 @@ import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
 import Async.async
-import AsyncImplicits._
 import TierTestTools._
 
 class TierSystemSpec extends FreeSpec with CrashChecks {

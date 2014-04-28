@@ -3,13 +3,13 @@ package com.treode.store.atomic
 import scala.util.{Failure, Success}
 
 import com.treode.async._
+import com.treode.async.implicits._
 import com.treode.cluster.{Cluster, HostId, Peer, RequestDescriptor}
 import com.treode.disk.{ObjectId, TypeId}
 import com.treode.store._
 import com.treode.store.tier.TierTable
 
 import Async.{async, guard, supply}
-import AsyncImplicits._
 import Callback.ignore
 import Cohort.Moving
 import Rebalancer.{Batch, Point, Range, Targets, Tracker, move}

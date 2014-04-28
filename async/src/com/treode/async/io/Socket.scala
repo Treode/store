@@ -6,11 +6,11 @@ import java.net.SocketAddress
 import java.util.concurrent.{Executor, TimeUnit}
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncImplicits, Callback, RichExecutor, Scheduler}
+import com.treode.async.{Async, Callback, RichExecutor, Scheduler}
+import com.treode.async.implicits._
 import com.treode.buffer.PagedBuffer
 
 import Async.async
-import AsyncImplicits._
 import TimeUnit.MILLISECONDS
 
 /** A socket that has useful behavior (flush/fill) and that can be mocked. */

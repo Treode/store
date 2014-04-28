@@ -2,7 +2,7 @@ package com.treode.async
 
 import org.scalatest.FlatSpec
 
-import AsyncImplicits._
+import com.treode.async.implicits._
 
 class TripleLatchSpec extends FlatSpec {
 

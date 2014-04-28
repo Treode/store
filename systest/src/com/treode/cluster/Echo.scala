@@ -2,11 +2,11 @@ package com.treode.cluster
 
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncImplicits, Backoff, Callback, Fiber, Scheduler}
+import com.treode.async.{Async, Backoff, Callback, Fiber, Scheduler}
+import com.treode.async.implicits._
 import com.treode.pickle.Picklers
 
 import Async.async
-import AsyncImplicits._
 import Callback.ignore
 
 object Echo {

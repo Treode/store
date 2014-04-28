@@ -4,8 +4,9 @@ import scala.collection.mutable.PriorityQueue
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
+import com.treode.async.implicits._
+
 import Async.async
-import AsyncImplicits._
 
 private class MergeIterator [A] (iters: Seq [AsyncIterator [A]]) (implicit order: Ordering [A])
 extends AsyncIterator [A] {

@@ -6,13 +6,12 @@ import scala.collection.JavaConversions._
 import scala.language.postfixOps
 import scala.util.{Failure, Random, Success}
 
-import com.treode.async.{AsyncImplicits, Backoff, Callback, Fiber, Scheduler}
+import com.treode.async.{Backoff, Callback, Fiber, Scheduler}
+import com.treode.async.implicits._
 import com.treode.async.io.Socket
 import com.treode.async.misc.RichInt
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Pickler
-
-import AsyncImplicits._
 
 private class RemoteConnection (
   val id: HostId,

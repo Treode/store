@@ -2,10 +2,10 @@ package com.treode.disk
 
 import java.util.concurrent.ConcurrentHashMap
 
-import com.treode.async.{Async, AsyncImplicits, Callback, Latch}
+import com.treode.async.{Async, Callback, Latch}
+import com.treode.async.implicits._
 
 import Async.guard
-import AsyncImplicits._
 import PageLedger.{Groups, Merger}
 import PageRegistry.{PickledHandler, Probe}
 

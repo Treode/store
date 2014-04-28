@@ -3,11 +3,11 @@ package com.treode.store
 import java.util.concurrent.ConcurrentSkipListMap
 import scala.collection.JavaConversions
 
-import com.treode.async.{Async, AsyncImplicits, AsyncIterator, Scheduler, StubScheduler}
+import com.treode.async.{Async, AsyncIterator, Scheduler, StubScheduler}
+import com.treode.async.implicits._
 import com.treode.store.locks.LockSpace
 
 import Async.guard
-import AsyncImplicits._
 import JavaConversions._
 
 class StubStore (implicit scheduler: Scheduler) extends Store {

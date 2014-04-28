@@ -1,12 +1,12 @@
 package com.treode.store.atomic
 
-import com.treode.async.{Async, AsyncImplicits}
+import com.treode.async.Async
+import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.disk.Disks
 import com.treode.store.TxId
 
 import Async.{guard, latch}
-import AsyncImplicits._
 
 private class WriteDeputies (kit: AtomicKit) {
   import WriteDeputy._

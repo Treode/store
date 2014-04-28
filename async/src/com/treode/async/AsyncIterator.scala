@@ -4,8 +4,9 @@ import java.lang.{Iterable => JIterable}
 import java.util.{Iterator => JIterator}
 import scala.util.{Failure, Success}
 
+import com.treode.async.implicits._
+
 import Async.{async, when}
-import AsyncImplicits._
 
 trait AsyncIterator [+A] {
 

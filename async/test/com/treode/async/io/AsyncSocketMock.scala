@@ -9,10 +9,9 @@ import java.util.concurrent.{Future, TimeUnit}
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Success}
 
-import com.treode.async.{AsyncImplicits, Callback, StubScheduler}
+import com.treode.async.{Callback, StubScheduler}
+import com.treode.async.implicits._
 import org.scalatest.Assertions
-
-import AsyncImplicits._
 
 /** ScalaMock refuses to mock AsynchronousSocketChannel. */
 class AsyncSocketMock extends AsynchronousSocketChannel (null) with Assertions {

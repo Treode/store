@@ -1,11 +1,12 @@
 package com.treode.disk
 
 import scala.collection.immutable.Queue
-import com.treode.async.{Async, AsyncImplicits, Callback, Fiber, Latch, Scheduler}
 import scala.util.{Failure, Success}
 
+import com.treode.async.{Async, Callback, Fiber, Latch, Scheduler}
+import com.treode.async.implicits._
+
 import Async.{async, guard}
-import AsyncImplicits._
 import Callback.ignore
 import PageLedger.Groups
 

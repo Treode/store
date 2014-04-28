@@ -4,10 +4,10 @@ import java.nio.channels._
 import java.net.SocketAddress
 import java.util.concurrent.Executor
 
-import com.treode.async.{Async, AsyncImplicits, Callback}
+import com.treode.async.{Async, Callback}
+import com.treode.async.implicits._
 
 import Async.async
-import AsyncImplicits._
 
 /** Something that can be mocked in tests. */
 class ServerSocket (socket: AsynchronousServerSocketChannel, exec: Executor) {

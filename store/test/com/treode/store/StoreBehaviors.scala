@@ -5,12 +5,12 @@ import java.util.concurrent.atomic.AtomicInteger
 import scala.util.Random
 
 import com.treode.async._
+import com.treode.async.implicits._
 import com.treode.pickle.Picklers
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
 import Async.{async, guard, latch}
-import AsyncImplicits._
 import Fruits.Apple
 import StoreTestTools._
 import WriteOp._

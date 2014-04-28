@@ -3,7 +3,8 @@ package com.treode.store.atomic
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions
 
-import com.treode.async.{Async, AsyncImplicits, AsyncIterator, Callback, Latch}
+import com.treode.async.{Async, AsyncIterator, Callback, Latch}
+import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disks, ObjectId, PageHandler, Position, RecordDescriptor}
 import com.treode.store.{Bytes, Cell, ReadOp, Residents, TableId, TxClock, TxId, Value, WriteOp}
@@ -11,7 +12,6 @@ import com.treode.store.locks.LockSpace
 import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
 
 import Async.{async, guard, supply}
-import AsyncImplicits._
 import AtomicKit.locator
 import JavaConversions._
 

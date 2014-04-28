@@ -4,6 +4,8 @@ import java.lang.{Integer => JavaInt, Long => JavaLong}
 import java.nio.channels.CompletionHandler
 import scala.util.{Failure, Random, Success, Try}
 
+import com.treode.async.implicits._
+
 package async {
 
   class CallbackException (thrown: Throwable) extends Exception (thrown)
@@ -13,9 +15,6 @@ package async {
   }}
 
 package object async {
-
-  import AsyncImplicits._
-  import Scheduler.toRunnable
 
   type Callback [A] = Try [A] => Any
 
