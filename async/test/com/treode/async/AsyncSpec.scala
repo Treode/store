@@ -139,20 +139,6 @@ class AsyncSpec extends FlatSpec {
       async [Int] (_.pass (1)) .filter (_ == 1) .run (exceptional)
     }}
 
-  "Async.defer" should "not invoke the callback" in {
-    val cb = CallbackCaptor [Unit]
-    var flag = false
-    supply (flag = true) defer (cb)
-    cb.assertNotInvoked()
-    assertResult (true) (flag)
-  }
-
-  it should "report an exception through the callback" in {
-    val cb = CallbackCaptor [Unit]
-    guard (throw new DistinguishedException) defer (cb)
-    cb.failed [DistinguishedException]
-  }
-
   "Async.ensure" should "invoke the body on pass" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false

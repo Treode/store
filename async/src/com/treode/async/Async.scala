@@ -49,12 +49,6 @@ trait Async [A] {
   def flatten [B] (implicit witness: A <:< Async [B]): Async [B] =
     flatMap (task => task)
 
-  def defer (cb: Callback [_]) {
-    run {
-      case Success (v) => ()
-      case Failure (t) => cb (Failure (t))
-    }}
-
   def on (s: Scheduler): Async [A] =
     _async (cb => run (cb on s))
 
