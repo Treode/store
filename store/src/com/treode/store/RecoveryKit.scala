@@ -9,6 +9,8 @@ import com.treode.store.atomic.AtomicKit
 import com.treode.store.catalog.Catalogs
 import com.treode.store.paxos.Paxos
 
+import Store.Controller
+
 private class RecoveryKit (implicit
     random: Random,
     scheduler: Scheduler,
@@ -23,7 +25,7 @@ private class RecoveryKit (implicit
   val _paxos = Paxos.recover()
   val _atomic = AtomicKit.recover()
 
-  def launch (launch: Disks.Launch): Async [Store] = {
+  def launch (launch: Disks.Launch): Async [Controller] = {
     import launch.disks
 
     for {
@@ -31,5 +33,5 @@ private class RecoveryKit (implicit
       paxos <- _paxos.launch (launch)
       atomic <- _atomic.launch (launch, paxos)
     } yield {
-      atomic
+      new ControllerAgent (catalogs, atomic)
     }}}

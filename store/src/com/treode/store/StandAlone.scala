@@ -14,16 +14,29 @@ object StandAlone {
   class Controller (
       executor: ExecutorService,
       cluster: Cluster,
-      disks: Disks.Controller
-  ) (implicit
-      val store: Store
-  ) {
+      disks: Disks.Controller,
+      controller: Store.Controller
+  ) extends Store.Controller {
+
+    implicit val store: Store = controller.store
 
     def attach (items: Seq [(Path, DiskGeometry)]): Async [Unit] =
       disks.attach (items, executor)
 
+    def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
+      cluster.hail (remoteId, remoteAddr)
+
     def startup(): Unit =
       cluster.startup()
+
+    def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =
+      controller.listen (desc) (f)
+
+    def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Unit =
+      controller.issue (desc) (version, cat)
+
+    def issue (atlas: Atlas): Unit =
+      controller.issue (Atlas.catalog) (atlas.version - 1, atlas)
   }
 
   def create (
@@ -50,7 +63,7 @@ object StandAlone {
       launch <- _disks.attach (items, executor)
       store <- _store.launch (launch)
     } yield {
-      new Controller (executor, cluster, launch.controller) (store)
+      new Controller (executor, cluster, launch.controller, store)
     }}
 
   def recover (
@@ -77,5 +90,5 @@ object StandAlone {
       launch <- _disks.reattach (items, executor)
       store <- _store.launch (launch)
     } yield {
-      new Controller (executor, cluster, launch.controller) (store)
+      new Controller (executor, cluster, launch.controller, store)
     }}}

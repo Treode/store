@@ -19,9 +19,20 @@ trait Store {
 
 object Store {
 
+  trait Controller {
+
+    implicit def store: Store
+
+    def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any)
+
+    def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C)
+
+    def issue (atlas: Atlas)
+  }
+
   trait Recovery {
 
-    def launch (launch: Disks.Launch): Async [Store]
+    def launch (launch: Disks.Launch): Async [Controller]
   }
 
   def recover() (implicit
