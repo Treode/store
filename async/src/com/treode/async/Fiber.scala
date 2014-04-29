@@ -46,7 +46,7 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
         try {
           f (cb)
         } catch {
-          case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnNotAllowedFromAsync)
+          case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnException)
           case t: Throwable => scheduler.fail (cb, t)
         }}}
 
@@ -56,7 +56,7 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
         try {
           scheduler.pass (cb, f)
         } catch {
-          case t: NonLocalReturnControl [_] => scheduler.pass (cb, t.value.asInstanceOf [Async [A]])
+          case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnException)
           case t: Throwable => scheduler.fail (cb, t)
         }}} .flatten
 
@@ -66,6 +66,6 @@ class Fiber (scheduler: Scheduler) extends Scheduler {
         try {
           scheduler.pass (cb, f)
         } catch {
-          case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnNotAllowedFromAsync)
+          case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnException)
           case t: Throwable => scheduler.fail (cb, t)
         }}}}

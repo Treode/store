@@ -93,7 +93,7 @@ class FiberSpec extends FlatSpec {
     implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     def method(): Async [Int] = f.async (_ => return null)
-    method() .fail [ReturnNotAllowedFromAsync]
+    method() .fail [ReturnException]
   }
 
   it should "report an exception through the callback" in {
@@ -108,11 +108,11 @@ class FiberSpec extends FlatSpec {
     f.guard (throw new DistinguishedException) .fail [DistinguishedException]
   }
 
-  it should "handle the return keyword" in {
+  it should "reject the return keyword" in {
     implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     def method(): Async [Int] = f.guard (return supply (0))
-    method() .expect (0)
+    method() .fail [ReturnException]
   }
 
   "Fiber.supply" should "invoke the callback" in {
@@ -127,7 +127,7 @@ class FiberSpec extends FlatSpec {
     implicit val s = StubScheduler.random()
     val f = new Fiber (s)
     def method(): Async [Int] = f.supply {return null}
-    method() .fail [ReturnNotAllowedFromAsync]
+    method() .fail [ReturnException]
   }
 
   it should "report an exception through the callback" in {

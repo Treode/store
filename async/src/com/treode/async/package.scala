@@ -10,7 +10,7 @@ package async {
 
   class CallbackException (thrown: Throwable) extends Exception (thrown)
 
-  class ReturnNotAllowedFromAsync extends Exception {
+  class ReturnException extends Exception {
     override def getMessage = "The return keyword is not allowed in an async definition."
   }}
 
