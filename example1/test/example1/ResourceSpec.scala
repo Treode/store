@@ -1,7 +1,8 @@
 package example1
 
 import com.treode.async.stubs.StubScheduler
-import com.treode.store.{Bytes, Cell, StubStore, TxClock, TxId, WriteOp}
+import com.treode.store.{Bytes, Cell, TxClock, TxId, WriteOp}
+import com.treode.store.stubs.StubStore
 import com.twitter.finagle.http.MediaType
 import com.twitter.finatra.test.{MockApp, MockResult}
 import org.scalatest.{FreeSpec, Matchers}

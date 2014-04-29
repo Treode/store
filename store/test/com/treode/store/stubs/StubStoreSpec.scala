@@ -1,10 +1,11 @@
-package com.treode.store
+package com.treode.store.stubs
 
 import java.util.concurrent.Executors
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.stubs.StubScheduler
+import com.treode.store._
 import org.scalatest.FreeSpec
 
 class StubStoreSpec extends FreeSpec with StoreBehaviors {

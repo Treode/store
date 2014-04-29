@@ -1,4 +1,4 @@
-package com.treode.store
+package com.treode.store.stubs
 
 import java.util.concurrent.ConcurrentSkipListMap
 import scala.collection.JavaConversions
@@ -6,6 +6,7 @@ import scala.collection.JavaConversions
 import com.treode.async.{Async, AsyncIterator, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
+import com.treode.store._
 import com.treode.store.locks.LockSpace
 
 import Async.guard

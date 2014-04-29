@@ -1,4 +1,6 @@
-package com.treode.store
+package com.treode.store.stubs
+
+import com.treode.store.{Bytes, TableId, TxClock}
 
 private case class StubKey (table: TableId, key: Bytes, time: TxClock)
 extends Ordered [StubKey] {
