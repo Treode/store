@@ -4,8 +4,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
-import com.treode.store.CatalogId
-import com.treode.store.paxos.BallotNumber
+import com.treode.store.{BallotNumber, CatalogId}
 
 import Callback.ignore
 

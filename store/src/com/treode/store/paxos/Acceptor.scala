@@ -5,7 +5,7 @@ import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.disk.RecordDescriptor
-import com.treode.store.{Bytes, Cell, TxClock}
+import com.treode.store.{BallotNumber, Bytes, Cell, TxClock}
 
 import Async.supply
 import Callback.ignore

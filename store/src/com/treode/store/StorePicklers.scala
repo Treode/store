@@ -3,7 +3,6 @@ package com.treode.store
 import com.treode.cluster.{HostId, PortId}
 import com.treode.disk.{ObjectId, Position, TypeId}
 import com.treode.pickle.Picklers
-import com.treode.store.paxos.BallotNumber
 import com.treode.store.tier.TierTable
 import org.joda.time.Instant
 

@@ -7,7 +7,7 @@ import com.treode.async.{Backoff, Callback, Fiber}
 import com.treode.async.implicits._
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{Peer, MessageDescriptor}
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{BallotNumber, Bytes, TxClock}
 
 private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   import kit.proposers.remove

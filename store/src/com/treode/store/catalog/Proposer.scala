@@ -7,8 +7,7 @@ import com.treode.async.{Backoff, Fiber}
 import com.treode.async.implicits._
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{MessageDescriptor, Peer}
-import com.treode.store.CatalogId
-import com.treode.store.paxos.BallotNumber
+import com.treode.store.{BallotNumber, CatalogId}
 
 private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
   import kit.proposers.remove

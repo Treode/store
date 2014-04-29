@@ -3,7 +3,6 @@ package com.treode.store
 import java.util.concurrent.ConcurrentHashMap
 
 import com.treode.async.Callback
-import com.treode.store.paxos.BallotNumber
 import com.treode.pickle.PicklerRegistry
 
 package object catalog {

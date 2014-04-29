@@ -1,8 +1,8 @@
-package com.treode.store.paxos
+package com.treode.store
 
 import com.treode.cluster.HostId
 
-class BallotNumber private (
+private class BallotNumber private (
     val number: Long,
     val host: HostId) extends Ordered [BallotNumber] {
 
@@ -25,7 +25,7 @@ class BallotNumber private (
   override def toString = f"BallotNumber:$number%X:${host.id}%X"
 }
 
-object BallotNumber extends Ordering [BallotNumber] {
+private object BallotNumber extends Ordering [BallotNumber] {
 
   val zero = new BallotNumber (0, 0)
 
@@ -34,10 +34,9 @@ object BallotNumber extends Ordering [BallotNumber] {
   def compare (x: BallotNumber, y: BallotNumber) = x compare (y)
 
   val pickler = {
-    import PaxosPicklers._
+    import StorePicklers._
     wrap (ulong, hostId) build {
       v => BallotNumber (v._1, v._2)
     } inspect {
       v => (v.number, v.host)
-    }
-  }}
+    }}}

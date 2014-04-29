@@ -1,7 +1,7 @@
 package com.treode.store.paxos
 
 import com.treode.async.{Async, Fiber}
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{BallotNumber, Bytes, TxClock}
 import com.treode.store.tier.TierMedic
 
 private class Medic (
