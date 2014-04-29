@@ -6,7 +6,6 @@ import org.scalatest.{Informing, ParallelTestExecution, Suite}
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.time.SpanSugar
 
-import AsyncTestTools._
 import SpanSugar._
 
 trait AsyncChecks extends ParallelTestExecution with TimeLimitedTests {

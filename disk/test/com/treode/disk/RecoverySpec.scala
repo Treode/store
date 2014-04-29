@@ -4,7 +4,8 @@ import java.nio.file.Paths
 
 import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.{AsyncTestTools, StubScheduler}
+import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import org.scalatest.FreeSpec
 
 import DiskTestTools._

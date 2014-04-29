@@ -6,6 +6,7 @@ import com.treode.async.implicits._
 import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
+import com.treode.async.stubs.implicits._
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import com.treode.store.{Fruits, StoreConfig}
 import com.treode.pickle.Picklers

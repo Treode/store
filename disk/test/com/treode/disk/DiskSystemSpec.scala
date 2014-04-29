@@ -9,6 +9,7 @@ import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import com.treode.disk.stubs.CrashChecks
 import com.treode.tags.{Intensive, Periodic}
 import org.scalacheck.Gen

@@ -8,14 +8,15 @@ import scala.util.Random
 
 import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.{AsyncTestTools, CallbackCaptor, StubScheduler}
+import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
+import com.treode.async.stubs.implicits._
 import org.scalatest.Assertions
 
 import Assertions.assertResult
 import Disks.Launch
 import JavaConversions._
 
-private object DiskTestTools extends AsyncTestTools {
+private object DiskTestTools {
 
   type AttachItem = (String, StubFile, DiskGeometry)
 

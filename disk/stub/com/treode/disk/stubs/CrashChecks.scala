@@ -3,10 +3,9 @@ package com.treode.disk.stubs
 import scala.util.Random
 
 import com.treode.async.Async
-import com.treode.async.stubs.{AsyncChecks, AsyncTestTools, StubScheduler}
+import com.treode.async.stubs.{AsyncChecks, StubScheduler}
+import com.treode.async.stubs.implicits._
 import org.scalatest.{Informing, Suite}
-
-import AsyncTestTools._
 
 trait CrashChecks extends AsyncChecks {
   this: Suite with Informing =>

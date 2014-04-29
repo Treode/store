@@ -6,12 +6,11 @@ import com.treode.async.Async
 import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.implicits._
-import com.treode.async.stubs.{AsyncTestTools, CallbackCaptor, StubScheduler}
+import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
+import com.treode.async.stubs.implicits._
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
-
-import AsyncTestTools._
 
 class DiskDriveSpec extends FreeSpec {
 

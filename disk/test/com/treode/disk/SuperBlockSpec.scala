@@ -2,6 +2,7 @@ package com.treode.disk
 
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import com.treode.buffer.PagedBuffer
 import org.scalatest.FlatSpec
 

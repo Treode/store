@@ -5,6 +5,7 @@ import scala.util.Random
 import com.treode.async.{Async, Callback}
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import org.scalatest.FreeSpec
 
 import Async.supply

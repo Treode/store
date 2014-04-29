@@ -3,11 +3,10 @@ package com.treode.disk
 import java.nio.file.{Path, Paths}
 
 import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.{AsyncTestTools, StubScheduler}
+import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import com.treode.buffer.PagedBuffer
 import org.scalatest.FreeSpec
-
-import AsyncTestTools._
 
 class SuperBlocksSpec extends FreeSpec {
 

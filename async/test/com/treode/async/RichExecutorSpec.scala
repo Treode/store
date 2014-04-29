@@ -1,10 +1,10 @@
 package com.treode.async
 
-import com.treode.async.stubs.{AsyncTestTools, StubScheduler}
+import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import org.scalatest.FlatSpec
 
 import Async.supply
-import AsyncTestTools._
 import Callback.{ignore => disregard}
 
 class RichExecutorSpec extends FlatSpec {

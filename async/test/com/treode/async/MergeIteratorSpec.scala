@@ -2,6 +2,7 @@ package com.treode.async
 
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import org.scalatest.FlatSpec
 
 import Async.supply

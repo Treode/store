@@ -4,6 +4,7 @@ import java.util.concurrent.TimeoutException
 import scala.util.Random
 
 import com.treode.async.stubs.AsyncChecks
+import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.store.{Bytes, Cell}
 import com.treode.tags.{Intensive, Periodic}

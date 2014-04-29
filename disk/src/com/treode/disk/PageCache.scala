@@ -25,7 +25,6 @@ private class PageCache (disks: DiskDrives) {
     guard {
       pages
           .get ((pos.disk, pos.offset), new Load (desc.asInstanceOf [PageDescriptor [_, Any]], pos))
-          .get()
           .map (v => desc.tpag.runtimeClass.cast (v) .asInstanceOf [P])
     }
 

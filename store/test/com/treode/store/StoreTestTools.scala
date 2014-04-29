@@ -4,7 +4,7 @@ import scala.language.implicitConversions
 import scala.util.Random
 
 import com.treode.async.Async
-import com.treode.async.stubs.{AsyncTestTools, CallbackCaptor, StubScheduler}
+import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.cluster.HostId
 import com.treode.cluster.stubs.StubHost
 import com.treode.disk.{CellId, DisksConfig, DiskGeometry}
@@ -12,7 +12,7 @@ import org.scalatest.Assertions
 
 import Assertions.{assertResult, fail}
 
-private trait StoreTestTools extends AsyncTestTools {
+private trait StoreTestTools {
 
   implicit def intToBytes (v: Int): Bytes =
     Bytes (v)

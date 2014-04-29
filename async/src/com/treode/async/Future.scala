@@ -6,7 +6,7 @@ import scala.util.{Failure, Success, Try}
 
 import Async.async
 
-class Future [A] extends Callback [A] {
+class Future [A] extends Async [A] with Callback [A] {
 
   private var callbacks = new ArrayList [Callback [A]]
   private var value: Try [A] = null
@@ -19,16 +19,9 @@ class Future [A] extends Callback [A] {
     callbacks foreach (_ (v))
   }
 
-  private def get (cb: Callback [A]): Unit = synchronized {
+  def run (cb: Callback [A]): Unit = synchronized {
     if (value != null)
       cb (value)
     else
       callbacks.add (cb)
-  }
-
-  def get(): Async [A] =
-    async (get (_))
-
-  def await(): A =
-    get() .await()
-}
+  }}

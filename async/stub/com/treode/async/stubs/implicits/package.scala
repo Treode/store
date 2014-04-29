@@ -6,9 +6,9 @@ import org.scalatest.Assertions
 import Assertions.assertResult
 import Async.supply
 
-trait AsyncTestTools {
+package object implicits {
 
-  implicit class RichAsync [A] (async: Async [A]) {
+  implicit class TestingAsync [A] (async: Async [A]) {
 
     def capture(): CallbackCaptor [A] = {
       val cb = CallbackCaptor [A]
@@ -35,7 +35,7 @@ trait AsyncTestTools {
       assertResult (xs) (pass)
   }
 
-  implicit class RichAsyncIterator [A] (iter: AsyncIterator [A]) {
+  implicit class TestingAsyncIterator [A] (iter: AsyncIterator [A]) {
 
     /** Iterate the entire asynchronous iterator and build a standard sequence. */
     def toSeq (implicit scheduler: StubScheduler): Seq [A] = {
@@ -43,5 +43,3 @@ trait AsyncTestTools {
       iter.foreach (x => supply (builder += x)) .pass
       builder.result
     }}}
-
-object AsyncTestTools extends AsyncTestTools

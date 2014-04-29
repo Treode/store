@@ -4,13 +4,13 @@ import java.util.Arrays
 import scala.util.Random
 
 import com.treode.async.io.Socket
-import com.treode.async.stubs.{AsyncChecks, AsyncTestTools, StubScheduler}
+import com.treode.async.stubs.{AsyncChecks, StubScheduler}
+import com.treode.async.stubs.implicits._
 import com.treode.buffer.PagedBuffer
 import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
 import com.treode.pickle.{Pickler, Picklers, PicklerRegistry}
 import org.scalatest.{FreeSpec, PropSpec, Suites}
 
-import AsyncTestTools._
 import Scuttlebutt.{Handler, Sync, Value}
 
 class ScuttlebuttSpec extends Suites (ScuttlebuttBehaviors, new ScuttlebuttProperties)

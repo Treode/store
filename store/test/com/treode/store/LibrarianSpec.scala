@@ -5,6 +5,7 @@ import java.nio.file.Paths
 import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{AsyncCaptor, AsyncChecks, StubScheduler}
+import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
 import com.treode.disk.Disks

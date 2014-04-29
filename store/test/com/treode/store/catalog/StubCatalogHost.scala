@@ -5,6 +5,7 @@ import scala.util.Random
 
 import com.treode.async.{Async, Callback}
 import com.treode.async.io.stubs.StubFile
+import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubActiveHost, StubHost, StubNetwork}
 import com.treode.store._

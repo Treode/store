@@ -2,6 +2,7 @@ package com.treode.store.tier
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import com.treode.store.{Bytes, Cell, Fruits, Residents, StoreTestTools, TxClock}
 import org.scalatest.Assertions
 

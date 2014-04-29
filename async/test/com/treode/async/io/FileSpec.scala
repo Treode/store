@@ -5,13 +5,13 @@ import scala.util.Random
 import com.google.common.hash.Hashing
 import com.treode.async.Callback
 import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.{AsyncTestTools, StubScheduler}
+import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec
 import org.scalatest.prop.PropertyChecks
 
-import AsyncTestTools._
 import PropertyChecks._
 
 class FileSpec extends FlatSpec {

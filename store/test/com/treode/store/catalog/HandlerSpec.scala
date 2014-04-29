@@ -1,15 +1,17 @@
 package com.treode.store.catalog
 
 import java.nio.file.Paths
-import scala.collection.JavaConversions._
+import scala.collection.JavaConversions
 
 import org.scalatest.FreeSpec
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.io.stubs.StubFile
+import com.treode.async.stubs.implicits._
 import com.treode.disk.{Disks, Position}
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, CatalogId, StoreTestTools}
 
+import JavaConversions._
 import StoreTestTools._
 
 class HandlerSpec extends FreeSpec {

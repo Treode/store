@@ -1,12 +1,13 @@
 package com.treode.async
 
-import com.treode.async.stubs.{AsyncTestTools, StubScheduler}
+import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import org.scalatest.Assertions
 
 import Assertions.assertResult
 import Async.supply
 
-object AsyncIteratorTestTools extends AsyncTestTools {
+object AsyncIteratorTestTools {
 
   class DistinguishedException extends Exception
 
