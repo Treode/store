@@ -6,6 +6,7 @@ import com.treode.async._
 import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
+import com.treode.disk.stubs.CrashChecks
 import com.treode.pickle.{InvalidTagException, Picklers}
 import com.treode.tags.Periodic
 import org.scalatest.FlatSpec

@@ -1,4 +1,4 @@
-package com.treode.disk
+package com.treode.disk.stubs
 
 import scala.util.Random
 

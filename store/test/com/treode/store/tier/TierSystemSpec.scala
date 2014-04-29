@@ -7,7 +7,8 @@ import com.treode.async.Async
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.io.stubs.StubFile
-import com.treode.disk.{CrashChecks, Disks, DisksConfig, DiskGeometry}
+import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
+import com.treode.disk.stubs.CrashChecks
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
