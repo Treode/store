@@ -9,6 +9,7 @@ import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
 import com.treode.store._
+import com.treode.store.catalog.Catalogs
 import com.treode.disk.Disks
 import org.scalatest.Assertions
 
@@ -68,7 +69,7 @@ extends StubActiveHost (id, network) {
     val atlas = Atlas (cohorts.toArray, version)
     library.atlas = atlas
     library.residents = atlas.residents (localId)
-    Atlas.catalog.issue (version, atlas) .pass
+    catalogs.issue (Atlas.catalog) (version, atlas) .pass
   }
 
   def writer (xid: TxId) = atomic.writers.get (xid)

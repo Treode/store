@@ -9,6 +9,7 @@ import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
 import com.treode.disk.Disks
+import com.treode.store.catalog.Catalogs
 import org.scalatest.FlatSpec
 
 import Async.when
@@ -65,7 +66,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
       val atlas = Atlas (cohorts.toArray, version)
       library.atlas = atlas
       library.residents = atlas.residents (localId)
-      Atlas.catalog.issue (version, atlas) .pass
+      catalogs.issue (Atlas.catalog) (version, atlas) .pass
     }
 
     def expectAtlas (atlas: Atlas) {

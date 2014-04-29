@@ -6,7 +6,7 @@ import com.treode.async.{Async, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.cluster.Cluster
 import com.treode.disk.{Disks, Position}
-import com.treode.store.{Catalogs, CatalogDescriptor, CatalogId, Library, StoreConfig}
+import com.treode.store.{CatalogDescriptor, CatalogId, Library, StoreConfig}
 
 import Async.guard
 

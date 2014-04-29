@@ -3,6 +3,7 @@ package com.treode.store
 import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.cluster.{Cluster, HostId, Peer}
+import com.treode.store.catalog.Catalogs
 
 import Cohort._
 
@@ -64,7 +65,7 @@ private class Librarian (
       }
     if (!changed) return
     val version = atlas.version + 1
-    Atlas.catalog.issue (version, Atlas (cohorts, version)) run {
+    catalogs.issue (Atlas.catalog) (version, Atlas (cohorts, version)) run {
       case Success (_) => ()
       case Failure (_: StaleException) => install (library.atlas)
       case Failure (t) => throw t
@@ -94,7 +95,7 @@ private class Librarian (
     if (moving) advance()
   }
 
-  Atlas.catalog.listen (install _)
+  catalogs.listen (Atlas.catalog) (install _)
   Atlas.received.listen (received _)
   Atlas.moved.listen (moved _)
 }

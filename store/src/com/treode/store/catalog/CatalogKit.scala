@@ -43,15 +43,3 @@ private class CatalogKit (val broker: Broker) (implicit
       if (patch.checksum != chosen.checksum)
         throw new StaleException
     }}}
-
-private [store] object CatalogKit {
-
-  def recover () (implicit
-      random: Random,
-      scheduler: Scheduler,
-      cluster: Cluster,
-      library: Library,
-      recovery: Disks.Recovery,
-      config: StoreConfig): Catalogs.Recovery =
-    new RecoveryKit
-}

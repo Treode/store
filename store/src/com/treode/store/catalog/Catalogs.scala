@@ -1,20 +1,20 @@
-package com.treode.store
+package com.treode.store.catalog
 
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
-import com.treode.store.catalog.CatalogKit
+import com.treode.store.{CatalogDescriptor, Library, StoreConfig}
 
-private trait Catalogs {
+private [store] trait Catalogs {
 
   def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any)
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit]
 }
 
-private object Catalogs {
+private [store] object Catalogs {
 
   trait Recovery {
 
@@ -29,5 +29,5 @@ private object Catalogs {
       recovery: Disks.Recovery,
       config: StoreConfig
   ): Recovery =
-    CatalogKit.recover()
+    new RecoveryKit
 }

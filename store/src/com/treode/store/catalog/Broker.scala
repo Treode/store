@@ -138,7 +138,7 @@ private class Broker (
     gab()
   }}
 
-object Broker {
+private object Broker {
 
   val ping: MessageDescriptor [Ping] = {
     import CatalogPicklers._

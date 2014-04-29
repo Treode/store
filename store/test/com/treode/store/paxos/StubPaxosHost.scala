@@ -8,7 +8,8 @@ import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubActiveHost, StubHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Atlas, Catalogs, Cohort, Library, Paxos}
+import com.treode.store.{Atlas, Cohort, Library, Paxos}
+import com.treode.store.catalog.Catalogs
 
 import Async.guard
 import PaxosTestTools._
@@ -47,7 +48,7 @@ extends StubActiveHost (id, network) {
     Thread.sleep (10)
   implicit val (disks, catalogs, paxos) = captor.passed
 
-  Atlas.catalog.listen { atlas =>
+  catalogs.listen (Atlas.catalog) { atlas =>
     library.atlas = atlas
     library.residents = atlas.residents (localId)
   }
@@ -59,5 +60,5 @@ extends StubActiveHost (id, network) {
   }
 
   def issueAtlas (cohorts: Cohort*): Async [Unit] =
-    Atlas.catalog.issue (1, Atlas (cohorts.toArray, 1))
+    catalogs.issue (Atlas.catalog) (1, Atlas (cohorts.toArray, 1))
 }
