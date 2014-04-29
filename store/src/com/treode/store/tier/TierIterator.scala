@@ -45,7 +45,7 @@ private abstract class TierIterator (
         case Success (p: CellPage) =>
           page = p
           index = 0
-          next()
+          cb.callback (next())
 
         case Success (p) =>
           cb.fail (new MatchError (p))
@@ -78,7 +78,7 @@ private abstract class TierIterator (
           } else {
             page = p
             index = i
-            next()
+            cb.callback (next())
           }
 
         case Success (p) =>
@@ -91,23 +91,25 @@ private abstract class TierIterator (
       pager.read (root) .run (loop)
     }
 
-    def push (p: TierPage) {
+    def push (p: TierPage): Option [Unit] = {
       p match {
         case p: IndexPage =>
           val e = p.get (0)
           stack ::= (p, 0)
           pager.read (e.pos) .run (_push)
+          None
         case p: CellPage =>
           page = p
           index = 0
           next()
       }}
 
-    def next() {
+    def next(): Option [Unit] = {
       if (index < page.size) {
         val entry = page.get (index)
         index += 1
         f (entry) run (_next)
+        None
       } else if (!stack.isEmpty) {
         var b = stack.head._1
         var i = stack.head._2 + 1
@@ -120,11 +122,12 @@ private abstract class TierIterator (
         if (i < b.size) {
           stack ::= (b, i)
           pager.read (b.get (i) .pos) .run (_push)
+          None
         } else {
-          cb.pass()
+          Some()
         }
       } else {
-        cb.pass()
+        Some()
       }}}}
 
 private object TierIterator {

@@ -319,7 +319,7 @@ private class DiskDrive (
 private object DiskDrive {
 
   def offset (id: Int, offset: Long, length: Int, cb: Callback [Position]): Callback [Long] =
-    cb.callback (base => Position (id, base + offset, length))
+    cb.continue (base => Some (Position (id, base + offset, length)))
 
   def read [P] (file: File, desc: PageDescriptor [_, P], pos: Position): Async [P] =
     guard {

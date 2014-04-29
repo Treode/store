@@ -13,20 +13,6 @@ package object implicits {
 
     def fail (t: Throwable) = cb (Failure (t))
 
-    def callback [B] (f: B => A): Callback [B] = {
-      case Success (b) => cb (Try (f (b)))
-      case Failure (t) => cb (Failure (t))
-    }
-
-    def continue [B] (f: B => Any): Callback [B] = {
-      case Success (b) =>
-        Try (f (b)) match {
-          case Success (_) => ()
-          case Failure (t) => cb (Failure (t))
-        }
-      case Failure (t) => cb (Failure (t))
-    }
-
     def defer (f: => Any) {
       try {
         f
@@ -34,8 +20,17 @@ package object implicits {
         case t: Throwable => cb (Failure (t))
       }}
 
-    def invoke (f: => A): Unit =
-      cb (Try (f))
+    def callback (f: => Option [A]) {
+      Try (f) match {
+        case Success (Some (v)) => cb (Success (v))
+        case Success (None) => ()
+        case Failure (t) => cb (Failure (t))
+      }}
+
+    def continue [B] (f: B => Option [A]): Callback [B] = {
+      case Success (b) => callback (f (b))
+      case Failure (t) => cb (Failure (t))
+    }
 
     def timeout (fiber: Fiber, backoff: Backoff) (rouse: => Any) (implicit random: Random):
         TimeoutCallback [A] =

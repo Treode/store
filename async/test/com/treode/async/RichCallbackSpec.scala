@@ -8,52 +8,6 @@ class RichCallbackSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
 
-  "RichCallback.continue" should "not invoke the callback" in {
-    val captor = CallbackCaptor [Unit]
-    var flag = false
-    val cb = captor.continue [Unit] (_ => flag = true)
-    cb.pass()
-    captor.assertNotInvoked()
-    assertResult (true) (flag)
-  }
-
-  it should "report an exception in the body through the callback" in {
-    val captor = CallbackCaptor [Unit]
-    val cb = captor.continue [Unit] (_ => throw new DistinguishedException)
-    cb.pass()
-    captor.failed [DistinguishedException]
-  }
-
-  it should "report an exception before the body through the callback" in {
-    val captor = CallbackCaptor [Unit]
-    val cb = captor.continue [Unit] (_ => ())
-    cb.fail (new DistinguishedException)
-    captor.failed [DistinguishedException]
-  }
-
-  "RichCallback.callback" should "invoke the callback" in {
-    val captor = CallbackCaptor [Unit]
-    var flag = false
-    val cb = captor.callback [Unit] (_ => flag = true)
-    cb.pass()
-    captor.passed
-    assertResult (true) (flag)
-  }
-
-  it should "report an exception in the body through the callback" in {
-    val captor = CallbackCaptor [Unit]
-    val cb = captor.callback [Unit] (_ => throw new DistinguishedException)
-    cb.pass()
-    captor.failed [DistinguishedException]
-  }
-
-  it should "report an exception before the body through the callback" in {
-    val captor = CallbackCaptor [Unit]
-    val cb = captor.callback [Unit] (_ => ())
-    cb.fail (new DistinguishedException)
-    captor.failed [DistinguishedException]
-  }
-
   "RichCallback.defer" should "not invoke the callback" in {
     val cb = CallbackCaptor [Unit]
     var flag = false
@@ -68,18 +22,58 @@ class RichCallbackSpec extends FlatSpec {
     cb.failed [DistinguishedException]
   }
 
-  "RichCallback.invoke" should "invoke the callback" in {
+  "RichCallback.callback" should "invoke the callback on Some" in {
     val cb = CallbackCaptor [Unit]
     var flag = false
-    cb.invoke (flag = true)
+    cb.callback (Some (flag = true))
     cb.passed
+    assertResult (true) (flag)
+  }
+
+  it should "not invoke the callback on None" in {
+    val cb = CallbackCaptor [Unit]
+    var flag = false
+    cb.callback {flag = true; None}
+    cb.assertNotInvoked
     assertResult (true) (flag)
   }
 
   it should "report an exception through the callback" in {
     val cb = CallbackCaptor [Unit]
-    cb.invoke (throw new DistinguishedException)
+    cb.callback (throw new DistinguishedException)
     cb.failed [DistinguishedException]
+  }
+
+  "RichCallback.continue" should "invoke the callback on Some" in {
+    val captor = CallbackCaptor [Unit]
+    var flag = false
+    val cb = captor.continue [Unit] (_ => Some (flag = true))
+    cb.pass()
+    captor.passed
+    assertResult (true) (flag)
+  }
+
+  it should "not invoke the callback on None" in {
+    val captor = CallbackCaptor [Unit]
+    var flag = false
+    val cb = captor.continue [Unit] {_ => flag = true; None}
+    cb.pass()
+    captor.assertNotInvoked
+    assertResult (true) (flag)
+  }
+
+  it should "report an exception from the body through the callback" in {
+    val captor = CallbackCaptor [Unit]
+    val cb = captor.continue [Unit] (_ => throw new DistinguishedException)
+    cb.pass()
+    captor.failed [DistinguishedException]
+  }
+
+  it should "report an exception before the body through the callback" in {
+    val captor = CallbackCaptor [Unit]
+    val cb = captor.continue [Unit] (_ => None)
+    cb.fail (new DistinguishedException)
+    captor.failed [DistinguishedException]
   }
 
   "RichCallback.ensure" should "run the body on pass" in {
