@@ -6,7 +6,7 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
-import com.treode.store.{Bytes, Paxos, Library, StoreConfig, TxClock}
+import com.treode.store.{Bytes, Library, StoreConfig, TxClock}
 import com.treode.store.tier.TierMedic
 
 import Acceptors.checkpoint

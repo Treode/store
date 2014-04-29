@@ -6,7 +6,8 @@ import com.treode.async.{Async, Latch, Scheduler}
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
-import com.treode.store.{Cohort, Library, Paxos, Store, StoreConfig, TxId}
+import com.treode.store.{Cohort, Library, Store, StoreConfig, TxId}
+import com.treode.store.paxos.Paxos
 import com.treode.store.tier.TierMedic
 
 import Rebalancer.Targets

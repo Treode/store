@@ -5,7 +5,7 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.{Cluster, ReplyTracker}
 import com.treode.disk.Disks
-import com.treode.store.{Bytes, Library, Paxos, StoreConfig, TxClock}
+import com.treode.store.{Bytes, Library, StoreConfig, TxClock}
 import com.treode.store.tier.TierTable
 
 import Async.async
@@ -38,19 +38,9 @@ private class PaxosKit (
     proposers.propose (random.nextInt (17) + 1, key, time, value)
 }
 
-private [store] object PaxosKit {
+private object PaxosKit {
 
   val locator = {
     import PaxosPicklers._
     tuple (bytes, txClock)
-  }
-
-  def recover () (implicit
-    random: Random,
-    scheduler: Scheduler,
-    cluster: Cluster,
-    library: Library,
-    recovery: Disks.Recovery,
-    config: StoreConfig): Paxos.Recovery =
-  new RecoveryKit
-}
+  }}

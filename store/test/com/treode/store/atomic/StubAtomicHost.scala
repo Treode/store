@@ -8,9 +8,10 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
+import com.treode.disk.Disks
 import com.treode.store._
 import com.treode.store.catalog.Catalogs
-import com.treode.disk.Disks
+import com.treode.store.paxos.Paxos
 import org.scalatest.Assertions
 
 import Assertions.assertResult

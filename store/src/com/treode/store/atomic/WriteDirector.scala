@@ -9,6 +9,7 @@ import com.treode.async.implicits._
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{Cluster, Peer}
 import com.treode.store._
+import com.treode.store.paxos.PaxosAccessor
 
 import Async.async
 import WriteDirector.deliberate

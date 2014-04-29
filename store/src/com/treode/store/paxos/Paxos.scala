@@ -1,20 +1,20 @@
-package com.treode.store
+package com.treode.store.paxos
 
 import scala.util.Random
 
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
-import com.treode.store.paxos.PaxosKit
+import com.treode.store.{Bytes, Library, StoreConfig, TxClock}
 
-private trait Paxos {
+private [store] trait Paxos {
 
   def lead (key: Bytes, time: TxClock, value: Bytes): Async [Bytes]
 
   def propose (key: Bytes, time: TxClock, value: Bytes): Async [Bytes]
 }
 
-private object Paxos {
+private [store] object Paxos {
 
   trait Recovery {
 
@@ -29,5 +29,5 @@ private object Paxos {
       recovery: Disks.Recovery,
       config: StoreConfig
   ): Recovery =
-   PaxosKit.recover()
+    new RecoveryKit
 }

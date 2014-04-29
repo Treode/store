@@ -8,7 +8,7 @@ import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubActiveHost, StubHost, StubNetwork}
 import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.store.{Atlas, Cohort, Library, Paxos}
+import com.treode.store.{Atlas, Cohort, Library}
 import com.treode.store.catalog.Catalogs
 
 import Async.guard
