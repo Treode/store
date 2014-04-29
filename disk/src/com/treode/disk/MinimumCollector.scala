@@ -2,7 +2,7 @@ package com.treode.disk
 
 import scala.collection.mutable.PriorityQueue
 
-class MinimumCollector [A] (count: Int) {
+private class MinimumCollector [A] (count: Int) {
 
   private val candidates = {
     import Ordering._

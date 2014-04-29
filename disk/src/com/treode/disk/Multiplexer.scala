@@ -5,7 +5,7 @@ import scala.reflect.ClassTag
 
 import com.treode.async.{Async, Callback, Fiber, Scheduler}
 
-class Multiplexer [M] (dispatcher: Dispatcher [M]) (
+private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     implicit scheduler: Scheduler, mtag: ClassTag [M]) {
 
   private type R = (Long, UnrolledBuffer [M]) => Any

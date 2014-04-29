@@ -9,55 +9,55 @@ import com.treode.async.io.File
 
 package disk {
 
-  class AlreadyAttachedException (paths: Seq [Path]) extends IllegalArgumentException {
+  private class AlreadyAttachedException (paths: Seq [Path]) extends IllegalArgumentException {
     override def getMessage = s"Disks already attached: ${paths mkString ", "}"
   }
 
-  class CannotDrainAllException extends IllegalArgumentException {
+  private class CannotDrainAllException extends IllegalArgumentException {
     override def getMessage = "Cannot drain all disks."
   }
 
-  class CellMismatchException (expected: CellId, found: CellId) extends Exception {
+  private class CellMismatchException (expected: CellId, found: CellId) extends Exception {
     override def getMessage = s"Expected $expected, found $found."
   }
 
-  class DiskFullException extends Exception {
+  private class DiskFullException extends Exception {
     override def getMessage = "Disk full."
   }
 
-  class ExtraDisksException (paths: Seq [Path]) extends IllegalArgumentException {
+  private class ExtraDisksException (paths: Seq [Path]) extends IllegalArgumentException {
     override def getMessage = s"Extra disks in reattachment: ${paths mkString ", "}"
   }
 
-  class InconsistentSuperBlocksException extends Exception {
+  private class InconsistentSuperBlocksException extends Exception {
     override def getMessage = "Inconsistent superblocks."
   }
 
-  class MissingDisksException (paths: Seq [Path]) extends IllegalArgumentException {
+  private class MissingDisksException (paths: Seq [Path]) extends IllegalArgumentException {
     override def getMessage = s"Missing disks in reattachment: ${paths mkString ", "}"
   }
 
-  class NoSuperBlocksException extends Exception {
+  private class NoSuperBlocksException extends Exception {
     override def getMessage = "No superblocks."
   }
 
-  class NotAttachedException (paths: Seq [Path]) extends IllegalArgumentException {
+  private class NotAttachedException (paths: Seq [Path]) extends IllegalArgumentException {
     override def getMessage = s"No such disks are attached: ${paths mkString ", "}"
   }
 
-  class OversizedPageException (maximum: Int, found: Int) extends IllegalArgumentException {
+  private class OversizedPageException (maximum: Int, found: Int) extends IllegalArgumentException {
     override def getMessage = s"The page of $found bytes exceeds the limit of $maximum bytes."
   }
 
-  class OversizedRecordException (maximum: Int, found: Int) extends IllegalArgumentException {
+  private class OversizedRecordException (maximum: Int, found: Int) extends IllegalArgumentException {
     override def getMessage = s"The record of $found bytes exceeds the limit of $maximum bytes."
   }
 
-  class PageLedgerOverflowException extends Exception {
+  private class PageLedgerOverflowException extends Exception {
     override def getMessage = "The page ledger is to large for its allocated disk space."
   }
 
-  class SuperblockOverflowException extends Exception {
+  private class SuperblockOverflowException extends Exception {
     override def getMessage = "The superblock data is to large for its allocated disk space."
   }}
 

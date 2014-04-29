@@ -7,7 +7,7 @@ import com.treode.async.io.File
 import Async.guard
 import PageLedger.{Groups, Projector, Zipped, longBytes, varIntBytes}
 
-class PageLedger (
+private class PageLedger (
     private var ledger: Map [(TypeId, ObjectId, PageGroup), Long],
     private var objects: Set [(TypeId, ObjectId)],
     private var _byteSize: Int
@@ -82,7 +82,7 @@ class PageLedger (
     new PageLedger (ledger, objects, _byteSize)
 }
 
-object PageLedger {
+private object PageLedger {
 
   val varIntBytes = 5
   val longBytes = 8

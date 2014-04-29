@@ -3,7 +3,7 @@ package com.treode.disk
 import java.util.Arrays
 import com.treode.pickle.{Pickler, PickleContext, UnpickleContext}
 
-class PageGroup private (val bytes: Array [Byte]) {
+private class PageGroup private (val bytes: Array [Byte]) {
 
   def unpickle [A] (p: Pickler [A]): A =
     p.fromByteArray (bytes)
@@ -24,7 +24,7 @@ class PageGroup private (val bytes: Array [Byte]) {
     "PageGroup:%08X" format hashCode
 }
 
-object PageGroup {
+private object PageGroup {
 
   def apply (bytes: Array [Byte]): PageGroup =
     new PageGroup (bytes)
