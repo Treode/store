@@ -19,7 +19,7 @@ class Future [A] extends Callback [A] {
     callbacks foreach (_ (v))
   }
 
-  def get (cb: Callback [A]): Unit = synchronized {
+  private def get (cb: Callback [A]): Unit = synchronized {
     if (value != null)
       cb (value)
     else
