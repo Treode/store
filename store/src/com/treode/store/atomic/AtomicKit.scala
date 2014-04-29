@@ -11,6 +11,7 @@ import com.treode.store.tier.TierTable
 import Async.{async, supply}
 import AtomicKit.locator
 import Rebalancer.Targets
+import WriteDirector.deliberate
 
 private class AtomicKit (implicit
     val random: Random,
@@ -44,6 +45,9 @@ private class AtomicKit (implicit
 
   def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock] =
     WriteDirector.write (xid, ct, ops, this)
+
+  def status (xid: TxId): Async [TxStatus] =
+    deliberate.propose (xid.id, xid.time, TxStatus.Aborted)
 
   def scan (table: TableId, key: Bytes, time: TxClock): CellIterator =
     ScanDirector.scan (table, key,  time, this)

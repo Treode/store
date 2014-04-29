@@ -5,7 +5,7 @@ import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.{RequestDescriptor, RequestMediator}
 import com.treode.disk.RecordDescriptor
-import com.treode.store.{Bytes, TxClock, TxId, WriteOp, log}
+import com.treode.store.{Bytes, TxClock, TxId, TxStatus, WriteOp, log}
 import com.treode.store.atomic.{WriteDeputy => WD}
 import com.treode.store.locks.LockSet
 

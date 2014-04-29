@@ -1,6 +1,6 @@
 package com.treode.store.stubs
 
-import java.util.concurrent.ConcurrentSkipListMap
+import java.util.concurrent.{ConcurrentHashMap, ConcurrentSkipListMap}
 import scala.collection.JavaConversions
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
@@ -9,7 +9,7 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.store._
 import com.treode.store.locks.LockSpace
 
-import Async.guard
+import Async.{async, guard}
 import JavaConversions._
 
 class StubStore (implicit scheduler: Scheduler) extends Store {
@@ -19,6 +19,7 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
     StoreConfig (Epoch.zero, 0.01, 4, Int.MaxValue, Int.MaxValue, Int.MaxValue)
 
   private val space = new LockSpace
+  private val xacts = new ConcurrentHashMap [TxId, TxStatus]
   private val data = new ConcurrentSkipListMap [StubKey, Option [Bytes]]
 
   private def get (table: TableId, key: Bytes, time: TxClock): Value = {
@@ -73,18 +74,27 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
           val results = ops.map (op => prepare (ct, op))
           val collisions = for (((c, t), i) <- results.zipWithIndex; if c) yield i
           val vt = results.filterNot (_._1) .map (_._2) .fold (TxClock.zero) (TxClock.max _)
-          if (ct < vt) {
+          val wt = TxClock.max (vt, locks.ft) + 1
+          if (ct < vt)
             throw new StaleException
-          } else if (!collisions.isEmpty) {
+          if (!collisions.isEmpty)
             throw new CollisionException (collisions)
-          } else {
-            val wt = TxClock.max (vt, locks.ft) + 1
-            commit (wt, ops)
-            wt
-          }
+          if (xacts.putIfAbsent (xid, TxStatus.Committed (wt)) != null)
+            throw new TimeoutException
+          commit (wt, ops)
+          wt
         } finally {
           locks.release()
         }}}
+
+  def status (xid: TxId): Async [TxStatus] =
+    async { cb =>
+      val st = xacts.putIfAbsent (xid, TxStatus.Aborted)
+      if (st == null)
+        cb.pass (TxStatus.Aborted)
+      else
+        cb.pass (st)
+    }
 
   def scan (table: TableId, key: Bytes, time: TxClock): AsyncIterator [Cell] = {
     val entries = data .tailMap (StubKey (table, key, time)) .takeWhile (_._1.table == table)

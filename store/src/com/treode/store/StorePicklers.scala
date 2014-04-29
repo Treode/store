@@ -27,6 +27,7 @@ private trait StorePicklers extends Picklers {
   def tierMeta = TierTable.Meta.pickler
   def txClock = TxClock.pickler
   def txId = TxId.pickler
+  def txStatus = TxStatus.pickler
   def value = Value.pickler
   def writeOp = WriteOp.pickler
 }

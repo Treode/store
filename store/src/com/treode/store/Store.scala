@@ -12,6 +12,8 @@ trait Store {
 
   def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock]
 
+  def status (xid: TxId): Async [TxStatus]
+
   def scan (table: TableId, key: Bytes, time: TxClock): AsyncIterator [Cell]
 }
 

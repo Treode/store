@@ -1,6 +1,4 @@
-package com.treode.store.atomic
-
-import com.treode.store.TxClock
+package com.treode.store
 
 sealed abstract class TxStatus
 
@@ -11,7 +9,7 @@ object TxStatus {
   case class Committed (wt: TxClock) extends TxStatus
 
   val pickler = {
-    import AtomicPicklers._
+    import StorePicklers._
     tagged [TxStatus] (
         0x1 -> const (Aborted),
         0x2 -> wrap (txClock) .build (Committed.apply _) .inspect (_.wt))
