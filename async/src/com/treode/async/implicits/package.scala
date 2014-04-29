@@ -44,9 +44,16 @@ package object implicits {
     def on (s: Scheduler): Callback [A] =
       (v => s.execute (cb, v))
 
-    def ensure (f: => Any): Callback [A] = { v =>
-      f
-      cb (v)
+    def ensure (f: => Any): Callback [A] = {
+      case Success (v) =>
+        cb (Try (f) .map (_ => v))
+      case v @ Failure (t1) =>
+        try {
+          f
+        } catch {
+          case t2: Throwable => t1.addSuppressed (t2)
+        }
+        cb (v)
     }
 
     def recover (f: PartialFunction [Throwable, A]): Callback [A] =
