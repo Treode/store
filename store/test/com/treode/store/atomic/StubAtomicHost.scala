@@ -56,8 +56,6 @@ extends StubActiveHost (id, network) {
 
   val librarian = new Librarian (atomic.rebalance _)
 
-  scuttlebutt.attach (this)
-
   def setAtlas (cohorts: Cohort*) {
     val version = library.atlas.version + 1
     val atlas = Atlas (cohorts.toArray, version)

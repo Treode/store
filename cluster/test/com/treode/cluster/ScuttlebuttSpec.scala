@@ -47,7 +47,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
     def send [A] (p: Pickler [A], port: PortId, msg: A) = ???
   }
 
-  class RichScuttlebutt (implicit random: Random, scheduler: StubScheduler) {
+  private class RichScuttlebutt (implicit random: Random, scheduler: StubScheduler) {
 
     val peers = new PeerRegistry (LOCAL, new StubPeer (_))
 
@@ -71,7 +71,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
       scheduler.runTasks()
     }}
 
-  def mkScuttlebutt = {
+  private def mkScuttlebutt = {
     implicit val random = new Random (0)
     implicit val scheduler = StubScheduler.random (random)
     val sb = new RichScuttlebutt
@@ -207,8 +207,6 @@ class ScuttlebuttProperties extends PropSpec with AsyncChecks {
     r1.listen ((v, from) => heard += entry (from.id, r1, v))
     r2.listen ((v, from) => heard += entry (from.id, r2, v))
     r3.listen ((v, from) => heard += entry (from.id, r3, v))
-
-    scuttlebutt.attach (this)
   }
 
   def checkUnity (random: Random, mf: Double) {

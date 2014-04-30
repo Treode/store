@@ -59,8 +59,6 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
 
     val librarian = new Librarian (rebalance _)
 
-    scuttlebutt.attach (this)
-
     def issue (cohorts: Cohort*) {
       val version = library.atlas.version + 1
       val atlas = Atlas (cohorts.toArray, version)

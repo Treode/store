@@ -7,7 +7,7 @@ import com.treode.pickle.{InvalidTagException, Pickler, PicklerRegistry}
 import Callback.ignore
 import Scuttlebutt.{Handler, Ping, Sync, Universe}
 
-class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Scheduler) {
+private class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Scheduler) {
 
   private val fiber = new Fiber (scheduler)
   private val localHost = peers.get (localId)
@@ -23,7 +23,14 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
     ports.unpickle (id.id, ArrayBuffer (msg))
 
   def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
-    ports.register (desc.pmsg, desc.id.id) (f.curried)
+    fiber.execute {
+      ports.register (desc.pmsg, desc.id.id) (f.curried)
+      for {
+        (host, state) <- universe
+        (msg, _) <- state get (desc.id)
+      } {
+        scheduler.execute (unpickle (desc.id, msg) (peers.get (host)))
+      }}
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
     fiber.execute {
@@ -98,7 +105,7 @@ class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Sc
     gab()
   }}
 
-object Scuttlebutt {
+private object Scuttlebutt {
 
   type Handler = Peer => Any
   type Value = Array [Byte]

@@ -16,8 +16,10 @@ class StubActiveHost (val localId: HostId, network: StubNetwork) extends Cluster
   private val peers: PeerRegistry =
     new PeerRegistry (localId, new StubConnection (_, localId, network))
 
-  val scuttlebutt: Scuttlebutt =
+  private val scuttlebutt: Scuttlebutt =
     new Scuttlebutt (localId, peers)
+
+  scuttlebutt.attach (this)
 
   def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
     ports.listen (desc.pmsg, desc.id) (f)
