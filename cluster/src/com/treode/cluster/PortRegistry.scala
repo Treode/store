@@ -5,7 +5,7 @@ import com.treode.async.io.Socket
 import com.treode.buffer.{Input, PagedBuffer, Output}
 import com.treode.pickle.{InvalidTagException, Pickler, Picklers, PicklerRegistry}
 
-class PortRegistry {
+private class PortRegistry {
 
   private type Handler = Peer => Any
 

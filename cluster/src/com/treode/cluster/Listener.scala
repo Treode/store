@@ -8,7 +8,7 @@ import com.treode.async.{Callback, Scheduler}
 import com.treode.async.io.{Socket, ServerSocket}
 import com.treode.buffer.PagedBuffer
 
-class Listener (
+private class Listener (
   localId: HostId,
   localAddr: SocketAddress,
   group: AsynchronousChannelGroup,

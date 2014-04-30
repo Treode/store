@@ -7,7 +7,7 @@ import scala.util.Random
 
 import com.treode.async.{Fiber, Scheduler}
 
-class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit random: Random) {
+private class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit random: Random) {
 
   private val peers = new ConcurrentHashMap [Long, Peer]
 
@@ -41,7 +41,7 @@ class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit random: 
         (peers map (kv => (kv._1, kv._2)) mkString ("(\n    ", ",\n    ", ")"))
 }
 
-object PeerRegistry {
+private object PeerRegistry {
 
   def live (localId: HostId, group: AsynchronousChannelGroup, ports: PortRegistry) (
       implicit random: Random, scheduler: Scheduler): PeerRegistry = {
