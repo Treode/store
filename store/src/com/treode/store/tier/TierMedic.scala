@@ -4,7 +4,7 @@ import com.treode.async.Scheduler
 import com.treode.disk.Disks
 import com.treode.store.{Bytes, StoreConfig, TableId, TxClock}
 
-trait TierMedic {
+private [store] trait TierMedic {
 
   def put (gen: Long, key: Bytes, time: TxClock, value: Bytes)
 
@@ -15,7 +15,7 @@ trait TierMedic {
   def close () (implicit launch: Disks.Launch): TierTable
 }
 
-object TierMedic {
+private [store] object TierMedic {
 
   def apply (
       desc: TierDescriptor,

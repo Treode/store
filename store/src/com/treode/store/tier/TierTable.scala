@@ -7,7 +7,7 @@ import com.treode.store._
 import Async.async
 import TierTable.Meta
 
-trait TierTable {
+private [store] trait TierTable {
 
   def typ: TypeId
 
@@ -34,7 +34,7 @@ trait TierTable {
   def checkpoint (residents: Residents): Async [Meta]
 }
 
-object TierTable {
+private [store] object TierTable {
 
   class Meta (
       private [tier] val gen: Long,
