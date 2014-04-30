@@ -153,8 +153,10 @@ private object ScanDirector {
       x compare y
   }
 
-  def scan (table: TableId, key: Bytes, time: TxClock, kit: AtomicKit): CellIterator =
-    new CellIterator {
+  def scan (table: TableId, key: Bytes, time: TxClock, kit: AtomicKit): CellIterator = {
+    val iter = new CellIterator {
       def foreach (f: Cell => Async [Unit]): Async [Unit] =
         async (new ScanDirector (Key (key, time), table, kit, f, _))
-    }}
+    }
+    iter.dedupe
+  }}

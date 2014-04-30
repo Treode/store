@@ -39,8 +39,8 @@ class ScanSpec extends FlatSpec {
       h.setAtlas (settled (h1, h2, h3))
 
     h1.putCells (ID, Apple##1::1, Banana##1::1)
-    h1.putCells (ID, Banana##1::1, Grape##1::1)
-    h1.putCells (ID, Apple##1::1, Grape##1::1)
+    h2.putCells (ID, Banana##1::1, Grape##1::1)
+    h3.putCells (ID, Apple##1::1, Grape##1::1)
 
     assertSeq (Apple##1::1, Banana##1::1, Grape##1::1) {
       h1.scan (ID, Bytes.empty, TxClock.max)

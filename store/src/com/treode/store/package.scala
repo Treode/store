@@ -27,6 +27,15 @@ package object store {
 
   type CellIterator = AsyncIterator [Cell]
 
+  private [store] implicit class RichCellIterator (iter: CellIterator) {
+
+    def dedupe: CellIterator =
+      Filters.dedupe (iter)
+
+    def retire (limit: TxClock): CellIterator =
+      Filters.retire (iter, limit)
+  }
+
   private [store] object log {
 
     val logger = Logger.getLogger ("com.treode.store")

@@ -1,7 +1,6 @@
-package com.treode.store.tier
+package com.treode.store
 
 import com.treode.async.{AsyncIterator, Callback}
-import com.treode.store.{Bytes, CellIterator, Key, Residents, TxClock}
 
 private object Filters {
 

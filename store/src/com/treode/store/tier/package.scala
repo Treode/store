@@ -30,12 +30,6 @@ package object tier {
 
   private [tier] implicit class RichCellIterator (iter: CellIterator) {
 
-    def dedupe: CellIterator =
-      Filters.dedupe (iter)
-
-    def retire (limit: TxClock): CellIterator =
-      Filters.retire (iter, limit)
-
     def clean (desc: TierDescriptor, id: TableId, residents: Residents) (
         implicit config: StoreConfig): CellIterator =
       iter.dedupe
