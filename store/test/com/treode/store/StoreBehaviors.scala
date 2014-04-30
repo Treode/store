@@ -225,7 +225,7 @@ trait StoreBehaviors {
 
     "serialize concurrent operations" taggedAs (Intensive, Periodic) in {
 
-      object Accounts extends Accessor (1, Picklers.fixedInt, Picklers.fixedInt)
+      val Accounts = Accessor (1, Picklers.fixedInt, Picklers.fixedInt)
 
       val accounts = 100
       val threads = 8
