@@ -25,6 +25,9 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
   private def whilst (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
     new RichExecutor (exec) .whilst (p) (f)
 
+  /** Read from the file until `input` has at least `len` readable bytes.  If `input` already has
+    * that many readable bytes, this will invoke the callback promptly.
+    */
   def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] = {
     input.capacity (input.readPos + len)
     var _pos = pos
@@ -39,6 +42,15 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
           _buf = input.buffer (input.writePos, input.writeableBytes)
       }}}
 
+  /** Read a frame with its own length from the file; return the length.
+    *
+    * Ensure `input` has at least four readable bytes, reading from the file if necessary.
+    * Interpret those as the length of bytes needed.  Read from the file again if necessary,
+    * until `input` has at least that many additional readable bytes.
+    *
+    * The write counter-part to this method can be found in the
+    * [[com.treode.pickle.Pickler Pickler]].
+    */
   def deframe (input: PagedBuffer, pos: Long): Async [Int] = {
     for {
       _ <- fill (input, pos, 4)
@@ -47,6 +59,17 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
     } yield len
   }
 
+  /** Read a frame with its own checksum and length from the file; return the length.
+    *
+    * Ensure `input` has at least some number readable bytes, depending on `hashf`, reading from
+    * the file if necessary.  Interpret those as a checksum.  Then ensure `input` has at least four
+    * readable bytes, reading from the file again if necessary.  Interpret those as the length of
+    * bytes needed.  Read from the file again if necessary, until `input` has at least that many
+    * additional readable bytes.  Finally, check the hash of the read bytes against the checksum.
+    *
+    * The write counter-part to this method can be found in the
+    * [[com.treode.pickle.Pickler Pickler]].
+    */
   def deframe (hashf: HashFunction, input: PagedBuffer, pos: Long): Async [Int] = {
     val head = 4 + (hashf.bits >> 3)
     for {
@@ -65,6 +88,7 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
       len
     }}
 
+  /** Write all readable bytes from `output` to the file at `pos`. */
   def flush (output: PagedBuffer, pos: Long): Async [Unit] = {
     var _pos = pos
     var _buf = output.buffer (output.readPos, output.readableBytes)

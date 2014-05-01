@@ -1,5 +1,8 @@
 package com.treode.async
 
+/** Collects multiple exceptions into one.  The collected exceptions can be retrieved from
+  * `getSuppressed`.
+  */
 class MultiException extends Exception
 
 object MultiException {

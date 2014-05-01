@@ -5,6 +5,7 @@ import scala.util.{Failure, Random, Try}
 
 import Scheduler.toRunnable
 
+/** Experimental. */
 class TimeoutCallback [A] private [async] (
     fiber: Fiber,
     backoff: Backoff,

@@ -4,11 +4,24 @@ import scala.util.Random
 
 import Backoff.BackoffIterator
 
+/** A series of ints that grows almost exponentially.
+  *
+  * This provides a sequence
+  * ''i'',,''n'',, = ''i'',,''n''-1,, + `random` (''i'',,''n''-1,,).
+  * ''i'',,0,, = `start` + `random` (`jitter`).
+  * ''i'',,''n'',, never exceeds `max`.
+  * The sequence has length `retries`.
+  *
+  * This requires a [[scala.util.Random Random]] to form the iterator.  The PRNG is provided to
+  * `iterator` rather than the constructor.  This allows you to define a `Backoff` as a constant
+  * or configuration property.  You can use Scala's [[scala.util.Random Random]] in production,
+  * and you can use [[com.treode.async.stubs.AsyncChecks AsyncChecks]] to seed a random in testing.
+  */
 class Backoff private (
-  start: Int,
-  jitter: Int,
-  max: Int,
-  retries: Int
+  val start: Int,
+  val jitter: Int,
+  val max: Int,
+  val retries: Int
 ) {
 
   require (start > 0 || jitter > 0, "Start or jitter must be greater than 0.")

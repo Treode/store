@@ -4,6 +4,7 @@ import scala.util.{Failure, Success, Try}
 
 import org.scalatest.Assertions
 
+/** Capture the result of an asynchronous call so you may test for success or failure later. */
 class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
 
   private var _invokation: Array [StackTraceElement] = null
@@ -27,22 +28,29 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
       case Failure (t) => _t = t
     }}
 
+  /** True if the callback was invoked, regardless of [[scala.util.Success Success]] or
+   *  [[scala.util.Failure Failure]].
+   */
   def wasInvoked: Boolean = synchronized {
     _invokation != null
   }
 
+  /** True if the callback was invoked with [[scala.util.Success Success]]. */
   def hasPassed: Boolean = synchronized {
     _v != null
   }
 
+  /** True if the callback was invoked with [[scala.util.Failure Failure]]. */
   def hasFailed [A] (implicit m: Manifest [A]): Boolean = synchronized {
     _t != null && m.runtimeClass.isInstance (_t)
   }
 
+  /** Throw a testing error if the callback was not invoked. */
   def assertInvoked(): Unit = synchronized {
     assert (_invokation != null, "Expected callback to have been invoked, but it was not.")
   }
 
+  /** Throw a testing error if the callback was invoked. */
   def assertNotInvoked(): Unit = synchronized {
     if (_invokation != null)
       fail (
@@ -50,6 +58,7 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
           (_invokation take (10) mkString "\n"))
   }
 
+  /** Assert the callback was invoked with [[scala.util.Success Success]] and return the result. */
   def passed: T = synchronized {
     assertInvoked()
     if (_t != null)
@@ -57,6 +66,9 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
     _v
   }
 
+  /** Assert the callback was invoked with [[scala.util.Failure Failure]] and return the
+    * exception.
+    */
   def failed [E] (implicit m: Manifest [E]): E = synchronized {
     assertInvoked()
     if (_v != null)

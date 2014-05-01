@@ -9,10 +9,13 @@ package object implicits {
 
   implicit class RichCallback [A] (cb: Try [A] => Any) {
 
+    /** Invoke this callback with [[scala.util.Success Success]]. */
     def pass (v: A): Unit = cb (Success (v))
 
+    /** Invoke this callback with [[scala.util.Failure Failure]]. */
     def fail (t: Throwable) = cb (Failure (t))
 
+    /** Invoke `f` immediately, and then invoke this callback if `f` throws an exception. */
     def defer (f: => Any) {
       try {
         f
@@ -20,6 +23,9 @@ package object implicits {
         case t: Throwable => cb (Failure (t))
       }}
 
+    /** Invoke `f` immediately, and then invoke this callback if `f` throws an exception or
+      * returns [[scala.Some Some]].
+      */
     def callback (f: => Option [A]) {
       Try (f) match {
         case Success (Some (v)) => cb (Success (v))
@@ -27,18 +33,27 @@ package object implicits {
         case Failure (t) => cb (Failure (t))
       }}
 
+    /** Create a callback that will invoke `f` on [[scala.util.Success Success]], and then
+      * invoke this callback if `f` throws an exception or returns [[scala.Some Some]].
+      */
     def continue [B] (f: B => Option [A]): Callback [B] = {
       case Success (b) => callback (f (b))
       case Failure (t) => cb (Failure (t))
     }
 
+    /** Experimental. */
     def timeout (fiber: Fiber, backoff: Backoff) (rouse: => Any) (implicit random: Random):
         TimeoutCallback [A] =
       new TimeoutCallback (fiber, backoff, rouse, cb)
 
+    /** Create a callback that will run this one on the scheduler `s`. */
     def on (s: Scheduler): Callback [A] =
       (v => s.execute (cb, v))
 
+    /** Create a callback that first invokes `f`, regardless of receiving
+      * [[scala.util.Success Success]] or [[scala.util.Failure Failure]], and then invokes this
+      * callback.
+      */
     def ensure (f: => Any): Callback [A] = {
       case Success (v) =>
         cb (Try (f) .map (_ => v))
@@ -51,9 +66,15 @@ package object implicits {
         cb (v)
     }
 
+    /** Create a callback that will invoke `f` on [[scala.util.Failure Failure]] and then invoke
+      * this callback.
+      */
     def recover (f: PartialFunction [Throwable, A]): Callback [A] =
       (v => cb (v recover f))
 
+    /** Create a callback that will invoke `f` on [[scala.util.Failure Failure]] and then invoke
+      * this callback.
+      */
     def rescue (f: PartialFunction [Throwable, Try [A]]): Callback [A] =
       (v => cb (v recoverWith f))
 }

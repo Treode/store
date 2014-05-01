@@ -39,6 +39,9 @@ class Socket (socket: AsynchronousSocketChannel) (implicit exec: Executor) {
   private def write (srcs: Array [ByteBuffer]): Async [Long] =
     async (socket.write (srcs, 0, srcs.length, -1, MILLISECONDS, _, Callback.LongHandler))
 
+  /** Read from the socket until `input` has at least `len` readable bytes.  If `input` already has
+    * that many readable bytes, this will invoke the callback promptly.
+    */
   def fill (input: PagedBuffer, len: Int): Async [Unit] = {
     input.capacity (input.writePos + len)
     val bufs = input.buffers (input.writePos, input.writeableBytes)
@@ -50,6 +53,15 @@ class Socket (socket: AsynchronousSocketChannel) (implicit exec: Executor) {
         input.writePos = input.writePos + result.toInt
       }}}
 
+  /** Read a frame with its own length from the socket; return the length.
+    *
+    * Ensure `input` has at least four readable bytes, reading from the socket if necessary.
+    * Interpret those as the length of bytes needed.  Read from the socket again if necessary,
+    * until `input` has at least that many additional readable bytes.
+    *
+    * The write counter-part to this method can be found in the
+    * [[com.treode.pickle.Pickler Pickler]].
+    */
   def deframe (input: PagedBuffer): Async [Int] = {
     for {
       _ <- fill (input, 4)
@@ -58,6 +70,7 @@ class Socket (socket: AsynchronousSocketChannel) (implicit exec: Executor) {
     } yield len
   }
 
+  /** Write all readable bytes from `output` to the socket. */
   def flush (output: PagedBuffer): Async [Unit] = {
     val bufs = output.buffers (output.readPos, output.readableBytes)
     whilst (output.readableBytes > 0) {

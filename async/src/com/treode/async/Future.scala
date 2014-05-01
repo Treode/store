@@ -6,6 +6,7 @@ import scala.util.{Failure, Success, Try}
 
 import Async.async
 
+/** An asynchronous future. */
 class Future [A] extends Async [A] with Callback [A] {
 
   private var callbacks = new ArrayList [Callback [A]]

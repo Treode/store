@@ -8,6 +8,19 @@ import com.treode.async.implicits._
 
 import Async.{async, when}
 
+/**
+  * {{{
+  * import com.treode.async.Async.supply
+  * import com.treode.async.implicits._
+  * import com.treode.async.stubs.StubScheduler
+  * implicit val scheduler = StubScheduler.random()
+  * for {
+  *   i <- Seq (0, 1, 2) .async
+  * } supply {
+  *   i * 2
+  * }
+  * }}}
+  */
 trait AsyncIterator [+A] {
 
   def foreach (f: A => Async [Unit]): Async [Unit]
@@ -65,10 +78,10 @@ object AsyncIterator {
         scheduler.whilst (iter.hasNext) (f (iter.next))
   }
 
-  /** Given asynchronous iterators of sorted items, merge them into single asynchronous iterator
+  /** Given asynchronous iterators of sorted items, merge them into a single asynchronous iterator
     * that maintains the sort.  Keep duplicate elements, and when two or more input iterators
-    * duplicate an element, first list the element from the earlier iterator (that is, by position
-    * in `iters`).
+    * duplicate an element, first list the element from the earlier iterator, that is by position
+    * in `iters`.
     */
   def merge [A] (iters: Seq [AsyncIterator [A]]) (implicit ordering: Ordering [A]): AsyncIterator [A] =
     new MergeIterator (iters)

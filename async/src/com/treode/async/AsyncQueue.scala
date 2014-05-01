@@ -7,6 +7,7 @@ import com.treode.async.implicits._
 
 import Callback.ignore
 
+/** Experimental. */
 class AsyncQueue (fiber: Fiber) (deque: => Option [Runnable]) {
 
   private [this] var _engaged = true

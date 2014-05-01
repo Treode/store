@@ -14,7 +14,30 @@ package async {
     override def getMessage = "The return keyword is not allowed in an async definition."
   }}
 
+/** The async package defines the [[com.treode.async.Async Async]] class which an asynchronous
+  * method may return as its result, and it is a good place to begin reading.
+  *
+  * This package also defines asynchronous [[com.treode.async.io.File files]] and
+  * [[com.treode.async.io.Socket sockets]], and it provides [[com.treode.async.Fiber fibers]] that
+  * are not quite entirely unlike actors.
+  *
+  * See the [[com.treode.async.stubs stubs]] package for an overview of testing asynchronous
+  * methods.
+  */
 package object async {
+
+  import java.nio.file.Paths
+  import java.util.concurrent.Executors
+  import io.File
+  import com.treode.buffer.PagedBuffer
+  val executor = Executors.newScheduledThreadPool (8)
+  val scheduler = Scheduler (executor)
+  val file = File.open (Paths.get ("file"), executor)
+  val input = PagedBuffer (12)
+  file.fill (input, 0, 1024) run {
+    case Success (_) => // do something with input
+    case Failure (t) => // do something with exception
+  }
 
   type Callback [A] = Try [A] => Any
 
