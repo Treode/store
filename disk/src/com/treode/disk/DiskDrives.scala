@@ -57,7 +57,7 @@ private class DiskDrives (kit: DisksKit) {
 
   def launch(): Async [Unit] =
     for {
-      segs <- disks.values.filter (_.draining) .latch.seq foreach (_.drain())
+      segs <- disks.values.filter (_.draining) .latch.casual foreach (_.drain())
     } yield {
       compactor.drain (segs.iterator.flatten)
       queue.launch()
@@ -81,7 +81,7 @@ private class DiskDrives (kit: DisksKit) {
 
       for {
         newDisks <-
-          for (((path, file, geometry), i) <- items.zipWithIndex.latch.indexed)
+          for (((path, file, geometry), i) <- items.zipWithIndex.latch.seq)
             DiskDrive.init (this.number + i + 1, path, file, geometry, newBoot, kit)
         _ <- priorDisks.latch.unit foreach (_.checkpoint (newBoot, None))
       } yield {
@@ -143,7 +143,7 @@ private class DiskDrives (kit: DisksKit) {
 
       val draining = items map (byPath.apply _)
       for {
-        segs <- draining.latch.seq foreach (_.drain())
+        segs <- draining.latch.casual foreach (_.drain())
       } yield {
         checkpointer.checkpoint()
             .ensure (compactor.drain (segs.iterator.flatten))
@@ -186,7 +186,7 @@ private class DiskDrives (kit: DisksKit) {
   def cleanable(): Async [Iterator [SegmentPointer]] =  {
     guard {
       for {
-        segs <- disks.values.filterNot (_.draining) .latch.seq.foreach (_.cleanable())
+        segs <- disks.values.filterNot (_.draining) .latch.casual.foreach (_.cleanable())
       } yield segs.iterator.flatten
     }}
 

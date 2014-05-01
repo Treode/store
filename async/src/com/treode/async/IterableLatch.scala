@@ -20,6 +20,23 @@ class IterableLatch [A, R] private [async] (iter: FilterMonadic [A, R], size: In
   private def run [A, R, B] (iter: FilterMonadic [A, R], cb: Callback [B]) (f: A => Async [B]): Unit =
     iter foreach (x => f (x) run (cb))
 
+  /** The iterated method must yield a result; the final result is a sequence whose order depends
+    * on the scheduling of the asynchronous operations.
+    */
+  object casual {
+
+    def foreach [B] (f: A => Async [B]) (implicit m: Manifest [B]): Async [Seq [B]] =
+      async { cb =>
+        run [A, R, B] (iter, new CasualLatch [B] (size, cb)) (f)
+      }
+
+    def filter (p: A => Boolean) =
+      new IterableLatch (iter.withFilter (p), size) .casual
+
+    def withFilter (p: A => Boolean) =
+      new IterableLatch (iter.withFilter (p), size) .casual
+  }
+
   /** The iterated method must yield a pair (key, value); the final result is a map. */
   object map {
 
@@ -38,30 +55,13 @@ class IterableLatch [A, R] private [async] (iter: FilterMonadic [A, R], size: In
   /** The iterated method must yield a result; the final result is a sequence whose order matches
     * that of the input iterator.
     */
-  object indexed {
+  object seq {
 
     def foreach [C, B] (f: A => Async [B]) (implicit m: Manifest [B], w: A <:< (C, Int)): Async [Seq [B]] =
       async { cb =>
-        run [A, R, (Int, B)] (iter, new IndexedLatch (size, cb)) {
+        run [A, R, (Int, B)] (iter, new ArrayLatch (size, cb)) {
           x => f (x) map ((x._2, _))
         }}
-
-    def filter (p: A => Boolean) =
-      new IterableLatch (iter.withFilter (p), size) .indexed
-
-    def withFilter (p: A => Boolean) =
-      new IterableLatch (iter.withFilter (p), size) .indexed
-  }
-
-  /** The iterated method must yield a result; the final result is a sequence whose order depends
-    * on the scheduling of the asynchronous operations.
-    */
-  object seq {
-
-    def foreach [B] (f: A => Async [B]) (implicit m: Manifest [B]): Async [Seq [B]] =
-      async { cb =>
-        run [A, R, B] (iter, new SeqLatch [B] (size, cb)) (f)
-      }
 
     def filter (p: A => Boolean) =
       new IterableLatch (iter.withFilter (p), size) .seq

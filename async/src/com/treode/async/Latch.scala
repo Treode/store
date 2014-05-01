@@ -4,6 +4,12 @@ package com.treode.async
   */
 object Latch {
 
+  /** Create a callback that takes a value, and invoke the `cb` after collecting `count` results.
+    * The elements in the result are ordered according to how they arrived.
+    */
+  def casual [A] (count: Int, cb: Callback [Seq [A]]) (implicit m: Manifest [A]): Callback [A] =
+    new CasualLatch (count, cb)
+
   /** Create a callback that takes a key and value, and invoke the `cb` after collecting `count`
     * pairs.
     */
@@ -13,14 +19,8 @@ object Latch {
   /** Create a callback that takes an index and value, and invoke the `cb` after collecting
     * `count` results.  The elements in the result are ordered according to the provided index.
     */
-  def indexed [A] (count: Int, cb: Callback [Seq [A]]) (implicit m: Manifest [A]): Callback [(Int, A)] =
-    new IndexedLatch (count, cb)
-
-  /** Create a callback that takes a value, and invoke the `cb` after collecting `count` results.
-    * The elements in the result are ordered according to how they arrived.
-    */
-  def seq [A] (count: Int, cb: Callback [Seq [A]]) (implicit m: Manifest [A]): Callback [A] =
-    new SeqLatch (count, cb)
+  def seq [A] (count: Int, cb: Callback [Seq [A]]) (implicit m: Manifest [A]): Callback [(Int, A)] =
+    new ArrayLatch (count, cb)
 
   /** Create a callback that takes nothing, and invoke the `cb` after the callback is invoked
     * `count` times.

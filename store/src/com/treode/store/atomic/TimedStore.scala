@@ -46,7 +46,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     for {
       _ <- space.read (rt, ids)
       cells <-
-        for ((op, i) <- ops.zipWithIndex.latch.indexed)
+        for ((op, i) <- ops.zipWithIndex.latch.seq)
           getTable (op.table) .get (op.key, rt)
     } yield {
       for (Cell (_, time, value) <- cells) yield Value (time, value)
@@ -68,7 +68,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     for {
       locks <- space.write (ct, ids)
       results <-
-        for ((op, i) <- ops.zipWithIndex.latch.indexed)
+        for ((op, i) <- ops.zipWithIndex.latch.seq)
           prepare (ct, op)
     } yield {
       val collisions = for (((c, t), i) <- results.zipWithIndex; if c) yield i

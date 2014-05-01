@@ -4,34 +4,34 @@ import com.treode.async.implicits._
 import com.treode.async.stubs.CallbackCaptor
 import org.scalatest.FlatSpec
 
-class ArrayLatchSpec extends FlatSpec {
+class CasualLatchSpec extends FlatSpec {
 
   class DistinguishedException extends Exception
 
-  "The ArrayLatch" should "release immediately for count==0" in {
+  "The SeqLatch" should "release immediately for count==0" in {
     val cb = CallbackCaptor [Seq [Int]]
-    val ltch = Latch.indexed [Int] (0, cb)
-    assertResult (Seq [Int] ()) (cb.passed.toSeq)
+    val ltch = Latch.casual [Int] (0, cb)
+    assertResult (Seq [Int] ()) (cb.passed)
   }
 
   it should "reject extra releases" in {
     val cb = CallbackCaptor [Seq [Int]]
-    val ltch = Latch.indexed [Int] (0, cb)
-    assertResult (Seq [Int] ()) (cb.passed.toSeq)
-    intercept [Exception] (ltch.pass (0, 0))
+    val ltch = Latch.casual [Int] (0, cb)
+    assertResult (Seq [Int] ()) (cb.passed)
+    intercept [Exception] (ltch.pass (1))
   }
 
   it should "release after one pass for count==1" in {
     val cb = CallbackCaptor [Seq [Int]]
-    val ltch = Latch.indexed [Int] (1, cb)
+    val ltch = Latch.casual [Int] (1, cb)
     cb.assertNotInvoked()
-    ltch.pass (0, 1)
-    assertResult (Seq (1)) (cb.passed.toSeq)
+    ltch.pass (1)
+    assertResult (Seq (1)) (cb.passed)
   }
 
   it should "release after one fail for count==1" in {
     val cb = CallbackCaptor [Seq [Int]]
-    val ltch = Latch.indexed [Int] (1, cb)
+    val ltch = Latch.casual [Int] (1, cb)
     cb.assertNotInvoked()
     ltch.fail (new DistinguishedException)
     cb.failed [DistinguishedException]
@@ -39,29 +39,29 @@ class ArrayLatchSpec extends FlatSpec {
 
   it should "release after two passes for count==2" in {
     val cb = CallbackCaptor [Seq [Int]]
-    val ltch = Latch.indexed [Int] (2, cb)
+    val ltch = Latch.casual [Int] (2, cb)
     cb.assertNotInvoked()
-    ltch.pass (0, 1)
+    ltch.pass (1)
     cb.assertNotInvoked()
-    ltch.pass (1, 2)
-    assertResult (Seq (1, 2)) (cb.passed.toSeq)
+    ltch.pass (2)
+    assertResult (Seq (1, 2)) (cb.passed)
   }
 
   it should "release after two reversed passes for count==2" in {
     val cb = CallbackCaptor [Seq [Int]]
-    val ltch = Latch.indexed [Int] (2, cb)
+    val ltch = Latch.casual [Int] (2, cb)
     cb.assertNotInvoked()
-    ltch.pass (1, 2)
+    ltch.pass (2)
     cb.assertNotInvoked()
-    ltch.pass (0, 1)
-    assertResult (Seq (1, 2)) (cb.passed.toSeq)
+    ltch.pass (1)
+    assertResult (Seq (2, 1)) (cb.passed)
   }
 
   it should "release after a pass and a fail for count==2" in {
     val cb = CallbackCaptor [Seq [Int]]
-    val ltch = Latch.indexed [Int] (2, cb)
+    val ltch = Latch.casual [Int] (2, cb)
     cb.assertNotInvoked()
-    ltch.pass (0, 0)
+    ltch.pass (1)
     cb.assertNotInvoked()
     ltch.fail (new DistinguishedException)
     cb.failed [DistinguishedException]
@@ -69,7 +69,7 @@ class ArrayLatchSpec extends FlatSpec {
 
   it should "release after two fails for count==2" in {
     val cb = CallbackCaptor [Seq [Int]]
-    val ltch = Latch.indexed [Int] (2, cb)
+    val ltch = Latch.casual [Int] (2, cb)
     cb.assertNotInvoked()
     ltch.fail (new Exception)
     cb.assertNotInvoked()

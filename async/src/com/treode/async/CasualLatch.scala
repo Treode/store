@@ -2,8 +2,12 @@ package com.treode.async
 
 import scala.util.{Failure, Success, Try}
 
-private class SeqLatch [A] (count: Int, cb: Callback [Seq [A]]) (implicit manifest: Manifest [A])
-extends AbstractLatch [Seq [A]] (count, cb) with Callback [A] {
+private class CasualLatch [A] (
+    count: Int,
+    cb: Callback [Seq [A]]
+) (implicit
+    manifest: Manifest [A]
+) extends AbstractLatch [Seq [A]] (count, cb) with Callback [A] {
 
   private var values = Seq.newBuilder [A]
   values.sizeHint (count)
