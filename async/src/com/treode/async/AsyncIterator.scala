@@ -8,32 +8,20 @@ import com.treode.async.implicits._
 
 import Async.{async, when}
 
-/**
-  * {{{
-  * import com.treode.async.Async.supply
-  * import com.treode.async.implicits._
-  * import com.treode.async.stubs.StubScheduler
-  * implicit val scheduler = StubScheduler.random()
-  * for {
-  *   i <- Seq (0, 1, 2) .async
-  * } supply {
-  *   i * 2
-  * }
-  * }}}
-  */
+/** Concrete classes should implement `foreach`. */
 trait AsyncIterator [+A] {
+  self =>
 
+  /** Execute the asynchronous operation `f` foreach element. */
   def foreach (f: A => Async [Unit]): Async [Unit]
 
   def map [B] (f: A => B): AsyncIterator [B] = {
-    val self = this
     new AsyncIterator [B] {
       def foreach (g: B => Async [Unit]): Async [Unit] =
         self.foreach (x => g (f (x)))
     }}
 
   def filter (p: A => Boolean): AsyncIterator [A] = {
-    val self = this
     new AsyncIterator [A] {
       def foreach (g: A => Async [Unit]): Async [Unit] =
         self.foreach (x => when (p (x)) (g (x)))
@@ -42,6 +30,10 @@ trait AsyncIterator [+A] {
   def withFilter (p: A => Boolean): AsyncIterator [A] =
     filter (p)
 
+  /** Execute the asynchronous operation `f` foreach element while `p` is true.  Return the first
+    * element for which `p` fails, or `None` if `p` never fails and the whole sequence is
+    * consumed.
+    */
   def whilst [B >: A] (p: A => Boolean) (f: A => Async [Unit]): Async [Option [B]] =
     async { close =>
       foreach { x =>
