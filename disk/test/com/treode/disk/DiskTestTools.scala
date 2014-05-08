@@ -3,6 +3,7 @@ package com.treode.disk
 import java.nio.file.{Path, Paths}
 import scala.collection.JavaConversions
 import scala.collection.mutable.UnrolledBuffer
+import scala.language.implicitConversions
 import scala.reflect.ClassTag
 import scala.util.Random
 
@@ -18,9 +19,12 @@ import JavaConversions._
 
 private object DiskTestTools {
 
-  type AttachItem = (String, StubFile, DiskGeometry)
+  type AttachItem = (Path, StubFile, DiskGeometry)
 
-  type ReattachItem = (String, StubFile)
+  type ReattachItem = (Path, StubFile)
+
+  implicit def stringToPath (path: String): Path =
+    Paths.get (path)
 
   implicit class RichControllerAgent (controller: Disks.Controller) {
     val agent = controller.asInstanceOf [ControllerAgent]
@@ -33,11 +37,8 @@ private object DiskTestTools {
       disks.assertDraining (paths: _*)
 
     def attachAndWait (items: AttachItem*) (implicit scheduler: StubScheduler): Async [Unit] = {
-      agent.attach (
-        for ((path, file, geom) <- items) yield {
-          file.scheduler = scheduler
-          (Paths.get (path), file, geom)
-        })
+      items foreach (_._2.scheduler = scheduler)
+      agent._attach (items: _*)
     }
 
     def attachAndCapture (items: AttachItem*) (implicit scheduler: StubScheduler): CallbackCaptor [Unit] =
@@ -48,13 +49,13 @@ private object DiskTestTools {
       disks.assertReady()
     }
 
-    def drainAndWait (items: String*): Async [Unit] =
-      agent.drain (items map (Paths.get (_)))
+    def drainAndWait (items: Path*): Async [Unit] =
+      agent.drain (items: _*)
 
-    def drainAndCapture (items: String*): CallbackCaptor [Unit] =
+    def drainAndCapture (items: Path*): CallbackCaptor [Unit] =
       drainAndWait (items: _*) .capture()
 
-    def drainAndPass (items: String*) (implicit scheduler: StubScheduler) {
+    def drainAndPass (items: Path*) (implicit scheduler: StubScheduler) {
       drainAndWait (items: _*) .pass
       disks.tickle()
       disks.assertReady()
@@ -169,11 +170,8 @@ private object DiskTestTools {
     val agent = recovery.asInstanceOf [RecoveryAgent]
 
     def attachAndWait (items: AttachItem*) (implicit scheduler: StubScheduler): Async [Launch] = {
-      recovery.attach (
-        for ((path, file, geom) <- items) yield {
-          file.scheduler = scheduler
-          (Paths.get (path), file, geom)
-        })
+      items foreach (_._2.scheduler = scheduler)
+      recovery._attach (items: _*)
     }
 
     def attachAndCapture (items: AttachItem*) (implicit scheduler: StubScheduler): CallbackCaptor [Launch] =
@@ -193,11 +191,8 @@ private object DiskTestTools {
     }
 
     def reattachAndWait (items: ReattachItem*) (implicit scheduler: StubScheduler): Async [Launch] = {
-      recovery.reattach (
-        for ((path, file) <- items) yield {
-          file.scheduler = scheduler
-          (Paths.get (path), file)
-        })
+      items foreach (_._2.scheduler = scheduler)
+      recovery._reattach (items: _*)
     }
 
     def reattachAndLaunch (items: ReattachItem*) (implicit scheduler: StubScheduler): Disks = {
@@ -206,20 +201,15 @@ private object DiskTestTools {
       launch.disks
     }
 
-    def reopenAndWait (paths: String*) (items: ReattachItem*) (
+    def reopenAndWait (paths: Path*) (items: ReattachItem*) (
         implicit scheduler: StubScheduler, config: DisksConfig): Async [Launch] = {
-      val _paths = paths map (Paths.get (_))
-      val _items =
-        for ((path, file) <- items) yield {
-          file.scheduler = scheduler
-          (Paths.get (path), file)
-        }
-      val files = _items.toMap
+      items foreach (_._2.scheduler = scheduler)
+      val files = items.toMap
       def superbs (path: Path) = SuperBlocks.read (path, files (path))
-      agent._reattach (_paths) (superbs _)
+      agent._reattach (paths) (superbs _)
     }
 
-    def reopenAndLaunch (paths: String*) (items: ReattachItem*) (
+    def reopenAndLaunch (paths: Path*) (items: ReattachItem*) (
         implicit scheduler: StubScheduler, config: DisksConfig): Disks = {
       val launch = reopenAndWait (paths: _*) (items: _*) .pass
       launch.launchAndPass()

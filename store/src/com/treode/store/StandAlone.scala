@@ -21,7 +21,7 @@ object StandAlone {
     implicit val store: Store = controller.store
 
     def attach (items: Seq [(Path, DiskGeometry)]): Async [Unit] =
-      disks.attach (items, executor)
+      disks.attach (executor, items:_*)
 
     def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
       cluster.hail (remoteId, remoteAddr)
@@ -60,7 +60,7 @@ object StandAlone {
     val _store = Store.recover () (random, scheduler, cluster, _disks, storeConfig)
 
     for {
-      launch <- _disks.attach (items, executor)
+      launch <- _disks.attach (executor, items: _*)
       store <- _store.launch (launch)
     } yield {
       new Controller (executor, cluster, launch.controller, store)
@@ -87,7 +87,7 @@ object StandAlone {
     val _store = Store.recover () (random, scheduler, cluster, _disks, storeConfig)
 
     for {
-      launch <- _disks.reattach (items, executor)
+      launch <- _disks.reattach (executor, items:_*)
       store <- _store.launch (launch)
     } yield {
       new Controller (executor, cluster, launch.controller, store)

@@ -41,7 +41,7 @@ class HandlerSpec extends FreeSpec {
     implicit val config = TestDisksConfig()
     implicit val disks = Disks
         .recover()
-        .attach (Seq ((Paths.get ("a"), file, TestDiskGeometry())))
+        ._attach (("a", file, TestDiskGeometry()))
         .pass.disks
     val cat = Handler (0)
     for ((v, i) <- values.take (issues) .zipWithIndex)

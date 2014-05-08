@@ -1,6 +1,5 @@
 package com.treode.store.tier
 
-import java.nio.file.Paths
 import scala.collection.mutable.Builder
 
 import com.treode.async.implicits._
@@ -24,8 +23,7 @@ class TierSpec extends WordSpec {
     implicit val recovery = Disks.recover()
     val file = new StubFile (1<<22)
     val geometry = TestDiskGeometry (segmentBits=18, diskBytes=1<<22)
-    val item = (Paths.get ("a"), file, geometry)
-    val launch = recovery.attach (Seq (item)) .pass
+    val launch = recovery._attach (("a", file, geometry)) .pass
     launch.launch()
     (scheduler, launch.disks)
   }

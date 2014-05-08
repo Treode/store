@@ -99,7 +99,7 @@ private class DiskDrives (kit: DisksKit) {
       attachreqs = attachreqs.enqueue (items, cb)
     }}
 
-  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Unit] =
+  def attach (exec: ExecutorService, items: Seq [(Path, DiskGeometry)]): Async [Unit] =
     guard {
       val files = items map (openFile (_, exec))
       attach (files)

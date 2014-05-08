@@ -30,11 +30,10 @@ extends StubActiveHost (id, network) {
 
   val file = new StubFile
   val geometry = TestDiskGeometry()
-  val files = Seq ((Paths.get ("a"), file, geometry))
 
   val _launch =
     for {
-      launch <- recovery.attach (files)
+      launch <- recovery._attach (("a", file, geometry))
       catalogs <- _catalogs.launch (launch)
       paxos <- _paxos.launch (launch) .map (_.asInstanceOf [PaxosKit])
     } yield {

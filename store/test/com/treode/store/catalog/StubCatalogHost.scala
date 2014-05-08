@@ -1,6 +1,5 @@
 package com.treode.store.catalog
 
-import java.nio.file.Paths
 import scala.util.Random
 
 import com.treode.async.{Async, Callback}
@@ -35,11 +34,10 @@ extends StubActiveHost (id, network) {
 
   val file = new StubFile
   val geometry = TestDiskGeometry()
-  val files = Seq ((Paths.get ("a"), file, geometry))
 
   val _launch =
     for {
-      launch <- recovery.attach (files)
+      launch <- recovery._attach (("a", file, geometry))
       catalogs <- _catalogs.launch (launch) .map (_.asInstanceOf [CatalogKit])
     } yield {
       launch.launch()

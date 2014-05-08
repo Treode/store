@@ -1,6 +1,5 @@
 package com.treode.store.catalog
 
-import java.nio.file.Paths
 import scala.util.Random
 
 import com.treode.async.stubs.{AsyncChecks, StubScheduler}
@@ -50,7 +49,7 @@ object BrokerBehaviors extends FreeSpec {
     implicit val recovery = Disks.recover()
     val disk = new StubFile
     val geometry = TestDiskGeometry()
-    implicit val launch = recovery.attach (Seq ((Paths.get ("a"), disk, geometry))) .pass
+    implicit val launch = recovery._attach (("a", disk, geometry)) .pass
     implicit val disks = launch.disks
     launch.launch()
 

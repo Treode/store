@@ -34,7 +34,7 @@ extends Disks.Recovery {
       open = false
     }
 
-  def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Launch] =
+  def _attach (items: (Path, File, DiskGeometry)*): Async [Launch] =
     guard {
 
       val attaching = items.map (_._1) .toSet
@@ -53,17 +53,17 @@ extends Disks.Recovery {
         new LaunchAgent (kit)
       }}
 
-  def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Launch] =
+  def attach (exec: ExecutorService, items: (Path, DiskGeometry)*): Async [Launch] =
     guard {
       val files = items map (openFile (_, exec))
-      attach (files)
+      _attach (files: _*)
     }
 
   def reopen (items: Seq [(Path, File)]): Async [Seq [SuperBlocks]] =
     for ((path, file) <- items.latch.casual)
       SuperBlocks.read (path, file)
 
-  def reattach (items: Seq [(Path, File)]): Async [Launch] =
+  def _reattach (items: (Path, File)*): Async [Launch] =
     guard {
 
       val reattaching = items.map (_._1) .toSet
@@ -118,6 +118,6 @@ extends Disks.Recovery {
         new LaunchAgent (kit)
       }}
 
-  def reattach (items: Seq [Path], exec: ExecutorService): Async [Launch] =
+  def reattach (exec: ExecutorService, items: Path*): Async [Launch] =
     _reattach (items) (reopen (exec) _)
 }

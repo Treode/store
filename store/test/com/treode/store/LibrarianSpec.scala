@@ -1,7 +1,5 @@
 package com.treode.store
 
-import java.nio.file.Paths
-
 import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{AsyncCaptor, AsyncChecks, StubScheduler}
@@ -32,11 +30,10 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
 
     val file = new StubFile
     val geometry = TestDiskGeometry()
-    val files = Seq ((Paths.get ("a"), file, geometry))
 
     val _launch =
       for {
-        launch <- recovery.attach (files)
+        launch <- recovery._attach (("a", file, geometry))
         catalogs <- _catalogs.launch (launch)
       } yield {
         launch.launch()

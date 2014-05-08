@@ -25,11 +25,11 @@ object Disks {
 
     implicit def disks: Disks
 
-    def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit]
+    def _attach (items: (Path, File, DiskGeometry)*): Async [Unit]
 
-    def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Unit]
+    def attach (exec: ExecutorService, items: (Path, DiskGeometry)*): Async [Unit]
 
-    def drain (items: Seq [Path]): Async [Unit]
+    def drain (items: Path*): Async [Unit]
   }
 
   trait Launch {
@@ -49,13 +49,13 @@ object Disks {
 
     def replay [R] (desc: RecordDescriptor [R]) (f: R => Any)
 
-    def reattach (items: Seq [(Path, File)]): Async [Launch]
+    def _reattach (items: (Path, File)*): Async [Launch]
 
-    def reattach (items: Seq [Path], executor: ExecutorService): Async [Launch]
+    def reattach (exec: ExecutorService, items: Path*): Async [Launch]
 
-    def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Launch]
+    def _attach (items: (Path, File, DiskGeometry)*): Async [Launch]
 
-    def attach (items: Seq [(Path, DiskGeometry)], exec: ExecutorService): Async [Launch]
+    def attach (exec: ExecutorService, items: (Path, DiskGeometry)*): Async [Launch]
   }
 
   def recover () (implicit scheduler: Scheduler, config: DisksConfig): Recovery =

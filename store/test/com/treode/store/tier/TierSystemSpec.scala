@@ -1,6 +1,5 @@
 package com.treode.store.tier
 
-import java.nio.file.Paths
 import scala.util.Random
 
 import com.treode.async.Async
@@ -71,8 +70,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   ): TestTable = {
       implicit val recovery = Disks.recover()
       val _table = new TestRecovery (ID)
-      val files = Seq ((Paths.get ("a"), disk, geometry))
-      val launch = recovery.attach (files) .pass
+      val launch = recovery._attach (("a", disk, geometry)) .pass
       val table = _table.launch (launch) .pass
       launch.launch()
       table
@@ -87,8 +85,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   ): TestTable = {
     implicit val recovery = Disks.recover()
     val _table = new TestRecovery (ID)
-    val files = Seq ((Paths.get ("a"), disk))
-    val launch = recovery.reattach (files) .pass
+    val launch = recovery._reattach (("a", disk)) .pass
     val table = _table.launch (launch) .pass
     launch.launch()
     table

@@ -1,5 +1,6 @@
 package com.treode.store
 
+import java.nio.file.{Path, Paths}
 import scala.language.implicitConversions
 import scala.util.Random
 
@@ -22,6 +23,9 @@ private trait StoreTestTools {
 
   implicit def longToTxClock (v: Long): TxClock =
     new TxClock (v)
+
+  implicit def stringToPath (path: String): Path =
+    Paths.get (path)
 
   implicit class RichBytes (v: Bytes) {
     def ## (time: Int) = Cell (v, time, None)
