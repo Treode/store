@@ -8,7 +8,7 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.cluster.{HostId, PortId}
 import com.treode.pickle.Pickler
 
-class StubNetwork (implicit val random: Random, val scheduler: StubScheduler) {
+class StubNetwork private (implicit random: Random) {
 
   private val hosts = new ConcurrentHashMap [HostId, StubHost]
 
@@ -42,22 +42,10 @@ class StubNetwork (implicit val random: Random, val scheduler: StubScheduler) {
     if (messageTrace)
       println (s"$from->$to:$port: $msg")
     h.deliver (p, from, port, msg)
-  }
-
-  def runTasks (timers: Boolean = false, count: Int = Int.MaxValue): Unit =
-    scheduler.runTasks (timers, count)
-}
+  }}
 
 object StubNetwork {
 
-  def apply (random: Random, scheduler: StubScheduler): StubNetwork =
-    new StubNetwork () (random, scheduler)
-
-  def apply (random: Random = new Random (0), multithreaded: Boolean = false): StubNetwork = {
-    val scheduler =
-      if (multithreaded)
-        StubScheduler.multithreaded (Executors.newScheduledThreadPool (8))
-      else
-        StubScheduler.random (random)
-    new StubNetwork () (random, scheduler)
-  }}
+  def apply (random: Random): StubNetwork =
+    new StubNetwork () (random)
+}

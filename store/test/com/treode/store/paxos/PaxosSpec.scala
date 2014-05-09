@@ -6,7 +6,7 @@ import scala.util.Random
 import com.treode.async.stubs.AsyncChecks
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
-import com.treode.store.{Bytes, Cell}
+import com.treode.store.{Bytes, Cell, StoreTestKit}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
@@ -28,7 +28,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
 
   // Propose two values simultaneously, expect one choice.
   def check (
-      kit: StubNetwork,
+      kit: StoreTestKit,
       p1: StubPaxosHost,         // First host that will submit a proposal.
       p2: StubPaxosHost,         // Second host that will submit a proposal.
       as: Seq [StubPaxosHost],   // Hosts that we expect will accept.
@@ -36,7 +36,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       summary: Summary
   ) {
     try {
-      import kit.scheduler
+      import kit._
 
       val k = Bytes (0x9E360154E51197A8L)
 
@@ -67,8 +67,8 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       "stable hosts and a reliable network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
         forAllSeeds { random =>
-          val kit = StubNetwork (random)
-          val hs = kit.install (3, new StubPaxosHost (_, kit))
+          implicit val kit = StoreTestKit (random)
+          val hs = kit.install (3, new StubPaxosHost (_))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
@@ -80,8 +80,8 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
         forAllSeeds { random =>
-          val kit = StubNetwork (random)
-          val hs = kit.install (3, new StubPaxosHost (_, kit))
+          implicit val kit = StoreTestKit (random)
+          val hs = kit.install (3, new StubPaxosHost (_))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
@@ -93,10 +93,10 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       "atlas distributed by catalogs" in {
         var summary = new Summary
         forAllSeeds { random =>
-          val kit = StubNetwork (random)
+          implicit val kit = StoreTestKit (random)
           import kit.scheduler
 
-          val hs = kit.install (3, new StubPaxosHost (_, kit))
+          val hs = kit.install (3, new StubPaxosHost (_))
           val Seq (h1, h2, h3) = hs
           for (h1 <- hs; h2 <- hs)
             h1.hail (h2.localId, null)
@@ -110,10 +110,10 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       }}
 
     "rebalance" in { pending
-      val kit = StubNetwork()
+      implicit val kit = StoreTestKit ()
       import kit.scheduler
 
-      val hs = kit.install (4, new StubPaxosHost (_, kit))
+      val hs = kit.install (4, new StubPaxosHost (_))
       val Seq (h1, h2, h3, h4) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))

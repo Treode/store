@@ -3,6 +3,7 @@ package com.treode.cluster
 import java.util.Arrays
 import scala.util.Random
 
+import com.treode.async.Scheduler
 import com.treode.async.io.Socket
 import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
@@ -198,7 +199,13 @@ class ScuttlebuttProperties extends PropSpec with AsyncChecks {
   def entry [M] (host: HostId, rumor: RumorDescriptor [M], msg: M) =
     ((host, rumor.id), msg)
 
-  class StubHost (id: HostId, network: StubNetwork) extends StubActiveHost (id, network) {
+  class StubHost (
+      id: HostId
+   ) (implicit
+       random: Random,
+       scheduler: Scheduler,
+       network: StubNetwork
+   ) extends StubActiveHost (id) {
 
     implicit val cluster: Cluster = this
 
@@ -209,24 +216,25 @@ class ScuttlebuttProperties extends PropSpec with AsyncChecks {
     r3.listen ((v, from) => heard += entry (from.id, r3, v))
   }
 
-  def checkUnity (random: Random, mf: Double) {
-    val kit = StubNetwork (random)
-    kit.messageFlakiness = mf
-    val hs = kit.install (3, new StubHost (_, kit))
+  def checkUnity (mf: Double) (implicit random: Random) {
+    implicit val scheduler = StubScheduler.random (random)
+    implicit val network = StubNetwork (random)
+    network.messageFlakiness = mf
+    val hs = network.install (3, new StubHost (_))
     for (h1 <- hs; h2 <- hs)
       h1.hail (h2.localId, null)
-    kit.runTasks()
+    scheduler.runTasks()
 
     val Seq (h1, h2, h3) = hs
     h1.spread (r1) (1)
     h2.spread (r2) (2)
-    kit.runTasks()
+    scheduler.runTasks()
     h2.spread (r2) (3)
     h3.spread (r2) (4)
     h3.spread (r3) (5)
-    kit.runTasks()
+    scheduler.runTasks()
     h3.spread (r3) (6)
-    kit.runTasks (timers = true, count = 200)
+    scheduler.runTasks (timers = true, count = 200)
 
     val expected = Map (
         entry (h1.localId, r1, 1),
@@ -237,11 +245,11 @@ class ScuttlebuttProperties extends PropSpec with AsyncChecks {
   }
 
   property ("Scuttlebutt should spread rumors") {
-    forAllSeeds { random =>
-      checkUnity (random, 0.0)
+    forAllSeeds { implicit random =>
+      checkUnity (0.0) (random)
     }}
 
   property ("Scuttlebutt should spread rumors with a flakey network") {
     forAllSeeds { random =>
-      checkUnity (random, 0.1)
+      checkUnity (0.1) (random)
     }}}

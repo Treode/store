@@ -218,9 +218,9 @@ class BrokerProperties extends PropSpec with AsyncChecks {
   val values = BrokerBehaviors.values
 
   def checkUnity (random: Random, mf: Double) {
-    val kit = StubNetwork (random)
+    implicit val kit = StoreTestKit (random)
     kit.messageFlakiness = mf
-    val hs = kit.install (3, new StubCatalogHost (_, kit))
+    val hs = kit.install (3, new StubCatalogHost (_))
     for (h1 <- hs; h2 <- hs)
       h1.hail (h2.localId, null)
     kit.runTasks()

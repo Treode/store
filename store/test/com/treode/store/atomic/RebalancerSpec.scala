@@ -1,11 +1,9 @@
 package com.treode.store.atomic
 
-import scala.util.Random
-
 import com.treode.async.stubs.StubScheduler
 import com.treode.cluster.{Cluster, HostId, Peer}
 import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
-import com.treode.store.{Atlas, Bytes, Cohort, StoreTestTools, TxClock}
+import com.treode.store.{Atlas, Bytes, Cohort, StoreTestKit, StoreTestTools, TxClock}
 import org.scalatest.{FreeSpec, ShouldMatchers}
 
 import Cohort.{issuing, moving, settled}
@@ -58,14 +56,14 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
   "Deriving targets from cohorts should" - {
 
     def setup() = {
-      implicit val random = new Random (0)
-      implicit val scheduler = StubScheduler.random (random)
-      implicit val cluster = new StubActiveHost (0, new StubNetwork)
-      (random, scheduler, cluster)
+      implicit val kit = StoreTestKit()
+      import kit._
+      implicit val cluster = new StubActiveHost (0)
+      cluster
     }
 
     "find no targets when no cohorts are moving" in {
-      implicit val (random, scheduler, cluster) = setup()
+      implicit val cluster = setup()
       val ts = targets (
           settled (1, 2, 3),
           settled (4, 5, 6),
@@ -75,7 +73,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
     }
 
     "find targets only from the cohorts that are moving" in {
-      implicit val (random, scheduler, cluster) = setup()
+      implicit val cluster = setup()
       val ts = targets (
           settled (1, 2, 3),
           issuing (1, 2, 3) (1, 2, 4),
@@ -105,21 +103,21 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
       "no work underway and" - {
 
         def setup() = {
-          implicit val random = new Random (0)
-          implicit val scheduler = StubScheduler.random (random)
-          implicit val cluster = new StubActiveHost (0, new StubNetwork)
+          implicit val kit = StoreTestKit()
+          import kit._
+          implicit val cluster = new StubActiveHost (0)
           val tracker = new RichTracker
-          (random, scheduler, cluster, tracker)
+          (cluster, tracker)
         }
 
         "rebalance is not started, it should yield no work" in {
-          implicit val (random, scheduler, cluster, t) = setup()
+          implicit val (cluster, t) = setup()
           assertNone (t.deque())
           intercept [AssertionError] (t.continue (0))
         }
 
         "rebalance is started with all cohorts settled, it should yield no work" in {
-          implicit val (random, scheduler, cluster, t) = setup()
+          implicit val (cluster, t) = setup()
           t.start (settled (1, 2, 3))
           assertNone (t.deque())
           assertNone (t.deque())
@@ -127,7 +125,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
         }
 
         "rebalance is started with a cohort moving, it should start work" in {
-          implicit val (random, scheduler, cluster, t) = setup()
+          implicit val (cluster, t) = setup()
           t.start (moving (1, 2, 3) (1, 2, 4))
           assertTask (begin (0), 0 -> Set (4)) (t.deque())
           intercept [AssertionError] (t.deque())
@@ -140,18 +138,18 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
       "no work underway and" - {
 
         def setup() = {
-          implicit val random = new Random (0)
-          implicit val scheduler = StubScheduler.random (random)
-          implicit val cluster = new StubActiveHost (0, new StubNetwork)
+          implicit val kit = StoreTestKit()
+          import kit._
+          implicit val cluster = new StubActiveHost (0)
           val t = new RichTracker
           t.start (moving (1, 2, 3) (1, 2, 4))
           assertTask (begin (0), 0 -> Set (4)) (t.deque())
           t.continue (7)
-          (random, scheduler, cluster, t)
+          (cluster, t)
         }
 
         "rebalance is not restarted, it should continue work" in {
-          implicit val (random, scheduler, cluster, t) = setup()
+          implicit val (cluster, t) = setup()
           assertTask (begin (7), 0 -> Set (4)) (t.deque())
           t.continue (Point.End)
           assertNone (t.deque())
@@ -160,13 +158,13 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
         "rebalance is restarted" - {
 
           "with all cohorts settled, it should yield no work" in {
-            implicit val (random, scheduler, cluster, t) = setup()
+            implicit val (cluster, t) = setup()
             t.start (settled (1, 2, 3))
             assertNone (t.deque())
           }
 
           "with the same cohort moving the same way, it should continue work" in {
-            implicit val (random, scheduler, cluster, t) = setup()
+            implicit val (cluster, t) = setup()
             t.start (moving (1, 2, 3) (1, 2, 4))
             assertTask (begin (7), 0 -> Set (4)) (t.deque())
             t.continue (Point.End)
@@ -174,7 +172,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
           }
 
           "with the same cohort moving the same way and more, it should restart work" in {
-            implicit val (random, scheduler, cluster, t) = setup()
+            implicit val (cluster, t) = setup()
             t.start (moving (1, 2, 3) (1, 4, 5))
             assertTask (range (0, 7), 0 -> Set (5)) (t.deque())
             intercept [AssertionError] (t.deque())
@@ -185,7 +183,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
           }
 
           "with the same cohort moving a different way, it should restart work" in {
-            implicit val (random, scheduler, cluster, t) = setup()
+            implicit val (cluster, t) = setup()
             t.start (moving (1, 2, 3) (1, 2, 5))
             assertTask (begin (0), 0 -> Set (5)) (t.deque())
             t.continue (Point.End)
@@ -193,7 +191,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
           }
 
           "with a different cohort moving, it should restart work" in {
-            implicit val (random, scheduler, cluster, t) = setup()
+            implicit val (cluster, t) = setup()
             t.start (
                 settled (1, 2, 3),
                 moving (1, 2, 3) (1, 2, 4))
@@ -207,9 +205,9 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
       "no work underway and" - {
 
         def setup() = {
-          implicit val random = new Random (0)
-          implicit val scheduler = StubScheduler.random (random)
-          implicit val cluster = new StubActiveHost (0, new StubNetwork)
+          implicit val kit = StoreTestKit()
+          import kit._
+          implicit val cluster = new StubActiveHost (0)
           val t = new RichTracker
           t.start (moving (1, 2, 3) (1, 2, 4))
           assertTask (begin (0), 0 -> Set (4)) (t.deque())
@@ -217,11 +215,11 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
           t.continue (7)
           assertTask (range (0, 7), 0 -> Set (5)) (t.deque())
           t.continue (3)
-          (random, scheduler, cluster, t)
+          (cluster, t)
         }
 
         "rebalance is not restarted, it should continue work" in {
-          implicit val (random, scheduler, cluster, t) = setup()
+          implicit val (cluster, t) = setup()
           assertTask (range (3, 7), 0 -> Set (5)) (t.deque())
           t.continue (7)
           assertTask (begin (7), 0 -> Set (4, 5)) (t.deque())
@@ -232,13 +230,13 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
         "rebalance is restarted" - {
 
           "with all cohorts settled, it should yield no work" in {
-            implicit val (random, scheduler, cluster, t) = setup()
+            implicit val (cluster, t) = setup()
             t.start (settled (1, 2, 3))
             assertNone (t.deque())
           }
 
           "with the same cohort moving the same way, it should continue work" in {
-            implicit val (random, scheduler, cluster, t) = setup()
+            implicit val (cluster, t) = setup()
             t.start (moving (1, 2, 3) (1, 4, 5))
             assertTask (range (3, 7), 0 -> Set (5)) (t.deque())
             t.continue (7)
@@ -248,7 +246,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
           }
 
           "with the same cohort moving a different way, it should restart work" in {
-            implicit val (random, scheduler, cluster, t) = setup()
+            implicit val (cluster, t) = setup()
             t.start (moving (1, 2, 3) (1, 2, 6))
             assertTask (begin (0), 0 -> Set (6)) (t.deque())
             t.continue (Point.End)
@@ -256,7 +254,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
           }
 
           "with a different cohort moving, it should restart work" in {
-            implicit val (random, scheduler, cluster, t) = setup()
+            implicit val (cluster, t) = setup()
             t.start (
                 settled (1, 2, 3),
                 moving (1, 2, 3) (1, 2, 4))

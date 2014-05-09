@@ -1,6 +1,9 @@
 package com.treode.store
 
+import scala.util.Random
+
 import com.treode.async.Async
+import com.treode.async.stubs.StubScheduler
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{AsyncCaptor, AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
@@ -15,9 +18,9 @@ import StoreTestTools._
 
 class LibrarianSpec extends FlatSpec with AsyncChecks {
 
-  private class StubLibrarianHost (id: HostId, network: StubNetwork)
-  extends StubActiveHost (id, network) {
-    import network.{random, scheduler}
+  private class StubLibrarianHost (id: HostId) (implicit kit: StoreTestKit)
+  extends StubActiveHost (id) (kit.random, kit.scheduler, kit.network) {
+    import kit._
 
     implicit val cluster: Cluster = this
     implicit val library = new Library
@@ -74,22 +77,24 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
   }
 
   "It" should "work" in {
-    val network = StubNetwork()
-    val hs = network.install (10, new StubLibrarianHost (_, network))
+
+    implicit val kit = StoreTestKit()
+
+    val hs = kit.install (10, new StubLibrarianHost (_))
     val Seq (h0, h1, h2, h3) = hs take 4
 
     for (h1 <- hs; h2 <- hs)
       h1.hail (h2.localId, null)
     h0.issue (issuing (h0, h1, h2) (h0, h1, h3))
-    network.runTasks (count = 2000, timers = true)
+    kit.runTasks (count = 2000, timers = true)
     expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)
     h0.rebalancer.pass()
-    network.runTasks (count = 1000, timers = true)
+    kit.runTasks (count = 1000, timers = true)
     expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)
     h1.rebalancer.pass()
-    network.runTasks (count = 1000, timers = true)
+    kit.runTasks (count = 1000, timers = true)
     expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)
     h2.rebalancer.pass()
-    network.runTasks (count = 2000, timers = true)
+    kit.runTasks (count = 2000, timers = true)
     expectAtlas (3, settled (h0, h1, h3)) (hs)
   }}

@@ -1,9 +1,9 @@
 package com.treode.store.atomic
 
-import java.util.concurrent.TimeoutException
+import java.util.concurrent.Executors
 import scala.util.Random
 
-import com.treode.async.stubs.{AsyncChecks, CallbackCaptor}
+import com.treode.async.stubs.{AsyncChecks, CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.store._
@@ -18,16 +18,14 @@ import WriteOp._
 
 class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
-  def check (random: Random, mf: Double) {
+  def check (mf: Double) (implicit kit: StoreTestKit) {
+    import kit._
 
-    val kit = StubNetwork (random)
-    val hs = kit.install (3, new StubAtomicHost (_, kit))
+    val hs = kit.install (3, new StubAtomicHost (_))
     val Seq (h1, h2, h3) = hs
 
     for (h <- hs)
       h.setAtlas (settled (h1, h2, h3))
-
-    import kit.scheduler
 
     // Setup.
     val xid1 = TxId (random.nextLong, 0)
@@ -58,35 +56,34 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
   "The atomic implementation should" - {
 
-    behave like aStore { scheduler =>
-      val kit = StubNetwork (new Random (0), scheduler)
-      val hs = kit.install (3, new StubAtomicHost (_, kit))
+    behave like aStore { implicit kit =>
+      val hs = kit.install (3, new StubAtomicHost (_))
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
-      new TestableCluster (hs, kit)
+      new TestableCluster (hs)
     }
 
     behave like aMultithreadableStore (100) {
-      val kit = StubNetwork (Random, true)
-      val hs = kit.install (3, new StubAtomicHost (_, kit))
+      implicit val kit = StoreTestKit.multithreaded()
+      val hs = kit.install (3, new StubAtomicHost (_))
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
-      new TestableCluster (hs, kit)
+      new TestableCluster (hs)
     }
 
     "achieve consensus with" - {
 
       "stable hosts and a reliable network" taggedAs (Intensive, Periodic) in {
-        forAllSeeds (check (_, 0.0))
+        forAllSeeds (r => check (0.0) (StoreTestKit (r)))
       }}
 
     "rebalance" in {
-      val kit = StubNetwork()
+      implicit val kit = StoreTestKit()
       import kit.scheduler
 
-      val hs = kit.install (4, new StubAtomicHost (_, kit))
+      val hs = kit.install (4, new StubAtomicHost (_))
       val Seq (h1, h2, h3, h4) = hs
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId, null)

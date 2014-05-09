@@ -6,7 +6,7 @@ import scala.util.Random
 import com.treode.async.stubs.AsyncChecks
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
-import com.treode.store.{Bytes, CatalogDescriptor, StaleException}
+import com.treode.store.{Bytes, CatalogDescriptor, StaleException, StoreTestKit}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
@@ -41,7 +41,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
 
   // Propose two patches simultaneously, expect one choice.
   def check (
-      kit: StubNetwork,
+      kit: StoreTestKit,
       p1: StubCatalogHost,         // First host that will submit a proposal.
       p2: StubCatalogHost,         // Second host that will submit a proposal.
       as: Seq [StubCatalogHost],   // Hosts that we expect will accept.
@@ -75,8 +75,8 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       "stable hosts and a reliable network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
         forAllSeeds { random =>
-          val kit = StubNetwork (random)
-          val hs = kit.install (3, new StubCatalogHost (_, kit))
+          implicit val kit = StoreTestKit (random)
+          val hs = kit.install (3, new StubCatalogHost (_))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
@@ -88,8 +88,8 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
         forAllSeeds { random =>
-          val kit = StubNetwork (random)
-          val hs = kit.install (3, new StubCatalogHost (_, kit))
+          implicit val kit = StoreTestKit (random)
+          val hs = kit.install (3, new StubCatalogHost (_))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
@@ -101,8 +101,8 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
   "The kit should" - {
 
     def setup (random: Random = new Random (0)) = {
-      val kit = StubNetwork (random)
-      val hs = kit.install (3, new StubCatalogHost (_, kit))
+      implicit val kit = StoreTestKit (random)
+      val hs = kit.install (3, new StubCatalogHost (_))
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))

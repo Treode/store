@@ -10,7 +10,8 @@ import org.scalatest.FreeSpec
 
 class StubStoreSpec extends FreeSpec with StoreBehaviors {
 
-  private class TestableStubStore (implicit scheduler: Scheduler) extends TestableStore {
+  private class TestableStubStore (implicit kit: StoreTestKit) extends TestableStore {
+    import kit.scheduler
 
     private val delegate = new StubStore
 
@@ -26,10 +27,9 @@ class StubStoreSpec extends FreeSpec with StoreBehaviors {
 
   "The StubStore should" - {
 
-    behave like aStore (implicit scheduler => new TestableStubStore)
+    behave like aStore (implicit kit => new TestableStubStore)
 
     behave like aMultithreadableStore (10000) {
-      val executor = Executors.newScheduledThreadPool (4)
-      val scheduler = StubScheduler.multithreaded (executor)
-      new TestableStubStore () (scheduler)
+      implicit val kit = StoreTestKit.multithreaded()
+      new TestableStubStore
     }}}

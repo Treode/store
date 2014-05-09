@@ -16,9 +16,9 @@ import Callback.ignore
 import CatalogTestTools._
 import StubCatalogHost.{cat1, cat2}
 
-private class StubCatalogHost (id: HostId, network: StubNetwork)
-extends StubActiveHost (id, network) {
-  import network.{random, scheduler}
+private class StubCatalogHost (id: HostId) (implicit kit: StoreTestKit)
+extends StubActiveHost (id) (kit.random, kit.scheduler, kit.network) {
+  import kit._
 
   implicit val storeConfig = TestStoreConfig()
 

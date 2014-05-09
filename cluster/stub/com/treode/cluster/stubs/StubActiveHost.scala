@@ -7,8 +7,13 @@ import com.treode.async.Scheduler
 import com.treode.cluster._
 import com.treode.pickle.Pickler
 
-class StubActiveHost (val localId: HostId, network: StubNetwork) extends Cluster with StubHost {
-  import network.{random, scheduler}
+class StubActiveHost (
+    val localId: HostId
+) (implicit
+    random: Random,
+    scheduler: Scheduler,
+    network: StubNetwork
+) extends Cluster with StubHost {
 
   private val ports: PortRegistry =
     new PortRegistry

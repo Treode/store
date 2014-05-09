@@ -1,12 +1,14 @@
 package com.treode.store.atomic
 
+import scala.util.Random
+
 import com.treode.async.Async
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.store._
 
-private class TestableCluster (hosts: Seq [StubAtomicHost], network: StubNetwork)
+private class TestableCluster (hosts: Seq [StubAtomicHost]) (implicit kit: StoreTestKit)
 extends TestableStore {
-  import network.random
+  import kit.{random, scheduler}
 
   private def randomHost: StubAtomicHost =
     hosts (random.nextInt (hosts.size))

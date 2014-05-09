@@ -4,7 +4,7 @@ import com.treode.async.AsyncIterator
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
-import com.treode.store.{Bytes, Fruits, TableId, TxClock}
+import com.treode.store.{Bytes, Fruits, StoreTestKit, TableId, TxClock}
 import org.scalatest.FlatSpec
 
 import AtomicTestTools._
@@ -18,10 +18,11 @@ class ScanSpec extends FlatSpec {
     assertResult (expected) (actual.toSeq)
 
   "Scan" should "handle an empty table" in {
-    val kit = StubNetwork()
+
+    implicit val kit = StoreTestKit()
     import kit.scheduler
 
-    val hs = kit.install (3, new StubAtomicHost (_, kit))
+    val hs = kit.install (3, new StubAtomicHost (_))
     val Seq (h1, h2, h3) = hs
     for (h <- hs)
       h.setAtlas (settled (h1, h2, h3))
@@ -30,10 +31,11 @@ class ScanSpec extends FlatSpec {
   }
 
   it should "handle a filled table" in {
-    val kit = StubNetwork()
+
+    implicit val kit = StoreTestKit()
     import kit.scheduler
 
-    val hs = kit.install (3, new StubAtomicHost (_, kit))
+    val hs = kit.install (3, new StubAtomicHost (_))
     val Seq (h1, h2, h3) = hs
     for (h <- hs)
       h.setAtlas (settled (h1, h2, h3))

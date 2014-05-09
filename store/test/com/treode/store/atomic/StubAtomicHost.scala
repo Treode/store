@@ -4,6 +4,7 @@ import java.nio.file.Paths
 import scala.util.Random
 
 import com.treode.async.{Async, Callback}
+import com.treode.async.stubs.StubScheduler
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
@@ -18,9 +19,9 @@ import Assertions.assertResult
 import AtomicTestTools._
 import Callback.ignore
 
-private class StubAtomicHost (id: HostId, network: StubNetwork)
-extends StubActiveHost (id, network) {
-  import network.{random, scheduler}
+private class StubAtomicHost (id: HostId) (implicit kit: StoreTestKit)
+extends StubActiveHost (id) (kit.random, kit.scheduler, kit.network) {
+  import kit._
 
   implicit val cluster: Cluster = this
   implicit val library = new Library
