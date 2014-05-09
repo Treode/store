@@ -1,7 +1,6 @@
 package com.treode.disk.stubs
 
 import java.nio.file.{Path, Paths}
-import java.util.concurrent.ExecutorService
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.io.File
@@ -52,15 +51,9 @@ private class StubRecoveryAgent (
     delegate._attach ((Paths.get ("a"), disk.file, geom)) .map (new StubLaunchAgent (_))
   }
 
-  def _reattach (items: (Path, File)*): Async [Launch] = ???
+  def reattach (items: Path*): Async [Launch] =
     guard (throw new UnsupportedOperationException ("The StubDisks do not use files."))
 
-  def reattach (exec: ExecutorService, items: Path*): Async [Launch] =
-    guard (throw new UnsupportedOperationException ("The StubDisks do not use files."))
-
-  def _attach (items: (Path, File, DiskGeometry)*): Async [Launch] = ???
-    guard (throw new UnsupportedOperationException ("The StubDisks do not use files."))
-
-  def attach (exec: ExecutorService, items: (Path, DiskGeometry)*): Async [Launch] =
+  def attach (items: (Path, DiskGeometry)*): Async [Launch] =
     guard (throw new UnsupportedOperationException ("The StubDisks do not use files."))
 }

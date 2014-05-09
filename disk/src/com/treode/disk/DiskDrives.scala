@@ -1,7 +1,6 @@
 package com.treode.disk
 
 import java.nio.file.Path
-import java.util.concurrent.ExecutorService
 import scala.collection.immutable.Queue
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
@@ -91,7 +90,7 @@ private class DiskDrives (kit: DisksKit) {
         newDisks foreach (_.added())
       }}
 
-  def attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit] = {
+  def _attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit] = {
     queue.async { cb =>
       val attaching = items.map (_._1) .toSet
       require (!items.isEmpty, "Must list at least one file or device to attach.")
@@ -99,10 +98,10 @@ private class DiskDrives (kit: DisksKit) {
       attachreqs = attachreqs.enqueue (items, cb)
     }}
 
-  def attach (exec: ExecutorService, items: Seq [(Path, DiskGeometry)]): Async [Unit] =
+  def attach (items: Seq [(Path, DiskGeometry)]): Async [Unit] =
     guard {
       val files = items map (openFile (_))
-      attach (files)
+      _attach (files)
     }
 
   private def _detach (items: List [DiskDrive]): Option [Runnable] =

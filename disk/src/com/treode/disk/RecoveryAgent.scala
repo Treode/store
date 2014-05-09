@@ -1,8 +1,6 @@
 package com.treode.disk
 
 import java.nio.file.Path
-import java.util.ArrayList
-import java.util.concurrent.ExecutorService
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.implicits._
@@ -53,7 +51,7 @@ extends Disks.Recovery {
         new LaunchAgent (kit)
       }}
 
-  def attach (exec: ExecutorService, items: (Path, DiskGeometry)*): Async [Launch] =
+  def attach (items: (Path, DiskGeometry)*): Async [Launch] =
     guard {
       val files = items map (openFile (_))
       _attach (files: _*)
@@ -79,7 +77,7 @@ extends Disks.Recovery {
         new LaunchAgent (kit)
       }}
 
-  def reopen (exec: ExecutorService) (path: Path): Async [SuperBlocks] =
+  def reopen (path: Path): Async [SuperBlocks] =
     guard {
       val file = reopenFile (path)
       SuperBlocks.read (path, file)
@@ -118,6 +116,6 @@ extends Disks.Recovery {
         new LaunchAgent (kit)
       }}
 
-  def reattach (exec: ExecutorService, items: Path*): Async [Launch] =
-    _reattach (items) (reopen (exec) _)
+  def reattach (items: Path*): Async [Launch] =
+    _reattach (items) (reopen _)
 }

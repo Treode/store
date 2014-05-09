@@ -36,10 +36,10 @@ private object DiskTestTools {
     def assertDraining (paths: String*): Unit =
       disks.assertDraining (paths: _*)
 
-    def attachAndWait (items: AttachItem*) (implicit scheduler: StubScheduler): Async [Unit] =
-      agent._attach (items: _*)
+    def attachAndWait (items: AttachItem*): Async [Unit] =
+      disks.attachAndWait (items: _*)
 
-    def attachAndCapture (items: AttachItem*) (implicit scheduler: StubScheduler): CallbackCaptor [Unit] =
+    def attachAndCapture (items: AttachItem*): CallbackCaptor [Unit] =
       attachAndWait (items: _*) .capture
 
     def attachAndPass (items: AttachItem*) (implicit scheduler: StubScheduler) {
@@ -62,6 +62,9 @@ private object DiskTestTools {
   implicit class RichDisksAgent (disks: Disks) {
     val agent = disks.asInstanceOf [DisksAgent]
     import agent.kit.{disks => drives, checkpointer, compactor, config, logd, paged}
+
+    def attachAndWait (items: AttachItem*): Async [Unit] =
+      drives._attach (items)
 
     def assertDisks (paths: String*) {
       val expected = paths.map (Paths.get (_)) .toSet
@@ -89,8 +92,8 @@ private object DiskTestTools {
       assertResult (nreceivers) (paged.receivers.size)
     }
 
-    def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, grp: PageGroup)
-        (implicit scheduler: StubScheduler) {
+    def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, grp: PageGroup) (
+        implicit scheduler: StubScheduler) {
       val drive = drives.disks (pos.disk)
       val num = (pos.offset >> drive.geometry.segmentBits).toInt
       if (num == drive.pageSeg.num) {
@@ -167,10 +170,10 @@ private object DiskTestTools {
   implicit class RichRecovery (recovery: Disks.Recovery) {
     val agent = recovery.asInstanceOf [RecoveryAgent]
 
-    def attachAndWait (items: AttachItem*) (implicit scheduler: StubScheduler): Async [Launch] =
+    def attachAndWait (items: AttachItem*): Async [Launch] =
       agent._attach (items: _*)
 
-    def attachAndCapture (items: AttachItem*) (implicit scheduler: StubScheduler): CallbackCaptor [Launch] =
+    def attachAndCapture (items: AttachItem*): CallbackCaptor [Launch] =
       attachAndWait (items: _*) .capture()
 
     def attachAndControl (items: AttachItem*)  (
@@ -186,7 +189,7 @@ private object DiskTestTools {
       launch.disks
     }
 
-    def reattachAndWait (items: ReattachItem*) (implicit scheduler: StubScheduler): Async [Launch] =
+    def reattachAndWait (items: ReattachItem*): Async [Launch] =
       agent._reattach (items: _*)
 
     def reattachAndLaunch (items: ReattachItem*) (implicit scheduler: StubScheduler): Disks = {

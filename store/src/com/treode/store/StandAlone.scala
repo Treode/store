@@ -20,8 +20,8 @@ object StandAlone {
 
     implicit val store: Store = controller.store
 
-    def attach (items: Seq [(Path, DiskGeometry)]): Async [Unit] =
-      disks.attach (executor, items:_*)
+    def attach (items: (Path, DiskGeometry)*): Async [Unit] =
+      disks.attach (items:_*)
 
     def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
       cluster.hail (remoteId, remoteAddr)
@@ -44,7 +44,7 @@ object StandAlone {
       localAddr: SocketAddress,
       disksConfig: DisksConfig,
       storeConfig: StoreConfig,
-      items: Seq [(Path, DiskGeometry)]
+      items: (Path, DiskGeometry)*
   ): Async [Controller] = {
 
     val random = Random
@@ -60,7 +60,7 @@ object StandAlone {
     val _store = Store.recover () (random, scheduler, cluster, _disks, storeConfig)
 
     for {
-      launch <- _disks.attach (executor, items: _*)
+      launch <- _disks.attach (items: _*)
       store <- _store.launch (launch)
     } yield {
       new Controller (executor, cluster, launch.controller, store)
@@ -71,7 +71,7 @@ object StandAlone {
       localAddr: SocketAddress,
       disksConfig: DisksConfig,
       storeConfig: StoreConfig,
-      items: Seq [Path]
+      items: Path*
   ): Async [Controller] = {
 
     val random = Random
@@ -87,7 +87,7 @@ object StandAlone {
     val _store = Store.recover () (random, scheduler, cluster, _disks, storeConfig)
 
     for {
-      launch <- _disks.reattach (executor, items:_*)
+      launch <- _disks.reattach (items: _*)
       store <- _store.launch (launch)
     } yield {
       new Controller (executor, cluster, launch.controller, store)
