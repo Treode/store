@@ -68,7 +68,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
         var summary = new Summary
         forAllSeeds { random =>
           implicit val kit = StoreTestKit (random)
-          val hs = kit.install (3, new StubPaxosHost (_))
+          val hs = Seq.fill (3) (new StubPaxosHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
@@ -81,7 +81,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
         var summary = new Summary
         forAllSeeds { random =>
           implicit val kit = StoreTestKit (random)
-          val hs = kit.install (3, new StubPaxosHost (_))
+          val hs = Seq.fill (3) (new StubPaxosHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
@@ -96,7 +96,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
           implicit val kit = StoreTestKit (random)
           import kit.scheduler
 
-          val hs = kit.install (3, new StubPaxosHost (_))
+          val hs = Seq.fill (3) (new StubPaxosHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h1 <- hs; h2 <- hs)
             h1.hail (h2.localId, null)
@@ -111,9 +111,9 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
 
     "rebalance" in { pending
       implicit val kit = StoreTestKit ()
-      import kit.scheduler
+      import kit._
 
-      val hs = kit.install (4, new StubPaxosHost (_))
+      val hs = Seq.fill (4) (new StubPaxosHost (random.nextLong))
       val Seq (h1, h2, h3, h4) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))

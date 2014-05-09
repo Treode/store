@@ -7,7 +7,6 @@ import scala.util.Random
 import com.treode.async.Async
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.cluster.HostId
-import com.treode.cluster.stubs.StubHost
 import com.treode.disk.{CellId, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions
 
@@ -72,13 +71,13 @@ private trait StoreTestTools {
   def Get (id: TableId, key: Bytes): ReadOp =
     ReadOp (id, key)
 
-  def settled (hosts: StubHost*): Cohort =
+  def settled (hosts: StubStoreHost*): Cohort =
     Cohort.settled (hosts map (_.localId): _*)
 
-  def issuing (origin: StubHost*) (target: StubHost*): Cohort =
+  def issuing (origin: StubStoreHost*) (target: StubStoreHost*): Cohort =
     Cohort.issuing (origin map (_.localId): _*) (target map (_.localId): _*)
 
-  def moving (origin: StubHost*) (target: StubHost*): Cohort =
+  def moving (origin: StubStoreHost*) (target: StubStoreHost*): Cohort =
     Cohort.moving (origin map (_.localId): _*) (target map (_.localId): _*)
 }
 

@@ -6,7 +6,6 @@ import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.pickle.{Pickler, Picklers}
 import com.treode.store._
@@ -220,7 +219,7 @@ class BrokerProperties extends PropSpec with AsyncChecks {
   def checkUnity (random: Random, mf: Double) {
     implicit val kit = StoreTestKit (random)
     kit.messageFlakiness = mf
-    val hs = kit.install (3, new StubCatalogHost (_))
+    val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
     for (h1 <- hs; h2 <- hs)
       h1.hail (h2.localId, null)
     kit.runTasks()

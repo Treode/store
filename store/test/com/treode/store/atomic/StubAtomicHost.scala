@@ -8,7 +8,6 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store._
 import com.treode.store.catalog.Catalogs
@@ -20,10 +19,9 @@ import AtomicTestTools._
 import Callback.ignore
 
 private class StubAtomicHost (id: HostId) (implicit kit: StoreTestKit)
-extends StubActiveHost (id) (kit.random, kit.scheduler, kit.network) {
+extends StubStoreHost (id) {
   import kit._
 
-  implicit val cluster: Cluster = this
   implicit val library = new Library
 
   implicit val storeConfig = TestStoreConfig()
@@ -52,6 +50,8 @@ extends StubActiveHost (id) (kit.random, kit.scheduler, kit.network) {
   implicit val (disks, catalogs, atomic) = captor.passed
 
   val librarian = new Librarian (atomic.rebalance _)
+
+  cluster.startup()
 
   def setAtlas (cohorts: Cohort*) {
     val version = library.atlas.version + 1

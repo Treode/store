@@ -7,13 +7,13 @@ import com.treode.async.Scheduler
 import com.treode.cluster._
 import com.treode.pickle.Pickler
 
-class StubActiveHost (
+class StubCluster (
     val localId: HostId
 ) (implicit
     random: Random,
     scheduler: Scheduler,
     network: StubNetwork
-) extends Cluster with StubHost {
+) extends Cluster {
 
   private val ports: PortRegistry =
     new PortRegistry
@@ -24,7 +24,8 @@ class StubActiveHost (
   private val scuttlebutt: Scuttlebutt =
     new Scuttlebutt (localId, peers)
 
-  scuttlebutt.attach (this)
+  private [stubs] def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M): Unit =
+    ports.deliver (p, peers.get (from), port, msg)
 
   def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
     ports.listen (desc.pmsg, desc.id) (f)
@@ -35,7 +36,10 @@ class StubActiveHost (
   def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
     peers.get (remoteId) .address = remoteAddr
 
-  def startup(): Unit = ()
+  def startup() {
+    scuttlebutt.attach (this)
+    network.install (this)
+  }
 
   def peer (id: HostId): Peer =
     peers.get (id)
@@ -48,7 +52,4 @@ class StubActiveHost (
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
     scuttlebutt.spread (desc) (msg)
-
-  def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M): Unit =
-    ports.deliver (p, peers.get (from), port, msg)
 }

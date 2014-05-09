@@ -76,7 +76,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
         var summary = new Summary
         forAllSeeds { random =>
           implicit val kit = StoreTestKit (random)
-          val hs = kit.install (3, new StubCatalogHost (_))
+          val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
@@ -89,7 +89,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
         var summary = new Summary
         forAllSeeds { random =>
           implicit val kit = StoreTestKit (random)
-          val hs = kit.install (3, new StubCatalogHost (_))
+          val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
@@ -102,7 +102,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
 
     def setup (random: Random = new Random (0)) = {
       implicit val kit = StoreTestKit (random)
-      val hs = kit.install (3, new StubCatalogHost (_))
+      val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))

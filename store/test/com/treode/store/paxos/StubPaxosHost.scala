@@ -1,24 +1,20 @@
 package com.treode.store.paxos
 
-import java.nio.file.Paths
-
 import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.cluster.stubs.{StubActiveHost, StubHost, StubNetwork}
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
-import com.treode.store.{Atlas, Cohort, Library, StoreTestKit}
+import com.treode.store.{Atlas, Cohort, Library, StoreTestKit, StubStoreHost}
 import com.treode.store.catalog.Catalogs
 
 import Async.guard
 import PaxosTestTools._
 
 private class StubPaxosHost (id: HostId) (implicit kit: StoreTestKit)
-extends StubActiveHost (id) (kit.random, kit.scheduler, kit.network) {
+extends StubStoreHost (id) {
   import kit._
 
-  implicit val cluster: Cluster = this
   implicit val library = new Library
 
   implicit val storeConfig = TestStoreConfig()
@@ -48,6 +44,8 @@ extends StubActiveHost (id) (kit.random, kit.scheduler, kit.network) {
     library.atlas = atlas
     library.residents = atlas.residents (localId)
   }
+
+  cluster.startup()
 
   def setAtlas (cohorts: Cohort*) {
     val _cohorts = Atlas (cohorts.toArray, 1)

@@ -8,7 +8,6 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{AsyncCaptor, AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store.catalog.Catalogs
 import org.scalatest.FlatSpec
@@ -19,10 +18,9 @@ import StoreTestTools._
 class LibrarianSpec extends FlatSpec with AsyncChecks {
 
   private class StubLibrarianHost (id: HostId) (implicit kit: StoreTestKit)
-  extends StubActiveHost (id) (kit.random, kit.scheduler, kit.network) {
+  extends StubStoreHost (id) {
     import kit._
 
-    implicit val cluster: Cluster = this
     implicit val library = new Library
 
     implicit val storeConfig = TestStoreConfig()
@@ -56,6 +54,8 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
 
     val librarian = new Librarian (rebalance _)
 
+    cluster.startup()
+
     def issue (cohorts: Cohort*) {
       val version = library.atlas.version + 1
       val atlas = Atlas (cohorts.toArray, version)
@@ -79,8 +79,9 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
   "It" should "work" in {
 
     implicit val kit = StoreTestKit()
+    import kit.random
 
-    val hs = kit.install (10, new StubLibrarianHost (_))
+    val hs = Seq.fill (10) (new StubLibrarianHost (random.nextLong))
     val Seq (h0, h1, h2, h3) = hs take 4
 
     for (h1 <- hs; h2 <- hs)

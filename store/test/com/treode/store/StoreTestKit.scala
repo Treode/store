@@ -5,7 +5,7 @@ import scala.util.Random
 
 import com.treode.async.stubs.StubScheduler
 import com.treode.cluster.HostId
-import com.treode.cluster.stubs.{StubHost, StubNetwork}
+import com.treode.cluster.stubs.StubNetwork
 
 class StoreTestKit private (implicit
     val random: Random,
@@ -17,9 +17,6 @@ class StoreTestKit private (implicit
 
   def messageFlakiness_= (v: Double): Unit =
     network.messageFlakiness = v
-
-  def install [H <: StubHost] (n: Int, mk: HostId => H): Seq [H] =
-    network.install(n, mk)
 
   def runTasks (timers: Boolean = false, count: Int = Int.MaxValue): Unit =
     scheduler.runTasks (timers, count)

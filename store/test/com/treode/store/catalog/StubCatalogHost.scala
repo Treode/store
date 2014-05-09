@@ -6,7 +6,6 @@ import com.treode.async.{Async, Callback}
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.cluster.stubs.{StubActiveHost, StubHost, StubNetwork}
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store._
 import org.scalatest.Assertions
@@ -17,14 +16,12 @@ import CatalogTestTools._
 import StubCatalogHost.{cat1, cat2}
 
 private class StubCatalogHost (id: HostId) (implicit kit: StoreTestKit)
-extends StubActiveHost (id) (kit.random, kit.scheduler, kit.network) {
+extends StubStoreHost (id) {
   import kit._
 
-  implicit val storeConfig = TestStoreConfig()
-
-  implicit val cluster: Cluster = this
   implicit val library = new Library
 
+  implicit val storeConfig = TestStoreConfig()
   implicit val recovery = StubDisks.recover()
   implicit val _catalogs = Catalogs.recover()
 
@@ -51,6 +48,8 @@ extends StubActiveHost (id) (kit.random, kit.scheduler, kit.network) {
   implicit val (disks, catalogs) = captor.passed
 
   val acceptors = catalogs.acceptors
+
+  cluster.startup()
 
   def setAtlas (cohorts: Cohort*) {
     val atlas = Atlas (cohorts.toArray, 1)

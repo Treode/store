@@ -8,7 +8,7 @@ import com.treode.async.io.Socket
 import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.buffer.PagedBuffer
-import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
+import com.treode.cluster.stubs.{StubCluster, StubNetwork}
 import com.treode.pickle.{Pickler, Picklers, PicklerRegistry}
 import org.scalatest.{FreeSpec, PropSpec, Suites}
 
@@ -200,29 +200,37 @@ class ScuttlebuttProperties extends PropSpec with AsyncChecks {
     ((host, rumor.id), msg)
 
   class StubHost (
-      id: HostId
+      val localId: HostId
    ) (implicit
        random: Random,
        scheduler: Scheduler,
        network: StubNetwork
-   ) extends StubActiveHost (id) {
+   ) {
 
-    implicit val cluster: Cluster = this
+    implicit val cluster = new StubCluster (localId)
 
     var heard = Map.empty [(HostId, RumorId), Int]
 
     r1.listen ((v, from) => heard += entry (from.id, r1, v))
     r2.listen ((v, from) => heard += entry (from.id, r2, v))
     r3.listen ((v, from) => heard += entry (from.id, r3, v))
+
+    cluster.startup()
+
+    def hail (remoteId: HostId): Unit =
+      cluster.hail (remoteId, null)
+
+    def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
+      cluster.spread (desc) (msg)
   }
 
   def checkUnity (mf: Double) (implicit random: Random) {
     implicit val scheduler = StubScheduler.random (random)
     implicit val network = StubNetwork (random)
     network.messageFlakiness = mf
-    val hs = network.install (3, new StubHost (_))
+    val hs = Seq.fill (3) (new StubHost (random.nextLong))
     for (h1 <- hs; h2 <- hs)
-      h1.hail (h2.localId, null)
+      h1.hail (h2.localId)
     scheduler.runTasks()
 
     val Seq (h1, h2, h3) = hs

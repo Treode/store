@@ -21,7 +21,7 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
   def check (mf: Double) (implicit kit: StoreTestKit) {
     import kit._
 
-    val hs = kit.install (3, new StubAtomicHost (_))
+    val hs = Seq.fill (3) (new StubAtomicHost (random.nextLong))
     val Seq (h1, h2, h3) = hs
 
     for (h <- hs)
@@ -57,7 +57,8 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
   "The atomic implementation should" - {
 
     behave like aStore { implicit kit =>
-      val hs = kit.install (3, new StubAtomicHost (_))
+      import kit.random
+      val hs = Seq.fill (3) (new StubAtomicHost (random.nextLong))
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -66,7 +67,8 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
     behave like aMultithreadableStore (100) {
       implicit val kit = StoreTestKit.multithreaded()
-      val hs = kit.install (3, new StubAtomicHost (_))
+      import kit.random
+      val hs = Seq.fill (3) (new StubAtomicHost (random.nextLong))
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -81,9 +83,9 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
     "rebalance" in {
       implicit val kit = StoreTestKit()
-      import kit.scheduler
+      import kit.{random, scheduler}
 
-      val hs = kit.install (4, new StubAtomicHost (_))
+      val hs = Seq.fill (4) (new StubAtomicHost (random.nextLong))
       val Seq (h1, h2, h3, h4) = hs
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId, null)
