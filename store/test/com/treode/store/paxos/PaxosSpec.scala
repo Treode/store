@@ -67,7 +67,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       "stable hosts and a reliable network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
         forAllSeeds { random =>
-          implicit val kit = StoreTestKit (random)
+          implicit val kit = StoreTestKit.random (random)
           val hs = Seq.fill (3) (new StubPaxosHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
@@ -80,7 +80,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
         forAllSeeds { random =>
-          implicit val kit = StoreTestKit (random)
+          implicit val kit = StoreTestKit.random (random)
           val hs = Seq.fill (3) (new StubPaxosHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
@@ -93,7 +93,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       "atlas distributed by catalogs" in {
         var summary = new Summary
         forAllSeeds { random =>
-          implicit val kit = StoreTestKit (random)
+          implicit val kit = StoreTestKit.random (random)
           import kit.scheduler
 
           val hs = Seq.fill (3) (new StubPaxosHost (random.nextLong))
@@ -110,7 +110,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       }}
 
     "rebalance" in { pending
-      implicit val kit = StoreTestKit ()
+      implicit val kit = StoreTestKit.random ()
       import kit._
 
       val hs = Seq.fill (4) (new StubPaxosHost (random.nextLong))

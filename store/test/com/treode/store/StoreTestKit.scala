@@ -18,24 +18,22 @@ class StoreTestKit private (implicit
   def messageFlakiness_= (v: Double): Unit =
     network.messageFlakiness = v
 
-  def runTasks (timers: Boolean = false, count: Int = Int.MaxValue): Unit =
+  def runTasks (timers: Boolean = false, count: Int = Int.MaxValue): Int =
     scheduler.runTasks (timers, count)
 }
 
 object StoreTestKit {
 
-  def apply (random: Random): StoreTestKit = {
+  def random(): StoreTestKit =
+    random (new Random (0))
+
+  def random (random: Random): StoreTestKit = {
     val scheduler = StubScheduler.random (random)
     val network = StubNetwork (random)
     new StoreTestKit () (random, scheduler, network)
   }
 
-  def apply(): StoreTestKit =
-    apply (new Random (0))
-
-  def multithreaded(): StoreTestKit = {
-    val executor = Executors.newScheduledThreadPool (8)
-    val scheduler = StubScheduler.multithreaded (executor)
+  def multithreaded (scheduler: StubScheduler): StoreTestKit = {
     val network = StubNetwork (Random)
     new StoreTestKit () (Random, scheduler, network)
   }}

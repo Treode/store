@@ -8,7 +8,6 @@ import com.treode.async.Scheduler
 trait StubScheduler extends Scheduler {
 
   def runTasks (timers: Boolean = false, count: Int = Int.MaxValue): Int
-  def shutdown (timeout: Long)
 }
 
 object StubScheduler {

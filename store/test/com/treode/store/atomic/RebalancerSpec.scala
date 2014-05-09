@@ -56,7 +56,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
   "Deriving targets from cohorts should" - {
 
     def setup() = {
-      implicit val kit = StoreTestKit()
+      implicit val kit = StoreTestKit.random()
       import kit._
       implicit val cluster = new StubCluster (0)
       cluster
@@ -103,7 +103,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
       "no work underway and" - {
 
         def setup() = {
-          implicit val kit = StoreTestKit()
+          implicit val kit = StoreTestKit.random()
           import kit._
           implicit val cluster = new StubCluster (0)
           val tracker = new RichTracker
@@ -138,7 +138,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
       "no work underway and" - {
 
         def setup() = {
-          implicit val kit = StoreTestKit()
+          implicit val kit = StoreTestKit.random()
           import kit._
           implicit val cluster = new StubCluster (0)
           val t = new RichTracker
@@ -205,7 +205,7 @@ class RebalancerSpec extends FreeSpec with ShouldMatchers {
       "no work underway and" - {
 
         def setup() = {
-          implicit val kit = StoreTestKit()
+          implicit val kit = StoreTestKit.random()
           import kit._
           implicit val cluster = new StubCluster (0)
           val t = new RichTracker

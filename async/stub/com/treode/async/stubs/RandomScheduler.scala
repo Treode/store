@@ -47,9 +47,4 @@ private class RandomScheduler (random: Random) extends StubScheduler {
       time += 1
     }
     n
-  }
-
-  def shutdown (timeout: Long) {
-    tasks.clear()
-    timers.clear()
   }}

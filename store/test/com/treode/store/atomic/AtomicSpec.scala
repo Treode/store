@@ -65,8 +65,7 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
       new TestableCluster (hs)
     }
 
-    behave like aMultithreadableStore (100) {
-      implicit val kit = StoreTestKit.multithreaded()
+    behave like aMultithreadableStore (100) { implicit kit =>
       import kit.{random, scheduler, network}
       val hs = Seq.fill (3) (StubAtomicHost .install() .await)
       val Seq (h1, h2, h3) = hs
@@ -78,11 +77,11 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
     "achieve consensus with" - {
 
       "stable hosts and a reliable network" taggedAs (Intensive, Periodic) in {
-        forAllSeeds (r => check (0.0) (StoreTestKit (r)))
+        forAllSeeds (r => check (0.0) (StoreTestKit.random (r)))
       }}
 
     "rebalance" in {
-      implicit val kit = StoreTestKit()
+      implicit val kit = StoreTestKit.random()
       import kit.{random, scheduler}
 
       val hs = Seq.fill (4) (StubAtomicHost .install() .pass)

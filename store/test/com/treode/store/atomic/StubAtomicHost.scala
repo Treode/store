@@ -23,7 +23,6 @@ private class StubAtomicHost (
     val random: Random,
     val scheduler: Scheduler,
     val cluster: Cluster,
-    val network: StubNetwork,
     val disks: Disks,
     val library: Library,
     val catalogs: Catalogs,
@@ -100,15 +99,9 @@ private object StubAtomicHost {
       atomic <- _atomic.launch (launch, paxos) .map (_.asInstanceOf [AtomicKit])
     } yield {
       launch.launch()
-      new StubAtomicHost (id) (random, scheduler, cluster, network, launch.disks, library, catalogs, atomic)
+      new StubAtomicHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, atomic)
     }}
 
-  def install (id: HostId, drive: StubDiskDrive) (implicit kit: StoreTestKit): Async [StubAtomicHost] =
-    boot (id, drive, true)
-
   def install () (implicit kit: StoreTestKit): Async [StubAtomicHost] =
-    install (kit.random.nextLong, new StubDiskDrive)
-
-  def reboot (id: HostId, drive: StubDiskDrive) (implicit kit: StoreTestKit): Async [StubAtomicHost] =
-    boot (id, drive, false)
+    boot (kit.random.nextLong, new StubDiskDrive, true)
 }

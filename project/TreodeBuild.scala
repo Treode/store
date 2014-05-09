@@ -50,13 +50,13 @@ object TreodeBuild extends Build {
     EclipseKeys.configurations := Set (Compile, Test),
 
     testOptions in Test := Seq (
-      Tests.Argument ("-l", "com.treode.tags.Intensive")),
+      Tests.Argument ("-l", "com.treode.tags.Intensive", "-oDF")),
 
     testOptions in IntensiveTest := Seq (
-      Tests.Argument ("-n", "com.treode.tags.Intensive")),
+      Tests.Argument ("-n", "com.treode.tags.Intensive", "-oDF")),
 
     testOptions in PeriodicTest := Seq (
-      Tests.Argument ("-n", "com.treode.tags.Periodic")),
+      Tests.Argument ("-n", "com.treode.tags.Periodic", "-oDF")),
 
     unmanagedSourceDirectories in Test <<=
       (baseDirectory ((base: File) => Seq (base / "test"))),
@@ -89,13 +89,13 @@ object TreodeBuild extends Build {
     EclipseKeys.configurations := Set (Compile, Stub, TestWithStub),
 
     testOptions in TestWithStub := Seq (
-      Tests.Argument ("-l", "com.treode.tags.Intensive")),
+      Tests.Argument ("-l", "com.treode.tags.Intensive", "-oDF")),
 
     testOptions in IntensiveTestWithStub := Seq (
-      Tests.Argument ("-n", "com.treode.tags.Intensive")),
+      Tests.Argument ("-n", "com.treode.tags.Intensive", "-oDF")),
 
     testOptions in PeriodicTestWithStub := Seq (
-      Tests.Argument ("-n", "com.treode.tags.Periodic")),
+      Tests.Argument ("-n", "com.treode.tags.Periodic", "-oDF")),
 
     unmanagedSourceDirectories in Stub <<=
       (baseDirectory ((base: File) => Seq (base / "stub"))),

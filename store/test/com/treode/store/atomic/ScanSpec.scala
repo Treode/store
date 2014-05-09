@@ -19,7 +19,7 @@ class ScanSpec extends FlatSpec {
 
   "Scan" should "handle an empty table" in {
 
-    implicit val kit = StoreTestKit()
+    implicit val kit = StoreTestKit.random()
     import kit.{random, scheduler}
 
     val hs = Seq.fill (3) (StubAtomicHost .install() .pass)
@@ -32,7 +32,7 @@ class ScanSpec extends FlatSpec {
 
   it should "handle a filled table" in {
 
-    implicit val kit = StoreTestKit()
+    implicit val kit = StoreTestKit.random()
     import kit.{random, scheduler}
 
     val hs = Seq.fill (3) (StubAtomicHost .install() .pass)

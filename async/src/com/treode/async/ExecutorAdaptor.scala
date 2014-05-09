@@ -16,8 +16,4 @@ private class ExecutorAdaptor (executor: ScheduledExecutorService) extends Sched
       executor.execute (task)
     else
       executor.schedule (task, millis - t, TimeUnit.MILLISECONDS)
-  }
-
-  def spawn (task: Runnable): Unit =
-    executor.execute (task)
-}
+  }}

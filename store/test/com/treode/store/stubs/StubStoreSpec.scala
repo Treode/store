@@ -4,11 +4,11 @@ import java.util.concurrent.Executors
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.store._
 import org.scalatest.FreeSpec
 
-class StubStoreSpec extends FreeSpec with StoreBehaviors {
+class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
 
   private class TestableStubStore (implicit kit: StoreTestKit) extends TestableStore {
     import kit.scheduler
@@ -29,7 +29,6 @@ class StubStoreSpec extends FreeSpec with StoreBehaviors {
 
     behave like aStore (implicit kit => new TestableStubStore)
 
-    behave like aMultithreadableStore (10000) {
-      implicit val kit = StoreTestKit.multithreaded()
+    behave like aMultithreadableStore (10000) { implicit kit =>
       new TestableStubStore
     }}}

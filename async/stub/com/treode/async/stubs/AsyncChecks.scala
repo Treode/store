@@ -1,7 +1,9 @@
 package com.treode.async.stubs
 
+import java.util.concurrent.Executors
 import scala.util.Random
 
+import com.treode.async.Scheduler
 import org.scalatest.{Informing, ParallelTestExecution, Suite}
 import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.time.SpanSugar
@@ -49,4 +51,17 @@ trait AsyncChecks extends ParallelTestExecution with TimeLimitedTests {
   def forAllSeeds (test: Random => Any) {
     for (_ <- 0 until nseeds)
       forSeed (Random.nextLong) (test)
-  }}
+  }
+
+  /** Run the test with a multithreaded scheduler, and then shutdown the underlying executor after
+    * the test completes.
+    */
+  def multithreaded (test: StubScheduler => Any) {
+    val processors = Runtime.getRuntime.availableProcessors
+    val threads = if (processors < 8) 4 else 8
+    val executor = Executors.newScheduledThreadPool (threads)
+    try {
+      test (StubScheduler.multithreaded (executor))
+    } finally {
+      executor.shutdown()
+    }}}

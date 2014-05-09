@@ -25,9 +25,6 @@ trait Scheduler extends Executor {
   def execute [A] (f: A => Any, v: A): Unit =
     execute (toRunnable (f, v))
 
-  def execute [A] (cb: Callback [A], v: Try [A]): Unit =
-    execute (toRunnable (cb, v))
-
   def delay (millis: Long) (task: => Any): Unit =
     delay (millis, toRunnable (task))
 
@@ -102,16 +99,6 @@ object Scheduler {
       def run() =
         try {
           f (v)
-        } catch {
-          case t: NonLocalReturnControl [_] => ()
-          case t: CallbackException => throw t.getCause
-        }}
-
-  def toRunnable [A] (cb: Callback [A], v: Try [A]): Runnable =
-    new Runnable {
-      def run() =
-        try {
-          cb (v)
         } catch {
           case t: NonLocalReturnControl [_] => ()
           case t: CallbackException => throw t.getCause

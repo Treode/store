@@ -81,7 +81,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
 
   "It" should "work" in {
 
-    implicit val kit = StoreTestKit()
+    implicit val kit = StoreTestKit.random()
     import kit.random
 
     val hs = Seq.fill (10) (new StubLibrarianHost (random.nextLong))

@@ -5,7 +5,7 @@ import java.util.concurrent.Executors
 import scala.collection.JavaConversions
 import scala.util.Random
 
-import com.treode.async.Async
+import com.treode.async.{Async, Scheduler}
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
@@ -235,21 +235,21 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       }}
 
     "when multithreaded" taggedAs (Intensive, Periodic) in {
+      multithreaded { implicit scheduler =>
 
-      implicit val config = TestDisksConfig (checkpointEntries = 1000, cleaningFrequency = 3)
-      val geometry = TestDiskGeometry()
-      val tracker = new LogTracker
+        implicit val config = TestDisksConfig (checkpointEntries = 1000, cleaningFrequency = 3)
+        val geometry = TestDiskGeometry()
+        val tracker = new LogTracker
 
-      implicit val random = Random
-      implicit val scheduler = StubScheduler.multithreaded (Executors.newScheduledThreadPool (8))
-      val file = StubFile (1<<20)
-      implicit val recovery = Disks.recover()
-      implicit val launch = recovery.attachAndWait (("a", file, geometry)) .await()
-      import launch.disks
-      tracker.attach (launch)
-      launch.launch()
-      tracker.batches (80, 100000, 10) .await()
-    }}
+        implicit val random = Random
+        val file = StubFile (1<<20)
+        implicit val recovery = Disks.recover()
+        implicit val launch = recovery.attachAndWait (("a", file, geometry)) .await()
+        import launch.disks
+        tracker.attach (launch)
+        launch.launch()
+        tracker.batches (80, 100000, 10) .await()
+      }}}
 
   "The pager should read and write" - {
 
@@ -483,7 +483,7 @@ object DiskSystemSpec {
         put (round, k, random.nextInt (1<<20))
 
     def batches (nkeys: Int, nbatches: Int, nputs: Int, start: Int = 0) (
-        implicit random: Random, scheduler: StubScheduler, disks: Disks): Async [Unit] =
+        implicit random: Random, scheduler: Scheduler, disks: Disks): Async [Unit] =
       for {
         n <- (0 until nbatches) .async
         k <- random.nextInts (nputs, nkeys) .latch.unit
