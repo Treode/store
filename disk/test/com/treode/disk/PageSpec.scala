@@ -38,62 +38,65 @@ class PageSpec extends FreeSpec {
 
     "fetch after write and recovery" in {
 
-      val disk = new StubFile () (null)
+      var file: StubFile = null
       var pos = Position (0, 0, 0)
 
       {
         implicit val scheduler = StubScheduler.random()
-        implicit val disks = setup (disk)
+        file = StubFile()
+        implicit val disks = setup (file)
         pos = pagers.str.write (0, 0, "one") .pass
         pagers.str.fetch (pos) .expect ("one")
       }
 
       {
         implicit val scheduler = StubScheduler.random()
-        implicit val disks = recover (disk)
+        file = StubFile (file.data)
+        implicit val disks = recover (file)
         pagers.str.fetch (pos) .expect ("one")
       }}
 
     "read from the cache after write" in {
 
-      val disk = new StubFile () (null)
+      var file: StubFile = null
       var pos = Position (0, 0, 0)
 
       {
         implicit val scheduler = StubScheduler.random()
-        implicit val disks = setup (disk)
+        file = StubFile()
+        implicit val disks = setup (file)
         pos = pagers.str.write (0, 0, "one") .pass
-        disk.stop = true
+        file.stop = true
         pagers.str.read (pos) .expect ("one")
       }}
 
     "read from the cache after a first read" in {
 
-      val disk = new StubFile () (null)
+      var file: StubFile = null
       var pos = Position (0, 0, 0)
 
       {
         implicit val scheduler = StubScheduler.random()
-        implicit val disks = setup (disk)
+        file = StubFile()
+        implicit val disks = setup (file)
         pos = pagers.str.write (0, 0, "one") .pass
       }
 
       {
         implicit val scheduler = StubScheduler.random()
-        implicit val disks = recover (disk)
+        file = StubFile (file.data)
+        implicit val disks = recover (file)
         pagers.str.read (pos) .expect ("one")
-        disk.stop = true
+        file.stop = true
         pagers.str.read (pos) .expect ("one")
       }}
 
     "reject a large page" in {
 
-      val disk = new StubFile () (null)
-      var pos = Position (0, 0, 0)
-
       {
         implicit val scheduler = StubScheduler.random()
-        implicit val disks = setup (disk)
+        val file = StubFile()
+        implicit val disks = setup (file)
         pagers.stuff.write (0, 0, Stuff (0, 1000)) .fail [OversizedPageException]
       }}}
 
@@ -103,9 +106,9 @@ class PageSpec extends FreeSpec {
 
       implicit val random = new Random (0)
       implicit val scheduler = StubScheduler.random (random)
-      val disk = new StubFile
+      val file = StubFile()
       val recovery = Disks.recover()
-      implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+      implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       for (i <- 0 until 40)
         pagers.stuff.write (0, 0, Stuff (random.nextLong)) .pass
       disks.clean()
@@ -117,9 +120,9 @@ class PageSpec extends FreeSpec {
 
       implicit val random = new Random (0)
       implicit val scheduler = StubScheduler.random (random)
-      val disk = new StubFile
+      val file = StubFile()
       val recovery = Disks.recover()
-      implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
+      implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
       import launch.disks
       pagers.stuff.handle (new PageHandler [Int] {
         def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
@@ -140,9 +143,9 @@ class PageSpec extends FreeSpec {
 
       implicit val random = new Random (0)
       implicit val scheduler = StubScheduler.random (random)
-      val disk = new StubFile
+      val file = StubFile()
       val recovery = Disks.recover()
-      implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
+      implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
       import launch.disks
       pagers.stuff.handle (new PageHandler [Int] {
         def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =

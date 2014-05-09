@@ -4,9 +4,9 @@ import java.io.EOFException
 import java.util.{Arrays, ArrayDeque}
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, Callback}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
-import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
+import com.treode.async.stubs.CallbackCaptor
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
@@ -22,12 +22,13 @@ import Async.async
   * for capturing calls to `flush` and `fill` should be used only with the single-threaded
   * [[com.treode.async.stubs.StubScheduler StubScheduler]].
   */
-class StubFile (size: Int = 0) (implicit _scheduler: StubScheduler) extends File (null) {
+class StubFile private (
+    var data: Array [Byte]
+) (implicit
+    scheduler: Scheduler
+) extends File (null) {
 
-  private var data = new Array [Byte] (size)
   private var stack = new ArrayDeque [Callback [Unit]]
-
-  var scheduler: StubScheduler = _scheduler
 
   /** If true, the next call to `flush` or `fill` will be captured and push on a stack. */
   var stop: Boolean = false
@@ -96,4 +97,16 @@ class StubFile (size: Int = 0) (implicit _scheduler: StubScheduler) extends File
     closed = true
 
   override def toString = s"StubFile(size=${data.length})"
+}
+
+object StubFile {
+
+  def apply (data: Array [Byte]) (implicit scheduler: Scheduler): StubFile =
+    new StubFile (data)
+
+  def apply (size: Int) (implicit scheduler: Scheduler): StubFile =
+    new StubFile (new Array (size))
+
+  def apply () (implicit scheduler: Scheduler): StubFile =
+    new StubFile (new Array (0))
 }

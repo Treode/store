@@ -155,7 +155,7 @@ class SynthTableSpec extends FreeSpec {
     "only empty tiers, it should" - {
 
       def setup () (implicit scheduler: StubScheduler): SynthTable = {
-        val disk = new StubFile
+        val disk = StubFile()
         val table = mkTable (disk)
         assert (table.primary.isEmpty)
         assert (table.secondary.isEmpty)
@@ -202,7 +202,7 @@ class SynthTableSpec extends FreeSpec {
     "a non-empty primary tier, it should" - {
 
       def setup () (implicit scheduler: StubScheduler): SynthTable = {
-        val disk = new StubFile
+        val disk = StubFile()
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
         assert (!table.primary.isEmpty)
@@ -219,7 +219,7 @@ class SynthTableSpec extends FreeSpec {
     "a non-empty secondary tier, it should" - {
 
       def setup () (implicit scheduler: StubScheduler) = {
-        val disk = new StubFile
+        val disk = StubFile()
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
         disk.stop = true
@@ -241,7 +241,7 @@ class SynthTableSpec extends FreeSpec {
     "a non-empty primary and secondary tier, it should" - {
 
       def setup () (implicit scheduler: StubScheduler) = {
-        val disk = new StubFile
+        val disk = StubFile()
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2)
         disk.stop = true
@@ -264,7 +264,7 @@ class SynthTableSpec extends FreeSpec {
     "non-empty tertiary tiers, it should" - {
 
       def setup () (implicit scheduler: StubScheduler): SynthTable = {
-        val disk = new StubFile
+        val disk = StubFile()
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
         table.checkpoint() .pass
@@ -282,7 +282,7 @@ class SynthTableSpec extends FreeSpec {
     "non-empty primary and tertiary tiers, it should" - {
 
       def setup () (implicit scheduler: StubScheduler): SynthTable = {
-        val disk = new StubFile
+        val disk = StubFile()
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2)
         table.checkpoint() .pass

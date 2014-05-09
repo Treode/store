@@ -28,7 +28,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
     implicit val recovery = Disks.recover()
     implicit val _catalogs = Catalogs.recover()
 
-    val file = new StubFile
+    val file = StubFile (1<<20)
     val geometry = TestDiskGeometry()
 
     val _launch =

@@ -28,7 +28,7 @@ extends StubActiveHost (id, network) {
   implicit val _catalogs = Catalogs.recover()
   val _paxos = Paxos.recover()
 
-  val file = new StubFile
+  val file = StubFile (1<<20)
   val geometry = TestDiskGeometry()
 
   val _launch =

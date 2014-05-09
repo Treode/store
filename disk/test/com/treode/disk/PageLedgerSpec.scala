@@ -26,7 +26,7 @@ class PageLedgerSpec extends FlatSpec {
     val buf = PagedBuffer (12)
     for (i <- 0 until 1024)
       buf.writeInt (i)
-    val file = new StubFile (1<<12)
+    val file = StubFile (1<<12)
     file.flush (buf, 0) .pass
 
     // Check that the write throws an exception.

@@ -29,116 +29,127 @@ class LogSpec extends FlatSpec with CrashChecks {
 
   "The logger" should "replay zero items" in {
 
-    val disk = new StubFile () (null)
+    var file: StubFile = null
 
     {
       implicit val scheduler = StubScheduler.random()
+      file = StubFile()
       implicit val recovery = Disks.recover()
-      implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+      implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
     }
 
     {
       implicit val scheduler = StubScheduler.random()
+      file = StubFile (file.data)
       implicit val recovery = Disks.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
-      recovery.reattachAndLaunch (("a", disk))
+      recovery.reattachAndLaunch (("a", file))
       assertResult (Seq.empty) (replayed.result)
     }}
 
   it should "replay one item" in {
 
-    val disk = new StubFile () (null)
+    var file: StubFile = null
 
     {
       implicit val scheduler = StubScheduler.random()
+      file = StubFile()
       implicit val recovery = Disks.recover()
-      implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+      implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       records.str.record ("one") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
+      file = StubFile (file.data)
       implicit val recovery = Disks.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
-      recovery.reattachAndLaunch (("a", disk))
+      recovery.reattachAndLaunch (("a", file))
       assertResult (Seq ("one")) (replayed.result)
     }}
 
   it should "replay twice" in {
 
-    val disk = new StubFile () (null)
+    var file: StubFile = null
 
     {
       implicit val scheduler = StubScheduler.random()
+      file = StubFile()
       implicit val recovery = Disks.recover()
-      implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+      implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       records.str.record ("one") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
+      file = StubFile (file.data)
       implicit val recovery = Disks.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
-      implicit val disks = recovery.reattachAndLaunch (("a", disk))
+      implicit val disks = recovery.reattachAndLaunch (("a", file))
       assertResult (Seq ("one")) (replayed.result)
       records.str.record ("two") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
+      file = StubFile (file.data)
       implicit val recovery = Disks.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
-      recovery.reattachAndLaunch (("a", disk))
+      recovery.reattachAndLaunch (("a", file))
       assertResult (Seq ("one", "two")) (replayed.result)
     }}
 
   it should "report an unrecognized record" in {
 
-    val disk = new StubFile () (null)
+    var file: StubFile = null
 
     {
       implicit val scheduler = StubScheduler.random()
+      file = StubFile()
       implicit val recovery = Disks.recover()
-      implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+      implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       records.str.record ("one") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
+      file = StubFile (file.data)
       implicit val recovery = Disks.recover()
-      recovery.reattachAndWait (("a", disk)) .fail [InvalidTagException]
+      file = StubFile (file.data)
+      recovery.reattachAndWait (("a", file)) .fail [InvalidTagException]
     }}
 
   it should "report an error from a replay function" in {
 
-    val disk = new StubFile () (null)
+    var file: StubFile = null
 
     {
       implicit val scheduler = StubScheduler.random()
+      file = StubFile()
       implicit val recovery = Disks.recover()
-      implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+      implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       records.str.record ("one") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
+      file = StubFile (file.data)
       implicit val recovery = Disks.recover()
       records.str.replay (_ => throw new DistinguishedException)
-      recovery.reattachAndWait (("a", disk)) .fail [DistinguishedException]
+      recovery.reattachAndWait (("a", file)) .fail [DistinguishedException]
     }}
 
   it should "reject an oversized record" in {
 
-    val disk = new StubFile () (null)
-
     {
       implicit val scheduler = StubScheduler.random()
+      val file = StubFile()
       implicit val recovery = Disks.recover()
-      implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+      implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       records.stuff.record (Stuff (0, 1000)) .fail [OversizedRecordException]
     }}
 
@@ -147,9 +158,9 @@ class LogSpec extends FlatSpec with CrashChecks {
     forAllSeeds { implicit random =>
 
       implicit val scheduler = StubScheduler.random (random)
-      val disk = new StubFile
+      val file = StubFile()
       val recovery = Disks.recover()
-      val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
+      val launch = recovery.attachAndWait (("a", file, geometry)) .pass
       import launch.disks
 
       var checkpointed = false

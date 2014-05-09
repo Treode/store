@@ -36,10 +36,8 @@ private object DiskTestTools {
     def assertDraining (paths: String*): Unit =
       disks.assertDraining (paths: _*)
 
-    def attachAndWait (items: AttachItem*) (implicit scheduler: StubScheduler): Async [Unit] = {
-      items foreach (_._2.scheduler = scheduler)
+    def attachAndWait (items: AttachItem*) (implicit scheduler: StubScheduler): Async [Unit] =
       agent._attach (items: _*)
-    }
 
     def attachAndCapture (items: AttachItem*) (implicit scheduler: StubScheduler): CallbackCaptor [Unit] =
       attachAndWait (items: _*) .capture
@@ -169,10 +167,8 @@ private object DiskTestTools {
   implicit class RichRecovery (recovery: Disks.Recovery) {
     val agent = recovery.asInstanceOf [RecoveryAgent]
 
-    def attachAndWait (items: AttachItem*) (implicit scheduler: StubScheduler): Async [Launch] = {
-      items foreach (_._2.scheduler = scheduler)
+    def attachAndWait (items: AttachItem*) (implicit scheduler: StubScheduler): Async [Launch] =
       recovery._attach (items: _*)
-    }
 
     def attachAndCapture (items: AttachItem*) (implicit scheduler: StubScheduler): CallbackCaptor [Launch] =
       attachAndWait (items: _*) .capture()
@@ -190,10 +186,8 @@ private object DiskTestTools {
       launch.disks
     }
 
-    def reattachAndWait (items: ReattachItem*) (implicit scheduler: StubScheduler): Async [Launch] = {
-      items foreach (_._2.scheduler = scheduler)
+    def reattachAndWait (items: ReattachItem*) (implicit scheduler: StubScheduler): Async [Launch] =
       recovery._reattach (items: _*)
-    }
 
     def reattachAndLaunch (items: ReattachItem*) (implicit scheduler: StubScheduler): Disks = {
       val launch = reattachAndWait (items: _*) .pass
@@ -203,7 +197,6 @@ private object DiskTestTools {
 
     def reopenAndWait (paths: Path*) (items: ReattachItem*) (
         implicit scheduler: StubScheduler, config: DisksConfig): Async [Launch] = {
-      items foreach (_._2.scheduler = scheduler)
       val files = items.toMap
       def superbs (path: Path) = SuperBlocks.read (path, files (path))
       agent._reattach (paths) (superbs _)

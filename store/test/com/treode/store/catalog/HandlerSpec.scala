@@ -37,7 +37,7 @@ class HandlerSpec extends FreeSpec {
 
   private def newCatalog (issues: Int): Handler = {
     implicit val scheduler = StubScheduler.random()
-    implicit val file = new StubFile()
+    implicit val file = StubFile (1<<20)
     implicit val config = TestDisksConfig()
     implicit val disks = Disks
         .recover()

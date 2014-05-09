@@ -33,7 +33,7 @@ extends StubActiveHost (id, network) {
   val _paxos = Paxos.recover()
   val _atomic = AtomicKit.recover()
 
-  val file = new StubFile
+  val file = StubFile (1<<20)
   val geometry = TestDiskGeometry()
   val _launch =
     for {

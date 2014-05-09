@@ -47,7 +47,7 @@ object BrokerBehaviors extends FreeSpec {
 
     implicit val disksConfig = TestDisksConfig()
     implicit val recovery = Disks.recover()
-    val disk = new StubFile
+    val disk = StubFile (1<<20)
     val geometry = TestDiskGeometry()
     implicit val launch = recovery._attach (("a", disk, geometry)) .pass
     implicit val disks = launch.disks

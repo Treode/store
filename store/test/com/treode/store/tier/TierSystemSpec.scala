@@ -105,19 +105,19 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
     implicit val disksConfig = TestDisksConfig()
     implicit val storeConfig = TestStoreConfig()
     val geometry = TestDiskGeometry()
-    val disk = new StubFile () (null)
     val tracker = new TrackingTable
+    var file: StubFile = null
 
     setup { implicit scheduler =>
-      disk.scheduler = scheduler
-      val table = new TrackedTable (setup (disk, geometry), tracker)
+      file = StubFile (1<<20)
+      val table = new TrackedTable (setup (file, geometry), tracker)
       (0 until nrounds) .async.foreach { _ =>
         table.putAll (random.nextPut (nkeys, nbatch): _*)
       }}
 
     .recover { implicit scheduler =>
-      disk.scheduler = scheduler
-      val table = recover (disk)
+      file = StubFile (file.data)
+      val table = recover (file)
       tracker.check (table.toMap)
     }}
 

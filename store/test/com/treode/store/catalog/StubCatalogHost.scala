@@ -32,7 +32,7 @@ extends StubActiveHost (id, network) {
   var v1 = 0L
   var v2 = Seq.empty [Long]
 
-  val file = new StubFile
+  val file = StubFile (1<<20)
   val geometry = TestDiskGeometry()
 
   val _launch =

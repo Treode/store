@@ -21,7 +21,7 @@ class TierSpec extends WordSpec {
     implicit val scheduler = StubScheduler.random()
     implicit val disksConfig = TestDisksConfig (maximumPageBytes=1<<17)
     implicit val recovery = Disks.recover()
-    val file = new StubFile (1<<22)
+    val file = StubFile (1<<22)
     val geometry = TestDiskGeometry (segmentBits=18, diskBytes=1<<22)
     val launch = recovery._attach (("a", file, geometry)) .pass
     launch.launch()

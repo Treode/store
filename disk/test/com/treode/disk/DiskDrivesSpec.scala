@@ -23,12 +23,14 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
       "allow attaching a new item" taggedAs (Periodic) in {
         forAllCrashes { implicit random =>
 
-          val file1 = new StubFile () (null)
-          val file2 = new StubFile () (null)
+          var file1: StubFile = null
+          var file2: StubFile = null
           var attached = false
 
           setup { implicit scheduler =>
             val recovery = Disks.recover()
+            file1 = StubFile()
+            file2 = StubFile()
             attached = false
             for {
               launch <- recovery.attachAndWait (("a", file1, geom))
@@ -40,6 +42,8 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
             }}
 
           .recover { implicit scheduler =>
+            file1 = StubFile (file1.data)
+            file2 = StubFile (file2.data)
             val recovery = Disks.recover()
             val controller = recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2))
             if (attached)
@@ -49,13 +53,16 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
       "allow attaching multiple new items" taggedAs (Periodic) in {
         forAllCrashes { implicit random =>
 
-          val file1 = new StubFile () (null)
-          val file2 = new StubFile () (null)
-          val file3 = new StubFile () (null)
+          var file1: StubFile = null
+          var file2: StubFile = null
+          var file3: StubFile = null
           var attached = false
 
           setup { implicit scheduler =>
             val recovery = Disks.recover()
+            file1 = StubFile()
+            file2 = StubFile()
+            file3 = StubFile()
             attached = false
             for {
               launch <- recovery.attachAndWait (("a", file1, geom))
@@ -67,7 +74,9 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
             }}
 
           .recover { implicit scheduler =>
-            implicit val scheduler = StubScheduler.random()
+            file1 = StubFile (file1.data)
+            file2 = StubFile (file2.data)
+            file3 = StubFile (file3.data)
             val recovery = Disks.recover()
             val controller =
               recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2), ("c", file3))
@@ -77,11 +86,13 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
       "reject attaching no items" in {
 
-        val file1 = new StubFile () (null)
-        val file2 = new StubFile () (null)
+        var file1: StubFile = null
+        var file2: StubFile = null
 
         {
           implicit val scheduler = StubScheduler.random()
+          file1 = StubFile()
+          file2 = StubFile()
           val recovery = Disks.recover()
           val controller = recovery.attachAndControl (("a", file1, geom))
           controller.attachAndWait () .fail [IllegalArgumentException]
@@ -90,6 +101,8 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
         {
           implicit val scheduler = StubScheduler.random()
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
           val recovery = Disks.recover()
           val controller = recovery.reattachAndLaunch (("a", file1))
           controller.assertDisks ("a")
@@ -97,11 +110,13 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
       "reject attaching the same item multiple times" in {
 
-        val file1 = new StubFile () (null)
-        val file2 = new StubFile () (null)
+        var file1: StubFile = null
+        var file2: StubFile = null
 
         {
           implicit val scheduler = StubScheduler.random()
+          file1 = StubFile()
+          file2 = StubFile()
           val recovery = Disks.recover()
           val controller = recovery.attachAndControl (("a", file1, geom))
           controller
@@ -112,6 +127,8 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
         {
           implicit val scheduler = StubScheduler.random()
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
           val recovery = Disks.recover()
           val controller = recovery.reattachAndLaunch (("a", file1))
           controller.assertDisks ("a")
@@ -119,10 +136,11 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
       "reject attaching an item that's already attached" in {
 
-        val file = new StubFile () (null)
+        var file: StubFile = null
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile()
           val recovery = Disks.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
           controller.attachAndWait (("a", file, geom)).fail [AlreadyAttachedException]
@@ -131,6 +149,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile (file.data)
           val recovery = Disks.recover()
           val controller = recovery.reattachAndLaunch (("a", file))
           controller.assertDisks ("a")
@@ -139,12 +158,14 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
       "allow draining an item" taggedAs (Periodic) in {
         forAllCrashes { implicit random =>
 
-          val file1 = new StubFile () (null)
-          val file2 = new StubFile () (null)
+          var file1: StubFile = null
+          var file2: StubFile = null
           var drained = false
 
           setup { implicit scheduler =>
             val recovery = Disks.recover()
+            file1 = StubFile()
+            file2 = StubFile()
             drained = false
             for {
               launch <- recovery.attachAndWait (("a", file1, geom), ("b", file2, geom))
@@ -158,6 +179,8 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
           .recover { implicit scheduler =>
             val recovery = Disks.recover()
+            file1 = StubFile (file1.data)
+            file2 = StubFile (file2.data)
             val controller = recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2))
             if (drained)
               controller.assertDisks ("a")
@@ -166,13 +189,16 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
       "allow draining multiple items" taggedAs (Periodic) in {
         forAllCrashes { implicit random =>
 
-          val file1 = new StubFile () (null)
-          val file2 = new StubFile () (null)
-          val file3 = new StubFile () (null)
+          var file1: StubFile = null
+          var file2: StubFile = null
+          var file3: StubFile = null
           var drained = false
 
           setup { implicit scheduler =>
             val recovery = Disks.recover()
+            file1 = StubFile()
+            file2 = StubFile()
+            file3 = StubFile()
             drained = false
             for {
               launch <- recovery
@@ -188,6 +214,9 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
           .recover { implicit scheduler =>
             val recovery = Disks.recover()
+            file1 = StubFile (file1.data)
+            file2 = StubFile (file2.data)
+            file3 = StubFile (file3.data)
             val controller = recovery
               .reopenAndLaunch ("a") (("a", file1), ("b", file2), ("c", file3))
             if (drained)
@@ -196,10 +225,11 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
       "reject draining no items" in {
 
-        val file = new StubFile () (null)
+        var file: StubFile = null
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile()
           val recovery = Disks.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
           controller.drainAndWait () .fail [IllegalArgumentException]
@@ -209,6 +239,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile (file.data)
           val recovery = Disks.recover()
           val controller = recovery.reattachAndLaunch (("a", file))
           controller.assertDisks ("a")
@@ -216,10 +247,11 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
       "reject draining non-existent items" in {
 
-        val file = new StubFile () (null)
+        var file: StubFile = null
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile()
           val recovery = Disks.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
           controller.drainAndWait ("b") .fail [NotAttachedException]
@@ -229,6 +261,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile (file.data)
           val recovery = Disks.recover()
           val controller = recovery.reattachAndLaunch (("a", file))
           controller.assertDisks ("a")
@@ -236,10 +269,11 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
       "reject draining all items" in {
 
-        val file = new StubFile () (null)
+        var file: StubFile = null
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile()
           val recovery = Disks.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
           controller.drainAndWait ("a") .fail [CannotDrainAllException]
@@ -249,6 +283,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile (file.data)
           val recovery = Disks.recover()
           val controller = recovery.reattachAndLaunch (("a", file))
           controller.assertDisks ("a")
@@ -258,11 +293,13 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
       "queue attaching a new item" in {
 
-        val file1 = new StubFile () (null)
-        val file2 = new StubFile () (null)
+        var file1: StubFile = null
+        var file2: StubFile = null
 
         {
           implicit val scheduler = StubScheduler.random()
+          file1 = StubFile()
+          file2 = StubFile()
           val recovery = Disks.recover()
           val launch = recovery.attachAndWait (("a", file1, geom)) .pass
           val controller = launch.controller
@@ -276,6 +313,8 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
         {
           implicit val scheduler = StubScheduler.random()
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
           val recovery = Disks.recover()
           val controller = recovery.reattachAndLaunch (("a", file1), ("b", file2))
           controller.assertDisks ("a", "b")
@@ -283,10 +322,11 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
       "pass an exception from a queued attach" in {
 
-        val file = new StubFile () (null)
+        var file: StubFile = null
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile()
           val recovery = Disks.recover()
           val launch = recovery.attachAndWait (("a", file, geom)) .pass
           val controller = launch.controller
@@ -300,6 +340,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile (file.data)
           val recovery = Disks.recover()
           val controller = recovery.reattachAndLaunch (("a", file))
           controller.assertDisks ("a")
@@ -307,11 +348,13 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
       "queue draining an item" in {
 
-        val file1 = new StubFile () (null)
-        val file2 = new StubFile () (null)
+        var file1: StubFile = null
+        var file2: StubFile = null
 
         {
           implicit val scheduler = StubScheduler.random()
+          file1 = StubFile()
+          file2 = StubFile()
           val recovery = Disks.recover()
           val launch = recovery.attachAndWait (("a", file1, geom), ("b", file2, geom)) .pass
           import launch.{controller, disks}
@@ -326,6 +369,8 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
         {
           implicit val scheduler = StubScheduler.random()
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
           val recovery = Disks.recover()
           val controller = recovery.reattachAndLaunch (("a", file1))
           controller.assertDisks ("a")
@@ -333,10 +378,11 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
       "pass an exception from a queued drain" in {
 
-        val file = new StubFile () (null)
+        var file: StubFile = null
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile()
           val recovery = Disks.recover()
           val launch = recovery.attachAndWait (("a", file, geom)) .pass
           import launch.{controller, disks}
@@ -350,6 +396,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
         {
           implicit val scheduler = StubScheduler.random()
+          file = StubFile (file.data)
           val recovery = Disks.recover()
           val controller = recovery.reattachAndLaunch (("a", file))
           controller.assertDisks ("a")

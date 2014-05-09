@@ -35,12 +35,13 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig()
         val geometry = TestDiskGeometry()
-        val disk = new StubFile (size = 1<<20) (null)
         val tracker = new LogTracker
+        var file: StubFile = null
 
         setup { implicit scheduler =>
+          file = StubFile (1<<20)
           implicit val recovery = Disks.recover()
-          val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
+          val launch = recovery.attachAndWait (("a", file, geometry)) .pass
           import launch.disks
           launch.checkpoint (fail ("Expected no checkpoints"))
           launch.launch()
@@ -48,10 +49,11 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         }
 
         .recover { implicit scheduler =>
+          file = StubFile (file.data)
           implicit val recovery = Disks.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
-          implicit val disks = recovery.reattachAndLaunch (("a", disk))
+          implicit val disks = recovery.reattachAndLaunch (("a", file))
           replayer.check (tracker)
         }}}
 
@@ -60,12 +62,13 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig (checkpointEntries = 57)
         val geometry = TestDiskGeometry()
-        val disk = new StubFile (size=1<<20) (null)
         val tracker = new LogTracker
+        var file: StubFile = null
 
         setup { implicit scheduler =>
+          file = StubFile (1<<20)
           implicit val recovery = Disks.recover()
-          implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
+          implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
           import launch.disks
           var checkpoint = false
           tracker.attach (launch)
@@ -78,10 +81,11 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           }}
 
         .recover { implicit scheduler =>
+          file = StubFile (file.data)
           implicit val recovery = Disks.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
-          implicit val disks = recovery.reattachAndLaunch (("a", disk))
+          implicit val disks = recovery.reattachAndLaunch (("a", file))
           replayer.check (tracker)
         }}}
 
@@ -90,17 +94,20 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig (checkpointEntries = 57)
         val geometry = TestDiskGeometry()
-        val disk1 = new StubFile (size = 1<<20) (null)
-        val disk2 = new StubFile (size = 1<<20) (null)
-        val disk3 = new StubFile (size = 1<<20) (null)
         val tracker = new LogTracker
+        var file1: StubFile = null
+        var file2: StubFile = null
+        var file3: StubFile = null
 
         setup { implicit scheduler =>
+          file1 = StubFile (1<<20)
+          file2 = StubFile (1<<20)
+          file3 = StubFile (1<<20)
           implicit val recovery = Disks.recover()
           val launch = recovery.attachAndWait (
-              ("a", disk1, geometry),
-              ("b", disk2, geometry),
-              ("c", disk3, geometry)) .pass
+              ("a", file1, geometry),
+              ("b", file2, geometry),
+              ("c", file3, geometry)) .pass
           import launch.disks
           var checkpoint = false
           tracker.attach (launch)
@@ -113,13 +120,16 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           }}
 
         .recover { implicit scheduler =>
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
+          file3 = StubFile (file3.data)
           implicit val recovery = Disks.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
           implicit val disks = recovery.reattachAndLaunch (
-              ("a", disk1),
-              ("b", disk2),
-              ("c", disk3))
+              ("a", file1),
+              ("b", file2),
+              ("c", file3))
           replayer.check (tracker)
         }}}
 
@@ -128,13 +138,15 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig (checkpointEntries = 17)
         val geometry = TestDiskGeometry()
-        val disk1 = new StubFile (size=1<<20) (null)
-        val disk2 = new StubFile (size=1<<20) (null)
         val tracker = new LogTracker
+        var file1: StubFile = null
+        var file2: StubFile = null
 
         setup { implicit scheduler =>
+          file1 = StubFile (1<<20)
+          file2 = StubFile (1<<20)
           implicit val recovery = Disks.recover()
-          implicit val launch = recovery.attachAndWait (("a", disk1, geometry)) .pass
+          implicit val launch = recovery.attachAndWait (("a", file1, geometry)) .pass
           import launch.{disks, controller}
           var checkpoint = false
           tracker.attach (launch)
@@ -144,17 +156,19 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
             _ <- tracker.batches (80, 2, 10, 0)
             _ <- latch (
                 tracker.batch (80, 2, 10),
-                controller.attachAndWait (("b", disk2, geometry)))
+                controller.attachAndWait (("b", file2, geometry)))
             _ <- tracker.batches (80, 2, 10, 3)
           } yield {
             assert (checkpoint, "Expected a checkpoint")
           }}
 
         .recover { implicit scheduler =>
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
           implicit val recovery = Disks.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
-          implicit val disks = recovery.reopenAndLaunch ("a") (("a", disk1), ("b", disk2))
+          implicit val disks = recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2))
           replayer.check (tracker)
         }}}
 
@@ -163,14 +177,16 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig (checkpointEntries = 17)
         val geometry = TestDiskGeometry()
-        val disk1 = new StubFile (size=1<<20) (null)
-        val disk2 = new StubFile (size=1<<20) (null)
         val tracker = new LogTracker
+        var file1: StubFile = null
+        var file2: StubFile = null
 
         setup { implicit scheduler =>
+          file1 = StubFile (1<<20)
+          file2 = StubFile (1<<20)
           implicit val recovery = Disks.recover()
           implicit val launch =
-            recovery.attachAndWait (("a", disk1, geometry), ("b", disk2, geometry)) .pass
+            recovery.attachAndWait (("a", file1, geometry), ("b", file2, geometry)) .pass
           import launch.{disks, controller}
           var checkpoint = false
           tracker.attach (launch)
@@ -187,10 +203,12 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           }}
 
         .recover { implicit scheduler =>
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
           implicit val recovery = Disks.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
-          implicit val launch = recovery.reopenAndWait ("a") (("a", disk1), ("b", disk2)) .pass
+          implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .pass
           import launch.disks
           tracker.attach (launch)
           launch.launchAndPass (tickle = true)
@@ -204,12 +222,12 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig (checkpointEntries = 1000, cleaningFrequency = 3)
         val geometry = TestDiskGeometry()
-        val disk = new StubFile (1<<20) (null)
-        var tracker = new LogTracker
+        val tracker = new LogTracker
 
         implicit val scheduler = StubScheduler.random (random)
+        val file = StubFile (1<<20)
         implicit val recovery = Disks.recover()
-        implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
+        implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
         import launch.disks
         tracker.attach (launch)
         launch.launchAndPass()
@@ -220,13 +238,13 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
       implicit val config = TestDisksConfig (checkpointEntries = 1000, cleaningFrequency = 3)
       val geometry = TestDiskGeometry()
-      val disk = new StubFile (1<<20) (null)
-      var tracker = new LogTracker
+      val tracker = new LogTracker
 
       implicit val random = Random
       implicit val scheduler = StubScheduler.multithreaded (Executors.newScheduledThreadPool (8))
+      val file = StubFile (1<<20)
       implicit val recovery = Disks.recover()
-      implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .await()
+      implicit val launch = recovery.attachAndWait (("a", file, geometry)) .await()
       import launch.disks
       tracker.attach (launch)
       launch.launch()
@@ -240,18 +258,20 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig()
         val geometry = TestDiskGeometry()
-        val disk = new StubFile (size=1<<20) (null)
-        var tracker = new StuffTracker
+        val tracker = new StuffTracker
+        var file: StubFile = null
 
         setup { implicit scheduler =>
+          file = StubFile (1<<20)
           implicit val recovery = Disks.recover()
-          implicit val disks = recovery.attachAndLaunch (("a", disk, geometry))
+          implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
           tracker.batch (40, 10)
         }
 
         .recover { implicit scheduler =>
+          file = StubFile (file.data)
           implicit val recovery = Disks.recover()
-          implicit val disks = recovery.reattachAndLaunch (("a", disk))
+          implicit val disks = recovery.reattachAndLaunch (("a", file))
           tracker.check()
         }}}
 
@@ -260,12 +280,13 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig (cleaningFrequency = 3)
         val geometry = TestDiskGeometry()
-        val disk = new StubFile () (null)
-        var tracker = new StuffTracker
+        val tracker = new StuffTracker
+        var file: StubFile = null
 
         setup { implicit scheduler =>
+          file = StubFile (1<<20)
           implicit val recovery = Disks.recover()
-          implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
+          implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
           import launch.disks
           tracker.attach (launch)
           launch.launch()
@@ -277,8 +298,9 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           }}
 
         .recover { implicit scheduler =>
+          file = StubFile (file.data)
           implicit val recovery = Disks.recover()
-          implicit val disks = recovery.reattachAndLaunch (("a", disk))
+          implicit val disks = recovery.reattachAndLaunch (("a", file))
           tracker.check()
         }}}
 
@@ -287,17 +309,20 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig (cleaningFrequency = 3)
         val geometry = TestDiskGeometry()
-        val disk1 = new StubFile () (null)
-        val disk2 = new StubFile () (null)
-        val disk3 = new StubFile () (null)
-        var tracker = new StuffTracker
+        val tracker = new StuffTracker
+        var file1: StubFile = null
+        var file2: StubFile = null
+        var file3: StubFile = null
 
         setup { implicit scheduler =>
+          file1 = StubFile (1<<20)
+          file2 = StubFile (1<<20)
+          file3 = StubFile (1<<20)
           implicit val recovery = Disks.recover()
           val launch = recovery.attachAndWait (
-              ("a", disk1, geometry),
-              ("b", disk2, geometry),
-              ("c", disk3, geometry)) .pass
+              ("a", file1, geometry),
+              ("b", file2, geometry),
+              ("c", file3, geometry)) .pass
           import launch.disks
           tracker.attach (launch)
           launch.launch()
@@ -309,11 +334,14 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           }}
 
         .recover { implicit scheduler =>
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
+          file3 = StubFile (file3.data)
           implicit val recovery = Disks.recover()
           implicit val disks = recovery.reattachAndLaunch (
-              ("a", disk1),
-              ("b", disk2),
-              ("c", disk3))
+              ("a", file1),
+              ("b", file2),
+              ("c", file3))
           tracker.check()
         }}}
 
@@ -322,13 +350,15 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig (cleaningFrequency = 3)
         val geometry = TestDiskGeometry()
-        val disk1 = new StubFile () (null)
-        val disk2 = new StubFile () (null)
-        var tracker = new StuffTracker
+        val tracker = new StuffTracker
+        var file1: StubFile = null
+        var file2: StubFile = null
 
         setup { implicit scheduler =>
+          file1 = StubFile (1<<20)
+          file2 = StubFile (1<<20)
           implicit val recovery = Disks.recover()
-          implicit val launch = recovery.attachAndWait (("a", disk1, geometry)) .pass
+          implicit val launch = recovery.attachAndWait (("a", file1, geometry)) .pass
           import launch.{disks, controller}
           tracker.attach (launch)
           launch.launch()
@@ -337,15 +367,17 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
             _ <- tracker.batch (7, 10)
             _ <- latch (
                 tracker.batch (7, 10),
-                controller.attachAndWait (("b", disk2, geometry)))
+                controller.attachAndWait (("b", file2, geometry)))
             _ <- tracker.batch (7, 10)
           } yield {
             assert (tracker.probed && tracker.compacted, "Expected cleaning.")
           }}
 
         .recover { implicit scheduler =>
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
           implicit val recovery = Disks.recover()
-          implicit val disks = recovery.reopenAndLaunch ("a") (("a", disk1), ("b", disk2))
+          implicit val disks = recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2))
           tracker.check()
         }}}
 
@@ -354,14 +386,16 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig (cleaningFrequency = 3)
         val geometry = TestDiskGeometry()
-        val disk1 = new StubFile () (null)
-        val disk2 = new StubFile () (null)
-        var tracker = new StuffTracker
+        val tracker = new StuffTracker
+        var file1: StubFile = null
+        var file2: StubFile = null
 
         setup { implicit scheduler =>
+          file1 = StubFile (1<<20)
+          file2 = StubFile (1<<20)
           implicit val recovery = Disks.recover()
           implicit val launch =
-            recovery.attachAndWait (("a", disk1, geometry), ("b", disk2, geometry)) .pass
+            recovery.attachAndWait (("a", file1, geometry), ("b", file2, geometry)) .pass
           import launch.{disks, controller}
           tracker.attach (launch)
           launch.launch()
@@ -377,8 +411,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           }}
 
         .recover { implicit scheduler =>
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
           implicit val recovery = Disks.recover()
-          implicit val launch = recovery.reopenAndWait ("a") (("a", disk1), ("b", disk2)) .pass
+          implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .pass
           import launch.disks
           tracker.attach (launch)
           launch.launchAndPass (tickle = true)
@@ -390,12 +426,12 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val config = TestDisksConfig (cleaningFrequency = 3)
         val geometry = TestDiskGeometry (diskBytes=1<<22)
-        val disk = new StubFile (1<<22) (null)
-        var tracker = new StuffTracker
+        val tracker = new StuffTracker
 
         implicit val scheduler = StubScheduler.random (random)
+        val file = StubFile (1<<20)
         implicit val recovery = Disks.recover()
-        implicit val launch = recovery.attachAndWait (("a", disk, geometry)) .pass
+        implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
         import launch.disks
         tracker.attach (launch)
         launch.launch()

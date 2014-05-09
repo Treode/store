@@ -39,7 +39,7 @@ class SuperBlocksSpec extends FreeSpec {
 
   private def setup() = {
     implicit val scheduler = StubScheduler.random()
-    val file = new StubFile
+    val file = StubFile()
     val superb0 = superb (0)
     val superb1 = superb (1)
     SuperBlock.write (superb0, file) (config) .pass
