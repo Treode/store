@@ -7,8 +7,7 @@ import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
-import com.treode.disk.stubs.CrashChecks
+import com.treode.disk.stubs.{CrashChecks, StubDisks, StubDiskDrive}
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
@@ -61,31 +60,28 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   }
 
   private def setup (
-      disk: StubFile,
-      geometry: DiskGeometry
+      diskDrive: StubDiskDrive
   ) (implicit
       scheduler: StubScheduler,
-      disksConfig: DisksConfig,
       storeConfig: StoreConfig
   ): TestTable = {
-      implicit val recovery = Disks.recover()
+      implicit val recovery = StubDisks.recover()
       val _table = new TestRecovery (ID)
-      val launch = recovery._attach (("a", disk, geometry)) .pass
+      val launch = recovery.attach (diskDrive) .pass
       val table = _table.launch (launch) .pass
       launch.launch()
       table
   }
 
   private def recover (
-      disk: StubFile
+      diskDrive: StubDiskDrive
   ) (implicit
       scheduler: StubScheduler,
-      disksConfig: DisksConfig,
       storeConfig: StoreConfig
   ): TestTable = {
-    implicit val recovery = Disks.recover()
+    implicit val recovery = StubDisks.recover()
     val _table = new TestRecovery (ID)
-    val launch = recovery._reattach (("a", disk)) .pass
+    val launch = recovery.reattach (diskDrive) .pass
     val table = _table.launch (launch) .pass
     launch.launch()
     table
@@ -96,36 +92,28 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       nrounds: Int,
       nbatch: Int
   ) (implicit
-      geometry: DiskGeometry,
       random: Random,
-      disksConfig: DisksConfig,
       storeConfig: StoreConfig
   ) = {
 
-    implicit val disksConfig = TestDisksConfig()
     implicit val storeConfig = TestStoreConfig()
-    val geometry = TestDiskGeometry()
     val tracker = new TrackingTable
-    var file: StubFile = null
+    val diskDrive = new StubDiskDrive
 
     setup { implicit scheduler =>
-      file = StubFile (1<<20)
-      val table = new TrackedTable (setup (file, geometry), tracker)
+      val table = new TrackedTable (setup (diskDrive), tracker)
       (0 until nrounds) .async.foreach { _ =>
         table.putAll (random.nextPut (nkeys, nbatch): _*)
       }}
 
     .recover { implicit scheduler =>
-      file = StubFile (file.data)
-      val table = recover (file)
+      val table = recover (diskDrive)
       tracker.check (table.toMap)
     }}
 
   "When given large limits for checkpointing and cleaning" - {
 
-    implicit val disksConfig = TestDisksConfig()
     implicit val storeConfig = TestStoreConfig()
-    implicit val geometry = TestDiskGeometry()
 
     "it can recover" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
@@ -144,9 +132,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
 
   "When given a small threshold for checkpointing" - {
 
-    implicit val disksConfig = TestDisksConfig (checkpointEntries = 57)
     implicit val storeConfig = TestStoreConfig()
-    implicit val geometry = TestDiskGeometry()
 
     "it can recover" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>

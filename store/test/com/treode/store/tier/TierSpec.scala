@@ -6,9 +6,10 @@ import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
+import com.treode.disk.{Disks, Position}
+import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.pickle.Picklers
 import com.treode.store._
-import com.treode.disk.{Disks, DisksConfig, DiskGeometry, Position}
 import org.scalatest.WordSpec
 
 import Fruits._
@@ -19,11 +20,9 @@ class TierSpec extends WordSpec {
 
   private def setup(): (StubScheduler, Disks) = {
     implicit val scheduler = StubScheduler.random()
-    implicit val disksConfig = TestDisksConfig (maximumPageBytes=1<<17)
-    implicit val recovery = Disks.recover()
-    val file = StubFile (1<<22)
-    val geometry = TestDiskGeometry (segmentBits=18, diskBytes=1<<22)
-    val launch = recovery._attach (("a", file, geometry)) .pass
+    implicit val recovery = StubDisks.recover (18, 1<<22)
+    val diskDrive = new StubDiskDrive
+    val launch = recovery.attach (diskDrive) .pass
     launch.launch()
     (scheduler, launch.disks)
   }

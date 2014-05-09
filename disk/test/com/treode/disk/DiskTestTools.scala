@@ -168,7 +168,7 @@ private object DiskTestTools {
     val agent = recovery.asInstanceOf [RecoveryAgent]
 
     def attachAndWait (items: AttachItem*) (implicit scheduler: StubScheduler): Async [Launch] =
-      recovery._attach (items: _*)
+      agent._attach (items: _*)
 
     def attachAndCapture (items: AttachItem*) (implicit scheduler: StubScheduler): CallbackCaptor [Launch] =
       attachAndWait (items: _*) .capture()
@@ -187,7 +187,7 @@ private object DiskTestTools {
     }
 
     def reattachAndWait (items: ReattachItem*) (implicit scheduler: StubScheduler): Async [Launch] =
-      recovery._reattach (items: _*)
+      agent._reattach (items: _*)
 
     def reattachAndLaunch (items: ReattachItem*) (implicit scheduler: StubScheduler): Disks = {
       val launch = reattachAndWait (items: _*) .pass

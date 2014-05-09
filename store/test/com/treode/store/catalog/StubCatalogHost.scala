@@ -7,8 +7,8 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubActiveHost, StubHost, StubNetwork}
+import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store._
-import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
 import org.scalatest.Assertions
 
 import Assertions.assertResult
@@ -20,24 +20,22 @@ private class StubCatalogHost (id: HostId, network: StubNetwork)
 extends StubActiveHost (id, network) {
   import network.{random, scheduler}
 
-  implicit val disksConfig = TestDisksConfig()
   implicit val storeConfig = TestStoreConfig()
 
   implicit val cluster: Cluster = this
   implicit val library = new Library
 
-  implicit val recovery = Disks.recover()
+  implicit val recovery = StubDisks.recover()
   implicit val _catalogs = Catalogs.recover()
+
+  val diskDrive = new StubDiskDrive
 
   var v1 = 0L
   var v2 = Seq.empty [Long]
 
-  val file = StubFile (1<<20)
-  val geometry = TestDiskGeometry()
-
   val _launch =
     for {
-      launch <- recovery._attach (("a", file, geometry))
+      launch <- recovery.attach (diskDrive)
       catalogs <- _catalogs.launch (launch) .map (_.asInstanceOf [CatalogKit])
     } yield {
       launch.launch()

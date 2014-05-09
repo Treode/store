@@ -6,7 +6,7 @@ import com.treode.async.stubs.{AsyncCaptor, AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
-import com.treode.disk.Disks
+import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store.catalog.Catalogs
 import org.scalatest.FlatSpec
 
@@ -22,18 +22,15 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
     implicit val cluster: Cluster = this
     implicit val library = new Library
 
-    implicit val disksConfig = TestDisksConfig()
     implicit val storeConfig = TestStoreConfig()
-
-    implicit val recovery = Disks.recover()
+    implicit val recovery = StubDisks.recover()
     implicit val _catalogs = Catalogs.recover()
 
-    val file = StubFile (1<<20)
-    val geometry = TestDiskGeometry()
+    val diskDrive = new StubDiskDrive
 
     val _launch =
       for {
-        launch <- recovery._attach (("a", file, geometry))
+        launch <- recovery.attach (diskDrive)
         catalogs <- _catalogs.launch (launch)
       } yield {
         launch.launch()

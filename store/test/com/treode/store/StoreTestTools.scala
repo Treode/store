@@ -50,44 +50,6 @@ private trait StoreTestTools {
     def - (n: Int) = new TxClock (v.time - n)
   }
 
-  object TestDisksConfig {
-
-    def apply (
-      cell: CellId = 0,
-        superBlockBits: Int = 12,
-        maximumRecordBytes: Int = 1<<10,
-        maximumPageBytes: Int = 1<<10,
-        checkpointBytes: Int = Int.MaxValue,
-        checkpointEntries: Int = Int.MaxValue,
-        cleaningFrequency: Int = Int.MaxValue,
-        cleaningLoad: Int = 1
-    ): DisksConfig =
-      DisksConfig (
-          cell: CellId,
-          superBlockBits,
-          maximumRecordBytes,
-          maximumPageBytes,
-          checkpointBytes,
-          checkpointEntries,
-          cleaningFrequency,
-          cleaningLoad)
-  }
-
-  object TestDiskGeometry {
-
-    def apply (
-        segmentBits: Int = 12,
-        blockBits: Int = 6,
-        diskBytes: Long = 1<<20
-    ) (implicit
-        config: DisksConfig
-    ): DiskGeometry =
-       DiskGeometry (
-           segmentBits,
-           blockBits,
-           diskBytes)
-  }
-
   object TestStoreConfig {
 
     def apply (

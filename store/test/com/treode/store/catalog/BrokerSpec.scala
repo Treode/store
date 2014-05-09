@@ -7,7 +7,7 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubActiveHost, StubNetwork}
-import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
+import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.pickle.{Pickler, Picklers}
 import com.treode.store._
 import com.treode.tags.{Intensive, Periodic}
@@ -45,11 +45,10 @@ object BrokerBehaviors extends FreeSpec {
 
   private class RichBroker (implicit random: Random, scheduler: StubScheduler) {
 
-    implicit val disksConfig = TestDisksConfig()
-    implicit val recovery = Disks.recover()
-    val disk = StubFile (1<<20)
-    val geometry = TestDiskGeometry()
-    implicit val launch = recovery._attach (("a", disk, geometry)) .pass
+    val diskDrive = new StubDiskDrive
+
+    implicit val recovery = StubDisks.recover()
+    implicit val launch = recovery.attach (diskDrive) .pass
     implicit val disks = launch.disks
     launch.launch()
 

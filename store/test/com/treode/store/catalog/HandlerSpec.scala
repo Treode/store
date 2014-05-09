@@ -7,7 +7,7 @@ import org.scalatest.FreeSpec
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{Disks, Position}
+import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, CatalogId, StoreTestTools}
 
@@ -36,12 +36,11 @@ class HandlerSpec extends FreeSpec {
     }}
 
   private def newCatalog (issues: Int): Handler = {
+    val diskDrive = new StubDiskDrive
     implicit val scheduler = StubScheduler.random()
-    implicit val file = StubFile (1<<20)
-    implicit val config = TestDisksConfig()
-    implicit val disks = Disks
+    implicit val disks = StubDisks
         .recover()
-        ._attach (("a", file, TestDiskGeometry()))
+        .attach (diskDrive)
         .pass.disks
     val cat = Handler (0)
     for ((v, i) <- values.take (issues) .zipWithIndex)

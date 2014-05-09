@@ -7,7 +7,7 @@ import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
+import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store.{Fruits, StoreConfig}
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
@@ -20,13 +20,10 @@ class SynthTableSpec extends FreeSpec {
 
   val tier = TierDescriptor (0x56) ((_, _, _) => true)
 
-  private def mkTable (disk: File) (
+  private def mkTable (diskDrive: StubDiskDrive) (
       implicit scheduler: StubScheduler): SynthTable = {
-
-    implicit val disksConfig = TestDisksConfig()
-    implicit val recovery = Disks.recover()
-    val geometry = TestDiskGeometry()
-    implicit val launch = recovery._attach (("a", disk, geometry)) .pass
+    implicit val recovery = StubDisks.recover()
+    implicit val launch = recovery.attach (diskDrive) .pass
     implicit val disks = launch.disks
     launch.launch()
     implicit val storeConfig = TestStoreConfig()
@@ -137,7 +134,7 @@ class SynthTableSpec extends FreeSpec {
     }}
 
   private def aCheckpointingTable (
-      setup: StubScheduler => (StubFile, SynthTable, CallbackCaptor [Meta])) {
+      setup: StubScheduler => (StubDiskDrive, SynthTable, CallbackCaptor [Meta])) {
 
     "finish the checkpoint" in {
       implicit val scheduler = StubScheduler.random()
@@ -155,7 +152,7 @@ class SynthTableSpec extends FreeSpec {
     "only empty tiers, it should" - {
 
       def setup () (implicit scheduler: StubScheduler): SynthTable = {
-        val disk = StubFile()
+        val disk = new StubDiskDrive
         val table = mkTable (disk)
         assert (table.primary.isEmpty)
         assert (table.secondary.isEmpty)
@@ -202,7 +199,7 @@ class SynthTableSpec extends FreeSpec {
     "a non-empty primary tier, it should" - {
 
       def setup () (implicit scheduler: StubScheduler): SynthTable = {
-        val disk = StubFile()
+        val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
         assert (!table.primary.isEmpty)
@@ -219,11 +216,11 @@ class SynthTableSpec extends FreeSpec {
     "a non-empty secondary tier, it should" - {
 
       def setup () (implicit scheduler: StubScheduler) = {
-        val disk = StubFile()
+        val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
         disk.stop = true
-        val cb = table.checkpoint() .capture()
+        val cb = table .checkpoint() .capture()
         scheduler.runTasks()
         cb.assertNotInvoked()
         assert (table.primary.isEmpty)
@@ -241,7 +238,7 @@ class SynthTableSpec extends FreeSpec {
     "a non-empty primary and secondary tier, it should" - {
 
       def setup () (implicit scheduler: StubScheduler) = {
-        val disk = StubFile()
+        val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2)
         disk.stop = true
@@ -264,7 +261,7 @@ class SynthTableSpec extends FreeSpec {
     "non-empty tertiary tiers, it should" - {
 
       def setup () (implicit scheduler: StubScheduler): SynthTable = {
-        val disk = StubFile()
+        val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
         table.checkpoint() .pass
@@ -282,7 +279,7 @@ class SynthTableSpec extends FreeSpec {
     "non-empty primary and tertiary tiers, it should" - {
 
       def setup () (implicit scheduler: StubScheduler): SynthTable = {
-        val disk = StubFile()
+        val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2)
         table.checkpoint() .pass
