@@ -16,7 +16,7 @@ class AsyncQueueSpec extends FlatSpec {
 
   class TestQueue (implicit scheduler: StubScheduler) {
 
-    val fiber = new Fiber (scheduler)
+    val fiber = new Fiber
     val queue = AsyncQueue (fiber) (next())
     var callbacks = new ArrayDeque [Callback [Unit]]
     var captor = AsyncCaptor [Unit]

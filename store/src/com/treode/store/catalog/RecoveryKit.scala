@@ -19,7 +19,7 @@ private class RecoveryKit (implicit
     config: StoreConfig
 ) extends Catalogs.Recovery {
 
-  private val fiber = new Fiber (scheduler)
+  private val fiber = new Fiber
   private var medics = Map.empty [CatalogId, Medic]
 
   private def getMedic (id: CatalogId): Medic = {

@@ -19,7 +19,7 @@ private class Broker (
     disks: Disks
 ) extends PageHandler [Int] {
 
-  private val fiber = new Fiber (scheduler)
+  private val fiber = new Fiber
 
   private val ports = PicklerRegistry [Any] {id: Long => ()}
 

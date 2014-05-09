@@ -27,7 +27,7 @@ private class ScanDirector (
   case object Processing extends State
   case object Closed extends State
 
-  val fiber = new Fiber (scheduler)
+  val fiber = new Fiber
   val pq = new PriorityQueue [Element]
   var acks = Map.empty [Peer, (Int, Point)]
   var backoff = scanBatchBackoff.iterator

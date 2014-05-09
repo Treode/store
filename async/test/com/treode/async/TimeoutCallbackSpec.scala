@@ -16,7 +16,7 @@ class TimeoutCallbackSpec extends FlatSpec {
   def setup() = {
     implicit val random = new Random (0)
     implicit val scheduler = StubScheduler.random (random)
-    val fiber = new Fiber (scheduler)
+    val fiber = new Fiber
     val captor = CallbackCaptor [Unit]
     (random, scheduler, fiber, captor)
   }

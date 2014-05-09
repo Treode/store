@@ -15,7 +15,7 @@ private class Medic (
 
   import kit.{archive, scheduler}
 
-  val fiber = new Fiber (scheduler)
+  val fiber = new Fiber
 
   def promised (ballot: BallotNumber): Unit = fiber.execute {
     if (this.ballot < ballot)

@@ -34,6 +34,6 @@ class ServerSocket (socket: AsynchronousServerSocketChannel) (implicit scheduler
 
 object ServerSocket {
 
-  def open (group: AsynchronousChannelGroup, scheduler: Scheduler): ServerSocket =
+  def open (group: AsynchronousChannelGroup) (implicit scheduler: Scheduler): ServerSocket =
     new ServerSocket (AsynchronousServerSocketChannel.open (group)) (scheduler)
 }

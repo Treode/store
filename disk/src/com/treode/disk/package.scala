@@ -92,11 +92,11 @@ package object disk {
   private [disk] def openFile (item: (Path, DiskGeometry)) (implicit scheduler: Scheduler) = {
     val (path, config) = item
     import StandardOpenOption.{CREATE, READ, WRITE}
-    val file = File.open (path, scheduler, CREATE, READ, WRITE)
+    val file = File.open (path, CREATE, READ, WRITE)
     (path, file, config)
   }
 
   private [disk] def reopenFile (path: Path) (implicit scheduler: Scheduler) = {
     import StandardOpenOption.{READ, WRITE}
-    File.open (path, scheduler, READ, WRITE)
+    File.open (path, READ, WRITE)
   }}

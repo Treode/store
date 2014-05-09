@@ -78,6 +78,6 @@ class Socket (socket: AsynchronousSocketChannel) (implicit scheduler: Scheduler)
 
 object Socket {
 
-  def open (group: AsynchronousChannelGroup, scheduler: Scheduler): Socket =
+  def open (group: AsynchronousChannelGroup) (implicit scheduler: Scheduler): Socket =
     new Socket (AsynchronousSocketChannel.open (group)) (scheduler)
 }

@@ -18,7 +18,7 @@ object Echo {
 
   def attach (localId: HostId) (implicit random: Random, scheduler: Scheduler, cluster: Cluster) {
 
-    val fiber = new Fiber (scheduler)
+    val fiber = new Fiber
     val backoff = Backoff (100, 200)
     val period = 10000
     var start = 0L

@@ -56,7 +56,7 @@ private class Listener (
     }}
 
   def startup() {
-    server = ServerSocket.open (group, scheduler)
+    server = ServerSocket.open (group)
     server.bind (localAddr)
     if (localAddr.isInstanceOf [InetSocketAddress])
       println ("Accepting messenger connections on " + localAddr)

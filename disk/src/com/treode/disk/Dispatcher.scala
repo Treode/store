@@ -14,7 +14,7 @@ private class Dispatcher [M] (
 
   private type R = (Long, UnrolledBuffer [M]) => Any
 
-  private val fiber = new Fiber (scheduler)
+  private val fiber = new Fiber
   private var engaged = false
   private var messages = new UnrolledBuffer [M]
 

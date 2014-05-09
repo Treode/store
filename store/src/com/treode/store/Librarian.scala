@@ -19,7 +19,7 @@ private class Librarian (
   import cluster.localId
   import library.atlas
 
-  val fiber = new Fiber (scheduler)
+  val fiber = new Fiber
   var active = false
   var issuing = false
   var moving = false

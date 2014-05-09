@@ -17,7 +17,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   private val confirmingBackoff = Backoff (200, 300, 1 minutes, 7)
   private val closedLifetime = 2 seconds
 
-  private val fiber = new Fiber (scheduler)
+  private val fiber = new Fiber
   var state: State = Opening
 
   trait State {

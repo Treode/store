@@ -15,7 +15,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
   import kit.{acceptors, archive, cluster, disks, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
 
-  private val fiber = new Fiber (scheduler)
+  private val fiber = new Fiber
   var state: State = null
 
   trait State {

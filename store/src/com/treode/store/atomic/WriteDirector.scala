@@ -18,7 +18,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
   import kit.{cluster, paxos, random, scheduler}
   import kit.config.prepareBackoff
 
-  val fiber = new Fiber (scheduler)
+  val fiber = new Fiber
   val port = cluster.open (WriteResponse.pickler) (receive _)
   val backoff = prepareBackoff.iterator
   var state: State = new Opening

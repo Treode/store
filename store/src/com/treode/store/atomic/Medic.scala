@@ -6,7 +6,7 @@ import com.treode.store.{TxClock, TxId, WriteOp}
 private class Medic (val xid: TxId, kit: RecoveryKit)  {
   import kit.{scheduler, tables}
 
-  val fiber = new Fiber (scheduler)
+  val fiber = new Fiber
 
   var _preparing = Option.empty [Seq [WriteOp]]
   var _committed = Option.empty [TxClock]

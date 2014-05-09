@@ -15,7 +15,7 @@ private class Compactor (kit: DisksKit) {
 
   type DrainReq = Iterator [SegmentPointer]
 
-  val fiber = new Fiber (scheduler)
+  val fiber = new Fiber
   var pages: PageRegistry = null
   var cleanq = Set.empty [(TypeId, ObjectId)]
   var compactq = Set.empty [(TypeId, ObjectId)]
@@ -47,7 +47,7 @@ private class Compactor (kit: DisksKit) {
 
   private def compacted (latches: Seq [Callback [Unit]]): Callback [Unit] = {
     case Success (v) =>
-      val cb = Callback.fanout (latches, scheduler)
+      val cb = Callback.fanout (latches)
       fiber.execute (reengage())
       cb.pass (v)
     case Failure (t) =>

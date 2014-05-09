@@ -12,7 +12,7 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
   import kit.{acceptors, broker, cluster, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
 
-  private val fiber = new Fiber (scheduler)
+  private val fiber = new Fiber
   var state: State = null
 
   trait State {

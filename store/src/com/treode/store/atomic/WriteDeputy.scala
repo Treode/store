@@ -21,7 +21,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     val void = RequestMediator.void [WriteResponse]
   }
 
-  val fiber = new Fiber (scheduler)
+  val fiber = new Fiber
   var state: State = new Open
 
   trait State {

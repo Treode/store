@@ -36,7 +36,7 @@ private class DiskDrive (
 ) {
   import kit.{checkpointer, compactor, config, disks, scheduler}
 
-  val fiber = new Fiber (scheduler)
+  val fiber = new Fiber
   val logmp = new Multiplexer [PickledRecord] (kit.logd)
   val logr: (Long, UnrolledBuffer [PickledRecord]) => Unit = (receiveRecords _)
   val pagemp = new Multiplexer [PickledPage] (kit.paged)
@@ -220,7 +220,7 @@ private class DiskDrive (
       logmp.replace (rejects)
 
       val callbacks = writeRecords (logBuf, batch, accepts)
-      val cb = fanout (callbacks, scheduler)
+      val cb = fanout (callbacks)
       assert (logTail + logBuf.readableBytes <= logLimit)
 
       checkpointer.tally (logBuf.readableBytes, accepts.size)
@@ -301,7 +301,7 @@ private class DiskDrive (
       val (buffer, callbacks, ledger) = writePages (accepts)
       val pos = pageHead - buffer.readableBytes
       assert (pos >= pageSeg.base + geometry.blockBytes)
-      val cb = fanout (callbacks, scheduler)
+      val cb = fanout (callbacks)
 
       val task = for {
         _ <- file.flush (buffer, pos)

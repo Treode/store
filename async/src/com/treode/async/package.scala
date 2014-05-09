@@ -53,7 +53,7 @@ package object async {
         def apply (v: Try [A]) = f (this) (v)
       }
 
-    def fanout [A] (cbs: Traversable [Callback [A]], scheduler: Scheduler): Callback [A] =
+    def fanout [A] (cbs: Traversable [Callback [A]]) (implicit scheduler: Scheduler): Callback [A] =
       (v => cbs foreach (scheduler.execute (_, v)))
 
     def ignore [A]: Callback [A] = {

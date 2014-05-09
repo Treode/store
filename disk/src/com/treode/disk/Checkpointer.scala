@@ -9,7 +9,7 @@ import Callback.ignore
 private class Checkpointer (kit: DisksKit) {
   import kit.{config, disks, scheduler}
 
-  val fiber = new Fiber (scheduler)
+  val fiber = new Fiber
   var checkpoints: CheckpointRegistry = null
   var bytes = 0
   var entries = 0

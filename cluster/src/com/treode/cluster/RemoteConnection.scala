@@ -113,7 +113,7 @@ private class RemoteConnection (
     val time = System.currentTimeMillis
 
     override def send (message: PickledMessage) {
-      val socket = Socket.open (group, scheduler)
+      val socket = Socket.open (group)
       greet (socket)
       state = new Connecting (socket, localId, time, backoff)
       state.send (message)

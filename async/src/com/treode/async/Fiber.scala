@@ -68,7 +68,7 @@ import com.treode.async.implicits._
   * When you invoke `fiber.execute`, under the covers a closure (also an object) is created and
   * placed on a queue.  The fiber then runs the closures one at a time.
   */
-class Fiber (scheduler: Scheduler) extends Scheduler {
+class Fiber (implicit scheduler: Scheduler) extends Scheduler {
 
   private [this] val tasks = new ArrayDeque [Runnable]
   private [this] var engaged = false

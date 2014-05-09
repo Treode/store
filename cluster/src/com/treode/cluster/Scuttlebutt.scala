@@ -9,7 +9,7 @@ import Scuttlebutt.{Handler, Ping, Sync, Universe}
 
 private class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit scheduler: Scheduler) {
 
-  private val fiber = new Fiber (scheduler)
+  private val fiber = new Fiber
   private val localHost = peers.get (localId)
   private var universe: Universe = Map.empty .withDefaultValue (Map.empty)
   private var next = 1

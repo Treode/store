@@ -18,7 +18,7 @@ class FiberSpec extends FlatSpec {
 
   "A Fiber" should "run one task" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     var a = false
     f.execute (a = true)
     assertResult (false) (a)
@@ -28,7 +28,7 @@ class FiberSpec extends FlatSpec {
 
   it should "run two queued tasks" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     var a = false
     var b = false
     f.execute (a = true)
@@ -42,7 +42,7 @@ class FiberSpec extends FlatSpec {
 
   it should "run two tasks one after the other" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     var a = false
     var b = false
     f.execute (a = true)
@@ -57,7 +57,7 @@ class FiberSpec extends FlatSpec {
 
   it should "handle the return keyword" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     var b = false
     def method(): Unit = f.execute { return; b = true }
     method()
@@ -67,7 +67,7 @@ class FiberSpec extends FlatSpec {
 
   it should "report an exception thrown from a task and continue" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     var a = false
     f.execute (throwDistinguishedException)
     f.execute (a = true)
@@ -79,7 +79,7 @@ class FiberSpec extends FlatSpec {
 
   "Fiber.async" should "not invoke the callback" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     var a = false
     val cb = f.async [Unit] (cb => a = true) .capture()
     assertResult (false) (a)
@@ -91,33 +91,33 @@ class FiberSpec extends FlatSpec {
 
   it should "reject the return keyword" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     def method(): Async [Int] = f.async (_ => return null)
     method() .fail [ReturnException]
   }
 
   it should "report an exception through the callback" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     f.async [Unit] (cb => throw new DistinguishedException) .fail [DistinguishedException]
   }
 
   "Fiber.guard" should "report an exception through the callback" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     f.guard (throw new DistinguishedException) .fail [DistinguishedException]
   }
 
   it should "reject the return keyword" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     def method(): Async [Int] = f.guard (return supply (0))
     method() .fail [ReturnException]
   }
 
   "Fiber.supply" should "invoke the callback" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     var a = false
     f.supply (a = true) .pass
     assertResult (true) (a)
@@ -125,13 +125,13 @@ class FiberSpec extends FlatSpec {
 
   it should "reject the return keyword" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     def method(): Async [Int] = f.supply {return null}
     method() .fail [ReturnException]
   }
 
   it should "report an exception through the callback" in {
     implicit val s = StubScheduler.random()
-    val f = new Fiber (s)
+    val f = new Fiber
     f.supply (throw new DistinguishedException) .fail [DistinguishedException]
   }}

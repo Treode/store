@@ -10,7 +10,7 @@ private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
 
   private type R = (Long, UnrolledBuffer [M]) => Any
 
-  private val fiber = new Fiber (scheduler)
+  private val fiber = new Fiber
   private var messages = new UnrolledBuffer [M]
   private var exclusive = false
   private var enrolled = false
@@ -117,7 +117,7 @@ private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     case (cb, Open) =>
       state = Pausing (cb)
     case (cb1, Closing (cb2)) =>
-      state = Closing (Callback.fanout (Seq (cb1, cb2), scheduler))
+      state = Closing (Callback.fanout (Seq (cb1, cb2)))
     case (cb, _) =>
       scheduler.pass (cb, ())
   }
@@ -139,7 +139,7 @@ private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     case (cb, Closing (_)) =>
       scheduler.fail (cb, closedException)
     case (cb1, Pausing (cb2)) =>
-      state = Closing (Callback.fanout (Seq (cb1, cb2), scheduler))
+      state = Closing (Callback.fanout (Seq (cb1, cb2)))
     case (cb, _) if receiver.isDefined =>
       state = Closed
       scheduler.pass (cb, ())

@@ -20,7 +20,7 @@ private class ReadDirector (
   import kit.{cluster, random, scheduler}
   import kit.config.readBackoff
 
-  val fiber = new Fiber (scheduler)
+  val fiber = new Fiber
   val vs = Array.fill (ops.size) (Value.empty)
 
   val cohorts = ops map (kit.locate (_))

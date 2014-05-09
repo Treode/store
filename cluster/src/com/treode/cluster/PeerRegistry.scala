@@ -50,7 +50,7 @@ private object PeerRegistry {
       if (remoteId == localId)
         new LocalConnection (localId, ports)
       else
-        new RemoteConnection (remoteId, localId, new Fiber (scheduler), group, ports)
+        new RemoteConnection (remoteId, localId, new Fiber, group, ports)
 
     new PeerRegistry (localId, newPeer)
   }}

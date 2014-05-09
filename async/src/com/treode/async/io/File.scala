@@ -106,7 +106,6 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
 
 object File {
 
-  def open (path: Path, scheduler: Scheduler, opts: OpenOption*): File = {
-    val channel = AsynchronousFileChannel.open (path, opts.toSet, scheduler.asExecutorService)
-    new File (channel) (scheduler)
-  }}
+  def open (path: Path, opts: OpenOption*) (implicit scheduler: Scheduler): File =
+    new File (AsynchronousFileChannel.open (path, opts.toSet, scheduler.asExecutorService))
+}

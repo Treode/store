@@ -18,7 +18,7 @@ private class AtomicMover (kit: AtomicKit) {
   import kit.{cluster, library, place, random, scheduler, tables}
   import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
 
-  private val fiber = new Fiber (scheduler)
+  private val fiber = new Fiber
   private val queue = AsyncQueue (fiber) (next())
   private var tracker = new Tracker
   private var callbacks = List.empty [Callback [Unit]]

@@ -23,7 +23,7 @@ private class DiskDrives (kit: DisksKit) {
   type DetachRequest = DiskDrive
   type CheckpointRequest = (Map [Int, Long], Callback [Unit])
 
-  val fiber = new Fiber (scheduler)
+  val fiber = new Fiber
 
   var disks = Map.empty [Int, DiskDrive]
   var attachreqs = Queue.empty [AttachRequest]
