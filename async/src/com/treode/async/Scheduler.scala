@@ -1,12 +1,14 @@
 package com.treode.async
 
-import java.util.concurrent.{Executor, TimeUnit, ScheduledExecutorService}
+import java.util.List
+import java.util.concurrent._
 import scala.runtime.NonLocalReturnControl
 import scala.util.{Failure, Success, Try}
 
 import Scheduler.toRunnable
 
 trait Scheduler extends Executor {
+  self =>
 
   def execute (task: Runnable)
 
@@ -37,7 +39,29 @@ trait Scheduler extends Executor {
 
   def whilst [A] (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
     new RichExecutor (this) .whilst (p) (f)
-}
+
+  /** Implements what is needed by AsynchronousFileChannel. */
+  private [async] lazy val asExecutorService: ExecutorService =
+    new AbstractExecutorService {
+
+      def execute (task: Runnable): Unit =
+        self.execute (task)
+
+      def awaitTermination (timeout: Long, unit: TimeUnit): Boolean =
+        throw new UnsupportedOperationException
+
+      def isShutdown(): Boolean =
+        throw new UnsupportedOperationException
+
+      def isTerminated(): Boolean =
+        throw new UnsupportedOperationException
+
+      def shutdown(): Unit =
+        throw new UnsupportedOperationException
+
+      def shutdownNow(): List [Runnable] =
+        throw new UnsupportedOperationException
+  }}
 
 object Scheduler {
 

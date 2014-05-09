@@ -55,7 +55,7 @@ extends Disks.Recovery {
 
   def attach (exec: ExecutorService, items: (Path, DiskGeometry)*): Async [Launch] =
     guard {
-      val files = items map (openFile (_, exec))
+      val files = items map (openFile (_))
       _attach (files: _*)
     }
 
@@ -81,7 +81,7 @@ extends Disks.Recovery {
 
   def reopen (exec: ExecutorService) (path: Path): Async [SuperBlocks] =
     guard {
-      val file = reopenFile (path, exec)
+      val file = reopenFile (path)
       SuperBlocks.read (path, file)
     }
 

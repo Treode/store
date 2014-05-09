@@ -170,11 +170,17 @@ object TreodeBuild extends Build {
 
   lazy val example1 = Project ("example1", file ("example1"))
     .dependsOn (store % "compile;test->stub")
+    .settings (assemblySettings: _*)
     .settings (
 
       organization := "com.treode",
+      name := "example1",
       version := "0.1",
       scalaVersion := "2.10.3",
+
+      jarName in assembly := "server.jar",
+      mainClass in assembly := Some ("example1.Server"),
+      test in assembly := {},
 
       unmanagedSourceDirectories in Compile <<=
         (baseDirectory ((base: File) => Seq (base / "src"))),

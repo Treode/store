@@ -4,7 +4,7 @@ import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService
 
 import com.google.common.hash.Hashing
-import com.treode.async.AsyncIterator
+import com.treode.async.{AsyncIterator, Scheduler}
 import com.treode.async.io.File
 
 package disk {
@@ -89,14 +89,14 @@ package object disk {
       b.result
     }}
 
-  private [disk] def openFile (item: (Path, DiskGeometry), exec: ExecutorService) = {
+  private [disk] def openFile (item: (Path, DiskGeometry)) (implicit scheduler: Scheduler) = {
     val (path, config) = item
     import StandardOpenOption.{CREATE, READ, WRITE}
-    val file = File.open (path, exec, CREATE, READ, WRITE)
+    val file = File.open (path, scheduler, CREATE, READ, WRITE)
     (path, file, config)
   }
 
-  private [disk] def reopenFile (path: Path, exec: ExecutorService) = {
+  private [disk] def reopenFile (path: Path) (implicit scheduler: Scheduler) = {
     import StandardOpenOption.{READ, WRITE}
-    File.open (path, exec, READ, WRITE)
+    File.open (path, scheduler, READ, WRITE)
   }}

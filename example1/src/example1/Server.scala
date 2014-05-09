@@ -5,7 +5,7 @@ import java.nio.file.Paths
 import com.treode.disk.{DisksConfig, DiskGeometry}
 import com.treode.store.{StandAlone, StoreConfig}
 
-class Server extends AsyncFinatraServer {
+object Server extends AsyncFinatraServer {
 
   implicit val disksConfig =
     DisksConfig.recommended (0x7D7A5F10A567B675L)

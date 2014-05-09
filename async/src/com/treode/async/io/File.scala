@@ -4,7 +4,6 @@ import java.nio.ByteBuffer
 import java.nio.channels.AsynchronousFileChannel
 import java.nio.file.{OpenOption, Path}
 import java.nio.file.attribute.FileAttribute
-import java.util.concurrent.{Executor, ExecutorService}
 import scala.collection.JavaConversions._
 
 import com.google.common.hash.{HashCode, HashFunction}
@@ -14,7 +13,7 @@ import com.treode.buffer.PagedBuffer
 import Async.async
 
 /** A file that has useful behavior (flush/fill) and that can be mocked. */
-class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor) {
+class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Scheduler) {
 
   private def read (dst: ByteBuffer, pos: Long): Async [Int] =
     async (file.read (dst, pos, _, Callback.IntHandler))
@@ -23,7 +22,7 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
     async (file.write (src, pos, _, Callback.IntHandler))
 
   private def whilst (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
-    new RichExecutor (exec) .whilst (p) (f)
+    scheduler.whilst (p) (f)
 
   /** Read from the file until `input` has at least `len` readable bytes.  If `input` already has
     * that many readable bytes, this will invoke the callback promptly.
@@ -107,7 +106,7 @@ class File private [io] (file: AsynchronousFileChannel) (implicit exec: Executor
 
 object File {
 
-  def open (path: Path, exec: ExecutorService, opts: OpenOption*): File = {
-    val attrs = new Array [FileAttribute [_]] (0)
-    new File (AsynchronousFileChannel.open (path, opts.toSet, exec, attrs: _*)) (exec)
+  def open (path: Path, scheduler: Scheduler, opts: OpenOption*): File = {
+    val channel = AsynchronousFileChannel.open (path, opts.toSet, scheduler.asExecutorService)
+    new File (channel) (scheduler)
   }}

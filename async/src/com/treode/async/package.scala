@@ -26,19 +26,6 @@ package async {
   */
 package object async {
 
-  import java.nio.file.Paths
-  import java.util.concurrent.Executors
-  import io.File
-  import com.treode.buffer.PagedBuffer
-  val executor = Executors.newScheduledThreadPool (8)
-  val scheduler = Scheduler (executor)
-  val file = File.open (Paths.get ("file"), executor)
-  val input = PagedBuffer (12)
-  file.fill (input, 0, 1024) run {
-    case Success (_) => // do something with input
-    case Failure (t) => // do something with exception
-  }
-
   type Callback [A] = Try [A] => Any
 
   object Callback {
