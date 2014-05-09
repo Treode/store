@@ -5,6 +5,9 @@ import java.util.concurrent._
 import scala.runtime.NonLocalReturnControl
 import scala.util.{Failure, Success, Try}
 
+import com.treode.async.implicits._
+
+import Async.async
 import Scheduler.toRunnable
 
 trait Scheduler extends Executor {
@@ -38,7 +41,23 @@ trait Scheduler extends Executor {
     execute (cb, Failure (t))
 
   def whilst [A] (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
-    new RichExecutor (this) .whilst (p) (f)
+    async { cb =>
+      val loop = Callback.fix [Unit] { loop => {
+        case Success (v) =>
+           execute {
+             try {
+               if (p)
+                 f run loop
+               else
+                 pass (cb, ())
+             } catch {
+               case t: Throwable => fail (cb, t)
+             }
+           }
+        case Failure (t) => fail (cb, t)
+      }}
+      loop.pass()
+    }
 
   /** Implements what is needed by AsynchronousFileChannel. */
   private [async] lazy val asExecutorService: ExecutorService =

@@ -2,19 +2,18 @@ package com.treode.async.io
 
 import java.nio.channels._
 import java.net.SocketAddress
-import java.util.concurrent.Executor
 
-import com.treode.async.{Async, Callback}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 
 import Async.async
 
 /** Something that can be mocked in tests. */
-class ServerSocket (socket: AsynchronousServerSocketChannel, exec: Executor) {
+class ServerSocket (socket: AsynchronousServerSocketChannel) (implicit scheduler: Scheduler) {
 
   /** Adapts Callback to Java's NIO CompletionHandler. */
   object SocketHandler extends CompletionHandler [AsynchronousSocketChannel, Callback [Socket]] {
-    def completed (v: AsynchronousSocketChannel, cb: Callback [Socket]) = cb.pass (new Socket (v) (exec))
+    def completed (v: AsynchronousSocketChannel, cb: Callback [Socket]) = cb.pass (new Socket (v))
     def failed (t: Throwable, cb: Callback [Socket]) = cb.fail (t)
   }
 
@@ -35,6 +34,6 @@ class ServerSocket (socket: AsynchronousServerSocketChannel, exec: Executor) {
 
 object ServerSocket {
 
-  def open (group: AsynchronousChannelGroup, exec: Executor): ServerSocket =
-    new ServerSocket (AsynchronousServerSocketChannel.open (group), exec)
+  def open (group: AsynchronousChannelGroup, scheduler: Scheduler): ServerSocket =
+    new ServerSocket (AsynchronousServerSocketChannel.open (group)) (scheduler)
 }

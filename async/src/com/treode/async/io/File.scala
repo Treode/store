@@ -7,7 +7,7 @@ import java.nio.file.attribute.FileAttribute
 import scala.collection.JavaConversions._
 
 import com.google.common.hash.{HashCode, HashFunction}
-import com.treode.async.{Async, Callback, RichExecutor, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.buffer.PagedBuffer
 
 import Async.async

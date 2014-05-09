@@ -3,10 +3,10 @@ package com.treode.async.io
 import java.nio.ByteBuffer
 import java.nio.channels.{AsynchronousChannelGroup, AsynchronousSocketChannel}
 import java.net.SocketAddress
-import java.util.concurrent.{Executor, TimeUnit}
+import java.util.concurrent.TimeUnit
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, Callback, RichExecutor, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.buffer.PagedBuffer
 
@@ -14,13 +14,8 @@ import Async.async
 import TimeUnit.MILLISECONDS
 
 /** A socket that has useful behavior (flush/fill) and that can be mocked. */
-class Socket (socket: AsynchronousSocketChannel) (implicit exec: Executor) {
-
-  private def fail (cb: Callback [Unit], t: Throwable): Unit =
-    exec.execute (Scheduler.toRunnable (cb, Failure (t)))
-
-  private def whilst (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
-    new RichExecutor (exec) .whilst (p) (f)
+class Socket (socket: AsynchronousSocketChannel) (implicit scheduler: Scheduler) {
+  import scheduler.whilst
 
   def connect (addr: SocketAddress): Async [Unit] =
     async { cb =>
@@ -83,6 +78,6 @@ class Socket (socket: AsynchronousSocketChannel) (implicit exec: Executor) {
 
 object Socket {
 
-  def open (group: AsynchronousChannelGroup, exec: Executor): Socket =
-    new Socket (AsynchronousSocketChannel.open (group)) (exec)
+  def open (group: AsynchronousChannelGroup, scheduler: Scheduler): Socket =
+    new Socket (AsynchronousSocketChannel.open (group)) (scheduler)
 }
