@@ -21,7 +21,7 @@ class StoreTestKit private (implicit
   def install [H <: StubHost] (n: Int, mk: HostId => H): Seq [H] =
     network.install(n, mk)
 
-  def runTasks (timers: Boolean = true, count: Int = Int.MaxValue): Unit =
+  def runTasks (timers: Boolean = false, count: Int = Int.MaxValue): Unit =
     scheduler.runTasks (timers, count)
 }
 
