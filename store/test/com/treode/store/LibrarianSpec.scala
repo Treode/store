@@ -8,6 +8,7 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{AsyncCaptor, AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
+import com.treode.cluster.stubs.StubCluster
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store.catalog.Catalogs
 import org.scalatest.FlatSpec
@@ -17,9 +18,11 @@ import StoreTestTools._
 
 class LibrarianSpec extends FlatSpec with AsyncChecks {
 
-  private class StubLibrarianHost (id: HostId) (implicit kit: StoreTestKit)
-  extends StubStoreHost (id) {
+  private class StubLibrarianHost (val localId: HostId) (implicit kit: StoreTestKit)
+  extends StubStoreHost {
     import kit._
+
+    implicit val cluster = new StubCluster (localId)
 
     implicit val library = new Library
 
@@ -85,7 +88,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
     val Seq (h0, h1, h2, h3) = hs take 4
 
     for (h1 <- hs; h2 <- hs)
-      h1.hail (h2.localId, null)
+      h1.hail (h2.localId)
     h0.issue (issuing (h0, h1, h2) (h0, h1, h3))
     kit.runTasks (count = 2000, timers = true)
     expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)

@@ -221,7 +221,7 @@ class BrokerProperties extends PropSpec with AsyncChecks {
     kit.messageFlakiness = mf
     val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
     for (h1 <- hs; h2 <- hs)
-      h1.hail (h2.localId, null)
+      h1.hail (h2.localId)
     kit.runTasks()
 
     val vs1 = values

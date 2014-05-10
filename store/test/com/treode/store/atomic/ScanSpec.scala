@@ -22,7 +22,7 @@ class ScanSpec extends FlatSpec {
     implicit val kit = StoreTestKit()
     import kit.{random, scheduler}
 
-    val hs = Seq.fill (3) (new StubAtomicHost (random.nextLong))
+    val hs = Seq.fill (3) (StubAtomicHost .install() .pass)
     val Seq (h1, h2, h3) = hs
     for (h <- hs)
       h.setAtlas (settled (h1, h2, h3))
@@ -35,7 +35,7 @@ class ScanSpec extends FlatSpec {
     implicit val kit = StoreTestKit()
     import kit.{random, scheduler}
 
-    val hs = Seq.fill (3) (new StubAtomicHost (random.nextLong))
+    val hs = Seq.fill (3) (StubAtomicHost .install() .pass)
     val Seq (h1, h2, h3) = hs
     for (h <- hs)
       h.setAtlas (settled (h1, h2, h3))

@@ -27,6 +27,10 @@ private class Librarian (
   var receipts = Map.empty [HostId, Int] .withDefaultValue (0)
   var moves = Map.empty [HostId, Int] .withDefaultValue (0)
 
+  catalogs.listen (Atlas.catalog) (install _)
+  Atlas.received.listen (received _)
+  Atlas.moved.listen (moved _)
+
   private def rebalanced (atlas: Atlas): Unit = fiber.execute {
     if (library.atlas.version == atlas.version)
       Atlas.moved.spread (atlas.version)
@@ -93,9 +97,4 @@ private class Librarian (
     if (issued < issue) issued = issue
     moves += peer.id -> issue
     if (moving) advance()
-  }
-
-  catalogs.listen (Atlas.catalog) (install _)
-  Atlas.received.listen (received _)
-  Atlas.moved.listen (moved _)
-}
+  }}

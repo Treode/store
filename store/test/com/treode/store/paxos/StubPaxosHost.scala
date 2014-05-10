@@ -4,6 +4,7 @@ import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
+import com.treode.cluster.stubs.StubCluster
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store.{Atlas, Cohort, Library, StoreTestKit, StubStoreHost}
 import com.treode.store.catalog.Catalogs
@@ -11,9 +12,11 @@ import com.treode.store.catalog.Catalogs
 import Async.guard
 import PaxosTestTools._
 
-private class StubPaxosHost (id: HostId) (implicit kit: StoreTestKit)
-extends StubStoreHost (id) {
+private class StubPaxosHost (val localId: HostId) (implicit kit: StoreTestKit)
+extends StubStoreHost {
   import kit._
+
+  implicit val cluster = new StubCluster (localId)
 
   implicit val library = new Library
 

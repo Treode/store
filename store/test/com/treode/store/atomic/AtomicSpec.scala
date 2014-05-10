@@ -19,9 +19,9 @@ import WriteOp._
 class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
   def check (mf: Double) (implicit kit: StoreTestKit) {
-    import kit._
+    import kit.{random, scheduler, network}
 
-    val hs = Seq.fill (3) (new StubAtomicHost (random.nextLong))
+    val hs = Seq.fill (3) (StubAtomicHost .install() .pass)
     val Seq (h1, h2, h3) = hs
 
     for (h <- hs)
@@ -57,8 +57,8 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
   "The atomic implementation should" - {
 
     behave like aStore { implicit kit =>
-      import kit.random
-      val hs = Seq.fill (3) (new StubAtomicHost (random.nextLong))
+      import kit.{random, scheduler, network}
+      val hs = Seq.fill (3) (StubAtomicHost .install() .pass)
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -67,8 +67,8 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
     behave like aMultithreadableStore (100) {
       implicit val kit = StoreTestKit.multithreaded()
-      import kit.random
-      val hs = Seq.fill (3) (new StubAtomicHost (random.nextLong))
+      import kit.{random, scheduler, network}
+      val hs = Seq.fill (3) (StubAtomicHost .install() .await)
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -85,12 +85,12 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
       implicit val kit = StoreTestKit()
       import kit.{random, scheduler}
 
-      val hs = Seq.fill (4) (new StubAtomicHost (random.nextLong))
+      val hs = Seq.fill (4) (StubAtomicHost .install() .pass)
       val Seq (h1, h2, h3, h4) = hs
       for (h1 <- hs; h2 <- hs)
-        h1.hail (h2.localId, null)
-      h1.issueAtlas (settled (h1, h2, h3))
-      h1.issueAtlas (moving (h1, h2, h3) (h1, h2, h4))
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+      h1.issueAtlas (moving (h1, h2, h3) (h1, h2, h4)) .pass
 
       val xid = TxId (0x6196E3A0F6804B8FL, 0)
       val t = TableId (0xA49381B59A722319L)

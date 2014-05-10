@@ -1,6 +1,5 @@
 package com.treode.store.paxos
 
-import com.treode.cluster.stubs.StubHost
 import com.treode.store.{Cohort, StoreTestTools}
 
 private object PaxosTestTools extends StoreTestTools {

@@ -99,7 +99,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
           val hs = Seq.fill (3) (new StubPaxosHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h1 <- hs; h2 <- hs)
-            h1.hail (h2.localId, null)
+            h1.hail (h2.localId)
           h1.setAtlas (settled (h1, h2, h3))
           h1.issueAtlas (settled (h1, h2, h3)) .pass
           kit.runTasks (timers = true, count = 500)

@@ -6,6 +6,7 @@ import com.treode.async.{Async, Callback}
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
+import com.treode.cluster.stubs.StubCluster
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store._
 import org.scalatest.Assertions
@@ -15,9 +16,11 @@ import Callback.ignore
 import CatalogTestTools._
 import StubCatalogHost.{cat1, cat2}
 
-private class StubCatalogHost (id: HostId) (implicit kit: StoreTestKit)
-extends StubStoreHost (id) {
+private class StubCatalogHost (val localId: HostId) (implicit kit: StoreTestKit)
+extends StubStoreHost {
   import kit._
+
+  implicit val cluster = new StubCluster (localId)
 
   implicit val library = new Library
 
