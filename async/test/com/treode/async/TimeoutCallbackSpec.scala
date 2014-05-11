@@ -28,7 +28,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     timer.pass()
     assert (timer.invoked)
     captor.assertInvoked()
-    scheduler.runTasks (timers = true)
+    scheduler.run (timers = true)
     assertResult (1) (count)
   }
 
@@ -39,7 +39,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     timer.fail (new DistinguishedException)
     assert (timer.invoked)
     captor.failed [DistinguishedException]
-    scheduler.runTasks (timers = true)
+    scheduler.run (timers = true)
     assertResult (1) (count)
   }
 
@@ -49,14 +49,14 @@ class TimeoutCallbackSpec extends FlatSpec {
     val timer = captor.timeout (fiber, backoff) (count += 1)
     assert (!timer.invoked)
     captor.assertNotInvoked()
-    scheduler.runTasks (timers = true, count = 2)
+    scheduler.run (timers = true, count = 2)
     assertResult (2) (count)
     assert (!timer.invoked)
     captor.assertNotInvoked()
     timer.pass()
     assert (timer.invoked)
     captor.assertInvoked()
-    scheduler.runTasks (timers = true)
+    scheduler.run (timers = true)
     assertResult (2) (count)
   }
 
@@ -66,14 +66,14 @@ class TimeoutCallbackSpec extends FlatSpec {
     val timer = captor.timeout (fiber, backoff) (count += 1)
     assert (!timer.invoked)
     captor.assertNotInvoked()
-    scheduler.runTasks (timers = true, count = 2)
+    scheduler.run (timers = true, count = 2)
     assertResult (2) (count)
     assert (!timer.invoked)
     captor.assertNotInvoked()
     timer.fail (new DistinguishedException)
     assert (timer.invoked)
     captor.failed [DistinguishedException]
-    scheduler.runTasks (timers = true)
+    scheduler.run (timers = true)
     assertResult (2) (count)
   }
 
@@ -83,7 +83,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     val timer = captor.timeout (fiber, backoff) (count += 1)
     assert (!timer.invoked)
     captor.assertNotInvoked()
-    scheduler.runTasks (timers = true)
+    scheduler.run (timers = true)
     assertResult (3) (count)
     assert (timer.invoked)
     captor.failed [TimeoutException]
@@ -94,7 +94,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     var flag = false
     val timer = captor.ensure (flag = true) .timeout (fiber, backoff) ()
     timer.pass()
-    scheduler.runTasks (timers = true)
+    scheduler.run (timers = true)
     assert (timer.invoked)
     captor.assertInvoked()
     assert (flag)
@@ -105,7 +105,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     var flag = false
     val timer = captor.ensure (flag = true) .timeout (fiber, backoff) ()
     timer.fail (new DistinguishedException)
-    scheduler.runTasks (timers = true)
+    scheduler.run (timers = true)
     assert (timer.invoked)
     captor.failed [DistinguishedException]
     assert (flag)
@@ -115,7 +115,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     implicit val (random, scheduler, fiber, captor) = setup()
     var flag = false
     val timer = captor.ensure (flag = true) .timeout (fiber, backoff) ()
-    scheduler.runTasks (timers = true)
+    scheduler.run (timers = true)
     assert (timer.invoked)
     captor.failed [TimeoutException]
     assert (flag)

@@ -22,7 +22,7 @@ class FiberSpec extends FlatSpec {
     var a = false
     f.execute (a = true)
     assertResult (false) (a)
-    s.runTasks()
+    s.run()
     assertResult (true) (a)
   }
 
@@ -35,7 +35,7 @@ class FiberSpec extends FlatSpec {
     f.execute (b = true)
     assertResult (false) (a)
     assertResult (false) (b)
-    s.runTasks()
+    s.run()
     assertResult (true) (a)
     assertResult (true) (b)
   }
@@ -47,11 +47,11 @@ class FiberSpec extends FlatSpec {
     var b = false
     f.execute (a = true)
     assertResult (false) (a)
-    s.runTasks()
+    s.run()
     assertResult (true) (a)
     f.execute (b = true)
     assertResult (false) (b)
-    s.runTasks()
+    s.run()
     assertResult (true) (b)
   }
 
@@ -61,7 +61,7 @@ class FiberSpec extends FlatSpec {
     var b = false
     def method(): Unit = f.execute { return; b = true }
     method()
-    s.runTasks()
+    s.run()
     assertResult (false) (b)
   }
 
@@ -72,8 +72,8 @@ class FiberSpec extends FlatSpec {
     f.execute (throwDistinguishedException)
     f.execute (a = true)
     assertResult (false) (a)
-    intercept [DistinguishedException] (s.runTasks())
-    s.runTasks()
+    intercept [DistinguishedException] (s.run())
+    s.run()
     assertResult (true) (a)
   }
 
@@ -84,7 +84,7 @@ class FiberSpec extends FlatSpec {
     val cb = f.async [Unit] (cb => a = true) .capture()
     assertResult (false) (a)
     cb.assertNotInvoked()
-    s.runTasks()
+    s.run()
     assertResult (true) (a)
     cb.assertNotInvoked()
   }

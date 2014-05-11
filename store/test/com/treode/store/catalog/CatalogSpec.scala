@@ -53,7 +53,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       val cb1 = p1.catalogs.propose (cat1.id, patch1) .capture()
       val cb2 = p2.catalogs.propose (cat1.id, patch2) .capture()
       kit.messageFlakiness = mf
-      kit.runTasks (timers = true, count = 500)
+      kit.run (timers = true, count = 500)
       val v = cb1.passed
       assertResult (v) (cb2.passed)
 
@@ -114,7 +114,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
         val (kit, hs, h1, _) = setup (random)
         import kit.scheduler
         h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .pass
-        scheduler.runTasks (timers = true, count = 500)
+        scheduler.run (timers = true, count = 500)
         for (h <- hs)
           assertResult (0x658C1274DE7CFA8EL) (h.v1)
       }}
@@ -125,7 +125,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
         import kit.scheduler
         h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .pass
         h1.catalogs.issue (cat1) (2, 0x48B944DD188FD6D1L) .pass
-        scheduler.runTasks (timers = true, count = 500)
+        scheduler.run (timers = true, count = 500)
         for (h <- hs)
           assertResult (0x48B944DD188FD6D1L) (h.v1)
       }}
@@ -134,9 +134,9 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       val (kit, hs, h1, h2) = setup()
       import kit.scheduler
       h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .pass
-      scheduler.runTasks (timers = true, count = 500)
+      scheduler.run (timers = true, count = 500)
       h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [StaleException]
-      scheduler.runTasks (timers = true, count = 500)
+      scheduler.run (timers = true, count = 500)
       for (h <- hs)
         assertResult (0x658C1274DE7CFA8EL) (h.v1)
     }
@@ -145,9 +145,9 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       val (kit, hs, h1, h2) = setup()
       import kit.scheduler
       h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .pass
-      scheduler.runTasks (timers = true, count = 500)
+      scheduler.run (timers = true, count = 500)
       h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [StaleException]
-      scheduler.runTasks (timers = true, count = 500)
+      scheduler.run (timers = true, count = 500)
       for (h <- hs)
         assertResult (0x658C1274DE7CFA8EL) (h.v1)
     }}}

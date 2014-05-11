@@ -222,7 +222,7 @@ class BrokerProperties extends PropSpec with AsyncChecks {
     val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
     for (h1 <- hs; h2 <- hs)
       h1.hail (h2.localId)
-    kit.runTasks()
+    kit.run()
 
     val vs1 = values
     val vs2 = vs1.updated (5, 0x4B00FB5F38430882L)
@@ -238,7 +238,7 @@ class BrokerProperties extends PropSpec with AsyncChecks {
     h1.issue (cat2) (3, vs3)
     h1.issue (cat1) (4, 0x4A048A835ED3A0A6L)
     h1.issue (cat2) (4, vs4)
-    kit.runTasks (timers = true, count = 400)
+    kit.run (timers = true, count = 400)
 
     for (h <- hs) {
       assertResult (0x4A048A835ED3A0A6L) (h.v1)

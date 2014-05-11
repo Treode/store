@@ -42,11 +42,11 @@ class DiskDriveSpec extends FreeSpec {
       val kit = new DisksKit (0)
       file.stop = true
       val cb = init (file, kit) .capture()
-      scheduler.runTasks()
+      scheduler.run()
       file.last.pass()
       file.last.pass()
       file.stop = false
-      scheduler.runTasks()
+      scheduler.run()
       cb.passed
     }
 
@@ -56,11 +56,11 @@ class DiskDriveSpec extends FreeSpec {
       val kit = new DisksKit (0)
       file.stop = true
       val cb = init (file, kit) .capture()
-      scheduler.runTasks()
+      scheduler.run()
       file.last.pass()
       file.last.fail (new DistinguishedException)
       file.stop = false
-      scheduler.runTasks()
+      scheduler.run()
       cb.failed [DistinguishedException]
     }
 
@@ -70,10 +70,10 @@ class DiskDriveSpec extends FreeSpec {
       val kit = new DisksKit (0)
       file.stop = true
       val cb = init (file, kit) .capture()
-      scheduler.runTasks()
+      scheduler.run()
       file.last.fail (new DistinguishedException)
       file.last.pass()
       file.stop = false
-      scheduler.runTasks()
+      scheduler.run()
       cb.failed [DistinguishedException]
     }}}

@@ -31,7 +31,7 @@ class SocketSpec extends FlatSpec {
     buffer.writeInt (0)
     async.expectWrite (0, 4)
     val cb = socket.flush (buffer) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (4)
     cb.passed
@@ -44,7 +44,7 @@ class SocketSpec extends FlatSpec {
     async.expectWrite (0, 4)
     async.expectWrite (2, 4)
     val cb = socket.flush (output) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
     cb.assertNotInvoked()
@@ -57,7 +57,7 @@ class SocketSpec extends FlatSpec {
     output.writeInt (0)
     async.expectWrite (0, 4)
     val cb = socket.flush (output) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (-1)
     cb.failed [Exception]
@@ -78,7 +78,7 @@ class SocketSpec extends FlatSpec {
     implicit val (scheduler, async, socket, input) = mkSocket
     async.expectRead (0, 32)
     val cb = socket.fill (input, 4) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (4)
     cb.passed
@@ -89,7 +89,7 @@ class SocketSpec extends FlatSpec {
     async.expectRead (0, 32)
     async.expectRead (2, 32)
     val cb = socket.fill (input, 4) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
     cb.assertNotInvoked()
@@ -102,7 +102,7 @@ class SocketSpec extends FlatSpec {
     input.writePos = 2
     async.expectRead (2, 32)
     val cb = socket.fill (input, 4) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
     cb.passed
@@ -114,7 +114,7 @@ class SocketSpec extends FlatSpec {
     input.readPos = 4
     async.expectRead (4, 32)
     val cb = socket.fill (input, 4) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (4)
     cb.passed
@@ -126,7 +126,7 @@ class SocketSpec extends FlatSpec {
     input.readPos = 4
     async.expectRead (6, 32)
     val cb = socket.fill (input, 4) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
     cb.passed
@@ -139,7 +139,7 @@ class SocketSpec extends FlatSpec {
     async.expectRead (30, 32)
     async.expectRead (0, 32)
     val cb = socket.fill (input, 8) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
     cb.assertNotInvoked()
@@ -151,7 +151,7 @@ class SocketSpec extends FlatSpec {
     implicit val (scheduler, async, socket, input) = mkSocket
     async.expectRead (0, 32)
     val cb = socket.fill (input, 4) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (-1)
     cb.failed [Exception]

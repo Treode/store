@@ -90,11 +90,11 @@ class RecoverySpec extends FreeSpec {
       val recovery = Disks.recover()
       file.stop = true
       val cb = recovery.attachAndCapture (("a", file, geom))
-      scheduler.runTasks()
+      scheduler.run()
       file.stop = false
       while (file.hasLast)
         file.last.fail (new Exception)
-      scheduler.runTasks()
+      scheduler.run()
       cb.failed [Exception]
     }}
 

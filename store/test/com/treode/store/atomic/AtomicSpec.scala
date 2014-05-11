@@ -37,7 +37,7 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
     val cb1 = h1.write (xid1, TxClock.zero, Create (t, k, 1)) .capture()
     val cb2 = h2.write (xid2, TxClock.zero, Create (t, k, 2)) .capture()
     kit.messageFlakiness = mf
-    scheduler.runTasks (true, count = 400)
+    scheduler.run (true, count = 400)
 
     // 1 host might write and the other collide or timeout, or both might timeout.
     if (cb1.hasPassed) {
@@ -98,7 +98,7 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
       for (h <- hs)
         h.expectCells (t) (k##ts::1)
-      kit.runTasks (count = 1000, timers = true)
+      kit.run (count = 1000, timers = true)
       expectAtlas (3, settled (h1, h2, h4)) (hs)
       for (h <- Seq (h1, h2, h4))
         h.expectCells (t) (k##ts::1)

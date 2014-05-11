@@ -106,7 +106,7 @@ class DispatcherSpec extends FlatSpec {
     dsp.send (3)
     rcpt1.expect (1, 2)
     dsp.replace (list (2))
-    scheduler.runTasks()
+    scheduler.run()
     val rcpt2 = dsp.receptor()
     rcpt2.expect (2, 3)
     dsp.replace (list())
@@ -152,7 +152,7 @@ class DispatcherSpec extends FlatSpec {
     val count = 100
     for (i <- 0 until count)
       dsp.send (i)
-    scheduler.runTasks()
+    scheduler.run()
 
     assertResult ((0 until count).toSet) (received)
   }}

@@ -38,12 +38,12 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) with Assertions {
 
   def completeLast (v: Int) (implicit scheduler: StubScheduler) = {
     completion.pass (v)
-    scheduler.runTasks()
+    scheduler.run()
   }
 
   def failLast (t: Throwable) (implicit scheduler: StubScheduler) = {
     completion.fail (t)
-    scheduler.runTasks()
+    scheduler.run()
   }
 
   def expectRead (bufPos: Int, bufLimit: Int) {

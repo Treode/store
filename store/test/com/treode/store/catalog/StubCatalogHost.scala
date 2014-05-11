@@ -45,7 +45,7 @@ extends StubStoreHost {
     }
 
   val captor = _launch.capture()
-  scheduler.runTasks()
+  scheduler.run()
   while (!captor.wasInvoked)
     Thread.sleep (10)
   implicit val (disks, catalogs) = captor.passed

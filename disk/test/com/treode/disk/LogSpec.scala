@@ -175,7 +175,7 @@ class LogSpec extends FlatSpec with CrashChecks {
         checkpointing = true
       })
       launch.launch()
-      scheduler.runTasks()
+      scheduler.run()
 
       latch (
           disks.checkpoint(),

@@ -35,7 +35,7 @@ class FileSpec extends FlatSpec {
     buffer.writeInt (0)
     async.expectWrite (0, 0, 4)
     val cb = file.flush (buffer, 0) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (4)
     cb.passed
@@ -49,7 +49,7 @@ class FileSpec extends FlatSpec {
     async.expectWrite (0, 0, 4)
     async.expectWrite (2, 2, 4)
     val cb = file.flush (output, 0) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
     cb.assertNotInvoked()
@@ -63,7 +63,7 @@ class FileSpec extends FlatSpec {
     output.writeInt (0)
     async.expectWrite (0, 0, 4)
     val cb = file.flush (output, 0) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (-1)
     cb.failed [Exception]
@@ -87,7 +87,7 @@ class FileSpec extends FlatSpec {
     val input = PagedBuffer (5)
     async.expectRead (0, 0, 32)
     val cb = file.fill (input, 0, 4) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (4)
     cb.passed
@@ -99,7 +99,7 @@ class FileSpec extends FlatSpec {
     async.expectRead (0, 0, 32)
     async.expectRead (2, 2, 32)
     val cb = file.fill (input, 0, 4) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
     cb.assertNotInvoked()
@@ -113,7 +113,7 @@ class FileSpec extends FlatSpec {
     input.writePos = 2
     async.expectRead (0, 2, 32)
     val cb = file.fill (input, 0, 4) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
     cb.passed
@@ -135,7 +135,7 @@ class FileSpec extends FlatSpec {
     input.readPos = 4
     async.expectRead (0, 6, 32)
     val cb = file.fill (input, 0, 4) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
     cb.passed
@@ -149,7 +149,7 @@ class FileSpec extends FlatSpec {
     async.expectRead (0, 30, 32)
     async.expectRead (2, 0, 32)
     val cb = file.fill (input, 0, 8) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
     cb.assertNotInvoked()
@@ -162,7 +162,7 @@ class FileSpec extends FlatSpec {
     val input = PagedBuffer (5)
     async.expectRead (0, 0, 32)
     val cb = file.fill (input, 0, 4) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (-1)
     cb.failed [Exception]

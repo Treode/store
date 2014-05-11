@@ -33,12 +33,12 @@ class AsyncFileMock extends AsynchronousFileChannel with Assertions {
 
   def completeLast (v: Int) (implicit scheduler: StubScheduler) {
     completion.pass (v)
-    scheduler.runTasks()
+    scheduler.run()
   }
 
   def failLast (t: Throwable) (implicit scheduler: StubScheduler) {
     completion.fail (t)
-    scheduler.runTasks()
+    scheduler.run()
   }
 
   def expectRead (filePos: Long, bufPos: Int, bufLimit: Int) {

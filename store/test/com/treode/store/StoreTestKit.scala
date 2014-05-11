@@ -18,8 +18,8 @@ class StoreTestKit private (implicit
   def messageFlakiness_= (v: Double): Unit =
     network.messageFlakiness = v
 
-  def runTasks (timers: Boolean = false, count: Int = Int.MaxValue): Int =
-    scheduler.runTasks (timers, count)
+  def run (timers: => Boolean = false, count: Int = Int.MaxValue): Int =
+    scheduler.run (timers, count)
 }
 
 object StoreTestKit {

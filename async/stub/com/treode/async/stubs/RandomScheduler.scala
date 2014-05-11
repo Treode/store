@@ -36,15 +36,14 @@ private class RandomScheduler (random: Random) extends StubScheduler {
     t.task.run()
   }
 
-  def runTasks (withTimers: Boolean, count: Int): Int = {
+  def run (cond: => Boolean, count: Int): Int = {
     var n = 0
-    while (n < count && (!tasks.isEmpty || withTimers && !timers.isEmpty)) {
+    while (n < count && (!tasks.isEmpty || cond && !timers.isEmpty)) {
       if (tasks.isEmpty)
         nextTimer()
       else
         nextTask()
       n += 1
-      time += 1
     }
     n
   }}

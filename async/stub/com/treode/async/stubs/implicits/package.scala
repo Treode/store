@@ -24,7 +24,7 @@ package object implicits {
       */
     def pass (implicit scheduler: StubScheduler): A = {
       val cb = capture()
-      scheduler.runTasks()
+      scheduler.run()
       cb.passed
     }
 
@@ -33,7 +33,7 @@ package object implicits {
       */
     def fail [E] (implicit scheduler: StubScheduler, m: Manifest [E]): E = {
       val cb = capture()
-      scheduler.runTasks()
+      scheduler.run()
       cb.failed [E]
     }
 

@@ -6,5 +6,11 @@ import com.treode.async.ExecutorAdaptor
 private class StubExecutorAdaptor (executor: ScheduledExecutorService)
 extends ExecutorAdaptor (executor) with StubScheduler {
 
-  def runTasks (timers: Boolean, count: Int): Int = -1
-}
+  def run (timers: => Boolean, count: Int): Int = {
+    var n = 0
+    while (n < count && timers) {
+      Thread.sleep (10)
+      n += 1
+    }
+    n
+  }}

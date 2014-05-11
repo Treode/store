@@ -116,7 +116,7 @@ private object DiskTestTools {
         implicit tag: ClassTag [M], scheduler: StubScheduler): Int = {
       while (!dispatcher.receivers.isEmpty)
         dispatcher.receivers.remove () (0L, new UnrolledBuffer [M])
-      scheduler.runTasks()
+      scheduler.run()
     }
 
     def tickle() (implicit scheduler: StubScheduler) {
@@ -137,7 +137,7 @@ private object DiskTestTools {
 
     def launchAndPass (tickle: Boolean = false) (implicit scheduler: StubScheduler) {
       agent.launch()
-      scheduler.runTasks()
+      scheduler.run()
       if (tickle)
         disks.tickle()
       disks.assertLaunched()

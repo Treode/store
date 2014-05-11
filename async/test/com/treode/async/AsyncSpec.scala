@@ -115,7 +115,7 @@ class AsyncSpec extends FlatSpec {
   it should "stop when the predicate is false" in {
     implicit val scheduler = StubScheduler.random()
     val cb = async [Int] (_.pass (1)) .filter (_ != 1) .capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
   }
 

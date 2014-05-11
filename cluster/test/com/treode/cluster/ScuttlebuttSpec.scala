@@ -61,7 +61,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
 
     def spread (v: Int) = {
       sb.spread (rumor) (v)
-      scheduler.runTasks()
+      scheduler.run()
     }
 
     def ping (hosts: (HostId, Int)*) =
@@ -69,7 +69,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
 
     def sync (updates: (HostId, Seq [(RumorId, Value, Int)])*) {
       sb.sync (updates)
-      scheduler.runTasks()
+      scheduler.run()
     }}
 
   private def mkScuttlebutt = {
@@ -231,25 +231,27 @@ class ScuttlebuttProperties extends PropSpec with AsyncChecks {
     val hs = Seq.fill (3) (new StubHost (random.nextLong))
     for (h1 <- hs; h2 <- hs)
       h1.hail (h2.localId)
-    scheduler.runTasks()
+    scheduler.run()
 
     val Seq (h1, h2, h3) = hs
     h1.spread (r1) (1)
     h2.spread (r2) (2)
-    scheduler.runTasks()
+    scheduler.run()
     h2.spread (r2) (3)
     h3.spread (r2) (4)
     h3.spread (r3) (5)
-    scheduler.runTasks()
+    scheduler.run()
     h3.spread (r3) (6)
-    scheduler.runTasks (timers = true, count = 200)
 
     val expected = Map (
         entry (h1.localId, r1, 1),
         entry (h2.localId, r2, 3),
         entry (h3.localId, r2, 4),
         entry (h3.localId, r3, 6))
-    assert (hs forall (_.heard == expected))
+    val count = scheduler.run (
+        timers = hs forall (_.heard == expected),
+        count = 1000)
+    assert (count < 1000)
   }
 
   property ("Scuttlebutt should spread rumors") {

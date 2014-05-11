@@ -18,13 +18,13 @@ class AsyncFileStub (implicit random: Random, scheduler: StubScheduler) extends 
     require (position <= Int.MaxValue)
     if (position > data.length) {
       handler.completed (-1, attachment)
-      scheduler.runTasks()
+      scheduler.run()
     } else {
       val length = random.nextInt (math.min (dst.remaining, data.size - position.toInt)) + 1
       System.arraycopy (data, position.toInt, dst.array, dst.position, length)
       dst.position (dst.position + length)
       handler.completed (length, attachment)
-      scheduler.runTasks()
+      scheduler.run()
     }}
 
   def write [A] (src: ByteBuffer, position: Long, attachment: A, handler: CompletionHandler [JavaInt, _ >: A]) {
@@ -35,7 +35,7 @@ class AsyncFileStub (implicit random: Random, scheduler: StubScheduler) extends 
     System.arraycopy (src.array, src.position, data, position.toInt, length)
     src.position (src.position + length)
     handler.completed (length, attachment)
-    scheduler.runTasks()
+    scheduler.run()
   }
 
   def close(): Unit = ???

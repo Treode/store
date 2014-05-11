@@ -18,13 +18,13 @@ private object TierTestTools extends StoreTestTools {
     def putCells (cells: Cell*) (implicit scheduler: StubScheduler) {
       for (Cell (key, time, value) <- cells)
         table.put (key, time, value.get)
-      scheduler.runTasks()
+      scheduler.run()
     }
 
     def deleteCells (cells: Cell*) (implicit scheduler: StubScheduler) {
       for (Cell (key, time, _) <- cells)
         table.delete (key, time)
-      scheduler.runTasks()
+      scheduler.run()
     }
 
     def checkpoint(): Async [Meta] =

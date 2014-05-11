@@ -43,7 +43,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       val cb1 = p1.paxos.propose (k, 0, 1) .capture()
       val cb2 = p2.paxos.propose (k, 0, 2) .capture()
       kit.messageFlakiness = mf
-      kit.runTasks (timers = true, count = 1000)
+      kit.run (timers = true, count = 1000)
       val v = cb1.passed
       assertResult (v) (cb2.passed)
 
@@ -102,7 +102,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
             h1.hail (h2.localId)
           h1.setAtlas (settled (h1, h2, h3))
           h1.issueAtlas (settled (h1, h2, h3)) .pass
-          kit.runTasks (timers = true, count = 500)
+          kit.run (timers = true, count = 500)
 
           check (kit, h1, h2, hs, 0.1, summary)
         }

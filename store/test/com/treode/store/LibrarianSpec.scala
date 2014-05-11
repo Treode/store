@@ -42,7 +42,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
       }
 
     val captor = _launch.capture()
-    scheduler.runTasks()
+    scheduler.run()
     while (!captor.wasInvoked)
       Thread.sleep (10)
     implicit val (disks, catalogs) = captor.passed
@@ -90,15 +90,15 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
     for (h1 <- hs; h2 <- hs)
       h1.hail (h2.localId)
     h0.issue (issuing (h0, h1, h2) (h0, h1, h3))
-    kit.runTasks (count = 2000, timers = true)
+    kit.run (count = 2000, timers = true)
     expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)
     h0.rebalancer.pass()
-    kit.runTasks (count = 1000, timers = true)
+    kit.run (count = 1000, timers = true)
     expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)
     h1.rebalancer.pass()
-    kit.runTasks (count = 1000, timers = true)
+    kit.run (count = 1000, timers = true)
     expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)
     h2.rebalancer.pass()
-    kit.runTasks (count = 2000, timers = true)
+    kit.run (count = 2000, timers = true)
     expectAtlas (3, settled (h0, h1, h3)) (hs)
   }}

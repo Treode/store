@@ -32,18 +32,18 @@ class AsyncQueueSpec extends FlatSpec {
 
     def start(): CallbackCaptor [Unit] = {
       val cb = queue.async [Unit] (cb => callbacks.add (cb)) .capture()
-      scheduler.runTasks()
+      scheduler.run()
       cb
     }
 
     def pass() {
       captor.pass()
-      scheduler.runTasks()
+      scheduler.run()
     }
 
     def fail (t: Throwable) {
       captor.fail (t)
-      scheduler.runTasks()
+      scheduler.run()
     }}
 
   "An AsyncQueue" should "run one task" in {

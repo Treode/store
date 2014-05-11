@@ -38,7 +38,7 @@ trait CrashChecks extends AsyncChecks {
       val actual = {           // Setup running only the target number of tasks.
         val scheduler = StubScheduler.random (random)
         val cb = runner.setup (scheduler) .capture()
-        scheduler.runTasks (count = target)
+        scheduler.run (count = target)
       }
 
       {                        // Then check the recovery.

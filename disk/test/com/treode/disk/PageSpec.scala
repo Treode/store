@@ -113,7 +113,7 @@ class PageSpec extends FreeSpec {
         pagers.stuff.write (0, 0, Stuff (random.nextLong)) .pass
       disks.clean()
       intercept [IllegalArgumentException] {
-        scheduler.runTasks()
+        scheduler.run()
       }}
 
     "report an error from a probe method" in {
@@ -136,7 +136,7 @@ class PageSpec extends FreeSpec {
         pagers.stuff.write (0, 0, Stuff (random.nextLong)) .pass
       disks.clean()
       intercept [DistinguishedException] {
-        scheduler.runTasks()
+        scheduler.run()
       }}
 
     "report an error from a compact method" in {
@@ -159,5 +159,5 @@ class PageSpec extends FreeSpec {
         pagers.stuff.write (0, i, Stuff (random.nextLong)) .pass
       disks.clean()
       intercept [DistinguishedException] {
-        scheduler.runTasks()
+        scheduler.run()
       }}}}

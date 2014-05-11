@@ -140,7 +140,7 @@ class SynthTableSpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random()
       val (disk, table, cb) = setup (scheduler)
       disk.last.pass()
-      scheduler.runTasks()
+      scheduler.run()
       cb.passed
       assert (table.secondary.isEmpty)
       assert (table.tiers.size > 0)
@@ -221,7 +221,7 @@ class SynthTableSpec extends FreeSpec {
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
         disk.stop = true
         val cb = table .checkpoint() .capture()
-        scheduler.runTasks()
+        scheduler.run()
         cb.assertNotInvoked()
         assert (table.primary.isEmpty)
         assert (!table.secondary.isEmpty)
@@ -243,7 +243,7 @@ class SynthTableSpec extends FreeSpec {
         table.putCells (Kiwi##7::1, Kiwi##14::2)
         disk.stop = true
         val cb = table.checkpoint() .capture()
-        scheduler.runTasks()
+        scheduler.run()
         cb.assertNotInvoked()
         disk.stop = false
         table.putCells (Kiwi##21::3)

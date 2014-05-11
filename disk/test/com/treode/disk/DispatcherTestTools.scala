@@ -42,13 +42,13 @@ object DispatcherTestTools {
     }
 
     def expect (messages: M*) (implicit scheduler: StubScheduler) {
-      scheduler.runTasks()
+      scheduler.run()
       assert (_invokation != null, "Receiver was not invoked.")
       assertResult (list (messages: _*)) (_messages)
     }
 
     def expectNone () (implicit scheduler: StubScheduler) {
-      scheduler.runTasks()
+      scheduler.run()
       assertNotInvoked()
     }
 

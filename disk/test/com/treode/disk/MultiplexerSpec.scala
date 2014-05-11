@@ -49,7 +49,7 @@ class MultiplexerSpec extends FlatSpec {
     val rcpt1 = dsp.receptor()
     val mplx = new Multiplexer (dsp)
     val rcpt2 = mplx.receptor()
-    scheduler.runTasks()
+    scheduler.run()
     mplx.send (2)
     rcpt2.expect (2)
     mplx.replace (list (2))
@@ -87,13 +87,13 @@ class MultiplexerSpec extends FlatSpec {
     val dsp = new Dispatcher [Int] (0)
     val mplx = new Multiplexer (dsp)
     val cb = mplx.close().capture()
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     dsp.send (1)
-    scheduler.runTasks()
+    scheduler.run()
     cb.assertNotInvoked()
     val rcpt = mplx.receptor()
-    scheduler.runTasks()
+    scheduler.run()
     cb.passed
     rcpt.expectNone()
     dsp.expect (1)
@@ -137,7 +137,7 @@ class MultiplexerSpec extends FlatSpec {
         expected += (j << 8) | (i << 4) | i
       }}
 
-    scheduler.runTasks()
+    scheduler.run()
 
     assertResult (expected) (received)
   }}
