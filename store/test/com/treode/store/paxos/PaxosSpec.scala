@@ -66,9 +66,10 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
 
       "stable hosts and a reliable network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
-        forAllSeeds { random =>
+        forAllSeeds { implicit random =>
           implicit val kit = StoreTestKit.random (random)
-          val hs = Seq.fill (3) (new StubPaxosHost (random.nextLong))
+          import kit.{network, scheduler}
+          val hs = Seq.fill (3) (StubPaxosHost .install() .pass)
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
@@ -79,9 +80,10 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
 
       "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
-        forAllSeeds { random =>
+        forAllSeeds { implicit random =>
           implicit val kit = StoreTestKit.random (random)
-          val hs = Seq.fill (3) (new StubPaxosHost (random.nextLong))
+          import kit.{network, scheduler}
+          val hs = Seq.fill (3) (StubPaxosHost .install() .pass)
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
@@ -92,11 +94,11 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
 
       "atlas distributed by catalogs" in {
         var summary = new Summary
-        forAllSeeds { random =>
+        forAllSeeds { implicit random =>
           implicit val kit = StoreTestKit.random (random)
-          import kit.scheduler
+          import kit.{network, scheduler}
 
-          val hs = Seq.fill (3) (new StubPaxosHost (random.nextLong))
+          val hs = Seq.fill (3) (StubPaxosHost .install() .pass)
           val Seq (h1, h2, h3) = hs
           for (h1 <- hs; h2 <- hs)
             h1.hail (h2.localId)
@@ -110,10 +112,10 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
       }}
 
     "rebalance" in { pending
-      implicit val kit = StoreTestKit.random ()
-      import kit._
+      implicit val kit = StoreTestKit.random()
+      import kit.{network, random, scheduler}
 
-      val hs = Seq.fill (4) (new StubPaxosHost (random.nextLong))
+      val hs = Seq.fill (4) (StubPaxosHost .install() .pass)
       val Seq (h1, h2, h3, h4) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
