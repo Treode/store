@@ -30,24 +30,15 @@ private class ScanDeputy (kit: AtomicKit) {
         case None => (builder.result, None)
       }}
 
-  def scan (mdtr: ScanMediator, table: TableId, key: Bytes, time: TxClock) {
-    scan (table, key, time) run {
-      case Success (result) =>
-        mdtr.respond (result)
-      case Failure (t) =>
-        throw t
-    }}
-
   def attach() {
-    ScanDeputy.scan.listen { case ((table, key, time), mdtr) =>
-      scan (mdtr, table, key, time)
+    ScanDeputy.scan.listen { case ((table, key, time), from) =>
+      scan (table, key, time)
     }}}
 
 private object ScanDeputy {
 
   type Cells = Seq [Cell]
   type Point = Option [Key]
-  type ScanMediator = ScanDeputy.scan.Mediator
 
   val scan = {
     import AtomicPicklers._

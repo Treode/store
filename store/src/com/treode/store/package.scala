@@ -4,7 +4,7 @@ import java.util.concurrent.{TimeoutException => JTimeoutException}
 import java.util.logging.{Level, Logger}
 
 import com.treode.async.AsyncIterator
-import com.treode.cluster.PortId
+import com.treode.cluster.{RemoteException => CRemoteException, PortId}
 
 import Level.WARNING
 
@@ -12,11 +12,11 @@ package store {
 
   class CollisionException (val indexes: Seq [Int]) extends Exception
 
-  class DeputyException extends Exception
-
   class StaleException extends Exception
 
   class TimeoutException extends JTimeoutException
+
+  class RemoteException extends CRemoteException
 
   trait Op {
     def table: TableId

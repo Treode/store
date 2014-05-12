@@ -2,7 +2,7 @@ package com.treode.store.atomic
 
 import scala.collection.mutable
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 import com.treode.async.{Async, Backoff, Callback, Fiber}
 import com.treode.async.implicits._
@@ -19,7 +19,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
   import kit.config.prepareBackoff
 
   val fiber = new Fiber
-  val port = cluster.open (WriteResponse.pickler) (receive _)
+  val port = WriteDeputy.prepare.open (receive _)
   val backoff = prepareBackoff.iterator
   var state: State = new Opening
 
@@ -89,7 +89,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
           cb.fail (new CollisionException (ks.toSeq))
         } else if (failure) {
           state = new Aborting (true)
-          cb.fail (new DeputyException)
+          cb.fail (new RemoteException)
         } else {
           state = new Deliberating (ft+1, cb)
         }}}
@@ -236,15 +236,16 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     override def toString = "Director.Closed"
   }
 
-  def receive (rsp: WriteResponse, from: Peer): Unit = fiber.execute {
+  def receive (rsp: Try [WriteResponse], from: Peer): Unit = fiber.execute {
     import WriteResponse._
     rsp match {
-      case Prepared (ft)   => state.prepared (ft, from)
-      case Collisions (ks) => state.collisions (ks, from)
-      case Advance         => state.advance (from)
-      case Committed       => state.committed (from)
-      case Aborted         => state.aborted (from)
-      case Failed          => state.failed (from)
+      case Success (Prepared (ft))   => state.prepared (ft, from)
+      case Success (Collisions (ks)) => state.collisions (ks, from)
+      case Success (Advance)         => state.advance (from)
+      case Success (Committed)       => state.committed (from)
+      case Success (Aborted)         => state.aborted (from)
+      case Success (Failed)          => state.failed (from)
+      case Failure (_)               => state.failed (from)
     }}
 
   def open (cb: Callback [TxClock]): Unit =

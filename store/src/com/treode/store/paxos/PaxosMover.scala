@@ -59,10 +59,8 @@ private class PaxosMover (kit: PaxosKit) {
 
   move.listen { case (cells, from) =>
     val (gen, novel) = archive.receive (cells)
-    Acceptor.receive.record (gen, novel) run {
-      case Success (_) => from.respond()
-      case Failure (t) => throw t
-    }}
+    Acceptor.receive.record (gen, novel)
+  }
 
   def send (cells: Seq [Cell], hosts: Set [Peer]): Async [Unit] =
     async { cb =>

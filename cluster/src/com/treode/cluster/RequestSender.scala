@@ -4,7 +4,7 @@ import com.treode.pickle.Pickler
 
 trait RequestSender [A] {
 
-  type Port = EphemeralPort [A]
+  type Port = EphemeralPort [Option [A]]
 
   def apply (h: Peer, port: Port)
   def apply (hs: Iterable [Peer], port: Port) (implicit c: Cluster)

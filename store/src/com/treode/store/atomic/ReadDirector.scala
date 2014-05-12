@@ -1,12 +1,13 @@
 package com.treode.store.atomic
 
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, Backoff, Callback, Fiber}
 import com.treode.async.implicits._
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{HostId, Peer}
-import com.treode.store.{DeputyException, ReadOp, TxClock, Value}
+import com.treode.store.{ReadOp, TxClock, Value}
 
 import Async.async
 
@@ -31,10 +32,9 @@ private class ReadDirector (
 
   val port = ReadDeputy.read.open { (rsp, from) =>
     fiber.execute {
-      import ReadResponse._
       rsp match {
-        case Got (vs) => got (vs, from)
-        case Failed => failed (from)
+        case Success (vs) => got (vs, from)
+        case Failure (t) => ()
       }}}
 
   val timer = cb.ensure {
@@ -51,11 +51,6 @@ private class ReadDirector (
         vs (i) = v
     if (broker.quorum)
       timer.pass (vs)
-  }
-
-  def failed (from: Peer) {
-    if (timer.invoked) return
-    timer.fail (new DeputyException)
   }}
 
 private object ReadDirector {

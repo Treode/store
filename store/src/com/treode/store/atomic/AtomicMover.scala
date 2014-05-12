@@ -65,10 +65,8 @@ private class AtomicMover (kit: AtomicKit) {
     }}
 
   move.listen { case ((table, cells), from) =>
-    tables.receive (table, cells) run {
-      case Success (_) => from.respond()
-      case Failure (t) => throw t
-    }}
+    tables.receive (table, cells)
+  }
 
   def send (table: TableId, cells: Seq [Cell], hosts: Set [Peer]): Async [Unit] =
     async { cb =>

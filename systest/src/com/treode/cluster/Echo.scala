@@ -6,7 +6,7 @@ import com.treode.async.{Async, Backoff, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.pickle.Picklers
 
-import Async.async
+import Async.{async, supply}
 import Callback.ignore
 
 object Echo {
@@ -24,8 +24,8 @@ object Echo {
     var start = 0L
     var count = 0
 
-    echo.listen { case (s, mdtr) =>
-      mdtr.respond (s)
+    echo.listen { case (s, from) =>
+      supply (s)
     }
 
     def loop: Async [Unit] = async { cb =>

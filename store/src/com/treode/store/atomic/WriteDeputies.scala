@@ -50,14 +50,14 @@ private class WriteDeputies (kit: AtomicKit) {
 
     TimedStore.table.handle (tables)
 
-    prepare.listen { case ((xid, ct, ops), mdtr) =>
-      get (xid) .prepare (mdtr, ct, ops)
+    prepare.listen { case ((xid, ct, ops), from) =>
+      get (xid) .prepare (ct, ops)
     }
 
-    commit.listen { case ((xid, wt), mdtr) =>
-      get (xid) .commit (mdtr, wt)
+    commit.listen { case ((xid, wt), from) =>
+      get (xid) .commit (wt)
     }
 
-    abort.listen { case (xid, mdtr) =>
-      get (xid) .abort (mdtr)
+    abort.listen { case (xid, from) =>
+      get (xid) .abort()
     }}}

@@ -16,13 +16,3 @@ trait Peer {
   def id: HostId
   def send [A] (p: Pickler [A], port: PortId, msg: A)
 }
-
-object Peer {
-
-  val void: Peer =
-    new Peer {
-      def connect (socket: Socket, input: PagedBuffer, clientId: HostId) = ()
-      def close() = ()
-      def id: HostId = ???
-      def send [A] (p: Pickler [A], port: PortId, msg: A) = ()
-    }}

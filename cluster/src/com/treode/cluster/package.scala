@@ -6,6 +6,8 @@ import Level.WARNING
 
 package object cluster {
 
+  class RemoteException extends Exception
+
   private [cluster] object log {
 
     val logger = Logger.getLogger ("com.treode.cluster")

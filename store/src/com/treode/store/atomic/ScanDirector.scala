@@ -33,8 +33,11 @@ private class ScanDirector (
   var backoff = scanBatchBackoff.iterator
   var state: State = Awaiting
 
-  val port = ScanDeputy.scan.open { case ((cells, point), from) =>
-    got (cells, point, from)
+  val port = ScanDeputy.scan.open {
+    case (Success ((cells, point)), from) =>
+      got (cells, point, from)
+    case _ =>
+      ()
   }
 
   val take: Callback [Unit] = { v =>

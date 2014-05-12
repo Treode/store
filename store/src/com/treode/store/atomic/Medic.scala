@@ -1,7 +1,9 @@
 package com.treode.store.atomic
 
-import com.treode.async.{Async, Fiber}
+import com.treode.async.{Async, Callback, Fiber}
 import com.treode.store.{TxClock, TxId, WriteOp}
+
+import Async.when
 
 private class Medic (val xid: TxId, kit: RecoveryKit)  {
   import kit.{scheduler, tables}
@@ -26,20 +28,11 @@ private class Medic (val xid: TxId, kit: RecoveryKit)  {
   }
 
   def close (kit: AtomicKit): Async [WriteDeputy] =
-    fiber.supply {
-      val void = WriteDeputy.prepare.void
+    fiber.guard {
       val w = new WriteDeputy (xid, kit)
-      _committed match {
-        case Some (wt) => w.commit (void, wt)
-        case None => ()
-      }
-      _aborted match {
-        case true => w.abort (void)
-        case fase => ()
-      }
-      _preparing match {
-        case Some (ops) => w.prepare (void, TxClock.zero, ops)
-        case None => ()
-      }
-      w
+      for {
+        _ <- when (_committed.isDefined) (w.commit (_committed.get))
+        _ <- when (_aborted) (w.abort())
+        _ <- when (_preparing.isDefined) (w.prepare (TxClock.zero, _preparing.get))
+      } yield w
     }}
