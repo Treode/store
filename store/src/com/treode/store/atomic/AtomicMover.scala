@@ -12,7 +12,7 @@ import com.treode.store.tier.TierTable
 import Async.{async, guard, supply}
 import Callback.ignore
 import Cohort.Moving
-import Rebalancer.{Batch, Point, Range, Targets, Tracker, move}
+import AtomicMover.{Batch, Point, Range, Targets, Tracker, move}
 
 private class AtomicMover (kit: AtomicKit) {
   import kit.{cluster, library, place, random, scheduler, tables}
@@ -122,7 +122,7 @@ private class AtomicMover (kit: AtomicKit) {
       tracker.start (targets)
     }}
 
-private object Rebalancer {
+private object AtomicMover {
 
   type Batch = Map [Int, Seq [Cell]]
 

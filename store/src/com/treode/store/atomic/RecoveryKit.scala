@@ -10,7 +10,6 @@ import com.treode.store.{Cohort, Library, Store, StoreConfig, TxId}
 import com.treode.store.paxos.Paxos
 import com.treode.store.tier.TierMedic
 
-import Rebalancer.Targets
 import WriteDeputy.{aborted, committed, preparing}
 
 private class RecoveryKit (implicit

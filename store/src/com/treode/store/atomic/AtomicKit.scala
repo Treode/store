@@ -11,7 +11,7 @@ import com.treode.store.tier.TierTable
 
 import Async.{async, supply}
 import AtomicKit.locator
-import Rebalancer.Targets
+import AtomicMover.Targets
 import WriteDirector.deliberate
 
 private class AtomicKit (implicit

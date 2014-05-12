@@ -6,11 +6,11 @@ import com.treode.cluster.stubs.StubCluster
 import com.treode.store.{Atlas, Bytes, Cohort, StoreTestKit, StoreTestTools, TxClock}
 import org.scalatest.{FreeSpec, ShouldMatchers}
 
+import AtomicMover.{Point, Range, Targets, Tracker}
 import Cohort.{issuing, moving, settled}
-import Rebalancer.{Point, Range, Targets, Tracker}
 import StoreTestTools.{intToBytes, longToTxClock}
 
-class RebalancerSpec extends FreeSpec with ShouldMatchers {
+class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
 
   private def targets (cohorts: Cohort*) (implicit cluster: Cluster): Targets =
     Targets (Atlas (cohorts.toArray, 1))
