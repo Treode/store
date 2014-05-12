@@ -55,7 +55,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
       when (active && moving) (rebalancer.start())
     }
 
-    val librarian = new Librarian (rebalance _)
+    val librarian = Librarian (rebalance _)
 
     cluster.startup()
 

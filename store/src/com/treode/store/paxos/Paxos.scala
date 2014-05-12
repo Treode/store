@@ -5,13 +5,15 @@ import scala.util.Random
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
-import com.treode.store.{Bytes, Library, StoreConfig, TxClock}
+import com.treode.store.{Atlas, Bytes, Library, StoreConfig, TxClock}
 
 private [store] trait Paxos {
 
   def lead (key: Bytes, time: TxClock, value: Bytes): Async [Bytes]
 
   def propose (key: Bytes, time: TxClock, value: Bytes): Async [Bytes]
+
+  def rebalance (atlas: Atlas): Async [Unit]
 }
 
 private [store] object Paxos {

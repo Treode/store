@@ -11,7 +11,9 @@ import com.treode.disk.Disks
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store._
 import com.treode.store.catalog.Catalogs
+import org.scalatest.Assertions
 
+import Assertions._
 import Async.{guard, supply}
 import PaxosTestTools._
 
@@ -27,7 +29,7 @@ private class StubPaxosHost (
     val paxos: PaxosKit
 ) extends StubStoreHost {
 
-  val librarian = new Librarian (_ => supply())
+  val librarian = Librarian (paxos.rebalance _)
 
   cluster.startup()
 
@@ -37,9 +39,19 @@ private class StubPaxosHost (
     library.residents = _cohorts.residents (localId)
   }
 
-  def issueAtlas (cohorts: Cohort*): Async [Unit] =
-    catalogs.issue (Atlas.catalog) (1, Atlas (cohorts.toArray, 1))
-}
+  def issueAtlas (cohorts: Cohort*): Async [Unit] = {
+    val version = library.atlas.version + 1
+    val atlas = Atlas (cohorts.toArray, version)
+    library.atlas = atlas
+    library.residents = atlas.residents (localId)
+    catalogs.issue (Atlas.catalog) (version, atlas)
+  }
+
+  def expectAtlas (atlas: Atlas) {
+    assertResult (atlas) (library.atlas)
+    assertResult (librarian.issued) (atlas.version)
+    assert (librarian.receipts forall (_._2 == atlas.version))
+  }}
 
 private object StubPaxosHost {
 

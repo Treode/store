@@ -314,6 +314,11 @@ private object Acceptor {
     RecordDescriptor (0xAE980885, tuple (bytes, txClock, bytes, long))
   }
 
+  val receive = {
+    import PaxosPicklers._
+    RecordDescriptor (0x4DCE11AA, tuple (ulong, seq (cell)))
+  }
+
   trait Post {
     def record()
     def reply()

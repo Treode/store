@@ -7,7 +7,7 @@ import com.treode.store.catalog.Catalogs
 
 import Cohort._
 
-private class Librarian (
+private class Librarian private (
     rebalance: Atlas => Async [Unit]
 ) (implicit
     scheduler: Scheduler,
@@ -98,3 +98,16 @@ private class Librarian (
     moves += peer.id -> issue
     if (moving) advance()
   }}
+
+private object Librarian {
+
+  def apply (
+    rebalance: Atlas => Async [Unit]
+  ) (implicit
+      scheduler: Scheduler,
+      cluster: Cluster,
+      catalogs: Catalogs,
+      library: Library
+  ): Librarian =
+    new Librarian (rebalance)
+}

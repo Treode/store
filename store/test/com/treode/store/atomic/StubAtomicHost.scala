@@ -14,6 +14,7 @@ import com.treode.store.catalog.Catalogs
 import com.treode.store.paxos.Paxos
 import org.scalatest.Assertions
 
+import Async.latch
 import Assertions._
 import AtomicTestTools._
 
@@ -26,10 +27,13 @@ private class StubAtomicHost (
     val disks: Disks,
     val library: Library,
     val catalogs: Catalogs,
+    val paxos: Paxos,
     val atomic: AtomicKit
 ) extends StubStoreHost {
 
-  val librarian = new Librarian (atomic.rebalance _)
+  val librarian = Librarian { atlas =>
+    latch (paxos.rebalance (atlas), atomic.rebalance (atlas)) .map (_ => ())
+  }
 
   cluster.startup()
 
@@ -99,7 +103,7 @@ private object StubAtomicHost {
       atomic <- _atomic.launch (launch, paxos) .map (_.asInstanceOf [AtomicKit])
     } yield {
       launch.launch()
-      new StubAtomicHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, atomic)
+      new StubAtomicHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, paxos, atomic)
     }}
 
   def install () (implicit kit: StoreTestKit): Async [StubAtomicHost] =
