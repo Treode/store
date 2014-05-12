@@ -1,13 +1,12 @@
 package com.treode.store.paxos
 
-import java.util.concurrent.TimeoutException
 import scala.language.postfixOps
 
 import com.treode.async.{Backoff, Callback, Fiber}
 import com.treode.async.implicits._
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{Peer, MessageDescriptor}
-import com.treode.store.{BallotNumber, Bytes, TxClock}
+import com.treode.store.{BallotNumber, Bytes, TimeoutException, TxClock}
 
 private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   import kit.proposers.remove
@@ -118,7 +117,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
         }}}
 
     def chosen (v: Bytes) {
-      learners foreach (_.pass (v))
+      learners foreach (scheduler.pass (_, v))
       state = new Closed (v)
     }
 
@@ -131,8 +130,8 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
         Acceptor.query (key, time, ballot, value) (promised)
         fiber.delay (backoff.next) (state.timeout())
       } else {
-        remove (key, Proposer.this)
-        learners foreach (_.fail (new TimeoutException))
+        remove (key, time, Proposer.this)
+        learners foreach (scheduler.fail (_, new TimeoutException))
       }}
 
     override def toString = "Proposer.Open " + (key, ballot, value)
@@ -140,10 +139,10 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
   class Closed (value: Bytes) extends State {
 
-    fiber.delay (closedLifetime) (remove (key, Proposer.this))
+    fiber.delay (closedLifetime) (remove (key, time, Proposer.this))
 
     def learn (k: Learner) =
-      k.pass (value)
+      scheduler.pass (k, value)
 
     def chosen (v: Bytes) =
       require (v == value, "Paxos disagreement")

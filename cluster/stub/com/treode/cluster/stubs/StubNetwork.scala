@@ -8,6 +8,8 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.cluster.{HostId, PortId}
 import com.treode.pickle.Pickler
 
+import StubNetwork.inactive
+
 class StubNetwork private (implicit random: Random) {
 
   private val peers = new ConcurrentHashMap [HostId, StubCluster]
@@ -15,22 +17,37 @@ class StubNetwork private (implicit random: Random) {
   var messageFlakiness = 0.0
   var messageTrace = false
 
-  private [stubs] def install (peer: StubCluster): Unit =
+  private [stubs] def install (peer: StubCluster) {
+    val prior = peers.putIfAbsent (peer.localId, peer)
+    if (prior == null)
+      return
     require (
-        peers.putIfAbsent (peer.localId, peer) == null,
+        peers.replace (peer.localId, inactive, peer),
         s"Host ${peer.localId} is already installed.")
+  }
+
+  private [stubs] def remove (peer: StubCluster) {
+    require (
+        peers.replace (peer.localId, peer, inactive),
+        s"Host ${peer.localId} was already removed.")
+  }
 
   private [stubs] def deliver [M] (p: Pickler [M], from: HostId, to: HostId, port: PortId, msg: M) {
     if (messageFlakiness > 0.0 && random.nextDouble < messageFlakiness)
       return
     val h = peers.get (to)
-    require (h != null, s"Host $to is not installed.")
+    require (h != null, s"Host $to does not exist.")
     if (messageTrace)
-      println (s"$from->$to:$port: $msg")
+      println (s"$from->$to:$port: $msg $h")
     h.deliver (p, from, port, msg)
   }}
 
 object StubNetwork {
+
+  private [stubs] val inactive =
+    new StubCluster (0) (null, null, null) {
+      override def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M) = ()
+    }
 
   def apply (random: Random): StubNetwork =
     new StubNetwork () (random)

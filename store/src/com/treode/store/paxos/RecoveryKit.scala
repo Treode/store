@@ -28,40 +28,33 @@ private class RecoveryKit (implicit
   val archive = TierMedic (Acceptors.archive, 0)
   val medics = newMedicsMap
 
-  def openWithDefault (key: Bytes, time: TxClock, default: Bytes) {
+  def get (key: Bytes, time: TxClock, default: Option [Bytes]): Medic = {
     var m0 = medics.get ((key, time))
-    if (m0 != null)
-      return
+    if (m0 != null) return m0
     val m1 = Medic (key, time, default, this)
     m0 = medics.putIfAbsent ((key, time), m1)
-    if (m0 != null)
-      return
-  }
-
-  def get (key: Bytes, time: TxClock): Medic = {
-    val m = medics.get ((key, time))
-    require (m != null, s"Exepcted to be recovering paxos instance $key:$time.")
-    m
+    if (m0 != null) return m0
+    return m1
   }
 
   open.replay { case (key, time, default) =>
-    openWithDefault (key, time, default)
+    get (key, time, Some (default))
   }
 
   promise.replay { case (key, time, ballot) =>
-    get (key, time) promised (ballot)
+    get (key, time, None) promised (ballot)
   }
 
   accept.replay { case (key, time, ballot, value) =>
-    get (key, time) accepted (ballot, value)
+    get (key, time, Some (value)) accepted (ballot, value)
   }
 
   reaccept.replay { case (key, time, ballot) =>
-    get (key, time) reaccepted (ballot)
+    get (key, time, None) reaccepted (ballot)
   }
 
   close.replay { case (key, time, chosen, gen) =>
-    get (key, time) closed (chosen, gen)
+    get (key, time, Some (chosen)) closed (chosen, gen)
   }
 
   checkpoint.replay { meta =>

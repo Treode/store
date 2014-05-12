@@ -11,17 +11,15 @@ private class Proposers (kit: PaxosKit) {
 
   def get (key: Bytes, time: TxClock): Proposer = {
     var p0 = proposers.get ((key, time))
-    if (p0 != null)
-      return p0
+    if (p0 != null) return p0
     val p1 = new Proposer (key, time, kit)
     p0 = proposers.putIfAbsent ((key, time), p1)
-    if (p0 != null)
-      return p0
+    if (p0 != null) return p0
     p1
   }
 
-  def remove (key: Bytes, p: Proposer): Unit =
-    proposers.remove (key, p)
+  def remove (key: Bytes, time: TxClock, p: Proposer): Unit =
+    proposers.remove ((key, time), p)
 
   def propose (ballot: Long, key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
     async { cb =>

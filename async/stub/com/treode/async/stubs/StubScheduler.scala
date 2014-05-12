@@ -7,7 +7,7 @@ import com.treode.async.Scheduler
 
 trait StubScheduler extends Scheduler {
 
-  def run (timers: => Boolean = false, count: Int = Int.MaxValue): Int
+  def run (timers: => Boolean = false, count: Int = Int.MaxValue, oblivious: Boolean = false): Int
 }
 
 object StubScheduler {

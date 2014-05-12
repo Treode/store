@@ -9,7 +9,7 @@ import com.treode.async.stubs.AsyncChecks
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.{CrashChecks, StubDiskDrive}
-import com.treode.store.{Bytes, Cell, StoreTestKit}
+import com.treode.store.{Bytes, Cell, StoreClusterChecks, StoreTestKit}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
@@ -17,57 +17,7 @@ import Async.{guard, latch, supply}
 import Callback.{ignore => disregard}
 import PaxosTestTools._
 
-class PaxosSpec extends FreeSpec with CrashChecks {
-
-  val H1 = 0xF7DD0B042DACCD44L
-  val H2 = 0x3D74427D18B38275L
-  val H3 = 0x1FC96D277C03FEC3L
-
-  class Summary (var timedout: Boolean, var chosen: Set [Int]) {
-
-    def this() = this (false, Set.empty)
-
-    def chose (v: Int): Unit =
-      chosen += v
-
-    def check (domain: Set [Int]) {
-      if (intensity == "standard")
-        assertResult (domain) (chosen)
-    }}
-
-  // Propose two values simultaneously, expect one choice.
-  def check (
-      kit: StoreTestKit,
-      p1: StubPaxosHost,         // First host that will submit a proposal.
-      p2: StubPaxosHost,         // Second host that will submit a proposal.
-      as: Seq [StubPaxosHost],   // Hosts that we expect will accept.
-      mf: Double,
-      summary: Summary
-  ) {
-    try {
-      import kit._
-
-      val k = Bytes (0x9E360154E51197A8L)
-
-      val cb1 = p1.propose (k, 0, 1) .capture()
-      val cb2 = p2.propose (k, 0, 2) .capture()
-      kit.messageFlakiness = mf
-      kit.run (timers = true, count = 1000)
-      val v = cb1.passed
-      assertResult (v) (cb2.passed)
-
-      for (a <- as)
-        assert (
-            !a.acceptors.contains (k),
-            "Expected acceptor to have been removed.")
-      for (a <- as)
-        a.archive.get (k, 0) .expect (k##0::v)
-
-      summary.chose (v.int)
-    } catch {
-      case e: TimeoutException =>
-        summary.timedout = true
-    }}
+class PaxosSpec extends FreeSpec with CrashChecks with StoreClusterChecks {
 
   "The paxos implementation should" - {
 
@@ -101,7 +51,7 @@ class PaxosSpec extends FreeSpec with CrashChecks {
               for {
                 host <- StubPaxosHost.boot (H1, checkpoint, compaction, disk, true)
                 _ = host.setAtlas (settled (host))
-                _ <- tracker.batches (host, nbatch, nput)
+                _ <- tracker.batches (nbatch, nput, host)
               } yield ()
             }
 
@@ -114,33 +64,35 @@ class PaxosSpec extends FreeSpec with CrashChecks {
 
     "achieve consensus with" - {
 
-      "stable hosts and a reliable network" taggedAs (Intensive, Periodic) in {
-        var summary = new Summary
-        forAllSeeds { implicit random =>
-          implicit val kit = StoreTestKit.random (random)
-          import kit.{network, scheduler}
-          val hs = Seq.fill (3) (StubPaxosHost .install() .pass)
-          val Seq (h1, h2, h3) = hs
-          for (h <- hs)
-            h.setAtlas (settled (h1, h2, h3))
-          check (kit, h1, h2, hs, 0.0, summary)
+      def test (implicit random: Random) = {
+        val tracker = new PaxosTracker
+        cluster.host (StubPaxosHost)
+        .setup { implicit scheduler => (h1, h2) =>
+          tracker.batches (10, 10, h1, h2)
         }
-        summary.check (Set (1, 2))
-      }
+        .recover { implicit scheduler => h1 =>
+          tracker.check (h1)
+        }}
 
-      "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in {
-        var summary = new Summary
-        forAllSeeds { implicit random =>
-          implicit val kit = StoreTestKit.random (random)
-          import kit.{network, scheduler}
-          val hs = Seq.fill (3) (StubPaxosHost .install() .pass)
-          val Seq (h1, h2, h3) = hs
-          for (h <- hs)
-            h.setAtlas (settled (h1, h2, h3))
-          check (kit, h1, h2, hs, 0.1, summary)
-        }
-        summary.check (Set (1, 2))
-      }}
+      for { (name, flakiness) <- Seq (
+          "a reliable network" -> 0.0,
+          "a flakey network"   -> 0.1)
+      } s"$name and" - {
+
+        "stable hosts" taggedAs (Intensive, Periodic) in {
+          forThreeStableHosts (0.1, 0.1, flakiness) { implicit random =>
+            test
+          }}
+
+        "a host crashes before closing" taggedAs (Intensive, Periodic) in {
+          forOneHostCrashing (0.1, 0.1, flakiness) { implicit random =>
+            test
+          }}
+
+        "a host reboots after opening" taggedAs (Intensive, Periodic) in {
+          forOneHostRebooting (0.1, 0.1, flakiness) { implicit random =>
+            test
+          }}}}
 
     "rebalance" in {
       implicit val kit = StoreTestKit.random()

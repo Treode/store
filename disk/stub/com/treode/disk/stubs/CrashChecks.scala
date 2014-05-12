@@ -23,14 +23,14 @@ trait CrashChecks extends AsyncChecks {
       val recover: StubScheduler => Any
   )
 
-  class ForCrashesSetup (
+  class ForCrashesRecover (
       messages: Seq [String],
       setup: StubScheduler => Async [_]
   ) {
 
     private val asserts = Seq.newBuilder [Unit => Unit]
 
-    def assert (cond: => Boolean, msg: String): ForCrashesSetup = {
+    def assert (cond: => Boolean, msg: String): ForCrashesRecover = {
       asserts += (_ => Assertions.assert (cond, msg))
       this
     }
@@ -39,24 +39,24 @@ trait CrashChecks extends AsyncChecks {
       new ForCrashesRunner (messages, setup, asserts.result, recover)
   }
 
-  class ForCrashesInfo {
+  class ForCrashesSetup {
 
     private val messages = Seq.newBuilder [String]
 
-    def info (msg: String): ForCrashesInfo = {
+    def info (msg: String): ForCrashesSetup = {
       messages += msg
       this
     }
 
-    def setup (setup: StubScheduler => Async [_]) (implicit random: Random) =
-      new ForCrashesSetup (messages.result, setup)
+    def setup (setup: StubScheduler => Async [_]) =
+      new ForCrashesRecover (messages.result, setup)
   }
 
-  def crash: ForCrashesInfo =
-    new ForCrashesInfo
+  def crash: ForCrashesSetup =
+    new ForCrashesSetup
 
-  def setup (setup: StubScheduler => Async [_]) (implicit random: Random) =
-    new ForCrashesSetup (Seq.empty, setup)
+  def setup (setup: StubScheduler => Async [_]) =
+    new ForCrashesRecover (Seq.empty, setup)
 
   def forCrash (seed: Long, target: Int) (init: Random => ForCrashesRunner): Int = {
 

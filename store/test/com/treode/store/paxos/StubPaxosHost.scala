@@ -22,17 +22,22 @@ private class StubPaxosHost (
     val localId: HostId
 ) (implicit
     val random: Random,
-    val scheduler: Scheduler,
-    val cluster: Cluster,
+    val scheduler: ChildScheduler,
+    val cluster: StubCluster,
     val disks: Disks,
     val library: Library,
     val catalogs: Catalogs,
     val paxos: PaxosKit
-) extends StubStoreHost {
+) extends StoreClusterChecks.Host {
 
   val librarian = Librarian (paxos.rebalance _)
 
   cluster.startup()
+
+  def shutdown() {
+    cluster.shutdown()
+    scheduler.shutdown()
+  }
 
   def setAtlas (cohorts: Cohort*) {
     val _cohorts = Atlas (cohorts.toArray, 1)
@@ -67,7 +72,7 @@ private class StubPaxosHost (
     paxos.propose (key, time, value)
 }
 
-private object StubPaxosHost {
+private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] {
 
   def boot (
       id: HostId,
@@ -77,10 +82,11 @@ private object StubPaxosHost {
       init: Boolean
   ) (implicit
       random: Random,
-      scheduler: Scheduler,
+      parent: Scheduler,
       network: StubNetwork
   ): Async [StubPaxosHost] = {
 
+    implicit val scheduler = new ChildScheduler (parent)
     implicit val cluster = new StubCluster (id)
     implicit val library = new Library
     implicit val storeConfig = TestStoreConfig()

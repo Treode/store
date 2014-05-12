@@ -7,7 +7,7 @@ import com.treode.store.tier.TierMedic
 private class Medic (
     val key: Bytes,
     val time: TxClock,
-    val default: Bytes,
+    var default: Option [Bytes],
     var ballot: BallotNumber,
     var proposal: Proposal,
     var chosen: Option [Bytes],
@@ -24,13 +24,15 @@ private class Medic (
     if (this.ballot < ballot) {
       this.ballot = ballot
       this.proposal = Some ((ballot, value))
+    } else if (proposal.isEmpty) {
+      this.proposal = Some ((ballot, value))
     }}
 
   def reaccepted (ballot: BallotNumber): Unit = synchronized {
-    val value = proposal.get._2
     if (this.ballot < ballot) {
       this.ballot = ballot
-      this.proposal = Some ((ballot, value))
+      if (proposal.isDefined)
+        this.proposal = Some ((ballot, proposal.get._2))
     }}
 
   def closed (chosen: Bytes, gen: Long): Unit = synchronized {
@@ -42,8 +44,10 @@ private class Medic (
     val a = new Acceptor (key, time, kit)
     if (chosen.isDefined)
       a.state = new a.Closed (chosen.get, 0)
+    else if (default.isDefined)
+      a.state = new a.Deliberating (default.get, ballot, proposal, Set.empty)
     else
-      a.state = new a.Deliberating (default, ballot, proposal, Set.empty)
+      assert (false, s"Failed to recover paxos instance $key:$time")
     kit.acceptors.recover (key, time, a)
   }
 
@@ -52,6 +56,6 @@ private class Medic (
 
 private object Medic {
 
-  def apply (key: Bytes, time: TxClock, default: Bytes, kit: RecoveryKit): Medic =
+  def apply (key: Bytes, time: TxClock, default: Option [Bytes], kit: RecoveryKit): Medic =
     new Medic (key, time, default, BallotNumber.zero, Option.empty, None, kit)
 }

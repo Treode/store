@@ -41,6 +41,9 @@ class StubCluster (
     network.install (this)
   }
 
+  def shutdown(): Unit =
+    network.remove (this)
+
   def peer (id: HostId): Peer =
     peers.get (id)
 
