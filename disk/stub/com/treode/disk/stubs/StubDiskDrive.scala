@@ -4,7 +4,7 @@ import java.util.{ArrayDeque, ArrayList, HashMap}
 import scala.collection.JavaConversions
 import scala.util.{Failure, Random, Success}
 
-import com.treode.async.{Async, Callback}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.buffer.ArrayBuffer
 import com.treode.disk.RecordRegistry
@@ -43,10 +43,13 @@ class StubDiskDrive (implicit random: Random) {
           f (cb)
         }}}}
 
-  private [stubs] def replay (registry: RecordRegistry) {
-    for (rs <- this.records; r <- rs)
-      registry.read (r.typ, r.data) ()
-  }
+  private [stubs] def replay (registry: RecordRegistry) (implicit scheduler: Scheduler): Async [Unit] =
+    for (rs <- records.async; r <- rs.latch.unit)
+      async [Unit] { cb =>
+        scheduler.execute {
+          registry.read (r.typ, r.data) ()
+          cb.pass()
+        }}
 
   private [stubs] def mark(): Int =
     synchronized {

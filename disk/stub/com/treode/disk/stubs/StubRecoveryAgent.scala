@@ -3,12 +3,13 @@ package com.treode.disk.stubs
 import java.nio.file.{Path, Paths}
 import scala.util.Random
 
-import com.treode.async.{Async, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
 import com.treode.disk._
 
 import Async.{guard, supply}
+import Callback.ignore
 import Disks.Launch
 import StubDisks.StubRecovery
 
@@ -36,7 +37,7 @@ private class StubRecoveryAgent (implicit
         requireOpen()
         open = false
       }
-      disk.replay (records)
+      disk.replay (records) run (ignore)
       new StubLaunchAgent (new StubDisks () (random, scheduler, disk, config))
     }
 
@@ -46,7 +47,7 @@ private class StubRecoveryAgent (implicit
         requireOpen()
         open = false
       }
-      disk.replay (records)
+      disk.replay (records) run (ignore)
       new StubLaunchAgent (new StubDisks () (random, scheduler, disk, config))
     }
 
