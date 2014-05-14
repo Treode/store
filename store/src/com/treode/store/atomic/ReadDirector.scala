@@ -42,6 +42,7 @@ private class ReadDirector (
   } .timeout (fiber, readBackoff) {
     broker.rouse()
   }
+  broker.rouse()
 
   def got (_vs: Seq [Value], from: Peer) {
     if (timer.invoked) return
