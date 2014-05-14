@@ -21,7 +21,7 @@ class StubNetwork private (implicit random: Random) {
         s"Host ${peer.localId} is already installed.")
 
   private [stubs] def deliver [M] (p: Pickler [M], from: HostId, to: HostId, port: PortId, msg: M) {
-    if (messageFlakiness != 0.0 && random.nextDouble < messageFlakiness)
+    if (messageFlakiness > 0.0 && random.nextDouble < messageFlakiness)
       return
     val h = peers.get (to)
     require (h != null, s"Host $to is not installed.")

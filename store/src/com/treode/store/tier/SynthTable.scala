@@ -210,7 +210,7 @@ private class SynthTable (
       try {
         secondary = newMemTier
         tiers = tiers.compacted (tier, Tiers.empty)
-        new Meta (this.gen, tiers)
+        new Meta (gen, tiers)
       } finally {
         writeLock.unlock()
       }}}}

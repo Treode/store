@@ -48,6 +48,16 @@ class StubDiskDrive (implicit random: Random) {
       registry.read (r.typ, r.data) ()
   }
 
+  private [stubs] def mark(): Int =
+    synchronized {
+      records.size
+    }
+
+  private [stubs] def checkpoint (mark: Int): Unit =
+    synchronized {
+      records.remove (0, mark)
+    }
+
   private [stubs] def log (records: Seq [StubRecord]): Async [Unit] =
     _stop { cb =>
       this.records.add (records)

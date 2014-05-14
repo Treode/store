@@ -11,6 +11,9 @@ import com.treode.store.{Residents, StoreConfig, StorePicklers}
   def size: Int =
     tiers.length
 
+  def isEmpty: Boolean =
+    tiers.isEmpty
+
   def keys: Long =
     tiers .map (_.keys) .sum
 

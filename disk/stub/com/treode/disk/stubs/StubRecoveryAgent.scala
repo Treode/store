@@ -1,6 +1,7 @@
 package com.treode.disk.stubs
 
 import java.nio.file.{Path, Paths}
+import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.io.File
@@ -11,7 +12,11 @@ import Async.{guard, supply}
 import Disks.Launch
 import StubDisks.StubRecovery
 
-private class StubRecoveryAgent (implicit scheduler: Scheduler) extends StubRecovery {
+private class StubRecoveryAgent (implicit
+    random: Random,
+    scheduler: Scheduler,
+    config: StubConfig
+) extends StubRecovery {
 
   private val records = new RecordRegistry
   private var open = true
@@ -32,7 +37,7 @@ private class StubRecoveryAgent (implicit scheduler: Scheduler) extends StubReco
         open = false
       }
       disk.replay (records)
-      new StubLaunchAgent (new StubDisks (disk))
+      new StubLaunchAgent (new StubDisks () (random, scheduler, disk, config))
     }
 
   def attach (disk: StubDiskDrive): Async [Launch] =
@@ -42,7 +47,7 @@ private class StubRecoveryAgent (implicit scheduler: Scheduler) extends StubReco
         open = false
       }
       disk.replay (records)
-      new StubLaunchAgent (new StubDisks (disk))
+      new StubLaunchAgent (new StubDisks () (random, scheduler, disk, config))
     }
 
   def reattach (items: Path*): Async [Launch] =

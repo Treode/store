@@ -60,12 +60,14 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   }
 
   private def setup (
+      checkpoint: Double,
       diskDrive: StubDiskDrive
   ) (implicit
+      random: Random,
       scheduler: StubScheduler,
       storeConfig: StoreConfig
   ): TestTable = {
-      implicit val recovery = StubDisks.recover()
+      implicit val recovery = StubDisks.recover (checkpoint)
       val _table = new TestRecovery (ID)
       val launch = recovery.attach (diskDrive) .pass
       val table = _table.launch (launch) .pass
@@ -74,12 +76,14 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   }
 
   private def recover (
+      checkpoint: Double,
       diskDrive: StubDiskDrive
   ) (implicit
+      random: Random,
       scheduler: StubScheduler,
       storeConfig: StoreConfig
   ): TestTable = {
-    implicit val recovery = StubDisks.recover()
+    implicit val recovery = StubDisks.recover (checkpoint)
     val _table = new TestRecovery (ID)
     val launch = recovery.reattach (diskDrive) .pass
     val table = _table.launch (launch) .pass
@@ -88,6 +92,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   }
 
   def check (
+      checkpoint: Double,
       nkeys: Int,
       nrounds: Int,
       nbatch: Int
@@ -101,41 +106,33 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
     val diskDrive = new StubDiskDrive
 
     setup { implicit scheduler =>
-      val table = new TrackedTable (setup (diskDrive), tracker)
+      val rawtable = setup (checkpoint, diskDrive)
+      val table = new TrackedTable (rawtable, tracker)
       (0 until nrounds) .async.foreach { _ =>
         table.putAll (random.nextPut (nkeys, nbatch): _*)
       }}
 
     .recover { implicit scheduler =>
-      val table = recover (diskDrive)
+      val table = recover (checkpoint, diskDrive)
       tracker.check (table.toMap)
     }}
 
-  "When given large limits for checkpointing and cleaning" - {
+  "The TierTable when" - {
 
     implicit val storeConfig = TestStoreConfig()
 
-    "it can recover" taggedAs (Intensive, Periodic) in {
-      forAllCrashes { implicit random =>
-        check (100, 10, 10)
-      }}
+    for { (name, checkpointProbability) <- Seq (
+        "not checkpointed at all"   -> 0.0,
+        "checkpointed occasionally" -> 0.01,
+        "checkpointed frequently"   -> 0.1)
+    } s"$name should" - {
 
-    "it can recover with lots of overwrites" taggedAs (Intensive, Periodic) in {
-      forAllCrashes { implicit random =>
-        check (30, 10, 10)
-      }}
+      for { (name, (nkeys, nrounds, nbatch)) <- Seq (
+          "recover from a crash"             -> (100, 10, 10),
+          "recover with lots of overwrites"  -> (30, 10, 10),
+          "recover with very few overwrites" -> (10000, 10, 10))
+      } name taggedAs (Intensive, Periodic) in {
 
-    "it can recover with very few overwrites" taggedAs (Intensive, Periodic) in {
-      forAllCrashes { implicit random =>
-        check (10000, 10, 10)
-      }}}
-
-  "When given a small threshold for checkpointing" - {
-
-    implicit val storeConfig = TestStoreConfig()
-
-    "it can recover" taggedAs (Intensive, Periodic) in {
-      forAllCrashes { implicit random =>
-        check (100, 40, 10)
-      }}}
-}
+        forAllCrashes { implicit random =>
+          check (checkpointProbability, nkeys, nrounds, nbatch)
+        }}}}}

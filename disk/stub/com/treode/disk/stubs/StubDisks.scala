@@ -1,7 +1,7 @@
 package com.treode.disk.stubs
 
 import scala.collection.mutable.UnrolledBuffer
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Random, Success}
 
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
@@ -11,10 +11,18 @@ import Async.{async, guard, supply}
 import Callback.fanout
 import Disks.{Launch, Recovery}
 
-private class StubDisks (disk: StubDiskDrive) (implicit scheduler: Scheduler) extends Disks {
+private class StubDisks (implicit
+    random: Random,
+    scheduler: Scheduler,
+    disk: StubDiskDrive,
+    config: StubConfig
+) extends Disks {
 
   val logd = new Dispatcher [(StubRecord, Callback [Unit])] (0L)
+  val checkpointer = new StubCheckpointer
   val releaser = new Releaser
+
+  logd.receive (receiver _)
 
   private def align (n: Int): Int = {
     val bits = 6
@@ -30,11 +38,14 @@ private class StubDisks (disk: StubDiskDrive) (implicit scheduler: Scheduler) ex
       cb (v)
     }}
 
-  logd.receive (receiver _)
+  def launch (checkpoints: CheckpointRegistry) {
+    checkpointer.launch (checkpoints)
+  }
 
   def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit] =
     async { cb =>
       logd.send ((StubRecord (desc, entry), cb))
+      checkpointer.tally()
     }
 
   def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
@@ -71,6 +82,12 @@ object StubDisks {
     def attach (disk: StubDiskDrive): Async [Launch]
   }
 
-  def recover () (implicit scheduler: Scheduler ): StubRecovery =
+  def recover (
+      checkpoint: Double = 0.1
+  ) (implicit
+      random: Random,
+      scheduler: Scheduler
+  ): StubRecovery = {
+    implicit val config = StubConfig (checkpoint)
     new StubRecoveryAgent
-}
+  }}

@@ -92,6 +92,7 @@ private class ScanDirector (
       if (count < 5 && end.isDefined)
         ScanDeputy.scan (table, end.get.key, end.get.time) (element.from, port)
       state = Processing
+      prev = element.cell.timedKey
       body (element.cell) run (take)
     }}
 

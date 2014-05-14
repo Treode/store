@@ -1,7 +1,6 @@
 package com.treode.disk
 
 import scala.collection.immutable.Queue
-import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback, Fiber}
 
 import Callback.ignore

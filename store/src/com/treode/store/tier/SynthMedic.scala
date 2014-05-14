@@ -31,16 +31,20 @@ private class SynthMedic (
 
   private def replay (gen: Long, key: Bytes, time: TxClock, value: Option [Bytes]) {
 
+    val mkey = Key (key, time)
+
     readLock.lock()
     val needWrite = try {
-      if (gen == this.gen - 1) {
-        secondary.put (Key (key, time), value)
+      if (gen < this.gen && tiers.isEmpty) {
+        secondary.put (mkey, value)
         false
       } else if (gen == this.gen) {
-        primary.put (Key (key, time), value)
+        primary.put (mkey, value)
         false
-      } else {
+      } else if (gen > this.gen) {
         true
+      } else {
+        false
       }
     } finally {
       readLock.unlock()
@@ -49,20 +53,15 @@ private class SynthMedic (
     if (needWrite) {
       writeLock.lock()
       try {
-        if (gen == this.gen - 1) {
-          secondary.put (Key (key, time), value)
+        if (gen < this.gen && tiers.isEmpty) {
+          secondary.put (mkey, value)
         } else if (gen == this.gen) {
-          primary.put (Key (key, time), value)
-        } else if (gen == this.gen + 1) {
+          primary.put (mkey, value)
+        } else if (gen > this.gen) {
           this.gen = gen
-          secondary = primary
+          secondary.putAll (primary)
           primary = newMemTier
-          primary.put (Key (key, time), value)
-        } else if (gen > this.gen + 1) {
-          this.gen = gen
-          primary = newMemTier
-          secondary = newMemTier
-          primary.put (Key (key, time), value)
+          primary.put (mkey, value)
         }
       } finally {
         writeLock.unlock()
@@ -77,10 +76,15 @@ private class SynthMedic (
   def checkpoint (meta: TierTable.Meta) {
     writeLock.lock()
     try {
-      gen = meta.gen+1
-      primary = newMemTier
-      secondary = newMemTier
-      tiers = meta.tiers
+      if (meta.gen == this.gen - 1) {
+        secondary = newMemTier
+        tiers = meta.tiers
+      } else if (meta.gen >= this.gen) {
+        this.gen = meta.gen + 1
+        primary = newMemTier
+        secondary = newMemTier
+        tiers = meta.tiers
+      }
     } finally {
       writeLock.unlock()
     }}
@@ -89,13 +93,9 @@ private class SynthMedic (
     import launch.disks
 
     writeLock.lock()
-    val (gem, primary, secondary, tiers) = try {
-      if (!this.secondary.isEmpty) {
-        this.secondary.putAll (this.primary)
-        this.primary = this.secondary
-        this.secondary = newMemTier
-      }
-      val result = (this.gen, this.primary, this.secondary, this.tiers)
+    val (gen, primary, tiers) = try {
+      this.secondary.putAll (this.primary)
+      val result = (this.gen, this.secondary, this.tiers)
       this.primary = null
       this.secondary = null
       this.tiers = null
@@ -104,5 +104,5 @@ private class SynthMedic (
       writeLock.unlock()
     }
 
-    new SynthTable (desc, id, lock, gem, primary, secondary, tiers)
+    new SynthTable (desc, id, lock, gen, primary, newMemTier, tiers)
   }}

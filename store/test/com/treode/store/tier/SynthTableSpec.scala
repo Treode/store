@@ -22,7 +22,7 @@ class SynthTableSpec extends FreeSpec {
   val tier = TierDescriptor (0x56) ((_, _, _) => true)
 
   private def mkTable (diskDrive: StubDiskDrive) (
-      implicit scheduler: StubScheduler): SynthTable = {
+      implicit random: Random, scheduler: StubScheduler): SynthTable = {
     implicit val recovery = StubDisks.recover()
     implicit val launch = recovery.attach (diskDrive) .pass
     implicit val disks = launch.disks

@@ -1,9 +1,10 @@
 package com.treode.async.stubs
 
-import com.treode.async.{Async, Callback}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 
 import Async.async
+import Callback.fanout
 
 /** Capture an asynchronous call so it may be completed later.
   *
@@ -15,31 +16,37 @@ import Async.async
   * [[com.treode.async.stubs.StubScheduler StubScheduler]].  If you are using a multithreaded
   * scheduler, you must arrange that `start` happens-before `pass` or `fail`.
   */
-class AsyncCaptor [A] private {
+class AsyncCaptor [A] private (implicit scheduler: Scheduler) {
 
-  private var cb: Callback [A] = null
+  private var cbs = List.empty [Callback [A]]
 
   def start(): Async [A] =
     async { cb =>
-      require (this.cb == null, "An async is already outstanding.")
-      this.cb = cb
+      require (cbs.isEmpty, "An async is already outstanding.")
+      cbs ::= cb
+    }
+
+  def add(): Async [A] =
+    async { cb =>
+      cbs ::= cb
     }
 
   def pass (v: A) {
-    require (this.cb != null)
-    val cb = this.cb
-    this.cb = null
+    require (!cbs.isEmpty)
+    val cb = fanout (cbs)
+    cbs = List.empty
     cb.pass (v)
   }
 
   def fail (t: Throwable) {
-    require (this.cb != null)
-    val cb = this.cb
-    this.cb = null
+    require (!cbs.isEmpty)
+    val cb = fanout (cbs)
+    cbs = List.empty
     cb.fail (t)
   }}
 
 object AsyncCaptor {
 
-  def apply [A]: AsyncCaptor [A] = new AsyncCaptor [A]
+  def apply [A] (implicit scheduler: Scheduler): AsyncCaptor [A] =
+    new AsyncCaptor [A]
 }
