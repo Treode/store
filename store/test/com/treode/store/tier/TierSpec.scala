@@ -1,6 +1,7 @@
 package com.treode.store.tier
 
 import scala.collection.mutable.Builder
+import scala.util.Random
 
 import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
@@ -19,8 +20,9 @@ import TierTestTools._
 class TierSpec extends WordSpec {
 
   private def setup(): (StubScheduler, Disks) = {
-    implicit val scheduler = StubScheduler.random()
-    implicit val recovery = StubDisks.recover (18, 1<<22)
+    implicit val random = new Random (0)
+    implicit val scheduler = StubScheduler.random (random)
+    implicit val recovery = StubDisks.recover()
     val diskDrive = new StubDiskDrive
     val launch = recovery.attach (diskDrive) .pass
     launch.launch()
@@ -174,7 +176,7 @@ class TierSpec extends WordSpec {
       }
 
       "the pages are limited to 256 bytes" in {
-        checkBuild (1 << 8, 1792)
+        checkBuild (1 << 8, 1856)
       }
 
       "the pages are limited to 64K" in {

@@ -106,6 +106,7 @@ private object StubAtomicHost {
       new StubAtomicHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, paxos, atomic)
     }}
 
-  def install () (implicit kit: StoreTestKit): Async [StubAtomicHost] =
-    boot (kit.random.nextLong, new StubDiskDrive, true)
-}
+  def install () (implicit kit: StoreTestKit): Async [StubAtomicHost] = {
+    import kit.random
+    boot (random.nextLong, new StubDiskDrive, true)
+  }}

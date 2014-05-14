@@ -2,6 +2,7 @@ package com.treode.store.catalog
 
 import java.nio.file.Paths
 import scala.collection.JavaConversions
+import scala.util.Random
 
 import org.scalatest.FreeSpec
 import com.treode.async.stubs.StubScheduler
@@ -36,8 +37,9 @@ class HandlerSpec extends FreeSpec {
     }}
 
   private def newCatalog (issues: Int): Handler = {
+    implicit val random = new Random (0)
     val diskDrive = new StubDiskDrive
-    implicit val scheduler = StubScheduler.random()
+    implicit val scheduler = StubScheduler.random (random)
     implicit val disks = StubDisks
         .recover()
         .attach (diskDrive)

@@ -1,6 +1,7 @@
 package com.treode.store.tier
 
 import java.nio.file.Paths
+import scala.util.Random
 
 import com.treode.async.implicits._
 import com.treode.async.io.File
@@ -30,102 +31,116 @@ class SynthTableSpec extends FreeSpec {
     SynthTable (tier, 0x62)
   }
 
-  private def aNonEmptyTable (setup: StubScheduler => SynthTable) {
+  private def aNonEmptyTable (setup: (Random, StubScheduler) => SynthTable) {
 
     "iterate and get those values" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.check (Kiwi##21::3, Kiwi##14::2, Kiwi##7::1)
     }
 
     "put a new key before existing keys" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.putCells (Grape##7::11)
       table.check (Grape##7::11, Kiwi##21::3, Kiwi##14::2, Kiwi##7::1)
     }
 
     "put a new key after existing keys" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.putCells (Orange##7::11)
       table.check (Kiwi##21::3, Kiwi##14::2, Kiwi##7::1, Orange##7::11)
     }
 
     "put an existing key at a time later than exsiting times" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.putCells (Kiwi##28::11)
       table.check (Kiwi##28::11, Kiwi##21::3, Kiwi##14::2, Kiwi##7::1)
     }
 
     "put an existing key at a time earlier than existing times" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.putCells (Kiwi##1::11)
       table.check (Kiwi##21::3, Kiwi##14::2, Kiwi##7::1, Kiwi##1::11)
     }
 
     "put an existing key at a time between two existing times" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.putCells (Kiwi##11::11)
       table.check (Kiwi##21::3, Kiwi##14::2, Kiwi##11::11, Kiwi##7::1)
     }
 
     "put an existing key over an existing time" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.putCells (Kiwi##14::11)
       table.check (Kiwi##21::3, Kiwi##14::11, Kiwi##7::1)
     }
 
     "delete a new key before existing keys" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.deleteCells (Grape##7)
       table.check (Grape##7, Kiwi##21::3, Kiwi##14::2, Kiwi##7::1)
     }
 
     "delete a new key after existing keys" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.deleteCells (Orange##7)
       table.check (Kiwi##21::3, Kiwi##14::2, Kiwi##7::1, Orange##7)
     }
 
     "delete an existing key at a time later than exsiting times" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.deleteCells (Kiwi##28)
       table.check (Kiwi##28, Kiwi##21::3, Kiwi##14::2, Kiwi##7::1)
     }
 
     "delete an existing key at a time earlier than existing times" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.deleteCells (Kiwi##1)
       table.check (Kiwi##21::3, Kiwi##14::2, Kiwi##7::1, Kiwi##1)
     }
 
     "delete an existing key at a time between two existing times" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.deleteCells (Kiwi##11)
       table.check (Kiwi##21::3, Kiwi##14::2, Kiwi##11, Kiwi##7::1)
     }
 
     "delete an existing key over an existing time" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.deleteCells (Kiwi##14)
       table.check (Kiwi##21::3, Kiwi##14, Kiwi##7::1)
     }}
 
-  private def aCheckpointedTable (setup: StubScheduler => SynthTable) {
+  private def aCheckpointedTable (setup: (Random, StubScheduler) => SynthTable) {
     "handle a checkpoint" in {
-      implicit val scheduler = StubScheduler.random()
-      val table = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val table = setup (random, scheduler)
       table.checkpoint() .pass
       assert (table.primary.isEmpty)
       assert (table.secondary.isEmpty)
@@ -134,11 +149,12 @@ class SynthTableSpec extends FreeSpec {
     }}
 
   private def aCheckpointingTable (
-      setup: StubScheduler => (StubDiskDrive, SynthTable, CallbackCaptor [Meta])) {
+      setup: (Random, StubScheduler) => (StubDiskDrive, SynthTable, CallbackCaptor [Meta])) {
 
     "finish the checkpoint" in {
-      implicit val scheduler = StubScheduler.random()
-      val (disk, table, cb) = setup (scheduler)
+      implicit val random = new Random (0)
+      implicit val scheduler = StubScheduler.random (random)
+      val (disk, table, cb) = setup (random, scheduler)
       disk.last.pass()
       scheduler.run()
       cb.passed
@@ -151,7 +167,7 @@ class SynthTableSpec extends FreeSpec {
 
     "only empty tiers, it should" - {
 
-      def setup () (implicit scheduler: StubScheduler): SynthTable = {
+      def setup () (implicit random: Random, scheduler: StubScheduler): SynthTable = {
         val disk = new StubDiskDrive
         val table = mkTable (disk)
         assert (table.primary.isEmpty)
@@ -161,13 +177,15 @@ class SynthTableSpec extends FreeSpec {
       }
 
       "iterate no values" in {
-        implicit val scheduler = StubScheduler.random()
+        implicit val random = new Random (0)
+        implicit val scheduler = StubScheduler.random (random)
         val table = setup()
         table.check ()
       }
 
       "handle a checkpoint" in {
-        implicit val scheduler = StubScheduler.random()
+        implicit val random = new Random (0)
+        implicit val scheduler = StubScheduler.random (random)
         val table = setup()
         table.checkpoint() .pass
         assert (table.primary.isEmpty)
@@ -177,7 +195,8 @@ class SynthTableSpec extends FreeSpec {
       }
 
       "handle a put" in {
-        implicit val scheduler = StubScheduler.random()
+        implicit val random = new Random (0)
+        implicit val scheduler = StubScheduler.random (random)
         val table = setup()
         table.putCells (Kiwi##7::1)
         assert (!table.primary.isEmpty)
@@ -187,7 +206,8 @@ class SynthTableSpec extends FreeSpec {
       }
 
       "handle a delete" in {
-        implicit val scheduler = StubScheduler.random()
+        implicit val random = new Random (0)
+        implicit val scheduler = StubScheduler.random (random)
         val table = setup()
         table.deleteCells (Kiwi##1)
         assert (!table.primary.isEmpty)
@@ -198,7 +218,7 @@ class SynthTableSpec extends FreeSpec {
 
     "a non-empty primary tier, it should" - {
 
-      def setup () (implicit scheduler: StubScheduler): SynthTable = {
+      def setup () (implicit random: Random, scheduler: StubScheduler): SynthTable = {
         val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
@@ -208,14 +228,14 @@ class SynthTableSpec extends FreeSpec {
         table
       }
 
-      behave like aCheckpointedTable (s => setup () (s))
+      behave like aCheckpointedTable (setup () (_, _))
 
-      behave like aNonEmptyTable (s => setup () (s))
+      behave like aNonEmptyTable  (setup () (_, _))
     }
 
     "a non-empty secondary tier, it should" - {
 
-      def setup () (implicit scheduler: StubScheduler) = {
+      def setup () (implicit random: Random, scheduler: StubScheduler) = {
         val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
@@ -230,14 +250,14 @@ class SynthTableSpec extends FreeSpec {
         (disk, table, cb)
       }
 
-      behave like aCheckpointingTable (s => setup () (s))
+      behave like aCheckpointingTable (setup () (_, _))
 
-      behave like aNonEmptyTable (s => setup () (s) ._2)
+      behave like aNonEmptyTable ((r, s) => setup () (r, s) ._2)
     }
 
     "a non-empty primary and secondary tier, it should" - {
 
-      def setup () (implicit scheduler: StubScheduler) = {
+      def setup () (implicit random: Random, scheduler: StubScheduler) = {
         val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2)
@@ -253,14 +273,14 @@ class SynthTableSpec extends FreeSpec {
         (disk, table, cb)
       }
 
-      behave like aCheckpointingTable (s => setup () (s))
+      behave like aCheckpointingTable (setup () (_, _))
 
-      behave like aNonEmptyTable (s => setup () (s) ._2)
+      behave like aNonEmptyTable ((r, s) => setup () (r, s) ._2)
     }
 
     "non-empty tertiary tiers, it should" - {
 
-      def setup () (implicit scheduler: StubScheduler): SynthTable = {
+      def setup () (implicit random: Random, scheduler: StubScheduler): SynthTable = {
         val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
@@ -271,14 +291,14 @@ class SynthTableSpec extends FreeSpec {
         table
       }
 
-      behave like aCheckpointedTable (s => setup () (s))
+      behave like aCheckpointedTable (setup () (_, _))
 
-      behave like aNonEmptyTable (s => setup () (s))
+      behave like aNonEmptyTable (setup () (_, _))
     }
 
     "non-empty primary and tertiary tiers, it should" - {
 
-      def setup () (implicit scheduler: StubScheduler): SynthTable = {
+      def setup () (implicit random: Random, scheduler: StubScheduler): SynthTable = {
         val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2)
@@ -290,7 +310,7 @@ class SynthTableSpec extends FreeSpec {
         table
       }
 
-      behave like aCheckpointedTable (s => setup () (s))
+      behave like aCheckpointedTable (setup () (_, _))
 
-      behave like aNonEmptyTable (s => setup () (s))
+      behave like aNonEmptyTable (setup () (_, _))
     }}}

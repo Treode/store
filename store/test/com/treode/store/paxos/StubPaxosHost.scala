@@ -80,6 +80,7 @@ private object StubPaxosHost {
       new StubPaxosHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, paxos)
     }}
 
-  def install () (implicit kit: StoreTestKit): Async [StubPaxosHost] =
-    boot (kit.random.nextLong, new StubDiskDrive, true)
-}
+  def install () (implicit kit: StoreTestKit): Async [StubPaxosHost] = {
+    import kit.random
+    boot (random.nextLong, new StubDiskDrive, true)
+  }}

@@ -633,6 +633,7 @@ object DiskSystemSpec {
 
     def check () (implicit scheduler: StubScheduler, disks: Disks) {
       for ((seed, pos) <- written) {
-        pagers.stuff.assertInLedger (pos, 0, seed)
+        if (disks.isInstanceOf [DisksAgent])
+          pagers.stuff.assertInLedger (pos, 0, seed)
         pagers.stuff.read (pos) .expect (Stuff (seed))
       }}}}

@@ -5,51 +5,45 @@ import java.nio.file.{Path, Paths}
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
-import com.treode.disk.{Disks, DisksConfig, DiskGeometry, RecordDescriptor, RecoveryAgent}
+import com.treode.disk._
 
-import Async.guard
+import Async.{guard, supply}
 import Disks.Launch
 import StubDisks.StubRecovery
 
-private class StubRecoveryAgent (
-    segmentBits: Int,
-    diskBytes: Int
-) (implicit
-    scheduler: Scheduler
-) extends StubRecovery {
+private class StubRecoveryAgent (implicit scheduler: Scheduler) extends StubRecovery {
 
-  private implicit val config =
-      DisksConfig (
-          cell = 0,
-          superBlockBits = 12,
-          maximumRecordBytes = 1<<10,
-          maximumPageBytes = 1 << (segmentBits - 2),
-          checkpointBytes = Int.MaxValue,
-          checkpointEntries = Int.MaxValue,
-          cleaningFrequency = Int.MaxValue,
-          cleaningLoad = 1)
+  private val records = new RecordRegistry
+  private var open = true
 
-  private val geom =
-    DiskGeometry (
-        segmentBits = segmentBits,
-        blockBits = 6,
-        diskBytes = diskBytes)
+  def requireOpen(): Unit =
+    require (open, "Recovery has already begun.")
 
-  private val delegate =
-    Disks .recover () (scheduler, config) .asInstanceOf [RecoveryAgent]
+  def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
+    synchronized {
+      requireOpen()
+      records.replay (desc) (f)
+    }
 
-  def replay [R] (desc: RecordDescriptor[R]) (f: R => Any): Unit =
-    delegate.replay (desc) (f)
+  def reattach (disk: StubDiskDrive): Async [Launch] =
+    supply {
+      synchronized {
+        requireOpen()
+        open = false
+      }
+      disk.replay (records)
+      new StubLaunchAgent (new StubDisks (disk))
+    }
 
-  def reattach (disk: StubDiskDrive): Async [Launch] = {
-    disk.file = StubFile (disk.file.data)
-    delegate._reattach ((Paths.get ("a"), disk.file)) .map (new StubLaunchAgent (_))
-  }
-
-  def attach (disk: StubDiskDrive): Async [Launch] = {
-    disk.file = StubFile (diskBytes)
-    delegate._attach ((Paths.get ("a"), disk.file, geom)) .map (new StubLaunchAgent (_))
-  }
+  def attach (disk: StubDiskDrive): Async [Launch] =
+    supply {
+      synchronized {
+        requireOpen()
+        open = false
+      }
+      disk.replay (records)
+      new StubLaunchAgent (new StubDisks (disk))
+    }
 
   def reattach (items: Path*): Async [Launch] =
     guard (throw new UnsupportedOperationException ("The StubDisks do not use files."))
