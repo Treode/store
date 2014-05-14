@@ -1,19 +1,18 @@
-package com.treode.disk
+package com.treode.disk.stubs
 
 import com.treode.async.{Async, Callback}
 import com.treode.async.implicits._
+import com.treode.disk._
 
-private class Releaser extends AbstractReleaser [SegmentPointer] {
+private class StubReleaser (disk: StubDiskDrive) extends AbstractReleaser [Long] {
 
-  private def free (released: Seq [SegmentPointer]) {
-    for ((disk, segs) <- released groupBy (_.disk))
-      disk.free (segs)
-  }
+  private def free (released: Seq [Long]): Unit =
+    disk.free (released)
 
   def leave (epoch: Int): Unit =
     free (_leave (epoch))
 
-  def release (segments: Seq [SegmentPointer]): Unit =
+  def release (segments: Seq [Long]): Unit =
     free (_release (segments))
 
   def join [A] (cb: Callback [A]): Callback [A] = {

@@ -2,35 +2,28 @@ package com.treode.store.tier
 
 class TrackingTable {
 
-  private var attempted = Map.empty [Int, Int]
-  private var accepted = Map.empty [Int, Int]
+  private var attempted = Map.empty [Int, Option [Int]]
+  private var accepted = Map.empty [Int, Option [Int]]
 
   def putting (key: Int, value: Int): Unit =
-    attempted += (key -> value)
+    attempted += key -> Some (value)
 
   def put (key: Int, value: Int): Unit =
-    accepted += (key -> value)
+    accepted += key -> Some (value)
 
   def deleting (key: Int): Unit =
-    attempted -= key
+    attempted += key -> None
 
   def deleted (key: Int): Unit =
-    accepted -= key
+    accepted += key -> None
 
   def check (recovered: Map [Int, Int]) {
-    var okay = true
-    for ((key, value) <- recovered) {
-      val _accepted = accepted.get (key)
-      val _attempted = attempted.get (key)
-      val expected = Seq (_accepted, _attempted) .flatten.mkString (" or ")
+    for (k <- accepted.keySet)
       assert (
-          _accepted == Some (value) || _attempted == Some (value),
-          s"Found $key -> $value, expected $expected")
-    }
-    for ((key, value) <- accepted) {
-      val _recovered = recovered.get (key)
-      val _attempted = attempted.get (key)
+          recovered.contains (k) || attempted (k) == None,
+          s"Expected $k to be recovered")
+    for ((k, v) <- recovered)
       assert (
-          _recovered == Some (value) || _recovered == _attempted,
-          s"Found ${_recovered}, expected ${Some (value)} or ${_attempted}")
-    }}}
+          attempted (k) == Some (v) || accepted (k) == Some (v),
+          s"Expected $k to be ${attempted (k)} or ${accepted (k)}")
+  }}

@@ -22,7 +22,7 @@ class TierSpec extends WordSpec {
   private def setup(): (StubScheduler, Disks) = {
     implicit val random = new Random (0)
     implicit val scheduler = StubScheduler.random (random)
-    implicit val recovery = StubDisks.recover()
+    implicit val recovery = StubDisks.recover (0.0, 0.0)
     val diskDrive = new StubDiskDrive
     val launch = recovery.attach (diskDrive) .pass
     launch.launch()

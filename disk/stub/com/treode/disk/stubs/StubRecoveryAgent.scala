@@ -38,7 +38,9 @@ private class StubRecoveryAgent (implicit
         open = false
       }
       disk.replay (records) run (ignore)
-      new StubLaunchAgent (new StubDisks () (random, scheduler, disk, config))
+      val releaser = new StubReleaser (disk)
+      val disks = new StubDisks (releaser) (random, scheduler, disk, config)
+      new StubLaunchAgent (releaser, disks) (random, scheduler, disk, config)
     }
 
   def attach (disk: StubDiskDrive): Async [Launch] =
@@ -48,7 +50,9 @@ private class StubRecoveryAgent (implicit
         open = false
       }
       disk.replay (records) run (ignore)
-      new StubLaunchAgent (new StubDisks () (random, scheduler, disk, config))
+      val releaser = new StubReleaser (disk)
+      val disks = new StubDisks (releaser) (random, scheduler, disk, config)
+      new StubLaunchAgent (releaser, disks) (random, scheduler, disk, config)
     }
 
   def reattach (items: Path*): Async [Launch] =

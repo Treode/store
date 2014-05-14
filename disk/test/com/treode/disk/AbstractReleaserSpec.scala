@@ -2,38 +2,40 @@ package com.treode.disk
 
 import org.scalatest.FlatSpec
 
-class ReleaserSpec extends FlatSpec {
+class AbstractReleaserSpec extends FlatSpec {
 
   implicit val config = TestDisksConfig()
 
   val geometry = TestDiskGeometry()
 
-  private implicit class RichSegmentReleaser (releaser: Releaser) {
+  private class TestReleaser () {
 
-    def ptrs (ns: Seq [Int]): Seq [SegmentPointer] =
-        ns map (n => SegmentPointer (null, geometry.segmentBounds (n)))
+    val releaser  = new AbstractReleaser [Int] {}
+
+    def join(): Int =
+      releaser._join()
 
     def leaveAndExpect (epoch: Int) (fs: Int*): Unit =
-      assertResult (fs) (releaser._leave (epoch) .map (_.num))
+      assertResult (fs) (releaser._leave (epoch))
 
     def releaseAndExpect (ns: Int*) (fs: Int*): Unit =
-      assertResult (fs) (releaser._release (ptrs (ns)) .map (_.num))
+      assertResult (fs) (releaser._release (ns))
   }
 
   "The SegmentReleaser" should "free immediately when there are no parties" in {
-    val releaser = new Releaser
+    val releaser = new TestReleaser
     releaser.releaseAndExpect (0) (0)
   }
 
   it should "not free until the party leaves" in {
-    val releaser = new Releaser
+    val releaser = new TestReleaser
     val e1 = releaser.join()
     releaser.releaseAndExpect (0) ()
     releaser.leaveAndExpect (e1) (0)
   }
 
   it should "not free until previous epoch is freed" in {
-    val releaser = new Releaser
+    val releaser = new TestReleaser
     val e1 = releaser.join()
     releaser.releaseAndExpect (0) ()
     releaser.releaseAndExpect (1) ()
@@ -41,7 +43,7 @@ class ReleaserSpec extends FlatSpec {
   }
 
   it should "not free until the previous epoch is free and the party leaves" in {
-    val releaser = new Releaser
+    val releaser = new TestReleaser
     val e1 = releaser.join()
     releaser.releaseAndExpect (0) ()
     val e2 = releaser.join()
@@ -51,7 +53,7 @@ class ReleaserSpec extends FlatSpec {
   }
 
   it should "not free until the parties leave the previous epoch is free" in {
-    val releaser = new Releaser
+    val releaser = new TestReleaser
     val e1 = releaser.join()
     releaser.releaseAndExpect (0) ()
     val e2 = releaser.join()

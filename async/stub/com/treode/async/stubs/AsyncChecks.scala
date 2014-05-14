@@ -40,7 +40,6 @@ trait AsyncChecks extends TimeLimitedTests {
     } catch {
       case t: Throwable =>
         info (s"Test failed; seed = ${seed}L")
-        t.printStackTrace()
         throw t
     }}
 

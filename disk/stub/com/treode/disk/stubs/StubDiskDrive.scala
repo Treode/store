@@ -6,6 +6,7 @@ import scala.util.{Failure, Random, Success}
 
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
+import com.treode.async.misc.RichOption
 import com.treode.buffer.ArrayBuffer
 import com.treode.disk.RecordRegistry
 
@@ -69,7 +70,7 @@ class StubDiskDrive (implicit random: Random) {
 
   private [stubs] def write (page: StubPage): Async [Long] =
     _stop { cb =>
-      var pos = random.nextLong
+      var pos = random.nextLong & 0x7FFFFFFFFFFFFFFFL
       while (pages contains pos)
         pos = random.nextLong
       pages += pos -> page
@@ -78,5 +79,15 @@ class StubDiskDrive (implicit random: Random) {
 
   private [stubs] def read (pos: Long): Async [StubPage] =
     _stop { cb =>
-      cb.pass (pages (pos))
+      cb.pass (pages .get (pos) .getOrThrow (new Exception (s"Page $pos not found")))
+    }
+
+  private [stubs] def cleanable(): Iterator [(Long, StubPage)] =
+    synchronized {
+      pages.iterator
+    }
+
+  private [stubs] def free (pos: Seq [Long]): Unit =
+    synchronized {
+      pages --= pos
     }}

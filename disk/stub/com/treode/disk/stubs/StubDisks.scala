@@ -7,11 +7,13 @@ import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.disk._
 
-import Async.{async, guard, supply}
-import Callback.fanout
+import Async.{async, guard, latch, supply}
+import Callback.{fanout, ignore}
 import Disks.{Launch, Recovery}
 
-private class StubDisks (implicit
+private class StubDisks (
+    releaser: StubReleaser
+) (implicit
     random: Random,
     scheduler: Scheduler,
     disk: StubDiskDrive,
@@ -20,17 +22,17 @@ private class StubDisks (implicit
 
   val logd = new Dispatcher [(StubRecord, Callback [Unit])] (0L)
   val checkpointer = new StubCheckpointer
-  val releaser = new Releaser
+  val compactor = new StubCompactor (releaser)
 
   logd.receive (receiver _)
 
-  private def align (n: Int): Int = {
+  def align (n: Int): Int = {
     val bits = 6
     val mask = (1 << bits) - 1
     (n + mask) & ~mask
   }
 
-  private def receiver (batch: Long, records: UnrolledBuffer [(StubRecord, Callback [Unit])]) {
+  def receiver (batch: Long, records: UnrolledBuffer [(StubRecord, Callback [Unit])]) {
     logd.replace (new UnrolledBuffer)
     val cb = fanout (records .map (_._2))
     disk.log (records .map (_._1) .toSeq) .run { v =>
@@ -38,8 +40,9 @@ private class StubDisks (implicit
       cb (v)
     }}
 
-  def launch (checkpoints: CheckpointRegistry) {
+  def launch (checkpoints: CheckpointRegistry, pages: StubPageRegistry) {
     checkpointer.launch (checkpoints)
+    compactor.launch (pages)
   }
 
   def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit] =
@@ -63,6 +66,7 @@ private class StubDisks (implicit
       for {
         offset <- disk.write (_page)
       } yield {
+        compactor.tally()
         Position (0, offset, align (_page.length))
       }}
 
@@ -83,11 +87,12 @@ object StubDisks {
   }
 
   def recover (
-      checkpoint: Double = 0.1
+      checkpoint: Double = 0.1,
+      compaction: Double = 0.1
   ) (implicit
       random: Random,
       scheduler: Scheduler
   ): StubRecovery = {
-    implicit val config = StubConfig (checkpoint)
+    implicit val config = StubConfig (checkpoint, compaction)
     new StubRecoveryAgent
   }}

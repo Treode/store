@@ -21,7 +21,7 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
         val drive = new StubDiskDrive
 
         setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0)
+          implicit val recovery = StubDisks.recover (0.0, 0.0)
           val launch = recovery.attach (drive) .pass
           import launch.disks
           launch.checkpoint (fail ("Expected no checkpoints"))
@@ -30,7 +30,7 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
         }
 
         .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover()
+          implicit val recovery = StubDisks.recover (0.0, 0.0)
           val replayer = new LogReplayer
           replayer.attach (recovery)
           implicit val disks = recovery.reattach (drive) .pass.disks
@@ -45,9 +45,10 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
         var checkpoint = false
 
         setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.01)
+          implicit val recovery = StubDisks.recover (0.05, 0.0)
           val launch = recovery.attach (drive) .pass
           import launch.disks
+          tracker.attach (launch)
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           tracker.batches (80, 40, 10)
@@ -56,24 +57,25 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
         .assert (checkpoint, "Expected a checkpoint")
 
         .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover()
+          implicit val recovery = StubDisks.recover (0.05, 0.0)
           val replayer = new LogReplayer
           replayer.attach (recovery)
           implicit val disks = recovery.reattach (drive) .pass.disks
           replayer.check (tracker)
         }}}
 
-      "with frequent checkpoints" taggedAs (Intensive, Periodic) in {
-        forAllCrashes { implicit random =>
+    "with frequent checkpoints" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
 
         val tracker = new LogTracker
         val drive = new StubDiskDrive
         var checkpoint = false
 
         setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.01)
+          implicit val recovery = StubDisks.recover (0.2, 0.0)
           val launch = recovery.attach (drive) .pass
           import launch.disks
+          tracker.attach (launch)
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           tracker.batches (80, 40, 10)
@@ -82,7 +84,7 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
         .assert (checkpoint, "Expected a checkpoint")
 
         .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover()
+          implicit val recovery = StubDisks.recover (0.2, 0.0)
           val replayer = new LogReplayer
           replayer.attach (recovery)
           implicit val disks = recovery.reattach (drive) .pass.disks
@@ -98,13 +100,61 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
         val drive = new StubDiskDrive
 
         setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0)
+          implicit val recovery = StubDisks.recover (0.0, 0.0)
           implicit val disks = recovery.attach (drive) .pass.disks
           tracker.batch (40, 10)
         }
 
         .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover()
+          implicit val recovery = StubDisks.recover (0.0, 0.0)
+          implicit val disks = recovery.attach (drive) .pass.disks
+          tracker.check()
+        }}}
+
+    "with cleaning" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+
+        val tracker = new StuffTracker
+        val drive = new StubDiskDrive
+
+        setup { implicit scheduler =>
+          implicit val recovery = StubDisks.recover (0.0, 0.03)
+          implicit val launch = recovery.attach (drive) .pass
+          import launch.disks
+          tracker.attach (launch)
+          launch.launch()
+          for {
+            _ <- tracker.batch (40, 10)
+          } yield {
+            //assert (tracker.probed && tracker.compacted, "Expected cleaning.")
+          }}
+
+        .recover { implicit scheduler =>
+          implicit val recovery = StubDisks.recover (0.0, 0.03)
+          implicit val disks = recovery.attach (drive) .pass.disks
+          tracker.check()
+        }}}
+
+     "with frequent cleaning" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+
+        val tracker = new StuffTracker
+        val drive = new StubDiskDrive
+
+        setup { implicit scheduler =>
+          implicit val recovery = StubDisks.recover (0.0, 0.1)
+          implicit val launch = recovery.attach (drive) .pass
+          import launch.disks
+          tracker.attach (launch)
+          launch.launch()
+          for {
+            _ <- tracker.batch (40, 10)
+          } yield {
+            //assert (tracker.probed && tracker.compacted, "Expected cleaning.")
+          }}
+
+        .recover { implicit scheduler =>
+          implicit val recovery = StubDisks.recover (0.0, 0.1)
           implicit val disks = recovery.attach (drive) .pass.disks
           tracker.check()
         }}}}}

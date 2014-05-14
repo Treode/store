@@ -61,13 +61,14 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
 
   private def setup (
       checkpoint: Double,
+      compaction: Double,
       diskDrive: StubDiskDrive
   ) (implicit
       random: Random,
       scheduler: StubScheduler,
       storeConfig: StoreConfig
   ): TestTable = {
-      implicit val recovery = StubDisks.recover (checkpoint)
+      implicit val recovery = StubDisks.recover (checkpoint, compaction)
       val _table = new TestRecovery (ID)
       val launch = recovery.attach (diskDrive) .pass
       val table = _table.launch (launch) .pass
@@ -77,13 +78,14 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
 
   private def recover (
       checkpoint: Double,
+      compaction: Double,
       diskDrive: StubDiskDrive
   ) (implicit
       random: Random,
       scheduler: StubScheduler,
       storeConfig: StoreConfig
   ): TestTable = {
-    implicit val recovery = StubDisks.recover (checkpoint)
+    implicit val recovery = StubDisks.recover (checkpoint, compaction)
     val _table = new TestRecovery (ID)
     val launch = recovery.reattach (diskDrive) .pass
     val table = _table.launch (launch) .pass
@@ -93,6 +95,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
 
   def check (
       checkpoint: Double,
+      compaction: Double,
       nkeys: Int,
       nrounds: Int,
       nbatch: Int
@@ -106,14 +109,14 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
     val diskDrive = new StubDiskDrive
 
     setup { implicit scheduler =>
-      val rawtable = setup (checkpoint, diskDrive)
+      val rawtable = setup (checkpoint, compaction, diskDrive)
       val table = new TrackedTable (rawtable, tracker)
       (0 until nrounds) .async.foreach { _ =>
         table.putAll (random.nextPut (nkeys, nbatch): _*)
       }}
 
     .recover { implicit scheduler =>
-      val table = recover (checkpoint, diskDrive)
+      val table = recover (checkpoint, compaction, diskDrive)
       tracker.check (table.toMap)
     }}
 
@@ -121,7 +124,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
 
     implicit val storeConfig = TestStoreConfig()
 
-    for { (name, checkpointProbability) <- Seq (
+    for { (name, checkpoint) <- Seq (
         "not checkpointed at all"   -> 0.0,
         "checkpointed occasionally" -> 0.01,
         "checkpointed frequently"   -> 0.1)
@@ -134,5 +137,5 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       } name taggedAs (Intensive, Periodic) in {
 
         forAllCrashes { implicit random =>
-          check (checkpointProbability, nkeys, nrounds, nbatch)
+          check (checkpoint, 0.0, nkeys, nrounds, nbatch)
         }}}}}
