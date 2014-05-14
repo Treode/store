@@ -34,6 +34,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
             attached = false
             for {
               launch <- recovery.attachAndWait (("a", file1, geom))
+              _ = launch.launch()
               controller = launch.controller
               _ <- controller.attachAndWait (("b", file2, geom))
             } yield {
@@ -66,6 +67,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
             attached = false
             for {
               launch <- recovery.attachAndWait (("a", file1, geom))
+              _ = launch.launch()
               controller = launch.controller
               _ <- controller.attachAndWait (("b", file2, geom), ("c", file3, geom))
             } yield {
@@ -160,29 +162,28 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
 
           var file1: StubFile = null
           var file2: StubFile = null
-          var drained = false
 
           setup { implicit scheduler =>
             val recovery = Disks.recover()
             file1 = StubFile()
             file2 = StubFile()
-            drained = false
             for {
               launch <- recovery.attachAndWait (("a", file1, geom), ("b", file2, geom))
+              _ = launch.launch()
               controller = launch.controller
               _ <- controller.drainAndWait ("b")
-            } yield {
-              assert (file2.closed)
-              controller.assertDisks ("a")
-              drained = true
-            }}
+            } yield ()
+          }
+
+          .assert (file2.closed, "Expected file to be closed.")
 
           .recover { implicit scheduler =>
+            val detached = file2.closed
             val recovery = Disks.recover()
             file1 = StubFile (file1.data)
             file2 = StubFile (file2.data)
             val controller = recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2))
-            if (drained)
+            if (detached)
               controller.assertDisks ("a")
           }}}
 
@@ -192,34 +193,32 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           var file1: StubFile = null
           var file2: StubFile = null
           var file3: StubFile = null
-          var drained = false
 
           setup { implicit scheduler =>
             val recovery = Disks.recover()
             file1 = StubFile()
             file2 = StubFile()
             file3 = StubFile()
-            drained = false
             for {
-              launch <- recovery
-                  .attachAndWait (("a", file1, geom), ("b", file2, geom), ("c", file3, geom))
+              launch <-
+                  recovery.attachAndWait (("a", file1, geom), ("b", file2, geom), ("c", file3, geom))
+              _ = launch.launch()
               controller = launch.controller
               _ <- controller.drainAndWait ("b", "c")
-            } yield {
-              assert (file2.closed)
-              assert (file3.closed)
-              controller.assertDisks ("a")
-              drained = true
-            }}
+            } yield ()
+          }
+
+          .assert (file2.closed && file3.closed, "Expected files to be closed.")
 
           .recover { implicit scheduler =>
+            val detached = file2.closed && file3.closed
             val recovery = Disks.recover()
             file1 = StubFile (file1.data)
             file2 = StubFile (file2.data)
             file3 = StubFile (file3.data)
             val controller = recovery
               .reopenAndLaunch ("a") (("a", file1), ("b", file2), ("c", file3))
-            if (drained)
+            if (detached)
               controller.assertDisks ("a")
           }}}
 

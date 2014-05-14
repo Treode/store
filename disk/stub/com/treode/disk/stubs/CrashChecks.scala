@@ -5,7 +5,7 @@ import scala.util.Random
 import com.treode.async.Async
 import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
-import org.scalatest.{Informing, Suite}
+import org.scalatest.{Assertions, Informing, Suite}
 
 trait CrashChecks extends AsyncChecks {
   this: Suite with Informing =>
@@ -18,12 +18,21 @@ trait CrashChecks extends AsyncChecks {
 
   class ForCrashesRunner (
       val setup: StubScheduler => Async [_],
+      val asserts: Seq [Unit => Unit],
       val recover: StubScheduler => Any
   )
 
   class ForCrashesSetup (setup: StubScheduler => Async [_]) {
+
+    private val asserts = Seq.newBuilder [Unit => Unit]
+
+    def assert (cond: => Boolean, msg: String): ForCrashesSetup = {
+      asserts += (_ => Assertions.assert (cond, msg))
+      this
+    }
+
     def recover (recover: StubScheduler => Any) =
-      new ForCrashesRunner (setup, recover)
+      new ForCrashesRunner (setup, asserts.result, recover)
   }
 
   def setup (setup: StubScheduler => Async [_]) (implicit random: Random) =
@@ -38,7 +47,12 @@ trait CrashChecks extends AsyncChecks {
       val actual = {           // Setup running only the target number of tasks.
         val scheduler = StubScheduler.random (random)
         val cb = runner.setup (scheduler) .capture()
-        scheduler.run (count = target)
+        val actual = scheduler.run (count = target)
+        if (target == Int.MaxValue) {
+          cb.passed
+          runner.asserts foreach (_())
+        }
+        actual
       }
 
       {                        // Then check the recovery.

@@ -64,21 +64,20 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         val geometry = TestDiskGeometry()
         val tracker = new LogTracker
         var file: StubFile = null
+        var checkpoint = false
 
         setup { implicit scheduler =>
           file = StubFile (1<<20)
           implicit val recovery = Disks.recover()
           implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
           import launch.disks
-          var checkpoint = false
           tracker.attach (launch)
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
-          for {
-            _ <- tracker.batches (80, 40, 10)
-          } yield {
-            assert (checkpoint, "Expected a checkpoint")
-          }}
+          tracker.batches (80, 40, 10)
+        }
+
+        .assert (checkpoint, "Expected a checkpoint")
 
         .recover { implicit scheduler =>
           file = StubFile (file.data)
@@ -98,6 +97,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         var file1: StubFile = null
         var file2: StubFile = null
         var file3: StubFile = null
+        var checkpoint = false
 
         setup { implicit scheduler =>
           file1 = StubFile (1<<20)
@@ -109,15 +109,13 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
               ("b", file2, geometry),
               ("c", file3, geometry)) .pass
           import launch.disks
-          var checkpoint = false
           tracker.attach (launch)
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
-          for {
-            _ <- tracker.batches (80, 40, 10)
-          } yield {
-            assert (checkpoint, "Expected a checkpoint")
-          }}
+          tracker.batches (80, 40, 10)
+        }
+
+        .assert (checkpoint, "Expected a checkpoint")
 
         .recover { implicit scheduler =>
           file1 = StubFile (file1.data)
@@ -141,6 +139,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         val tracker = new LogTracker
         var file1: StubFile = null
         var file2: StubFile = null
+        var checkpoint = false
 
         setup { implicit scheduler =>
           file1 = StubFile (1<<20)
@@ -148,7 +147,6 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val recovery = Disks.recover()
           implicit val launch = recovery.attachAndWait (("a", file1, geometry)) .pass
           import launch.{disks, controller}
-          var checkpoint = false
           tracker.attach (launch)
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
@@ -158,9 +156,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
                 tracker.batch (80, 2, 10),
                 controller.attachAndWait (("b", file2, geometry)))
             _ <- tracker.batches (80, 2, 10, 3)
-          } yield {
-            assert (checkpoint, "Expected a checkpoint")
-          }}
+          } yield ()
+        }
+
+        .assert (checkpoint, "Expected a checkpoint")
 
         .recover { implicit scheduler =>
           file1 = StubFile (file1.data)
@@ -180,6 +179,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         val tracker = new LogTracker
         var file1: StubFile = null
         var file2: StubFile = null
+        var checkpoint = false
 
         setup { implicit scheduler =>
           file1 = StubFile (1<<20)
@@ -188,7 +188,6 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val launch =
             recovery.attachAndWait (("a", file1, geometry), ("b", file2, geometry)) .pass
           import launch.{disks, controller}
-          var checkpoint = false
           tracker.attach (launch)
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
@@ -198,9 +197,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
                 tracker.batch (80, 2, 3),
                 controller.drainAndWait ("b"))
             _ <- tracker.batches (80, 2, 3, 3)
-          } yield {
-            assert (checkpoint, "Expected a checkpoint")
-          }}
+          } yield ()
+        }
+
+        .assert (checkpoint, "Expected a checkpoint")
 
         .recover { implicit scheduler =>
           file1 = StubFile (file1.data)
@@ -290,12 +290,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           import launch.disks
           tracker.attach (launch)
           launch.launch()
+          tracker.batch (40, 10)
+        }
 
-          for {
-            _ <- tracker.batch (40, 10)
-          } yield {
-            assert (tracker.probed && tracker.compacted, "Expected cleaning.")
-          }}
+        .assert (tracker.probed && tracker.compacted, "Expected cleaning.")
 
         .recover { implicit scheduler =>
           file = StubFile (file.data)
@@ -326,12 +324,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           import launch.disks
           tracker.attach (launch)
           launch.launch()
+          tracker.batch (40, 10)
+        }
 
-          for {
-            _ <- tracker.batch (40, 10)
-          } yield {
-            assert (tracker.probed && tracker.compacted, "Expected cleaning.")
-          }}
+        .assert (tracker.probed && tracker.compacted, "Expected cleaning.")
 
         .recover { implicit scheduler =>
           file1 = StubFile (file1.data)
@@ -369,9 +365,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
                 tracker.batch (7, 10),
                 controller.attachAndWait (("b", file2, geometry)))
             _ <- tracker.batch (7, 10)
-          } yield {
-            assert (tracker.probed && tracker.compacted, "Expected cleaning.")
-          }}
+          } yield ()
+        }
+
+        .assert (tracker.probed && tracker.compacted, "Expected cleaning.")
 
         .recover { implicit scheduler =>
           file1 = StubFile (file1.data)
@@ -406,9 +403,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
                 tracker.batch (7, 10),
                 controller.drainAndWait ("b"))
             _ <- tracker.batch (7, 10)
-          } yield {
-            assert (tracker.probed && tracker.compacted, "Expected cleaning.")
-          }}
+          } yield ()
+        }
+
+        .assert (tracker.probed && tracker.compacted, "Expected cleaning.")
 
         .recover { implicit scheduler =>
           file1 = StubFile (file1.data)
