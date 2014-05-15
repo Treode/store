@@ -104,21 +104,23 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       storeConfig: StoreConfig
   ) = {
 
-    implicit val storeConfig = TestStoreConfig()
-    val tracker = new TrackingTable
-    val diskDrive = new StubDiskDrive
+      implicit val storeConfig = TestStoreConfig()
+      val tracker = new TrackingTable
+      val diskDrive = new StubDiskDrive
 
-    setup { implicit scheduler =>
-      val rawtable = setup (checkpoint, compaction, diskDrive)
-      val table = new TrackedTable (rawtable, tracker)
-      (0 until nrounds) .async.foreach { _ =>
-        table.putAll (random.nextPut (nkeys, nbatch): _*)
+      crash.info (s"check ($checkpoint, $compaction, $nkeys, $nrounds, $nbatch)")
+
+      .setup { implicit scheduler =>
+        val rawtable = setup (checkpoint, compaction, diskDrive)
+        val table = new TrackedTable (rawtable, tracker)
+        (0 until nrounds) .async.foreach { _ =>
+          table.putAll (random.nextPut (nkeys, nbatch): _*)
+        }}
+
+      .recover { implicit scheduler =>
+        val table = recover (checkpoint, compaction, diskDrive)
+        tracker.check (table.toMap)
       }}
-
-    .recover { implicit scheduler =>
-      val table = recover (checkpoint, compaction, diskDrive)
-      tracker.check (table.toMap)
-    }}
 
   "The TierTable when" - {
 
@@ -128,6 +130,12 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
         "not checkpointed at all"   -> 0.0,
         "checkpointed occasionally" -> 0.01,
         "checkpointed frequently"   -> 0.1)
+    } s"$name and" - {
+
+      for { (name, compaction) <- Seq (
+          "not compacted at all"   -> 0.0,
+          "compacted occasionally" -> 0.01,
+          "compacted frequently"   -> 0.1)
     } s"$name should" - {
 
       for { (name, (nkeys, nrounds, nbatch)) <- Seq (
@@ -137,5 +145,5 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       } name taggedAs (Intensive, Periodic) in {
 
         forAllCrashes { implicit random =>
-          check (checkpoint, 0.0, nkeys, nrounds, nbatch)
-        }}}}}
+          check (checkpoint, compaction, nkeys, nrounds, nbatch)
+        }}}}}}

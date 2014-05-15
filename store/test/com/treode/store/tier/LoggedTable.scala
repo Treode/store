@@ -1,13 +1,14 @@
 package com.treode.store.tier
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
-import com.treode.disk.Disks
+import com.treode.disk.{Disks, ObjectId, PageHandler}
 import com.treode.store.{Bytes, Residents, TxClock}
 
-import Async.guard
+import Async.{guard, supply}
 import TierTestTools._
 
-private class LoggedTable (table: TierTable) (implicit disks: Disks) extends TestTable {
+private class LoggedTable (table: TierTable) (implicit disks: Disks)
+extends TestTable with PageHandler [Long] {
 
   def get (key: Int): Async [Option [Int]] = guard {
     for (cell <- table.get (Bytes (key), TxClock.max))
@@ -27,9 +28,19 @@ private class LoggedTable (table: TierTable) (implicit disks: Disks) extends Tes
     TestTable.delete.record (gen, key)
   }
 
+  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+    supply (table.probe (groups))
+
+  def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] = guard {
+    for {
+      meta <- table.compact (groups, Residents.all)
+      _ <- TestTable.checkpoint.record (meta)
+    } yield ()
+  }
+
   def checkpoint(): Async [Unit] = guard {
     for {
-      meta <- table.checkpoint()
+      meta <- table.checkpoint (Residents.all)
       _ <- TestTable.checkpoint.record (meta)
     } yield ()
   }}

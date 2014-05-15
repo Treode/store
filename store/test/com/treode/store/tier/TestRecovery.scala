@@ -34,6 +34,6 @@ private class TestRecovery (
     import launch.{checkpoint, disks}
     val table = new LoggedTable (medic.close())
     checkpoint (table.checkpoint())
-    //pager.handle (table)
+    descriptor.handle (table)
     table
   }}

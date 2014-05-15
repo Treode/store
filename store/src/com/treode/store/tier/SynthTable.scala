@@ -6,8 +6,9 @@ import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.disk.{Disks, PageDescriptor, Position}
 import com.treode.store._
 
-import Async.{async, supply, when}
+import Async.{async, guard, supply, when}
 import Callback.ignore
+import SynthTable.{genStepSize, genStepMask}
 import TierTable.Meta
 
 private class SynthTable (
@@ -42,12 +43,14 @@ private class SynthTable (
   import desc.pager
   import scheduler.whilst
 
-  private val readLock = lock.readLock()
-  private val writeLock = lock.writeLock()
+  val readLock = lock.readLock()
+  val writeLock = lock.writeLock()
+
+  var writting = Set.empty [Long]
 
   def typ = desc.id
 
-  def get (key: Bytes, time: TxClock): Async [Cell] = {
+  def get (key: Bytes, time: TxClock): Async [Cell] = guard {
 
     val mkey = Key (key, time)
 
@@ -150,27 +153,28 @@ private class SynthTable (
 
   def probe (groups: Set [Long]): Set [Long] = {
     readLock.lock()
-    val (active) = try {
-      tiers.active
+    val (gen, active, writting) = try {
+      (this.gen, tiers.active, this.writting)
     } finally {
       readLock.unlock()
     }
-    active
+    active ++ writting
   }
 
   def compact(): Unit =
     pager.compact (id.id) run (ignore)
 
-  def compact (groups: Set [Long], residents: Residents): Async [Meta] = {
+  def compact (groups: Set [Long], residents: Residents): Async [Meta] = guard {
 
-    readLock.lock()
-    val (gen, chosen) = try {
-      val g = this.gen
+    writeLock.lock()
+    val (chosen, gen) = try {
       val c = tiers.choose (groups, residents)
-      this.gen += 1
-      (g, c)
+      val g = tiers.gen + 1
+      assert ((g & genStepMask) != 0, "Tier compacted too many times")
+      writting += g
+      (c, g)
     } finally {
-      readLock.unlock()
+      writeLock.unlock()
     }
 
     val iter = TierIterator .merge (desc, chosen) .clean (desc, id, residents)
@@ -181,21 +185,23 @@ private class SynthTable (
       writeLock.lock()
       try {
         tiers = tiers.compacted (tier, chosen)
-        new Meta (this.gen, tiers)
+        writting -= gen
+        new Meta (tiers.gen, tiers)
       } finally {
         writeLock.unlock()
       }}}
 
-  def checkpoint (residents: Residents): Async [Meta] = disks.join {
+  def checkpoint (residents: Residents): Async [Meta] = guard {
 
     writeLock.lock()
     val (gen, primary) = try {
       require (secondary.isEmpty, "Checkpoint already in progress.")
       val g = this.gen
       val p = this.primary
-      this.gen += 1
+      this.gen += genStepSize
       this.primary = secondary
       secondary = p
+      writting += g
       (g, p)
     } finally {
       writeLock.unlock()
@@ -210,12 +216,16 @@ private class SynthTable (
       try {
         secondary = newMemTier
         tiers = tiers.compacted (tier, Tiers.empty)
+        writting -= gen
         new Meta (gen, tiers)
       } finally {
         writeLock.unlock()
       }}}}
 
 private object SynthTable {
+
+  val genStepSize = 128
+  val genStepMask = genStepSize - 1
 
   def apply (desc: TierDescriptor, id: TableId) (
       implicit scheduler: Scheduler, disk: Disks, config: StoreConfig): SynthTable = {

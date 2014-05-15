@@ -6,6 +6,8 @@ import com.treode.async.Scheduler
 import com.treode.disk.{Disks, Position}
 import com.treode.store.{Bytes, Key, StoreConfig, TableId, TxClock}
 
+import SynthTable.{genStepSize, genStepMask}
+
 private class SynthMedic (
     desc: TierDescriptor,
     id: TableId
@@ -76,11 +78,14 @@ private class SynthMedic (
   def checkpoint (meta: TierTable.Meta) {
     writeLock.lock()
     try {
-      if (meta.gen == this.gen - 1) {
+      if (meta.gen == this.gen - genStepSize) {
         secondary = newMemTier
+        if (meta.gen > tiers.gen)
+          tiers = meta.tiers
+      } else if (meta.gen > this.gen - genStepSize && meta.gen < this.gen) {
         tiers = meta.tiers
       } else if (meta.gen >= this.gen) {
-        this.gen = meta.gen + 1
+        this.gen = (meta.gen + genStepSize - 1) & ~genStepMask
         primary = newMemTier
         secondary = newMemTier
         tiers = meta.tiers

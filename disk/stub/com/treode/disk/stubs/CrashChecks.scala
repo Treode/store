@@ -17,12 +17,16 @@ trait CrashChecks extends AsyncChecks {
     }
 
   class ForCrashesRunner (
+      val messages: Seq [String],
       val setup: StubScheduler => Async [_],
       val asserts: Seq [Unit => Unit],
       val recover: StubScheduler => Any
   )
 
-  class ForCrashesSetup (setup: StubScheduler => Async [_]) {
+  class ForCrashesSetup (
+      messages: Seq [String],
+      setup: StubScheduler => Async [_]
+  ) {
 
     private val asserts = Seq.newBuilder [Unit => Unit]
 
@@ -32,18 +36,34 @@ trait CrashChecks extends AsyncChecks {
     }
 
     def recover (recover: StubScheduler => Any) =
-      new ForCrashesRunner (setup, asserts.result, recover)
+      new ForCrashesRunner (messages, setup, asserts.result, recover)
   }
 
+  class ForCrashesInfo {
+
+    private val messages = Seq.newBuilder [String]
+
+    def info (msg: String): ForCrashesInfo = {
+      messages += msg
+      this
+    }
+
+    def setup (setup: StubScheduler => Async [_]) (implicit random: Random) =
+      new ForCrashesSetup (messages.result, setup)
+  }
+
+  def crash: ForCrashesInfo =
+    new ForCrashesInfo
+
   def setup (setup: StubScheduler => Async [_]) (implicit random: Random) =
-    new ForCrashesSetup (setup)
+    new ForCrashesSetup (Seq.empty, setup)
 
   def forCrash (seed: Long, target: Int) (init: Random => ForCrashesRunner): Int = {
+
+    val random = new Random (seed)
+    val runner = init (random)
+
     try {
-
-      val random = new Random (seed)
-      val runner = init (random)
-
       val actual = {           // Setup running only the target number of tasks.
         val scheduler = StubScheduler.random (random)
         val cb = runner.setup (scheduler) .capture()
@@ -63,8 +83,8 @@ trait CrashChecks extends AsyncChecks {
       actual
     } catch {
       case t: Throwable =>
-        info (s"Crash and recovery failed; seed = ${seed}L, target = $target")
-        t.printStackTrace()
+        info (s"forCrash (seed = ${seed}L, target = $target)")
+        runner.messages foreach (info (_))
         throw t
     }}
 
