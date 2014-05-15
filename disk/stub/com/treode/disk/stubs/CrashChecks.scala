@@ -13,7 +13,7 @@ trait CrashChecks extends AsyncChecks {
   private val ncrashes =
     intensity match {
       case "development" => 1
-      case _ => 100
+      case _ => 10
     }
 
   class ForCrashesRunner (
@@ -88,7 +88,7 @@ trait CrashChecks extends AsyncChecks {
   def forAllCrashes (init: Random => ForCrashesRunner) {
     val start = System.currentTimeMillis
     var count = 0
-    for (_ <- 0 until nseeds) {
+    for (_ <- 0 until nseeds / ncrashes) {
       val seed = Random.nextLong()
       count += forAllCrashes (seed) (init)
     }

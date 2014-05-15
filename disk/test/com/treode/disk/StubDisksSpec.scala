@@ -102,7 +102,7 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
         setup { implicit scheduler =>
           implicit val recovery = StubDisks.recover (0.0, 0.0)
           implicit val disks = recovery.attach (drive) .pass.disks
-          tracker.batch (40, 10)
+          tracker.batch (100, 10)
         }
 
         .recover { implicit scheduler =>
@@ -118,19 +118,18 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
         val drive = new StubDiskDrive
 
         setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.03)
+          implicit val recovery = StubDisks.recover (0.0, 0.05)
           implicit val launch = recovery.attach (drive) .pass
           import launch.disks
           tracker.attach (launch)
           launch.launch()
-          for {
-            _ <- tracker.batch (40, 10)
-          } yield {
-            //assert (tracker.probed && tracker.compacted, "Expected cleaning.")
-          }}
+          tracker.batch (100, 10)
+        }
+
+        .assert (tracker.probed && tracker.compacted, "Expected cleaning.")
 
         .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.03)
+          implicit val recovery = StubDisks.recover (0.0, 0.05)
           implicit val disks = recovery.attach (drive) .pass.disks
           tracker.check()
         }}}
@@ -142,19 +141,18 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
         val drive = new StubDiskDrive
 
         setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.1)
+          implicit val recovery = StubDisks.recover (0.0, 0.2)
           implicit val launch = recovery.attach (drive) .pass
           import launch.disks
           tracker.attach (launch)
           launch.launch()
-          for {
-            _ <- tracker.batch (40, 10)
-          } yield {
-            //assert (tracker.probed && tracker.compacted, "Expected cleaning.")
-          }}
+          tracker.batch (100, 10)
+        }
+
+        .assert (tracker.probed && tracker.compacted, "Expected cleaning.")
 
         .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.1)
+          implicit val recovery = StubDisks.recover (0.0, 0.2)
           implicit val disks = recovery.attach (drive) .pass.disks
           tracker.check()
         }}}}}
