@@ -167,6 +167,19 @@ class MergeIteratorSpec extends FlatSpec {
     assertResult (Set (1, 2, 3)) (provided)
   }
 
+  it should "report an exception while opening the first iterator" in {
+    implicit val scheduler = StubScheduler.random()
+    var c2 = Set.empty [Int]
+    var provided = Set.empty [Int]
+    assertFail [DistinguishedException] {
+      val i1 = failNow
+      val j1 = track (adapt (2, 4, 6, 8)) (c2 += _)
+      track (AsyncIterator.merge (Seq (i1, j1))) (provided += _)
+    }
+    assertResult (Set (2)) (c2)
+    assertResult (Set.empty) (provided)
+  }
+
   it should "report an exception from the second iterator" in {
     implicit val scheduler = StubScheduler.random()
     var c1 = Set.empty [Int]
@@ -181,6 +194,19 @@ class MergeIteratorSpec extends FlatSpec {
     assertResult (Set (1, 3, 5)) (c1)
     assertResult (Set (2, 4, 6)) (c2)
     assertResult (Set (1, 2, 3, 4)) (provided)
+  }
+
+  it should "report an exception while opening the second iterator" in {
+    implicit val scheduler = StubScheduler.random()
+    var c1 = Set.empty [Int]
+    var provided = Set.empty [Int]
+    assertFail [DistinguishedException] {
+      val i1 = track (adapt (1, 3, 5, 7)) (c1 += _)
+      val j1 = failNow
+      track (AsyncIterator.merge (Seq (i1, j1))) (provided += _)
+    }
+    assertResult (Set (1)) (c1)
+    assertResult (Set.empty) (provided)
   }
 
   it should "report exceptions from both iterators" in {
@@ -200,14 +226,25 @@ class MergeIteratorSpec extends FlatSpec {
     assertResult (Set.empty) (provided)
   }
 
-  it should "report and exception from the body (1)" in {
+  it should "report exceptions while opening both iterators" in {
+    implicit val scheduler = StubScheduler.random()
+    var provided = Set.empty [Int]
+    assertFail [MultiException] {
+      val i1 = failNow [Int]
+      val j1 = failNow [Int]
+      track (AsyncIterator.merge (Seq (i1, j1))) (provided += _)
+    }
+    assertResult (Set.empty) (provided)
+  }
+
+  it should "report a failure returned from the body" in {
     implicit val scheduler = StubScheduler.random()
     val i1 = merge [Int] (Seq (1))
     val i2 = i1.foreach (_ => supply (throw new DistinguishedException))
     i2.fail [DistinguishedException]
   }
 
-  it should "report and exception from the body (2)" in {
+  it should "report an exception thrown from the body" in {
     implicit val scheduler = StubScheduler.random()
     val i1 = merge [Int] (Seq (1), Seq (2))
     val i2 = i1.foreach (x => supply (if (x == 2) throw new DistinguishedException))

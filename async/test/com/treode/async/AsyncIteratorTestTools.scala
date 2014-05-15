@@ -30,6 +30,12 @@ object AsyncIteratorTestTools {
           g (x)
         }}}
 
+  def failNow [A]: AsyncIterator [A] =
+    new AsyncIterator [A] {
+      def foreach (g: A => Async [Unit]): Async [Unit] =
+        supply (throw new DistinguishedException)
+    }
+
   def assertSeq [A] (expected: A*) (actual: AsyncIterator [A]) (implicit s: StubScheduler): Unit =
     assertResult (expected) (actual.toSeq)
 
