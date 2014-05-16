@@ -1,5 +1,7 @@
 package com.treode.disk
 
+import scala.util.Random
+
 import com.treode.async.Async
 import com.treode.async.stubs.implicits._
 import com.treode.disk.stubs.{CrashChecks, StubDisks, StubDiskDrive}
@@ -12,147 +14,87 @@ import DiskSystemSpec._
 
 class StubDisksSpec extends FreeSpec with CrashChecks {
 
-  "The logger should replay items" - {
+  "The logger when" - {
 
-    "without checkpoints" taggedAs (Intensive, Periodic) in {
-      forAllCrashes { implicit random =>
+    def check (checkpoint: Double, compaction: Double) (implicit random: Random) = {
 
-        val tracker = new LogTracker
-        val drive = new StubDiskDrive
+      val checkpointing = checkpoint > 0.0
+      val tracker = new LogTracker
+      val drive = new StubDiskDrive
+      var checkpointed = false
 
-        setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.0)
-          val launch = recovery.attach (drive) .pass
-          import launch.disks
+      setup { implicit scheduler =>
+        implicit val recovery = StubDisks.recover (checkpoint, compaction)
+        implicit val launch = recovery.attach (drive) .pass
+        import launch.disks
+        tracker.attach()
+        if (checkpointing)
+          launch.checkpoint (supply (checkpointed = true))
+        else
           launch.checkpoint (fail ("Expected no checkpoints"))
-          launch.launch()
-          tracker.batches (80, 40, 10)
-        }
+        launch.launch()
+        tracker.batches (80, 40, 10)
+      }
 
-        .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.0)
-          val replayer = new LogReplayer
-          replayer.attach (recovery)
-          implicit val disks = recovery.reattach (drive) .pass.disks
-          replayer.check (tracker)
-        }}}
+      .assert (!checkpointing || checkpointed, "Expected a checkpoint")
 
-    "with checkpoints" taggedAs (Intensive, Periodic) in {
+      .recover { implicit scheduler =>
+        implicit val recovery = StubDisks.recover (checkpoint, compaction)
+        val replayer = new LogReplayer
+        replayer.attach (recovery)
+        implicit val disks = recovery.reattach (drive) .pass.disks
+        replayer.check (tracker)
+      }}
+
+    for { (name, checkpoint) <- Seq (
+        "not checkpointed at all"   -> 0.0,
+        "checkpointed occasionally" -> 0.01,
+        "checkpointed frequently"   -> 0.1)
+    } s"$name and" - {
+
+      for { (name, compaction) <- Seq (
+          "not compacted at all"   -> 0.0,
+          "compacted occasionally" -> 0.01,
+          "compacted frequently"   -> 0.1)
+      } s"$name should" - {
+
+        "should replay items" taggedAs (Intensive, Periodic) in {
+          forAllCrashes { implicit random =>
+            check (checkpoint, compaction)
+          }}}}}
+
+  "The pager when" - {
+
+    def check (checkpoint: Double, compaction: Double) (implicit random: Random) = {
+
+      val cleaning = compaction > 0.0
+      val tracker = new StuffTracker
+      val drive = new StubDiskDrive
+
+      setup { implicit scheduler =>
+        implicit val recovery = StubDisks.recover (checkpoint, compaction)
+        implicit val launch = recovery.attach (drive) .pass
+        import launch.disks
+        if (cleaning) tracker.attach()
+        launch.launch()
+        tracker.batch (100, 10)
+      }
+
+      .assert (!cleaning || tracker.probed && tracker.compacted, "Expected cleaning.")
+
+      .recover { implicit scheduler =>
+        implicit val recovery = StubDisks.recover (checkpoint, compaction)
+        implicit val disks = recovery.attach (drive) .pass.disks
+        tracker.check()
+      }}
+
+    for { (name, compaction) <- Seq (
+        "not compacted at all"   -> 0.0,
+        "compacted occasionally" -> 0.1,
+        "compacted frequently"   -> 0.3)
+    } s"$name should" - {
+
+    "should read and write" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
-
-        val tracker = new LogTracker
-        val drive = new StubDiskDrive
-        var checkpoint = false
-
-        setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.05, 0.0)
-          val launch = recovery.attach (drive) .pass
-          import launch.disks
-          tracker.attach (launch)
-          launch.checkpoint (supply (checkpoint = true))
-          launch.launch()
-          tracker.batches (80, 40, 10)
-        }
-
-        .assert (checkpoint, "Expected a checkpoint")
-
-        .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.05, 0.0)
-          val replayer = new LogReplayer
-          replayer.attach (recovery)
-          implicit val disks = recovery.reattach (drive) .pass.disks
-          replayer.check (tracker)
-        }}}
-
-    "with frequent checkpoints" taggedAs (Intensive, Periodic) in {
-      forAllCrashes { implicit random =>
-
-        val tracker = new LogTracker
-        val drive = new StubDiskDrive
-        var checkpoint = false
-
-        setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.2, 0.0)
-          val launch = recovery.attach (drive) .pass
-          import launch.disks
-          tracker.attach (launch)
-          launch.checkpoint (supply (checkpoint = true))
-          launch.launch()
-          tracker.batches (80, 40, 10)
-        }
-
-        .assert (checkpoint, "Expected a checkpoint")
-
-        .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.2, 0.0)
-          val replayer = new LogReplayer
-          replayer.attach (recovery)
-          implicit val disks = recovery.reattach (drive) .pass.disks
-          replayer.check (tracker)
-        }}}}
-
-  "The pager should read and write" - {
-
-    "without cleaning" taggedAs (Intensive, Periodic) in {
-      forAllCrashes { implicit random =>
-
-        val tracker = new StuffTracker
-        val drive = new StubDiskDrive
-
-        setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.0)
-          implicit val disks = recovery.attach (drive) .pass.disks
-          tracker.batch (100, 10)
-        }
-
-        .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.0)
-          implicit val disks = recovery.attach (drive) .pass.disks
-          tracker.check()
-        }}}
-
-    "with cleaning" taggedAs (Intensive, Periodic) in {
-      forAllCrashes { implicit random =>
-
-        val tracker = new StuffTracker
-        val drive = new StubDiskDrive
-
-        setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.05)
-          implicit val launch = recovery.attach (drive) .pass
-          import launch.disks
-          tracker.attach (launch)
-          launch.launch()
-          tracker.batch (100, 10)
-        }
-
-        .assert (tracker.probed && tracker.compacted, "Expected cleaning.")
-
-        .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.05)
-          implicit val disks = recovery.attach (drive) .pass.disks
-          tracker.check()
-        }}}
-
-     "with frequent cleaning" taggedAs (Intensive, Periodic) in {
-      forAllCrashes { implicit random =>
-
-        val tracker = new StuffTracker
-        val drive = new StubDiskDrive
-
-        setup { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.2)
-          implicit val launch = recovery.attach (drive) .pass
-          import launch.disks
-          tracker.attach (launch)
-          launch.launch()
-          tracker.batch (100, 10)
-        }
-
-        .assert (tracker.probed && tracker.compacted, "Expected cleaning.")
-
-        .recover { implicit scheduler =>
-          implicit val recovery = StubDisks.recover (0.0, 0.2)
-          implicit val disks = recovery.attach (drive) .pass.disks
-          tracker.check()
-        }}}}}
+        check (0.0, compaction)
+      }}}}}

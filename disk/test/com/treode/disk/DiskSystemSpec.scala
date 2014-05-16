@@ -17,7 +17,7 @@ import org.scalatest.{Assertions, FreeSpec}
 import org.scalatest.prop.PropertyChecks
 import org.scalatest.time.SpanSugar
 
-import Async.{guard, latch, supply}
+import Async.{async, guard, latch, supply}
 import DiskTestTools._
 import DiskSystemSpec._
 import JavaConversions._
@@ -71,7 +71,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val recovery = Disks.recover()
           implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
           import launch.disks
-          tracker.attach (launch)
+          tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           tracker.batches (80, 40, 10)
@@ -104,12 +104,12 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file2 = StubFile (1<<20)
           file3 = StubFile (1<<20)
           implicit val recovery = Disks.recover()
-          val launch = recovery.attachAndWait (
+          implicit val launch = recovery.attachAndWait (
               ("a", file1, geometry),
               ("b", file2, geometry),
               ("c", file3, geometry)) .pass
           import launch.disks
-          tracker.attach (launch)
+          tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           tracker.batches (80, 40, 10)
@@ -147,7 +147,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val recovery = Disks.recover()
           implicit val launch = recovery.attachAndWait (("a", file1, geometry)) .pass
           import launch.{disks, controller}
-          tracker.attach (launch)
+          tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           for {
@@ -188,7 +188,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val launch =
             recovery.attachAndWait (("a", file1, geometry), ("b", file2, geometry)) .pass
           import launch.{disks, controller}
-          tracker.attach (launch)
+          tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
           for {
@@ -210,7 +210,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           replayer.attach (recovery)
           implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .pass
           import launch.disks
-          tracker.attach (launch)
+          tracker.attach()
           launch.launchAndPass (tickle = true)
           replayer.check (tracker)
         }}}}
@@ -229,7 +229,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         implicit val recovery = Disks.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
         import launch.disks
-        tracker.attach (launch)
+        tracker.attach()
         launch.launchAndPass()
         tracker.batches (80, 100000, 10) .pass
       }}
@@ -246,7 +246,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         implicit val recovery = Disks.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geometry)) .await()
         import launch.disks
-        tracker.attach (launch)
+        tracker.attach()
         launch.launch()
         tracker.batches (80, 100000, 10) .await()
       }}}
@@ -288,7 +288,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val recovery = Disks.recover()
           implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
           import launch.disks
-          tracker.attach (launch)
+          tracker.attach()
           launch.launch()
           tracker.batch (40, 10)
         }
@@ -317,12 +317,12 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file2 = StubFile (1<<20)
           file3 = StubFile (1<<20)
           implicit val recovery = Disks.recover()
-          val launch = recovery.attachAndWait (
+          implicit val launch = recovery.attachAndWait (
               ("a", file1, geometry),
               ("b", file2, geometry),
               ("c", file3, geometry)) .pass
           import launch.disks
-          tracker.attach (launch)
+          tracker.attach()
           launch.launch()
           tracker.batch (40, 10)
         }
@@ -356,7 +356,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val recovery = Disks.recover()
           implicit val launch = recovery.attachAndWait (("a", file1, geometry)) .pass
           import launch.{disks, controller}
-          tracker.attach (launch)
+          tracker.attach()
           launch.launch()
 
           for {
@@ -394,7 +394,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val launch =
             recovery.attachAndWait (("a", file1, geometry), ("b", file2, geometry)) .pass
           import launch.{disks, controller}
-          tracker.attach (launch)
+          tracker.attach()
           launch.launch()
 
           for {
@@ -414,7 +414,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val recovery = Disks.recover()
           implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .pass
           import launch.disks
-          tracker.attach (launch)
+          tracker.attach()
           launch.launchAndPass (tickle = true)
           tracker.check()
         }}}
@@ -431,7 +431,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         implicit val recovery = Disks.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
         import launch.disks
-        tracker.attach (launch)
+        tracker.attach()
         launch.launch()
         tracker.batch (1000, 10) .pass
         assert (tracker.maximum > (1<<21), "Expected growth.")
@@ -461,6 +461,7 @@ object DiskSystemSpec {
   }
 
   class LogTracker {
+    self =>
 
     private var attempted = Map.empty [Int, Int] .withDefaultValue (-1)
     private var accepted = Map.empty [Int, Int] .withDefaultValue (-1)
@@ -489,17 +490,26 @@ object DiskSystemSpec {
         put (n + start, k, random.nextInt (1<<20))
       }
 
-    def checkpoint () (implicit disks: Disks): Async [Unit] = {
-      val save = attempted
-      val g = gen
-      gen += 1
-      for {
-        pos <- pagers.table.write (0, g, save)
-        _ <- records.checkpoint.record (g, pos)
-      } yield ()
-    }
+    def checkpoint () (implicit disks: Disks): Async [Unit] =
+      guard {
+        val save = attempted
+        val g = gen
+        gen += 1
+        for {
+          pos <- pagers.table.write (0, g, save)
+          _ <- records.checkpoint.record (g, pos)
+        } yield ()
+      }
 
-    def attach (implicit launch: Disks.Launch) {
+    def probe (groups: Set [Int]) (implicit scheduler: Scheduler): Async [Set [Int]] =
+      supply (groups)
+
+    def compact () (implicit disks: Disks): Async [Unit] =
+      guard {
+        checkpoint()
+      }
+
+    def attach () (implicit scheduler: Scheduler, launch: Disks.Launch) {
       import launch.disks
 
       launch.checkpoint (checkpoint())
@@ -507,10 +517,10 @@ object DiskSystemSpec {
       pagers.table.handle (new PageHandler [Int] {
 
         def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
-          supply (groups)
+          self.probe (groups)
 
         def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
-          checkpoint()
+          self.checkpoint()
       })
     }
 
@@ -606,7 +616,7 @@ object DiskSystemSpec {
       write()
     }
 
-    def attach (implicit launch: Disks.Launch) {
+    def attach () (implicit scheduler: Scheduler, launch: Disks.Launch) {
       import launch.disks
 
       _probed = false
@@ -622,13 +632,13 @@ object DiskSystemSpec {
             keep
           }
 
-        def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
+        def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] = {
           guard {
             _compacted = true
             for (seed <- groups.latch.unit)
               for (pos <- pagers.stuff.write (0, seed, Stuff (seed)))
                 yield written += seed -> pos
-          }})
+          }}})
     }
 
     def check () (implicit scheduler: StubScheduler, disks: Disks) {
