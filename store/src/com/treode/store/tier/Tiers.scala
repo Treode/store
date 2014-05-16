@@ -15,7 +15,7 @@ import com.treode.store.{Residents, StoreConfig, StorePicklers}
     tiers.isEmpty
 
   def gen: Long =
-    if (tiers.isEmpty) -1 else tiers.head.gen
+    if (tiers.isEmpty) 0 else tiers.head.gen
 
   def keys: Long =
     tiers .map (_.keys) .sum

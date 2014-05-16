@@ -28,8 +28,9 @@ extends TestTable with PageHandler [Long] {
     TestTable.delete.record (gen, key)
   }
 
-  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
-    supply (table.probe (groups))
+  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] = guard {
+    table.probe (groups)
+  }
 
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] = guard {
     for {

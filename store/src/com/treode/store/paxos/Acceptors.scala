@@ -40,7 +40,9 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   }
 
   def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
-    supply (archive.probe (groups))
+    guard {
+      archive.probe (groups)
+    }
 
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {

@@ -25,7 +25,7 @@ private [store] trait TierTable {
 
   def receive (cells: Seq [Cell]): (Long, Seq [Cell])
 
-  def probe (groups: Set [Long]): Set [Long]
+  def probe (groups: Set [Long]): Async [Set [Long]]
 
   def compact()
 
