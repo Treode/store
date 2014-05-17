@@ -27,17 +27,11 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
     a1
   }
 
+  def recover (key: Bytes, time: TxClock, a: Acceptor): Unit =
+    acceptors.put ((key, time), a)
+
   def remove (key: Bytes, time: TxClock, a: Acceptor): Unit =
     acceptors.remove ((key, time), a)
-
-  def recover (medics: Seq [Medic]): Async [Unit] = {
-    for {
-      _ <-
-        for (m <- medics.latch.unit)
-          for (a <- m.close (kit))
-            yield acceptors.put ((m.key, m.time), a)
-    } yield ()
-  }
 
   def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
     guard {

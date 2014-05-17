@@ -68,7 +68,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
 
     def timeout() = ()
 
-    override def toString = "Proposer.Open (%s)" format (key.toString)
+    override def toString = "Proposer.Opening (%s)" format (key.toString)
   }
 
   class Open (_ballot: Long, patch: Patch) extends State {

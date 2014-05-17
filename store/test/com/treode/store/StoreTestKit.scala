@@ -33,6 +33,11 @@ object StoreTestKit {
     new StoreTestKit () (random, scheduler, network)
   }
 
+  def random (random: Random, scheduler: StubScheduler): StoreTestKit = {
+    val network = StubNetwork (random)
+    new StoreTestKit () (random, scheduler, network)
+  }
+
   def multithreaded (scheduler: StubScheduler): StoreTestKit = {
     val network = StubNetwork (Random)
     new StoreTestKit () (Random, scheduler, network)

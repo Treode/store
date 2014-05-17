@@ -1,8 +1,24 @@
 package com.treode.store.paxos
 
-import com.treode.store.{Atlas, Cohort, StoreTestTools}
+import scala.util.Random
+
+import com.treode.store.{Atlas, Bytes, Cohort, StoreTestTools}
 
 private object PaxosTestTools extends StoreTestTools {
+
+  private val pkey = {
+    import PaxosPicklers._
+    tuple (ulong, ulong)
+  }
+
+  implicit class RichRandom (random: Random) {
+
+    def nextKey(): Bytes =
+      Bytes (pkey, (random.nextLong(), random.nextLong()))
+
+    def nextKeys (count: Int): Seq [Bytes] =
+      Seq.fill (count) (nextKey())
+  }
 
   implicit class TestableAcceptor (a: Acceptor) {
 

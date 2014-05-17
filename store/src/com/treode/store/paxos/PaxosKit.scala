@@ -33,7 +33,10 @@ private class PaxosKit (
     atlas.place (locator, (key, time))
 
   def locate (key: Bytes, time: TxClock): Cohort =
-    atlas.locate (locator, (key,time))
+    atlas.locate (locator, (key, time))
+
+  def track (key: Bytes, time: TxClock): ReplyTracker =
+    locate (key, time) .track
 
   def lead (key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
     proposers.propose (0, key, time, value)

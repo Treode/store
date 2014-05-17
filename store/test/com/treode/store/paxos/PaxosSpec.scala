@@ -3,16 +3,25 @@ package com.treode.store.paxos
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 
+import com.treode.async.{Async, Callback}
+import com.treode.async.implicits._
 import com.treode.async.stubs.AsyncChecks
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
+import com.treode.disk.stubs.{CrashChecks, StubDiskDrive}
 import com.treode.store.{Bytes, Cell, StoreTestKit}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
+import Async.{guard, latch, supply}
+import Callback.{ignore => disregard}
 import PaxosTestTools._
 
-class PaxosSpec extends FreeSpec with AsyncChecks {
+class PaxosSpec extends FreeSpec with CrashChecks {
+
+  val H1 = 0xF7DD0B042DACCD44L
+  val H2 = 0x3D74427D18B38275L
+  val H3 = 0x1FC96D277C03FEC3L
 
   class Summary (var timedout: Boolean, var chosen: Set [Int]) {
 
@@ -40,8 +49,8 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
 
       val k = Bytes (0x9E360154E51197A8L)
 
-      val cb1 = p1.paxos.propose (k, 0, 1) .capture()
-      val cb2 = p2.paxos.propose (k, 0, 2) .capture()
+      val cb1 = p1.propose (k, 0, 1) .capture()
+      val cb2 = p2.propose (k, 0, 2) .capture()
       kit.messageFlakiness = mf
       kit.run (timers = true, count = 1000)
       val v = cb1.passed
@@ -49,10 +58,10 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
 
       for (a <- as)
         assert (
-            !a.paxos.acceptors.acceptors.contains (k),
+            !a.acceptors.contains (k),
             "Expected acceptor to have been removed.")
       for (a <- as)
-        a.paxos.archive.get (k, 0) .expect (k##0::v)
+        a.archive.get (k, 0) .expect (k##0::v)
 
       summary.chose (v.int)
     } catch {
@@ -61,6 +70,28 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
     }}
 
   "The paxos implementation should" - {
+
+    "recover from a crash" taggedAs (Intensive, Periodic) in {
+      forAllCrashes { implicit random =>
+
+        val tracker = new PaxosTracker
+        val disk = new StubDiskDrive
+
+        setup { implicit scheduler =>
+          implicit val kit = StoreTestKit.random (random, scheduler)
+          for {
+            host <- StubPaxosHost.install (H1, disk)
+            _ = host.setAtlas (settled (host))
+            _ <- tracker.batches (host, 10, 10)
+          } yield ()
+        }
+
+        .recover { implicit scheduler =>
+          implicit val kit = StoreTestKit.random (random, scheduler)
+          val host = StubPaxosHost .reboot (H1, disk) .pass
+          host.setAtlas (settled (host))
+          tracker.check (host) .pass
+        }}}
 
     "achieve consensus with" - {
 
@@ -78,7 +109,7 @@ class PaxosSpec extends FreeSpec with AsyncChecks {
         summary.check (Set (1, 2))
       }
 
-      "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in {
+      "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in { pending
         var summary = new Summary
         forAllSeeds { implicit random =>
           implicit val kit = StoreTestKit.random (random)

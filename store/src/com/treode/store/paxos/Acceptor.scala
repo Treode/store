@@ -67,7 +67,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     var postable = {_: Deliberating => ()}
 
     def promise (ballot: BallotNumber, proposal: Proposal, proposer: Peer): Unit =
-      postable = (_.promise (ballot, proposal, proposer))
+      postable = (_.open (ballot.number, default, proposer))
 
     def accept (ballot: BallotNumber, value: Bytes, proposer: Peer): Unit =
       postable = (_.accept (ballot, value, proposer))

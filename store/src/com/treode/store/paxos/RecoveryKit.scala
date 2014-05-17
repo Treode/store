@@ -1,16 +1,20 @@
 package com.treode.store.paxos
 
+import scala.collection.JavaConversions
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
+import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
 import com.treode.disk.Disks
 import com.treode.store.{Bytes, Library, StoreConfig, TxClock}
 import com.treode.store.tier.TierMedic
 
+import Async.supply
 import Acceptors.checkpoint
 import Acceptor.{open, promise, accept, reaccept, close}
+import JavaConversions._
 
 private class RecoveryKit (implicit
     val random: Random,
@@ -64,16 +68,12 @@ private class RecoveryKit (implicit
     archive.checkpoint (meta)
   }
 
-  def launch (implicit launch: Disks.Launch): Async [Paxos] = {
-    import launch.disks
-
-    val kit = new PaxosKit (archive.close())
-    import kit.{acceptors, proposers}
-
-    for {
-      _ <- acceptors.recover (materialize (medics.values))
-    } yield {
-      acceptors.attach()
-      proposers.attach()
+  def launch (implicit launch: Disks.Launch): Async [Paxos] =
+    supply {
+      import launch.disks
+      val kit = new PaxosKit (archive.close())
+      medics.values foreach (_.close (kit))
+      kit.acceptors.attach()
+      kit.proposers.attach()
       kit
-    }}}
+    }}

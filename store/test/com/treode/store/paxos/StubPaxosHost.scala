@@ -11,6 +11,7 @@ import com.treode.disk.Disks
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store._
 import com.treode.store.catalog.Catalogs
+import com.treode.store.tier.TierTable
 import org.scalatest.Assertions
 
 import Assertions._
@@ -51,7 +52,20 @@ private class StubPaxosHost (
     assertResult (atlas) (library.atlas)
     assertResult (librarian.issued) (atlas.version)
     assert (librarian.receipts forall (_._2 == atlas.version))
-  }}
+  }
+
+  def archive: TierTable =
+    paxos.archive
+
+  def acceptors: AcceptorsMap =
+    paxos.acceptors.acceptors
+
+  def locate (key: Bytes, time: TxClock): Cohort =
+    paxos.locate (key, time)
+
+  def propose (key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
+    paxos.propose (key, time, value)
+}
 
 private object StubPaxosHost {
 
@@ -80,7 +94,19 @@ private object StubPaxosHost {
       new StubPaxosHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, paxos)
     }}
 
+  def install (id: HostId, drive: StubDiskDrive) (implicit kit: StoreTestKit): Async [StubPaxosHost] =
+    boot (id, drive, true)
+
+  def install (id: HostId) (implicit kit: StoreTestKit): Async [StubPaxosHost] = {
+    import kit.random
+    boot (id, new StubDiskDrive, true)
+  }
+
   def install () (implicit kit: StoreTestKit): Async [StubPaxosHost] = {
     import kit.random
     boot (random.nextLong, new StubDiskDrive, true)
-  }}
+  }
+
+  def reboot (id: HostId, drive: StubDiskDrive) (implicit kit: StoreTestKit): Async [StubPaxosHost] =
+    boot (id, drive, false)
+}

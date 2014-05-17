@@ -11,7 +11,7 @@ import com.treode.store.{BallotNumber, Bytes, TxClock}
 
 private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   import kit.proposers.remove
-  import kit.{cluster, locate, random, scheduler}
+  import kit.{cluster, random, scheduler, track}
 
   private val proposingBackoff = Backoff (200, 300, 1 minutes, 7)
   private val confirmingBackoff = Backoff (200, 300, 1 minutes, 7)
@@ -68,7 +68,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
     def timeout() = ()
 
-    override def toString = "Proposer.Open (%s)" format (key.toString)
+    override def toString = "Proposer.Opening (%s)" format (key.toString)
   }
 
   class Open (_ballot: Long, value: Bytes) extends State {
@@ -77,8 +77,8 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     var ballot = _ballot
     var refused = ballot
     var proposed = Option.empty [(BallotNumber, Bytes)]
-    val promised = locate (key, time) .track
-    val accepted = locate (key, time) .track
+    val promised = track (key, time)
+    val accepted = track (key, time)
 
     // Ballot number zero was implicitly accepted.
     if (ballot == 0)
@@ -112,7 +112,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
         accepted += from
         if (accepted.quorum) {
           val v = agreement (proposed, value)
-          Acceptor.choose (key, time, v) (locate (key, time) .track)
+          Acceptor.choose (key, time, v) (track (key, time))
           learners foreach (_.pass (v))
           state = new Closed (v)
         }}}
