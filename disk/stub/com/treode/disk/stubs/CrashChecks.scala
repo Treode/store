@@ -67,7 +67,7 @@ trait CrashChecks extends AsyncChecks {
       val actual = {           // Setup running only the target number of tasks.
         val scheduler = StubScheduler.random (random)
         val cb = runner.setup (scheduler) .capture()
-        val actual = scheduler.run (count = target)
+        val actual = scheduler.run (timers = !cb.wasInvoked, count = target)
         if (target == Int.MaxValue) {
           cb.passed
           runner.asserts foreach (_())

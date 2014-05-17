@@ -19,33 +19,32 @@ package object implicits {
       cb
     }
 
-    /** Run all tasks on the scheduler until none remain, then assert that the asynchronous
-      * operation completed with [[scala.util.Success Success]] and return the result.
+    /** Run until the asynchronous operation completes, then assert that it yielded
+      * [[scala.util.Success Success]] and return the result.
       */
     def pass (implicit scheduler: StubScheduler): A = {
       val cb = capture()
-      scheduler.run()
+      scheduler.run (!cb.wasInvoked)
       cb.passed
     }
 
-    /** Run all tasks on the scheduler until none remain, then assert that the asynchronous
-      * operation completed with [[scala.util.Failure Failure]] and return the exception.
+    /** Run until the asynchronous operation completes, then assert that it yielded
+      * [[scala.util.Failure Failure]] and return the exception.
       */
     def fail [E] (implicit scheduler: StubScheduler, m: Manifest [E]): E = {
       val cb = capture()
-      scheduler.run()
+      scheduler.run (!cb.wasInvoked)
       cb.failed [E]
     }
 
-    /** Run all tasks on the scheduler until none remain, then assert that the asynchronous
-      * operation completed with [[scala.util.Success Success]] and check that the result is
-      * as expected.
+    /** Run until the asynchronous operation completes, then assert that it yielded
+      * [[scala.util.Success Success]] and check that the result is as expected.
       */
     def expect (expected: A) (implicit scheduler: StubScheduler): Unit =
       assertResult (expected) (pass)
 
-    /** Run all tasks on the scheduler until none remain, then assert that the asynchronous
-      * operation completed with [[scala.util.Success Success]] and check that the
+    /** Run until the asynchronous operation completes, then assert that it yielded
+      * [[scala.util.Success Success]] and check that the
       * [[scala.collection.Seq Seq]] result is as expected.
       */
     def expectSeq [B] (xs: B*) (implicit s: StubScheduler, w: A <:< Seq [B]): Unit =
