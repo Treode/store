@@ -69,19 +69,22 @@ private class StubPaxosHost (
 
 private object StubPaxosHost {
 
-  private def boot (
+  def boot (
       id: HostId,
+      checkpoint: Double,
+      compaction: Double,
       drive: StubDiskDrive,
       init: Boolean
   ) (implicit
-      kit: StoreTestKit
+      random: Random,
+      scheduler: Scheduler,
+      network: StubNetwork
   ): Async [StubPaxosHost] = {
-    import kit.{random, scheduler, network}
 
     implicit val cluster = new StubCluster (id)
     implicit val library = new Library
     implicit val storeConfig = TestStoreConfig()
-    implicit val recovery = StubDisks.recover()
+    implicit val recovery = StubDisks.recover (checkpoint, compaction)
     implicit val _catalogs = Catalogs.recover()
     val _paxos = Paxos.recover()
 
@@ -94,19 +97,6 @@ private object StubPaxosHost {
       new StubPaxosHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, paxos)
     }}
 
-  def install (id: HostId, drive: StubDiskDrive) (implicit kit: StoreTestKit): Async [StubPaxosHost] =
-    boot (id, drive, true)
-
-  def install (id: HostId) (implicit kit: StoreTestKit): Async [StubPaxosHost] = {
-    import kit.random
-    boot (id, new StubDiskDrive, true)
-  }
-
-  def install () (implicit kit: StoreTestKit): Async [StubPaxosHost] = {
-    import kit.random
-    boot (random.nextLong, new StubDiskDrive, true)
-  }
-
-  def reboot (id: HostId, drive: StubDiskDrive) (implicit kit: StoreTestKit): Async [StubPaxosHost] =
-    boot (id, drive, false)
+  def install () (implicit r: Random, s: Scheduler, n: StubNetwork): Async [StubPaxosHost] =
+    boot (r.nextLong, 0.1, 0.1, new StubDiskDrive, true)
 }

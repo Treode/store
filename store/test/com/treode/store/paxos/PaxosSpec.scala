@@ -71,27 +71,46 @@ class PaxosSpec extends FreeSpec with CrashChecks {
 
   "The paxos implementation should" - {
 
-    "recover from a crash" taggedAs (Intensive, Periodic) in {
-      forAllCrashes { implicit random =>
+    "recover from a crash when" - {
 
-        val tracker = new PaxosTracker
-        val disk = new StubDiskDrive
+      for { (name, checkpoint) <- Seq (
+          "not checkpointed at all"   -> 0.0,
+          "checkpointed occasionally" -> 0.01,
+          "checkpointed frequently"   -> 0.1)
+      } s"$name and" - {
 
-        setup { implicit scheduler =>
-          implicit val kit = StoreTestKit.random (random, scheduler)
-          for {
-            host <- StubPaxosHost.install (H1, disk)
-            _ = host.setAtlas (settled (host))
-            _ <- tracker.batches (host, 10, 10)
-          } yield ()
-        }
+        for { (name, compaction) <- Seq (
+            "not compacted at all"   -> 0.0,
+            "compacted occasionally" -> 0.01,
+            "compacted frequently"   -> 0.1)
+      } s"$name with" - {
 
-        .recover { implicit scheduler =>
-          implicit val kit = StoreTestKit.random (random, scheduler)
-          val host = StubPaxosHost .reboot (H1, disk) .pass
-          host.setAtlas (settled (host))
-          tracker.check (host) .pass
-        }}}
+        for { (name, (nbatch, nput)) <- Seq (
+            "some batches"     -> (10, 10),
+            "lots of batches"  -> (100, 10),
+            "some big batches" -> (10, 100))
+        } name taggedAs (Intensive, Periodic) in {
+
+          forAllCrashes { implicit random =>
+
+            val tracker = new PaxosTracker
+            val disk = new StubDiskDrive
+
+            setup { implicit scheduler =>
+              implicit val network = StubNetwork (random)
+              for {
+                host <- StubPaxosHost.boot (H1, checkpoint, compaction, disk, true)
+                _ = host.setAtlas (settled (host))
+                _ <- tracker.batches (host, nbatch, nput)
+              } yield ()
+            }
+
+            .recover { implicit scheduler =>
+              implicit val network = StubNetwork (random)
+              val host = StubPaxosHost .boot (H1, checkpoint, compaction, disk, false) .pass
+              host.setAtlas (settled (host))
+              tracker.check (host) .pass
+            }}}}}}
 
     "achieve consensus with" - {
 
@@ -109,7 +128,7 @@ class PaxosSpec extends FreeSpec with CrashChecks {
         summary.check (Set (1, 2))
       }
 
-      "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in { pending
+      "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
         forAllSeeds { implicit random =>
           implicit val kit = StoreTestKit.random (random)
