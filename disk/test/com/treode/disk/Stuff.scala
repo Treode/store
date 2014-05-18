@@ -35,4 +35,9 @@ object Stuff {
     wrap (fixedLong, seq (int))
     .build (v => new Stuff (v._1, v._2))
     .inspect (v => (v.seed, v.items))
+  }
+
+  val pager = {
+    import DiskPicklers._
+    PageDescriptor (0x26, fixedLong, Stuff.pickler)
   }}

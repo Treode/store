@@ -10,7 +10,6 @@ import org.scalatest.FreeSpec
 
 import Async.supply
 import DiskTestTools._
-import DiskSystemSpec._
 
 class StubDisksSpec extends FreeSpec with CrashChecks {
 
