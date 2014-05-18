@@ -8,13 +8,13 @@ import com.treode.store.{Bytes, StoreConfig, TableId, TxClock}
 import Async.supply
 import TestTable.{checkpoint, delete, descriptor, put}
 
-private class TestRecovery (
+private class TestMedic (
     id: TableId
 ) (implicit
     scheduler: StubScheduler,
     recovery: Disk.Recovery,
     config: StoreConfig
-) extends TestTable.Recovery {
+) extends TestTable.Medic {
 
   val medic = TierMedic (descriptor, id.id)
 
@@ -32,7 +32,7 @@ private class TestRecovery (
 
   def launch (implicit launch: Disk.Launch): Async [TestTable] = supply {
     import launch.{checkpoint, disks}
-    val table = new LoggedTable (medic.close())
+    val table = new TestTable (medic.close())
     checkpoint (table.checkpoint())
     descriptor.handle (table)
     table

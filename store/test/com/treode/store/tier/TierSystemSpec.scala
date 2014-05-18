@@ -19,46 +19,6 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
 
   val ID = 0xC8
 
-  implicit class RichRandom (random: Random) {
-
-    def nextPut (nkeys: Int, nputs: Int): Seq [(Int, Int)] = {
-
-      var keys = Set.empty [Int]
-      def nextKey = {
-        var key = random.nextInt (nkeys)
-        while (keys contains key)
-          key = random.nextInt (nkeys)
-        keys += key
-        key
-      }
-
-      def nextValue = random.nextInt (Int.MaxValue)
-      Seq.fill (nputs) (nextKey, nextValue)
-    }}
-
-  implicit class RichTestTable (table: TestTable) {
-
-    def putAll (kvs: (Int, Int)*): Async [Unit] =
-      for ((key, value) <- kvs.latch.unit)
-        table.put (key, value)
-
-    def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] =
-      for (c <- table.iterator.toSeq; if c.value.isDefined)
-        yield (c.key, c.value.get)
-
-    def toMap (implicit scheduler: StubScheduler): Map [Int, Int] =
-      toSeq.toMap
-
-    def expectNone (key: Int) (implicit scheduler: StubScheduler): Unit =
-      table.get (key) .expect (None)
-
-    def expectValue (key: Int, value: Int) (implicit scheduler: StubScheduler): Unit =
-      table.get (key) .expect (Some (value))
-
-    def expectValues (kvs: (Int, Int)*) (implicit scheduler: StubScheduler): Unit =
-      assertResult (kvs.sorted) (toSeq)
-  }
-
   private def setup (
       checkpoint: Double,
       compaction: Double,
@@ -69,7 +29,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       storeConfig: StoreConfig
   ): TestTable = {
       implicit val recovery = StubDisk.recover (checkpoint, compaction)
-      val _table = new TestRecovery (ID)
+      val _table = new TestMedic (ID)
       val launch = recovery.attach (diskDrive) .pass
       val table = _table.launch (launch) .pass
       launch.launch()
@@ -86,7 +46,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       storeConfig: StoreConfig
   ): TestTable = {
     implicit val recovery = StubDisk.recover (checkpoint, compaction)
-    val _table = new TestRecovery (ID)
+    val _table = new TestMedic (ID)
     val launch = recovery.reattach (diskDrive) .pass
     val table = _table.launch (launch) .pass
     launch.launch()
@@ -105,7 +65,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   ) = {
 
       implicit val storeConfig = TestStoreConfig()
-      val tracker = new TrackingTable
+      val tracker = new TableTracker
       val diskDrive = new StubDiskDrive
 
       crash.info (s"check ($checkpoint, $compaction, $nkeys, $nrounds, $nbatch)")

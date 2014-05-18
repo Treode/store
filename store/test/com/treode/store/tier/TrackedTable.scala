@@ -1,10 +1,9 @@
 package com.treode.store.tier
 
 import com.treode.async.{Async, AsyncIterator}
+import com.treode.async.implicits._
 
-import Async.async
-
-private class TrackedTable (table: TestTable, tracker: TrackingTable) extends TestTable {
+private class TrackedTable (table: TestTable, tracker: TableTracker) {
 
   def get (key: Int): Async [Option [Int]] =
     table.get (key)
@@ -16,6 +15,10 @@ private class TrackedTable (table: TestTable, tracker: TrackingTable) extends Te
     tracker.putting (key, value)
     table.put (key, value) .map (_ => tracker.put (key, value))
   }
+
+  def putAll (kvs: (Int, Int)*): Async [Unit] =
+    for ((key, value) <- kvs.latch.unit)
+      put (key, value)
 
   def delete (key: Int): Async [Unit] = {
     tracker.deleting (key)

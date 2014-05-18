@@ -1,5 +1,7 @@
 package com.treode.store.tier
 
+import scala.util.Random
+
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
@@ -12,6 +14,23 @@ import Fruits.{Apple, Tomato}
 import TierTable.Meta
 
 private object TierTestTools extends StoreTestTools {
+
+  implicit class RichRandom (random: Random) {
+
+    def nextPut (nkeys: Int, nputs: Int): Seq [(Int, Int)] = {
+
+      var keys = Set.empty [Int]
+      def nextKey = {
+        var key = random.nextInt (nkeys)
+        while (keys contains key)
+          key = random.nextInt (nkeys)
+        keys += key
+        key
+      }
+
+      def nextValue = random.nextInt (Int.MaxValue)
+      Seq.fill (nputs) (nextKey, nextValue)
+    }}
 
   implicit class RichTierTable (table: TierTable) {
 

@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-class TrackingTable {
+class TableTracker {
 
   private var attempted = Map.empty [Int, Option [Int]]
   private var accepted = Map.empty [Int, Option [Int]]
