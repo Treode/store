@@ -4,7 +4,7 @@ import java.util.concurrent.Executors
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.async.stubs.{AsyncChecks, StubScheduler}
+import com.treode.async.stubs.{AsyncChecks, CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId
 import com.treode.cluster.stubs.StubNetwork
@@ -33,12 +33,20 @@ trait StoreClusterChecks extends AsyncChecks {
 
   implicit class StoreTestingAsync [A] (async: Async [A]) {
 
-    def disregard(): Unit =
+    def passOrTimeout(): Unit =
       try {
         async.await()
       } catch {
-        case _: Throwable => ()
+        case _: TimeoutException => ()
       }}
+
+  implicit class StoreTestingCallbackCaptor [A] (cb: CallbackCaptor [A]) {
+
+    def passedOrTimedout: Unit =
+      assert (
+          cb.hasPassed || cb.hasFailed [TimeoutException],
+          s"Expected success or timeout, found $cb")
+  }
 
   class ForStoreClusterRunner [H] (
       val messages: Seq [String],
@@ -141,7 +149,7 @@ trait StoreClusterChecks extends AsyncChecks {
       network.messageFlakiness = flakiness
       val cb = runner.setup (scheduler) (h1, h2) .capture()
       val count = scheduler.run (timers = !cb.wasInvoked)
-      cb.passed
+      cb.passedOrTimedout
       runner.asserts foreach (_ ())
       network.messageFlakiness = 0.0
 
@@ -198,7 +206,7 @@ trait StoreClusterChecks extends AsyncChecks {
 
       network.messageFlakiness = flakiness
       val start = System.currentTimeMillis
-      val cb = runner.setup (scheduler) (h1, h2) .await()
+      runner.setup (scheduler) (h1, h2) .passOrTimeout
       val end = System.currentTimeMillis
       runner.asserts foreach (_ ())
       network.messageFlakiness = 0.0
@@ -246,6 +254,7 @@ trait StoreClusterChecks extends AsyncChecks {
       network.messageFlakiness = flakiness
       val cb = runner.setup (scheduler) (h1, h2) .capture()
       val count = scheduler.run (timers = !cb.wasInvoked, oblivious = true)
+      cb.passedOrTimedout
       runner.asserts foreach (_ ())
       network.messageFlakiness = 0.0
 
@@ -313,7 +322,7 @@ trait StoreClusterChecks extends AsyncChecks {
 
       network.messageFlakiness = flakiness
       val start = System.currentTimeMillis
-      runner.setup (scheduler) (h1, h2) .disregard()
+      runner.setup (scheduler) (h1, h2) .passOrTimeout
       val end = System.currentTimeMillis
       runner.asserts foreach (_ ())
       network.messageFlakiness = 0.0
@@ -369,6 +378,7 @@ trait StoreClusterChecks extends AsyncChecks {
       scheduler.run (count = target, timers = true)
       h3.shutdown()
       val count = scheduler.run (timers = !cb.wasInvoked, oblivious = true)
+      cb.passedOrTimedout
       runner.asserts foreach (_ ())
       network.messageFlakiness = 0.0
 
@@ -463,7 +473,7 @@ trait StoreClusterChecks extends AsyncChecks {
       network.messageFlakiness = flakiness
       scheduler.delay (target) (h3.shutdown())
       val start = System.currentTimeMillis
-      runner.setup (scheduler) (h1, h2) .disregard()
+      runner.setup (scheduler) (h1, h2) .passOrTimeout
       val end = System.currentTimeMillis
       runner.asserts foreach (_ ())
       network.messageFlakiness = 0.0
@@ -538,7 +548,8 @@ trait StoreClusterChecks extends AsyncChecks {
       val cb = runner.setup (scheduler) (h1, h2) .capture()
       scheduler.run (count = target, timers = true, oblivious = true)
       val cb2 = runner .boot (H3, checkpoint, compaction, d3, false) .capture()
-      scheduler.run (timers = !cb.wasInvoked && !cb2.wasInvoked, oblivious = true)
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked, oblivious = true)
+      cb.passedOrTimedout
       h3 = cb2.passed
       runner.asserts foreach (_ ())
       network.messageFlakiness = 0.0
@@ -637,7 +648,7 @@ trait StoreClusterChecks extends AsyncChecks {
           _ <- Async.delay (target)
           h <- runner.boot (H3, checkpoint, compaction, d3, false)
         } yield h) .toFuture
-      runner.setup (scheduler) (h1, h2) .disregard()
+      runner.setup (scheduler) (h1, h2) .passOrTimeout
       runner.asserts foreach (_ ())
       h3 = _h3.await()
       network.messageFlakiness = 0.0
@@ -711,7 +722,8 @@ trait StoreClusterChecks extends AsyncChecks {
       h3.shutdown()
       scheduler.run (count = target2, timers = true, oblivious = true)
       val cb2 = runner .boot (H3, checkpoint, compaction, d3, false) .capture()
-      scheduler.run (timers = !cb.wasInvoked && !cb2.wasInvoked, oblivious = true)
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked, oblivious = true)
+      cb.passedOrTimedout
       h3 = cb2.passed
       runner.asserts foreach (_ ())
       network.messageFlakiness = 0.0
@@ -812,7 +824,7 @@ trait StoreClusterChecks extends AsyncChecks {
           _ <- Async.delay (target2)
           h <- runner .boot (H3, checkpoint, compaction, d3, false)
         } yield h) .toFuture
-      runner.setup (scheduler) (h1, h2) .disregard()
+      runner.setup (scheduler) (h1, h2) .passOrTimeout
       runner.asserts foreach (_ ())
       h3 = _h3.await()
       network.messageFlakiness = 0.0

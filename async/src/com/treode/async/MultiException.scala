@@ -1,5 +1,7 @@
 package com.treode.async
 
+import java.util.concurrent.TimeoutException
+
 /** Collects multiple exceptions into one.  The collected exceptions can be retrieved from
   * `getSuppressed`.
   */
@@ -16,6 +18,11 @@ object MultiException {
   }
 
   /** Create a MultiException unless the sequence has one exception. */
-  def fit (ts: Seq [Throwable]): Throwable =
-    if (ts.size == 1) ts.head else apply (ts)
-}
+  def fit (ts: Seq [Throwable]): Throwable = {
+    if (ts.size == 1)
+      ts.head
+    else if (ts forall (_.isInstanceOf [TimeoutException]))
+      ts.head
+    else
+      apply (ts)
+  }}
