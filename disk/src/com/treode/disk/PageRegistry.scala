@@ -6,7 +6,7 @@ import com.treode.async.implicits._
 import Async.guard
 import PageLedger.{Groups, Merger}
 
-private class PageRegistry (kit: DisksKit) extends AbstractPageRegistry {
+private class PageRegistry (kit: DiskKit) extends AbstractPageRegistry {
   import kit.{config, releaser, scheduler}
 
   def probe (ledger: PageLedger): Async [Long] = {

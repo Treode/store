@@ -10,7 +10,7 @@ import com.treode.async.io.File
 package disk {
 
   private class AlreadyAttachedException (paths: Seq [Path]) extends IllegalArgumentException {
-    override def getMessage = s"Disks already attached: ${paths mkString ", "}"
+    override def getMessage = s"Disk already attached: ${paths mkString ", "}"
   }
 
   private class CannotDrainAllException extends IllegalArgumentException {

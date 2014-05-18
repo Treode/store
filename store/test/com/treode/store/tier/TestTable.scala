@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.async.{Async, AsyncIterator}
-import com.treode.disk.{Disks, RecordDescriptor}
+import com.treode.disk.{Disk, RecordDescriptor}
 import com.treode.store.StorePicklers
 
 private trait TestTable {
@@ -18,7 +18,7 @@ private trait TestTable {
 private object TestTable {
 
   trait Recovery {
-    def launch (implicit launch: Disks.Launch): Async [TestTable]
+    def launch (implicit launch: Disk.Launch): Async [TestTable]
   }
 
   val descriptor = {

@@ -22,7 +22,7 @@ private class DiskDrive (
     val file: File,
     val geometry: DiskGeometry,
     val alloc: Allocator,
-    val kit: DisksKit,
+    val kit: DiskKit,
     var draining: Boolean,
     var logSegs: ArrayDeque [Int],
     var logHead: Long,
@@ -334,7 +334,7 @@ private object DiskDrive {
       file: File,
       geometry: DiskGeometry,
       boot: BootBlock,
-      kit: DisksKit
+      kit: DiskKit
   ): Async [DiskDrive] =
 
     guard {

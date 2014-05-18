@@ -5,7 +5,7 @@ import com.treode.async.Async
 
 import Async.{async, guard}
 
-private class DisksAgent (val kit: DisksKit) extends Disks {
+private class DiskAgent (val kit: DiskKit) extends Disk {
   import kit.{compactor, disks, logd, paged, releaser}
   import kit.config.{maximumPageBytes, maximumRecordBytes}
 

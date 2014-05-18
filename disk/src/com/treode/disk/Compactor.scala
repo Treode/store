@@ -10,7 +10,7 @@ import Async.{async, guard}
 import Callback.ignore
 import PageLedger.Groups
 
-private class Compactor (kit: DisksKit) {
+private class Compactor (kit: DiskKit) {
   import kit.{config, disks, releaser, scheduler}
 
   type DrainReq = Iterator [SegmentPointer]

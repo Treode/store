@@ -4,7 +4,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.async.implicits._
-import com.treode.disk.{Disks, PageDescriptor, Position}
+import com.treode.disk.{Disk, PageDescriptor, Position}
 import com.treode.store._
 
 import Async.{async, guard, supply, when}
@@ -39,7 +39,7 @@ private class SynthTable (
 
 ) (implicit
     scheduler: Scheduler,
-    disks: Disks,
+    disks: Disk,
     config: StoreConfig
 ) extends TierTable {
   import desc.pager
@@ -239,7 +239,7 @@ private object SynthTable {
   val genStepMask = genStepSize - 1
 
   def apply (desc: TierDescriptor, id: TableId) (
-      implicit scheduler: Scheduler, disk: Disks, config: StoreConfig): SynthTable = {
+      implicit scheduler: Scheduler, disk: Disk, config: StoreConfig): SynthTable = {
     val lock = new ReentrantReadWriteLock
     new SynthTable (desc, id, lock, 0, newMemTier, newMemTier, Tiers.empty)
   }}

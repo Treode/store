@@ -5,7 +5,7 @@ import com.treode.async.{Async, Callback, Fiber}
 
 import Callback.ignore
 
-private class Checkpointer (kit: DisksKit) {
+private class Checkpointer (kit: DiskKit) {
   import kit.{config, disks, scheduler}
 
   val fiber = new Fiber

@@ -3,7 +3,7 @@ package com.treode.store.paxos
 import com.treode.async.{Async, Latch}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position, RecordDescriptor}
+import com.treode.disk.{Disk, ObjectId, PageDescriptor, PageHandler, Position, RecordDescriptor}
 import com.treode.store.{Bytes, Cell, Residents, TxClock}
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
@@ -57,7 +57,7 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
       } yield ()
     }
 
-  def attach () (implicit launch: Disks.Launch) {
+  def attach () (implicit launch: Disk.Launch) {
     import Acceptor.{choose, propose, query}
 
     Acceptors.archive.handle (this)

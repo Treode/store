@@ -27,12 +27,12 @@ class PageSpec extends FreeSpec {
   "The pager should" - {
 
     def setup (disk: StubFile) (implicit scheduler: StubScheduler) = {
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       recovery.attachAndLaunch (("a", disk, geometry))
     }
 
     def recover (disk: StubFile) (implicit scheduler: StubScheduler) = {
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       recovery.reattachAndLaunch (("a", disk))
     }
 
@@ -107,7 +107,7 @@ class PageSpec extends FreeSpec {
       implicit val random = new Random (0)
       implicit val scheduler = StubScheduler.random (random)
       val file = StubFile()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       for (i <- 0 until 40)
         pagers.stuff.write (0, 0, Stuff (random.nextLong)) .pass
@@ -121,7 +121,7 @@ class PageSpec extends FreeSpec {
       implicit val random = new Random (0)
       implicit val scheduler = StubScheduler.random (random)
       val file = StubFile()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
       import launch.disks
       pagers.stuff.handle (new PageHandler [Int] {
@@ -144,7 +144,7 @@ class PageSpec extends FreeSpec {
       implicit val random = new Random (0)
       implicit val scheduler = StubScheduler.random (random)
       val file = StubFile()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
       import launch.disks
       pagers.stuff.handle (new PageHandler [Int] {

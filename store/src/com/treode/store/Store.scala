@@ -4,7 +4,7 @@ import scala.util.Random
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
 import com.treode.cluster.Cluster
-import com.treode.disk.Disks
+import com.treode.disk.Disk
 
 trait Store {
 
@@ -32,14 +32,14 @@ object Store {
 
   trait Recovery {
 
-    def launch (launch: Disks.Launch): Async [Controller]
+    def launch (launch: Disk.Launch): Async [Controller]
   }
 
   def recover() (implicit
       random: Random,
       scheduler: Scheduler,
       cluster: Cluster,
-      recovery: Disks.Recovery,
+      recovery: Disk.Recovery,
       config: StoreConfig
   ): Recovery =
     new RecoveryKit

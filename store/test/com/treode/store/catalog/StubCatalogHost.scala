@@ -7,7 +7,7 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.StubPeer
-import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
+import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.store._
 import org.scalatest.Assertions
 
@@ -25,7 +25,7 @@ extends StubStoreHost {
   implicit val library = new Library
 
   implicit val storeConfig = TestStoreConfig()
-  implicit val recovery = StubDisks.recover()
+  implicit val recovery = StubDisk.recover()
   implicit val _catalogs = Catalogs.recover()
 
   val diskDrive = new StubDiskDrive

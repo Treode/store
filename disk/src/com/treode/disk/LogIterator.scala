@@ -24,7 +24,7 @@ private class LogIterator private (
     private var logSeg: SegmentBounds
 ) (implicit
     scheduler: Scheduler,
-    config: DisksConfig
+    config: DiskConfig
 ) extends AsyncIterator [(Long, Unit => Any)] {
 
   private var draining = superb.draining
@@ -131,7 +131,7 @@ private class LogIterator private (
         (seg, seg.limit, pageLedger, true)
     }
 
-  def close (kit: DisksKit): DiskDrive = {
+  def close (kit: DiskKit): DiskDrive = {
     val (seg, head, ledger, dirty) = pages()
     new DiskDrive (
         superb.id, path, file, superb.geometry, alloc, kit, draining, logSegs,
@@ -146,7 +146,7 @@ private object LogIterator {
       records: RecordRegistry
   ) (implicit
       scheduler: Scheduler,
-      config: DisksConfig
+      config: DiskConfig
   ): Async [(Int, LogIterator)] = {
 
     val path = read.path
@@ -172,8 +172,8 @@ private object LogIterator {
       records: RecordRegistry
   ) (implicit
       scheduler: Scheduler,
-      config: DisksConfig
-  ): Async [DisksKit] = {
+      config: DiskConfig
+  ): Async [DiskKit] = {
 
     val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
     val useGen0 = chooseSuperBlock (reads)
@@ -189,7 +189,7 @@ private object LogIterator {
       logs <- reads.latch.map foreach (apply (useGen0, _, records))
       iter = AsyncIterator.merge (logs.values.toSeq) (ordering)
       _ <- iter.foreach (entry => supply (replay (entry)))
-      kit = new DisksKit (logBatch)
+      kit = new DiskKit (logBatch)
       drives =
         for (read <- reads) yield {
           val superb = read.superb (useGen0)

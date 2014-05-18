@@ -14,7 +14,7 @@ import com.treode.async.stubs.implicits._
 import org.scalatest.Assertions
 
 import Assertions.assertResult
-import Disks.Launch
+import Disk.Launch
 import JavaConversions._
 
 private object DiskTestTools {
@@ -26,7 +26,7 @@ private object DiskTestTools {
   implicit def stringToPath (path: String): Path =
     Paths.get (path)
 
-  implicit class RichControllerAgent (controller: Disks.Controller) {
+  implicit class RichControllerAgent (controller: Disk.Controller) {
     val agent = controller.asInstanceOf [ControllerAgent]
     import agent.disks
 
@@ -59,8 +59,8 @@ private object DiskTestTools {
       disks.assertReady()
     }}
 
-  implicit class RichDisksAgent (disks: Disks) {
-    val agent = disks.asInstanceOf [DisksAgent]
+  implicit class RichDisksAgent (disks: Disk) {
+    val agent = disks.asInstanceOf [DiskAgent]
     import agent.kit.{disks => drives, checkpointer, compactor, config, logd, paged}
 
     def attachAndWait (items: AttachItem*): Async [Unit] =
@@ -131,7 +131,7 @@ private object DiskTestTools {
       compactor.clean()
   }
 
-  implicit class RichLaunchAgent (launch: Disks.Launch) {
+  implicit class RichLaunchAgent (launch: Disk.Launch) {
     val agent = launch.asInstanceOf [LaunchAgent]
     import agent.disks
 
@@ -146,11 +146,11 @@ private object DiskTestTools {
   implicit class RichPager [G, P] (pager: PageDescriptor [G, P]) {
 
     def assertInLedger (pos: Position, obj: ObjectId, grp: G) (
-        implicit scheduler: StubScheduler, disks: Disks): Unit =
+        implicit scheduler: StubScheduler, disks: Disk): Unit =
       disks.assertInLedger (pos, pager.id, obj, PageGroup (pager.pgrp, grp))
 
-    def fetch (pos: Position) (implicit disks: Disks): Async [P] =
-      disks.asInstanceOf [DisksAgent] .kit.disks.fetch (pager, pos)
+    def fetch (pos: Position) (implicit disks: Disk): Async [P] =
+      disks.asInstanceOf [DiskAgent] .kit.disks.fetch (pager, pos)
   }
 
   implicit class RichRandom (random: Random) {
@@ -167,7 +167,7 @@ private object DiskTestTools {
       PageGroup (DiskPicklers.fixedLong, random.nextLong())
   }
 
-  implicit class RichRecovery (recovery: Disks.Recovery) {
+  implicit class RichRecovery (recovery: Disk.Recovery) {
     val agent = recovery.asInstanceOf [RecoveryAgent]
 
     def attachAndWait (items: AttachItem*): Async [Launch] =
@@ -177,13 +177,13 @@ private object DiskTestTools {
       attachAndWait (items: _*) .capture()
 
     def attachAndControl (items: AttachItem*)  (
-        implicit scheduler: StubScheduler): Disks.Controller = {
+        implicit scheduler: StubScheduler): Disk.Controller = {
       val launch = attachAndWait (items: _*) .pass
       launch.launchAndPass()
       launch.controller
     }
 
-    def attachAndLaunch (items: AttachItem*) (implicit scheduler: StubScheduler): Disks = {
+    def attachAndLaunch (items: AttachItem*) (implicit scheduler: StubScheduler): Disk = {
       val launch = attachAndWait (items: _*) .pass
       launch.launchAndPass()
       launch.disks
@@ -192,21 +192,21 @@ private object DiskTestTools {
     def reattachAndWait (items: ReattachItem*): Async [Launch] =
       agent._reattach (items: _*)
 
-    def reattachAndLaunch (items: ReattachItem*) (implicit scheduler: StubScheduler): Disks = {
+    def reattachAndLaunch (items: ReattachItem*) (implicit scheduler: StubScheduler): Disk = {
       val launch = reattachAndWait (items: _*) .pass
       launch.launchAndPass()
       launch.disks
     }
 
     def reopenAndWait (paths: Path*) (items: ReattachItem*) (
-        implicit scheduler: StubScheduler, config: DisksConfig): Async [Launch] = {
+        implicit scheduler: StubScheduler, config: DiskConfig): Async [Launch] = {
       val files = items.toMap
       def superbs (path: Path) = SuperBlocks.read (path, files (path))
       agent._reattach (paths) (superbs _)
     }
 
     def reopenAndLaunch (paths: Path*) (items: ReattachItem*) (
-        implicit scheduler: StubScheduler, config: DisksConfig): Disks = {
+        implicit scheduler: StubScheduler, config: DiskConfig): Disk = {
       val launch = reopenAndWait (paths: _*) (items: _*) .pass
       launch.launchAndPass()
       launch.disks

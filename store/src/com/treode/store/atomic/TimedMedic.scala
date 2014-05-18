@@ -2,7 +2,7 @@ package com.treode.store.atomic
 
 import com.treode.async.Async
 import com.treode.async.misc.materialize
-import com.treode.disk.Disks
+import com.treode.disk.Disk
 import com.treode.store.{TableId, TxClock, WriteOp}
 import com.treode.store.tier.{TierMedic, TierTable}
 
@@ -34,7 +34,7 @@ private class TimedMedic (kit: RecoveryKit) {
   def checkpoint (id: TableId, meta: TierTable.Meta): Unit =
     get (id) .checkpoint (meta)
 
-  def close() (implicit launch: Disks.Launch): Seq [(TableId, TierTable)] = {
+  def close() (implicit launch: Disk.Launch): Seq [(TableId, TierTable)] = {
     materialize (tables.entrySet) map { entry =>
       val id = entry.getKey
       val t = entry.getValue.close()

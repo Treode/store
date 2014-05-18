@@ -19,7 +19,7 @@ class DiskGeometry private (
   private [disk] def segmentNum (pos: Long): Int =
     (pos >> segmentBits) .toInt
 
-  private [disk] def segmentBounds (num: Int) (implicit config: DisksConfig): SegmentBounds = {
+  private [disk] def segmentBounds (num: Int) (implicit config: DiskConfig): SegmentBounds = {
     require (0 <= num && num < segmentCount)
     val pos = if (num == 0) config.diskLeadBytes else num << segmentBits
     val end = (num + 1) << segmentBits
@@ -51,7 +51,7 @@ object DiskGeometry {
       blockBits: Int,
       diskBytes: Long
   ) (implicit
-      config: DisksConfig
+      config: DiskConfig
   ): DiskGeometry = {
 
     require (
@@ -87,7 +87,7 @@ object DiskGeometry {
       blockBits: Int = 13,
       diskBytes: Long = -1
   ) (implicit
-      config: DisksConfig
+      config: DiskConfig
    ): DiskGeometry =
      DiskGeometry (
          segmentBits,

@@ -7,7 +7,7 @@ import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.stubs.{CrashChecks, StubDisks, StubDiskDrive}
+import com.treode.disk.stubs.{CrashChecks, StubDisk, StubDiskDrive}
 import com.treode.store.{Bytes, StoreConfig}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
@@ -68,7 +68,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       scheduler: StubScheduler,
       storeConfig: StoreConfig
   ): TestTable = {
-      implicit val recovery = StubDisks.recover (checkpoint, compaction)
+      implicit val recovery = StubDisk.recover (checkpoint, compaction)
       val _table = new TestRecovery (ID)
       val launch = recovery.attach (diskDrive) .pass
       val table = _table.launch (launch) .pass
@@ -85,7 +85,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       scheduler: StubScheduler,
       storeConfig: StoreConfig
   ): TestTable = {
-    implicit val recovery = StubDisks.recover (checkpoint, compaction)
+    implicit val recovery = StubDisk.recover (checkpoint, compaction)
     val _table = new TestRecovery (ID)
     val launch = recovery.reattach (diskDrive) .pass
     val table = _table.launch (launch) .pass

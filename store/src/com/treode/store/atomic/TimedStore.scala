@@ -6,7 +6,7 @@ import scala.collection.JavaConversions
 import com.treode.async.{Async, AsyncIterator, Callback, Latch}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disks, ObjectId, PageHandler, Position, RecordDescriptor}
+import com.treode.disk.{Disk, ObjectId, PageHandler, Position, RecordDescriptor}
 import com.treode.store.{Bytes, Cell, ReadOp, Residents, TableId, TxClock, TxId, Value, WriteOp}
 import com.treode.store.locks.LockSpace
 import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}

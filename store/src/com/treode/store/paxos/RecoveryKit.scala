@@ -7,7 +7,7 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
-import com.treode.disk.Disks
+import com.treode.disk.Disk
 import com.treode.store.{Bytes, Library, StoreConfig, TxClock}
 import com.treode.store.tier.TierMedic
 
@@ -21,7 +21,7 @@ private class RecoveryKit (implicit
     val scheduler: Scheduler,
     val cluster: Cluster,
     val library: Library,
-    val recovery: Disks.Recovery,
+    val recovery: Disk.Recovery,
     val config: StoreConfig
 ) extends Paxos.Recovery {
 
@@ -61,7 +61,7 @@ private class RecoveryKit (implicit
     archive.checkpoint (meta)
   }
 
-  def launch (implicit launch: Disks.Launch): Async [Paxos] =
+  def launch (implicit launch: Disk.Launch): Async [Paxos] =
     supply {
       import launch.disks
       val kit = new PaxosKit (archive.close())

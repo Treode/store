@@ -7,11 +7,11 @@ import com.treode.async.{Async, Callback, Scheduler}
 import Async.{guard, latch}
 import Callback.ignore
 
-private class DisksKit (
+private class DiskKit (
     logBatch: Long
 ) (implicit
     val scheduler: Scheduler,
-    val config: DisksConfig
+    val config: DiskConfig
 ) {
 
   val logd = new Dispatcher [PickledRecord] (logBatch)

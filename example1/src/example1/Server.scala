@@ -2,13 +2,13 @@ package example1
 
 import java.net.InetSocketAddress
 import java.nio.file.Paths
-import com.treode.disk.{DisksConfig, DiskGeometry}
+import com.treode.disk.{DiskConfig, DiskGeometry}
 import com.treode.store.{StandAlone, StoreConfig}
 
 object Server extends AsyncFinatraServer {
 
   implicit val disksConfig =
-    DisksConfig.recommended (0x7D7A5F10A567B675L)
+    DiskConfig.recommended (0x7D7A5F10A567B675L)
 
   val controller = {
     val c = StandAlone.create (

@@ -7,8 +7,8 @@ import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{Disks, Position}
-import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
+import com.treode.disk.{Disk, Position}
+import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.pickle.Picklers
 import com.treode.store._
 import org.scalatest.WordSpec
@@ -19,10 +19,10 @@ import TierTestTools._
 
 class TierSpec extends WordSpec {
 
-  private def setup(): (StubScheduler, Disks) = {
+  private def setup(): (StubScheduler, Disk) = {
     implicit val random = new Random (0)
     implicit val scheduler = StubScheduler.random (random)
-    implicit val recovery = StubDisks.recover (0.0, 0.0)
+    implicit val recovery = StubDisk.recover (0.0, 0.0)
     val diskDrive = new StubDiskDrive
     val launch = recovery.attach (diskDrive) .pass
     launch.launch()
@@ -30,17 +30,17 @@ class TierSpec extends WordSpec {
   }
 
   private def newBuilder (est: Long) (
-      implicit scheduler: StubScheduler, disks: Disks, config: StoreConfig) =
+      implicit scheduler: StubScheduler, disks: Disk, config: StoreConfig) =
     new TierBuilder (descriptor, 0, 0, Residents.all, BloomFilter (est, config.falsePositiveProbability))
 
   /** Get the depths of ValueBlocks reached from the index entries. */
   private def getDepths (entries: Iterable [IndexEntry], depth: Int) (
-      implicit scheduler: StubScheduler, disks: Disks): Set [Int] =
+      implicit scheduler: StubScheduler, disks: Disk): Set [Int] =
     entries.map (e => getDepths (e.pos, depth+1)) .fold (Set.empty) (_ ++ _)
 
   /** Get the depths of ValueBlocks for the tree root at `pos`. */
   private def getDepths (pos: Position, depth: Int) (
-      implicit scheduler: StubScheduler, disks: Disks): Set [Int] = {
+      implicit scheduler: StubScheduler, disks: Disk): Set [Int] = {
     descriptor.pager.read (pos) .pass match {
       case b: IndexPage => getDepths (b.entries, depth+1)
       case b: CellPage => Set (depth)
@@ -49,7 +49,7 @@ class TierSpec extends WordSpec {
   /** Check that tree rooted at `pos` has all ValueBlocks at the same depth, expect those under
     * the final index entry.
     */
-  private def expectBalanced (tier: Tier) (implicit scheduler: StubScheduler, disks: Disks) {
+  private def expectBalanced (tier: Tier) (implicit scheduler: StubScheduler, disks: Disk) {
     descriptor.pager.read (tier.root) .pass match {
       case b: IndexPage =>
         val ds1 = getDepths (b.entries.take (b.size-1), 1)
@@ -63,7 +63,7 @@ class TierSpec extends WordSpec {
 
   /** Build a tier from fruit. */
   private def buildTier (pageBytes: Int) (
-      implicit scheduler: StubScheduler, disks: Disks): Tier = {
+      implicit scheduler: StubScheduler, disks: Disk): Tier = {
     implicit val config = TestStoreConfig (targetPageBytes = pageBytes)
     val builder = newBuilder (AllFruits.length)
     AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .pass
@@ -72,16 +72,16 @@ class TierSpec extends WordSpec {
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier) (
-      implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] =
+      implicit scheduler: StubScheduler, disks: Disk): Seq [Cell] =
     TierIterator (descriptor, tier.root) .toSeq
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier, key: Bytes, time: TxClock) (
-      implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] =
+      implicit scheduler: StubScheduler, disks: Disk): Seq [Cell] =
     TierIterator (descriptor, tier.root, key, time) .toSeq
 
   private def toSeq (builder: Builder [Cell, _], pos: Position) (
-      implicit scheduler: StubScheduler, disks: Disks) {
+      implicit scheduler: StubScheduler, disks: Disk) {
     descriptor.pager.read (pos) .pass match {
       case page: IndexPage =>
         page.entries foreach (e => toSeq (builder, e.pos))
@@ -91,7 +91,7 @@ class TierSpec extends WordSpec {
 
   /** Build a sequence of the cells in the tier using old-fashioned recursion. */
   private def toSeq (tier: Tier) (
-      implicit scheduler: StubScheduler, disks: Disks): Seq [Cell] = {
+      implicit scheduler: StubScheduler, disks: Disk): Seq [Cell] = {
     val builder = Seq.newBuilder [Cell]
     toSeq (builder, tier.root)
     builder.result

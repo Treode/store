@@ -5,11 +5,11 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.disk._
 
-import Disks.{Controller, Launch}
+import Disk.{Controller, Launch}
 
 private class StubLaunchAgent (
     releaser: StubReleaser,
-    val disks: StubDisks
+    val disks: StubDisk
 ) (implicit
     random: Random,
     scheduler: Scheduler,
@@ -22,7 +22,7 @@ private class StubLaunchAgent (
   private var open = true
 
   def requireOpen(): Unit =
-    require (open, "Disks have already launched.")
+    require (open, "Disk have already launched.")
 
   def checkpoint (f: => Async [Unit]): Unit =
     synchronized {
@@ -41,5 +41,5 @@ private class StubLaunchAgent (
     }
 
   def controller: Controller =
-    throw new UnsupportedOperationException ("The StubDisks do not provide a controller.")
+    throw new UnsupportedOperationException ("The StubDisk do not provide a controller.")
 }

@@ -8,7 +8,7 @@ import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
-import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
+import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.store.{Fruits, StoreConfig}
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
@@ -23,7 +23,7 @@ class SynthTableSpec extends FreeSpec {
 
   private def mkTable (diskDrive: StubDiskDrive) (
       implicit random: Random, scheduler: StubScheduler): SynthTable = {
-    implicit val recovery = StubDisks.recover (0.0, 0.0)
+    implicit val recovery = StubDisk.recover (0.0, 0.0)
     implicit val launch = recovery.attach (diskDrive) .pass
     implicit val disks = launch.disks
     launch.launch()

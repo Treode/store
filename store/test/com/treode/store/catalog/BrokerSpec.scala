@@ -6,7 +6,7 @@ import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
+import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.pickle.{Pickler, Picklers}
 import com.treode.store._
 import com.treode.tags.{Intensive, Periodic}
@@ -46,7 +46,7 @@ object BrokerBehaviors extends FreeSpec {
 
     val diskDrive = new StubDiskDrive
 
-    implicit val recovery = StubDisks.recover()
+    implicit val recovery = StubDisk.recover()
     implicit val launch = recovery.attach (diskDrive) .pass
     implicit val disks = launch.disks
     launch.launch()

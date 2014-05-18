@@ -11,8 +11,8 @@ object TestDisksConfig {
       checkpointEntries: Int = Int.MaxValue,
       cleaningFrequency: Int = Int.MaxValue,
       cleaningLoad: Int = 1
-  ): DisksConfig =
-    DisksConfig (
+  ): DiskConfig =
+    DiskConfig (
         cell: CellId,
         superBlockBits,
         maximumRecordBytes,

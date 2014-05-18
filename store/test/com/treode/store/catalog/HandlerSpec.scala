@@ -8,7 +8,7 @@ import org.scalatest.FreeSpec
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
-import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
+import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, CatalogId, StoreTestTools}
 
@@ -40,7 +40,7 @@ class HandlerSpec extends FreeSpec {
     implicit val random = new Random (0)
     val diskDrive = new StubDiskDrive
     implicit val scheduler = StubScheduler.random (random)
-    implicit val disks = StubDisks
+    implicit val disks = StubDisk
         .recover()
         .attach (diskDrive)
         .pass.disks

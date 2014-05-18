@@ -1,13 +1,13 @@
 package com.treode.store.tier
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
-import com.treode.disk.{Disks, ObjectId, PageHandler}
+import com.treode.disk.{Disk, ObjectId, PageHandler}
 import com.treode.store.{Bytes, Residents, TxClock}
 
 import Async.{guard, supply}
 import TierTestTools._
 
-private class LoggedTable (table: TierTable) (implicit disks: Disks)
+private class LoggedTable (table: TierTable) (implicit disks: Disk)
 extends TestTable with PageHandler [Long] {
 
   def get (key: Int): Async [Option [Int]] = guard {

@@ -3,7 +3,7 @@ package com.treode.disk
 import java.nio.file.Path
 import com.treode.async.{Async, Callback, Scheduler}
 
-trait Disks {
+trait Disk {
 
   def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit]
 
@@ -16,11 +16,11 @@ trait Disks {
   def join [A] (task: Async [A]): Async [A]
 }
 
-object Disks {
+object Disk {
 
   trait Controller {
 
-    implicit def disks: Disks
+    implicit def disks: Disk
 
     def attach (items: (Path, DiskGeometry)*): Async [Unit]
 
@@ -29,7 +29,7 @@ object Disks {
 
   trait Launch {
 
-    implicit def disks: Disks
+    implicit def disks: Disk
 
     implicit def controller: Controller
 
@@ -49,6 +49,6 @@ object Disks {
     def attach (items: (Path, DiskGeometry)*): Async [Launch]
   }
 
-  def recover () (implicit scheduler: Scheduler, config: DisksConfig): Recovery =
+  def recover () (implicit scheduler: Scheduler, config: DiskConfig): Recovery =
     new RecoveryAgent
 }

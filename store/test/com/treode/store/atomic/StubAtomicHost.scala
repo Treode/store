@@ -7,8 +7,8 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubPeer, StubNetwork}
-import com.treode.disk.Disks
-import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
+import com.treode.disk.Disk
+import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.store._
 import com.treode.store.catalog.Catalogs
 import com.treode.store.paxos.Paxos
@@ -24,7 +24,7 @@ private class StubAtomicHost (
     val random: Random,
     val scheduler: Scheduler,
     val cluster: Cluster,
-    val disks: Disks,
+    val disks: Disk,
     val library: Library,
     val catalogs: Catalogs,
     val paxos: Paxos,
@@ -91,7 +91,7 @@ private object StubAtomicHost {
     implicit val cluster = new StubPeer (id)
     implicit val library = new Library
     implicit val storeConfig = TestStoreConfig()
-    implicit val recovery = StubDisks.recover()
+    implicit val recovery = StubDisk.recover()
     implicit val _catalogs = Catalogs.recover()
     val _paxos = Paxos.recover()
     val _atomic = AtomicKit.recover()

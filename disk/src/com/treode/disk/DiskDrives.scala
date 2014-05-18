@@ -12,7 +12,7 @@ import com.treode.async.io.File
 import Async.{async, guard}
 import Callback.ignore
 
-private class DiskDrives (kit: DisksKit) {
+private class DiskDrives (kit: DiskKit) {
   import kit.{checkpointer, compactor, scheduler}
   import kit.config.cell
 

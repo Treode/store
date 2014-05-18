@@ -7,11 +7,11 @@ import com.treode.async.implicits._
 import com.treode.async.io.File
 
 import Async.guard
-import Disks.Launch
+import Disk.Launch
 import SuperBlocks.{chooseSuperBlock, verifyReattachment}
 
-private class RecoveryAgent (implicit scheduler: Scheduler, config: DisksConfig)
-extends Disks.Recovery {
+private class RecoveryAgent (implicit scheduler: Scheduler, config: DiskConfig)
+extends Disk.Recovery {
   import config.cell
 
   private val records = new RecordRegistry
@@ -40,7 +40,7 @@ extends Disks.Recovery {
       require (attaching.size == items.size, "Cannot attach a path multiple times.")
       close()
 
-      val kit = new DisksKit (0)
+      val kit = new DiskKit (0)
       val boot = BootBlock.apply (cell, 0, items.size, attaching)
       for {
         drives <-

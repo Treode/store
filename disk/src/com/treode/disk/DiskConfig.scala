@@ -1,6 +1,6 @@
 package com.treode.disk
 
-class DisksConfig private (
+class DiskConfig private (
     val cell: CellId,
     val superBlockBits: Int,
     val maximumRecordBytes: Int,
@@ -27,7 +27,7 @@ class DisksConfig private (
     segments >= cleaningFrequency
 }
 
-object DisksConfig {
+object DiskConfig {
 
   def apply (
       cell: CellId,
@@ -38,7 +38,7 @@ object DisksConfig {
       checkpointEntries: Int,
       cleaningFrequency: Int,
       cleaningLoad: Int
-  ): DisksConfig = {
+  ): DiskConfig = {
 
     require (
         superBlockBits > 0,
@@ -62,7 +62,7 @@ object DisksConfig {
         cleaningLoad > 0,
         "The cleaning load must be more than 0 segemnts.")
 
-    new DisksConfig (
+    new DiskConfig (
         cell,
         superBlockBits,
         maximumRecordBytes,
@@ -82,8 +82,8 @@ object DisksConfig {
       checkpointEntries: Int = 10000,
       cleaningFrequency: Int = 7,
       cleaningLoad: Int = 1
-  ): DisksConfig =
-    DisksConfig (
+  ): DiskConfig =
+    DiskConfig (
         cell: CellId,
         superBlockBits,
         maximumRecordBytes,

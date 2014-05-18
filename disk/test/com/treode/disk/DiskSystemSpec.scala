@@ -40,7 +40,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         setup { implicit scheduler =>
           file = StubFile (1<<20)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           val launch = recovery.attachAndWait (("a", file, geometry)) .pass
           import launch.disks
           launch.checkpoint (fail ("Expected no checkpoints"))
@@ -50,7 +50,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         .recover { implicit scheduler =>
           file = StubFile (file.data)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
           implicit val disks = recovery.reattachAndLaunch (("a", file))
@@ -68,7 +68,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         setup { implicit scheduler =>
           file = StubFile (1<<20)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
           import launch.disks
           tracker.attach()
@@ -81,7 +81,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         .recover { implicit scheduler =>
           file = StubFile (file.data)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
           implicit val disks = recovery.reattachAndLaunch (("a", file))
@@ -103,7 +103,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file1 = StubFile (1<<20)
           file2 = StubFile (1<<20)
           file3 = StubFile (1<<20)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val launch = recovery.attachAndWait (
               ("a", file1, geometry),
               ("b", file2, geometry),
@@ -121,7 +121,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file1 = StubFile (file1.data)
           file2 = StubFile (file2.data)
           file3 = StubFile (file3.data)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
           implicit val disks = recovery.reattachAndLaunch (
@@ -144,7 +144,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         setup { implicit scheduler =>
           file1 = StubFile (1<<20)
           file2 = StubFile (1<<20)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val launch = recovery.attachAndWait (("a", file1, geometry)) .pass
           import launch.{disks, controller}
           tracker.attach()
@@ -164,7 +164,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         .recover { implicit scheduler =>
           file1 = StubFile (file1.data)
           file2 = StubFile (file2.data)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
           implicit val disks = recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2))
@@ -184,7 +184,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         setup { implicit scheduler =>
           file1 = StubFile (1<<20)
           file2 = StubFile (1<<20)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val launch =
             recovery.attachAndWait (("a", file1, geometry), ("b", file2, geometry)) .pass
           import launch.{disks, controller}
@@ -205,7 +205,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         .recover { implicit scheduler =>
           file1 = StubFile (file1.data)
           file2 = StubFile (file2.data)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
           implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .pass
@@ -226,7 +226,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val scheduler = StubScheduler.random (random)
         val file = StubFile (1<<20)
-        implicit val recovery = Disks.recover()
+        implicit val recovery = Disk.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
         import launch.disks
         tracker.attach()
@@ -243,7 +243,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val random = Random
         val file = StubFile (1<<20)
-        implicit val recovery = Disks.recover()
+        implicit val recovery = Disk.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geometry)) .await()
         import launch.disks
         tracker.attach()
@@ -263,14 +263,14 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         setup { implicit scheduler =>
           file = StubFile (1<<20)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
           tracker.batch (40, 10)
         }
 
         .recover { implicit scheduler =>
           file = StubFile (file.data)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val disks = recovery.reattachAndLaunch (("a", file))
           tracker.check()
         }}}
@@ -285,7 +285,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         setup { implicit scheduler =>
           file = StubFile (1<<20)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
           import launch.disks
           tracker.attach()
@@ -297,7 +297,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         .recover { implicit scheduler =>
           file = StubFile (file.data)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val disks = recovery.reattachAndLaunch (("a", file))
           tracker.check()
         }}}
@@ -316,7 +316,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file1 = StubFile (1<<20)
           file2 = StubFile (1<<20)
           file3 = StubFile (1<<20)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val launch = recovery.attachAndWait (
               ("a", file1, geometry),
               ("b", file2, geometry),
@@ -333,7 +333,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file1 = StubFile (file1.data)
           file2 = StubFile (file2.data)
           file3 = StubFile (file3.data)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val disks = recovery.reattachAndLaunch (
               ("a", file1),
               ("b", file2),
@@ -353,7 +353,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         setup { implicit scheduler =>
           file1 = StubFile (1<<20)
           file2 = StubFile (1<<20)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val launch = recovery.attachAndWait (("a", file1, geometry)) .pass
           import launch.{disks, controller}
           tracker.attach()
@@ -373,7 +373,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         .recover { implicit scheduler =>
           file1 = StubFile (file1.data)
           file2 = StubFile (file2.data)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val disks = recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2))
           tracker.check()
         }}}
@@ -390,7 +390,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         setup { implicit scheduler =>
           file1 = StubFile (1<<20)
           file2 = StubFile (1<<20)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val launch =
             recovery.attachAndWait (("a", file1, geometry), ("b", file2, geometry)) .pass
           import launch.{disks, controller}
@@ -411,7 +411,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         .recover { implicit scheduler =>
           file1 = StubFile (file1.data)
           file2 = StubFile (file2.data)
-          implicit val recovery = Disks.recover()
+          implicit val recovery = Disk.recover()
           implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .pass
           import launch.disks
           tracker.attach()
@@ -428,7 +428,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
         implicit val scheduler = StubScheduler.random (random)
         val file = StubFile (1<<20)
-        implicit val recovery = Disks.recover()
+        implicit val recovery = Disk.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
         import launch.disks
         tracker.attach()
@@ -467,7 +467,7 @@ object DiskSystemSpec {
     private var accepted = Map.empty [Int, Int] .withDefaultValue (-1)
     private var gen = 0
 
-    def put (n: Int, k: Int, v: Int) (implicit disks: Disks): Async [Unit] = {
+    def put (n: Int, k: Int, v: Int) (implicit disks: Disk): Async [Unit] = {
       attempted += k -> v
       val g = gen
       for {
@@ -477,12 +477,12 @@ object DiskSystemSpec {
       }}
 
     def batch (nkeys: Int, round: Int, nputs: Int) (
-        implicit random: Random, disks: Disks): Async [Unit] =
+        implicit random: Random, disks: Disk): Async [Unit] =
       for (k <- random.nextInts (nputs, nkeys) .latch.unit)
         put (round, k, random.nextInt (1<<20))
 
     def batches (nkeys: Int, nbatches: Int, nputs: Int, start: Int = 0) (
-        implicit random: Random, scheduler: Scheduler, disks: Disks): Async [Unit] =
+        implicit random: Random, scheduler: Scheduler, disks: Disk): Async [Unit] =
       for {
         n <- (0 until nbatches) .async
         k <- random.nextInts (nputs, nkeys) .latch.unit
@@ -490,7 +490,7 @@ object DiskSystemSpec {
         put (n + start, k, random.nextInt (1<<20))
       }
 
-    def checkpoint () (implicit disks: Disks): Async [Unit] =
+    def checkpoint () (implicit disks: Disk): Async [Unit] =
       guard {
         val save = attempted
         val g = gen
@@ -504,12 +504,12 @@ object DiskSystemSpec {
     def probe (groups: Set [Int]) (implicit scheduler: Scheduler): Async [Set [Int]] =
       supply (groups)
 
-    def compact () (implicit disks: Disks): Async [Unit] =
+    def compact () (implicit disks: Disk): Async [Unit] =
       guard {
         checkpoint()
       }
 
-    def attach () (implicit scheduler: Scheduler, launch: Disks.Launch) {
+    def attach () (implicit scheduler: Scheduler, launch: Disk.Launch) {
       import launch.disks
 
       launch.checkpoint (checkpoint())
@@ -567,12 +567,12 @@ object DiskSystemSpec {
         this.reread = Some (pos)
       }}
 
-    def attach (implicit recovery: Disks.Recovery) {
+    def attach (implicit recovery: Disk.Recovery) {
       records.put.replay ((put _).tupled)
       records.checkpoint.replay ((checkpoint _).tupled)
     }
 
-    def check (tracker: LogTracker) (implicit scheduler: StubScheduler, disks: Disks) {
+    def check (tracker: LogTracker) (implicit scheduler: StubScheduler, disks: Disk) {
       reread match {
         case Some (pos) =>
           val saved = pagers.table.read (pos) .pass
@@ -595,7 +595,7 @@ object DiskSystemSpec {
     def compacted = _compacted
     def maximum = _maximum
 
-    def write() (implicit disks: Disks): Async [Unit] = {
+    def write() (implicit disks: Disk): Async [Unit] = {
       var seed = random.nextLong()
       while (written contains seed)
         seed = random.nextLong()
@@ -608,7 +608,7 @@ object DiskSystemSpec {
       }}
 
    def batch (nbatches: Int, nwrites: Int) (implicit
-      scheduler: StubScheduler, disks: Disks): Async [Unit] =
+      scheduler: StubScheduler, disks: Disk): Async [Unit] =
     for {
       _ <- (0 until nbatches) .async
       _ <- (0 until nwrites) .latch.unit
@@ -616,7 +616,7 @@ object DiskSystemSpec {
       write()
     }
 
-    def attach () (implicit scheduler: Scheduler, launch: Disks.Launch) {
+    def attach () (implicit scheduler: Scheduler, launch: Disk.Launch) {
       import launch.disks
 
       _probed = false
@@ -641,9 +641,9 @@ object DiskSystemSpec {
           }}})
     }
 
-    def check () (implicit scheduler: StubScheduler, disks: Disks) {
+    def check () (implicit scheduler: StubScheduler, disks: Disk) {
       for ((seed, pos) <- written) {
-        if (disks.isInstanceOf [DisksAgent])
+        if (disks.isInstanceOf [DiskAgent])
           pagers.stuff.assertInLedger (pos, 0, seed)
         pagers.stuff.read (pos) .expect (Stuff (seed))
       }}}}

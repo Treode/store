@@ -10,8 +10,8 @@ import com.treode.disk._
 
 import Async.{guard, supply}
 import Callback.ignore
-import Disks.Launch
-import StubDisks.StubRecovery
+import Disk.Launch
+import StubDisk.StubRecovery
 
 private class StubRecoveryAgent (implicit
     random: Random,
@@ -41,7 +41,7 @@ private class StubRecoveryAgent (implicit
         _ <- disk.replay (records)
       } yield {
         val releaser = new StubReleaser (disk)
-        val disks = new StubDisks (releaser) (random, scheduler, disk, config)
+        val disks = new StubDisk (releaser) (random, scheduler, disk, config)
         new StubLaunchAgent (releaser, disks) (random, scheduler, disk, config)
       }}
 
@@ -52,13 +52,13 @@ private class StubRecoveryAgent (implicit
         open = false
       }
       val releaser = new StubReleaser (disk)
-      val disks = new StubDisks (releaser) (random, scheduler, disk, config)
+      val disks = new StubDisk (releaser) (random, scheduler, disk, config)
       new StubLaunchAgent (releaser, disks) (random, scheduler, disk, config)
     }
 
   def reattach (items: Path*): Async [Launch] =
-    guard (throw new UnsupportedOperationException ("The StubDisks do not use files."))
+    guard (throw new UnsupportedOperationException ("The StubDisk do not use files."))
 
   def attach (items: (Path, DiskGeometry)*): Async [Launch] =
-    guard (throw new UnsupportedOperationException ("The StubDisks do not use files."))
+    guard (throw new UnsupportedOperationException ("The StubDisk do not use files."))
 }

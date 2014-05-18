@@ -4,7 +4,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, Callback}
 import com.treode.async.implicits._
-import com.treode.disk.{Disks, Position}
+import com.treode.disk.{Disk, Position}
 import com.treode.store.{Bytes, Cell, Residents, StorePicklers, TxClock}
 
 import Async.async
@@ -21,7 +21,7 @@ private case class Tier (
     diskBytes: Long
 ) {
 
-  def get (desc: TierDescriptor, key: Bytes, time: TxClock) (implicit disks: Disks): Async [Option [Cell]] =
+  def get (desc: TierDescriptor, key: Bytes, time: TxClock) (implicit disks: Disk): Async [Option [Cell]] =
     async { cb =>
 
       import desc.pager

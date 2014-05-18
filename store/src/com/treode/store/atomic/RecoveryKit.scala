@@ -5,7 +5,7 @@ import scala.util.Random
 import com.treode.async.{Async, Latch, Scheduler}
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
-import com.treode.disk.Disks
+import com.treode.disk.Disk
 import com.treode.store.{Cohort, Library, Store, StoreConfig, TxId}
 import com.treode.store.paxos.Paxos
 import com.treode.store.tier.TierMedic
@@ -17,7 +17,7 @@ private class RecoveryKit (implicit
     val scheduler: Scheduler,
     val cluster: Cluster,
     val library: Library,
-    val recovery: Disks.Recovery,
+    val recovery: Disk.Recovery,
     val config: StoreConfig
 ) extends AtomicKit.Recovery {
 
@@ -46,7 +46,7 @@ private class RecoveryKit (implicit
     tables.checkpoint (tab, meta)
   }
 
-  def launch (implicit launch: Disks.Launch, paxos: Paxos): Async [Store] = {
+  def launch (implicit launch: Disk.Launch, paxos: Paxos): Async [Store] = {
     import launch.disks
 
     val kit = new AtomicKit()

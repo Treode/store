@@ -6,7 +6,7 @@ import Allocator.segmentBounds
 
 private class Allocator private (private var _free: IntSet) {
 
-  def alloc (geometry: DiskGeometry, config: DisksConfig): SegmentBounds = {
+  def alloc (geometry: DiskGeometry, config: DiskConfig): SegmentBounds = {
     val iter = _free.iterator
     if (!iter.hasNext)
       throw new DiskFullException
@@ -15,7 +15,7 @@ private class Allocator private (private var _free: IntSet) {
     segmentBounds (num, geometry, config)
   }
 
-  def alloc (num: Int, geometry: DiskGeometry, config: DisksConfig): SegmentBounds = {
+  def alloc (num: Int, geometry: DiskGeometry, config: DiskConfig): SegmentBounds = {
     _free = _free.remove (num)
     segmentBounds (num, geometry, config)
   }
@@ -35,7 +35,7 @@ private class Allocator private (private var _free: IntSet) {
 
 private object Allocator {
 
-  def segmentBounds (num: Int, geometry: DiskGeometry, config: DisksConfig): SegmentBounds = {
+  def segmentBounds (num: Int, geometry: DiskGeometry, config: DiskConfig): SegmentBounds = {
     require (0 <= num && num < geometry.segmentCount)
     val pos = if (num == 0) config.diskLeadBytes else num << geometry.segmentBits
     val end = (num + 1) << geometry.segmentBits
@@ -46,7 +46,7 @@ private object Allocator {
   def apply (free: IntSet): Allocator =
     new Allocator (free)
 
-  def apply (geometry: DiskGeometry, config: DisksConfig): Allocator = {
+  def apply (geometry: DiskGeometry, config: DiskConfig): Allocator = {
     val all = IntSet.fill (geometry.segmentCount)
     val superbs = IntSet.fill (config.diskLeadBytes >> geometry.segmentBits)
     new Allocator (all.remove (superbs))

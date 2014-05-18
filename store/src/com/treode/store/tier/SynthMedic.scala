@@ -3,7 +3,7 @@ package com.treode.store.tier
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.Scheduler
-import com.treode.disk.{Disks, Position}
+import com.treode.disk.{Disk, Position}
 import com.treode.store.{Bytes, Key, StoreConfig, TableId, TxClock}
 
 import SynthTable.{genStepBits, genStepMask, genStepSize}
@@ -94,7 +94,7 @@ private class SynthMedic (
       writeLock.unlock()
     }}
 
-  def close () (implicit launch: Disks.Launch): TierTable = {
+  def close () (implicit launch: Disk.Launch): TierTable = {
     import launch.disks
 
     writeLock.lock()

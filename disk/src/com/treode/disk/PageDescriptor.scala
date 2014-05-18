@@ -10,16 +10,16 @@ class PageDescriptor [G, P] private (
     val ppag: Pickler [P]) (
         implicit val tpag: ClassTag [P]) {
 
-  def handle (handler: PageHandler [G]) (implicit launch: Disks.Launch): Unit =
+  def handle (handler: PageHandler [G]) (implicit launch: Disk.Launch): Unit =
     launch.handle (this, handler)
 
-  def read (pos: Position) (implicit disks: Disks): Async [P] =
+  def read (pos: Position) (implicit disks: Disk): Async [P] =
     disks.read (this, pos)
 
-  def write (obj: ObjectId, group: G, page: P) (implicit disks: Disks): Async [Position] =
+  def write (obj: ObjectId, group: G, page: P) (implicit disks: Disk): Async [Position] =
     disks.write (this, obj, group, page)
 
-  def compact (obj: ObjectId) (implicit disks: Disks): Async [Unit] =
+  def compact (obj: ObjectId) (implicit disks: Disk): Async [Unit] =
     disks.compact (this, obj)
 
   override def toString = s"PageDescriptor($id)"

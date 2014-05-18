@@ -7,14 +7,14 @@ import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.disk.{Disks, DisksConfig, DiskGeometry}
+import com.treode.disk.{Disk, DiskConfig, DiskGeometry}
 
 object StandAlone {
 
   class Controller (
       executor: ExecutorService,
       cluster: Cluster,
-      disks: Disks.Controller,
+      disks: Disk.Controller,
       controller: Store.Controller
   ) extends Store.Controller {
 
@@ -42,7 +42,7 @@ object StandAlone {
   def create (
       localId: HostId,
       localAddr: SocketAddress,
-      disksConfig: DisksConfig,
+      disksConfig: DiskConfig,
       storeConfig: StoreConfig,
       items: (Path, DiskGeometry)*
   ): Async [Controller] = {
@@ -55,7 +55,7 @@ object StandAlone {
 
     val cluster = Cluster.live (localId, localAddr) (random, scheduler)
 
-    val _disks = Disks.recover () (scheduler, disksConfig)
+    val _disks = Disk.recover () (scheduler, disksConfig)
 
     val _store = Store.recover () (random, scheduler, cluster, _disks, storeConfig)
 
@@ -69,7 +69,7 @@ object StandAlone {
   def recover (
       localId: HostId,
       localAddr: SocketAddress,
-      disksConfig: DisksConfig,
+      disksConfig: DiskConfig,
       storeConfig: StoreConfig,
       items: Path*
   ): Async [Controller] = {
@@ -82,7 +82,7 @@ object StandAlone {
 
     val cluster = Cluster.live (localId, localAddr) (random, scheduler)
 
-    val _disks = Disks.recover () (scheduler, disksConfig)
+    val _disks = Disk.recover () (scheduler, disksConfig)
 
     val _store = Store.recover () (random, scheduler, cluster, _disks, storeConfig)
 

@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import com.treode.async.Async
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
-import com.treode.disk.Disks
+import com.treode.disk.Disk
 import com.treode.store.TxId
 
 import Async.{guard, latch}
@@ -46,7 +46,7 @@ private class WriteDeputies (kit: AtomicKit) {
       } yield ()
     }
 
-  def attach () (implicit launch: Disks.Launch) {
+  def attach () (implicit launch: Disk.Launch) {
 
     TimedStore.table.handle (tables)
 

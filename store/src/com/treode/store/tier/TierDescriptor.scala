@@ -1,6 +1,6 @@
 package com.treode.store.tier
 
-import com.treode.disk.{Disks, PageDescriptor, PageHandler, TypeId}
+import com.treode.disk.{Disk, PageDescriptor, PageHandler, TypeId}
 import com.treode.store.{Cell, Residents, StorePicklers, TableId}
 import com.treode.pickle.Pickler
 
@@ -15,7 +15,7 @@ private [store] class TierDescriptor private (
     PageDescriptor (id, ulong, TierPage.pickler)
   }
 
-  def handle (handler: PageHandler [Long]) (implicit launch: Disks.Launch): Unit =
+  def handle (handler: PageHandler [Long]) (implicit launch: Disk.Launch): Unit =
     pager.handle (handler)
 
   override def toString = s"TierDescriptor($id)"

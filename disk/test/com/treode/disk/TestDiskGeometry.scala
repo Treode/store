@@ -7,7 +7,7 @@ object TestDiskGeometry {
       blockBits: Int = 6,
       diskBytes: Long = 1<<20
   ) (implicit
-      config: DisksConfig
+      config: DiskConfig
    ): DiskGeometry =
      DiskGeometry (
          segmentBits,

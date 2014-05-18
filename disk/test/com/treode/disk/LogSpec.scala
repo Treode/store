@@ -34,14 +34,14 @@ class LogSpec extends FlatSpec with CrashChecks {
     {
       implicit val scheduler = StubScheduler.random()
       file = StubFile()
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
     }
 
     {
       implicit val scheduler = StubScheduler.random()
       file = StubFile (file.data)
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
       recovery.reattachAndLaunch (("a", file))
@@ -55,7 +55,7 @@ class LogSpec extends FlatSpec with CrashChecks {
     {
       implicit val scheduler = StubScheduler.random()
       file = StubFile()
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       records.str.record ("one") .pass
     }
@@ -63,7 +63,7 @@ class LogSpec extends FlatSpec with CrashChecks {
     {
       implicit val scheduler = StubScheduler.random()
       file = StubFile (file.data)
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
       recovery.reattachAndLaunch (("a", file))
@@ -77,7 +77,7 @@ class LogSpec extends FlatSpec with CrashChecks {
     {
       implicit val scheduler = StubScheduler.random()
       file = StubFile()
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       records.str.record ("one") .pass
     }
@@ -85,7 +85,7 @@ class LogSpec extends FlatSpec with CrashChecks {
     {
       implicit val scheduler = StubScheduler.random()
       file = StubFile (file.data)
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
       implicit val disks = recovery.reattachAndLaunch (("a", file))
@@ -96,7 +96,7 @@ class LogSpec extends FlatSpec with CrashChecks {
     {
       implicit val scheduler = StubScheduler.random()
       file = StubFile (file.data)
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
       recovery.reattachAndLaunch (("a", file))
@@ -110,7 +110,7 @@ class LogSpec extends FlatSpec with CrashChecks {
     {
       implicit val scheduler = StubScheduler.random()
       file = StubFile()
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       records.str.record ("one") .pass
     }
@@ -118,7 +118,7 @@ class LogSpec extends FlatSpec with CrashChecks {
     {
       implicit val scheduler = StubScheduler.random()
       file = StubFile (file.data)
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       file = StubFile (file.data)
       recovery.reattachAndWait (("a", file)) .fail [InvalidTagException]
     }}
@@ -130,7 +130,7 @@ class LogSpec extends FlatSpec with CrashChecks {
     {
       implicit val scheduler = StubScheduler.random()
       file = StubFile()
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       records.str.record ("one") .pass
     }
@@ -138,7 +138,7 @@ class LogSpec extends FlatSpec with CrashChecks {
     {
       implicit val scheduler = StubScheduler.random()
       file = StubFile (file.data)
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       records.str.replay (_ => throw new DistinguishedException)
       recovery.reattachAndWait (("a", file)) .fail [DistinguishedException]
     }}
@@ -148,7 +148,7 @@ class LogSpec extends FlatSpec with CrashChecks {
     {
       implicit val scheduler = StubScheduler.random()
       val file = StubFile()
-      implicit val recovery = Disks.recover()
+      implicit val recovery = Disk.recover()
       implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
       records.stuff.record (Stuff (0, 1000)) .fail [OversizedRecordException]
     }}
@@ -159,7 +159,7 @@ class LogSpec extends FlatSpec with CrashChecks {
 
       implicit val scheduler = StubScheduler.random (random)
       val file = StubFile()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       val launch = recovery.attachAndWait (("a", file, geometry)) .pass
       import launch.disks
 

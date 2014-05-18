@@ -34,7 +34,7 @@ class SuperBlocksSpec extends FreeSpec {
   private def chooseSuperBlock (reads: SuperBlocks*) =
     SuperBlocks.chooseSuperBlock (reads)
 
-  private def verifyReattachment (reads: SuperBlocks*) (implicit config: DisksConfig) =
+  private def verifyReattachment (reads: SuperBlocks*) (implicit config: DiskConfig) =
     SuperBlocks.verifyReattachment (reads) (config)
 
   private def setup() = {

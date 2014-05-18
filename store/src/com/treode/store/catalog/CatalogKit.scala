@@ -4,14 +4,14 @@ import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.{Cluster, ReplyTracker}
-import com.treode.disk.Disks
+import com.treode.disk.Disk
 import com.treode.store._
 
 private class CatalogKit (val broker: Broker) (implicit
     val random: Random,
     val scheduler: Scheduler,
     val cluster: Cluster,
-    val disks: Disks,
+    val disks: Disk,
     val library: Library,
     val config: StoreConfig
 ) extends Catalogs {

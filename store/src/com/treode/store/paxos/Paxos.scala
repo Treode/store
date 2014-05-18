@@ -4,7 +4,7 @@ import scala.util.Random
 
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.cluster.Cluster
-import com.treode.disk.Disks
+import com.treode.disk.Disk
 import com.treode.store.{Atlas, Bytes, Library, StoreConfig, TxClock}
 
 private [store] trait Paxos {
@@ -20,7 +20,7 @@ private [store] object Paxos {
 
   trait Recovery {
 
-    def launch (implicit launch: Disks.Launch): Async [Paxos]
+    def launch (implicit launch: Disk.Launch): Async [Paxos]
   }
 
   def recover() (implicit
@@ -28,7 +28,7 @@ private [store] object Paxos {
       scheduler: Scheduler,
       cluster: Cluster,
       library: Library,
-      recovery: Disks.Recovery,
+      recovery: Disk.Recovery,
       config: StoreConfig
   ): Recovery =
     new RecoveryKit

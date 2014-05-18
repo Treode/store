@@ -4,7 +4,7 @@ import scala.util.Random
 
 import com.treode.async.Async
 import com.treode.async.stubs.implicits._
-import com.treode.disk.stubs.{CrashChecks, StubDisks, StubDiskDrive}
+import com.treode.disk.stubs.{CrashChecks, StubDisk, StubDiskDrive}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
@@ -24,7 +24,7 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
       var checkpointed = false
 
       setup { implicit scheduler =>
-        implicit val recovery = StubDisks.recover (checkpoint, compaction)
+        implicit val recovery = StubDisk.recover (checkpoint, compaction)
         implicit val launch = recovery.attach (drive) .pass
         import launch.disks
         tracker.attach()
@@ -39,7 +39,7 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
       .assert (!checkpointing || checkpointed, "Expected a checkpoint")
 
       .recover { implicit scheduler =>
-        implicit val recovery = StubDisks.recover (checkpoint, compaction)
+        implicit val recovery = StubDisk.recover (checkpoint, compaction)
         val replayer = new LogReplayer
         replayer.attach (recovery)
         implicit val disks = recovery.reattach (drive) .pass.disks
@@ -72,7 +72,7 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
       val drive = new StubDiskDrive
 
       setup { implicit scheduler =>
-        implicit val recovery = StubDisks.recover (checkpoint, compaction)
+        implicit val recovery = StubDisk.recover (checkpoint, compaction)
         implicit val launch = recovery.attach (drive) .pass
         import launch.disks
         if (cleaning) tracker.attach()
@@ -83,7 +83,7 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
       .assert (!cleaning || tracker.probed && tracker.compacted, "Expected cleaning.")
 
       .recover { implicit scheduler =>
-        implicit val recovery = StubDisks.recover (checkpoint, compaction)
+        implicit val recovery = StubDisk.recover (checkpoint, compaction)
         implicit val disks = recovery.attach (drive) .pass.disks
         tracker.check()
       }}

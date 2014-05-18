@@ -27,10 +27,10 @@ private object SuperBlock {
                 v.id, v.boot, v.geometry, v.draining, v.free, v.logHead)))
   }
 
-  def position (gen: Int) (implicit config: DisksConfig): Long =
+  def position (gen: Int) (implicit config: DiskConfig): Long =
     if ((gen & 0x1) == 0) 0L else config.superBlockBytes
 
-  def write (superb: SuperBlock, file: File) (implicit config: DisksConfig): Async [Unit] =
+  def write (superb: SuperBlock, file: File) (implicit config: DiskConfig): Async [Unit] =
     guard {
       val buf = PagedBuffer (12)
       pickler.frame (checksum, superb, buf)

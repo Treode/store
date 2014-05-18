@@ -4,7 +4,7 @@ import java.util.ArrayDeque
 import scala.collection.JavaConversions._
 
 import com.treode.async.Async
-import com.treode.disk.Disks
+import com.treode.disk.Disk
 import com.treode.store.{Bytes, CatalogId}
 
 import Async.{guard, when}
@@ -53,7 +53,7 @@ private class Medic (id: CatalogId) {
         patch (end, patches)
     }
 
-  def patch (meta: Meta) (implicit disks: Disks): Async [Unit] =
+  def patch (meta: Meta) (implicit disks: Disk): Async [Unit] =
     guard {
       for {
         (version, bytes, history) <- pager.read (meta.pos)
@@ -64,7 +64,7 @@ private class Medic (id: CatalogId) {
   def checkpoint (meta: Meta): Unit =
     this.saved = Some (meta)
 
-  def close() (implicit disks: Disks): Async [Handler] =
+  def close() (implicit disks: Disk): Async [Handler] =
     guard {
       for {
         _ <- when (saved.isDefined) (patch (saved.get))

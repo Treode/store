@@ -9,16 +9,16 @@ import com.treode.disk._
 
 import Async.{async, guard, latch, supply}
 import Callback.{fanout, ignore}
-import Disks.{Launch, Recovery}
+import Disk.{Launch, Recovery}
 
-private class StubDisks (
+private class StubDisk (
     releaser: StubReleaser
 ) (implicit
     random: Random,
     scheduler: Scheduler,
     disk: StubDiskDrive,
     config: StubConfig
-) extends Disks {
+) extends Disk {
 
   val logd = new Dispatcher [(StubRecord, Callback [Unit])] (0L)
   val checkpointer = new StubCheckpointer
@@ -77,7 +77,7 @@ private class StubDisks (
     releaser.join (task)
 }
 
-object StubDisks {
+object StubDisk {
 
   trait StubRecovery extends Recovery {
 

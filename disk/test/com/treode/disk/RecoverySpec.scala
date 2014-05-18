@@ -20,13 +20,13 @@ class RecoverySpec extends FreeSpec {
 
     "allow registration of a record descriptor" in {
       implicit val scheduler = StubScheduler.random()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       recovery.replay (record) (_ => ())
     }
 
     "reject double registration of a record descriptor" in {
       implicit val scheduler = StubScheduler.random()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       recovery.replay (record) (_ => ())
       intercept [IllegalArgumentException] {
         recovery.replay (record) (_ => ())
@@ -35,7 +35,7 @@ class RecoverySpec extends FreeSpec {
     "reject registration of a record descriptor after attach" in {
       implicit val scheduler = StubScheduler.random()
       val file = StubFile()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       recovery.attachAndWait (("a", file, geom)) .pass
       intercept [IllegalArgumentException] {
         recovery.replay (record) (_ => ())
@@ -44,9 +44,9 @@ class RecoverySpec extends FreeSpec {
     "reject registration of a record descriptor after reattach" in {
       implicit val scheduler = StubScheduler.random()
       val file = StubFile()
-      var recovery = Disks.recover()
+      var recovery = Disk.recover()
       recovery.attachAndLaunch (("a", file, geom))
-      recovery = Disks.recover()
+      recovery = Disk.recover()
       recovery.reattachAndLaunch (("a", file))
       intercept [IllegalArgumentException] {
         recovery.replay (record) (_ => ())
@@ -57,7 +57,7 @@ class RecoverySpec extends FreeSpec {
     "allow attaching an item" in {
       implicit val scheduler = StubScheduler.random()
       val file = StubFile()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       recovery.attachAndLaunch (("a", file, geom))
     }
 
@@ -65,20 +65,20 @@ class RecoverySpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random()
       val file1 = StubFile()
       val file2 = StubFile()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       recovery.attachAndLaunch (("a", file1, geom), ("b", file2, geom))
     }
 
     "reject attaching no items" in {
       implicit val scheduler = StubScheduler.random()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       recovery.attachAndWait() .fail [IllegalArgumentException]
     }
 
     "reject attaching the same path multiply" in {
       implicit val scheduler = StubScheduler.random()
       val file = StubFile()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       recovery
           .attachAndWait (("a", file, geom), ("a", file, geom))
           .fail [IllegalArgumentException]
@@ -87,7 +87,7 @@ class RecoverySpec extends FreeSpec {
     "pass through an exception from DiskDrive.init" in {
       implicit val scheduler = StubScheduler.random()
       val file = StubFile()
-      val recovery = Disks.recover()
+      val recovery = Disk.recover()
       file.stop = true
       val cb = recovery.attachAndCapture (("a", file, geom))
       scheduler.run()
@@ -105,9 +105,9 @@ class RecoverySpec extends FreeSpec {
       "allow reattaching an item" in {
         implicit val scheduler = StubScheduler.random()
         val file = StubFile()
-        var recovery = Disks.recover()
+        var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom))
-        recovery = Disks.recover()
+        recovery = Disk.recover()
         recovery.reattachAndLaunch (("a", file))
       }
 
@@ -115,24 +115,24 @@ class RecoverySpec extends FreeSpec {
         implicit val scheduler = StubScheduler.random()
         val file1 = StubFile()
         val file2 = StubFile()
-        var recovery = Disks.recover()
+        var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file1, geom), ("b", file2, geom))
-        recovery = Disks.recover()
+        recovery = Disk.recover()
         recovery.reattachAndLaunch (("a", file1), ("b", file2))
       }
 
       "reject reattaching no items" in {
         implicit val scheduler = StubScheduler.random()
-        val recovery = Disks.recover()
+        val recovery = Disk.recover()
         recovery.reattachAndWait() .fail [IllegalArgumentException]
       }
 
       "reject reattaching the same path multiply" in {
         implicit val scheduler = StubScheduler.random()
         val file = StubFile()
-        var recovery = Disks.recover()
+        var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom))
-        recovery = Disks.recover()
+        recovery = Disk.recover()
         recovery
             .reattachAndWait (("a", file), ("a", file))
             .fail [IllegalArgumentException]
@@ -141,17 +141,17 @@ class RecoverySpec extends FreeSpec {
       "pass through an exception from chooseSuperBlock" in {
         implicit val scheduler = StubScheduler.random()
         val file = StubFile()
-        val recovery = Disks.recover()
+        val recovery = Disk.recover()
         recovery.reattachAndWait (("a", file)) .fail [NoSuperBlocksException]
       }
 
       "pass through an exception from verifyReattachment" in {
         implicit val scheduler = StubScheduler.random()
         val file = StubFile()
-        var recovery = Disks.recover()
+        var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom))
         val config2 = TestDisksConfig (cell = 1)
-        recovery = Disks.recover () (scheduler, config2)
+        recovery = Disk.recover () (scheduler, config2)
         recovery.reattachAndWait (("a", file)) .fail [CellMismatchException]
       }}
 
@@ -161,9 +161,9 @@ class RecoverySpec extends FreeSpec {
         implicit val scheduler = StubScheduler.random()
         val file = StubFile()
         val file2 = StubFile()
-        var recovery = Disks.recover()
+        var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
-        recovery = Disks.recover()
+        recovery = Disk.recover()
         recovery.reattachAndWait (("a", file)) .fail [MissingDisksException]
       }}
 
@@ -173,9 +173,9 @@ class RecoverySpec extends FreeSpec {
         implicit val scheduler = StubScheduler.random()
         val file = StubFile()
         val file2 = StubFile()
-        var recovery = Disks.recover()
+        var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
-        recovery = Disks.recover()
+        recovery = Disk.recover()
         recovery.reopenAndLaunch ("a", "b") (("a", file), ("b", file2))
       }
 
@@ -183,9 +183,9 @@ class RecoverySpec extends FreeSpec {
         implicit val scheduler = StubScheduler.random()
         val file = StubFile()
         val file2 = StubFile()
-        var recovery = Disks.recover()
+        var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
-        recovery = Disks.recover()
+        recovery = Disk.recover()
         recovery.reopenAndLaunch ("a") (("a", file), ("b", file2))
       }
 
@@ -194,9 +194,9 @@ class RecoverySpec extends FreeSpec {
         val file = StubFile()
         val file2 = StubFile()
         val file3 = StubFile()
-        var recovery = Disks.recover()
+        var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
-        recovery = Disks.recover()
+        recovery = Disk.recover()
         recovery
             .reopenAndWait ("a", "c") (("a", file), ("b", file2), ("c", file3))
             .fail [InconsistentSuperBlocksException]
@@ -207,11 +207,11 @@ class RecoverySpec extends FreeSpec {
         val file = StubFile()
         val file2 = StubFile()
         val file3 = StubFile()
-        var recovery = Disks.recover()
+        var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
-        recovery = Disks.recover()
+        recovery = Disk.recover()
         recovery.attachAndLaunch (("c", file3, geom))
-        recovery = Disks.recover()
+        recovery = Disk.recover()
         recovery
             .reopenAndWait ("a", "c") (("a", file), ("b", file2), ("c", file3))
             .fail [ExtraDisksException]

@@ -5,7 +5,7 @@ import scala.util.Random
 import com.treode.async.{Async, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.cluster.Cluster
-import com.treode.disk.{Disks, Position}
+import com.treode.disk.{Disk, Position}
 import com.treode.store.{CatalogDescriptor, CatalogId, Library, StoreConfig}
 
 import Async.guard
@@ -15,7 +15,7 @@ private class RecoveryKit (implicit
     scheduler: Scheduler,
     cluster: Cluster,
     library: Library,
-    recovery: Disks.Recovery,
+    recovery: Disk.Recovery,
     config: StoreConfig
 ) extends Catalogs.Recovery {
 
@@ -40,14 +40,14 @@ private class RecoveryKit (implicit
     fiber.execute (getMedic (id) checkpoint (meta))
   }
 
-  private def close (id: CatalogId) (implicit disks: Disks): Async [(CatalogId, Handler)] =
+  private def close (id: CatalogId) (implicit disks: Disk): Async [(CatalogId, Handler)] =
     for {
       handler <- getMedic (id) .close()
     } yield {
       (id, handler)
     }
 
-  def launch (implicit launch: Disks.Launch): Async [Catalogs] =
+  def launch (implicit launch: Disk.Launch): Async [Catalogs] =
     fiber.guard {
       import launch.disks
       for {

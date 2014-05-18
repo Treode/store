@@ -5,7 +5,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.async.implicits._
-import com.treode.disk.{Disks, Position}
+import com.treode.disk.{Disk, Position}
 import com.treode.store.{Bytes, Cell, CellIterator, Key, TxClock}
 
 import Async.async
@@ -14,7 +14,7 @@ private abstract class TierIterator (
     desc: TierDescriptor,
     root: Position
 ) (implicit
-    disks: Disks
+    disks: Disk
 ) extends CellIterator {
 
   class Foreach (f: Cell => Async [Unit], cb: Callback [Unit]) {
@@ -136,7 +136,7 @@ private object TierIterator {
       desc: TierDescriptor,
       root: Position
   ) (implicit
-      disks: Disks
+      disks: Disk
   ) extends TierIterator (desc, root) {
 
     def foreach (f: Cell => Async [Unit]): Async [Unit] =
@@ -149,7 +149,7 @@ private object TierIterator {
       key: Bytes,
       time: TxClock
   ) (implicit
-      disks: Disks
+      disks: Disk
   ) extends TierIterator (desc, root) {
 
     def foreach (f: Cell => Async [Unit]): Async [Unit] =
@@ -160,7 +160,7 @@ private object TierIterator {
       desc: TierDescriptor,
       root: Position
   ) (implicit
-      disks: Disks
+      disks: Disk
   ): CellIterator =
     new FromBeginning (desc, root)
 
@@ -170,7 +170,7 @@ private object TierIterator {
       key: Bytes,
       time: TxClock
   ) (implicit
-      disks: Disks
+      disks: Disk
   ): CellIterator =
     new FromKey (desc, root, key, time)
 
@@ -185,7 +185,7 @@ private object TierIterator {
       tiers: Tiers
   ) (implicit
       scheduler: Scheduler,
-      disks: Disks
+      disks: Disk
   ): CellIterator = {
 
     val allTiers = new Array [CellIterator] (tiers.size)
@@ -202,7 +202,7 @@ private object TierIterator {
       tiers: Tiers
   ) (implicit
       scheduler: Scheduler,
-      disks: Disks
+      disks: Disk
   ): CellIterator = {
 
     val allTiers = new Array [CellIterator] (tiers.size + 2)
@@ -223,7 +223,7 @@ private object TierIterator {
       tiers: Tiers
   ) (implicit
       scheduler: Scheduler,
-      disks: Disks
+      disks: Disk
   ): CellIterator = {
 
     val allTiers = new Array [CellIterator] (tiers.size + 2)

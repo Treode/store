@@ -6,7 +6,7 @@ import scala.collection.JavaConversions._
 import com.nothome.delta.{Delta, GDiffPatcher}
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disks, PageDescriptor, Position, RecordDescriptor}
+import com.treode.disk.{Disk, PageDescriptor, Position, RecordDescriptor}
 import com.treode.store.{Bytes, CatalogId, StaleException}
 
 import Async.{guard, when}
@@ -21,7 +21,7 @@ private class Handler (
     var history: ArrayDeque [Bytes],
     var saved: Option [Meta]
 ) (implicit
-    disks: Disks
+    disks: Disk
 ) {
 
   def diff (other: Int): Update = {
@@ -138,6 +138,6 @@ private object Handler {
     PageDescriptor (0x8407E7035A50C6CFL, uint, tuple (uint, bytes, seq (bytes)))
   }
 
-  def apply (id: CatalogId) (implicit disks: Disks): Handler =
+  def apply (id: CatalogId) (implicit disks: Disk): Handler =
     new Handler (id, 0, Bytes.empty.murmur32, Bytes.empty, new ArrayDeque, None)
 }

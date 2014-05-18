@@ -4,7 +4,7 @@ import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.buffer.ArrayBuffer
 import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
-import com.treode.disk.{Disks, ObjectId, PageDescriptor, PageHandler, Position}
+import com.treode.disk.{Disk, ObjectId, PageDescriptor, PageHandler, Position}
 import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 import com.treode.pickle.PicklerRegistry
 
@@ -16,7 +16,7 @@ private class Broker (
     private var catalogs: Map [CatalogId, Handler]
 ) (implicit
     scheduler: Scheduler,
-    disks: Disks
+    disks: Disk
 ) extends PageHandler [Int] {
 
   private val fiber = new Fiber
@@ -119,7 +119,7 @@ private class Broker (
       catalogs.values.latch.unit foreach (_.checkpoint())
     }
 
-  def attach () (implicit launch: Disks.Launch, cluster: Cluster) {
+  def attach () (implicit launch: Disk.Launch, cluster: Cluster) {
 
     pager.handle (this)
 
