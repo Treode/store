@@ -214,6 +214,12 @@ object Async {
       case t: Throwable => _fail (t)
     }
 
+  def at (millis: Int) (implicit s: Scheduler): Async [Unit] =
+    _async (cb => s.at (millis) (cb (Success())))
+
+  def delay (millis: Int) (implicit s: Scheduler): Async [Unit] =
+    _async (cb => s.delay (millis) (cb (Success())))
+
   /** Perform the asynchronous operation `f` only when the predicate `p` is true. */
   def when [A] (p: => Boolean) (f: => Async [A]): Async [Unit] =
     try {

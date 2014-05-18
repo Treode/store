@@ -1,23 +1,15 @@
 package com.treode.store.paxos
 
-import java.util.concurrent.TimeoutException
-import scala.util.Random
-
-import com.treode.async.{Async, Callback}
-import com.treode.async.implicits._
-import com.treode.async.stubs.AsyncChecks
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
-import com.treode.disk.stubs.{CrashChecks, StubDiskDrive}
-import com.treode.store.{Bytes, Cell, StoreClusterChecks, StoreTestKit}
+import com.treode.disk.stubs.StubDiskDrive
+import com.treode.store.{Bytes, StoreTestKit}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
-import Async.{guard, latch, supply}
-import Callback.{ignore => disregard}
 import PaxosTestTools._
 
-class PaxosSpec extends FreeSpec with CrashChecks with StoreClusterChecks {
+class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
 
   "The paxos implementation should" - {
 
@@ -35,44 +27,17 @@ class PaxosSpec extends FreeSpec with CrashChecks with StoreClusterChecks {
             "compacted frequently"   -> 0.1)
       } s"$name with" - {
 
-        for { (name, (nbatch, nput)) <- Seq (
+        for { (name, (nbatch, nputs)) <- Seq (
             "some batches"     -> (10, 10),
             "lots of batches"  -> (100, 10),
             "some big batches" -> (10, 100))
         } name taggedAs (Intensive, Periodic) in {
 
           forAllCrashes { implicit random =>
-
-            val tracker = new PaxosTracker
-            val disk = new StubDiskDrive
-
-            setup { implicit scheduler =>
-              implicit val network = StubNetwork (random)
-              for {
-                host <- StubPaxosHost.boot (H1, checkpoint, compaction, disk, true)
-                _ = host.setAtlas (settled (host))
-                _ <- tracker.batches (nbatch, nput, host)
-              } yield ()
-            }
-
-            .recover { implicit scheduler =>
-              implicit val network = StubNetwork (random)
-              val host = StubPaxosHost .boot (H1, checkpoint, compaction, disk, false) .pass
-              host.setAtlas (settled (host))
-              tracker.check (host) .pass
-            }}}}}}
+            crashAndRecover (nbatch, nputs, checkpoint, compaction)
+          }}}}}
 
     "achieve consensus with" - {
-
-      def test (implicit random: Random) = {
-        val tracker = new PaxosTracker
-        cluster.host (StubPaxosHost)
-        .setup { implicit scheduler => (h1, h2) =>
-          tracker.batches (10, 10, h1, h2)
-        }
-        .recover { implicit scheduler => h1 =>
-          tracker.check (h1)
-        }}
 
       for { (name, flakiness) <- Seq (
           "a reliable network" -> 0.0,
@@ -81,17 +46,27 @@ class PaxosSpec extends FreeSpec with CrashChecks with StoreClusterChecks {
 
         "stable hosts" taggedAs (Intensive, Periodic) in {
           forThreeStableHosts (0.1, 0.1, flakiness) { implicit random =>
-            test
+            achieveConsensus (10, 10)
           }}
 
-        "a host crashes before closing" taggedAs (Intensive, Periodic) in {
+        "a host is offline" taggedAs (Intensive, Periodic) in {
+          forOneHostOffline (0.1, 0.1, flakiness) { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "a host crashes" taggedAs (Intensive, Periodic) in {
           forOneHostCrashing (0.1, 0.1, flakiness) { implicit random =>
-            test
+            achieveConsensus (10, 10)
           }}
 
-        "a host reboots after opening" taggedAs (Intensive, Periodic) in {
+        "a host reboots" taggedAs (Intensive, Periodic) in {
           forOneHostRebooting (0.1, 0.1, flakiness) { implicit random =>
-            test
+            achieveConsensus (10, 10)
+          }}
+
+        "a host bounces" taggedAs (Intensive, Periodic) in {
+          forOneHostBouncing (0.1, 0.1, flakiness) { implicit random =>
+            achieveConsensus (10, 10)
           }}}}
 
     "rebalance" in {

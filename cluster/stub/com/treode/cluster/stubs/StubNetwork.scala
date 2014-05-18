@@ -18,18 +18,15 @@ class StubNetwork private (implicit random: Random) {
   var messageTrace = false
 
   private [stubs] def install (peer: StubCluster) {
-    val prior = peers.putIfAbsent (peer.localId, peer)
-    if (prior == null)
-      return
-    require (
-        peers.replace (peer.localId, inactive, peer),
-        s"Host ${peer.localId} is already installed.")
+    if (peers.putIfAbsent (peer.localId, peer) != null &&
+        !peers.replace (peer.localId, inactive, peer))
+      throw new IllegalArgumentException (s"Host ${peer.localId} is already installed.")
   }
 
   private [stubs] def remove (peer: StubCluster) {
-    require (
-        peers.replace (peer.localId, peer, inactive),
-        s"Host ${peer.localId} was already removed.")
+    if (!peers.replace (peer.localId, peer, inactive) &&
+        peers.get (peer.localId) != inactive)
+      throw new IllegalArgumentException (s"Host ${peer.localId} was rebooted.")
   }
 
   private [stubs] def deliver [M] (p: Pickler [M], from: HostId, to: HostId, port: PortId, msg: M) {
