@@ -6,7 +6,7 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.cluster.stubs.{StubCluster, StubNetwork}
+import com.treode.cluster.stubs.{StubPeer, StubNetwork}
 import com.treode.disk.Disks
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store._
@@ -88,7 +88,7 @@ private object StubAtomicHost {
   ): Async [StubAtomicHost] = {
     import kit.{network, random, scheduler}
 
-    implicit val cluster = new StubCluster (id)
+    implicit val cluster = new StubPeer (id)
     implicit val library = new Library
     implicit val storeConfig = TestStoreConfig()
     implicit val recovery = StubDisks.recover()

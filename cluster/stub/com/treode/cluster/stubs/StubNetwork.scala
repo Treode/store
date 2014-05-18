@@ -12,18 +12,18 @@ import StubNetwork.inactive
 
 class StubNetwork private (implicit random: Random) {
 
-  private val peers = new ConcurrentHashMap [HostId, StubCluster]
+  private val peers = new ConcurrentHashMap [HostId, StubPeer]
 
   var messageFlakiness = 0.0
   var messageTrace = false
 
-  private [stubs] def install (peer: StubCluster) {
+  private [stubs] def install (peer: StubPeer) {
     if (peers.putIfAbsent (peer.localId, peer) != null &&
         !peers.replace (peer.localId, inactive, peer))
       throw new IllegalArgumentException (s"Host ${peer.localId} is already installed.")
   }
 
-  private [stubs] def remove (peer: StubCluster) {
+  private [stubs] def remove (peer: StubPeer) {
     if (!peers.replace (peer.localId, peer, inactive) &&
         peers.get (peer.localId) != inactive)
       throw new IllegalArgumentException (s"Host ${peer.localId} was rebooted.")
@@ -42,7 +42,7 @@ class StubNetwork private (implicit random: Random) {
 object StubNetwork {
 
   private [stubs] val inactive =
-    new StubCluster (0) (null, null, null) {
+    new StubPeer (0) (null, null, null) {
       override def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M) = ()
     }
 

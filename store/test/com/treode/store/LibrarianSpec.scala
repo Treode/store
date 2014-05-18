@@ -8,7 +8,7 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{AsyncCaptor, AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.cluster.stubs.StubCluster
+import com.treode.cluster.stubs.StubPeer
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store.catalog.Catalogs
 import org.scalatest.FlatSpec
@@ -22,7 +22,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
   extends StubStoreHost {
     import kit._
 
-    implicit val cluster = new StubCluster (localId)
+    implicit val cluster = new StubPeer (localId)
 
     implicit val library = new Library
 

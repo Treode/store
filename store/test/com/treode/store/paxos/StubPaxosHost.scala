@@ -6,7 +6,7 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.cluster.stubs.{StubCluster, StubNetwork}
+import com.treode.cluster.stubs.{StubPeer, StubNetwork}
 import com.treode.disk.Disks
 import com.treode.disk.stubs.{StubDisks, StubDiskDrive}
 import com.treode.store._
@@ -23,7 +23,7 @@ private class StubPaxosHost (
 ) (implicit
     val random: Random,
     val scheduler: ChildScheduler,
-    val cluster: StubCluster,
+    val cluster: StubPeer,
     val disks: Disks,
     val library: Library,
     val catalogs: Catalogs,
@@ -87,7 +87,7 @@ private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] 
   ): Async [StubPaxosHost] = {
 
     implicit val scheduler = new ChildScheduler (parent)
-    implicit val cluster = new StubCluster (id)
+    implicit val cluster = new StubPeer (id)
     implicit val library = new Library
     implicit val storeConfig = TestStoreConfig()
     implicit val recovery = StubDisks.recover (checkpoint, compaction)

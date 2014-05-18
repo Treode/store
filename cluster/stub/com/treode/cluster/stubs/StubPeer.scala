@@ -7,7 +7,7 @@ import com.treode.async.Scheduler
 import com.treode.cluster._
 import com.treode.pickle.Pickler
 
-class StubCluster (
+class StubPeer (
     val localId: HostId
 ) (implicit
     random: Random,
