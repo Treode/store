@@ -18,7 +18,7 @@ import StoreTestTools._
 trait StoreClusterChecks extends AsyncChecks {
   this: Suite with Informing =>
 
-  private val ncrashes =
+  private val ntargets =
     intensity match {
       case "development" => 1
       case _ => 10
@@ -30,23 +30,6 @@ trait StoreClusterChecks extends AsyncChecks {
   val H1 = 0xF7DD0B042DACCD44L
   val H2 = 0x3D74427D18B38275L
   val H3 = 0x1FC96D277C03FEC3L
-
-  implicit class StoreTestingAsync [A] (async: Async [A]) {
-
-    def passOrTimeout(): Unit =
-      try {
-        async.await()
-      } catch {
-        case _: TimeoutException => ()
-      }}
-
-  implicit class StoreTestingCallbackCaptor [A] (cb: CallbackCaptor [A]) {
-
-    def passedOrTimedout: Unit =
-      assert (
-          cb.hasPassed || cb.hasFailed [TimeoutException],
-          s"Expected success or timeout, found $cb")
-  }
 
   class ForStoreClusterRunner [H] (
       val messages: Seq [String],
@@ -123,6 +106,163 @@ trait StoreClusterChecks extends AsyncChecks {
   def cluster: ForStoreClusterHost =
     new ForStoreClusterHost
 
+  private class StubSchedulerKit [H] (
+      val runner: ForStoreClusterRunner [H]
+   ) (implicit
+      val random: Random,
+      val scheduler: StubScheduler,
+      val network: StubNetwork
+  )
+
+  private class MultithreadedSchedulerKit [H] (
+      val runner: ForStoreClusterRunner [H]
+   ) (implicit
+      val random: Random,
+      val scheduler: Scheduler,
+      val network: StubNetwork
+  )
+
+  private implicit class NamedTest (name: String) {
+
+    def withStubScheduler [H, A] (
+        seed: Long,
+        init: Random => ForStoreClusterRunner [H]
+    ) (
+        test: StubSchedulerKit [H] => A
+    ): A = {
+      implicit val random = new Random (seed)
+      val runner = init (random)
+      try {
+        implicit val scheduler = StubScheduler.random (random)
+        implicit val network = StubNetwork (random)
+        test (new StubSchedulerKit (runner))
+      } catch {
+        case t: Throwable =>
+          info (name)
+          runner.messages foreach (info (_))
+          throw t
+      }}
+
+    def withMultithreadedScheduler [H, A] (
+        init: Random => ForStoreClusterRunner [H]
+    ) (
+        test: MultithreadedSchedulerKit [H] => A
+    ): A = {
+      implicit val random = Random
+      val executor = Executors.newScheduledThreadPool (nthreads)
+      val runner = init (random)
+      try {
+        implicit val scheduler = Scheduler (executor)
+        implicit val network = StubNetwork (random)
+        test (new MultithreadedSchedulerKit (runner))
+      } catch {
+        case t: Throwable =>
+          info (name)
+          runner.messages foreach (info (_))
+          throw t
+      } finally {
+        executor.shutdown()
+      }}}
+
+  private def forSeeds (test: Long => Any): Long = {
+    val start = System.currentTimeMillis
+    for (_ <- 0 until nseeds)
+      test (Random.nextLong())
+    val end = System.currentTimeMillis
+    (end - start) / nseeds
+  }
+
+  private def forTargets (count: Long => Int) (test: (Long, Int) => Any): Long = {
+    val start = System.currentTimeMillis
+    var nruns = 0
+    for (_ <- 0 until nseeds / ntargets) {
+      val seed = Random.nextLong()
+      val max = count (seed)
+      nruns += 1
+      if (max < ntargets) {
+        for (i <- 1 to max)
+          test (seed, i)
+        nruns += max
+      } else {
+        for (i <- 1 to ntargets)
+          test (seed, Random.nextInt (max - 1) + 1)
+        nruns += ntargets
+      }}
+    val end = System.currentTimeMillis()
+    (start - end) / nruns
+  }
+
+  private def forDoubleTargets (
+      count1: Long => Int
+  ) (
+      count2: (Long, Int) => Int
+  ) (
+      test: (Long, Int, Int) => Any
+  ): Long = {
+    val start = System.currentTimeMillis
+    var nruns = 0
+    for (_ <- 0 until nseeds / ntargets) {
+      val seed = Random.nextLong()
+      val max1 = count1 (seed)
+      nruns += 1
+      if (max1 < ntargets) {
+        for (i <- 1 to max1) {
+          val max2 = count2 (seed, i)
+          test (seed, i, Random.nextInt (max2 - 1) + 1)
+        }
+        nruns += max1 + max1
+      } else {
+        for (i <- 1 to ntargets) {
+          val t1 = Random.nextInt (max1 - 1) + 1
+          val max2 = count2 (seed, t1)
+          test (seed, t1, Random.nextInt (max2 - 1) + 1)
+        }
+        nruns += ntargets + ntargets
+      }}
+    val end = System.currentTimeMillis()
+    (start - end) / nruns
+  }
+
+  def forOneHost [H <: Host] (
+      seed: Long,
+      checkpoint: Double,
+      compaction: Double,
+      flakiness: Double
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ): Int =
+
+    s"forOneHost (${seed}L, $checkpoint, $compaction, $flakiness)"
+    .withStubScheduler (seed, init) { kit =>
+      import kit._
+
+      val h1 = runner .install (H1, checkpoint, compaction) .pass
+      for (h <- Seq (h1))
+        h.setAtlas (settled (h1))
+
+      network.messageFlakiness = flakiness
+      val cb = runner.setup (scheduler) (h1, h1) .capture()
+      val count = scheduler.run (timers = !cb.wasInvoked)
+      cb.passedOrTimedout
+      runner.asserts foreach (_ ())
+      network.messageFlakiness = 0.0
+
+      runner.recover (scheduler) (h1) .pass
+
+      count
+    }
+
+  def forOneHost [H <: Host] (
+      checkpoint: Double,
+      compaction: Double,
+      flakiness: Double
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) {
+    val average = forSeeds (forOneHost (_, checkpoint, compaction, flakiness) (init))
+    info (s"Average time on one host: ${average}ms")
+  }
+
   def forThreeStableHosts [H <: Host] (
       seed: Long,
       checkpoint: Double,
@@ -130,15 +270,11 @@ trait StoreClusterChecks extends AsyncChecks {
       flakiness: Double
   ) (
       init: Random => ForStoreClusterRunner [H]
-  ): Int = {
+  ): Int =
 
-    implicit val random = new Random (seed)
-    val runner = init (random)
-
-    try {
-
-      implicit val kit = StoreTestKit.random (random)
-      import kit.{network, scheduler}
+    s"forThreeStableHosts (${seed}L, $checkpoint, $compaction, $flakiness)"
+    .withStubScheduler (seed, init) { kit =>
+      import kit._
 
       val h1 = runner .install (H1, checkpoint, compaction) .pass
       val h2 = runner .install (H2, checkpoint, compaction) .pass
@@ -156,13 +292,7 @@ trait StoreClusterChecks extends AsyncChecks {
       runner.recover (scheduler) (h1) .pass
 
       count
-
-    } catch {
-      case t: Throwable =>
-        info (s"forThreeStableHosts (${seed}L, $checkpoint, $compaction, $flakiness)")
-        runner.messages foreach (info (_))
-        throw t
-    }}
+    }
 
   def forThreeStableHosts [H <: Host] (
       checkpoint: Double,
@@ -171,13 +301,7 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (
       init: Random => ForStoreClusterRunner [H]
   ) {
-    val start = System.currentTimeMillis
-    for (_ <- 0 until nseeds) {
-      val seed = Random.nextLong()
-      forThreeStableHosts (seed, checkpoint, compaction, flakiness) (init)
-    }
-    val end = System.currentTimeMillis
-    val average = (end - start) / nseeds
+    val average = forSeeds (forThreeStableHosts (_, checkpoint, compaction, flakiness) (init))
     info (s"Average time on three stable hosts: ${average}ms")
   }
 
@@ -187,16 +311,11 @@ trait StoreClusterChecks extends AsyncChecks {
       flakiness: Double
   ) (
       init: Random => ForStoreClusterRunner [H]
-  ): Int = {
+  ): Int =
 
-    implicit val random = Random
-    val executor = Executors.newScheduledThreadPool (nthreads)
-    val runner = init (random)
-
-    try {
-
-      implicit val scheduler = Scheduler (executor)
-      implicit val network = StubNetwork (random)
+    s"forThreeStableHostsMultithreaded ($checkpoint, $compaction, $flakiness)"
+    .withMultithreadedScheduler (init) { kit =>
+      import kit._
 
       val h1 = runner .install (H1, checkpoint, compaction) .await()
       val h2 = runner .install (H2, checkpoint, compaction) .await()
@@ -214,15 +333,7 @@ trait StoreClusterChecks extends AsyncChecks {
       runner.recover (scheduler) (h1) .await()
 
       (end - start).toInt
-
-    } catch {
-      case t: Throwable =>
-        info (s"forThreeStableHostsMultithreaded ($checkpoint, $compaction, $flakiness)")
-        runner.messages foreach (info (_))
-        throw t
-    } finally {
-      executor.shutdown()
-    }}
+    }
 
   def forOneHostOffline [H <: Host] (
       seed: Long,
@@ -231,15 +342,11 @@ trait StoreClusterChecks extends AsyncChecks {
       flakiness: Double
   ) (
       init: Random => ForStoreClusterRunner [H]
-  ): Int = {
+  ): Int =
 
-    implicit val random = new Random (seed)
-    val runner = init (random)
-
-    try {
-
-      implicit val kit = StoreTestKit.random (random)
-      import kit.{network, scheduler}
+    s"forOneHostOffline (${seed}L, $checkpoint, $compaction, $flakiness)"
+    .withStubScheduler (seed, init) { kit =>
+      import kit._
 
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
@@ -269,13 +376,7 @@ trait StoreClusterChecks extends AsyncChecks {
       cb2.passed
 
       count
-
-    } catch {
-      case t: Throwable =>
-        info (s"forOneHostCrashed (${seed}L, $checkpoint, $compaction, $flakiness)")
-        runner.messages foreach (info (_))
-        throw t
-    }}
+    }
 
   def forOneHostOffline [H <: Host] (
       checkpoint: Double,
@@ -284,12 +385,7 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (
       init: Random => ForStoreClusterRunner [H]
   ) {
-    val start = System.currentTimeMillis
-    for (_ <- 0 until nseeds) {
-      forOneHostOffline (Random.nextLong(), checkpoint, compaction, flakiness) (init)
-    }
-    val end = System.currentTimeMillis
-    val average = (end - start) / nseeds
+    val average = forSeeds (forOneHostOffline (_, checkpoint, compaction, flakiness) (init))
     info (s"Average time with one host crashed: ${average}ms")
   }
 
@@ -299,16 +395,11 @@ trait StoreClusterChecks extends AsyncChecks {
       flakiness: Double
   ) (
       init: Random => ForStoreClusterRunner [H]
-  ): Int = {
+  ): Int =
 
-    implicit val random = Random
-    implicit val executor = Executors.newScheduledThreadPool (nthreads)
-    val runner = init (random)
-
-    try {
-
-      implicit val scheduler = Scheduler (executor)
-      implicit val network = StubNetwork (random)
+    s"forOneHostOfflineMultithreaded ($checkpoint, $compaction, $flakiness)"
+    .withMultithreadedScheduler (init) { kit =>
+      import kit._
 
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
@@ -336,15 +427,7 @@ trait StoreClusterChecks extends AsyncChecks {
       runner.recover (scheduler) (h1) .await()
 
       (end - start).toInt
-
-    } catch {
-      case t: Throwable =>
-        info (s"forOneHostOfflineMultithreaded ($checkpoint, $compaction, $flakiness)")
-        runner.messages foreach (info (_))
-        throw t
-    } finally {
-      executor.shutdown()
-    }}
+    }
 
   def forOneHostCrashing [H <: Host] (
       seed: Long,
@@ -354,14 +437,11 @@ trait StoreClusterChecks extends AsyncChecks {
       flakiness: Double
   ) (
       init: Random => ForStoreClusterRunner [H]
-  ): Int = {
+  ): Int =
 
-    implicit val random = new Random (seed)
-    val runner = init (random)
-
-    try {
-      implicit val kit = StoreTestKit.random (random)
-      import kit.{network, scheduler}
+    s"forOneHostCrashing (${seed}L, $target, $checkpoint, $compaction, $flakiness)"
+    .withStubScheduler (seed, init) { kit =>
+      import kit._
 
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
@@ -392,38 +472,7 @@ trait StoreClusterChecks extends AsyncChecks {
       runner .recover (scheduler) (h1) .pass
 
       count
-
-    } catch {
-      case t: Throwable =>
-        info (s"forOneHostCrashing (${seed}L, $target, $checkpoint, $compaction, $flakiness)")
-        runner.messages foreach (info (_))
-        throw t
-    }}
-
-  def forOneHostCrashing [H <: Host] (
-      seed: Long,
-      checkpoint: Double,
-      compaction: Double,
-      flakiness: Double
-  ) (
-      init: Random => ForStoreClusterRunner [H]
-  ): Int = {
-
-    // Run the first time for as long as possible.
-    val count = forThreeStableHosts (seed, checkpoint, compaction, flakiness) (init)
-
-    // Run the subsequent times for a portion of what was possible.
-    if (count < ncrashes) {
-      for (i <- 1 to count)
-        forOneHostCrashing (seed, i, checkpoint, compaction, flakiness) (init)
-      count + 1
-    } else {
-      for (i <- 1 to ncrashes) {
-        val target =  Random.nextInt (count - 1) + 1
-        forOneHostCrashing (seed, target, checkpoint, compaction, flakiness) (init)
-      }
-      ncrashes + 1
-    }}
+    }
 
   def forOneHostCrashing [H <: Host] (
       checkpoint: Double,
@@ -432,14 +481,9 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (
       init: Random => ForStoreClusterRunner [H]
   ) {
-    val start = System.currentTimeMillis
-    var count = 0
-    for (_ <- 0 until nseeds / ncrashes) {
-      val seed = Random.nextLong()
-      count += forOneHostCrashing (seed, checkpoint, compaction, flakiness) (init)
-    }
-    val end = System.currentTimeMillis
-    val average = (end - start) / count
+    val average = forTargets (
+        forThreeStableHosts (_, checkpoint, compaction, flakiness) (init)) (
+            forOneHostCrashing (_, _, checkpoint, compaction, flakiness) (init))
     info (s"Average time with one host crashing: ${average}ms")
   }
 
@@ -450,15 +494,11 @@ trait StoreClusterChecks extends AsyncChecks {
       flakiness: Double
   ) (
       init: Random => ForStoreClusterRunner [H]
-  ): Int = {
+  ): Int =
 
-    implicit val random = Random
-    val executor = Executors.newScheduledThreadPool (nthreads)
-    val runner = init (random)
-
-    try {
-      implicit val scheduler = Scheduler (executor)
-      implicit val network = StubNetwork (random)
+    s"forOneHostCrashingMultithreaded ($target, $checkpoint, $compaction, $flakiness)"
+    .withMultithreadedScheduler (init) { kit =>
+      import kit._
 
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
@@ -490,15 +530,7 @@ trait StoreClusterChecks extends AsyncChecks {
       runner .recover (scheduler) (h1) .await()
 
       (end - start).toInt
-
-    } catch {
-      case t: Throwable =>
-        info (s"forOneHostCrashingMultithread ($target, $checkpoint, $compaction, $flakiness)")
-        runner.messages foreach (info (_))
-        throw t
-    } finally {
-      executor.shutdown()
-    }}
+    }
 
   def forOneHostCrashingMultithreaded [H <: Host] (
       checkpoint: Double,
@@ -507,11 +539,7 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (
       init: Random => ForStoreClusterRunner [H]
   ) {
-
-    // Run the first time for as long as possible.
     val time = forThreeStableHostsMultithreaded (checkpoint, compaction, flakiness) (init)
-
-    // Run the final time for a portion of what was possible.
     val target =  Random.nextInt ((time * 0.7).toInt) + (time * 0.1).toInt
     forOneHostCrashingMultithreaded (target, checkpoint, compaction, flakiness) (init)
   }
@@ -524,14 +552,11 @@ trait StoreClusterChecks extends AsyncChecks {
       flakiness: Double
   ) (
       init: Random => ForStoreClusterRunner [H]
-  ) {
+  ): Unit =
 
-    implicit val random = new Random (seed)
-    val runner = init (random)
-
-    try {
-      implicit val kit = StoreTestKit.random (random)
-      import kit.{network, scheduler}
+    s"forOneHostRebooting (${seed}L, $target, $checkpoint, $compaction, $flakiness)"
+    .withStubScheduler (seed, init) { kit =>
+      import kit._
 
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
@@ -563,38 +588,7 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- Seq (h1, h2, h3))
         h.setAtlas (settled (h1, h2, h3))
       runner .recover (scheduler) (h1) .pass
-
-    } catch {
-      case t: Throwable =>
-        info (s"forOneHostRebooting (${seed}L, $target, $checkpoint, $compaction, $flakiness)")
-        runner.messages foreach (info (_))
-        throw t
-    }}
-
-  def forOneHostRebooting [H <: Host] (
-      seed: Long,
-      checkpoint: Double,
-      compaction: Double,
-      flakiness: Double
-  ) (
-      init: Random => ForStoreClusterRunner [H]
-  ): Int = {
-
-    // Run the first time for as long as possible.
-    val count = forOneHostOffline (seed, checkpoint, compaction, flakiness) (init)
-
-    // Run the subsequent times for a portion of what was possible.
-    if (count < ncrashes) {
-      for (i <- 1 to count)
-        forOneHostRebooting (seed, i, checkpoint, compaction, flakiness) (init)
-      count + 1
-    } else {
-      for (i <- 1 to ncrashes) {
-        val target =  Random.nextInt (count - 1) + 1
-        forOneHostRebooting (seed, target, checkpoint, compaction, flakiness) (init)
-      }
-      ncrashes + 1
-    }}
+    }
 
   def forOneHostRebooting [H <: Host] (
       checkpoint: Double,
@@ -603,14 +597,9 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (
       init: Random => ForStoreClusterRunner [H]
   ) {
-    val start = System.currentTimeMillis
-    var count = 0
-    for (_ <- 0 until nseeds / ncrashes) {
-      val seed = Random.nextLong()
-      count += forOneHostRebooting (seed, checkpoint, compaction, flakiness) (init)
-    }
-    val end = System.currentTimeMillis
-    val average = (end - start) / count
+    val average = forTargets (
+        forOneHostOffline (_, checkpoint, compaction, flakiness) (init)) (
+            forOneHostRebooting (_, _, checkpoint, compaction, flakiness) (init))
     info (s"Average time with one host rebooting: ${average}ms")
   }
 
@@ -621,15 +610,11 @@ trait StoreClusterChecks extends AsyncChecks {
       flakiness: Double
   ) (
       init: Random => ForStoreClusterRunner [H]
-  ) {
+  ): Unit =
 
-    implicit val random = Random
-    val executor = Executors.newScheduledThreadPool (nthreads)
-    val runner = init (random)
-
-    try {
-      implicit val scheduler = Scheduler (executor)
-      implicit val network = StubNetwork (random)
+    s"forOneHostRebootingMultithreaded ($target, $checkpoint, $compaction, $flakiness)"
+    .withMultithreadedScheduler (init) { kit =>
+      import kit._
 
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
@@ -662,15 +647,7 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- Seq (h1, h2, h3))
         h.setAtlas (settled (h1, h2, h3))
       runner .recover (scheduler) (h1) .await()
-
-    } catch {
-      case t: Throwable =>
-        info (s"forOneHostRebootingMultithreaded ($target, $checkpoint, $compaction, $flakiness)")
-        runner.messages foreach (info (_))
-        throw t
-    } finally {
-      executor.shutdown()
-    }}
+    }
 
   def forOneHostRebootingMultithreaded [H <: Host] (
       checkpoint: Double,
@@ -679,11 +656,7 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (
       init: Random => ForStoreClusterRunner [H]
   ) {
-
-    // Run the first time for as long as possible.
     val time = forOneHostOfflineMultithreaded (checkpoint, compaction, flakiness) (init)
-
-    // Run the final time for a portion of what was possible.
     val target =  Random.nextInt ((time * 0.7).toInt) + (time * 0.1).toInt
     forOneHostRebootingMultithreaded (target, checkpoint, compaction, flakiness) (init)
   }
@@ -697,14 +670,11 @@ trait StoreClusterChecks extends AsyncChecks {
       flakiness: Double
   ) (
       init: Random => ForStoreClusterRunner [H]
-  ) {
+  ): Unit =
 
-    implicit val random = new Random (seed)
-    val runner = init (random)
-
-    try {
-      implicit val kit = StoreTestKit.random (random)
-      import kit.{network, scheduler}
+    s"forOneHostBouncing (${seed}L, $target1, $target2, $checkpoint, $compaction, $flakiness)"
+    .withStubScheduler (seed, init) { kit =>
+      import kit._
 
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
@@ -737,40 +707,7 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- Seq (h1, h2, h3))
         h.setAtlas (settled (h1, h2, h3))
       runner .recover (scheduler) (h1) .pass
-
-    } catch {
-      case t: Throwable =>
-        info (s"forOneHostRebooting (${seed}L, $target1, $target2, $checkpoint, $compaction, $flakiness)")
-        runner.messages foreach (info (_))
-        throw t
-    }}
-
-  def forOneHostBoucing [H <: Host] (
-      seed: Long,
-      checkpoint: Double,
-      compaction: Double,
-      flakiness: Double
-  ) (
-      init: Random => ForStoreClusterRunner [H]
-  ): Int = {
-
-    // Run the first time for as long as possible.
-    val count1 = forThreeStableHosts (seed, checkpoint, compaction, flakiness) (init)
-    val target1 = Random.nextInt (count1 - 1) + 1
-    val count2 = forOneHostCrashing (seed, target1, checkpoint, compaction, flakiness) (init)
-
-    // Run the subsequent times for a portion of what was possible.
-    if (count2 < ncrashes) {
-      for (i <- 1 to count2)
-        forOneHostBouncing (seed, target1, i, checkpoint, compaction, flakiness) (init)
-      count2 + 2
-    } else {
-      for (i <- 1 to ncrashes) {
-        val target2 =  Random.nextInt (count2 - 1) + 1
-        forOneHostBouncing (seed, target1, target2, checkpoint, compaction, flakiness) (init)
-      }
-      ncrashes + 2
-    }}
+    }
 
   def forOneHostBouncing [H <: Host] (
       checkpoint: Double,
@@ -779,13 +716,11 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (
       init: Random => ForStoreClusterRunner [H]
   ) {
-    val start = System.currentTimeMillis
-    var count = 0
-    for (_ <- 0 until nseeds / ncrashes)
-      count += forOneHostBoucing (Random.nextLong(), checkpoint, compaction, flakiness) (init)
-    val end = System.currentTimeMillis
-    val average = (end - start) / count
-    info (s"Average time with one host crashing: ${average}ms")
+    val average = forDoubleTargets (
+        forThreeStableHosts (_, checkpoint, compaction, flakiness) (init)) (
+            forOneHostCrashing (_, _, checkpoint, compaction, flakiness) (init)) (
+                forOneHostBouncing (_, _, _, checkpoint, compaction, flakiness) (init))
+    info (s"Average time with one host bouncing: ${average}ms")
   }
 
   def forOneHostBouncingMultithreaded [H <: Host] (
@@ -796,15 +731,11 @@ trait StoreClusterChecks extends AsyncChecks {
       flakiness: Double
   ) (
       init: Random => ForStoreClusterRunner [H]
-  ) {
+  ): Unit =
 
-    implicit val random = Random
-    val executor = Executors.newScheduledThreadPool (nthreads)
-    val runner = init (random)
-
-    try {
-      implicit val scheduler = Scheduler (executor)
-      implicit val network = StubNetwork (random)
+    s"forOneHostRebootingMultithreaded ($target1, $target2, $checkpoint, $compaction, $flakiness)"
+    .withMultithreadedScheduler (init) { kit =>
+      import kit._
 
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
@@ -838,15 +769,7 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- Seq (h1, h2, h3))
         h.setAtlas (settled (h1, h2, h3))
       runner .recover (scheduler) (h1) .await()
-
-    } catch {
-      case t: Throwable =>
-        info (s"forOneHostRebootingMultithreaded ($target1, $target2, $checkpoint, $compaction, $flakiness)")
-        runner.messages foreach (info (_))
-        throw t
-    } finally {
-      executor.shutdown()
-    }}
+    }
 
   def forOneHostBouncingMultithreaded [H <: Host] (
       checkpoint: Double,
@@ -855,13 +778,9 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (
       init: Random => ForStoreClusterRunner [H]
   ) {
-
-    // Run the first time for as long as possible.
     val time1 = forThreeStableHostsMultithreaded (checkpoint, compaction, flakiness) (init)
     val target1 = Random.nextInt ((time1 * 0.7).toInt) + (time1 * 0.1).toInt
     val time2 = forOneHostCrashingMultithreaded (target1, checkpoint, compaction, flakiness) (init)
-
-    // Run the final time for a portion of what was possible.
     val target2 =  Random.nextInt ((time2 * 0.7).toInt) + (time2 * 0.1).toInt
     forOneHostBouncingMultithreaded (target1, target2, checkpoint, compaction, flakiness) (init)
   }}

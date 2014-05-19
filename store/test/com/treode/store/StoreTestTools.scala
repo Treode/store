@@ -49,6 +49,23 @@ private trait StoreTestTools {
     def - (n: Int) = new TxClock (v.time - n)
   }
 
+  implicit class StoreTestingAsync [A] (async: Async [A]) {
+
+    def passOrTimeout(): Unit =
+      try {
+        async.await()
+      } catch {
+        case _: TimeoutException => ()
+      }}
+
+  implicit class StoreTestingCallbackCaptor [A] (cb: CallbackCaptor [A]) {
+
+    def passedOrTimedout: Unit =
+      assert (
+          cb.hasPassed || cb.hasFailed [TimeoutException],
+          s"Expected success or timeout, found $cb")
+  }
+
   object TestStoreConfig {
 
     def apply (
