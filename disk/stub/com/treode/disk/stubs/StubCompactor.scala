@@ -15,7 +15,7 @@ private class StubCompactor (
      random: Random,
      scheduler: Scheduler,
      disk: StubDiskDrive,
-     config: StubConfig
+     config: StubDiskConfig
 ) {
 
   val fiber = new Fiber

@@ -59,7 +59,7 @@ private object DiskTestTools {
       disks.assertReady()
     }}
 
-  implicit class RichDisksAgent (disks: Disk) {
+  implicit class RichDiskAgent (disks: Disk) {
     val agent = disks.asInstanceOf [DiskAgent]
     import agent.kit.{disks => drives, checkpointer, compactor, config, logd, paged}
 
@@ -129,6 +129,21 @@ private object DiskTestTools {
 
     def clean() =
       compactor.clean()
+  }
+
+  implicit class RichDiskGeometryObject (obj: DiskGeometry.type) {
+
+    def test (
+        segmentBits: Int = 12,
+        blockBits: Int = 6,
+        diskBytes: Long = 1<<20
+    ) (implicit
+        config: DiskConfig
+     ): DiskGeometry =
+       DiskGeometry (
+           segmentBits,
+           blockBits,
+           diskBytes)
   }
 
   implicit class RichLaunchAgent (launch: Disk.Launch) {

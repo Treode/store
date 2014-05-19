@@ -2,11 +2,13 @@ package com.treode.disk
 
 import org.scalatest.FlatSpec
 
+import DiskTestTools._
+
 class AbstractReleaserSpec extends FlatSpec {
 
-  implicit val config = TestDisksConfig()
+  implicit val config = DiskTestConfig()
 
-  val geometry = TestDiskGeometry()
+  val geometry = DiskGeometry.test()
 
   private class TestReleaser () {
 

@@ -8,11 +8,13 @@ import com.treode.async.stubs.implicits._
 import com.treode.buffer.PagedBuffer
 import org.scalatest.FreeSpec
 
+import DiskTestTools._
+
 class SuperBlocksSpec extends FreeSpec {
 
-  implicit val config = TestDisksConfig()
+  implicit val config = DiskTestConfig()
   val path = Paths.get ("a")
-  val geom = TestDiskGeometry()
+  val geom = DiskGeometry.test()
 
   private def superb (gen: Int, disks: Set [Path] = Set (path)) = {
     val free = IntSet()
@@ -271,7 +273,7 @@ class SuperBlocksSpec extends FreeSpec {
       }}
 
     "require the config's cell match the boot block's cell" in {
-      val config2 = TestDisksConfig (cell = 1)
+      val config2 = DiskTestConfig (cell = 1)
       intercept [CellMismatchException] {
         verifyReattachment (superbs (0, 1)) (config2)
       }}

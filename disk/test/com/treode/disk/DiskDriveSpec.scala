@@ -12,17 +12,19 @@ import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
+import DiskTestTools._
+
 class DiskDriveSpec extends FreeSpec {
 
   class DistinguishedException extends Exception
 
-  implicit val config = TestDisksConfig()
+  implicit val config = DiskTestConfig()
 
   private def init (file: File, kit: DiskKit) = {
     val path = Paths.get ("a")
     val free = IntSet()
     val boot = BootBlock (0, 0, 0, Set (path))
-    val geom = TestDiskGeometry()
+    val geom = DiskGeometry.test()
     new SuperBlock (0, boot, geom, false, free, 0)
     DiskDrive.init (0, path, file, geom, boot, kit)
   }

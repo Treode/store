@@ -3,7 +3,8 @@ package com.treode.disk
 class DiskGeometry private (
     val segmentBits: Int,
     val blockBits: Int,
-    val diskBytes: Long) {
+    val diskBytes: Long
+) {
 
   val segmentBytes = 1 << segmentBits
   val segmentMask = ~(segmentBytes - 1)

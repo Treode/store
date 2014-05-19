@@ -1,6 +1,6 @@
 package com.treode.disk
 
-class DiskConfig private (
+class DiskConfig private [disk] (
     val cell: CellId,
     val superBlockBits: Int,
     val maximumRecordBytes: Int,

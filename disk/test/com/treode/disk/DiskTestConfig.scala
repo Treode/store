@@ -1,6 +1,25 @@
 package com.treode.disk
 
-object TestDisksConfig {
+class DiskTestConfig (
+    cell: CellId,
+    superBlockBits: Int,
+    maximumRecordBytes: Int,
+    maximumPageBytes: Int,
+    checkpointBytes: Int,
+    checkpointEntries: Int,
+    cleaningFrequency: Int,
+    cleaningLoad: Int
+) extends DiskConfig (
+    cell,
+    superBlockBits,
+    maximumRecordBytes,
+    maximumPageBytes,
+    checkpointBytes,
+    checkpointEntries,
+    cleaningFrequency,
+    cleaningLoad)
+
+object DiskTestConfig {
 
   def apply (
       cell: CellId = 0,

@@ -14,12 +14,12 @@ class SuperBlockSpec extends FlatSpec {
 
     // Setup the config with a small space for the superblock.
     implicit val scheduler = StubScheduler.random()
-    val config = TestDisksConfig (
+    val config = DiskTestConfig (
         superBlockBits = 4,
         maximumRecordBytes = 1<<6,
         maximumPageBytes = 1<<6)
     val boot = BootBlock (0, 0, 0, Set.empty)
-    val geom = TestDiskGeometry (blockBits=4) (config)
+    val geom = DiskGeometry.test (blockBits=4) (config)
     val free = IntSet()
     val superb = new SuperBlock (0, boot, geom, false, free, 0)
 

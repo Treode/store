@@ -13,7 +13,7 @@ import PageLedger.{Groups, Merger}
 private class StubPageRegistry (releaser: StubReleaser) (implicit
     random: Random,
     scheduler: Scheduler,
-    config: StubConfig
+    config: StubDiskConfig
 ) extends AbstractPageRegistry {
 
   import config.compactionProbability

@@ -12,8 +12,8 @@ import DiskTestTools._
 
 class RecoverySpec extends FreeSpec {
 
-  implicit val config = TestDisksConfig()
-  val geom = TestDiskGeometry()
+  implicit val config = DiskTestConfig()
+  val geom = DiskGeometry.test()
   val record = RecordDescriptor (0x1BF6DBABE6A70060L, DiskPicklers.int)
 
   "Recovery.replay should" - {
@@ -150,7 +150,7 @@ class RecoverySpec extends FreeSpec {
         val file = StubFile()
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom))
-        val config2 = TestDisksConfig (cell = 1)
+        val config2 = DiskTestConfig (cell = 1)
         recovery = Disk.recover () (scheduler, config2)
         recovery.reattachAndWait (("a", file)) .fail [CellMismatchException]
       }}

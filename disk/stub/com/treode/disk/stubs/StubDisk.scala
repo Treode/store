@@ -17,7 +17,7 @@ private class StubDisk (
     random: Random,
     scheduler: Scheduler,
     disk: StubDiskDrive,
-    config: StubConfig
+    config: StubDiskConfig
 ) extends Disk {
 
   val logd = new Dispatcher [(StubRecord, Callback [Unit])] (0L)
@@ -93,6 +93,6 @@ object StubDisk {
       random: Random,
       scheduler: Scheduler
   ): StubRecovery = {
-    implicit val config = StubConfig (checkpoint, compaction)
+    implicit val config = StubDiskConfig (checkpoint, compaction)
     new StubRecoveryAgent
   }}

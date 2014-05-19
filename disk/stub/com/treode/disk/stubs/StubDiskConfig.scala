@@ -2,7 +2,7 @@ package com.treode.disk.stubs
 
 import scala.util.Random
 
-private case class StubConfig (
+private case class StubDiskConfig (
     checkpointProbability: Double,
     compactionProbability: Double
 ) {
