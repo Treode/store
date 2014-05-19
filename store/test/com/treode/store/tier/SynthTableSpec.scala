@@ -9,7 +9,7 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
-import com.treode.store.{Fruits, StoreConfig}
+import com.treode.store.{Fruits, StoreTestConfig}
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
@@ -27,7 +27,7 @@ class SynthTableSpec extends FreeSpec {
     implicit val launch = recovery.attach (diskDrive) .pass
     implicit val disks = launch.disks
     launch.launch()
-    implicit val storeConfig = TestStoreConfig()
+    implicit val storeConfig = StoreTestConfig()
     SynthTable (tier, 0x62)
   }
 

@@ -89,7 +89,7 @@ private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] 
     implicit val scheduler = new ChildScheduler (parent)
     implicit val cluster = new StubPeer (id)
     implicit val library = new Library
-    implicit val storeConfig = TestStoreConfig()
+    implicit val storeConfig = StoreTestConfig()
     implicit val recovery = StubDisk.recover (checkpoint, compaction)
     implicit val _catalogs = Catalogs.recover()
     val _paxos = Paxos.recover()

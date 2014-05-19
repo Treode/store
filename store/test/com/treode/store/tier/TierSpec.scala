@@ -64,7 +64,7 @@ class TierSpec extends WordSpec {
   /** Build a tier from fruit. */
   private def buildTier (pageBytes: Int) (
       implicit scheduler: StubScheduler, disks: Disk): Tier = {
-    implicit val config = TestStoreConfig (targetPageBytes = pageBytes)
+    implicit val config = StoreTestConfig (targetPageBytes = pageBytes)
     val builder = newBuilder (AllFruits.length)
     AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .pass
     builder.result.pass
@@ -101,7 +101,7 @@ class TierSpec extends WordSpec {
 
     "require that added entries are not duplicated" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = TestStoreConfig()
+      implicit val config = StoreTestConfig()
       val builder = newBuilder (2)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
@@ -109,7 +109,7 @@ class TierSpec extends WordSpec {
 
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = TestStoreConfig()
+      implicit val config = StoreTestConfig()
       val builder = newBuilder (2)
       builder.add (Cell (Orange, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
@@ -117,7 +117,7 @@ class TierSpec extends WordSpec {
 
     "allow properly sorted entries" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = TestStoreConfig()
+      implicit val config = StoreTestConfig()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Orange, 0, None)) .pass
@@ -126,7 +126,7 @@ class TierSpec extends WordSpec {
 
     "track the number of entries and keys" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = TestStoreConfig()
+      implicit val config = StoreTestConfig()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 3, None)) .pass
       builder.add (Cell (Apple, 1, None)) .pass
@@ -140,7 +140,7 @@ class TierSpec extends WordSpec {
 
     "track the bounds on the times" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = TestStoreConfig()
+      implicit val config = StoreTestConfig()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 3, None)) .pass
       builder.add (Cell (Orange, 5, None)) .pass
@@ -152,7 +152,7 @@ class TierSpec extends WordSpec {
 
     "track the number of bytes" in {
       implicit val (scheduler, disks) = setup()
-      implicit val config = TestStoreConfig()
+      implicit val config = StoreTestConfig()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 1, None)) .pass
       val tier = builder.result(). pass

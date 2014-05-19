@@ -5,7 +5,7 @@ import scala.language.postfixOps
 import com.treode.async.Backoff
 import com.treode.async.misc.RichInt
 
-class StoreConfig private (
+class StoreConfig private [store] (
     val priorValueEpoch: Epoch,
     val falsePositiveProbability: Double,
     val lockSpaceBits: Int,

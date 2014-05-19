@@ -66,25 +66,6 @@ private trait StoreTestTools {
           s"Expected success or timeout, found $cb")
   }
 
-  object TestStoreConfig {
-
-    def apply (
-        priorValueEpoch: Epoch = Epoch.zero,
-        falsePositiveProbability: Double = 0.01,
-        lockSpaceBits: Int = 4,
-        targetPageBytes: Int = 1<<10,
-        rebalanceBytes: Int = Int.MaxValue,
-        rebalanceEntries: Int = Int.MaxValue
-    ): StoreConfig =
-      StoreConfig (
-          priorValueEpoch,
-          falsePositiveProbability,
-          lockSpaceBits,
-          targetPageBytes,
-          rebalanceBytes,
-          rebalanceEntries)
-  }
-
   def Get (id: TableId, key: Bytes): ReadOp =
     ReadOp (id, key)
 

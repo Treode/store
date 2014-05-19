@@ -8,7 +8,7 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.disk.stubs.{CrashChecks, StubDisk, StubDiskDrive}
-import com.treode.store.{Bytes, StoreConfig}
+import com.treode.store.{Bytes, StoreTestConfig}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
@@ -26,7 +26,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   ) (implicit
       random: Random,
       scheduler: StubScheduler,
-      storeConfig: StoreConfig
+      storeConfig: StoreTestConfig
   ): TestTable = {
       implicit val recovery = StubDisk.recover (checkpoint, compaction)
       val _table = new TestMedic (ID)
@@ -43,7 +43,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   ) (implicit
       random: Random,
       scheduler: StubScheduler,
-      storeConfig: StoreConfig
+      storeConfig: StoreTestConfig
   ): TestTable = {
     implicit val recovery = StubDisk.recover (checkpoint, compaction)
     val _table = new TestMedic (ID)
@@ -61,10 +61,10 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       nbatch: Int
   ) (implicit
       random: Random,
-      storeConfig: StoreConfig
+      storeConfig: StoreTestConfig
   ) = {
 
-      implicit val storeConfig = TestStoreConfig()
+      implicit val storeConfig = StoreTestConfig()
       val tracker = new TableTracker
       val diskDrive = new StubDiskDrive
 
@@ -84,7 +84,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
 
   "The TierTable when" - {
 
-    implicit val storeConfig = TestStoreConfig()
+    implicit val storeConfig = StoreTestConfig()
 
     for { (name, checkpoint) <- Seq (
         "not checkpointed at all"   -> 0.0,

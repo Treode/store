@@ -90,7 +90,7 @@ private object StubAtomicHost {
 
     implicit val cluster = new StubPeer (id)
     implicit val library = new Library
-    implicit val storeConfig = TestStoreConfig()
+    implicit val storeConfig = StoreTestConfig()
     implicit val recovery = StubDisk.recover()
     implicit val _catalogs = Catalogs.recover()
     val _paxos = Paxos.recover()

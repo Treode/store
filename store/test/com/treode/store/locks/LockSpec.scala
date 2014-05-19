@@ -6,7 +6,7 @@ import org.scalatest.WordSpec
 import com.treode.async.Async
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.store.{Bytes, StoreConfig, StoreTestTools, TxClock}
+import com.treode.store.{Bytes, StoreTestConfig, StoreTestTools, TxClock}
 import com.treode.pickle.Picklers
 
 import StoreTestTools._
@@ -147,7 +147,7 @@ class LockSpec extends WordSpec with MockFactory {
 
     "acquire all locks before proceeding" in {
       implicit val scheduler = StubScheduler.random()
-      implicit val config = TestStoreConfig (lockSpaceBits = 8)
+      implicit val config = StoreTestConfig (lockSpaceBits = 8)
       val locks = new LockSpace
       val w1 = locks.write (1, Apple, Banana) .pass
       val w2 = locks.write (2, Banana, Orange) .capture()

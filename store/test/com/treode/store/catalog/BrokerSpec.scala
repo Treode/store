@@ -51,7 +51,7 @@ object BrokerBehaviors extends FreeSpec {
     implicit val disks = launch.disks
     launch.launch()
 
-    implicit val storeConfig = TestStoreConfig()
+    implicit val storeConfig = StoreTestConfig()
 
     val broker = new Broker (Map.empty)
 
@@ -96,7 +96,7 @@ object BrokerBehaviors extends FreeSpec {
   private def newBrokers = {
     implicit val random = new Random (0)
     implicit val scheduler = StubScheduler.random (random)
-    implicit val config = TestStoreConfig()
+    implicit val config = StoreTestConfig()
     val broker1 = new RichBroker
     val broker2 = new RichBroker
     (scheduler, broker1, broker2)

@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.disk.Position
-import com.treode.store.{Atlas, Cohort, Residents}
+import com.treode.store.{Atlas, Cohort, Residents, StoreTestConfig}
 import org.scalatest.FreeSpec
 
 import Cohort.settled
@@ -10,7 +10,7 @@ import TierTestTools._
 
 class TiersSpec extends FreeSpec {
 
-  implicit val config = TestStoreConfig()
+  implicit val config = StoreTestConfig()
 
   private def residents (cohorts: Int*): Residents =
     Atlas (cohorts .map (settled (_)) .toArray, 1) .residents (0)
