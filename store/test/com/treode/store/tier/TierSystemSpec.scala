@@ -20,15 +20,13 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   val ID = 0xC8
 
   private def setup (
-      checkpoint: Double,
-      compaction: Double,
       diskDrive: StubDiskDrive
   ) (implicit
       random: Random,
       scheduler: StubScheduler,
-      storeConfig: StoreTestConfig
+      config: StoreTestConfig
   ): TestTable = {
-      implicit val recovery = StubDisk.recover (checkpoint, compaction)
+      implicit val recovery = StubDisk.recover (config.stubDiskConfig)
       val _table = new TestMedic (ID)
       val launch = recovery.attach (diskDrive) .pass
       val table = _table.launch (launch) .pass
@@ -37,15 +35,13 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   }
 
   private def recover (
-      checkpoint: Double,
-      compaction: Double,
       diskDrive: StubDiskDrive
   ) (implicit
       random: Random,
       scheduler: StubScheduler,
-      storeConfig: StoreTestConfig
+      config: StoreTestConfig
   ): TestTable = {
-    implicit val recovery = StubDisk.recover (checkpoint, compaction)
+    implicit val recovery = StubDisk.recover (config.stubDiskConfig)
     val _table = new TestMedic (ID)
     val launch = recovery.reattach (diskDrive) .pass
     val table = _table.launch (launch) .pass
@@ -54,37 +50,34 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
   }
 
   def check (
-      checkpoint: Double,
-      compaction: Double,
       nkeys: Int,
       nrounds: Int,
       nbatch: Int
   ) (implicit
       random: Random,
-      storeConfig: StoreTestConfig
+      config: StoreTestConfig
   ) = {
 
-      implicit val storeConfig = StoreTestConfig()
       val tracker = new TableTracker
       val diskDrive = new StubDiskDrive
 
-      crash.info (s"check ($checkpoint, $compaction, $nkeys, $nrounds, $nbatch)")
+      crash.info (s"check ($nkeys, $nrounds, $nbatch, $config)")
 
       .setup { implicit scheduler =>
-        val rawtable = setup (checkpoint, compaction, diskDrive)
+        val rawtable = setup (diskDrive)
         val table = new TrackedTable (rawtable, tracker)
         (0 until nrounds) .async.foreach { _ =>
           table.putAll (random.nextPut (nkeys, nbatch): _*)
         }}
 
       .recover { implicit scheduler =>
-        val table = recover (checkpoint, compaction, diskDrive)
+        val table = recover (diskDrive)
         tracker.check (table.toMap)
       }}
 
   "The TierTable when" - {
 
-    implicit val storeConfig = StoreTestConfig()
+
 
     for { (name, checkpoint) <- Seq (
         "not checkpointed at all"   -> 0.0,
@@ -98,6 +91,10 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
           "compacted frequently"   -> 0.1)
     } s"$name should" - {
 
+      implicit val storeConfig = StoreTestConfig (
+          checkpointProbability = checkpoint,
+          compactionProbability = compaction)
+
       for { (name, (nkeys, nrounds, nbatch)) <- Seq (
           "recover from a crash"             -> (100, 10, 10),
           "recover with lots of overwrites"  -> (30, 10, 10),
@@ -105,5 +102,5 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       } name taggedAs (Intensive, Periodic) in {
 
         forAllCrashes { implicit random =>
-          check (checkpoint, compaction, nkeys, nrounds, nbatch)
+          check (nkeys, nrounds, nbatch)
         }}}}}}
