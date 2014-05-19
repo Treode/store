@@ -1,12 +1,17 @@
 package com.treode.store
 
+import com.treode.disk.stubs.StubDiskConfig
+
 class StoreTestConfig (
     priorValueEpoch: Epoch,
     falsePositiveProbability: Double,
     lockSpaceBits: Int,
     targetPageBytes: Int,
     rebalanceBytes: Int,
-    rebalanceEntries: Int
+    rebalanceEntries: Int,
+    val checkpointProbability: Double,
+    val compactionProbability: Double,
+    val messageFlakiness: Double
 ) extends StoreConfig (
     priorValueEpoch,
     falsePositiveProbability,
@@ -14,7 +19,12 @@ class StoreTestConfig (
     targetPageBytes,
     rebalanceBytes,
     rebalanceEntries
-)
+) {
+
+  val stubDiskConfig = StubDiskConfig (
+      checkpointProbability,
+      compactionProbability)
+}
 
 object StoreTestConfig {
 
@@ -24,7 +34,10 @@ object StoreTestConfig {
       lockSpaceBits: Int = 4,
       targetPageBytes: Int = 1<<10,
       rebalanceBytes: Int = Int.MaxValue,
-      rebalanceEntries: Int = Int.MaxValue
+      rebalanceEntries: Int = Int.MaxValue,
+      checkpointProbability: Double = 0.1,
+      compactionProbability: Double = 0.1,
+      messageFlakiness: Double = 0.1
   ): StoreTestConfig =
     new StoreTestConfig (
         priorValueEpoch,
@@ -32,5 +45,8 @@ object StoreTestConfig {
         lockSpaceBits,
         targetPageBytes,
         rebalanceBytes,
-        rebalanceEntries)
+        rebalanceEntries,
+        checkpointProbability,
+        compactionProbability,
+        messageFlakiness)
 }

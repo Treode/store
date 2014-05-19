@@ -3,7 +3,7 @@ package com.treode.store.paxos
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.StubDiskDrive
-import com.treode.store.{Bytes, StoreTestKit}
+import com.treode.store.{Bytes, StoreTestConfig, StoreTestKit}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
@@ -27,6 +27,10 @@ class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
             "compacted frequently"   -> 0.1)
       } s"$name with" - {
 
+        implicit val config = StoreTestConfig (
+            checkpointProbability = checkpoint,
+            compactionProbability = compaction)
+
         for { (name, (nbatch, nputs)) <- Seq (
             "some batches"     -> (10, 10),
             "lots of batches"  -> (100, 10),
@@ -34,7 +38,7 @@ class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
         } name taggedAs (Intensive, Periodic) in {
 
           forAllCrashes { implicit random =>
-            crashAndRecover (nbatch, nputs, checkpoint, compaction)
+            crashAndRecover (nbatch, nputs)
           }}}}}
 
     "achieve consensus with" - {
@@ -44,28 +48,30 @@ class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
           "a flakey network"   -> 0.1)
       } s"$name and" - {
 
+        implicit val config = StoreTestConfig (messageFlakiness = flakiness)
+
         "stable hosts" taggedAs (Intensive, Periodic) in {
-          forThreeStableHosts (0.1, 0.1, flakiness) { implicit random =>
+          forThreeStableHosts { implicit random =>
             achieveConsensus (10, 10)
           }}
 
         "a host is offline" taggedAs (Intensive, Periodic) in {
-          forOneHostOffline (0.1, 0.1, flakiness) { implicit random =>
+          forOneHostOffline { implicit random =>
             achieveConsensus (10, 10)
           }}
 
         "a host crashes" taggedAs (Intensive, Periodic) in {
-          forOneHostCrashing (0.1, 0.1, flakiness) { implicit random =>
+          forOneHostCrashing { implicit random =>
             achieveConsensus (10, 10)
           }}
 
         "a host reboots" taggedAs (Intensive, Periodic) in {
-          forOneHostRebooting (0.1, 0.1, flakiness) { implicit random =>
+          forOneHostRebooting { implicit random =>
             achieveConsensus (10, 10)
           }}
 
         "a host bounces" taggedAs (Intensive, Periodic) in {
-          forOneHostBouncing (0.1, 0.1, flakiness) { implicit random =>
+          forOneHostBouncing { implicit random =>
             achieveConsensus (10, 10)
           }}}}
 

@@ -2,13 +2,10 @@ package com.treode.disk.stubs
 
 import scala.util.Random
 
-private case class StubDiskConfig (
-    checkpointProbability: Double,
-    compactionProbability: Double
+class StubDiskConfig private (
+    val checkpointProbability: Double,
+    val compactionProbability: Double
 ) {
-
-  require (0.0 <= checkpointProbability && checkpointProbability <= 1.0)
-  require (0.0 <= compactionProbability && compactionProbability <= 1.0)
 
   val checkpointEntries =
     if (checkpointProbability > 0)
@@ -30,3 +27,19 @@ private case class StubDiskConfig (
     compactionProbability > 0.0 &&
       (entries > compactionEntries || random.nextDouble < compactionProbability)
 }
+
+object StubDiskConfig {
+
+  def apply (
+      checkpointProbability: Double = 0.1,
+      compactionProbability: Double = 0.1
+  ): StubDiskConfig = {
+
+      require (0.0 <= checkpointProbability && checkpointProbability <= 1.0)
+
+      require (0.0 <= compactionProbability && compactionProbability <= 1.0)
+
+      new StubDiskConfig (
+          checkpointProbability,
+          compactionProbability)
+  }}

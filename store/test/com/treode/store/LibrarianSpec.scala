@@ -26,8 +26,8 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
 
     implicit val library = new Library
 
-    implicit val storeConfig = StoreTestConfig()
-    implicit val recovery = StubDisk.recover()
+    implicit val config = StoreTestConfig()
+    implicit val recovery = StubDisk.recover (config.stubDiskConfig)
     implicit val _catalogs = Catalogs.recover()
 
     val diskDrive = new StubDiskDrive

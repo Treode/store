@@ -76,21 +76,21 @@ private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] 
 
   def boot (
       id: HostId,
-      checkpoint: Double,
-      compaction: Double,
       drive: StubDiskDrive,
       init: Boolean
   ) (implicit
       random: Random,
       parent: Scheduler,
-      network: StubNetwork
+      network: StubNetwork,
+      config: StoreTestConfig
   ): Async [StubPaxosHost] = {
+
+    import config.{checkpointProbability, compactionProbability}
 
     implicit val scheduler = new ChildScheduler (parent)
     implicit val cluster = new StubPeer (id)
     implicit val library = new Library
-    implicit val storeConfig = StoreTestConfig()
-    implicit val recovery = StubDisk.recover (checkpoint, compaction)
+    implicit val recovery = StubDisk.recover (config.stubDiskConfig)
     implicit val _catalogs = Catalogs.recover()
     val _paxos = Paxos.recover()
 
@@ -103,6 +103,7 @@ private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] 
       new StubPaxosHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, paxos)
     }}
 
-  def install () (implicit r: Random, s: Scheduler, n: StubNetwork): Async [StubPaxosHost] =
-    boot (r.nextLong, 0.1, 0.1, new StubDiskDrive, true)
-}
+  def install () (implicit r: Random, s: Scheduler, n: StubNetwork): Async [StubPaxosHost] = {
+    implicit val config = StoreTestConfig()
+    boot (r.nextLong, new StubDiskDrive, true)
+  }}

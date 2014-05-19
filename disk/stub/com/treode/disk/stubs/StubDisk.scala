@@ -86,6 +86,12 @@ object StubDisk {
     def attach (disk: StubDiskDrive): Async [Launch]
   }
 
+  def recover (config: StubDiskConfig) (implicit
+      random: Random,
+      scheduler: Scheduler
+  ): StubRecovery =
+    new StubRecoveryAgent () (random, scheduler, config)
+
   def recover (
       checkpoint: Double = 0.1,
       compaction: Double = 0.1

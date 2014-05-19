@@ -6,7 +6,7 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.{CrashChecks, StubDiskDrive}
-import com.treode.store.StoreClusterChecks
+import com.treode.store.{StoreClusterChecks, StoreTestConfig}
 import org.scalatest.{Informing, Suite}
 
 import PaxosTestTools._
@@ -16,11 +16,10 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
 
   private [paxos] def crashAndRecover (
       nbatch: Int,
-      nputs: Int,
-      checkpoint: Double,
-      compaction: Double
+      nputs: Int
   ) (implicit
-      random: Random
+      random: Random,
+      config: StoreTestConfig
   ) = {
 
     val tracker = new PaxosTracker
@@ -29,7 +28,7 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
     setup { implicit scheduler =>
       implicit val network = StubNetwork (random)
       for {
-        host <- StubPaxosHost.boot (H1, checkpoint, compaction, disk, true)
+        host <- StubPaxosHost.boot (H1, disk, true)
         _ = host.setAtlas (settled (host))
         _ <- tracker.batches (nbatch, nputs, host)
       } yield ()
@@ -37,7 +36,7 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
 
     .recover { implicit scheduler =>
       implicit val network = StubNetwork (random)
-      val host = StubPaxosHost .boot (H1, checkpoint, compaction, disk, false) .pass
+      val host = StubPaxosHost .boot (H1, disk, false) .pass
       host.setAtlas (settled (host))
       tracker.check (host) .pass
     }}
