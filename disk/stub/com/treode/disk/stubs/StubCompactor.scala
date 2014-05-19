@@ -18,14 +18,13 @@ private class StubCompactor (
      config: StubConfig
 ) {
 
-  import config.compactionProbability
-
   val fiber = new Fiber
   var pages: StubPageRegistry = null
   var cleanq = Set.empty [(TypeId, ObjectId)]
   var compactq = Set.empty [(TypeId, ObjectId)]
   var book = Map.empty [(TypeId, ObjectId), (Set [PageGroup], List [Callback [Unit]])]
   var cleanreq = false
+  var entries = 0
   var engaged = true
 
   private def reengage() {
@@ -70,6 +69,7 @@ private class StubCompactor (
   private def probeForClean(): Unit =
     guard {
       engaged = true
+      entries = 0
       for {
         (groups, segments) <- pages.probe (disk.cleanable())
       } yield compact (groups, segments)
@@ -107,7 +107,8 @@ private class StubCompactor (
 
   def tally(): Unit =
     fiber.execute {
-      if (compactionProbability > 0.0 && random.nextDouble < compactionProbability)
+      entries += 1
+      if (config.compact (entries))
         if (!engaged)
           probeForClean()
         else

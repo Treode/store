@@ -15,11 +15,10 @@ private class StubCheckpointer (implicit
     config: StubConfig
 ) {
 
-  import config.checkpointProbability
-
   val fiber = new Fiber
   var checkpoints: CheckpointRegistry = null
   var checkreqs = Queue.empty [Callback [Unit]]
+  var entries = 0
   var engaged = true
 
   private def reengage() {
@@ -33,6 +32,7 @@ private class StubCheckpointer (implicit
 
   private def _checkpoint (cb: Callback [Unit]) {
     engaged = true
+    entries = 0
     val mark = disk.mark()
     checkpoints .checkpoint() .map { _ =>
       disk.checkpoint (mark)
@@ -56,7 +56,8 @@ private class StubCheckpointer (implicit
 
   def tally(): Unit =
     fiber.execute {
-      if (checkpointProbability > 0.0 && random.nextDouble < checkpointProbability)
+      entries += 1
+      if (config.checkpoint (entries))
         if (checkreqs.isEmpty)
           if (engaged)
             checkreqs = checkreqs.enqueue (ignore [Unit])

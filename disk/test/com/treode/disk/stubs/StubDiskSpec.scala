@@ -1,17 +1,17 @@
-package com.treode.disk
+package com.treode.disk.stubs
 
 import scala.util.Random
 
 import com.treode.async.Async
 import com.treode.async.stubs.implicits._
-import com.treode.disk.stubs.{CrashChecks, StubDisk, StubDiskDrive}
+import com.treode.disk.{DiskTestTools, LogReplayer, LogTracker, StuffTracker}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
 import Async.supply
 import DiskTestTools._
 
-class StubDisksSpec extends FreeSpec with CrashChecks {
+class StubDiskSpec extends FreeSpec with CrashChecks {
 
   "The logger when" - {
 
@@ -76,10 +76,10 @@ class StubDisksSpec extends FreeSpec with CrashChecks {
         import launch.disks
         if (cleaning) tracker.attach()
         launch.launch()
-        tracker.batch (100, 10)
+        tracker.batch (40, 10)
       }
 
-      .assert (!cleaning || tracker.probed && tracker.compacted, "Expected cleaning.")
+      .assert (!cleaning || tracker.probed && tracker.compacted, "Expected cleaning")
 
       .recover { implicit scheduler =>
         implicit val recovery = StubDisk.recover (checkpoint, compaction)

@@ -9,11 +9,15 @@ import com.treode.async.stubs.implicits._
 import com.treode.disk.stubs.CrashChecks
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
+import org.scalatest.time.SpanSugar
 
 import Async.{latch, supply}
 import DiskTestTools._
+import SpanSugar._
 
 class DiskSystemSpec extends FreeSpec with CrashChecks {
+
+  override val timeLimit = 15 minutes
 
   "The logger should replay items" - {
 
