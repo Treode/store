@@ -24,7 +24,22 @@ class StoreTestConfig (
   val stubDiskConfig = StubDiskConfig (
       checkpointProbability,
       compactionProbability)
-}
+
+  override def toString = {
+    val s = new StringBuilder
+    s ++= "StoreTestConfig("
+    s ++= s"priorValueEpoch = $priorValueEpoch, "
+    s ++= s"falsePositiveProbability = $falsePositiveProbability, "
+    s ++= s"lockSpaceBits = $lockSpaceBits, "
+    s ++= s"targetPageBytes = $targetPageBytes, "
+    s ++= s"rebalanceBytes = $rebalanceBytes, "
+    s ++= s"rebalanceEntries = $rebalanceEntries, "
+    s ++= s"checkpointProbability = $checkpointProbability, "
+    s ++= s"compactionProbability = $compactionProbability, "
+    s ++= s"messageFlakiness = $messageFlakiness"
+    s ++= ")"
+    s.result
+  }}
 
 object StoreTestConfig {
 

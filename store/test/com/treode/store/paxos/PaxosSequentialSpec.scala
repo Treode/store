@@ -75,7 +75,7 @@ class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
             achieveConsensus (10, 10)
           }}}}
 
-    "rebalance" in {
+    "rebalance" in { pending
       implicit val kit = StoreTestKit.random()
       import kit.{network, random, scheduler}
 

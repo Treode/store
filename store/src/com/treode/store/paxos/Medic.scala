@@ -15,6 +15,11 @@ private class Medic (
 
   import kit.archive
 
+  def opened (default: Bytes): Unit = synchronized {
+    if (this.default.isEmpty)
+      this.default = Some (default)
+  }
+
   def promised (ballot: BallotNumber): Unit = synchronized {
     if (this.ballot < ballot)
       this.ballot = ballot
@@ -46,6 +51,8 @@ private class Medic (
       a.state = new a.Closed (chosen.get, 0)
     else if (default.isDefined)
       a.state = new a.Deliberating (default.get, ballot, proposal, Set.empty)
+    else if (proposal.isDefined)
+      a.state = new a.Deliberating (proposal.get._2, ballot, proposal, Set.empty)
     else
       assert (false, s"Failed to recover paxos instance $key:$time")
     kit.acceptors.recover (key, time, a)

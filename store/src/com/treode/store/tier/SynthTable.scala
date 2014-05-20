@@ -52,7 +52,7 @@ private class SynthTable (
 
   def typ = desc.id
 
-  def get (key: Bytes, time: TxClock): Async [Cell] = guard {
+  def get (key: Bytes, time: TxClock): Async [Cell] = disks.join {
 
     val mkey = Key (key, time)
 

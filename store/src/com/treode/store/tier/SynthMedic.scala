@@ -37,7 +37,7 @@ private class SynthMedic (
 
     readLock.lock()
     val needWrite = try {
-      if (gen < this.gen && tiers.isEmpty) {
+      if (gen < this.gen) {
         secondary.put (mkey, value)
         false
       } else if (gen == this.gen) {
@@ -55,7 +55,7 @@ private class SynthMedic (
     if (needWrite) {
       writeLock.lock()
       try {
-        if (gen < this.gen && tiers.isEmpty) {
+        if (gen < this.gen) {
           secondary.put (mkey, value)
         } else if (gen == this.gen) {
           primary.put (mkey, value)

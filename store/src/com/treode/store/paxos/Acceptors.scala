@@ -49,16 +49,27 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
 
   def checkpoint(): Async [Unit] =
     guard {
+
       val residents = library.residents
-      for {
-        _ <- latch (
-            archive.checkpoint (residents) .flatMap (Acceptors.checkpoint.record (_)),
-            materialize (acceptors.values) .latch.unit foreach (_.checkpoint()))
+
+      val _archive = for {
+        meta <- archive.checkpoint (residents)
+        _ <- Acceptors.checkpoint.record (meta)
       } yield ()
+
+      val _acceptors = for {
+        a <- materialize (acceptors.values) .latch.unit
+      } {
+        a.checkpoint()
+      }
+
+      latch (_archive, _acceptors) .map (_ => ())
     }
 
   def attach () (implicit launch: Disk.Launch) {
     import Acceptor.{choose, propose, query}
+
+    launch.checkpoint (checkpoint())
 
     Acceptors.archive.handle (this)
 

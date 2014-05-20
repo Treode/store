@@ -237,7 +237,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
       require (chosen == this.chosen, "Paxos disagreement")
 
     def checkpoint(): Async [Unit] =
-      Acceptor.close.record (key, time, chosen, gen)
+      supply()
 
     override def toString = s"Acceptor.Closed($key, $chosen)"
   }

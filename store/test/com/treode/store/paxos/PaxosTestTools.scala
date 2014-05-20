@@ -6,15 +6,10 @@ import com.treode.store.{Atlas, Bytes, Cohort, StoreTestTools}
 
 private object PaxosTestTools extends StoreTestTools {
 
-  private val pkey = {
-    import PaxosPicklers._
-    tuple (ulong, ulong)
-  }
-
   implicit class RichRandom (random: Random) {
 
     def nextKey(): Bytes =
-      Bytes (pkey, (random.nextLong(), random.nextLong()))
+      Bytes (PaxosPicklers.fixedLong, random.nextLong & 0x7FFFFFFFFFFFFFFFL)
 
     def nextKeys (count: Int): Seq [Bytes] =
       Seq.fill (count) (nextKey())

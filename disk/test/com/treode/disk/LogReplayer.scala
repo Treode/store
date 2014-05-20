@@ -16,7 +16,7 @@ class LogReplayer {
   def put (n: Int, g: Int, k: Int, v: Int) {
     assert (n >= round)
     round = n
-    if (g < gen && reread.isEmpty) {
+    if (g < gen) {
       secondary += k -> v
     } else if (g == gen) {
       primary += k -> v

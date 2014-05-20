@@ -59,7 +59,9 @@ class StubDiskDrive (implicit random: Random) {
 
   private [stubs] def checkpoint (mark: Int): Unit =
     synchronized {
-      records.remove (0, mark)
+      val _records = new ArrayList [Seq [StubRecord]] (records.size - mark)
+      _records.addAll (records.subList (mark, records.size))
+      records = _records
     }
 
   private [stubs] def log (records: Seq [StubRecord]): Async [Unit] =

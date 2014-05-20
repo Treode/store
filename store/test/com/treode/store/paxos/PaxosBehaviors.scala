@@ -25,7 +25,9 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
     val tracker = new PaxosTracker
     val disk = new StubDiskDrive
 
-    setup { implicit scheduler =>
+    crash.info (s"crashAndRecover ($nbatch, $nputs, $config)")
+
+    .setup { implicit scheduler =>
       implicit val network = StubNetwork (random)
       for {
         host <- StubPaxosHost.boot (H1, disk, true)
@@ -46,7 +48,9 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
 
     val tracker = new PaxosTracker
 
-    cluster.host (StubPaxosHost)
+    cluster.info (s"acheiveConsensus ($nbatches, $nputs)")
+
+    .host (StubPaxosHost)
 
     .setup { implicit scheduler => (h1, h2) =>
       tracker.batches (nbatches, nputs, h1, h2)

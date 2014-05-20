@@ -7,7 +7,6 @@ import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.store.Bytes
-
 import PaxosTestTools._
 
 class PaxosTracker {
@@ -52,16 +51,23 @@ class PaxosTracker {
 
   def check (host: StubPaxosHost) (implicit scheduler: Scheduler): Async [Unit] =
     for {
-      _ <- for ((key, value) <- accepted.async)
-            for (_found <- host.propose (key, 0, Bytes (-1)); found = _found.int)
-              yield assert (
-                  found == -1 || found == value,
-                  s"Expected $key to be $value, found $found.")
-      _ <- for ((key, values) <- attempted.async; if !(accepted contains key))
-            for (_found <- host.propose (key, 0, Bytes (-1)); found = _found.int)
-              yield
+      _ <- for ((key, value) <- accepted.async) {
+            for {
+              _found <- host.propose (key, 0, Bytes (-1))
+            } yield {
+              val found = _found.int
+              assert (
+                  found == value,
+                  s"Expected ${key.long} to be $value, found $found.")
+            }}
+      _ <- for ((key, values) <- attempted.async; if !(accepted contains key)) {
+            for {
+              _found <- host.propose (key, 0, Bytes (-1))
+            } yield {
+              val found = _found.int
               assert (
                   found == -1 || (values contains found),
-                  s"Expected $key to be one of $values, found $found")
+                  s"Expected ${key.long} to be one of $values, found $found")
+            }}
     } yield ()
 }
