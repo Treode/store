@@ -83,13 +83,12 @@ private class SynthMedic (
       if (mg == tg - 1) {
         secondary = newMemTier
       } else if (mg >= tg) {
+        gen = (mg+1) << genStepBits
         primary = newMemTier
         secondary = newMemTier
       }
-      if (meta.gen > tiers.gen) {
-        gen = (meta.gen + genStepSize) & ~genStepMask
+      if (meta.gen > tiers.gen)
         tiers = meta.tiers
-      }
     } finally {
       writeLock.unlock()
     }}

@@ -2,8 +2,8 @@ package com.treode.store.tier
 
 class TableTracker {
 
-  private var attempted = Map.empty [Int, Option [Int]]
-  private var accepted = Map.empty [Int, Option [Int]]
+  private var attempted = Map.empty [Int, Option [Int]] .withDefaultValue (None)
+  private var accepted = Map.empty [Int, Option [Int]] .withDefaultValue (None)
 
   def putting (key: Int, value: Int): Unit =
     attempted += key -> Some (value)
@@ -22,8 +22,8 @@ class TableTracker {
       assert (
           recovered.contains (k) || attempted (k) == None,
           s"Expected $k to be recovered")
-    for ((k, v) <- recovered)
-      assert (
-          attempted (k) == Some (v) || accepted (k) == Some (v),
-          s"Expected $k to be ${attempted (k)} or ${accepted (k)}")
-  }}
+    for ((k, v) <- recovered) {
+      val expected = attempted (k) .toSet ++ accepted (k) .toSet
+      assert (expected contains v,
+          s"Expected $k to be ${expected mkString " or "}, found $v")
+    }}}
