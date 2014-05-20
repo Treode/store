@@ -13,6 +13,7 @@ import Stuff.pager
 
 class StuffTracker (implicit random: Random) {
 
+  private var seeds = Set.empty [Long]
   private var written = Map.empty [Long, Position]
   private var _probed = false
   private var _compacted = false
@@ -26,6 +27,7 @@ class StuffTracker (implicit random: Random) {
     var seed = random.nextLong()
     while (written contains seed)
       seed = random.nextLong()
+    seeds += seed
     for {
       pos <- pager.write (0, seed, Stuff (seed))
     } yield {
@@ -54,7 +56,9 @@ class StuffTracker (implicit random: Random) {
       def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
         supply {
           _probed = true
-          val (keep, remove) = groups partition (_ => random.nextInt (3) == 0)
+          val (keep, remove) = groups partition { s =>
+            !(written contains s) || random.nextInt (3) == 0
+          }
           written --= remove
           keep
         }

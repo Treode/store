@@ -107,7 +107,7 @@ private object DiskTestTools {
         val ledger = PageLedger.read (drive.file, seg.base) .pass
         assert (
             ledger.get (typ, obj, grp) > 0,
-            s"Expected ($typ, $obj, $grp) in ledger at ${seg.base}.")
+            s"Expected ($typ, $obj, $grp) in ledger at ${seg.base} on ${drive.id}.")
       }}
 
     // After detaching, closed multiplexers may still reside in the dispatcher's receiver
