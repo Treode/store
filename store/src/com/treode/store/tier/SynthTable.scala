@@ -1,6 +1,7 @@
 package com.treode.store.tier
 
 import java.util.concurrent.locks.ReentrantReadWriteLock
+import scala.collection.JavaConversions
 
 import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.async.implicits._
@@ -9,6 +10,7 @@ import com.treode.store._
 
 import Async.{async, guard, supply, when}
 import Callback.ignore
+import JavaConversions._
 import Scheduler.toRunnable
 import SynthTable.{genStepMask, genStepSize}
 import TierTable.Meta
@@ -47,7 +49,6 @@ private class SynthTable (
 
   val readLock = lock.readLock()
   val writeLock = lock.writeLock()
-  var checkpointing = false
   var queue = List.empty [Runnable]
 
   def typ = desc.id
@@ -156,7 +157,7 @@ private class SynthTable (
   def probe (groups: Set [Long]): Async [Set [Long]] = async { cb =>
     writeLock.lock()
     try {
-      if (checkpointing)
+      if (!secondary.isEmpty)
         queue ::= toRunnable (probe (groups), cb)
       else
         cb.pass (tiers.active)
@@ -167,11 +168,21 @@ private class SynthTable (
   def compact(): Unit =
     pager.compact (id.id) run (ignore)
 
+  def countKeys (tier: MemTier): Long = {
+    var count = 0L
+    var key: Bytes = null
+    for (k <- tier.keySet; if k.key != k) {
+      key = k.key
+      count += 1
+    }
+    count
+  }
+
   def compact (chosen: Tiers, residents: Residents): Async [Meta] = guard {
     val gen = tiers.gen + 1
     assert ((gen & genStepMask) != 0, "Tier compacted too many times")
     val iter = TierIterator .merge (desc, chosen) .clean (desc, id, residents)
-    val est = countMemTierKeys (primary) + chosen.keys
+    val est = countKeys (primary) + chosen.estimate (residents)
     for {
       tier <- TierBuilder.build (desc, id, gen, est, residents, iter)
     } yield {
@@ -186,11 +197,14 @@ private class SynthTable (
   def compact (groups: Set [Long], residents: Residents): Async [Meta] = async { cb =>
     writeLock.lock()
     try {
-      if (checkpointing) {
+      if (!secondary.isEmpty) {
         queue ::= toRunnable (compact (groups, residents), cb)
       } else {
         val chosen = tiers.choose (groups, residents)
-        compact (chosen, residents) run (cb)
+        if (chosen.isEmpty)
+          cb.pass (new Meta (tiers.gen, tiers))
+        else
+          compact (chosen, residents) run (cb)
       }
     } finally {
       writeLock.unlock()
@@ -203,34 +217,37 @@ private class SynthTable (
       require (secondary.isEmpty, "Checkpoint already in progress.")
       val g = this.gen
       val p = this.primary
-      this.gen += genStepSize
-      this.primary = secondary
-      secondary = p
-      checkpointing = true
+      if (!this.primary.isEmpty) {
+        this.gen += genStepSize
+        this.primary = secondary
+        secondary = p
+      }
       (g, p)
     } finally {
       writeLock.unlock()
     }
 
-    val iter = TierIterator .adapt (primary) .clean (desc, id, residents)
-    val est = countMemTierKeys (primary)
-    for {
-      tier <- TierBuilder.build (desc, id, gen, est, residents, iter)
-    } yield {
-      writeLock.lock()
-      val (meta, queue) = try {
-        val q = this.queue
-        this.queue = List.empty
-        checkpointing = false
-        secondary = newMemTier
-        tiers = tiers.compacted (tier, Tiers.empty)
-        (new Meta (gen, tiers), q)
-      } finally {
-        writeLock.unlock()
-      }
-      queue foreach (_.run)
-      meta
-    }}}
+    if (primary.isEmpty) {
+      supply (new Meta (tiers.gen, tiers))
+    } else {
+      val iter = TierIterator .adapt (primary) .clean (desc, id, residents)
+      val est = countKeys (primary)
+      for {
+        tier <- TierBuilder.build (desc, id, gen, est, residents, iter)
+      } yield {
+        writeLock.lock()
+        val (meta, queue) = try {
+          val q = this.queue
+          this.queue = List.empty
+          secondary = newMemTier
+          tiers = tiers.compacted (tier, Tiers.empty)
+          (new Meta (gen, tiers), q)
+        } finally {
+          writeLock.unlock()
+        }
+        queue foreach (_.run)
+        meta
+      }}}}
 
 private object SynthTable {
 

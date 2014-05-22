@@ -77,8 +77,6 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
 
   "The TierTable when" - {
 
-
-
     for { (name, checkpoint) <- Seq (
         "not checkpointed at all"   -> 0.0,
         "checkpointed occasionally" -> 0.01,

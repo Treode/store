@@ -15,9 +15,9 @@ class TiersSpec extends FreeSpec {
   private def residents (cohorts: Int*): Residents =
     Atlas (cohorts .map (settled (_)) .toArray, 1) .residents (0)
 
-  private def tier (gen: Int, res: Residents = all, bytes: Int = 0): Tier = {
+  private def tier (gen: Int, res: Residents = all, keys: Int = 1, bytes: Int = 0): Tier = {
     val pos = Position (-1, -1, -1)
-    Tier (gen, pos, pos, res, 0, 0, 0, 0, bytes)
+    Tier (gen, pos, pos, res, keys, 0, 0, 0, bytes)
   }
 
   private def tiers (ts: Tier*): Tiers =
@@ -106,35 +106,68 @@ class TiersSpec extends FreeSpec {
   "When Tiers.compacted is given" - {
 
     val t1 = tier (1)
+    val t1e = tier (1, keys = 0)
     val t2 = tier (2)
+    val t2e = tier (2, keys = 0)
     val t3 = tier (3)
+    val t3e = tier (3, keys = 0)
 
     "no tiers, it should yield the one new tier" in {
       assertResult (tiers (t1)) {
         tiers() .compacted (t1, tiers())
       }}
 
-    "one tier, the new tier replacing nothing, it should work" in {
+    "no tiers and an empty new tier, it should yield no tiers" in {
+      assertResult (tiers()) {
+        tiers() .compacted (t1e, tiers())
+      }}
+
+    "one tier, and a new tier replacing nothing, it should work" in {
       assertResult (tiers (t2, t1)) {
         tiers (t1) .compacted (t2, tiers())
       }}
 
-    "one tier, the new tier replacing it, it should work" in {
+    "one tier, and a new empty tier replacing nothing, it should work" in {
+      assertResult (tiers (t1)) {
+        tiers (t1) .compacted (t2e, tiers())
+      }}
+
+    "one tier, and a new tier replacing it, it should work" in {
       assertResult (tiers (t2)) {
         tiers (t1) .compacted (t2, tiers (t1))
       }}
 
-    "two tiers, the new one replacing the younger, it should work" in {
-      assertResult (tiers (t3, t1)) {
-        tiers (t2, t1) .compacted (t3, tiers (t2))
+    "one tier, and a new empty tier replacing it, it should work" in {
+      assertResult (tiers()) {
+        tiers (t1) .compacted (t2e, tiers (t1))
       }}
 
-    "two tiers, the new one replacing the older, it should work" in {
+    "two tiers, and a new one replacing the younger, it should work" in {
+      assertResult (tiers (t1)) {
+        tiers (t2, t1) .compacted (t3e, tiers (t2))
+      }}
+
+    "two tiers, and a new empty one replacing the younger, it should work" in {
+      assertResult (tiers (t1)) {
+        tiers (t2, t1) .compacted (t3e, tiers (t2))
+      }}
+
+    "two tiers, and a new one replacing the older, it should work" in {
       assertResult (tiers (t3, t2)) {
         tiers (t3, t1) .compacted (t2, tiers (t1))
       }}
 
-    "two tiers, the new one replacing both, it should work" in {
+    "two tiers, and a new empty one replacing the older, it should work" in {
+      assertResult (tiers (t3)) {
+        tiers (t3, t1) .compacted (t2e, tiers (t1))
+      }}
+
+    "two tiers, and a new one replacing both, it should work" in {
       assertResult (tiers (t3)) {
         tiers (t2, t1) .compacted (t3, tiers (t2, t1))
+      }}
+
+     "two tiers, and a new empty one replacing both, it should work" in {
+      assertResult (tiers()) {
+        tiers (t2, t1) .compacted (t3e, tiers (t2, t1))
       }}}}

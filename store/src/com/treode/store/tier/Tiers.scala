@@ -17,8 +17,8 @@ import com.treode.store.{Residents, StoreConfig, StorePicklers}
   def gen: Long =
     if (tiers.isEmpty) 0 else tiers.head.gen
 
-  def keys: Long =
-    tiers .map (_.keys) .sum
+  def estimate (other: Residents): Long =
+    tiers .map (_.estimate (other)) .sum
 
   def active: Set [Long] =
     tiers .map (_.gen) .toSet
@@ -45,7 +45,8 @@ import com.treode.store.{Residents, StoreConfig, StorePicklers}
     val keep = if (replace.tiers.isEmpty) Long.MaxValue else replace.tiers.map (_.gen) .min
     val bldr = Seq.newBuilder [Tier]
     bldr ++= tiers takeWhile (_.gen > tier.gen)
-    bldr += tier
+    if (tier.keys > 0)
+      bldr += tier
     bldr ++= tiers dropWhile (_.gen >= keep)
     new Tiers (bldr.result)
   }

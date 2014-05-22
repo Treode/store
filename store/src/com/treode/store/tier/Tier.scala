@@ -66,6 +66,9 @@ private case class Tier (
           cb.fail (t)
       }}
 
+  def estimate (other: Residents): Long =
+    (keys.toDouble * residents.stability (other) * 1.1).toLong
+
   override def toString: String =
     s"Tier($gen,$root,$bloom)"
 }

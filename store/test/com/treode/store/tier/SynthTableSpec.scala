@@ -190,7 +190,7 @@ class SynthTableSpec extends FreeSpec {
         table.checkpoint() .pass
         assert (table.primary.isEmpty)
         assert (table.secondary.isEmpty)
-        assert (table.tiers.size > 0)
+        assert (table.tiers.size == 0)
         table.check ()
       }
 
