@@ -6,10 +6,14 @@ import scala.util.{Failure, Success}
 
 import com.treode.async.implicits._
 
-import Async.async
+import Async.{guard, async}
 
-private class MergeIterator [A] (iters: Seq [AsyncIterator [A]]) (implicit order: Ordering [A])
-extends AsyncIterator [A] {
+private class MergeIterator [A] (
+    iters: Seq [AsyncIterator [A]]
+) (implicit 
+    order: Ordering [A],
+    scheduler: Scheduler
+) extends AsyncIterator [A] {
 
   private case class Element (x: A, tier: Int, cb: Callback [Unit])
   extends Ordered [Element] {
@@ -32,21 +36,24 @@ extends AsyncIterator [A] {
     var count = iters.size
     var thrown = List.empty [Throwable]
 
-    val next: Callback [Unit] = { v =>
-      pq.synchronized {
-        val elem = pq.dequeue()
-        elem.cb (v)
-      }}
+    def _next(): Unit =
+      scheduler.execute {
+        guard {
+          f (pq.head.x)
+        } run { v =>
+          pq.synchronized {
+            pq.dequeue().cb (v)
+          }}}
 
     def _close() {
-      require (count > 0, "MergeIterator was already closed.")
+      assert (count > 0, "MergeIterator was already closed.")
       count -= 1
       if (count == pq.size && count > 0 && thrown.isEmpty)
-        cb.defer (f (pq.head.x) run (next))
+        _next()
       else if (count == pq.size && !thrown.isEmpty)
-        cb.fail (MultiException.fit (thrown))
+        scheduler.fail (cb, MultiException.fit (thrown))
       else if (count == 0 && thrown.isEmpty)
-        cb.pass()
+        scheduler.pass (cb, ())
     }
 
     val close: Callback [Unit] = {
@@ -60,17 +67,18 @@ extends AsyncIterator [A] {
           _close()
         }}
 
-    def loop (n: Int) (x: A): Async [Unit] = async { cbi => pq.synchronized {
-      pq.enqueue (Element (x, n, cbi))
-      if (count == pq.size)
-        if (thrown.isEmpty)
-          cb.defer (f (pq.head.x) run (next))
-        else
-          cb.fail (MultiException.fit (thrown))
-    }}
+    def loop (n: Int) (x: A): Async [Unit] = async { cbi => 
+      pq.synchronized {
+        pq.enqueue (Element (x, n, cbi))
+        if (count == pq.size)
+          if (thrown.isEmpty)
+            _next()
+          else
+            scheduler.fail (cb, MultiException.fit (thrown))
+      }}
 
     if (count == 0)
-      cb.pass()
+      scheduler.pass (cb, ())
     for ((iter, n) <- iters zipWithIndex)
       iter.foreach (loop (n)) run (close)
   }}

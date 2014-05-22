@@ -75,6 +75,11 @@ object AsyncIterator {
     * duplicate an element, first list the element from the earlier iterator, that is by position
     * in `iters`.
     */
-  def merge [A] (iters: Seq [AsyncIterator [A]]) (implicit ordering: Ordering [A]): AsyncIterator [A] =
+  def merge [A] (
+      iters: Seq [AsyncIterator [A]]
+  ) (implicit 
+      ordering: Ordering [A],
+      scheduler: Scheduler
+  ): AsyncIterator [A] =
     new MergeIterator (iters)
 }
