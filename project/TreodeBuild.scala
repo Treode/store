@@ -20,7 +20,7 @@ object TreodeBuild extends Build {
 
     organization := "com.treode",
     version := "0.1",
-    scalaVersion := "2.10.3",
+    scalaVersion := "2.10.4",
 
     unmanagedSourceDirectories in Compile <<=
       (baseDirectory ((base: File) => Seq (base / "src"))),
@@ -33,13 +33,13 @@ object TreodeBuild extends Build {
     libraryDependencies ++= Seq (
       "com.codahale.metrics" % "metrics-core" % "3.0.2",
       "com.google.code.findbugs" % "jsr305" % "2.0.3",
-      "com.google.guava" % "guava" % "16.0.1",
-      "com.googlecode.javaewah" % "JavaEWAH" % "0.8.3",
+      "com.google.guava" % "guava" % "17.0",
+      "com.googlecode.javaewah" % "JavaEWAH" % "0.8.6",
       "com.nothome" % "javaxdelta" % "2.0.1",
       "joda-time" % "joda-time" % "2.3",
       "org.joda" % "joda-convert" % "1.2",
-      "org.slf4j" % "slf4j-api" % "1.7.6",
-      "org.slf4j" % "slf4j-simple" % "1.7.6"))
+      "org.slf4j" % "slf4j-api" % "1.7.7",
+      "org.slf4j" % "slf4j-simple" % "1.7.7"))
 
   // A portion of the settings for projects without stubs.  Adds
   // testing libraries to SBT's "test" configuration.
@@ -63,8 +63,8 @@ object TreodeBuild extends Build {
 
     libraryDependencies ++= Seq (
       "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "test",
-      "org.scalatest" %% "scalatest" % "2.1.0" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.11.3" % "test"))
+      "org.scalatest" %% "scalatest" % "2.1.7" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.11.4" % "test"))
 
   // Settings for projects without stubs.
   lazy val standardSettings =

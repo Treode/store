@@ -61,8 +61,6 @@ private class IntSet private (private val bitmap: Bitmap) {
 
 private object IntSet {
 
-  val MaxValue: Int = Int.MaxValue - Bitmap.wordinbits
-
   def apply (is: Int*): IntSet =
     new IntSet (Bitmap.bitmapOf (is: _*))
 
