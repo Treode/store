@@ -46,7 +46,7 @@ object Backoff {
     def next: Int = {
       val t = timeout
       if (t < max) {
-        timeout = t + random.nextInt (t)
+        timeout = t + 1 + random.nextInt (t)
         if (timeout > max)
           timeout = max
       }

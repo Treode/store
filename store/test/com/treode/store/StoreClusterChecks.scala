@@ -206,14 +206,16 @@ trait StoreClusterChecks extends AsyncChecks {
       if (max1 < ntargets) {
         for (i <- 1 to max1) {
           val max2 = count2 (seed, i)
-          test (seed, i, Random.nextInt (max2 - 1) + 1)
+          if (max2 > 1)
+            test (seed, i, Random.nextInt (max2 - 1) + 1)
         }
         nruns += max1 + max1
       } else {
         for (i <- 1 to ntargets) {
           val t1 = Random.nextInt (max1 - 1) + 1
           val max2 = count2 (seed, t1)
-          test (seed, t1, Random.nextInt (max2 - 1) + 1)
+          if (max2 > 1)
+            test (seed, t1, Random.nextInt (max2 - 1) + 1)
         }
         nruns += ntargets + ntargets
       }}
