@@ -91,7 +91,7 @@ private class Compactor (kit: DiskKit) {
 
   private def release (segments: Seq [SegmentPointer]): Callback [Unit] = {
     case Success (v) =>
-      releaser.release (segments)
+      releaser.release (segments foreach (_.free()))
     case Failure (t) =>
       // Exception already reported by compacted callback
   }

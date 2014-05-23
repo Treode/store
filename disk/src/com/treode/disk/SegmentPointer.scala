@@ -17,6 +17,9 @@ private class SegmentPointer private (
   def probe(): Async [PageLedger] =
     PageLedger.read (disk.file, bounds.base)
 
+  def free(): Unit =
+    disk.free (this)
+
   override def equals (other: Any): Boolean =
     other match {
       case that: SegmentPointer =>

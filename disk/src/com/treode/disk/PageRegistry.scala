@@ -30,7 +30,7 @@ private class PageRegistry (kit: DiskKit) extends AbstractPageRegistry {
       } yield {
         if (live == 0) {
           seg.compacting()
-          releaser.release (Seq (seg))
+          releaser.release (seg.free())
         } else {
           val util =
             ((live.toDouble / (seg.limit - seg.base).toDouble) * 10000D).toInt
@@ -54,7 +54,7 @@ private class PageRegistry (kit: DiskKit) extends AbstractPageRegistry {
       } yield {
         if (ledger.isEmpty) {
           seg.compacting()
-          releaser.release (Seq (seg))
+          releaser.release (seg.free())
         } else {
           merger.add (ledger.groups)
         }}

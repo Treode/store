@@ -5,14 +5,16 @@ import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.implicits._
+import com.treode.async.misc.EpochReleaser
 import com.treode.disk._
 
 import Async.guard
 import PageLedger.{Groups, Merger}
 
-private class StubPageRegistry (releaser: StubReleaser) (implicit
+private class StubPageRegistry (releaser: EpochReleaser) (implicit
     random: Random,
     scheduler: Scheduler,
+    disk: StubDiskDrive,
     config: StubDiskConfig
 ) extends AbstractPageRegistry {
 
@@ -27,7 +29,7 @@ private class StubPageRegistry (releaser: StubReleaser) (implicit
         live <- probe (page.typ, page.obj, groups)
       } yield {
         if (live._2.isEmpty) {
-          releaser.release (Seq (offset))
+          releaser.release (disk.free (Seq (offset)))
         } else if (compactionProbability > 0.0 && random.nextDouble < compactionProbability) {
           merger.add (Map ((page.typ, page.obj) -> groups))
           segments += offset

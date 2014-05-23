@@ -121,10 +121,10 @@ private class DiskDrive (
       compacting = compacting.add (nums)
     }
 
-  def free (segs: Seq [SegmentPointer]): Unit =
+  def free (seg: SegmentPointer): Unit =
     fiber.execute {
-      val nums = IntSet (segs.map (_.num) .sorted: _*)
-      assert (!(nums intersects _protected))
+      val nums = IntSet (seg.num)
+      assert (!(_protected contains seg.num))
       compacting = compacting.remove (nums)
       alloc.free (nums)
       record (SegmentFree (nums)) run (ignore)

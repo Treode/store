@@ -1,30 +1,30 @@
-package com.treode.disk
+package com.treode.async.misc
 
 import org.scalatest.FlatSpec
 
-import DiskTestTools._
-
-class AbstractReleaserSpec extends FlatSpec {
-
-  implicit val config = DiskTestConfig()
-
-  val geometry = DiskGeometry.test()
+class EpochReleaserSpec extends FlatSpec {
 
   private class TestReleaser () {
 
-    val releaser  = new AbstractReleaser [Int] {}
+    val releaser = new EpochReleaser
+    var released = Seq.empty [Int]
 
     def join(): Int =
-      releaser._join()
+      releaser. join()
 
-    def leaveAndExpect (epoch: Int) (fs: Int*): Unit =
-      assertResult (fs) (releaser._leave (epoch))
+    def leaveAndExpect (epoch: Int) (fs: Int*) {
+      released = Seq.empty
+      releaser.leave (epoch)
+      assertResult (fs) (released)
+    }
 
-    def releaseAndExpect (ns: Int*) (fs: Int*): Unit =
-      assertResult (fs) (releaser._release (ns))
-  }
+    def releaseAndExpect (ns: Int*) (fs: Int*) {
+      released = Seq.empty
+      releaser.release (released ++= ns)
+      assertResult (fs) (released)
+    }}
 
-  "The SegmentReleaser" should "free immediately when there are no parties" in {
+  "The EpochReleaser" should "free immediately when there are no parties" in {
     val releaser = new TestReleaser
     releaser.releaseAndExpect (0) (0)
   }

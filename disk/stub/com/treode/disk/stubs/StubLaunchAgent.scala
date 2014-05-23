@@ -3,12 +3,13 @@ package com.treode.disk.stubs
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
+import com.treode.async.misc.EpochReleaser
 import com.treode.disk._
 
 import Disk.{Controller, Launch}
 
 private class StubLaunchAgent (
-    releaser: StubReleaser,
+    releaser: EpochReleaser,
     val disks: StubDisk
 ) (implicit
     random: Random,

@@ -4,13 +4,14 @@ import scala.util.{Failure, Random, Success}
 
 import com.treode.async.{Async, Fiber, Callback, Latch, Scheduler}
 import com.treode.async.implicits._
+import com.treode.async.misc.EpochReleaser
 import com.treode.disk._
 
 import Async.{async, guard}
 import PageLedger.Groups
 
 private class StubCompactor (
-    releaser: StubReleaser
+    releaser: EpochReleaser
  ) (implicit
      random: Random,
      scheduler: Scheduler,
@@ -77,7 +78,7 @@ private class StubCompactor (
 
   private def release (segments: Seq [Long]): Callback [Unit] = {
     case Success (v) =>
-      releaser.release (segments)
+      releaser.release (disk.free (segments))
     case Failure (t) =>
       // Exception already reported by compacted callback
   }

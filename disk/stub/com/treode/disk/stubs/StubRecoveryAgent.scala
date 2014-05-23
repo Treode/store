@@ -6,6 +6,7 @@ import scala.util.Random
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
+import com.treode.async.misc.EpochReleaser
 import com.treode.disk._
 
 import Async.{guard, supply}
@@ -40,7 +41,7 @@ private class StubRecoveryAgent (implicit
       for {
         _ <- disk.replay (records)
       } yield {
-        val releaser = new StubReleaser (disk)
+        val releaser = new EpochReleaser
         val disks = new StubDisk (releaser) (random, scheduler, disk, config)
         new StubLaunchAgent (releaser, disks) (random, scheduler, disk, config)
       }}
@@ -51,7 +52,7 @@ private class StubRecoveryAgent (implicit
         requireOpen()
         open = false
       }
-      val releaser = new StubReleaser (disk)
+      val releaser = new EpochReleaser
       val disks = new StubDisk (releaser) (random, scheduler, disk, config)
       new StubLaunchAgent (releaser, disks) (random, scheduler, disk, config)
     }
