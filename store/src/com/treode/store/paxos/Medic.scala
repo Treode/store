@@ -58,7 +58,7 @@ private class Medic (
     kit.acceptors.recover (key, time, a)
   }
 
-  override def toString = s"Acceptor.Medic($key, $default, $proposal, $chosen)"
+  override def toString = s"Acceptor.Medic($key, $time, $default, $ballot, $proposal, $chosen)"
 }
 
 private object Medic {

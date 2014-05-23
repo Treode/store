@@ -17,6 +17,9 @@ import com.treode.store.{Residents, StoreConfig, StorePicklers}
   def gen: Long =
     if (tiers.isEmpty) 0 else tiers.head.gen
 
+  def gens: Seq [Long] =
+    tiers map (_.gen)
+
   def estimate (other: Residents): Long =
     tiers .map (_.estimate (other)) .sum
 
@@ -51,16 +54,35 @@ import com.treode.store.{Residents, StoreConfig, StorePicklers}
     new Tiers (bldr.result)
   }
 
+  def compare (that: Tiers): Int = {
+    val _this = this.gens
+    val _that = that.gens
+    for ((i, j) <- _this zip _that; r = i - j)
+      if (r < 0)
+        return -1
+      else if (r > 0)
+        return 1
+    if (_this.size < _that.size)
+      -1
+    else if (_this.size > _that.size)
+      1
+    else
+      0
+  }
+
   override def toString: String =
-    s"Tiers(${tiers mkString ", "})"
+    s"Tiers(\n   ${tiers mkString ",\n   "})"
 }
 
-private object Tiers {
+private object Tiers extends Ordering [Tiers] {
 
   val empty: Tiers = new Tiers (Seq.empty)
 
   def apply (tier: Tier): Tiers =
     new Tiers (Array (tier))
+
+  def compare (x: Tiers, y: Tiers): Int = 
+    x compare y
 
   val pickler = {
     import StorePicklers._

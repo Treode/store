@@ -25,6 +25,7 @@ class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
             "not compacted at all"   -> 0.0,
             "compacted occasionally" -> 0.01,
             "compacted frequently"   -> 0.1)
+            if checkpoint >= compaction
       } s"$name with" - {
 
         implicit val config = StoreTestConfig (

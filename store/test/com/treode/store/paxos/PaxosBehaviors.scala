@@ -48,7 +48,7 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
 
     val tracker = new PaxosTracker
 
-    cluster.info (s"acheiveConsensus ($nbatches, $nputs)")
+    cluster.info (s"achieveConsensus ($nbatches, $nputs)")
 
     .host (StubPaxosHost)
 

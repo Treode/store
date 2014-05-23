@@ -119,7 +119,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     def checkpoint(): Async [Unit] =
       supply()
 
-    override def toString = s"Acceptor.Restoring($key)"
+    override def toString = s"Acceptor.Restoring($key, $time)"
   }
 
   class Deliberating (
@@ -220,7 +220,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
         case None => Acceptor.open.record (key, time, default)
       }}
 
-    override def toString = s"Acceptor.Deliberating($key, $proposal)"
+    override def toString = s"Acceptor.Deliberating($key, $time, $default, $ballot, $proposal)"
   }
 
   class Closed (val chosen: Bytes, gen: Long) extends State {
@@ -239,7 +239,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     def checkpoint(): Async [Unit] =
       supply()
 
-    override def toString = s"Acceptor.Closed($key, $chosen)"
+    override def toString = s"Acceptor.Closed($key, $time, $chosen)"
   }
 
   class Panicked (s: State, thrown: Throwable) extends State {
@@ -254,7 +254,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
     def checkpoint(): Async [Unit] = supply()
 
-    override def toString = s"Acceptor.Panicked($key, $thrown)"
+    override def toString = s"Acceptor.Panicked($key, $time, $thrown)"
   }
 
   def query (proposer: Peer, ballot: Long, default: Bytes): Unit =

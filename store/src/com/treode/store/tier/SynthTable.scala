@@ -178,9 +178,7 @@ private class SynthTable (
     count
   }
 
-  def compact (chosen: Tiers, residents: Residents): Async [Meta] = guard {
-    val gen = tiers.gen + 1
-    assert ((gen & genStepMask) != 0, "Tier compacted too many times")
+  def compact (gen: Long, chosen: Tiers, residents: Residents): Async [Meta] = guard {
     val iter = TierIterator .merge (desc, chosen) .clean (desc, id, residents)
     val est = countKeys (primary) + chosen.estimate (residents)
     for {
@@ -201,11 +199,17 @@ private class SynthTable (
         queue ::= toRunnable (compact (groups, residents), cb)
       } else {
         val chosen = tiers.choose (groups, residents)
-        if (chosen.isEmpty)
+        if (chosen.isEmpty) {
           cb.pass (new Meta (tiers.gen, tiers))
-        else
-          compact (chosen, residents) run (cb)
-      }
+        } else if (primary.isEmpty) {
+          val gen = this.gen
+          this.gen += genStepSize
+          compact (gen, chosen, residents) run (cb)
+        } else {
+          val gen = tiers.gen + 1
+          assert ((gen & genStepMask) != 0, "Tier compacted too many times")
+          compact (gen, chosen, residents) run (cb)
+        }}
     } finally {
       writeLock.unlock()
     }}
@@ -251,7 +255,7 @@ private class SynthTable (
 
 private object SynthTable {
 
-  val genStepBits = 7
+  val genStepBits = 4
   val genStepSize = (1<<7).toLong
   val genStepMask = genStepSize - 1
 

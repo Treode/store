@@ -87,7 +87,7 @@ private class SynthMedic (
         primary = newMemTier
         secondary = newMemTier
       }
-      if (meta.gen > tiers.gen)
+      if (meta.tiers > tiers)
         tiers = meta.tiers
     } finally {
       writeLock.unlock()

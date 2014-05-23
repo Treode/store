@@ -38,7 +38,7 @@ private class RecoveryKit (implicit
   }
 
   open.replay { case (key, time, default) =>
-    get (key, time, Some (default))
+    get (key, time, Some (default)) opened (default)
   }
 
   promise.replay { case (key, time, ballot) =>
