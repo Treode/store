@@ -6,7 +6,7 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.store.Bytes
+import com.treode.store.{Bytes, Cell}
 import PaxosTestTools._
 
 class PaxosTracker {
@@ -70,4 +70,20 @@ class PaxosTracker {
                   s"Expected ${key.long} to be one of $values, found $found")
             }}
     } yield ()
-}
+
+  def check (cells: Seq [Cell]) {
+    val all = cells.map (c => (c.key, c.value.get.int)) .toMap.withDefaultValue (-1)
+    for ((key, value) <- accepted) {
+      val found = all (key)
+      assert (
+          found == value,
+          s"Expected ${key.long} to be $value, found $found.")
+    }
+    for ((key, found) <- all; if !(accepted contains key)) {
+      val values = attempted (key)
+      assert (
+          values contains found,
+          s"Expected ${key.long} to be one of $values, found $found")
+
+    }}}
+

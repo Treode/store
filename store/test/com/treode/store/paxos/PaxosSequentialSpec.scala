@@ -51,51 +51,43 @@ class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
 
         implicit val config = StoreTestConfig (messageFlakiness = flakiness)
 
-        "stable hosts" taggedAs (Intensive, Periodic) in {
+        "three stable hosts" taggedAs (Intensive, Periodic) in {
           forThreeStableHosts { implicit random =>
             achieveConsensus (10, 10)
           }}
 
-        "a host is offline" taggedAs (Intensive, Periodic) in {
+        "one of three hosts is offline" taggedAs (Intensive, Periodic) in {
           forOneHostOffline { implicit random =>
             achieveConsensus (10, 10)
           }}
 
-        "a host crashes" taggedAs (Intensive, Periodic) in {
+        "one of three hosts crashes" taggedAs (Intensive, Periodic) in {
           forOneHostCrashing { implicit random =>
             achieveConsensus (10, 10)
           }}
 
-        "a host reboots" taggedAs (Intensive, Periodic) in {
+        "one of three hosts reboots" taggedAs (Intensive, Periodic) in {
           forOneHostRebooting { implicit random =>
             achieveConsensus (10, 10)
           }}
 
-        "a host bounces" taggedAs (Intensive, Periodic) in {
+        "one of three hosts bounces" taggedAs (Intensive, Periodic) in {
           forOneHostBouncing { implicit random =>
             achieveConsensus (10, 10)
-          }}}}
+          }}
 
-    "rebalance" in { pending
-      implicit val kit = StoreTestKit.random()
-      import kit.{network, random, scheduler}
+        "one host moving to another" taggedAs (Intensive, Periodic) in {
+          forOneHostMoving { implicit random =>
+            achieveConsensus (10, 10)
+          }}
 
-      val hs = Seq.fill (4) (StubPaxosHost .install() .pass)
-      val Seq (h1, h2, h3, h4) = hs
-      for (h1 <- hs; h2 <- hs)
-        h1.hail (h2.localId)
-      h1.issueAtlas (settled (h1, h2, h3)) .pass
-      h1.issueAtlas (moving (h1, h2, h3) (h1, h2, h4)) .pass
+        "three hosts moving to others" taggedAs (Intensive, Periodic) in {
+          forThreeHostsMoving { implicit random =>
+            achieveConsensus (10, 10)
+          }}
 
-      val k = Bytes (0xB3334572873016E4L)
-      h1.paxos.propose (k, 0, 1) .expect (1)
-
-      for (h <- hs)
-        h.paxos.archive.get (k, 0) .expect (k##0::1)
-      kit.run (count = 1000, timers = true)
-      expectAtlas (3, settled (h1, h2, h4)) (hs)
-      for (h <- Seq (h1, h2, h4))
-        h.paxos.archive.get (k, 0) .expect (k##0::1)
-      // TierTable.get does not account for residents.
-      // h3.paxos.archive.get (k, 0) .expect (k##0)
-    }}}
+        "for three hosts growing to eight" taggedAs (Intensive, Periodic) in {
+          for3to8 { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+      }}}}

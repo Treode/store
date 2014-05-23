@@ -57,10 +57,10 @@ object Cohort {
     def hosts = origin ++ target
 
     def track: ReplyTracker =
-      ReplyTracker.settled (hosts)
+      ReplyTracker (origin, target)
 
     def quorum (acks: Set [HostId]): Boolean =
-      origin.count (acks contains _) >= oquorum && target.count (acks contains _) > tquorum
+      origin.count (acks contains _) >= oquorum && target.count (acks contains _) >= tquorum
   }
 
   case class Moving (origin: Set [HostId], target: Set [HostId]) extends Cohort {
@@ -78,7 +78,7 @@ object Cohort {
       ReplyTracker (origin, target)
 
     def quorum (acks: Set [HostId]): Boolean =
-      origin.count (acks contains _) >= oquorum && target.count (acks contains _) > tquorum
+      origin.count (acks contains _) >= oquorum && target.count (acks contains _) >= tquorum
   }
 
   def settled (hosts: HostId*): Cohort =

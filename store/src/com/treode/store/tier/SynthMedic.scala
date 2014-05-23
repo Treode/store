@@ -4,7 +4,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.Scheduler
 import com.treode.disk.{Disk, Position}
-import com.treode.store.{Bytes, Key, StoreConfig, TableId, TxClock}
+import com.treode.store.{Bytes, Cell, Key, StoreConfig, TableId, TxClock}
 
 import SynthTable.{genStepBits, genStepMask, genStepSize}
 
@@ -74,6 +74,28 @@ private class SynthMedic (
 
   def delete (gen: Long, key: Bytes, time: TxClock): Unit =
     replay (gen, key, time, None)
+
+  private def putAll (tier: MemTier, cells: Seq [Cell]): Unit =
+    for (c <- cells)
+      tier.put (c.timedKey, c.value)
+
+  def receive (gen: Long, novel: Seq [Cell]) {
+
+    writeLock.lock()
+    try {
+      if (gen < this.gen) {
+        putAll (secondary, novel)
+      } else if (gen == this.gen) {
+        putAll (primary, novel)
+      } else if (gen > this.gen) {
+        this.gen = gen
+        secondary.putAll (primary)
+        primary = newMemTier
+        putAll (primary, novel)
+      }
+    } finally {
+      writeLock.unlock()
+    }}
 
   def checkpoint (meta: TierTable.Meta) {
     writeLock.lock()

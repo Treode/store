@@ -2,13 +2,15 @@ package com.treode.store.tier
 
 import com.treode.async.Scheduler
 import com.treode.disk.Disk
-import com.treode.store.{Bytes, StoreConfig, TableId, TxClock}
+import com.treode.store.{Bytes, Cell, StoreConfig, TableId, TxClock}
 
 private [store] trait TierMedic {
 
   def put (gen: Long, key: Bytes, time: TxClock, value: Bytes)
 
   def delete (gen: Long, key: Bytes, time: TxClock)
+
+  def receive (gen: Long, novel: Seq [Cell])
 
   def checkpoint (meta: TierTable.Meta)
 

@@ -22,7 +22,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   trait State {
     def open (ballot: Long, value: Bytes) = ()
     def learn (k: Learner)
-    def refuse (ballot: Long)
+    def refuse (from: Peer, ballot: Long)
     def promise (from: Peer, ballot: Long, proposal: Proposal)
     def accept (from: Peer, ballot: Long)
     def chosen (value: Bytes)
@@ -56,24 +56,23 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
     def learn (k: Learner) = throw new IllegalStateException
 
-    def refuse (ballot: Long) = ()
+    def refuse (from: Peer, ballot: Long) = ()
 
     def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
 
     def accept (from: Peer, ballot: Long) = ()
 
     def chosen (v: Bytes): Unit =
-      state = new Closed (v)
+      state = new Closed (0, v)
 
     def timeout() = ()
 
     override def toString = "Proposer.Opening (%s)" format (key.toString)
   }
 
-  class Open (_ballot: Long, value: Bytes) extends State {
+  class Open (var ballot: Long, value: Bytes) extends State {
 
     var learners = List.empty [Learner]
-    var ballot = _ballot
     var refused = ballot
     var proposed = Option.empty [(BallotNumber, Bytes)]
     val promised = track (key, time)
@@ -91,7 +90,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     def learn (k: Learner) =
       learners ::= k
 
-    def refuse (ballot: Long) = {
+    def refuse (from: Peer, ballot: Long) = {
       refused = math.max (refused, ballot)
       promised.clear()
       accepted.clear()
@@ -113,12 +112,12 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
           val v = agreement (proposed, value)
           Acceptor.choose (key, time, v) (track (key, time))
           learners foreach (_.pass (v))
-          state = new Closed (v)
+          state = new Closed (ballot, v)
         }}}
 
     def chosen (v: Bytes) {
       learners foreach (scheduler.pass (_, v))
-      state = new Closed (v)
+      state = new Closed (ballot, v)
     }
 
     def timeout() {
@@ -137,7 +136,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     override def toString = "Proposer.Open " + (key, ballot, value)
   }
 
-  class Closed (value: Bytes) extends State {
+  class Closed (ballot: Long, value: Bytes) extends State {
 
     fiber.delay (closedLifetime) (remove (key, time, Proposer.this))
 
@@ -147,9 +146,18 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     def chosen (v: Bytes) =
       require (v == value, "Paxos disagreement")
 
-    def refuse (ballot: Long) = ()
-    def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
-    def accept (from: Peer, ballot: Long) = ()
+    def refuse (from: Peer, ballot: Long) =
+      if (ballot == this.ballot)
+        Acceptor.choose (key, time, value) (from)
+
+    def promise (from: Peer, ballot: Long, proposal: Proposal) =
+      if (ballot == this.ballot)
+        Acceptor.choose (key, time, value) (from)
+
+    def accept (from: Peer, ballot: Long) =
+      if (ballot == this.ballot)
+        Acceptor.choose (key, time, value) (from)
+
     def timeout() = ()
 
     override def toString = "Proposer.Closed " + (key, value)
@@ -158,7 +166,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   object Shutdown extends State {
 
     def learn (k: Learner) = ()
-    def refuse (ballot: Long) = ()
+    def refuse (from: Peer, ballot: Long) = ()
     def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
     def accept (from: Peer, ballot: Long) = ()
     def chosen (v: Bytes) = ()
@@ -173,8 +181,8 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   def learn (k: Learner) =
     fiber.execute  (state.learn (k))
 
-  def refuse (ballot: Long) =
-    fiber.execute  (state.refuse (ballot))
+  def refuse (from: Peer, ballot: Long) =
+    fiber.execute  (state.refuse (from, ballot))
 
   def promise (from: Peer, ballot: Long, proposal: Proposal) =
     fiber.execute  (state.promise (from, ballot, proposal))

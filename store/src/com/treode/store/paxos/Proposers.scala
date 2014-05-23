@@ -33,7 +33,7 @@ private class Proposers (kit: PaxosKit) {
     import kit.cluster
 
     refuse.listen { case ((key, time, ballot), c) =>
-      get (key, time) refuse (ballot)
+      get (key, time) refuse (c, ballot)
     }
 
     promise.listen { case ((key, time, ballot, proposal), c) =>

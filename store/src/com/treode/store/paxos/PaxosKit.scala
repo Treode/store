@@ -3,12 +3,13 @@ package com.treode.store.paxos
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
+import com.treode.async.misc.EpochReleaser
 import com.treode.cluster.{Cluster, ReplyTracker}
 import com.treode.disk.Disk
 import com.treode.store.{Atlas, Bytes, Cohort, Library, StoreConfig, TxClock}
 import com.treode.store.tier.TierTable
 
-import Async.async
+import Async.{async, when}
 import PaxosKit.locator
 import PaxosMover.Targets
 
@@ -27,6 +28,7 @@ private class PaxosKit (
 
   val acceptors = new Acceptors (this)
   val proposers = new Proposers (this)
+  val releaser = new EpochReleaser
   val mover = new PaxosMover (this)
 
   def place (key: Bytes, time: TxClock): Int =
@@ -47,6 +49,7 @@ private class PaxosKit (
   def rebalance (atlas: Atlas): Async [Unit] = {
     val targets = Targets (atlas)
     for {
+      _ <- when (!targets.isEmpty) (releaser.release())
       _ <- mover.rebalance (targets)
     } yield {
       if (targets.isEmpty)

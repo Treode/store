@@ -26,16 +26,16 @@ private class ReadDirector (
 
   val cohorts = ops map (kit.locate (_))
 
-  val broker = TightTracker (ops, cohorts, kit) { (host, ops) =>
-    ReadDeputy.read (rt, ops) (host, port)
-  }
-
   val port = ReadDeputy.read.open { (rsp, from) =>
     fiber.execute {
       rsp match {
         case Success (vs) => got (vs, from)
         case Failure (t) => ()
       }}}
+
+  val broker = TightTracker (ops, cohorts, kit) { (host, ops) =>
+    ReadDeputy.read (rt, ops) (host, port)
+  }
 
   val timer = cb.ensure {
     port.close()

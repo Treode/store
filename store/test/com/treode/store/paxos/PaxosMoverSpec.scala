@@ -64,7 +64,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
     def setup() = {
       implicit val kit = StoreTestKit.random()
       import kit._
-      implicit val cluster = new StubPeer (0)
+      implicit val cluster = new StubPeer (1)
       cluster
     }
 
@@ -110,7 +110,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
         def setup() = {
           implicit val kit = StoreTestKit.random()
           import kit._
-          implicit val cluster = new StubPeer (0)
+          implicit val cluster = new StubPeer (1)
           val tracker = new RichTracker
           (cluster, tracker)
         }
@@ -145,7 +145,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
         def setup() = {
           implicit val kit = StoreTestKit.random()
           import kit._
-          implicit val cluster = new StubPeer (0)
+          implicit val cluster = new StubPeer (1)
           val t = new RichTracker
           t.start (moving (1, 2, 3) (1, 2, 4))
           assertTask (begin (0), 0 -> Set (4)) (t.deque())
@@ -212,7 +212,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
         def setup() = {
           implicit val kit = StoreTestKit.random()
           import kit._
-          implicit val cluster = new StubPeer (0)
+          implicit val cluster = new StubPeer (1)
           val t = new RichTracker
           t.start (moving (1, 2, 3) (1, 2, 4))
           assertTask (begin (0), 0 -> Set (4)) (t.deque())

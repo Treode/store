@@ -26,6 +26,15 @@ class Atlas private (
   def locate [A] (p: Pickler [A], v: A): Cohort =
     locate (p.murmur32 (v))
 
+  def settled: Boolean =
+    cohorts forall (_.settled)
+
+  def issuing: Boolean =
+    cohorts exists (_.issuing)
+
+  def moving: Boolean =
+    cohorts exists (_.moving)
+
   def residents (host: HostId): Residents = {
     val nums = for ((c, i) <- cohorts.zipWithIndex; if c.hosts contains host) yield i
     new Residents (nums.toSet, cohorts.size - 1)

@@ -2,17 +2,30 @@ package com.treode.store.paxos
 
 import scala.util.Random
 
+import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.{CrashChecks, StubDiskDrive}
-import com.treode.store.{StoreClusterChecks, StoreTestConfig}
+import com.treode.store._
 import org.scalatest.{Informing, Suite}
 
+import Async.supply
 import PaxosTestTools._
 
 trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
   this: Suite with Informing =>
+
+  private def scan (hosts: Seq [StubPaxosHost]) (implicit scheduler: Scheduler): Async [Seq [Cell]] = {
+    val iters = hosts map (_.archive.iterator (Residents.all))
+    val iter = AsyncIterator.merge [Cell] (iters)
+    val cells = Seq.newBuilder [Cell]
+    for {
+      _ <- iter.dedupe.foreach (c => supply (cells += c))
+    } yield {
+      cells.result
+    }}
 
   private [paxos] def crashAndRecover (
       nbatch: Int,
@@ -43,7 +56,6 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
       tracker.check (host) .pass
     }}
 
-
   private [paxos] def achieveConsensus (nbatches: Int, nputs: Int) (implicit random: Random) = {
 
     val tracker = new PaxosTracker
@@ -58,4 +70,17 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
 
     .recover { implicit scheduler => h1 =>
       tracker.check (h1)
-    }}}
+    }
+
+    .whilst { hosts =>
+      def unsettled = hosts exists (h => !h.atlas.settled)
+      def open = hosts exists (h => !(h.acceptors.isEmpty))
+      unsettled || open
+    }
+
+    .verify { implicit scheduler => hosts =>
+      for {
+        cells <- scan (hosts)
+      } yield {
+        tracker.check (cells)
+      }}}}

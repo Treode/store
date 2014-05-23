@@ -76,21 +76,22 @@ private class Librarian private (
     }}
 
   private def install (atlas: Atlas): Unit = fiber.execute {
-    library.atlas = atlas
-    library.residents = atlas.residents (localId)
-    if (issued < atlas.version) issued = atlas.version
-    Atlas.received.spread (atlas.version)
-    _rebalance (atlas)
-    active = atlas.cohorts (0) contains localId
-    issuing = atlas.cohorts exists (_.issuing)
-    moving = atlas.cohorts exists (_.moving)
-    if (issuing || moving) advance()
-  }
+    if (library.atlas.version <= atlas.version) {
+      library.atlas = atlas
+      library.residents = atlas.residents (localId)
+      if (issued < atlas.version) issued = atlas.version
+      Atlas.received.spread (atlas.version)
+      _rebalance (atlas)
+      active = atlas.cohorts (0) contains localId
+      issuing = atlas.issuing
+      moving = atlas.moving
+      if (issuing || moving) advance()
+    }}
 
   private def received (issue: Int, peer: Peer): Unit = fiber.execute {
     if (issued < issue) issued = issue
     receipts += peer.id -> issue
-    if (issuing) advance()
+    if (issuing || moving) advance()
   }
 
   private def moved (issue: Int, peer: Peer): Unit = fiber.execute {

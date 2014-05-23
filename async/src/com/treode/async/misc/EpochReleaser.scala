@@ -1,10 +1,12 @@
 package com.treode.async.misc
 
 import scala.collection.mutable.Builder
+import scala.util.Success
 
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 
+import Async.async
 import Scheduler.toRunnable
 
 class EpochReleaser {
@@ -47,6 +49,9 @@ class EpochReleaser {
 
   def release (action: => Any): Unit =
     release (toRunnable (action))
+
+  def release(): Async [Unit] =
+    async (cb => release (toRunnable (cb, Success())))
 
   def join(): Int = synchronized {
     parties += 1

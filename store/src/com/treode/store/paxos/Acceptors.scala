@@ -33,6 +33,15 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   def remove (key: Bytes, time: TxClock, a: Acceptor): Unit =
     acceptors.remove ((key, time), a)
 
+  def receive (cells: Seq [Cell]) {
+    cells foreach {
+      case Cell (key, time, Some (chosen)) =>
+        val a = acceptors.get ((key, time))
+        if (a != null)
+          a.choose (chosen)
+      case _ => ()
+    }}
+
   def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
     guard {
       archive.probe (groups)
@@ -86,6 +95,11 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
     }}}
 
 private object Acceptors {
+
+  val receive = {
+    import PaxosPicklers._
+    RecordDescriptor (0x4DCE11AA, tuple (ulong, seq (cell)))
+  }
 
   val checkpoint = {
     import PaxosPicklers._

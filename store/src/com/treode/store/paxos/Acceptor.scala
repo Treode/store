@@ -12,10 +12,11 @@ import Callback.ignore
 
 private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
   import Acceptor.{NoPost, Post}
-  import kit.{acceptors, archive, cluster, disks, scheduler}
+  import kit.{acceptors, archive, cluster, disks, releaser, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
 
   private val fiber = new Fiber
+  private val epoch = releaser.join()
   var state: State = null
 
   trait State {
@@ -36,23 +37,23 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
     def query (proposer: Peer, ballot: Long, default: Bytes) {
       val s = new Restoring (default)
+      state = s
       s.query (proposer, ballot, default)
       s.restore()
-      state = s
     }
 
     def propose (proposer: Peer, ballot: Long, value: Bytes) {
       val s = new Restoring (value)
+      state = s
       s.propose (proposer, ballot, value)
       s.restore()
-      state = s
     }
 
     def choose (chosen: Bytes) {
       val s = new Restoring (chosen)
+      state = s
       s.choose (chosen)
       s.restore()
-      state = s
     }
 
     def checkpoint(): Async [Unit] =
@@ -225,6 +226,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
   class Closed (val chosen: Bytes, gen: Long) extends State {
 
+    releaser.leave (epoch)
     fiber.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
 
     def query (proposer: Peer, ballot: Long, default: Bytes): Unit =
@@ -244,6 +246,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
   class Panicked (s: State, thrown: Throwable) extends State {
 
+    releaser.leave (epoch)
     fiber.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
 
     def query (proposer: Peer, ballot: Long, default: Bytes): Unit = ()
@@ -312,11 +315,6 @@ private object Acceptor {
   val close = {
     import PaxosPicklers._
     RecordDescriptor (0xAE980885, tuple (bytes, txClock, bytes, long))
-  }
-
-  val receive = {
-    import PaxosPicklers._
-    RecordDescriptor (0x4DCE11AA, tuple (ulong, seq (cell)))
   }
 
   trait Post {

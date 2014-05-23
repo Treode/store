@@ -114,4 +114,13 @@ private class StubCompactor (
           probeForClean()
         else
           cleanreq = true
+    }
+
+  def compact (typ: TypeId, obj: ObjectId): Async [Unit] =
+    fiber.async { cb =>
+      val id = (typ, obj)
+      compactq += id
+      compact (id, Set.empty [PageGroup]) run (cb)
+      if (!engaged)
+        reengage()
     }}

@@ -40,24 +40,34 @@ private class StubPaxosHost (
   }
 
   def setAtlas (cohorts: Cohort*) {
-    val _cohorts = Atlas (cohorts.toArray, 1)
-    library.atlas = _cohorts
-    library.residents = _cohorts.residents (localId)
+    val atlas = Atlas (cohorts.toArray, 1)
+    library.atlas = atlas
+    library.residents = atlas.residents (localId)
   }
 
   def issueAtlas (cohorts: Cohort*): Async [Unit] = {
-    val version = library.atlas.version + 1
-    val atlas = Atlas (cohorts.toArray, version)
-    library.atlas = atlas
-    library.residents = atlas.residents (localId)
-    catalogs.issue (Atlas.catalog) (version, atlas)
-  }
+    var issued = false
+    var tries = 0
+    scheduler.whilst (!issued) {
+      val version = library.atlas.version + 1
+      val atlas = Atlas (cohorts.toArray, version)
+      library.atlas = atlas
+      library.residents = atlas.residents (localId)
+      catalogs
+          .issue (Atlas.catalog) (version, atlas)
+          .map (_ => issued = true)
+          .recover {
+            case t: StaleException if tries < 16 => tries += 1
+          }}}
 
   def expectAtlas (atlas: Atlas) {
     assertResult (atlas) (library.atlas)
     assertResult (librarian.issued) (atlas.version)
     assert (librarian.receipts forall (_._2 == atlas.version))
   }
+
+  def atlas: Atlas =
+    library.atlas
 
   def archive: TierTable =
     paxos.archive

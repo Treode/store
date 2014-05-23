@@ -15,7 +15,7 @@ import Cohort.Moving
 import PaxosMover.{Batch, Point, Range, Targets, Tracker, move}
 
 private class PaxosMover (kit: PaxosKit) {
-  import kit.{archive, cluster, disks, library, place, random, scheduler}
+  import kit.{acceptors, archive, cluster, disks, library, place, random, scheduler}
   import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
 
   private val fiber = new Fiber
@@ -25,59 +25,68 @@ private class PaxosMover (kit: PaxosKit) {
 
   queue.launch()
 
-  def split (start: Point.Middle, limit: Point, targets: Targets): Async [(Batch, Point)] = {
+  def split (start: Point.Middle, limit: Point, targets: Targets): Async [(Batch, Point)] =
+    disks.join {
 
-    var batch = Map.empty [Int, List [Cell]]
-    var entries = 0
-    var bytes = 0
+      var batch = Map.empty [Int, List [Cell]]
+      var entries = 0
+      var bytes = 0
 
-    val residents = library.residents
-    val iter = archive.iterator (start.key, start.time, residents)
-    val next = limit
+      val residents = library.residents
+      val iter = archive.iterator (start.key, start.time, residents)
+      val next = limit
 
-    iter.whilst { cell =>
-      entries < rebalanceEntries &&
-      bytes < rebalanceBytes &&
-      Point.Middle (cell.key, cell.time) < limit
-    } { cell =>
-      val num = place (cell.key, cell.time)
-      if (targets contains num) {
-        batch.get (num) match {
-          case Some (cs) => batch += num -> (cell::cs)
-          case None => batch += num -> List (cell)
+      iter.whilst { cell =>
+        entries < rebalanceEntries &&
+        bytes < rebalanceBytes &&
+        Point.Middle (cell.key, cell.time) < limit
+      } { cell =>
+        val num = place (cell.key, cell.time)
+        if (targets contains num) {
+          batch.get (num) match {
+            case Some (cs) => batch += num -> (cell::cs)
+            case None => batch += num -> List (cell)
+          }
+          entries += 1
+          bytes += cell.byteSize
         }
-        entries += 1
-        bytes += cell.byteSize
-      }
-      supply()
-    } .map {
-      case Some (cell) =>
-        (batch, Point.Middle (cell.key, cell.time))
-      case None =>
-        (batch, next)
-    }}
+        supply()
+      } .map {
+        case Some (cell) =>
+          (batch, Point.Middle (cell.key, cell.time))
+        case None =>
+          (batch, next)
+      }}
 
   move.listen { case (cells, from) =>
+    acceptors.receive (cells)
     val (gen, novel) = archive.receive (cells)
-    Acceptor.receive.record (gen, novel)
+    Acceptors.receive.record (gen, novel)
   }
 
+  private class Sender (cells: Seq [Cell], hosts: Set [Peer], cb: Callback [Unit]) {
+
+    var awaiting = hosts
+
+    val port = move.open { case (_, from) =>
+      got (from)
+    }
+
+    val timer = cb.ensure {
+      port.close()
+    } .timeout (fiber, rebalanceBackoff) {
+      move (cells) (awaiting, port)
+    }
+    move (cells) (awaiting, port)
+
+    def got (from: Peer) {
+      awaiting -= from
+      if (awaiting.isEmpty)
+        timer.pass()
+    }}
+
   def send (cells: Seq [Cell], hosts: Set [Peer]): Async [Unit] =
-    async { cb =>
-
-      var awaiting = hosts
-
-      val port = move.open { case (_, from) =>
-        awaiting -= from
-        if (awaiting.isEmpty)
-          cb.pass()
-      }
-
-      val timer = cb.ensure {
-        port.close()
-      } .timeout (fiber, rebalanceBackoff) {
-        move (cells) (awaiting, port)
-      }}
+    async (new Sender (cells, hosts, _))
 
   def send (batch: Batch, targets: Targets): Async [Unit] =
     guard {
@@ -156,9 +165,9 @@ private object PaxosMover {
 
     val empty = new Targets (Map.empty)
 
-    private def targets (cohort: Cohort): Set [HostId] =
+    private def targets (cohort: Cohort, host: HostId): Set [HostId] =
       cohort match {
-        case Moving (origin, target) => target -- origin
+        case Moving (origin, target) if (origin contains host)=> target -- origin
         case _ => Set.empty
       }
 
@@ -166,7 +175,7 @@ private object PaxosMover {
       val builder = Map.newBuilder [Int, Set [Peer]]
       for {
         (c, i) <- atlas.cohorts.zipWithIndex
-        ts = targets (c)
+        ts = targets (c, cluster.localId)
         if !ts.isEmpty
       }  builder += i -> (ts map (cluster.peer _))
       new Targets (builder.result)
