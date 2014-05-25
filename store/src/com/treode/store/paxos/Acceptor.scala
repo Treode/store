@@ -5,7 +5,7 @@ import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
 import com.treode.disk.RecordDescriptor
-import com.treode.store.{BallotNumber, Bytes, Cell, TxClock}
+import com.treode.store.{BallotNumber, Bytes, Cell, TimeoutException, TxClock}
 
 import Async.supply
 import Callback.ignore
@@ -154,11 +154,13 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
         this.postable = post
       }}
 
-    fiber.delay (deliberatingTimeout) {
+    fiber.delay (deliberatingTimeout) (timeout())
+
+    def timeout() {
       if (state == Deliberating.this)
         kit.propose (key, time, default) .run {
           case Success (v) => Acceptor.this.choose (v)
-          case Failure (t) => panic (Deliberating.this, t)
+          case Failure (_) => timeout()
         }}
 
     def open (ballot: Long, default: Bytes, proposer: Peer): Unit =

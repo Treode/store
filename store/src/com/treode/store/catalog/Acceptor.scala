@@ -16,9 +16,9 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
   var state: State = null
 
   trait State {
-    def query (proposer: Peer, ballot: Long)
+    def query (proposer: Peer, ballot: Long, default: Patch)
     def propose (proposer: Peer, ballot: Long, patch: Patch)
-    def choose (chosen: Update)
+    def choose (chosen: Patch)
   }
 
   private def panic (s: State, t: Throwable): Unit =
@@ -30,19 +30,19 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
 
   class Opening extends State {
 
-    def query (proposer: Peer, ballot: Long): Unit =
-      state = new Getting (_.query (proposer, ballot))
+    def query (proposer: Peer, ballot: Long, default: Patch): Unit =
+      state = new Getting (_.query (proposer, ballot, default), default)
 
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit =
-      state = new Getting (_.propose (proposer, ballot, patch))
+      state = new Getting (_.propose (proposer, ballot, patch), patch)
 
-    def choose (chosen: Update): Unit =
-      state = new Getting (_.choose (chosen))
+    def choose (chosen: Patch): Unit =
+      state = new Getting (_.choose (chosen), chosen)
 
     override def toString = "Acceptor.Opening"
   }
 
-  class Getting (var op: State => Unit) extends State {
+  class Getting (var op: State => Unit, default: Patch) extends State {
 
     broker.get (key) run {
       case Success (cat) => got (cat)
@@ -52,37 +52,38 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
     def got (cat: Handler): Unit =
       fiber.execute {
         if (state == Getting.this) {
-          state = new Deliberating (cat)
+          state = new Deliberating (cat, default)
           op (state)
         }}
 
-    def query (proposer: Peer, ballot: Long): Unit =
-      op = (_.query (proposer, ballot))
+    def query (proposer: Peer, ballot: Long, default: Patch): Unit =
+      op = (_.query (proposer, ballot, default))
 
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit =
       op = (_.propose (proposer, ballot, patch))
 
-    def choose (chosen: Update): Unit =
+    def choose (chosen: Patch): Unit =
       op = (_.choose (chosen))
 
     override def toString = "Acceptor.Getting"
   }
 
-  class Deliberating (handler: Handler) extends State {
+  class Deliberating (handler: Handler, default: Patch) extends State {
 
     var ballot: BallotNumber = BallotNumber.zero
     var proposal: Proposal = Option.empty
     var proposers = Set.empty [Peer]
 
-    fiber.delay (deliberatingTimeout) {
-      if (state == Deliberating.this) {
-        val default = Patch (handler.version, handler.checksum, Seq.empty)
-        kit.propose (key, default) run {
-          case Success (patch) => Acceptor.this.choose (patch)
-          case Failure (t) => panic (Deliberating.this, t)
-        }}}
+    fiber.delay (deliberatingTimeout) (timeout())
 
-    def query (proposer: Peer, _ballot: Long) {
+    def timeout() {
+      if (state == Deliberating.this)
+        kit.propose (key, default) .run {
+          case Success (v) => Acceptor.this.choose (v)
+          case Failure (_) => timeout()
+        }}
+
+    def query (proposer: Peer, _ballot: Long, default: Patch) {
       proposers += proposer
       val ballot = BallotNumber (_ballot, proposer.id)
       if (ballot < this.ballot) {
@@ -103,14 +104,14 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
         Proposer.accept (key, version, ballot.number) (proposer)
       }}
 
-    def choose (chosen: Update) {
+    def choose (chosen: Patch) {
       state = new Closed (chosen)
     }
 
     override def toString = s"Acceptor.Deliberating($key, $proposal)"
   }
 
-  class Closed (val chosen: Update) extends State {
+  class Closed (val chosen: Patch) extends State {
 
     broker.patch (key, chosen) run {
       case Success (v) =>
@@ -119,13 +120,13 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
         panic (Closed.this, t)
     }
 
-    def query (proposer: Peer, ballot: Long): Unit =
+    def query (proposer: Peer, ballot: Long, default: Patch): Unit =
       Proposer.chosen (key, version, chosen) (proposer)
 
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit =
       Proposer.chosen (key, version, chosen) (proposer)
 
-    def choose (chosen: Update): Unit =
+    def choose (chosen: Patch): Unit =
       require (chosen.checksum == this.chosen.checksum, "Paxos disagreement")
 
     override def toString = s"Acceptor.Closed($key, $chosen)"
@@ -135,20 +136,20 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
 
     fiber.delay (closedLifetime) (acceptors.remove (key, version, Acceptor.this))
 
-    def query (proposer: Peer, ballot: Long): Unit = ()
+    def query (proposer: Peer, ballot: Long, default: Patch): Unit = ()
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit = ()
-    def choose (chosen: Update): Unit = ()
+    def choose (chosen: Patch): Unit = ()
 
     override def toString = s"Acceptor.Panicked($key, $thrown)"
   }
 
-  def query (proposer: Peer, ballot: Long): Unit =
-    fiber.execute (state.query (proposer, ballot))
+  def query (proposer: Peer, ballot: Long, default: Patch): Unit =
+    fiber.execute (state.query (proposer, ballot, default))
 
   def propose (proposer: Peer, ballot: Long, patch: Patch): Unit =
     fiber.execute (state.propose (proposer, ballot, patch))
 
-  def choose (chosen: Update): Unit =
+  def choose (chosen: Patch): Unit =
     fiber.execute (state.choose (chosen))
 
   override def toString = state.toString
@@ -158,7 +159,7 @@ private object Acceptor {
 
   val query = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF9BFCEDF7D2E129L, tuple (catId, uint, ulong))
+    MessageDescriptor (0xFF9BFCEDF7D2E129L, tuple (catId, uint, ulong, patch))
   }
 
   val propose = {

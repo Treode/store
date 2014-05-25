@@ -11,7 +11,7 @@ package object catalog {
   private [catalog] type Sync = Seq [(CatalogId, Update)]
 
   private [catalog] type Proposal = Option [(BallotNumber, Patch)]
-  private [catalog] type Learner = Callback [Update]
+  private [catalog] type Learner = Callback [Patch]
 
   private [catalog] def newAcceptorsMap = new ConcurrentHashMap [(CatalogId, Int), Acceptor]
   private [catalog] def newProposersMap = new ConcurrentHashMap [(CatalogId, Int), Proposer]

@@ -25,8 +25,8 @@ private class Acceptors (kit: CatalogKit) {
   def attach() {
     import Acceptor.{choose, propose, query}
 
-    query.listen { case ((key, version, ballot), c) =>
-      get (key, version) query (c, ballot)
+    query.listen { case ((key, version, ballot, default), c) =>
+      get (key, version) query (c, ballot, default)
     }
 
     propose.listen { case ((key, version, ballot, value), c) =>

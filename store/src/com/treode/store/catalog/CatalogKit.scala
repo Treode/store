@@ -25,10 +25,10 @@ private class CatalogKit (val broker: Broker) (implicit
   def locate(): ReplyTracker =
     atlas.locate (0) .track
 
-  def lead (key: CatalogId, patch: Patch): Async [Update] =
+  def lead (key: CatalogId, patch: Patch): Async [Patch] =
     proposers.propose (0, key, patch)
 
-  def propose (key: CatalogId, patch: Patch): Async [Update] =
+  def propose (key: CatalogId, patch: Patch): Async [Patch] =
     proposers.propose (random.nextInt (17) + 1, key, patch)
 
   def listen [C] (desc: CatalogDescriptor [C]) (handler: C => Any): Unit =

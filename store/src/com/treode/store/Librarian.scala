@@ -72,6 +72,7 @@ private class Librarian private (
     catalogs.issue (Atlas.catalog) (version, Atlas (cohorts, version)) run {
       case Success (_) => ()
       case Failure (_: StaleException) => install (library.atlas)
+      case Failure (_: TimeoutException) => install (library.atlas)
       case Failure (t) => throw t
     }}
 

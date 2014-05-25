@@ -58,6 +58,7 @@ private class StubPaxosHost (
           .map (_ => issued = true)
           .recover {
             case t: StaleException if tries < 16 => tries += 1
+            case t: TimeoutException if tries < 16 => tries += 1
           }}}
 
   def expectAtlas (atlas: Atlas) {

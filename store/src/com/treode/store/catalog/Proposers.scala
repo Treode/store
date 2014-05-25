@@ -23,7 +23,7 @@ private class Proposers (kit: CatalogKit) {
   def remove (key: CatalogId, version: Int, p: Proposer): Unit =
     proposers.remove ((key, version), p)
 
-  def propose (ballot: Long, key: CatalogId, patch: Patch): Async [Update] =
+  def propose (ballot: Long, key: CatalogId, patch: Patch): Async [Patch] =
     async { cb =>
       val p = get (key, patch.version)
       p.open (ballot, patch)

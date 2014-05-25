@@ -1,13 +1,12 @@
 package com.treode.store.catalog
 
-import java.util.concurrent.TimeoutException
 import scala.language.postfixOps
 
 import com.treode.async.{Backoff, Fiber}
 import com.treode.async.implicits._
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{MessageDescriptor, Peer}
-import com.treode.store.{BallotNumber, CatalogId}
+import com.treode.store.{BallotNumber, CatalogId, TimeoutException}
 
 private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
   import kit.proposers.remove
@@ -26,7 +25,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
     def refuse (ballot: Long)
     def promise (from: Peer, ballot: Long, proposal: Proposal)
     def accept (from: Peer, ballot: Long)
-    def chosen (value: Update)
+    def chosen (value: Patch)
     def timeout()
     def shutdown() = state = Shutdown
   }
@@ -63,7 +62,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
 
     def accept (from: Peer, ballot: Long) = ()
 
-    def chosen (v: Update): Unit =
+    def chosen (v: Patch): Unit =
       state = new Closed (v)
 
     def timeout() = ()
@@ -84,7 +83,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
     if (ballot == 0)
       Acceptor.propose (key, version, ballot, patch) (promised)
     else
-      Acceptor.query (key, version, ballot) (promised)
+      Acceptor.query (key, version, ballot, patch) (promised)
 
     val backoff = proposingBackoff.iterator
     fiber.delay (backoff.next) (state.timeout())
@@ -117,7 +116,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
           state = new Closed (v)
         }}}
 
-    def chosen (v: Update) {
+    def chosen (v: Patch) {
       learners foreach (_.pass (v))
       state = new Closed (v)
     }
@@ -128,7 +127,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
         accepted.clear()
         ballot = refused + random.nextInt (17) + 1
         refused = ballot
-        Acceptor.query (key, version, ballot) (promised)
+        Acceptor.query (key, version, ballot, patch) (promised)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         remove (key, version, Proposer.this)
@@ -138,22 +137,22 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
     override def toString = "Proposer.Open " + (key, ballot, patch)
   }
 
-  class Closed (update: Update) extends State {
+  class Closed (patch: Patch) extends State {
 
     fiber.delay (closedLifetime) (remove (key, version, Proposer.this))
 
     def learn (k: Learner) =
-      k.pass (update)
+      k.pass (patch)
 
-    def chosen (v: Update) =
-      require (v == update, "Paxos disagreement")
+    def chosen (v: Patch) =
+      require (v == patch, "Paxos disagreement")
 
     def refuse (ballot: Long) = ()
     def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
     def accept (from: Peer, ballot: Long) = ()
     def timeout() = ()
 
-    override def toString = "Proposer.Closed " + (key, update)
+    override def toString = "Proposer.Closed " + (key, patch)
   }
 
   object Shutdown extends State {
@@ -162,7 +161,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
     def refuse (ballot: Long) = ()
     def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
     def accept (from: Peer, ballot: Long) = ()
-    def chosen (v: Update) = ()
+    def chosen (v: Patch) = ()
     def timeout() = ()
 
     override def toString = "Proposer.Shutdown (%s)" format (key)
@@ -183,8 +182,8 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
   def accept (from: Peer, ballot: Long) =
     fiber.execute  (state.accept (from, ballot))
 
-  def chosen (updatre: Update) =
-    fiber.execute  (state.chosen (updatre))
+  def chosen (patch: Patch) =
+    fiber.execute  (state.chosen (patch))
 
   def shutdown() =
     fiber.execute  (state.shutdown())
@@ -211,5 +210,5 @@ private object Proposer {
 
   val chosen = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF2259321F9D4EF9L, tuple (catId, uint, update))
+    MessageDescriptor (0xFF2259321F9D4EF9L, tuple (catId, uint, patch))
   }}

@@ -6,7 +6,9 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.store.{Bytes, Cell}
+import com.treode.store.{Bytes, Cell, TimeoutException}
+
+import Async.guard
 import PaxosTestTools._
 
 class PaxosTracker {
@@ -29,14 +31,18 @@ class PaxosTracker {
         accepted += key -> value
     }
 
-  def propose (host: StubPaxosHost, key: Bytes, value: Int): Async [Unit] = {
-    require (value >= 0)
-    proposing (key, value)
-    for {
-      got <- host.propose (key, 0, Bytes (value))
-    } yield {
-      learned (key, got.int)
-    }}
+  def propose (host: StubPaxosHost, key: Bytes, value: Int): Async [Unit] =
+    guard {
+      require (value >= 0)
+      proposing (key, value)
+      for {
+        got <- host.propose (key, 0, Bytes (value))
+      } yield {
+        learned (key, got.int)
+      }
+    } .recover {
+      case t: TimeoutException => ()
+    }
 
   def batch (nputs: Int, hs: StubPaxosHost*) (implicit random: Random): Async [Unit] = {
     val khs = for (k <- random.nextKeys (nputs); h <- hs) yield (k, h)
