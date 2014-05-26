@@ -68,17 +68,25 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
       tracker.batches (nbatches, nputs, h1, h2)
     }
 
-    .recover { implicit scheduler => h1 =>
-      tracker.check (h1)
+    .whilst { hosts =>
+      def unsettled = hosts exists (h => !h.atlas.settled)
+      def acceptorsOpen = hosts exists (h => !(h.acceptors.isEmpty))
+      def proposersOpen = hosts exists (h => !(h.proposers.isEmpty))
+      unsettled || acceptorsOpen || proposersOpen
+    }
+
+    .verify { implicit scheduler => host =>
+      tracker.check (host)
     }
 
     .whilst { hosts =>
       def unsettled = hosts exists (h => !h.atlas.settled)
-      def open = hosts exists (h => !(h.acceptors.isEmpty))
-      unsettled || open
+      def acceptorsOpen = hosts exists (h => !(h.acceptors.isEmpty))
+      def proposersOpen = hosts exists (h => !(h.proposers.isEmpty))
+      unsettled || acceptorsOpen || proposersOpen
     }
 
-    .verify { implicit scheduler => hosts =>
+    .audit { implicit scheduler => hosts =>
       for {
         cells <- scan (hosts)
       } yield {

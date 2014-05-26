@@ -49,6 +49,7 @@ private class StubPaxosHost (
     var issued = false
     var tries = 0
     scheduler.whilst (!issued) {
+      val save = (library.atlas, library.residents)
       val version = library.atlas.version + 1
       val atlas = Atlas (cohorts.toArray, version)
       library.atlas = atlas
@@ -57,8 +58,18 @@ private class StubPaxosHost (
           .issue (Atlas.catalog) (version, atlas)
           .map (_ => issued = true)
           .recover {
-            case t: StaleException if tries < 16 => tries += 1
-            case t: TimeoutException if tries < 16 => tries += 1
+            case t: StaleException if tries < 16 =>
+              if (library.atlas == atlas) {
+                library.atlas = save._1
+                library.residents = save._2
+              }
+              tries += 1
+            case t: TimeoutException if tries < 16 =>
+              if (library.atlas == atlas) {
+                library.atlas = save._1
+                library.residents = save._2
+              }
+              tries += 1
           }}}
 
   def expectAtlas (atlas: Atlas) {
@@ -75,6 +86,9 @@ private class StubPaxosHost (
 
   def acceptors: AcceptorsMap =
     paxos.acceptors.acceptors
+
+  def proposers: ProposersMap =
+    paxos.proposers.proposers
 
   def locate (key: Bytes, time: TxClock): Cohort =
     paxos.locate (key, time)

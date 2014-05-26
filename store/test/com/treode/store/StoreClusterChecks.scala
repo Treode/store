@@ -11,8 +11,10 @@ import com.treode.cluster.HostId
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.StubDiskDrive
 import org.scalatest.{Assertions, Informing, Suite}
+import org.scalatest.time.SpanSugar
 
 import Async.async
+import SpanSugar._
 import StoreClusterChecks.{Host, Package}
 import StoreTestTools._
 
@@ -28,6 +30,8 @@ trait StoreClusterChecks extends AsyncChecks {
   private val nthreads =
     if (Runtime.getRuntime.availableProcessors < 8) 4 else 8
 
+  override val timeLimit = 15 minutes
+
   val H1 = 0x44L
   val H2 = 0x75L
   val H3 = 0xC3L
@@ -36,41 +40,17 @@ trait StoreClusterChecks extends AsyncChecks {
   val H6 = 0x32L
   val H7 = 0xEDL
   val H8 = 0xBFL
+  val HS = Seq (H1, H2, H3, H4, H5, H6, H7, H8)
 
   class ForStoreClusterRunner [H] (
       val messages: Seq [String],
       val pkg: Package [H],
-      val setup: Scheduler => (H, H) => Async [_],
-      val recover: Scheduler => H => Async [_]
+      val _setup: Scheduler => (H, H) => Async [_],
+      val _verifyCond: Seq [H] => Boolean,
+      val _verify: Scheduler => H => Async [_],
+      val _auditCond: Seq [H] => Boolean,
+      val _audit: Scheduler => Seq [H] => Async [_]
   ) {
-
-    private val _whilsts = Seq.newBuilder [Seq [H] => Boolean]
-    lazy val whilsts = _whilsts.result
-
-    private val _verifications = Seq.newBuilder [StubScheduler => Seq [H] => Async [Unit]]
-    lazy val verifications = _verifications.result
-
-    def whilst (cond: Seq [H] => Boolean): ForStoreClusterRunner [H] = {
-      _whilsts += cond
-      this
-    }
-
-    def verify (test: StubScheduler => Seq [H] => Async [Unit]): ForStoreClusterRunner [H] = {
-      _verifications += test
-      this
-    }
-
-    def boot (
-        id: HostId,
-        drive: StubDiskDrive,
-        init: Boolean
-    ) (implicit
-        random: Random,
-        parent: Scheduler,
-        network: StubNetwork,
-        config: StoreTestConfig
-    ): Async [H] =
-      pkg.boot (id, drive, init)
 
     def install (
         id: HostId
@@ -82,21 +62,105 @@ trait StoreClusterChecks extends AsyncChecks {
     ): Async [H] =
       pkg.boot (id, new StubDiskDrive, true)
 
-    def verify (hs: Seq [H]) (implicit scheduler: StubScheduler) {
-      for (cond <- whilsts)
-        scheduler.run (timers = cond (hs))
-      for (test <- verifications)
-        test (scheduler) (hs) .pass
+    def install (
+        id: HostId,
+        drive: StubDiskDrive
+    ) (implicit
+        random: Random,
+        parent: Scheduler,
+        network: StubNetwork,
+        config: StoreTestConfig
+    ): Async [H] =
+      pkg.boot (id, drive, true)
+
+    def reboot (
+        id: HostId,
+        drive: StubDiskDrive
+    ) (implicit
+        random: Random,
+        parent: Scheduler,
+        network: StubNetwork,
+        config: StoreTestConfig
+    ): Async [H] =
+      pkg.boot (id, drive, false)
+
+    def setup (
+        h1: H,
+        h2: H
+    ) (implicit
+        scheduler: StubScheduler,
+        network: StubNetwork,
+        config: StoreTestConfig
+    ): Async [Unit] = {
+      network.messageFlakiness = config.messageFlakiness
+      for {
+        _ <- _setup (scheduler) (h1, h2)
+      } yield {
+        network.messageFlakiness = 0.0
+      }}
+
+    def verify (
+        hs: Seq [H]
+    ) (implicit
+        scheduler: StubScheduler,
+        network: StubNetwork
+    ): Async [Unit] = {
+      scheduler.run (timers = _verifyCond (hs))
+      _verify (scheduler) (hs.head)
+      scheduler.run (timers = _auditCond (hs))
+      _audit (scheduler) (hs) .map (_ => ())
     }}
 
+  class ForStoreClusterAudit [H] (
+      val messages: Seq [String],
+      val pkg: Package [H],
+      val setup: Scheduler => (H, H) => Async [_],
+      val verifyCond: Seq [H] => Boolean,
+      val verify: Scheduler => H => Async [_],
+      val auditCond: Seq [H] => Boolean
+  ) {
+
+    def audit (test: Scheduler => Seq [H] => Async [Unit]) =
+      new ForStoreClusterRunner [H] (messages, pkg, setup, verifyCond, verify, auditCond, test)
+  }
+
+  class ForStoreClusterVerifyCond [H] (
+      val messages: Seq [String],
+      val pkg: Package [H],
+      val setup: Scheduler => (H, H) => Async [_],
+      val verifyCond: Seq [H] => Boolean,
+      val verify: Scheduler => H => Async [_]
+  ) {
+
+    def whilst (cond: Seq [H] => Boolean) =
+      new ForStoreClusterAudit [H] (messages, pkg, setup, verifyCond, verify, cond)
+
+    def audit (test: Scheduler => Seq [H] => Async [Unit])  =
+      new ForStoreClusterRunner [H] (messages, pkg, setup, verifyCond, verify, _ => false, test)
+  }
+
   class ForStoreClusterRecover [H] (
+      messages: Seq [String],
+      pkg: Package [H],
+      setup: Scheduler => (H, H) => Async [_],
+      verifyCond: Seq [H] => Boolean
+  ) {
+
+    def verify (test: Scheduler => H => Async [_]) =
+      new ForStoreClusterVerifyCond [H] (messages, pkg, setup, verifyCond, test)
+  }
+
+  class ForStoreClusterSetupCond [H] (
       messages: Seq [String],
       pkg: Package [H],
       setup: Scheduler => (H, H) => Async [_]
   ) {
 
-    def recover (recover: Scheduler => H => Async [_]) =
-      new ForStoreClusterRunner [H] (messages, pkg, setup, recover)
+    def whilst (cond: Seq [H] => Boolean) =
+      new ForStoreClusterRecover [H] (messages, pkg, setup, cond)
+
+    def verify (test: Scheduler => H => Async [_]) =
+      new ForStoreClusterVerifyCond [H] (messages, pkg, setup, _ => false, test)
   }
 
   class ForStoreClusterSetup [H] (
@@ -105,7 +169,7 @@ trait StoreClusterChecks extends AsyncChecks {
   ) {
 
     def setup (setup: Scheduler => (H, H) => Async [_]) =
-      new ForStoreClusterRecover (messages, pkg, setup)
+      new ForStoreClusterSetupCond (messages, pkg, setup)
   }
 
   class ForStoreClusterHost {
@@ -132,17 +196,9 @@ trait StoreClusterChecks extends AsyncChecks {
       val network: StubNetwork
   )
 
-  private class MultithreadedSchedulerKit [H] (
-      val runner: ForStoreClusterRunner [H]
-   ) (implicit
-      val random: Random,
-      val scheduler: Scheduler,
-      val network: StubNetwork
-  )
-
   private implicit class NamedTest (name: String) {
 
-    def withStubScheduler [H, A] (
+    def withRandomScheduler [H, A] (
         seed: Long,
         init: Random => ForStoreClusterRunner [H]
     ) (
@@ -164,15 +220,15 @@ trait StoreClusterChecks extends AsyncChecks {
     def withMultithreadedScheduler [H, A] (
         init: Random => ForStoreClusterRunner [H]
     ) (
-        test: MultithreadedSchedulerKit [H] => A
+        test: StubSchedulerKit [H] => A
     ): A = {
       implicit val random = Random
       val executor = Executors.newScheduledThreadPool (nthreads)
       val runner = init (random)
       try {
-        implicit val scheduler = Scheduler (executor)
+        implicit val scheduler = StubScheduler.multithreaded (executor)
         implicit val network = StubNetwork (random)
-        test (new MultithreadedSchedulerKit (runner))
+        test (new StubSchedulerKit (runner))
       } catch {
         case t: Throwable =>
           info (name)
@@ -283,20 +339,18 @@ trait StoreClusterChecks extends AsyncChecks {
   ): Int =
 
     s"forOneHost (${seed}L, $config)"
-    .withStubScheduler (seed, init) { kit =>
+    .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val hs @ Seq (h1) = Seq (runner .install (H1) .pass)
+      val h1 = runner.install (H1) .pass
+      val hs = Seq (h1)
       h1.setAtlas (settled (h1))
 
-      network.messageFlakiness = config.messageFlakiness
-      val cb = runner.setup (scheduler) (h1, h1) .capture()
+      val cb = runner.setup  (h1, h1) .capture()
       val count = scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
-      network.messageFlakiness = 0.0
 
-      runner.recover (scheduler) (h1) .pass
-      runner.verify (hs)
+      runner.verify (hs) .pass
 
       count
     }
@@ -319,22 +373,21 @@ trait StoreClusterChecks extends AsyncChecks {
   ): Int =
 
     s"forThreeStableHosts (${seed}L, $config)"
-    .withStubScheduler (seed, init) { kit =>
+    .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val h1 = runner .install (H1) .pass
-      val h2 = runner .install (H2) .pass
-      val h3 = runner .install (H3) .pass
-      for (h <- Seq (h1, h2, h3))
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      val h3 = runner.install (H3) .pass
+      val hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      network.messageFlakiness = config.messageFlakiness
-      val cb = runner.setup (scheduler) (h1, h2) .capture()
+      val cb = runner.setup (h1, h2) .capture()
       val count = scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
-      network.messageFlakiness = 0.0
 
-      runner.recover (scheduler) (h1) .pass
+      runner.verify (hs) .pass
 
       count
     }
@@ -358,19 +411,18 @@ trait StoreClusterChecks extends AsyncChecks {
     .withMultithreadedScheduler (init) { kit =>
       import kit._
 
-      val h1 = runner .install (H1) .await()
-      val h2 = runner .install (H2) .await()
-      val h3 = runner .install (H3) .await()
-      for (h <- Seq (h1, h2, h3))
+      val h1 = runner.install (H1) .await()
+      val h2 = runner.install (H2) .await()
+      val h3 = runner.install (H3) .await()
+      val hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      network.messageFlakiness = config.messageFlakiness
       val start = System.currentTimeMillis
-      runner.setup (scheduler) (h1, h2) .passOrTimeout
+      runner.setup (h1, h2) .passOrTimeout
       val end = System.currentTimeMillis
-      network.messageFlakiness = 0.0
 
-      runner.recover (scheduler) (h1) .await()
+      runner.verify (hs) .await()
 
       (end - start).toInt
     }
@@ -384,34 +436,27 @@ trait StoreClusterChecks extends AsyncChecks {
   ): Int =
 
     s"forOneHostOffline (${seed}L, $config)"
-    .withStubScheduler (seed, init) { kit =>
+    .withRandomScheduler (seed, init) { kit =>
       import kit._
 
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
 
-      var h1 = runner .boot (H1, d1, true) .pass
-      var h2 = runner .boot (H2, d2, true) .pass
-      val h3 = runner .install (H3) .pass
+      val h1 = runner.install (H1, d1) .pass
+      val h2 = runner.install (H2, d2) .pass
+      val h3 = runner.install (H3) .pass
+      val hs = Seq (h1, h2)
       h3.shutdown()
-      for (h <- Seq (h1, h2, h3))
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      network.messageFlakiness = config.messageFlakiness
-      val cb = runner.setup (scheduler) (h1, h2) .capture()
+      val cb = runner.setup (h1, h2) .capture()
       val count = scheduler.run (timers = !cb.wasInvoked, oblivious = true)
       cb.passedOrTimedout
-      network.messageFlakiness = 0.0
 
-      h1.shutdown()
-      h2.shutdown()
-      h1 = runner .boot (H1, d1, false) .pass
-      h2 = runner .boot (H2, d2, false) .pass
-      for (h <- Seq (h1, h2))
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
-      val cb2 = runner.recover (scheduler) (h1) .capture()
-      scheduler.run (timers = !cb2.wasInvoked, oblivious = true)
-      cb2.passed
+      runner.verify (hs) .pass
 
       count
     }
@@ -438,26 +483,21 @@ trait StoreClusterChecks extends AsyncChecks {
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
 
-      var h1 = runner .boot (H1, d1, true) .await()
-      var h2 = runner .boot (H2, d2, true) .await()
-      val h3 = runner .install (H3) .await()
+      val h1 = runner.install (H1, d1) .await()
+      val h2 = runner.install (H2, d2) .await()
+      val h3 = runner.install (H3) .await()
       h3.shutdown()
-      for (h <- Seq (h1, h2, h3))
+      val hs = Seq (h1, h2)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      network.messageFlakiness = config.messageFlakiness
       val start = System.currentTimeMillis
-      runner.setup (scheduler) (h1, h2) .passOrTimeout
+      runner.setup (h1, h2) .passOrTimeout
       val end = System.currentTimeMillis
-      network.messageFlakiness = 0.0
 
-      h1.shutdown()
-      h2.shutdown()
-      h1 = runner .boot (H1, d1, false) .await()
-      h2 = runner .boot (H2, d2, false) .await()
-      for (h <- Seq (h1, h2))
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
-      runner.recover (scheduler) (h1) .await()
+      runner.verify (hs) .await()
 
       (end - start).toInt
     }
@@ -472,35 +512,29 @@ trait StoreClusterChecks extends AsyncChecks {
   ): Int =
 
     s"forOneHostCrashing (${seed}L, $target, $config)"
-    .withStubScheduler (seed, init) { kit =>
+    .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val d1 = new StubDiskDrive
-      val d2 = new StubDiskDrive
       val d3 = new StubDiskDrive
 
-      var h1 = runner .boot (H1, d1, true) .pass
-      var h2 = runner .boot (H2, d2, true) .pass
-      var h3 = runner .boot (H3, d3, true) .pass
-      for (h <- Seq (h1, h2, h3))
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      var h3 = runner.install (H3, d3) .pass
+      var hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      network.messageFlakiness = config.messageFlakiness
-      val cb = runner.setup (scheduler) (h1, h2) .capture()
+      val cb = runner.setup (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
       h3.shutdown()
       val count = scheduler.run (timers = !cb.wasInvoked, oblivious = true)
       cb.passedOrTimedout
-      network.messageFlakiness = 0.0
 
-      h1.shutdown()
-      h2.shutdown()
-      h1 = runner .boot (H1, d1, false) .pass
-      h2 = runner .boot (H2, d2, false) .pass
-      h3 = runner .boot (H3, d3, false) .pass
-      for (h <- Seq (h1, h2, h3))
+      h3 = runner.reboot (H3, d3) .pass
+      hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
-      runner .recover (scheduler) (h1) .pass
+      runner.verify (hs) .pass
 
       count
     }
@@ -528,33 +562,26 @@ trait StoreClusterChecks extends AsyncChecks {
     .withMultithreadedScheduler (init) { kit =>
       import kit._
 
-      val d1 = new StubDiskDrive
-      val d2 = new StubDiskDrive
       val d3 = new StubDiskDrive
 
-      var h1 = runner .boot (H1, d1, true) .await()
-      var h2 = runner .boot (H2, d2, true) .await()
-      var h3 = runner .boot (H3, d3, true) .await()
-      for (h <- Seq (h1, h2, h3))
+      val h1 = runner.install (H1) .await()
+      val h2 = runner.install (H2) .await()
+      var h3 = runner.install (H3, d3) .await()
+      var hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      network.messageFlakiness = config.messageFlakiness
-      scheduler.delay (target) (h3.shutdown())
       val start = System.currentTimeMillis
-      runner.setup (scheduler) (h1, h2) .passOrTimeout
+      scheduler.delay (target) (h3.shutdown())
+      runner.setup (h1, h2) .passOrTimeout
       val end = System.currentTimeMillis
-      network.messageFlakiness = 0.0
 
-      h1.shutdown()
-      h2.shutdown()
-      h3.shutdown()
-      h1 = runner .boot (H1, d1, false) .await()
-      h2 = runner .boot (H2, d2, false) .await()
-      h3 = runner .boot (H3, d3, false) .await()
-      for (h <- Seq (h1, h2, h3))
+      h3 = runner.reboot (H3, d3) .await()
+      hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      runner .recover (scheduler) (h1) .await()
+      runner.verify (hs) .await()
 
       (end - start).toInt
     }
@@ -579,38 +606,30 @@ trait StoreClusterChecks extends AsyncChecks {
   ): Unit =
 
     s"forOneHostRebooting (${seed}L, $target, $config)"
-    .withStubScheduler (seed, init) { kit =>
+    .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val d1 = new StubDiskDrive
-      val d2 = new StubDiskDrive
       val d3 = new StubDiskDrive
 
-      var h1 = runner .boot (H1, d1, true) .pass
-      var h2 = runner .boot (H2, d2, true) .pass
-      var h3 = runner .boot (H3, d3, true) .pass
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      var h3 = runner.install (H3, d3) .pass
+      var hs = Seq (h1, h2, h3)
       h3.shutdown()
-      for (h <- Seq (h1, h2, h3))
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      network.messageFlakiness = config.messageFlakiness
-      val cb = runner.setup (scheduler) (h1, h2) .capture()
+      val cb = runner.setup (h1, h2) .capture()
       scheduler.run (count = target, timers = true, oblivious = true)
-      val cb2 = runner .boot (H3, d3, false) .capture()
+      val cb2 = runner.reboot (H3, d3) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked, oblivious = true)
       cb.passedOrTimedout
       h3 = cb2.passed
-      network.messageFlakiness = 0.0
 
-      h1.shutdown()
-      h2.shutdown()
-      h3.shutdown()
-      h1 = runner .boot (H1, d1, false) .pass
-      h2 = runner .boot (H2, d2, false) .pass
-      h3 = runner .boot (H3, d3, false) .pass
-      for (h <- Seq (h1, h2, h3))
+      hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
-      runner .recover (scheduler) (h1) .pass
+      runner.verify (hs) .pass
     }
 
   def forOneHostRebooting [H <: Host] (
@@ -636,36 +655,28 @@ trait StoreClusterChecks extends AsyncChecks {
     .withMultithreadedScheduler (init) { kit =>
       import kit._
 
-      val d1 = new StubDiskDrive
-      val d2 = new StubDiskDrive
       val d3 = new StubDiskDrive
 
-      var h1 = runner .boot (H1, d1, true) .await()
-      var h2 = runner .boot (H2, d2, true) .await()
-      var h3 = runner .boot (H3, d3, true) .await()
+      val h1 = runner.install (H1) .await()
+      val h2 = runner.install (H2) .await()
+      var h3 = runner.install (H3, d3) .await()
+      var hs = Seq (h1, h2, h3)
       h3.shutdown()
-      for (h <- Seq (h1, h2, h3))
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      network.messageFlakiness = config.messageFlakiness
       val _h3 =
         (for {
           _ <- Async.delay (target)
-          h <- runner.boot (H3, d3, false)
+          h <- runner.reboot (H3, d3)
         } yield h) .toFuture
-      runner.setup (scheduler) (h1, h2) .passOrTimeout
+      runner.setup (h1, h2) .passOrTimeout
       h3 = _h3.await()
-      network.messageFlakiness = 0.0
 
-      h1.shutdown()
-      h2.shutdown()
-      h3.shutdown()
-      h1 = runner .boot (H1, d1, false) .await()
-      h2 = runner .boot (H2, d2, false) .await()
-      h3 = runner .boot (H3, d3, false) .await()
-      for (h <- Seq (h1, h2, h3))
+      hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
-      runner .recover (scheduler) (h1) .await()
+      runner.verify (hs) .await()
     }
 
   def forOneHostRebootingMultithreaded [H <: Host] (
@@ -689,39 +700,31 @@ trait StoreClusterChecks extends AsyncChecks {
   ): Unit =
 
     s"forOneHostBouncing (${seed}L, $target1, $target2, $config)"
-    .withStubScheduler (seed, init) { kit =>
+    .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val d1 = new StubDiskDrive
-      val d2 = new StubDiskDrive
       val d3 = new StubDiskDrive
 
-      var h1 = runner .boot (H1, d1, true) .pass
-      var h2 = runner .boot (H2, d2, true) .pass
-      var h3 = runner .boot (H3, d3, true) .pass
-      for (h <- Seq (h1, h2, h3))
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      var h3 = runner.install (H3, d3) .pass
+      var hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      network.messageFlakiness = config.messageFlakiness
-      val cb = runner.setup (scheduler) (h1, h2) .capture()
+      val cb = runner.setup (h1, h2) .capture()
       scheduler.run (count = target1, timers = true, oblivious = true)
       h3.shutdown()
       scheduler.run (count = target2, timers = true, oblivious = true)
-      val cb2 = runner .boot (H3, d3, false) .capture()
+      val cb2 = runner.reboot (H3, d3) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked, oblivious = true)
       cb.passedOrTimedout
       h3 = cb2.passed
-      network.messageFlakiness = 0.0
 
-      h1.shutdown()
-      h2.shutdown()
-      h3.shutdown()
-      h1 = runner .boot (H1, d1, false) .pass
-      h2 = runner .boot (H2, d2, false) .pass
-      h3 = runner .boot (H3, d3, false) .pass
-      for (h <- Seq (h1, h2, h3))
+      hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
-      runner .recover (scheduler) (h1) .pass
+      runner.verify (hs) .pass
     }
 
   def forOneHostBouncing [H <: Host] (
@@ -749,37 +752,29 @@ trait StoreClusterChecks extends AsyncChecks {
     .withMultithreadedScheduler (init) { kit =>
       import kit._
 
-      val d1 = new StubDiskDrive
-      val d2 = new StubDiskDrive
       val d3 = new StubDiskDrive
 
-      var h1 = runner .boot (H1, d1, true) .await()
-      var h2 = runner .boot (H2, d2, true) .await()
-      var h3 = runner .boot (H3, d3, true) .await()
-      for (h <- Seq (h1, h2, h3))
+      val h1 = runner.install (H1) .await()
+      val h2 = runner.install (H2) .await()
+      var h3 = runner.install (H3, d3) .await()
+      var hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      network.messageFlakiness = config.messageFlakiness
       val _h3 =
         (for {
           _ <- Async.delay (target1)
           _ = h3.shutdown()
           _ <- Async.delay (target2)
-          h <- runner .boot (H3, d3, false)
+          h <- runner.reboot (H3, d3)
         } yield h) .toFuture
-      runner.setup (scheduler) (h1, h2) .passOrTimeout
+      runner.setup (h1, h2) .passOrTimeout
       h3 = _h3.await()
-      network.messageFlakiness = 0.0
 
-      h1.shutdown()
-      h2.shutdown()
-      h3.shutdown()
-      h1 = runner .boot (H1, d1, false) .await()
-      h2 = runner .boot (H2, d2, false) .await()
-      h3 = runner .boot (H3, d3, false) .await()
-      for (h <- Seq (h1, h2, h3))
+      hs = Seq (h1, h2, h3)
+      for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
-      runner .recover (scheduler) (h1) .await()
+      runner.verify (hs) .await()
     }
 
   def forOneHostBouncingMultithreaded [H <: Host] (
@@ -804,26 +799,23 @@ trait StoreClusterChecks extends AsyncChecks {
   ): Unit =
 
     s"forOneHostMoving (${seed}L, $target, $config)"
-    .withStubScheduler (seed, init) { kit =>
+    .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val h1 = runner .install (H1) .pass
-      val h2 = runner .install (H2) .pass
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
       val hs = Seq (h1, h2)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1)) .pass
 
-      network.messageFlakiness = config.messageFlakiness
-      val cb = runner.setup (scheduler) (h1, h1) .capture()
+      val cb = runner.setup (h1, h1) .capture()
       scheduler.run (count = target, timers = true)
       h1.issueAtlas (issuing (h1) (h2)) .pass
       scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
-      network.messageFlakiness = 0.0
 
-      runner.recover (scheduler) (h1) .pass
-      runner.verify (hs)
+      runner.verify (hs) .pass
     }
 
   def forOneHostMoving [H <: Host] (
@@ -847,26 +839,23 @@ trait StoreClusterChecks extends AsyncChecks {
   ): Unit =
 
     s"forThreeHostsMoving (${seed}L, $target, $config)"
-    .withStubScheduler (seed, init) { kit =>
+    .withRandomScheduler (seed, init) { kit =>
       import kit._
 
       val hs @ Seq (h1, h2, h3, h4, h5, h6) =
         for (id <- Seq (H1, H2, H3, H4, H5, H6))
-          yield runner .install (id) .pass
+          yield runner.install (id) .pass
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      network.messageFlakiness = config.messageFlakiness
-      val cb = runner.setup (scheduler) (h1, h2) .capture()
+      val cb = runner.setup (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h4, h5, h6)) .pass
       scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
-      network.messageFlakiness = 0.0
 
-      runner.recover (scheduler) (h1) .pass
-      runner.verify (hs)
+      runner.verify (hs) .pass
     }
 
     def forThreeHostsMoving [H <: Host] (
@@ -890,28 +879,25 @@ trait StoreClusterChecks extends AsyncChecks {
   ): Unit =
 
     s"for3to8 (${seed}L, $target, $config)"
-    .withStubScheduler (seed, init) { kit =>
+    .withRandomScheduler (seed, init) { kit =>
       import kit._
 
       val hs =
         for (id <- Seq (H1, H2, H3, H4, H5, H6, H7, H8))
-          yield runner .install (id) .pass
+          yield runner.install (id) .pass
       val Seq (h1, h2, h3) = hs take 3
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
       val atlas1 = Seq (settled (h1, h2, h3))
       h1.issueAtlas (atlas1: _*) .pass
 
-      network.messageFlakiness = config.messageFlakiness
-      val cb = runner.setup (scheduler) (h1, h2) .capture()
+      val cb = runner.setup (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
       h1.issueAtlas (rewriteFor8 (atlas1, hs): _*) .pass
       scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
-      network.messageFlakiness = 0.0
 
-      runner.recover (scheduler) (h1) .pass
-      runner.verify (hs)
+      runner.verify (hs) .pass
     }
 
     def for3to8 [H <: Host] (
