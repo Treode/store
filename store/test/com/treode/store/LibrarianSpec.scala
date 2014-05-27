@@ -93,12 +93,9 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
     kit.run (count = 2000, timers = true)
     expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)
     h0.rebalancer.pass()
-    kit.run (count = 1000, timers = true)
+    kit.run (count = 2000, timers = true)
     expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)
     h1.rebalancer.pass()
-    kit.run (count = 1000, timers = true)
-    expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)
-    h2.rebalancer.pass()
     kit.run (count = 2000, timers = true)
     expectAtlas (3, settled (h0, h1, h3)) (hs)
   }}
