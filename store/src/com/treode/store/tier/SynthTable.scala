@@ -187,7 +187,7 @@ private class SynthTable (
       writeLock.lock()
       try {
         tiers = tiers.compacted (tier, chosen)
-        new Meta (tiers.gen, tiers)
+        new Meta (math.max (gen, tiers.gen), tiers)
       } finally {
         writeLock.unlock()
       }}}

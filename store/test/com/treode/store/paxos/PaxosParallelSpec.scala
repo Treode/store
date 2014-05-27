@@ -10,34 +10,21 @@ class PaxosParallelSpec extends FreeSpec with ParallelTestExecution with PaxosBe
 
     "achieve consensus with" - {
 
-      for { (name, flakiness) <- Seq (
-          "a reliable network" -> 0.0,
-          "a flakey network"   -> 0.1)
-      } s"$name and" - {
+      "a flakey network and" - {
 
-        implicit val config = StoreTestConfig (messageFlakiness = flakiness)
+        implicit val config = StoreTestConfig()
 
-        "stable hosts (multithreaded)" taggedAs (Intensive, Periodic) in {
-          forThreeStableHostsMultithreaded { implicit random =>
-            achieveConsensus (100, 3)
-          }}
-
-        "a host is offline (multithreaded)" taggedAs (Intensive, Periodic) in {
-          forOneHostOfflineMultithreaded { implicit random =>
-            achieveConsensus (100, 3)
-          }}
-
-        "a host crashes (multithreaded)" taggedAs (Intensive, Periodic) in {
-          forOneHostCrashingMultithreaded { implicit random =>
-            achieveConsensus (100, 3)
-          }}
-
-        "a host reboots (multithreaded)" taggedAs (Intensive, Periodic) in {
-          forOneHostRebootingMultithreaded { implicit random =>
-            achieveConsensus (100, 3)
+        "three stable hosts (multithreaded)" taggedAs (Intensive, Periodic) in {
+          for3hostsMT { implicit random =>
+            achieveConsensus (10, 10)
           }}
 
         "a host bounces (multithreaded)" taggedAs (Intensive, Periodic) in {
-          forOneHostBouncingMultithreaded { implicit random =>
-            achieveConsensus (100, 3)
+          for3with1bouncingMT { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "for three hosts growing to eight (multithreaded)" taggedAs (Intensive, Periodic) in {
+          for3to8MT { implicit random =>
+            achieveConsensus (10, 10)
           }}}}}}

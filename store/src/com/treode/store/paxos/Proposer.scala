@@ -27,7 +27,6 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     def accept (from: Peer, ballot: Long)
     def chosen (value: Bytes)
     def timeout()
-    def shutdown() = state = Shutdown
   }
 
   private def max (x: Proposal, y: Proposal) = {
@@ -192,9 +191,6 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
   def chosen (value: Bytes) =
     fiber.execute  (state.chosen (value))
-
-  def shutdown() =
-    fiber.execute  (state.shutdown())
 
   override def toString = state.toString
 }

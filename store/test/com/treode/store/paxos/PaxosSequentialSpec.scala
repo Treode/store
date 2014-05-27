@@ -51,38 +51,118 @@ class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
 
         implicit val config = StoreTestConfig (messageFlakiness = flakiness)
 
+        "for one host" taggedAs (Intensive, Periodic) in {
+          for1host { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
         "three stable hosts" taggedAs (Intensive, Periodic) in {
-          forThreeStableHosts { implicit random =>
+          for3hosts { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "eight stable hosts" taggedAs (Intensive, Periodic) in {
+          for8hosts { implicit random =>
             achieveConsensus (10, 10)
           }}
 
         "one of three hosts is offline" taggedAs (Intensive, Periodic) in {
-          forOneHostOffline { implicit random =>
+          for3with1offline { implicit random =>
             achieveConsensus (10, 10)
           }}
 
         "one of three hosts crashes" taggedAs (Intensive, Periodic) in {
-          forOneHostCrashing { implicit random =>
+          for3with1crashing { implicit random =>
             achieveConsensus (10, 10)
           }}
 
         "one of three hosts reboots" taggedAs (Intensive, Periodic) in {
-          forOneHostRebooting { implicit random =>
+          for3with1rebooting { implicit random =>
             achieveConsensus (10, 10)
           }}
 
         "one of three hosts bounces" taggedAs (Intensive, Periodic) in {
-          forOneHostBouncing { implicit random =>
+          for3with1bouncing { implicit random =>
             achieveConsensus (10, 10)
           }}
 
         "one host moving to another" taggedAs (Intensive, Periodic) in {
-          forOneHostMoving { implicit random =>
+          for1to1 { implicit random =>
             achieveConsensus (10, 10)
           }}
 
-        "three hosts moving to others" taggedAs (Intensive, Periodic) in {
-          forThreeHostsMoving { implicit random =>
+        "one host growing to three" taggedAs (Intensive, Periodic) in {
+          for1to3 { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "one host growing to three, one bounces" taggedAs (Intensive, Periodic) in {
+          for1to3with1bouncing { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts shrinking to one" taggedAs (Intensive, Periodic) in {
+          for3to1 { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts shrinking to one, one bounces" taggedAs (Intensive, Periodic) in {
+          for3to1with1bouncing { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts replacing one" taggedAs (Intensive, Periodic) in {
+          for3replacing1 { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts replacing one, source bounces" taggedAs (Intensive, Periodic) in {
+          for3replacing1withSourceBouncing { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts replacing one, target bounces" taggedAs (Intensive, Periodic) in {
+          for3replacing1withTargetBouncing { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts replacing one, common bounces" taggedAs (Intensive, Periodic) in {
+          for3replacing1withCommonBouncing { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts replacing two" taggedAs (Intensive, Periodic) in {
+          for3replacing2 { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts replacing two, source bounces" taggedAs (Intensive, Periodic) in {
+          for3replacing2withSourceBouncing { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts replacing two, target bounces" taggedAs (Intensive, Periodic) in {
+          for3replacing2withTargetBouncing { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts replacing two, common bounces" taggedAs (Intensive, Periodic) in {
+          for3replacing2withCommonBouncing { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts moving to three others" taggedAs (Intensive, Periodic) in {
+          for3to3 { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts moving to three others, source bounces" taggedAs (Intensive, Periodic) in {
+          for3to3withSourceBouncing { implicit random =>
+            achieveConsensus (10, 10)
+          }}
+
+        "three hosts moving to three others, target bounces" taggedAs (Intensive, Periodic) in {
+          for3to3withTargetBouncing { implicit random =>
             achieveConsensus (10, 10)
           }}
 
@@ -90,4 +170,8 @@ class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
           for3to8 { implicit random =>
             achieveConsensus (10, 10)
           }}
-      }}}}
+
+        "for eight hosts shrinking to three" taggedAs (Intensive, Periodic) in {
+          for8to3 { implicit random =>
+            achieveConsensus (10, 10)
+          }}}}}}

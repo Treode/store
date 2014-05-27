@@ -26,6 +26,9 @@ class Atlas private (
   def locate [A] (p: Pickler [A], v: A): Cohort =
     locate (p.murmur32 (v))
 
+  def quorum (hosts: Set [HostId]): Boolean =
+    cohorts forall (_.quorum (hosts))
+
   def settled: Boolean =
     cohorts forall (_.settled)
 

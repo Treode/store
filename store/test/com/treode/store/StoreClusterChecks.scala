@@ -3,7 +3,7 @@ package com.treode.store
 import java.util.concurrent.Executors
 import scala.util.Random
 
-import com.treode.async.{Async, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.stubs.{AsyncChecks, CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
@@ -14,6 +14,7 @@ import org.scalatest.{Assertions, Informing, Suite}
 import org.scalatest.time.SpanSugar
 
 import Async.async
+import Callback.{ignore => disregard}
 import SpanSugar._
 import StoreClusterChecks.{Host, Package}
 import StoreTestTools._
@@ -42,7 +43,7 @@ trait StoreClusterChecks extends AsyncChecks {
   val H8 = 0xBFL
   val HS = Seq (H1, H2, H3, H4, H5, H6, H7, H8)
 
-  class ForStoreClusterRunner [H] (
+  class ForStoreClusterRunner [H <: Host] (
       val messages: Seq [String],
       val pkg: Package [H],
       val _setup: Scheduler => (H, H) => Async [_],
@@ -106,12 +107,14 @@ trait StoreClusterChecks extends AsyncChecks {
         network: StubNetwork
     ): Async [Unit] = {
       scheduler.run (timers = _verifyCond (hs))
-      _verify (scheduler) (hs.head)
-      scheduler.run (timers = _auditCond (hs))
-      _audit (scheduler) (hs) .map (_ => ())
+      for {
+        _ <- _verify (scheduler) (hs.head)
+        _ = scheduler.run (timers = _auditCond (hs))
+        _ <- _audit (scheduler) (hs) .map (_ => ())
+      } yield ()
     }}
 
-  class ForStoreClusterAudit [H] (
+  class ForStoreClusterAudit [H <: Host] (
       val messages: Seq [String],
       val pkg: Package [H],
       val setup: Scheduler => (H, H) => Async [_],
@@ -124,7 +127,7 @@ trait StoreClusterChecks extends AsyncChecks {
       new ForStoreClusterRunner [H] (messages, pkg, setup, verifyCond, verify, auditCond, test)
   }
 
-  class ForStoreClusterVerifyCond [H] (
+  class ForStoreClusterVerifyCond [H <: Host] (
       val messages: Seq [String],
       val pkg: Package [H],
       val setup: Scheduler => (H, H) => Async [_],
@@ -139,7 +142,7 @@ trait StoreClusterChecks extends AsyncChecks {
       new ForStoreClusterRunner [H] (messages, pkg, setup, verifyCond, verify, _ => false, test)
   }
 
-  class ForStoreClusterRecover [H] (
+  class ForStoreClusterRecover [H <: Host] (
       messages: Seq [String],
       pkg: Package [H],
       setup: Scheduler => (H, H) => Async [_],
@@ -150,7 +153,7 @@ trait StoreClusterChecks extends AsyncChecks {
       new ForStoreClusterVerifyCond [H] (messages, pkg, setup, verifyCond, test)
   }
 
-  class ForStoreClusterSetupCond [H] (
+  class ForStoreClusterSetupCond [H <: Host] (
       messages: Seq [String],
       pkg: Package [H],
       setup: Scheduler => (H, H) => Async [_]
@@ -163,7 +166,7 @@ trait StoreClusterChecks extends AsyncChecks {
       new ForStoreClusterVerifyCond [H] (messages, pkg, setup, _ => false, test)
   }
 
-  class ForStoreClusterSetup [H] (
+  class ForStoreClusterSetup [H <: Host] (
       messages: Seq [String],
       pkg: Package [H]
   ) {
@@ -181,14 +184,14 @@ trait StoreClusterChecks extends AsyncChecks {
       this
     }
 
-    def host [H] (pkg: Package [H]): ForStoreClusterSetup [H] =
+    def host [H <: Host] (pkg: Package [H]): ForStoreClusterSetup [H] =
       new ForStoreClusterSetup (messages.result, pkg)
   }
 
   def cluster: ForStoreClusterHost =
     new ForStoreClusterHost
 
-  private class StubSchedulerKit [H] (
+  private class StubSchedulerKit [H <: Host] (
       val runner: ForStoreClusterRunner [H]
    ) (implicit
       val random: Random,
@@ -198,7 +201,7 @@ trait StoreClusterChecks extends AsyncChecks {
 
   private implicit class NamedTest (name: String) {
 
-    def withRandomScheduler [H, A] (
+    def withRandomScheduler [H <: Host, A] (
         seed: Long,
         init: Random => ForStoreClusterRunner [H]
     ) (
@@ -217,7 +220,7 @@ trait StoreClusterChecks extends AsyncChecks {
           throw t
       }}
 
-    def withMultithreadedScheduler [H, A] (
+    def withMultithreadedScheduler [H <: Host, A] (
         init: Random => ForStoreClusterRunner [H]
     ) (
         test: StubSchedulerKit [H] => A
@@ -312,7 +315,7 @@ trait StoreClusterChecks extends AsyncChecks {
         settled (h5, h6, h7))
   }
 
-  private def rewriteFor8 (prev: Seq [Cohort], hosts: Seq [StubStoreHost]): Seq [Cohort] = {
+  private def rewriteFor3to8 (prev: Seq [Cohort], hosts: Seq [StubStoreHost]): Seq [Cohort] = {
     import Cohort.{Issuing, Moving, Settled}
     for ((Settled (hs1), i) <- cohortsFor8 (hosts) .zipWithIndex) yield {
       prev (i % prev.length) match {
@@ -330,7 +333,17 @@ trait StoreClusterChecks extends AsyncChecks {
           Issuing (hs0, hs1)
       }}}
 
-  def forOneHost [H <: Host] (
+  private def rewriteFor8to3 (prev: Seq [Cohort], hosts: Seq [StubStoreHost]): Seq [Cohort] = {
+    import Cohort.{Issuing, Moving, Settled}
+    val hs1 = hosts .take (3) .map (_.localId) .toSet
+    for ((Settled (hs0), i) <- prev.zipWithIndex) yield
+      if (hs0 == hs1)
+        Settled (hs0)
+      else
+        Issuing (hs0, hs1)
+  }
+
+  def for1host [H <: Host] (
       seed: Long
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -338,7 +351,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Int =
 
-    s"forOneHost (${seed}L, $config)"
+    s"for1host (${seed}L, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -355,16 +368,16 @@ trait StoreClusterChecks extends AsyncChecks {
       count
     }
 
-  def forOneHost [H <: Host] (
+  def for1host [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forSeeds (forOneHost (_) (init))
+    val average = forSeeds (for1host (_) (init))
     info (s"Average time on one host: ${average}ms")
   }
 
-  def forThreeStableHosts [H <: Host] (
+  def for3hosts [H <: Host] (
       seed: Long
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -372,7 +385,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Int =
 
-    s"forThreeStableHosts (${seed}L, $config)"
+    s"for3hosts (${seed}L, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -392,22 +405,22 @@ trait StoreClusterChecks extends AsyncChecks {
       count
     }
 
-  def forThreeStableHosts [H <: Host] (
+  def for3hosts [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forSeeds (forThreeStableHosts (_) (init))
+    val average = forSeeds (for3hosts (_) (init))
     info (s"Average time on three stable hosts: ${average}ms")
   }
 
-  def forThreeStableHostsMultithreaded [H <: Host] (
+  def for3hostsMT [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ): Int =
 
-    s"forThreeStableHostsMultithreaded ($config)"
+    s"for3hostsMT ($config)"
     .withMultithreadedScheduler (init) { kit =>
       import kit._
 
@@ -427,7 +440,7 @@ trait StoreClusterChecks extends AsyncChecks {
       (end - start).toInt
     }
 
-  def forOneHostOffline [H <: Host] (
+  def for8hosts [H <: Host] (
       seed: Long
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -435,7 +448,45 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Int =
 
-    s"forOneHostOffline (${seed}L, $config)"
+    s"for8hosts (${seed}L, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val hs =
+        for (id <- Seq (H1, H2, H3, H4, H5, H6, H7, H8))
+          yield runner.install (id) .pass
+      val Seq (h1, h2) = hs take 2
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (cohortsFor8 (hs): _*) .pass
+
+      val cb = runner.setup (h1, h2) .capture()
+      val count = scheduler.run (timers = !cb.wasInvoked)
+      cb.passedOrTimedout
+
+      runner.verify (hs) .pass
+
+      count
+    }
+
+  def for8hosts [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forSeeds (for8hosts (_) (init))
+    info (s"Average time on eight stable hosts: ${average}ms")
+  }
+
+  def for3with1offline [H <: Host] (
+      seed: Long
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Int =
+
+    s"for3with1offline (${seed}L, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -461,22 +512,22 @@ trait StoreClusterChecks extends AsyncChecks {
       count
     }
 
-  def forOneHostOffline [H <: Host] (
+  def for3with1offline [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forSeeds (forOneHostOffline (_) (init))
+    val average = forSeeds (for3with1offline (_) (init))
     info (s"Average time with one host crashed: ${average}ms")
   }
 
-  def forOneHostOfflineMultithreaded [H <: Host] (
+  def for3with1offlineMT [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ): Int =
 
-    s"forOneHostOfflineMultithreaded ($config)"
+    s"for3with1offlineMT ($config)"
     .withMultithreadedScheduler (init) { kit =>
       import kit._
 
@@ -502,7 +553,7 @@ trait StoreClusterChecks extends AsyncChecks {
       (end - start).toInt
     }
 
-  def forOneHostCrashing [H <: Host] (
+  def for3with1crashing [H <: Host] (
       seed: Long,
       target: Int
   ) (
@@ -511,7 +562,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Int =
 
-    s"forOneHostCrashing (${seed}L, $target, $config)"
+    s"for3with1crashing (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -539,18 +590,18 @@ trait StoreClusterChecks extends AsyncChecks {
       count
     }
 
-  def forOneHostCrashing [H <: Host] (
+  def for3with1crashing [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
     val average = forTargets (
-        forThreeStableHosts (_) (init)) (
-            forOneHostCrashing (_, _) (init))
+        for3hosts (_) (init)) (
+            for3with1crashing (_, _) (init))
     info (s"Average time with one host crashing: ${average}ms")
   }
 
-  def forOneHostCrashingMultithreaded [H <: Host] (
+  def for3with1crashingMT [H <: Host] (
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -558,7 +609,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Int =
 
-    s"forOneHostCrashingMultithreaded ($target, $config)"
+    s"for3with1crashingMT ($target, $config)"
     .withMultithreadedScheduler (init) { kit =>
       import kit._
 
@@ -586,17 +637,17 @@ trait StoreClusterChecks extends AsyncChecks {
       (end - start).toInt
     }
 
-  def forOneHostCrashingMultithreaded [H <: Host] (
+  def for3with1crashingMT [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
-    val time = forThreeStableHostsMultithreaded (init)
+    val time = for3hostsMT (init)
     val target =  Random.nextInt ((time * 0.7).toInt) + (time * 0.1).toInt
-    forOneHostCrashingMultithreaded (target) (init)
+    for3with1crashingMT (target) (init)
   }
 
-  def forOneHostRebooting [H <: Host] (
+  def for3with1rebooting [H <: Host] (
       seed: Long,
       target: Int
   ) (
@@ -605,7 +656,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Unit =
 
-    s"forOneHostRebooting (${seed}L, $target, $config)"
+    s"for3with1rebooting (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -632,64 +683,18 @@ trait StoreClusterChecks extends AsyncChecks {
       runner.verify (hs) .pass
     }
 
-  def forOneHostRebooting [H <: Host] (
+  def for3with1rebooting [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
     val average = forTargets (
-        forOneHostOffline (_) (init)) (
-            forOneHostRebooting (_, _) (init))
+        for3with1offline (_) (init)) (
+            for3with1rebooting (_, _) (init))
     info (s"Average time with one host rebooting: ${average}ms")
   }
 
-  def forOneHostRebootingMultithreaded [H <: Host] (
-      target: Int
-  ) (
-      init: Random => ForStoreClusterRunner [H]
-  ) (implicit
-      config: StoreTestConfig
-  ): Unit =
-
-    s"forOneHostRebootingMultithreaded ($target, $config)"
-    .withMultithreadedScheduler (init) { kit =>
-      import kit._
-
-      val d3 = new StubDiskDrive
-
-      val h1 = runner.install (H1) .await()
-      val h2 = runner.install (H2) .await()
-      var h3 = runner.install (H3, d3) .await()
-      var hs = Seq (h1, h2, h3)
-      h3.shutdown()
-      for (h <- hs)
-        h.setAtlas (settled (h1, h2, h3))
-
-      val _h3 =
-        (for {
-          _ <- Async.delay (target)
-          h <- runner.reboot (H3, d3)
-        } yield h) .toFuture
-      runner.setup (h1, h2) .passOrTimeout
-      h3 = _h3.await()
-
-      hs = Seq (h1, h2, h3)
-      for (h <- hs)
-        h.setAtlas (settled (h1, h2, h3))
-      runner.verify (hs) .await()
-    }
-
-  def forOneHostRebootingMultithreaded [H <: Host] (
-      init: Random => ForStoreClusterRunner [H]
-  ) (implicit
-      config: StoreTestConfig
-  ) {
-    val time = forOneHostOfflineMultithreaded (init)
-    val target =  Random.nextInt ((time * 0.7).toInt) + (time * 0.1).toInt
-    forOneHostRebootingMultithreaded (target) (init)
-  }
-
-  def forOneHostBouncing [H <: Host] (
+  def for3with1bouncing [H <: Host] (
       seed: Long,
       target1: Int,
       target2: Int
@@ -699,7 +704,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Unit =
 
-    s"forOneHostBouncing (${seed}L, $target1, $target2, $config)"
+    s"for3with1bouncing (${seed}L, $target1, $target2, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -727,19 +732,19 @@ trait StoreClusterChecks extends AsyncChecks {
       runner.verify (hs) .pass
     }
 
-  def forOneHostBouncing [H <: Host] (
+  def for3with1bouncing [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
     val average = forDoubleTargets (
-        forThreeStableHosts (_) (init)) (
-            forOneHostCrashing (_, _) (init)) (
-                forOneHostBouncing (_, _, _) (init))
+        for3hosts (_) (init)) (
+            for3with1crashing (_, _) (init)) (
+                for3with1bouncing (_, _, _) (init))
     info (s"Average time with one host bouncing: ${average}ms")
   }
 
-  def forOneHostBouncingMultithreaded [H <: Host] (
+  def for3with1bouncingMT [H <: Host] (
       target1: Int,
       target2: Int
   ) (
@@ -748,7 +753,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Unit =
 
-    s"forOneHostRebootingMultithreaded ($target1, $target2, $config)"
+    s"for3with1rebootingMT ($target1, $target2, $config)"
     .withMultithreadedScheduler (init) { kit =>
       import kit._
 
@@ -777,19 +782,19 @@ trait StoreClusterChecks extends AsyncChecks {
       runner.verify (hs) .await()
     }
 
-  def forOneHostBouncingMultithreaded [H <: Host] (
+  def for3with1bouncingMT [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
-    val time1 = forThreeStableHostsMultithreaded (init)
+    val time1 = for3hostsMT (init)
     val target1 = Random.nextInt ((time1 * 0.7).toInt) + (time1 * 0.1).toInt
-    val time2 = forOneHostCrashingMultithreaded (target1) (init)
+    val time2 = for3with1crashingMT (target1) (init)
     val target2 =  Random.nextInt ((time2 * 0.7).toInt) + (time2 * 0.1).toInt
-    forOneHostBouncingMultithreaded (target1, target2) (init)
+    for3with1bouncingMT (target1, target2) (init)
   }
 
-  def forOneHostMoving [H <: Host] (
+  def for1to1 [H <: Host] (
       seed: Long,
       target: Int
   ) (
@@ -798,7 +803,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Unit =
 
-    s"forOneHostMoving (${seed}L, $target, $config)"
+    s"for1to1 (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -818,55 +823,771 @@ trait StoreClusterChecks extends AsyncChecks {
       runner.verify (hs) .pass
     }
 
-  def forOneHostMoving [H <: Host] (
+  def for1to1 [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
     val average = forTargets (
-        forOneHost (_) (init)) (
-            forOneHostMoving (_, _) (init))
+        for1host (_) (init)) (
+            for1to1 (_, _) (init))
     info (s"Average time with one host moving: ${average}ms")
   }
 
-  def forThreeHostsMoving [H <: Host] (
+  def for1to3 [H <: Host] (
       seed: Long,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
-  ): Unit =
+  ): Int =
 
-    s"forThreeHostsMoving (${seed}L, $target, $config)"
+    s"for1to3 (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val hs @ Seq (h1, h2, h3, h4, h5, h6) =
-        for (id <- Seq (H1, H2, H3, H4, H5, H6))
-          yield runner.install (id) .pass
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      val h3 = runner.install (H3) .pass
+      val hs = Seq (h1, h2, h3)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1)) .pass
+
+      val cb = runner.setup (h1, h2) .capture()
+      scheduler.run (count = target, timers = true)
+      h1.issueAtlas (issuing (h1) (h1, h2, h3)) .pass
+      val count = scheduler.run (timers = !cb.wasInvoked)
+      cb.passedOrTimedout
+
+      runner.verify (hs) .pass
+
+      count
+    }
+
+  def for1to3 [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forTargets (
+        for1host (_) (init)) (
+            for1to3 (_, _) (init))
+    info (s"Average time with one host growing to three: ${average}ms")
+  }
+
+  def for1to3with1bouncing [H <: Host] (
+      seed: Long,
+      target1: Int,
+      target3: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for1to3with1bouncing (${seed}L, $target1, $target3, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val target2 = random.nextInt (target3)
+      val d3 = new StubDiskDrive
+
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      var h3 = runner.install (H3, d3) .pass
+      var hs = Seq (h1, h2, h3)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1)) .pass
+
+      val cb = runner.setup (h1, h2) .capture()
+      scheduler.run (count = target1, timers = true)
+      h1.issueAtlas (issuing (h1) (h1, h2, h3)) .pass
+      scheduler.run (count = target2, timers = true)
+      h3.shutdown()
+      scheduler.run (count = target3 - target2, timers = true)
+      val cb2 = runner.reboot (H3, d3) .capture()
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
+      cb.passedOrTimedout
+      h3 = cb2.passed
+
+      hs = Seq (h1, h2, h3)
+      runner.verify (hs) .pass
+    }
+
+  def for1to3with1bouncing [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forDoubleTargets (
+        for1host (_) (init)) (
+            for1to3 (_, _) (init)) (
+                for1to3with1bouncing (_, _, _) (init))
+    info (s"Average time with one host growing to three, one bounces: ${average}ms")
+  }
+
+  def for3to1 [H <: Host] (
+      seed: Long,
+      target: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Int =
+
+    s"for3to1 (${seed}L, $target, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      val h3 = runner.install (H3) .pass
+      val hs = Seq (h1, h2, h3)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
       val cb = runner.setup (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
-      h1.issueAtlas (issuing (h1, h2, h3) (h4, h5, h6)) .pass
-      scheduler.run (timers = !cb.wasInvoked)
+      h1.issueAtlas (issuing (h1, h2, h3) (h1)) .pass
+      val count = scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
 
       runner.verify (hs) .pass
+
+      count
     }
 
-    def forThreeHostsMoving [H <: Host] (
+  def for3to1 [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
     val average = forTargets (
-        forThreeStableHosts (_) (init)) (
-            forThreeHostsMoving (_, _) (init))
+        for1host (_) (init)) (
+            for3to1 (_, _) (init))
+    info (s"Average time with three hosts shriking to one: ${average}ms")
+  }
+
+  def for3to1with1bouncing [H <: Host] (
+      seed: Long,
+      target1: Int,
+      target3: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for3to1with1bouncing (${seed}L, $target1, $target3, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val target2 = random.nextInt (target3)
+      val d3 = new StubDiskDrive
+
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      var h3 = runner.install (H3, d3) .pass
+      var hs = Seq (h1, h2, h3)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h1, h2) .capture()
+      scheduler.run (count = target1, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h1)) .pass
+      scheduler.run (count = target2, timers = true)
+      h3.shutdown()
+      scheduler.run (count = target3 - target2, timers = true)
+      val cb2 = runner.reboot (H3, d3) .capture()
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
+      cb.passedOrTimedout
+      h3 = cb2.passed
+
+      hs = Seq (h1, h2, h3)
+      runner.verify (hs) .pass
+    }
+
+  def for3to1with1bouncing [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forDoubleTargets (
+        for3hosts (_) (init)) (
+            for3to1 (_, _) (init)) (
+                for3to1with1bouncing (_, _, _) (init))
+    info (s"Average time with three hosts shriking to one, one bounces: ${average}ms")
+  }
+
+  def for3replacing1 [H <: Host] (
+      seed: Long,
+      target: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Int =
+
+    s"for3replacing1 (${seed}L, $target, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      val h3 = runner.install (H3) .pass
+      val h4 = runner.install (H4) .pass
+      val hs = Seq (h1, h2, h3, h4)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h1, h2) .capture()
+      scheduler.run (count = target, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h1, h2, h4)) .pass
+      val count = scheduler.run (timers = !cb.wasInvoked)
+      cb.passedOrTimedout
+
+      runner.verify (hs) .pass
+
+      count
+    }
+
+  def for3replacing1 [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forTargets (
+        for3hosts (_) (init)) (
+            for3replacing1 (_, _) (init))
+    info (s"Average time with three hosts replacing one: ${average}ms")
+  }
+
+  def for3replacing1withSourceBouncing [H <: Host] (
+      seed: Long,
+      target1: Int,
+      target3: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for3replacing1withSourceBouncing (${seed}L, $target1, $target3, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val target2 = random.nextInt (target3)
+      val d3 = new StubDiskDrive
+
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      var h3 = runner.install (H3, d3) .pass
+      val h4 = runner.install (H4) .pass
+      var hs = Seq (h1, h2, h3, h4)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h1, h2) .capture()
+      scheduler.run (count = target1, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h1, h2, h4)) .pass
+      scheduler.run (count = target2, timers = true)
+      h3.shutdown()
+      scheduler.run (count = target3 - target2, timers = true)
+      val cb2 = runner.reboot (H3, d3) .capture()
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
+      cb.passedOrTimedout
+      h3 = cb2.passed
+
+      hs = Seq (h1, h2, h3, h4)
+      runner.verify (hs) .pass
+    }
+
+  def for3replacing1withSourceBouncing [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forDoubleTargets (
+        for3hosts (_) (init)) (
+            for3replacing1 (_, _) (init)) (
+                for3replacing1withSourceBouncing (_, _, _) (init))
+    info (s"Average time with three hosts replacing one, a source host bounces: ${average}ms")
+  }
+
+  def for3replacing1withTargetBouncing [H <: Host] (
+      seed: Long,
+      target1: Int,
+      target3: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for3replacing1withTargetBouncing (${seed}L, $target1, $target3, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val target2 = random.nextInt (target3)
+      val d4 = new StubDiskDrive
+
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      val h3 = runner.install (H3) .pass
+      var h4 = runner.install (H4, d4) .pass
+      var hs = Seq (h1, h2, h3, h4)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h1, h2) .capture()
+      scheduler.run (count = target1, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h1, h2, h4)) .pass
+      scheduler.run (count = target2, timers = true)
+      h4.shutdown()
+      scheduler.run (count = target3 - target2, timers = true)
+      val cb2 = runner.reboot (H4, d4) .capture()
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
+      cb.passedOrTimedout
+      h4 = cb2.passed
+
+      hs = Seq (h1, h2, h3, h4)
+      runner.verify (hs) .pass
+    }
+
+  def for3replacing1withTargetBouncing [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forDoubleTargets (
+        for3hosts (_) (init)) (
+            for3replacing1 (_, _) (init)) (
+                for3replacing1withTargetBouncing (_, _, _) (init))
+    info (s"Average time with three hosts replacing one, a target host bounces: ${average}ms")
+  }
+
+  def for3replacing1withCommonBouncing [H <: Host] (
+      seed: Long,
+      target1: Int,
+      target3: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for3replacing1withCommonBouncing (${seed}L, $target1, $target3, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val target2 = random.nextInt (target3)
+      val d2 = new StubDiskDrive
+
+      val h1 = runner.install (H1) .pass
+      var h2 = runner.install (H2, d2) .pass
+      val h3 = runner.install (H3) .pass
+      val h4 = runner.install (H4) .pass
+      var hs = Seq (h1, h2, h3, h4)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h1, h3) .capture()
+      scheduler.run (count = target1, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h1, h2, h4)) .pass
+      scheduler.run (count = target2, timers = true)
+      h2.shutdown()
+      scheduler.run (count = target3 - target2, timers = true)
+      val cb2 = runner.reboot (H2, d2) .capture()
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
+      cb.passedOrTimedout
+      h2 = cb2.passed
+
+      hs = Seq (h1, h2, h3, h4)
+      runner.verify (hs) .pass
+    }
+
+  def for3replacing1withCommonBouncing [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forDoubleTargets (
+        for3hosts (_) (init)) (
+            for3replacing1 (_, _) (init)) (
+                for3replacing1withCommonBouncing (_, _, _) (init))
+    info (s"Average time with three hosts replacing one, a common host bounces: ${average}ms")
+  }
+
+  def for3replacing2 [H <: Host] (
+      seed: Long,
+      target: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Int =
+
+    s"for3replacing2 (${seed}L, $target, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      val h3 = runner.install (H3) .pass
+      val h4 = runner.install (H4) .pass
+      val h5 = runner.install (H5) .pass
+      val hs = Seq (h1, h2, h3, h4, h5)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h1, h2) .capture()
+      scheduler.run (count = target, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h1, h4, h5)) .pass
+      val count = scheduler.run (timers = !cb.wasInvoked)
+      cb.passedOrTimedout
+
+      runner.verify (hs) .pass
+
+      count
+    }
+
+  def for3replacing2 [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forTargets (
+        for3hosts (_) (init)) (
+            for3replacing2 (_, _) (init))
+    info (s"Average time with three hosts replacing two: ${average}ms")
+  }
+
+  def for3replacing2withSourceBouncing [H <: Host] (
+      seed: Long,
+      target1: Int,
+      target3: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for3replacing2withSourceBouncing (${seed}L, $target1, $target3, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val target2 = random.nextInt (target3)
+      val d3 = new StubDiskDrive
+
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      var h3 = runner.install (H3, d3) .pass
+      val h4 = runner.install (H4) .pass
+      val h5 = runner.install (H5) .pass
+      var hs = Seq (h1, h2, h3, h4, h5)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h1, h2) .capture()
+      scheduler.run (count = target1, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h1, h4, h5)) .pass
+      scheduler.run (count = target2, timers = true)
+      h3.shutdown()
+      scheduler.run (count = target3 - target2, timers = true)
+      val cb2 = runner.reboot (H3, d3) .capture()
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
+      cb.passedOrTimedout
+      h3 = cb2.passed
+
+      hs = Seq (h1, h2, h3, h4, h5)
+      runner.verify (hs) .pass
+    }
+
+  def for3replacing2withSourceBouncing [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forDoubleTargets (
+        for3hosts (_) (init)) (
+            for3replacing2 (_, _) (init)) (
+                for3replacing2withSourceBouncing (_, _, _) (init))
+    info (s"Average time with three hosts replacing two, a source host bounces: ${average}ms")
+  }
+
+  def for3replacing2withTargetBouncing [H <: Host] (
+      seed: Long,
+      target1: Int,
+      target3: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for3replacing2withTargetBouncing (${seed}L, $target1, $target3, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val target2 = random.nextInt (target3)
+      val d4 = new StubDiskDrive
+
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      val h3 = runner.install (H3) .pass
+      var h4 = runner.install (H4, d4) .pass
+      val h5 = runner.install (H5) .pass
+      var hs = Seq (h1, h2, h3, h4, h5)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h1, h2) .capture()
+      scheduler.run (count = target1, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h1, h4, h5)) .pass
+      scheduler.run (count = target2, timers = true)
+      h4.shutdown()
+      scheduler.run (count = target3 - target2, timers = true)
+      val cb2 = runner.reboot (H4, d4) .capture()
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
+      cb.passedOrTimedout
+      h4 = cb2.passed
+
+      hs = Seq (h1, h2, h3, h4, h5)
+      runner.verify (hs) .pass
+    }
+
+  def for3replacing2withTargetBouncing [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forDoubleTargets (
+        for3hosts (_) (init)) (
+            for3replacing2 (_, _) (init)) (
+                for3replacing2withTargetBouncing (_, _, _) (init))
+    info (s"Average time with three hosts replacing two, a target host bounces: ${average}ms")
+  }
+
+  def for3replacing2withCommonBouncing [H <: Host] (
+      seed: Long,
+      target1: Int,
+      target3: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for3replacing2withCommonBouncing (${seed}L, $target1, $target3, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val target2 = random.nextInt (target3)
+      val d1 = new StubDiskDrive
+
+      var h1 = runner.install (H1, d1) .pass
+      val h2 = runner.install (H2) .pass
+      val h3 = runner.install (H3) .pass
+      val h4 = runner.install (H4) .pass
+      val h5 = runner.install (H5) .pass
+      var hs = Seq (h1, h2, h3, h4, h5)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h2, h3) .capture()
+      scheduler.run (count = target1, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h1, h4, h5)) .pass
+      scheduler.run (count = target2, timers = true)
+      h1.shutdown()
+      scheduler.run (count = target3 - target2, timers = true)
+      val cb2 = runner.reboot (H1, d1) .capture()
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
+      cb.passedOrTimedout
+      h1 = cb2.passed
+
+      hs = Seq (h1, h2, h3, h4, h5)
+      runner.verify (hs) .pass
+    }
+
+  def for3replacing2withCommonBouncing [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forDoubleTargets (
+        for3hosts (_) (init)) (
+            for3replacing2 (_, _) (init)) (
+                for3replacing2withCommonBouncing (_, _, _) (init))
+    info (s"Average time with three hosts replacing two, a common host bounces: ${average}ms")
+  }
+
+  def for3to3 [H <: Host] (
+      seed: Long,
+      target: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Int =
+
+    s"for3to3 (${seed}L, $target, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      var h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      val h3 = runner.install (H3) .pass
+      val h4 = runner.install (H4) .pass
+      val h5 = runner.install (H5) .pass
+      val h6 = runner.install (H6) .pass
+      var hs = Seq (h1, h2, h3, h4, h5, h6)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h1, h4) .capture()
+      scheduler.run (count = target, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h4, h5, h6)) .pass
+      val count = scheduler.run (timers = !cb.wasInvoked)
+      cb.passedOrTimedout
+
+      runner.verify (hs) .pass
+
+      count
+    }
+
+  def for3to3 [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forTargets (
+        for3hosts (_) (init)) (
+            for3to3 (_, _) (init))
     info (s"Average time with three hosts moving: ${average}ms")
+  }
+
+  def for3to3withSourceBouncing [H <: Host] (
+      seed: Long,
+      target1: Int,
+      target3: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for3to3withSourceBouncing (${seed}L, $target1, $target3, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val target2 = random.nextInt (target3)
+      val d3 = new StubDiskDrive
+
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      var h3 = runner.install (H3, d3) .pass
+      val h4 = runner.install (H4) .pass
+      val h5 = runner.install (H5) .pass
+      val h6 = runner.install (H6) .pass
+      var hs = Seq (h1, h2, h3, h4, h5, h6)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h1, h4) .capture()
+      scheduler.run (count = target1, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h4, h5, h6)) .pass
+      scheduler.run (count = target2, timers = true)
+      h3.shutdown()
+      scheduler.run (count = target3 - target2, timers = true)
+      val cb2 = runner.reboot (H3, d3) .capture()
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
+      cb.passedOrTimedout
+      h3 = cb2.passed
+
+      hs = Seq (h1, h2, h3, h4, h5, h6)
+      runner.verify (hs) .pass
+    }
+
+  def for3to3withSourceBouncing [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forDoubleTargets (
+        for3hosts (_) (init)) (
+            for3to3 (_, _) (init)) (
+                for3to3withSourceBouncing (_, _, _) (init))
+    info (s"Average time with three hosts moving, a source host bounces: ${average}ms")
+  }
+
+  def for3to3withTargetBouncing [H <: Host] (
+      seed: Long,
+      target1: Int,
+      target3: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for3to3withTargetBouncing (${seed}L, $target1, $target3, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val target2 = random.nextInt (target3)
+      val d6 = new StubDiskDrive
+
+      val h1 = runner.install (H1) .pass
+      val h2 = runner.install (H2) .pass
+      val h3 = runner.install (H3) .pass
+      val h4 = runner.install (H4) .pass
+      val h5 = runner.install (H5) .pass
+      var h6 = runner.install (H6, d6) .pass
+      var hs = Seq (h1, h2, h3, h4, h5, h6)
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      h1.issueAtlas (settled (h1, h2, h3)) .pass
+
+      val cb = runner.setup (h1, h4) .capture()
+      scheduler.run (count = target1, timers = true)
+      h1.issueAtlas (issuing (h1, h2, h3) (h4, h5, h6)) .pass
+      scheduler.run (count = target2, timers = true)
+      h6.shutdown()
+      scheduler.run (count = target3 - target2, timers = true)
+      val cb2 = runner.reboot (H6, d6) .capture()
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
+      cb.passedOrTimedout
+      h6 = cb2.passed
+
+      hs = Seq (h1, h2, h3, h4, h5, h6)
+      runner.verify (hs) .pass
+    }
+
+  def for3to3withTargetBouncing [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forDoubleTargets (
+        for3hosts (_) (init)) (
+            for3to3 (_, _) (init)) (
+                for3to3withTargetBouncing (_, _, _) (init))
+    info (s"Average time with three hosts moving, a target host bounces: ${average}ms")
   }
 
   def for3to8 [H <: Host] (
@@ -893,22 +1614,107 @@ trait StoreClusterChecks extends AsyncChecks {
 
       val cb = runner.setup (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
-      h1.issueAtlas (rewriteFor8 (atlas1, hs): _*) .pass
+      h1.issueAtlas (rewriteFor3to8 (atlas1, hs): _*) .pass
       scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
 
       runner.verify (hs) .pass
     }
 
-    def for3to8 [H <: Host] (
+  def for3to8 [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
     val average = forTargets (
-        forThreeStableHosts (_) (init)) (
+        for3hosts (_) (init)) (
             for3to8 (_, _) (init))
     info (s"Average time for 3 growing to 8: ${average}ms")
+  }
+
+  def for3to8MT [H <: Host] (
+      target: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for3to8MT ($target, $config)"
+    .withMultithreadedScheduler (init) { kit =>
+      import kit._
+
+      val hs =
+        for (id <- Seq (H1, H2, H3, H4, H5, H6, H7, H8))
+          yield runner.install (id) .pass
+      val Seq (h1, h2, h3) = hs take 3
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      val atlas1 = Seq (settled (h1, h2, h3))
+      h1.issueAtlas (atlas1: _*) .pass
+
+      val start = System.currentTimeMillis
+      scheduler.delay (target) {
+        h1.issueAtlas (rewriteFor3to8 (atlas1, hs): _*) .run (disregard)
+      }
+      runner.setup (h1, h2) .passOrTimeout
+      val end = System.currentTimeMillis
+
+      runner.verify (hs) .await()
+
+      (end - start).toInt
+    }
+
+  def for3to8MT [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val time = for3hostsMT (init)
+    val target =  Random.nextInt ((time * 0.7).toInt) + (time * 0.1).toInt
+    for3to8MT (target) (init)
+  }
+
+  def for8to3 [H <: Host] (
+      seed: Long,
+      target: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"for8to3 (${seed}L, $target, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val hs =
+        for (id <- Seq (H1, H2, H3, H4, H5, H6, H7, H8))
+          yield runner.install (id) .pass
+      val Seq (h1, h2, h3) = hs take 3
+      for (h1 <- hs; h2 <- hs)
+        h1.hail (h2.localId)
+      val atlas1 = cohortsFor8 (hs)
+      h1.issueAtlas (atlas1: _*) .pass
+
+      val cb = runner.setup (h1, h2) .capture()
+      scheduler.run (count = target, timers = true)
+      h1.issueAtlas (rewriteFor8to3 (atlas1, hs): _*) .pass
+      scheduler.run (timers = !cb.wasInvoked)
+      cb.passedOrTimedout
+
+      runner.verify (hs) .pass
+    }
+
+    def for8to3 [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val average = forTargets (
+        for8hosts (_) (init)) (
+            for8to3 (_, _) (init))
+    info (s"Average time for 8 shrinking to 3: ${average}ms")
   }}
 
 object StoreClusterChecks {

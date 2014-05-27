@@ -20,10 +20,11 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
     if (a0 != null)
       return a0
     val a1 = new Acceptor (key, time, kit)
-    a1.state = new a1.Opening
     a0 = acceptors.putIfAbsent ((key, time), a1)
-    if (a0 != null)
+    if (a0 != null) {
+      a1.dispose()
       return a0
+    }
     a1
   }
 

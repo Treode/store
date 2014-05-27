@@ -48,11 +48,11 @@ private class Medic (
   def close (kit: PaxosKit): Unit = synchronized {
     val a = new Acceptor (key, time, kit)
     if (chosen.isDefined)
-      a.state = new a.Closed (chosen.get, 0)
+      a.choose (chosen.get)
     else if (default.isDefined)
-      a.state = new a.Deliberating (default.get, ballot, proposal, Set.empty)
+      a.recover (default.get, ballot, proposal)
     else if (proposal.isDefined)
-      a.state = new a.Deliberating (proposal.get._2, ballot, proposal, Set.empty)
+      a.recover (proposal.get._2, ballot, proposal)
     else
       assert (false, s"Failed to recover paxos instance $key:$time")
     kit.acceptors.recover (key, time, a)

@@ -32,8 +32,7 @@ private class PaxosMover (kit: PaxosKit) {
       var entries = 0
       var bytes = 0
 
-      val residents = library.residents
-      val iter = archive.iterator (start.key, start.time, residents)
+      val iter = archive.iterator (start.key, start.time, library.residents)
       val next = limit
 
       iter.whilst { cell =>
@@ -112,7 +111,7 @@ private class PaxosMover (kit: PaxosKit) {
       case Some ((Range (start: Point.Middle, end), targets)) =>
         queue.run (ignore) (rebalance (start, end, targets))
       case None =>
-        callbacks foreach (_.pass())
+        callbacks foreach (scheduler.pass (_, ()))
         callbacks = List.empty
         None
     }

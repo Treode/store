@@ -1,5 +1,7 @@
 package com.treode.pickle
 
+import scala.util.control.ControlThrowable
+
 import com.google.common.hash.{HashCode, HashFunction, Hashing}
 import com.treode.buffer.{ArrayBuffer, Buffer, Input, PagedBuffer, Output, OutputBuffer}
 
@@ -14,7 +16,12 @@ trait Pickler [A] {
     p (v, new BufferPickleContext (b))
 
   def unpickle (b: Input): A =
-    u (new BufferUnpickleContext (b))
+    try {
+      u (new BufferUnpickleContext (b))
+    } catch {
+      case t: ControlThrowable => throw t
+      case t: Throwable => throw new UnpicklingException (this, t)
+    }
 
   def byteSize (v: A): Int = {
     val sizer = new SizingPickleContext

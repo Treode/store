@@ -17,7 +17,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
   private val fiber = new Fiber
   private val epoch = releaser.join()
-  var state: State = null
+  private var state: State = new Opening
 
   trait State {
     def query (proposer: Peer, ballot: Long, default: Bytes)
@@ -262,6 +262,9 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     override def toString = s"Acceptor.Panicked($key, $time, $thrown)"
   }
 
+  def recover (default: Bytes, ballot: BallotNumber, proposal: Proposal): Unit =
+    fiber.execute (state = new Deliberating (default, ballot, proposal, Set.empty))
+
   def query (proposer: Peer, ballot: Long, default: Bytes): Unit =
     fiber.execute (state.query (proposer, ballot, default))
 
@@ -273,6 +276,9 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
   def checkpoint(): Async [Unit] =
     fiber.guard (state.checkpoint())
+
+  def dispose(): Unit =
+    releaser.leave (epoch)
 
   override def toString = state.toString
 }

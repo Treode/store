@@ -42,8 +42,8 @@ private class Broker (
     fiber.execute {
       ports.register (desc.pcat, desc.id.id) (f)
       catalogs get (desc.id) match {
-        case Some (cat) => deliver (desc.id, cat)
-        case None => ()
+        case Some (cat) if cat.bytes.murmur32 != 0 => deliver (desc.id, cat)
+        case _ => ()
       }}
 
   def get (cat: CatalogId): Async [Handler] =

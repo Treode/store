@@ -42,18 +42,12 @@ private class Librarian private (
       case Failure (t) => throw t
     }
 
-  private def current (atlas: Atlas, issued: Int, receipts: Map [HostId, Int]): Boolean = {
-    val current = receipts .filter (_._2 == issued) .keySet
-    atlas.cohorts forall (_.quorum (current))
-  }
-
-  private def moved (hosts: Set [HostId]): Boolean =
-    hosts forall (h => moves (h) >= issued)
-
   private def advance() {
     if (!active) return
     if (atlas.version != issued) return
-    if (!current (atlas, issued, receipts)) return
+    val current = receipts .filter (_._2 == issued) .keySet
+    if (!atlas.quorum (current)) return
+    val moved = moves .filter (_._2 == issued) .keySet
     var changed = false
     val cohorts =
       for (cohort <- atlas.cohorts) yield
@@ -61,7 +55,7 @@ private class Librarian private (
           case Issuing (origin, targets) =>
             changed = true
             Moving (origin, targets)
-          case Moving (origin, targets) if moved (origin) =>
+          case Moving (origin, targets) if cohort.quorum (moved) =>
             changed = true
             Settled (targets)
           case _ =>
