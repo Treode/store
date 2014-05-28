@@ -7,7 +7,8 @@ import Async.async
 import Proposer.{accept, chosen, promise, refuse}
 
 private class Proposers (kit: PaxosKit) {
-  import kit.{cluster, releaser}
+  import kit.cluster
+  import kit.library.releaser
 
   val proposers = newProposersMap
 

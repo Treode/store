@@ -1,10 +1,13 @@
 package com.treode.store
 
 import scala.util.{Failure, Success}
+
 import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.cluster.{Cluster, HostId, Peer}
 import com.treode.store.catalog.Catalogs
 
+import Async.guard
+import Callback.ignore
 import Cohort._
 
 private class Librarian private (
@@ -17,7 +20,7 @@ private class Librarian private (
 ) {
 
   import cluster.localId
-  import library.atlas
+  import library.{atlas, releaser}
 
   val fiber = new Fiber
   var active = false
@@ -31,16 +34,17 @@ private class Librarian private (
   Atlas.received.listen (received _)
   Atlas.moved.listen (moved _)
 
-  private def rebalanced (atlas: Atlas): Unit = fiber.execute {
-    if (library.atlas.version == atlas.version)
-      Atlas.moved.spread (atlas.version)
-  }
-
   private def _rebalance (atlas: Atlas): Unit =
-    rebalance (atlas) run {
-      case Success (_) => rebalanced (atlas)
-      case Failure (t) => throw t
-    }
+    guard [Unit] {
+      for {
+        _ <- releaser.release()
+        _ = Atlas.received.spread (atlas.version)
+        _ <- rebalance (atlas)
+      } yield fiber.execute {
+        if (library.atlas.version == atlas.version)
+          Atlas.moved.spread (atlas.version)
+      }
+    } run (ignore)
 
   private def advance() {
     if (!active) return
@@ -75,7 +79,6 @@ private class Librarian private (
       library.atlas = atlas
       library.residents = atlas.residents (localId)
       if (issued < atlas.version) issued = atlas.version
-      Atlas.received.spread (atlas.version)
       _rebalance (atlas)
       active = atlas.cohorts (0) contains localId
       issuing = atlas.issuing

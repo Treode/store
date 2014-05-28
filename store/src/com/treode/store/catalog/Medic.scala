@@ -69,6 +69,6 @@ private class Medic (id: CatalogId) {
       for {
         _ <- when (saved.isDefined) (patch (saved.get))
       } yield {
-        new Handler (id, version, bytes.hashCode, bytes, history, saved)
+        new Handler (id, version, bytes.murmur32, bytes, history, saved)
       }}
 }

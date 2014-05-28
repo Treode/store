@@ -12,8 +12,9 @@ import Callback.ignore
 
 private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
   import Acceptor.{NoPost, Post}
-  import kit.{acceptors, archive, cluster, disks, releaser, scheduler}
+  import kit.{acceptors, archive, cluster, disks, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
+  import kit.library.releaser
 
   private val fiber = new Fiber
   private val epoch = releaser.join()
