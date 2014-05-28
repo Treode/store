@@ -6,6 +6,8 @@ import com.treode.async.Async
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.store._
 
+import StoreTestTools._
+
 private class TestableCluster (hosts: Seq [StubAtomicHost]) (implicit kit: StoreTestKit)
 extends TestableStore {
   import kit.{random, scheduler}
@@ -17,7 +19,7 @@ extends TestableStore {
     randomHost.read (rt, ops:_*)
 
   def write (ct: TxClock, ops: WriteOp*): Async [TxClock] =
-    randomHost.write (TxId (random.nextLong, 0), ct, ops:_*)
+    randomHost.write (Random.nextTxId, ct, ops:_*)
 
   def expectCells (t: TableId) (expected: Cell*): Unit =
     hosts foreach (_.expectCells (t) (expected: _*))

@@ -8,6 +8,8 @@ import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.store._
 import org.scalatest.FreeSpec
 
+import StoreTestTools._
+
 class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
 
   private class TestableStubStore (implicit kit: StoreTestKit) extends TestableStore {
@@ -19,7 +21,7 @@ class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
       delegate.read (rt, ops:_*)
 
     def write (ct: TxClock, ops: WriteOp*): Async [TxClock] =
-      delegate.write (TxId (Random.nextLong, 0), ct, ops:_*)
+      delegate.write (Random.nextTxId, ct, ops:_*)
 
     def expectCells (t: TableId) (expected: Cell*): Unit =
       assertResult (expected.sorted) (delegate.scan (t))

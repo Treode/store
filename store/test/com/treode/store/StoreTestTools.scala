@@ -14,6 +14,11 @@ import Assertions.{assertResult, fail}
 
 private trait StoreTestTools {
 
+  private val fixedLongLong = {
+    import StorePicklers._
+    tuple (fixedLong, fixedLong)
+  }
+
   implicit def intToBytes (v: Int): Bytes =
     Bytes (v)
 
@@ -42,6 +47,21 @@ private trait StoreTestTools {
   implicit class RichOption (v: Option [Bytes]) {
     def :: (time: Int) = Value (time, v)
     def :: (time: TxClock) = Value (time, v)
+  }
+
+  implicit class RichRandom (random: Random) {
+
+    def nextTxId: TxId =
+      TxId (Bytes (fixedLongLong, (random.nextLong, random.nextLong)), 0)
+
+    def nextUpdate (ntables: Int, nkeys: Int): WriteOp.Update =
+      WriteOp.Update (
+          TableId (random.nextLong() % ntables),
+          Bytes (random.nextLong() % nkeys),
+          Bytes (random.nextInt (1<<20)))
+
+    def nextUpdates (ntables: Int, nkeys: Int, count: Int): Seq [WriteOp.Update] =
+      Seq.fill (count) (nextUpdate (ntables, nkeys))
   }
 
   implicit class RichTxClock (v: TxClock) {

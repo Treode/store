@@ -6,7 +6,7 @@ import com.treode.store.{Atlas, Bytes, Cohort, StoreTestTools}
 
 private object PaxosTestTools extends StoreTestTools {
 
-  implicit class RichRandom (random: Random) {
+  implicit class PaxosRichRandom (random: Random) {
 
     def nextKey(): Bytes =
       Bytes (PaxosPicklers.fixedLong, random.nextLong & 0x7FFFFFFFFFFFFFFFL)

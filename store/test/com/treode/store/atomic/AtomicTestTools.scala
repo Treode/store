@@ -1,9 +1,11 @@
 package com.treode.store.atomic
 
+import scala.util.Random
+
 import com.treode.async.Async
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.store.{Atlas, Cohort, Bytes, StoreTestTools, TxClock}
+import com.treode.store._
 import com.treode.store.locks.LockSet
 import org.scalatest.Assertions
 

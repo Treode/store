@@ -15,7 +15,7 @@ import TierTable.Meta
 
 private object TierTestTools extends StoreTestTools {
 
-  implicit class RichRandom (random: Random) {
+  implicit class TierRichRandom (random: Random) {
 
     def nextPut (nkeys: Int, nputs: Int): Seq [(Int, Int)] = {
 

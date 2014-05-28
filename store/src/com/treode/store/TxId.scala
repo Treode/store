@@ -9,8 +9,8 @@ case class TxId (id: Bytes, time: Instant) {
 
 object TxId {
 
-  def apply (id: Long, time: Long): TxId =
-    new TxId (Bytes (id), new Instant (time))
+  def apply (id: Bytes, time: Long): TxId =
+    TxId (id, new Instant (time))
 
   val pickler = {
     import StorePicklers._

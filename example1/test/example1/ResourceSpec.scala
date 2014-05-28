@@ -48,7 +48,7 @@ class ResourceSpec extends FreeSpec with Matchers with SpecTools {
       implicit val scheduler = StubScheduler.random()
       val store = StubStore()
       val mock = newMock (store)
-      val ts = store.write (TxId (1, 0), TxClock.zero,
+      val ts = store.write (TxId (Bytes (1), 0), TxClock.zero,
           Create (123, Bytes ("abc"), entity.readJson.toBytes)) .await
       (store, mock, ts)
     }
