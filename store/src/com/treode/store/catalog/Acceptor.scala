@@ -159,12 +159,12 @@ private object Acceptor {
 
   val query = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF9BFCEDF7D2E129L, tuple (catId, uint, ulong, patch))
+    MessageDescriptor (0xFF9BFCEDF7D2E129L, tuple (uint, catId, uint, ulong, patch))
   }
 
   val propose = {
     import CatalogPicklers._
-    MessageDescriptor (0xFF3E59E358D49679L, tuple (catId, uint, ulong, patch))
+    MessageDescriptor (0xFF3E59E358D49679L, tuple (uint, catId, uint, ulong, patch))
   }
 
   val choose = {

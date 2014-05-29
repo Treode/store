@@ -16,14 +16,9 @@ private class CatalogKit (val broker: Broker) (implicit
     val config: StoreConfig
 ) extends Catalogs {
 
-  import library.atlas
-
   val acceptors = new Acceptors (this)
 
   val proposers = new Proposers (this)
-
-  def locate(): ReplyTracker =
-    atlas.locate (0) .track
 
   def lead (key: CatalogId, patch: Patch): Async [Patch] =
     proposers.propose (0, key, patch)

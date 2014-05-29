@@ -12,6 +12,7 @@ import PaxosKit.locator
 
 private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   import kit.{archive, cluster, disks, library}
+  import kit.library.atlas
 
   val acceptors = newAcceptorsMap
 
@@ -83,12 +84,14 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
 
     Acceptors.archive.handle (this)
 
-    query.listen { case ((key, time, ballot, default), c) =>
-      get (key, time) query (c, ballot, default)
+    query.listen { case ((version, key, time, ballot, default), c) =>
+      if (atlas.version - 1 <= version && version <= atlas.version + 1)
+        get (key, time) query (c, ballot, default)
     }
 
-    propose.listen { case ((key, time, ballot, value), c) =>
-      get (key, time) propose (c, ballot, value)
+    propose.listen { case ((version, key, time, ballot, value), c) =>
+      if (atlas.version - 1 <= version && version <= atlas.version + 1)
+        get (key, time) propose (c, ballot, value)
     }
 
     choose.listen { case ((key, time, chosen), c) =>

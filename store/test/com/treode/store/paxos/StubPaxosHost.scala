@@ -90,9 +90,6 @@ private class StubPaxosHost (
   def proposers: ProposersMap =
     paxos.proposers.proposers
 
-  def locate (key: Bytes, time: TxClock): Cohort =
-    paxos.locate (key, time)
-
   def propose (key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
     paxos.propose (key, time, value)
 }

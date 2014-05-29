@@ -5,12 +5,12 @@ import scala.language.postfixOps
 import com.treode.async.{Backoff, Fiber}
 import com.treode.async.implicits._
 import com.treode.async.misc.RichInt
-import com.treode.cluster.{MessageDescriptor, Peer}
-import com.treode.store.{BallotNumber, CatalogId, TimeoutException}
+import com.treode.cluster.{MessageDescriptor, Peer, ReplyTracker}
+import com.treode.store.{Atlas, BallotNumber, CatalogId, TimeoutException}
 
 private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
   import kit.proposers.remove
-  import kit.{cluster, locate, random, scheduler}
+  import kit.{cluster, library, random, scheduler}
 
   private val proposingBackoff = Backoff (200, 300, 1 minutes, 7)
   private val confirmingBackoff = Backoff (200, 300, 1 minutes, 7)
@@ -47,6 +47,9 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
       case None => patch
     }}
 
+  private def track (atlas: Atlas): ReplyTracker =
+    atlas.locate (0) .track
+
   private def illegal = throw new IllegalStateException
 
   object Opening extends State {
@@ -76,14 +79,15 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
     var ballot = _ballot
     var refused = ballot
     var proposed = Option.empty [(BallotNumber, Patch)]
-    val promised = locate()
-    val accepted = locate()
+    var atlas = library.atlas
+    var promised = track (atlas)
+    var accepted = track (atlas)
 
     // Ballot number zero was implicitly accepted.
     if (ballot == 0)
-      Acceptor.propose (key, version, ballot, patch) (promised)
+      Acceptor.propose (atlas.version, key, version, ballot, patch) (promised)
     else
-      Acceptor.query (key, version, ballot, patch) (promised)
+      Acceptor.query (atlas.version, key, version, ballot, patch) (promised)
 
     val backoff = proposingBackoff.iterator
     fiber.delay (backoff.next) (state.timeout())
@@ -93,8 +97,8 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
 
     def refuse (ballot: Long) = {
       refused = math.max (refused, ballot)
-      promised.clear()
-      accepted.clear()
+      promised = track (atlas)
+      accepted = track (atlas)
     }
 
     def promise (from: Peer, ballot: Long, proposal: Proposal) {
@@ -103,7 +107,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
         proposed = max (proposed, proposal)
         if (promised.quorum) {
           val v = agreement (proposed, patch)
-          Acceptor.propose (key, version, ballot, v) (accepted)
+          Acceptor.propose (atlas.version, key, version, ballot, v) (accepted)
         }}}
 
     def accept (from: Peer, ballot: Long) {
@@ -111,7 +115,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
         accepted += from
         if (accepted.quorum) {
           val v = agreement (proposed, patch)
-          Acceptor.choose (key, version, v) (locate())
+          Acceptor.choose (key, version, v) (track (atlas))
           learners foreach (_.pass (v))
           state = new Closed (v)
         }}}
@@ -123,11 +127,12 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
 
     def timeout() {
       if (backoff.hasNext) {
-        promised.clear()
-        accepted.clear()
+        atlas = library.atlas
+        promised = track (atlas)
+        accepted = track (atlas)
         ballot = refused + random.nextInt (17) + 1
         refused = ballot
-        Acceptor.query (key, version, ballot, patch) (promised)
+        Acceptor.query (atlas.version, key, version, ballot, patch) (promised)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         remove (key, version, Proposer.this)

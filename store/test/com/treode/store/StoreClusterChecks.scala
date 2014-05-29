@@ -627,6 +627,7 @@ trait StoreClusterChecks extends AsyncChecks {
       runner.setup (h1, h2) .passOrTimeout
       val end = System.currentTimeMillis
 
+      scheduler.run (timers = network.active (h3.localId))
       h3 = runner.reboot (H3, d3) .await()
       hs = Seq (h1, h2, h3)
       for (h <- hs)
@@ -771,6 +772,7 @@ trait StoreClusterChecks extends AsyncChecks {
           _ <- Async.delay (target1)
           _ = h3.shutdown()
           _ <- Async.delay (target2)
+          _ = scheduler.run (timers = network.active (h3.localId))
           h <- runner.reboot (H3, d3)
         } yield h) .toFuture
       runner.setup (h1, h2) .passOrTimeout

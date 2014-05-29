@@ -4,7 +4,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async._
 import com.treode.async.implicits._
-import com.treode.cluster.{Cluster, HostId, Peer, RequestDescriptor}
+import com.treode.cluster.{Cluster, HostId, Peer, RequestDescriptor, ReplyTracker}
 import com.treode.disk.{ObjectId, TypeId}
 import com.treode.store._
 import com.treode.store.tier.TierTable
@@ -15,8 +15,9 @@ import Cohort.Moving
 import PaxosMover.{Batch, Point, Range, Targets, Tracker, move}
 
 private class PaxosMover (kit: PaxosKit) {
-  import kit.{acceptors, archive, cluster, disks, library, place, random, scheduler}
+  import kit.{acceptors, archive, cluster, disks, library, random, scheduler}
   import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
+  import kit.library.atlas
 
   private val fiber = new Fiber
   private val queue = AsyncQueue (fiber) (next())
@@ -24,6 +25,9 @@ private class PaxosMover (kit: PaxosKit) {
   private var callbacks = List.empty [Callback [Unit]]
 
   queue.launch()
+
+  def place (key: Bytes, time: TxClock): Int =
+    atlas.place (PaxosKit.locator, (key, time))
 
   def split (start: Point.Middle, limit: Point, targets: Targets): Async [(Batch, Point)] =
     disks.join {
@@ -65,7 +69,7 @@ private class PaxosMover (kit: PaxosKit) {
 
   private class Sender (cells: Seq [Cell], hosts: Set [Peer], cb: Callback [Unit]) {
 
-    var awaiting = hosts
+    val acks = ReplyTracker.settled (hosts map (_.id))
 
     val port = move.open { case (_, from) =>
       got (from)
@@ -74,13 +78,13 @@ private class PaxosMover (kit: PaxosKit) {
     val timer = cb.ensure {
       port.close()
     } .timeout (fiber, rebalanceBackoff) {
-      move (cells) (awaiting, port)
+      move (cells) (acks, port)
     }
-    move (cells) (awaiting, port)
+    move (cells) (acks, port)
 
     def got (from: Peer) {
-      awaiting -= from
-      if (awaiting.isEmpty)
+      acks += from
+      if (acks.quorum)
         timer.pass()
     }}
 
@@ -166,7 +170,7 @@ private object PaxosMover {
 
     private def targets (cohort: Cohort, host: HostId): Set [HostId] =
       cohort match {
-        case Moving (origin, target) if (origin contains host)=> target -- origin
+        case Moving (origin, target) if origin contains host => target - host
         case _ => Set.empty
       }
 

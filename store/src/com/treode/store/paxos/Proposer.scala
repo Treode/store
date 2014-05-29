@@ -5,12 +5,12 @@ import scala.language.postfixOps
 import com.treode.async.{Backoff, Callback, Fiber}
 import com.treode.async.implicits._
 import com.treode.async.misc.RichInt
-import com.treode.cluster.{Peer, MessageDescriptor}
-import com.treode.store.{BallotNumber, Bytes, TimeoutException, TxClock}
+import com.treode.cluster.{MessageDescriptor, Peer, ReplyTracker}
+import com.treode.store.{Atlas, BallotNumber, Bytes, TimeoutException, TxClock}
 
 private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
+  import kit.{cluster, library, random, scheduler}
   import kit.proposers.remove
-  import kit.{cluster, random, scheduler, track}
 
   private val proposingBackoff = Backoff (200, 300, 1 minutes, 7)
   private val confirmingBackoff = Backoff (200, 300, 1 minutes, 7)
@@ -46,6 +46,9 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
       case None => value
     }}
 
+  def track (atlas: Atlas): ReplyTracker =
+    atlas.locate (PaxosKit.locator, (key, time)) .track
+
   private def illegal = throw new IllegalStateException
 
   object Opening extends State {
@@ -74,14 +77,15 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     var learners = List.empty [Learner]
     var refused = ballot
     var proposed = Option.empty [(BallotNumber, Bytes)]
-    val promised = track (key, time)
-    val accepted = track (key, time)
+    var atlas = library.atlas
+    var promised = track (atlas)
+    var accepted = track (atlas)
 
     // Ballot number zero was implicitly accepted.
     if (ballot == 0)
-      Acceptor.propose (key, time, ballot, value) (promised)
+      Acceptor.propose (atlas.version, key, time, ballot, value) (promised)
     else
-      Acceptor.query (key, time, ballot, value) (promised)
+      Acceptor.query (atlas.version, key, time, ballot, value) (promised)
 
     val backoff = proposingBackoff.iterator
     fiber.delay (backoff.next) (state.timeout())
@@ -91,8 +95,8 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
     def refuse (from: Peer, ballot: Long) = {
       refused = math.max (refused, ballot)
-      promised.clear()
-      accepted.clear()
+      promised = atlas.locate (PaxosKit.locator, (key, time)) .track
+      accepted = atlas.locate (PaxosKit.locator, (key, time)) .track
     }
 
     def promise (from: Peer, ballot: Long, proposal: Proposal) {
@@ -101,7 +105,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
         proposed = max (proposed, proposal)
         if (promised.quorum) {
           val v = agreement (proposed, value)
-          Acceptor.propose (key, time, ballot, v) (accepted)
+          Acceptor.propose (atlas.version, key, time, ballot, v) (accepted)
         }}}
 
     def accept (from: Peer, ballot: Long) {
@@ -109,7 +113,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
         accepted += from
         if (accepted.quorum) {
           val v = agreement (proposed, value)
-          Acceptor.choose (key, time, v) (track (key, time))
+          Acceptor.choose (key, time, v) (track (atlas))
           learners foreach (_.pass (v))
           state = new Closed (ballot, v)
         }}}
@@ -121,11 +125,12 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
     def timeout() {
       if (backoff.hasNext) {
-        promised.clear()
-        accepted.clear()
+        atlas = library.atlas
+        promised = track (atlas)
+        accepted = track (atlas)
         ballot = refused + random.nextInt (17) + 1
         refused = ballot
-        Acceptor.query (key, time, ballot, value) (promised)
+        Acceptor.query (atlas.version, key, time, ballot, value) (promised)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         remove (key, time, Proposer.this)

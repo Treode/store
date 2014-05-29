@@ -4,6 +4,7 @@ import com.treode.store.CatalogId
 
 private class Acceptors (kit: CatalogKit) {
   import kit.{cluster, disks}
+  import kit.library.atlas
 
   val acceptors = newAcceptorsMap
 
@@ -25,12 +26,14 @@ private class Acceptors (kit: CatalogKit) {
   def attach() {
     import Acceptor.{choose, propose, query}
 
-    query.listen { case ((key, version, ballot, default), c) =>
-      get (key, version) query (c, ballot, default)
+    query.listen { case ((av, key, cv, ballot, default), c) =>
+      if (atlas.version - 1 <= av && av <= atlas.version + 1)
+        get (key, cv) query (c, ballot, default)
     }
 
-    propose.listen { case ((key, version, ballot, value), c) =>
-      get (key, version) propose (c, ballot, value)
+    propose.listen { case ((av, key, cv, ballot, value), c) =>
+      if (atlas.version - 1 <= av && av <= atlas.version + 1)
+        get (key, cv) propose (c, ballot, value)
     }
 
     choose.listen { case ((key, version, chosen), c) =>

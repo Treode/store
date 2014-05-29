@@ -23,20 +23,9 @@ private class PaxosKit (
     val config: StoreConfig
 ) extends Paxos {
 
-  import library.atlas
-
   val acceptors = new Acceptors (this)
   val proposers = new Proposers (this)
   val mover = new PaxosMover (this)
-
-  def place (key: Bytes, time: TxClock): Int =
-    atlas.place (locator, (key, time))
-
-  def locate (key: Bytes, time: TxClock): Cohort =
-    atlas.locate (locator, (key, time))
-
-  def track (key: Bytes, time: TxClock): ReplyTracker =
-    locate (key, time) .track
 
   def lead (key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
     proposers.propose (0, key, time, value)

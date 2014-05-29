@@ -3,7 +3,6 @@ package com.treode.cluster
 trait ReplyTracker {
 
   def += (p: Peer)
-  def clear()
   def awaiting: Set [HostId]
   def quorum: Boolean
   def unity: Boolean
@@ -13,7 +12,6 @@ object ReplyTracker {
 
   private class Isolated extends ReplyTracker {
     def += (p: Peer) = ()
-    def clear() = ()
     def awaiting = Set.empty [HostId]
     def quorum = false
     def unity = false
@@ -30,7 +28,6 @@ object ReplyTracker {
     private var hs = hosts
 
     def += (p: Peer): Unit = hs -= p.id
-    def clear(): Unit = hs = hosts
     def awaiting = hs
     def quorum = hs.size < nquorum
     def unity = hs.size == 0
@@ -48,11 +45,6 @@ object ReplyTracker {
     def += (p: Peer) {
       os -= p.id
       ts -= p.id
-    }
-
-    def clear() {
-      os = origin
-      ts = target
     }
 
     def awaiting = os ++ ts

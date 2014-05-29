@@ -37,6 +37,11 @@ class StubNetwork private (implicit random: Random) {
     if (messageTrace)
       println (s"$from->$to:$port: $msg $h")
     h.deliver (p, from, port, msg)
+  }
+
+  def active (id: HostId): Boolean = {
+    val p = peers.get (id)
+    p != null && p != inactive
   }}
 
 object StubNetwork {

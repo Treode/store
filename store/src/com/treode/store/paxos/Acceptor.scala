@@ -288,12 +288,12 @@ private object Acceptor {
 
   val query = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF14D4F00908FB59L, tuple (bytes, txClock, ulong, bytes))
+    MessageDescriptor (0xFF14D4F00908FB59L, tuple (uint, bytes, txClock, ulong, bytes))
   }
 
   val propose = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF09AFD4F9B688D9L, tuple (bytes, txClock, ulong, bytes))
+    MessageDescriptor (0xFF09AFD4F9B688D9L, tuple (uint, bytes, txClock, ulong, bytes))
   }
 
   val choose = {
