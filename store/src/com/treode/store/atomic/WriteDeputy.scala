@@ -30,13 +30,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit]
   }
 
-  private def panic (s: State, t: Throwable): Unit =
-    fiber.execute {
-      if (state == s) {
-        state = new Panicked (state, t)
-        throw t
-      }}
-
   private def timeout (s: State): Unit =
     fiber.delay (preparingTimeout) {
       if (state == s)
@@ -46,7 +39,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
           case Success (TxStatus.Committed (wt)) =>
             WriteDeputy.this.commit (wt) run (ignore)
           case Failure (t) =>
-            panic (s, t)
+            timeout (s)
         }}
 
   class Open extends State {

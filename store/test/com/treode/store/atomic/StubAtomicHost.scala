@@ -2,7 +2,8 @@ package com.treode.store.atomic
 
 import scala.util.Random
 
-import com.treode.async.{Async, Scheduler}
+import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
@@ -22,20 +23,25 @@ private class StubAtomicHost (
     val localId: HostId
 ) (implicit
     val random: Random,
-    val scheduler: Scheduler,
-    val cluster: Cluster,
+    val scheduler: ChildScheduler,
+    val cluster: StubPeer,
     val disks: Disk,
     val library: Library,
     val catalogs: Catalogs,
     val paxos: Paxos,
     val atomic: AtomicKit
-) extends StubStoreHost {
+) extends StoreClusterChecks.Host {
 
   val librarian = Librarian { atlas =>
     latch (paxos.rebalance (atlas), atomic.rebalance (atlas)) .map (_ => ())
   }
 
   cluster.startup()
+
+  def shutdown() {
+    cluster.shutdown()
+    scheduler.shutdown()
+  }
 
   def setAtlas (cohorts: Cohort*) {
     val atlas = Atlas (cohorts.toArray, 1)
@@ -44,14 +50,50 @@ private class StubAtomicHost (
   }
 
   def issueAtlas (cohorts: Cohort*): Async [Unit] = {
-    val version = library.atlas.version + 1
-    val atlas = Atlas (cohorts.toArray, version)
-    library.atlas = atlas
-    library.residents = atlas.residents (localId)
-    catalogs.issue (Atlas.catalog) (version, atlas)
-  }
+    var issued = false
+    var tries = 0
+    scheduler.whilst (!issued) {
+      val save = (library.atlas, library.residents)
+      val version = library.atlas.version + 1
+      val atlas = Atlas (cohorts.toArray, version)
+      library.atlas = atlas
+      library.residents = atlas.residents (localId)
+      catalogs
+          .issue (Atlas.catalog) (version, atlas)
+          .map (_ => issued = true)
+          .recover {
+            case _: Throwable if !(library.atlas eq atlas) && library.atlas == atlas =>
+              issued = true
+            case t: StaleException if tries < 16 =>
+              if (library.atlas eq atlas) {
+                library.atlas = save._1
+                library.residents = save._2
+              }
+              tries += 1
+            case t: TimeoutException if tries < 16 =>
+              if (library.atlas eq atlas) {
+                library.atlas = save._1
+                library.residents = save._2
+              }
+              tries += 1
+          }}}
 
-  def writer (xid: TxId) = atomic.writers.get (xid)
+  def atlas: Atlas =
+    library.atlas
+
+  def unsettled: Boolean =
+    !library.atlas.settled
+
+  def deputiesOpen: Boolean =
+    !atomic.writers.deputies.isEmpty
+
+  def scan: AsyncIterator [(TableId, Cell)] =
+    for {
+      e <- atomic.tables.tables.entrySet.async
+      cell <- e.getValue.iterator (Residents.all)
+    } yield {
+      (e.getKey, cell)
+    }
 
   def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
     atomic.read (rt, ops:_*)
@@ -76,7 +118,7 @@ private class StubAtomicHost (
     assertResult (cs) (t .iterator (library.residents) .toSeq)
   }}
 
-private object StubAtomicHost {
+private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost] {
 
   def boot (
       id: HostId,

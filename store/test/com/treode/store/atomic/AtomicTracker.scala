@@ -9,14 +9,14 @@ import com.treode.store._
 
 import Async.guard
 import AtomicTestTools._
+import AtomicTracker._
 
 class AtomicTracker {
 
   private var attempted =
     Map .empty [(Long, Long), Set [Int]] .withDefaultValue (Set.empty)
 
-  private var accepted =
-    Map.empty [(Long, Long), SortedMap [TxClock, Int]] .withDefaultValue (SortedMap.empty (TxClock))
+  private var accepted = newTrackedCells
 
   private def writting (table: Long, key: Long, value: Int): Unit =
     synchronized {
@@ -128,4 +128,19 @@ class AtomicTracker {
                   s"Expected $tk to be one of $expected, found $found")
             }}
     } yield ()
+
+  def check (cells: TrackedCells) {
+    for ((tk, expected) <- accepted) {
+      val found = cells (tk)
+      assert (
+          found == expected,
+          s"Expected tk to be $expected, found $found.")
+    }}}
+
+object AtomicTracker {
+
+  type TrackedCells = Map [(Long, Long), SortedMap [TxClock, Int]]
+
+  def newTrackedCells =
+    Map.empty [(Long, Long), SortedMap [TxClock, Int]] .withDefaultValue (SortedMap.empty (TxClock))
 }

@@ -43,4 +43,19 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
 
             forAllCrashes { implicit random =>
               crashAndRecover (nbatches, ntables, nkeys, nwrites, nops)
-            }}}}}}}}
+            }}}}}}
+
+    "issueAtomicWrites with" - {
+
+      for { (name, flakiness) <- Seq (
+          //"a reliable network" -> 0.0,
+          "a flakey network"   -> 0.1)
+      } s"$name and" - {
+
+        implicit val config = StoreTestConfig (messageFlakiness = flakiness)
+
+        "for one host" taggedAs (Intensive, Periodic) in {
+          for1host { implicit random =>
+            issueAtomicWrites (7, 3, 100, 5, 3)
+          }}
+      }}}}
