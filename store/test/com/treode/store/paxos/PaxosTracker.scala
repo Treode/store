@@ -55,22 +55,27 @@ class PaxosTracker {
     for (n <- (0 until nbatches) .async)
       batch (nputs, hs:_*)
 
+  def read (host: StubPaxosHost, key: Bytes): Async [Int] =
+    for {
+      _got <- host.propose (key, 0, Bytes (-1))
+    } yield {
+      _got.int
+    }
+
   def check (host: StubPaxosHost) (implicit scheduler: Scheduler): Async [Unit] =
     for {
       _ <- for ((key, value) <- accepted.async) {
             for {
-              _found <- host.propose (key, 0, Bytes (-1))
+              found <- read (host, key)
             } yield {
-              val found = _found.int
               assert (
                   found == value,
                   s"Expected ${key.long} to be $value, found $found.")
             }}
       _ <- for ((key, values) <- attempted.async; if !(accepted contains key)) {
             for {
-              _found <- host.propose (key, 0, Bytes (-1))
+              found <- read (host, key)
             } yield {
-              val found = _found.int
               assert (
                   found == -1 || (values contains found),
                   s"Expected ${key.long} to be one of $values, found $found")

@@ -2,7 +2,7 @@ package com.treode.store.paxos
 
 import scala.util.Random
 
-import com.treode.async.{Async, Scheduler}
+import com.treode.async.{Async, AsyncIterator, Scheduler}
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
@@ -58,37 +58,36 @@ private class StubPaxosHost (
           .issue (Atlas.catalog) (version, atlas)
           .map (_ => issued = true)
           .recover {
+            case _: Throwable if !(library.atlas eq atlas) && library.atlas == atlas =>
+              issued = true
             case t: StaleException if tries < 16 =>
-              if (library.atlas == atlas) {
+              if (library.atlas eq atlas) {
                 library.atlas = save._1
                 library.residents = save._2
               }
               tries += 1
             case t: TimeoutException if tries < 16 =>
-              if (library.atlas == atlas) {
+              if (library.atlas eq atlas) {
                 library.atlas = save._1
                 library.residents = save._2
               }
               tries += 1
           }}}
 
-  def expectAtlas (atlas: Atlas) {
-    assertResult (atlas) (library.atlas)
-    assertResult (librarian.issued) (atlas.version)
-    assert (librarian.receipts forall (_._2 == atlas.version))
-  }
-
   def atlas: Atlas =
     library.atlas
 
-  def archive: TierTable =
-    paxos.archive
+  def unsettled: Boolean =
+    !library.atlas.settled
 
-  def acceptors: AcceptorsMap =
-    paxos.acceptors.acceptors
+  def acceptorsOpen: Boolean =
+    !paxos.acceptors.acceptors.isEmpty
 
-  def proposers: ProposersMap =
-    paxos.proposers.proposers
+  def proposersOpen: Boolean =
+    !paxos.proposers.proposers.isEmpty
+
+  def scan: AsyncIterator [Cell] =
+    paxos.archive.iterator (Residents.all)
 
   def propose (key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
     paxos.propose (key, time, value)

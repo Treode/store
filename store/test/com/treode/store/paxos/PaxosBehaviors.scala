@@ -18,8 +18,7 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
   this: Suite with Informing =>
 
   private def scan (hosts: Seq [StubPaxosHost]) (implicit scheduler: Scheduler): Async [Seq [Cell]] = {
-    val iters = hosts map (_.archive.iterator (Residents.all))
-    val iter = AsyncIterator.merge [Cell] (iters)
+    val iter = AsyncIterator.merge (hosts map (_.scan))
     val cells = Seq.newBuilder [Cell]
     for {
       _ <- iter.dedupe.foreach (c => supply (cells += c))
@@ -38,7 +37,9 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
     val tracker = new PaxosTracker
     val disk = new StubDiskDrive
 
-    crash.info (s"crashAndRecover ($nbatch, $nputs, $config)")
+    crash
+    .info (s"$config")
+    .info (s"crashAndRecover ($nbatch, $nputs)")
 
     .setup { implicit scheduler =>
       implicit val network = StubNetwork (random)
@@ -69,9 +70,9 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
     }
 
     .whilst { hosts =>
-      def unsettled = hosts exists (h => !h.atlas.settled)
-      def acceptorsOpen = hosts exists (h => !(h.acceptors.isEmpty))
-      def proposersOpen = hosts exists (h => !(h.proposers.isEmpty))
+      def unsettled = hosts exists (_.unsettled)
+      def acceptorsOpen = hosts exists (_.acceptorsOpen)
+      def proposersOpen = hosts exists (_.proposersOpen)
       unsettled || acceptorsOpen || proposersOpen
     }
 
@@ -80,9 +81,9 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
     }
 
     .whilst { hosts =>
-      def unsettled = hosts exists (h => !h.atlas.settled)
-      def acceptorsOpen = hosts exists (h => !(h.acceptors.isEmpty))
-      def proposersOpen = hosts exists (h => !(h.proposers.isEmpty))
+      def unsettled = hosts exists (_.unsettled)
+      def acceptorsOpen = hosts exists (_.acceptorsOpen)
+      def proposersOpen = hosts exists (_.proposersOpen)
       unsettled || acceptorsOpen || proposersOpen
     }
 

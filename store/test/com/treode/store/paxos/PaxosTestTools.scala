@@ -13,10 +13,4 @@ private object PaxosTestTools extends StoreTestTools {
 
     def nextKeys (count: Int): Seq [Bytes] =
       Seq.fill (count) (nextKey())
-  }
-
-  def expectAtlas (version: Int, cohorts: Cohort*) (hosts: Seq [StubPaxosHost]) {
-    val atlas = Atlas (cohorts.toArray, version)
-    for (host <- hosts)
-      host.expectAtlas (atlas)
   }}
