@@ -36,6 +36,25 @@ private trait AtomicTestTools extends StoreTestTools {
       locks.release()
     }}
 
+  implicit class AtomicRichRandom (random: Random) {
+
+    def nextKeys (ntables: Int, nkeys: Int, nops: Int): Set [(Long, Long)] = {
+      var items = Set.empty [(Long, Long)]
+      while (items.size < nops)
+        items += ((math.abs (random.nextLong % ntables), math.abs (random.nextLong % nkeys)))
+      items
+    }
+
+    def nextKeys (ntables: Int, nkeys: Int, nwrites: Int, nops: Int): Seq [Set [(Long, Long)]] =
+      Seq.fill (nwrites) (nextKeys (ntables, nkeys, nops))
+
+    def nextUpdate (key: (Long, Long)): WriteOp.Update =
+      WriteOp.Update (TableId (key._1), Bytes (key._2), Bytes (random.nextInt (1<<20)))
+
+    def nextUpdates (keys: Set [(Long, Long)]): Seq [WriteOp.Update] =
+      keys.toSeq.map (nextUpdate _)
+  }
+
   def expectAtlas (version: Int, cohorts: Cohort*) (hosts: Seq [StubAtomicHost]) {
     val atlas = Atlas (cohorts.toArray, version)
     for (host <- hosts)

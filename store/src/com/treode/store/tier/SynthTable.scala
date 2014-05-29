@@ -214,11 +214,31 @@ private class SynthTable (
       writeLock.unlock()
     }}
 
+  def checkpoint (gen: Long, primary: MemTier, residents: Residents): Async [Meta] = guard {
+    val iter = TierIterator .adapt (primary) .clean (desc, id, residents)
+    val est = countKeys (primary)
+    for {
+      tier <- TierBuilder.build (desc, id, gen, est, residents, iter)
+    } yield {
+      writeLock.lock()
+      val (meta, queue) = try {
+        val q = this.queue
+        this.queue = List.empty
+        secondary = newMemTier
+        tiers = tiers.compacted (tier, Tiers.empty)
+        (new Meta (gen, tiers), q)
+      } finally {
+        writeLock.unlock()
+      }
+      queue foreach (_.run)
+      meta
+    }}
+
   def checkpoint (residents: Residents): Async [Meta] = guard {
 
     writeLock.lock()
-    val (gen, primary) = try {
-      require (secondary.isEmpty, "Checkpoint already in progress.")
+    val (gen, primary, tiers) = try {
+      assert (secondary.isEmpty, "Checkpoint already in progress.")
       val g = this.gen
       val p = this.primary
       if (!this.primary.isEmpty) {
@@ -226,7 +246,7 @@ private class SynthTable (
         this.primary = secondary
         secondary = p
       }
-      (g, p)
+      (g, p, this.tiers)
     } finally {
       writeLock.unlock()
     }
@@ -234,24 +254,8 @@ private class SynthTable (
     if (primary.isEmpty) {
       supply (new Meta (tiers.gen, tiers))
     } else {
-      val iter = TierIterator .adapt (primary) .clean (desc, id, residents)
-      val est = countKeys (primary)
-      for {
-        tier <- TierBuilder.build (desc, id, gen, est, residents, iter)
-      } yield {
-        writeLock.lock()
-        val (meta, queue) = try {
-          val q = this.queue
-          this.queue = List.empty
-          secondary = newMemTier
-          tiers = tiers.compacted (tier, Tiers.empty)
-          (new Meta (gen, tiers), q)
-        } finally {
-          writeLock.unlock()
-        }
-        queue foreach (_.run)
-        meta
-      }}}}
+      checkpoint (gen, primary, residents)
+    }}}
 
 private object SynthTable {
 
@@ -262,5 +266,5 @@ private object SynthTable {
   def apply (desc: TierDescriptor, id: TableId) (
       implicit scheduler: Scheduler, disk: Disk, config: StoreConfig): SynthTable = {
     val lock = new ReentrantReadWriteLock
-    new SynthTable (desc, id, lock, 0, newMemTier, newMemTier, Tiers.empty)
+    new SynthTable (desc, id, lock, genStepSize, newMemTier, newMemTier, Tiers.empty)
   }}

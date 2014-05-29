@@ -12,7 +12,7 @@ private class WriteDeputies (kit: AtomicKit) {
   import WriteDeputy._
   import kit.{cluster, tables}
 
-  private val deputies = newWritersMap
+  val deputies = newWritersMap
 
   def get (xid: TxId): WriteDeputy = {
     var d0 = deputies.get (xid.id)
@@ -28,25 +28,22 @@ private class WriteDeputies (kit: AtomicKit) {
   def remove (xid: TxId, w: WriteDeputy): Unit =
     deputies.remove (xid, w)
 
-  def recover (medics: Seq [Medic]): Async [Unit] = {
-    for {
-      _ <-
-        for (m <- medics.latch.unit)
-          for (w <- m.close (kit))
-            yield deputies.put (m.xid, w)
-    } yield ()
+  def recover (medics: Iterable [Medic]) {
+    for (m <- medics)
+      deputies.put (m.xid, m.close (kit))
   }
 
   def checkpoint(): Async [Unit] =
     guard {
       for {
-        _ <- latch (
-            tables.checkpoint(),
-            materialize (deputies.values) .latch.unit foreach (_.checkpoint()))
+        _ <- materialize (deputies.values) .latch.unit foreach (_.checkpoint())
+        _ <- tables.checkpoint()
       } yield ()
     }
 
   def attach () (implicit launch: Disk.Launch) {
+
+    launch.checkpoint (checkpoint())
 
     TimedStore.table.handle (tables)
 

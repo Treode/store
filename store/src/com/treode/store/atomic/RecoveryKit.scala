@@ -1,5 +1,6 @@
 package com.treode.store.atomic
 
+import scala.collection.JavaConversions
 import scala.util.Random
 
 import com.treode.async.{Async, Latch, Scheduler}
@@ -10,6 +11,8 @@ import com.treode.store.{Cohort, Library, Store, StoreConfig, TxId}
 import com.treode.store.paxos.Paxos
 import com.treode.store.tier.TierMedic
 
+import Async.supply
+import JavaConversions._
 import WriteDeputy.{aborted, committed, preparing}
 
 private class RecoveryKit (implicit
@@ -25,9 +28,12 @@ private class RecoveryKit (implicit
   val writers = newWriterMedicsMap
 
   def get (xid: TxId): Medic = {
+    var m0 = writers.get (xid)
+    if (m0 != null) return m0
     val m1 = new Medic (xid, this)
-    val m0 = writers.putIfAbsent (m1.xid, m1)
-    if (m0 == null) m1 else m0
+    m0 = writers.putIfAbsent (xid, m1)
+    if (m0 != null) return m0
+    m1
   }
 
   preparing.replay { case (xid, ops) =>
@@ -46,17 +52,15 @@ private class RecoveryKit (implicit
     tables.checkpoint (tab, meta)
   }
 
-  def launch (implicit launch: Disk.Launch, paxos: Paxos): Async [Store] = {
-    import launch.disks
+  def launch (implicit launch: Disk.Launch, paxos: Paxos): Async [Store] =
+    supply {
+      import launch.disks
 
-    val kit = new AtomicKit()
-    kit.tables.recover (tables.close())
-
-    for {
-      _ <- kit.writers.recover (materialize (writers.values))
-    } yield {
+      val kit = new AtomicKit()
+      kit.tables.recover (tables.close())
+      kit.writers.recover (writers.values)
       kit.reader.attach()
       kit.writers.attach()
       kit.scanner.attach()
       kit
-    }}}
+    }}

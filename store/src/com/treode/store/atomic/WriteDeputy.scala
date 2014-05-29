@@ -63,7 +63,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       supply()
 
-    override def toString = "Deputy.Open"
+    override def toString = s"WriteDeputy.Open($xid)"
   }
 
   class Preparing (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback) extends State {
@@ -140,6 +140,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.preparing.record (xid, ops)
 
+    override def toString = s"WriteDeputy.Preparing($xid, $ct)"
   }
 
   class Prepared (ops: Seq [WriteOp], ft: TxClock, locks: LockSet) extends State {
@@ -159,6 +160,8 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
     def checkpoint(): Async [Unit] =
       WD.preparing.record (xid, ops)
+
+    override def toString = s"WriteDeputy.Prepared($xid)"
   }
 
   class Deliberating (ops: Seq [WriteOp], rsp: Option [WriteResponse]) extends State {
@@ -169,7 +172,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       rsp foreach (cb.pass (_))
 
     def commit (wt: TxClock, cb: WriteCallback): Unit =
-      new Committing (wt, ops, None, cb)
+      state = new Committing (wt, ops, None, cb)
 
     def abort (cb: WriteCallback): Unit =
       state = new Aborting (None, cb)
@@ -177,12 +180,12 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.preparing.record (xid, ops)
 
-    override def toString = "Deputy.Deliberating"
+    override def toString = s"WriteDeputy.Deliberating($xid)"
   }
 
   class Tardy (wt: TxClock, cb: WriteCallback) extends State {
 
-    timeout (Tardy.this)
+    fiber.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
       new Committing (wt, ops, None, cb)
@@ -195,7 +198,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       supply()
 
-    override def toString = "Deputy.Tardy"
+    override def toString = s"WriteDeputy.Tardy($xid, $wt)"
   }
 
   class Committing (
@@ -240,7 +243,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.committed.record (xid, gens, wt)
 
-    override def toString = "Deputy.Committing"
+    override def toString = s"Deputy.Committing($xid)"
   }
 
   class Committed (gens: Seq [Long], wt: TxClock) extends State {
@@ -259,7 +262,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.committed.record (xid, gens, wt)
 
-    override def toString = "Deputy.Committed"
+    override def toString = s"WriteDeputy.Committed($xid, $wt)"
   }
 
   class Aborting (locks: Option [LockSet], cb: WriteCallback) extends State {
@@ -296,7 +299,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.aborted.record (xid)
 
-    override def toString = "Deputy.Aborting"
+    override def toString = s"WriteDeputy.Aborting($xid)"
   }
 
   class Aborted extends State {
@@ -317,7 +320,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def checkpoint(): Async [Unit] =
       WD.aborted.record (xid)
 
-    override def toString = "Deputy.Aborted"
+    override def toString = s"WriteDeputy.Aborted($xid)"
   }
 
   class Panicked (s: State, thrown: Throwable) extends State {
@@ -331,7 +334,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def commit (wt: TxClock, cb: WriteCallback) = ()
     def abort (cb: WriteCallback) = ()
 
-    override def toString = s"Deputy.Panicked ($thrown)"
+    override def toString = s"WriteDeputy.Panicked($xid, $thrown)"
   }
 
   def prepare (ct: TxClock, ops: Seq [WriteOp]): Async [WriteResponse] =

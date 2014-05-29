@@ -38,8 +38,7 @@ private class StubAtomicHost (
   cluster.startup()
 
   def setAtlas (cohorts: Cohort*) {
-    val version = library.atlas.version + 1
-    val atlas = Atlas (cohorts.toArray, version)
+    val atlas = Atlas (cohorts.toArray, 1)
     library.atlas = atlas
     library.residents = atlas.residents (localId)
   }
@@ -79,19 +78,21 @@ private class StubAtomicHost (
 
 private object StubAtomicHost {
 
-  private def boot (
+  def boot (
       id: HostId,
       drive: StubDiskDrive,
       init: Boolean
   ) (implicit
-      kit: StoreTestKit
+      random: Random,
+      parent: Scheduler,
+      network: StubNetwork,
+      config: StoreTestConfig
   ): Async [StubAtomicHost] = {
-    import kit.{network, random, scheduler}
 
+    implicit val scheduler = new ChildScheduler (parent)
     implicit val cluster = new StubPeer (id)
     implicit val library = new Library
-    implicit val storeConfig = StoreTestConfig()
-    implicit val recovery = StubDisk.recover()
+    implicit val recovery = StubDisk.recover (config.stubDiskConfig)
     implicit val _catalogs = Catalogs.recover()
     val _paxos = Paxos.recover()
     val _atomic = AtomicKit.recover()
@@ -107,6 +108,7 @@ private object StubAtomicHost {
     }}
 
   def install () (implicit kit: StoreTestKit): Async [StubAtomicHost] = {
-    import kit.random
+    import kit._
+    implicit val config = StoreTestConfig()
     boot (random.nextLong, new StubDiskDrive, true)
   }}

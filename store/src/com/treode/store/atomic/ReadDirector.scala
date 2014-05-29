@@ -1,5 +1,6 @@
 package com.treode.store.atomic
 
+import java.util.concurrent.{TimeoutException => JTimeoutException}
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
@@ -7,7 +8,7 @@ import com.treode.async.{Async, Backoff, Callback, Fiber}
 import com.treode.async.implicits._
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{HostId, Peer}
-import com.treode.store.{ReadOp, TxClock, Value}
+import com.treode.store.{ReadOp, TimeoutException, TxClock, Value}
 
 import Async.async
 
@@ -39,6 +40,8 @@ private class ReadDirector (
 
   val timer = cb.ensure {
     port.close()
+  } .rescue {
+    case t: JTimeoutException => Failure (new TimeoutException)
   } .timeout (fiber, readBackoff) {
     broker.rouse()
   }
