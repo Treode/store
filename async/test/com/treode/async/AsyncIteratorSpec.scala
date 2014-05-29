@@ -13,6 +13,9 @@ class AsyncIteratorSpec extends FlatSpec {
   private def map [A, B] (xs: A*) (f: A => B) (implicit s: StubScheduler): AsyncIterator [B] =
     xs.async.map (f)
 
+  private def flatMap [A, B] (xs: A*) (ys: B*) (implicit s: StubScheduler): AsyncIterator [(A, B)] =
+    xs.async.flatMap (x => ys.async.map (y => (x, y)))
+
   private def filter [A] (xs: A*) (p: A => Boolean) (implicit s: StubScheduler): AsyncIterator [A] =
     xs.async.filter (p)
 
@@ -90,6 +93,65 @@ class AsyncIteratorSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     val iter = for (x <- adapt (1, 2, 3)) yield x * 2
     assertSeq (2, 4, 6) (iter)
+  }
+
+  "AsyncIterator.flatMap" should "handle empty sequences" in {
+    implicit val scheduler = StubScheduler.random()
+    assertSeq () (flatMap [Int, Int] () (1, 2, 3))
+  }
+
+  it should "handle an empty outer sequence" in {
+    implicit val scheduler = StubScheduler.random()
+    assertSeq () (flatMap [Int, Int] () (1, 2, 3))
+  }
+
+  it should "handle an empty inner sequence" in {
+    implicit val scheduler = StubScheduler.random()
+    assertSeq () (flatMap [Int, Int] (1, 2, 3) ())
+  }
+
+  it should "handle an outer sequence of 1" in {
+    implicit val scheduler = StubScheduler.random()
+    assertSeq ((1, 1), (1, 2), (1, 3)) (flatMap [Int, Int] (1) (1, 2, 3))
+  }
+
+  it should "handle an inner sequence of 1" in {
+    implicit val scheduler = StubScheduler.random()
+    assertSeq ((1, 1), (2, 1), (3, 1)) (flatMap [Int, Int] (1, 2, 3) (1))
+  }
+
+  it should "handle an both sequences of three" in {
+    implicit val scheduler = StubScheduler.random()
+    assertSeq ((1,1), (1,2), (1,3), (2,1), (2,2), (2,3), (3,1), (3,2), (3,3)) {
+      flatMap [Int, Int] (1, 2, 3) (1, 2, 3)
+    }}
+
+  it should "stop at the first exception from the outer iterator" in {
+    implicit val scheduler = StubScheduler.random()
+    var consumed = Set.empty [Int]
+    var provided = Set.empty [(Int, Int)]
+    assertFail [DistinguishedException] {
+      val i1 = track (adapt (1, 2, 3, 4)) (consumed += _)
+      val i2 = failWhen (i1) (_ == 3)
+      val i3 = i2 flatMap (x => adapt (1) map (y => (x, y)))
+      track (i3) (provided += _)
+    }
+    assertResult (Set (1, 2, 3)) (consumed)
+    assertResult (Set ((1, 1), (2, 1))) (provided)
+  }
+
+  it should "stop at the first exception from the inner iterator" in {
+    implicit val scheduler = StubScheduler.random()
+    var consumed = Set.empty [Int]
+    var provided = Set.empty [(Int, Int)]
+    assertFail [DistinguishedException] {
+      val i1 = track (adapt (1, 2, 3, 4)) (consumed += _)
+      val i2 = failWhen (i1) (_ == 3)
+      val i3 = adapt (1, 2, 3) flatMap (x => i2 map (y => (x, y)))
+      track (i3) (provided += _)
+    }
+    assertResult (Set (1, 2, 3)) (consumed)
+    assertResult (Set ((1, 1), (1, 2))) (provided)
   }
 
   "AsyncIterator.filter" should "handle [] -> []" in {

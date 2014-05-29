@@ -15,17 +15,23 @@ trait AsyncIterator [+A] {
   /** Execute the asynchronous operation `f` foreach element. */
   def foreach (f: A => Async [Unit]): Async [Unit]
 
-  def map [B] (f: A => B): AsyncIterator [B] = {
+  def map [B] (f: A => B): AsyncIterator [B] =
     new AsyncIterator [B] {
       def foreach (g: B => Async [Unit]): Async [Unit] =
         self.foreach (x => g (f (x)))
-    }}
+    }
 
-  def filter (p: A => Boolean): AsyncIterator [A] = {
+  def flatMap [B] (f: A => AsyncIterator [B]): AsyncIterator [B] =
+    new AsyncIterator [B] {
+      def foreach (g: B => Async [Unit]): Async [Unit] =
+        self.foreach (x => f (x) foreach (g))
+    }
+
+  def filter (p: A => Boolean): AsyncIterator [A] =
     new AsyncIterator [A] {
       def foreach (g: A => Async [Unit]): Async [Unit] =
         self.foreach (x => when (p (x)) (g (x)))
-    }}
+    }
 
   def withFilter (p: A => Boolean): AsyncIterator [A] =
     filter (p)
@@ -77,7 +83,7 @@ object AsyncIterator {
     */
   def merge [A] (
       iters: Seq [AsyncIterator [A]]
-  ) (implicit 
+  ) (implicit
       ordering: Ordering [A],
       scheduler: Scheduler
   ): AsyncIterator [A] =
