@@ -16,6 +16,10 @@ class ObjectId private (val id: Long) extends AnyVal with Ordered [ObjectId] {
 
 object ObjectId extends Ordering [ObjectId] {
 
+  val MinValue = ObjectId (0)
+
+  val MaxValue = ObjectId (-1)
+
   implicit def apply (id: Long): ObjectId =
     new ObjectId (id)
 

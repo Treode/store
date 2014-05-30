@@ -15,6 +15,10 @@ class TypeId private (val id: Long) extends AnyVal with Ordered [TypeId] {
 
 object TypeId extends Ordering [TypeId] {
 
+  val MinValue = TypeId (0)
+
+  val MaxValue = TypeId (-1)
+
   implicit def apply (id: Long): TypeId =
     new TypeId (id)
 

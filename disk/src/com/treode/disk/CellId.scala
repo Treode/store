@@ -15,6 +15,10 @@ class CellId private (val id: Long) extends AnyVal with Ordered [CellId] {
 
 object CellId extends Ordering [CellId] {
 
+  val MinValue = CellId (0)
+
+  val MaxValue = CellId (-1)
+
   implicit def apply (id: Long): CellId =
     new CellId (id)
 

@@ -16,6 +16,10 @@ class RumorId (val id: Long) extends AnyVal with Ordered [RumorId] {
 
 object RumorId extends Ordering [RumorId] {
 
+  val MinValue = RumorId (0)
+
+  val MaxValue = RumorId (-1)
+
   implicit def apply (id: Long): RumorId =
     new RumorId (id)
 

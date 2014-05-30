@@ -21,6 +21,10 @@ object PortId extends Ordering [PortId] {
 
   private val fixed = 0xFF00000000000000L
 
+  val MinValue = PortId (0)
+
+  val MaxValue = PortId (-1)
+
   implicit def apply (id: Long): PortId =
     new PortId (id)
 

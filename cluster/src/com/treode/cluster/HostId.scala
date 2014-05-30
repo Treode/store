@@ -16,6 +16,10 @@ class HostId private (val id: Long) extends AnyVal with Ordered [HostId] {
 
 object HostId extends Ordering [HostId] {
 
+  val MinValue = HostId (0)
+
+  val MaxValue = HostId (-1)
+
   implicit def apply (id: Long): HostId =
     new HostId (id)
 

@@ -21,7 +21,7 @@ import WriteOp._
 trait StoreBehaviors {
   this: FreeSpec with AsyncChecks =>
 
-  val T1 = TableId (0x74429CA1)
+  val T1 = TableId (0xA1)
 
   def aStore (newStore: StoreTestKit => TestableStore) {
 

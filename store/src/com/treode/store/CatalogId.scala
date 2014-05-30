@@ -16,6 +16,10 @@ class CatalogId (val id: Long) extends AnyVal with Ordered [CatalogId] {
 
 object CatalogId extends Ordering [CatalogId] {
 
+  val MinValue = CatalogId (0)
+
+  val MaxValue = CatalogId (-1)
+
   implicit def apply (id: Long): CatalogId =
     new CatalogId (id)
 
