@@ -38,6 +38,7 @@ private class StubCompactor (
       compactObject (compactq.head)
     } else {
       book = Map.empty
+      entries = 0
       engaged = false
     }}
 
@@ -70,7 +71,6 @@ private class StubCompactor (
   private def probeForClean(): Unit =
     guard {
       engaged = true
-      entries = 0
       for {
         (groups, segments) <- pages.probe (disk.cleanable())
       } yield compact (groups, segments)
@@ -109,11 +109,8 @@ private class StubCompactor (
   def tally(): Unit =
     fiber.execute {
       entries += 1
-      if (config.compact (entries))
-        if (!engaged)
-          probeForClean()
-        else
-          cleanreq = true
+      if (!engaged && config.compact (entries))
+        probeForClean()
     }
 
   def compact (typ: TypeId, obj: ObjectId): Async [Unit] =
