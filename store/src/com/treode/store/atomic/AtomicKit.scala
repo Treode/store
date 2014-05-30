@@ -10,7 +10,6 @@ import com.treode.store.paxos.Paxos
 import com.treode.store.tier.TierTable
 
 import Async.{async, supply}
-import AtomicKit.locator
 import AtomicMover.Targets
 import WriteDirector.deliberate
 
@@ -31,15 +30,6 @@ private class AtomicKit (implicit
   val writers = new WriteDeputies (this)
   val scanner = new ScanDeputy (this)
   val mover = new AtomicMover (this)
-
-  def place (table: TableId, key: Bytes): Int =
-    atlas.place (locator, (table, key))
-
-  def locate (table: TableId, key: Bytes): Cohort =
-    atlas.locate (locator, (table, key))
-
-  def locate (op: Op): Cohort =
-    locate (op.table, op.key)
 
   def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
     releaser.join (ReadDirector.read (rt, ops, this))
@@ -63,11 +53,6 @@ private class AtomicKit (implicit
     }}}
 
 private [store] object AtomicKit {
-
-  val locator = {
-    import AtomicPicklers._
-    tuple (tableId, bytes)
-  }
 
   trait Recovery {
 

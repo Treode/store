@@ -9,7 +9,6 @@ import com.treode.store.{Atlas, Bytes, Cohort, Library, StoreConfig, TxClock}
 import com.treode.store.tier.TierTable
 
 import Async.{async, when}
-import PaxosKit.locator
 import PaxosMover.Targets
 
 private class PaxosKit (
@@ -41,10 +40,3 @@ private class PaxosKit (
       if (targets.isEmpty)
         archive.compact()
     }}}
-
-private object PaxosKit {
-
-  val locator = {
-    import PaxosPicklers._
-    tuple (bytes, txClock)
-  }}

@@ -17,7 +17,6 @@ import PaxosMover.{Batch, Point, Range, Targets, Tracker, move}
 private class PaxosMover (kit: PaxosKit) {
   import kit.{acceptors, archive, cluster, disks, library, random, scheduler}
   import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
-  import kit.library.atlas
 
   private val fiber = new Fiber
   private val queue = AsyncQueue (fiber) (next())
@@ -26,9 +25,6 @@ private class PaxosMover (kit: PaxosKit) {
 
   queue.launch()
 
-  def place (key: Bytes, time: TxClock): Int =
-    atlas.place (PaxosKit.locator, (key, time))
-
   def split (start: Point.Middle, limit: Point, targets: Targets): Async [(Batch, Point)] =
     disks.join {
 
@@ -36,7 +32,10 @@ private class PaxosMover (kit: PaxosKit) {
       var entries = 0
       var bytes = 0
 
-      val iter = archive.iterator (start.key, start.time, library.residents)
+      val atlas = library.atlas
+      val residents = library.residents
+
+      val iter = archive.iterator (start.key, start.time, residents)
       val next = limit
 
       iter.whilst { cell =>
@@ -44,7 +43,7 @@ private class PaxosMover (kit: PaxosKit) {
         bytes < rebalanceBytes &&
         Point.Middle (cell.key, cell.time) < limit
       } { cell =>
-        val num = place (cell.key, cell.time)
+        val num = place (atlas, cell.key, cell.time)
         if (targets contains num) {
           batch.get (num) match {
             case Some (cs) => batch += num -> (cell::cs)

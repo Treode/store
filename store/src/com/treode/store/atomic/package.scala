@@ -26,4 +26,18 @@ package object atomic {
   private [atomic] def newTableMedicsMap = new ConcurrentHashMap [TableId, TierMedic]
   private [atomic] def newWritersMap = new ConcurrentHashMap [TxId, WriteDeputy]
   private [atomic] def newWriterMedicsMap = new ConcurrentHashMap [TxId, Medic]
+
+  private val locator = {
+    import AtomicPicklers._
+    tuple (tableId, bytes)
+  }
+
+  private [atomic] def resident (residents: Residents, table: TableId, key: Bytes): Boolean =
+    residents.contains (locator, (table, key))
+
+  private [atomic] def locate (atlas: Atlas, table: TableId, key: Bytes): Cohort =
+    atlas.locate (locator, (table, key))
+
+  private [atomic] def place (atlas: Atlas, table: TableId, key: Bytes): Int =
+    atlas.place (locator, (table, key))
 }

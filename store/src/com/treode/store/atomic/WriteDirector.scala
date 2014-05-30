@@ -15,7 +15,7 @@ import Async.async
 import WriteDirector.deliberate
 
 private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
-  import kit.{cluster, paxos, random, scheduler}
+  import kit.{cluster, library, paxos, random, scheduler}
   import kit.config.prepareBackoff
 
   val fiber = new Fiber
@@ -23,10 +23,11 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
   val backoff = prepareBackoff.iterator
   var state: State = new Opening
 
-  val cohorts = ops map (kit.locate (_))
+  val atlas = library.atlas
+  val cohorts = ops map (op => locate (atlas, op.table, op.key))
 
-  val prepares = TightTracker (ops, cohorts, kit) { (host, ops) =>
-    WriteDeputy.prepare (xid, ct, ops) (host, port)
+  val responses = TightTracker (ops, cohorts, kit) { (host, ops) =>
+    WriteDeputy.prepare (atlas.version, xid, ct, ops) (host, port)
   }
 
   trait State {
@@ -76,11 +77,11 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     var ks = Set.empty [Int]
     var ft = TxClock.now
 
-    prepares.rouse()
+    responses.rouse()
     fiber.delay (backoff.next) (state.timeout())
 
     private def maybeNextState() {
-      if (prepares.quorum) {
+      if (responses.quorum) {
         if (advance) {
           state = new Aborting
           cb.fail (new StaleException)
@@ -95,32 +96,32 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
         }}}
 
     override def prepared (ft: TxClock, from: Peer) {
-      prepares += from
+      responses += from
       if (this.ft < ft) this.ft = ft
       maybeNextState()
     }
 
     override def collisions (ks: Set [Int], from: Peer) {
-      prepares += from
+      responses += from
       this.ks ++= ks
       maybeNextState()
     }
 
     override def advance (from: Peer) {
-      prepares += from
+      responses += from
       advance = true
       maybeNextState()
     }
 
     override def failed (from: Peer) {
-      prepares += from
+      responses += from
       failure = true
       maybeNextState()
     }
 
     override def timeout() {
       if (backoff.hasNext) {
-        prepares.rouse()
+        responses.rouse()
         fiber.delay (backoff.next) (state.timeout())
       } else {
         state = new Aborting
@@ -153,11 +154,11 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
       }}
 
     override def prepared (ft: TxClock, from: Peer): Unit =
-      prepares += from
+      responses += from
 
     override def timeout() {
       if (backoff.hasNext) {
-        prepares.rouse()
+        responses.rouse()
         fiber.delay (backoff.next) (state.timeout())
       }}
 
@@ -174,10 +175,10 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     fiber.delay (backoff.next) (state.timeout())
 
     override def prepared (ft: TxClock, from: Peer): Unit =
-      prepares += from
+      responses += from
 
     override def committed (from: Peer) {
-      prepares += from
+      responses += from
       commits += from
       if (commits.unity)
         state = new Closed
@@ -187,7 +188,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
 
     override def timeout() {
       if (backoff.hasNext) {
-        prepares.rouse()
+        responses.rouse()
         commits.rouse()
         fiber.delay (backoff.next) (state.timeout())
       } else {

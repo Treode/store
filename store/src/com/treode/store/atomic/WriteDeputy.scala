@@ -369,7 +369,7 @@ private object WriteDeputy {
     import AtomicPicklers._
     RequestDescriptor (
         0xFFDD52697F320AD1L,
-        tuple (txId, txClock, seq (writeOp)),
+        tuple (uint, txId, txClock, seq (writeOp)),
         writeResponse)
   }
 

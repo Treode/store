@@ -12,7 +12,6 @@ import com.treode.store.locks.LockSpace
 import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
 
 import Async.{async, guard, supply, when}
-import AtomicKit.locator
 import JavaConversions._
 
 private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
@@ -142,7 +141,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
 private object TimedStore {
 
   val table = TierDescriptor (0xB500D51FACAEA961L) { (residents, id, cell) =>
-    residents contains (AtomicKit.locator, (id, cell.key))
+    resident (residents, id, cell.key)
   }
 
   val receive = {

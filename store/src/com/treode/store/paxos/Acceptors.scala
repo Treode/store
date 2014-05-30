@@ -8,7 +8,6 @@ import com.treode.store.{Bytes, Cell, Residents, TxClock}
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
 import Async.{guard, latch, supply}
-import PaxosKit.locator
 
 private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   import kit.{archive, cluster, disks, library}
@@ -92,5 +91,5 @@ private object Acceptors {
   }
 
   val archive = TierDescriptor (0x9F59C4262C8190E8L) { (residents, _, cell) =>
-    residents contains (PaxosKit.locator, (cell.key, cell.time))
+    resident (residents, cell.key, cell.time)
   }}

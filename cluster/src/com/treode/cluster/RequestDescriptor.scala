@@ -26,6 +26,8 @@ class RequestDescriptor [Q, A] private (id: PortId, preq: Pickler [Q], prsp: Pic
       guard (f (req, from)) run {
         case Success (rsp) =>
           from.send (_prsp, port, Some (rsp))
+        case Failure (_: IgnoreRequestException) =>
+          ()
         case Failure (t) =>
           from.send (_prsp, port, None)
           throw t

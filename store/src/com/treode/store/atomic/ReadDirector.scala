@@ -19,13 +19,13 @@ private class ReadDirector (
     cb: Callback [Seq [Value]]
 ) {
 
-  import kit.{cluster, random, scheduler}
+  import kit.{cluster, library, random, scheduler}
   import kit.config.readBackoff
 
   val fiber = new Fiber
   val vs = Array.fill (ops.size) (Value.empty)
-
-  val cohorts = ops map (kit.locate (_))
+  val atlas = library.atlas
+  val cohorts = ops map (op => locate (atlas, op.table, op.key))
 
   val port = ReadDeputy.read.open { (rsp, from) =>
     fiber.execute {
@@ -35,7 +35,7 @@ private class ReadDirector (
       }}}
 
   val broker = TightTracker (ops, cohorts, kit) { (host, ops) =>
-    ReadDeputy.read (rt, ops) (host, port)
+    ReadDeputy.read (atlas.version, rt, ops) (host, port)
   }
 
   val timer = cb.ensure {

@@ -15,7 +15,7 @@ import Cohort.Moving
 import AtomicMover.{Batch, Point, Range, Targets, Tracker, move}
 
 private class AtomicMover (kit: AtomicKit) {
-  import kit.{cluster, disks, library, place, random, scheduler, tables}
+  import kit.{cluster, disks, library, random, scheduler, tables}
   import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
 
   private val fiber = new Fiber
@@ -32,7 +32,9 @@ private class AtomicMover (kit: AtomicKit) {
       var entries = 0
       var bytes = 0
 
+      val atlas = library.atlas
       val residents = library.residents
+
       val (table, iter, next) =
         tables.ceiling (start.table) match {
           case Some (table) if table.id == start.table =>
@@ -48,7 +50,7 @@ private class AtomicMover (kit: AtomicKit) {
         bytes < rebalanceBytes &&
         Point.Middle (start.table, cell.key, cell.time) < limit
       } { cell =>
-        val num = place (table, cell.key)
+        val num = place (atlas, table, cell.key)
         if (targets contains num) {
           batch.get (num) match {
             case Some (cs) => batch += num -> (cell::cs)

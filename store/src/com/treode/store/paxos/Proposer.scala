@@ -46,9 +46,6 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
       case None => value
     }}
 
-  def track (atlas: Atlas): ReplyTracker =
-    atlas.locate (PaxosKit.locator, (key, time)) .track
-
   private def illegal = throw new IllegalStateException
 
   object Opening extends State {
@@ -78,8 +75,8 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     var refused = ballot
     var proposed = Option.empty [(BallotNumber, Bytes)]
     var atlas = library.atlas
-    var promised = track (atlas)
-    var accepted = track (atlas)
+    var promised = track (atlas, key, time)
+    var accepted = track (atlas, key, time)
 
     // Ballot number zero was implicitly accepted.
     if (ballot == 0)
@@ -95,8 +92,8 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
     def refuse (from: Peer, ballot: Long) = {
       refused = math.max (refused, ballot)
-      promised = atlas.locate (PaxosKit.locator, (key, time)) .track
-      accepted = atlas.locate (PaxosKit.locator, (key, time)) .track
+      promised = track (atlas, key, time)
+      accepted = track (atlas, key, time)
     }
 
     def promise (from: Peer, ballot: Long, proposal: Proposal) {
@@ -113,7 +110,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
         accepted += from
         if (accepted.quorum) {
           val v = agreement (proposed, value)
-          Acceptor.choose (key, time, v) (track (atlas))
+          Acceptor.choose (key, time, v) (track (atlas, key, time))
           learners foreach (_.pass (v))
           state = new Closed (ballot, v)
         }}}
@@ -126,8 +123,8 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     def timeout() {
       if (backoff.hasNext) {
         atlas = library.atlas
-        promised = track (atlas)
-        accepted = track (atlas)
+        promised = track (atlas, key, time)
+        accepted = track (atlas, key, time)
         ballot = refused + random.nextInt (17) + 1
         refused = ballot
         Acceptor.query (atlas.version, key, time, ballot, value) (promised)

@@ -6,6 +6,8 @@ import Level.WARNING
 
 package object cluster {
 
+  class IgnoreRequestException extends Exception
+
   class RemoteException extends Exception
 
   private [cluster] object log {

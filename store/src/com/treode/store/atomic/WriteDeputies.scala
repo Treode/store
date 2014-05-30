@@ -3,14 +3,16 @@ package com.treode.store.atomic
 import com.treode.async.Async
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
+import com.treode.cluster.IgnoreRequestException
 import com.treode.disk.Disk
 import com.treode.store.TxId
 
-import Async.{guard, latch}
+import Async.{guard, supply, when}
 
 private class WriteDeputies (kit: AtomicKit) {
   import WriteDeputy._
   import kit.{cluster, tables}
+  import kit.library.atlas
 
   val deputies = newWritersMap
 
@@ -49,8 +51,11 @@ private class WriteDeputies (kit: AtomicKit) {
 
     TimedStore.table.handle (tables)
 
-    prepare.listen { case ((xid, ct, ops), from) =>
-      get (xid) .prepare (ct, ops)
+    prepare.listen { case ((version, xid, ct, ops), from) =>
+      if (atlas.version - 1 <= version && version <= atlas.version + 1)
+        get (xid) .prepare (ct, ops)
+      else
+        throw new IgnoreRequestException
     }
 
     commit.listen { case ((xid, wt), from) =>
