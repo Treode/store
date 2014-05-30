@@ -8,7 +8,7 @@ import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.{CrashChecks, StubDiskDrive}
 import com.treode.store._
-import org.scalatest.{Informing, Suite}
+import org.scalatest.FreeSpec
 
 import Async.supply
 import AtomicTestTools._
@@ -16,7 +16,7 @@ import AtomicTracker._
 import JavaConversions._
 
 trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
-  this: Suite with Informing =>
+  this: FreeSpec =>
 
   private def scan (hosts: Seq [StubAtomicHost]) (implicit scheduler: Scheduler) = {
     var cells = newTrackedCells
@@ -76,7 +76,7 @@ trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
 
     val tracker = new AtomicTracker
 
-    cluster.info (s"achieveConsensus ($nbatches, $ntables, $nkeys, $nwrites, $nops)")
+    cluster.info (s"issueAtomicWrites ($nbatches, $ntables, $nkeys, $nwrites, $nops)")
 
     .host (StubAtomicHost)
 

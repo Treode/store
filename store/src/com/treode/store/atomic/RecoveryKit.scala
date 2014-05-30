@@ -13,6 +13,7 @@ import com.treode.store.tier.TierMedic
 
 import Async.supply
 import JavaConversions._
+import TimedStore.{receive, checkpoint}
 import WriteDeputy.{aborted, committed, preparing}
 
 private class RecoveryKit (implicit
@@ -48,7 +49,11 @@ private class RecoveryKit (implicit
     get (xid) .aborted()
   }
 
-  TimedStore.checkpoint.replay { case (tab, meta) =>
+  receive.replay { case (tab, gen, novel) =>
+    tables.receive (tab, gen, novel)
+  }
+
+  checkpoint.replay { case (tab, meta) =>
     tables.checkpoint (tab, meta)
   }
 

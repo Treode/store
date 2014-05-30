@@ -35,15 +35,6 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   def remove (key: Bytes, time: TxClock, a: Acceptor): Unit =
     acceptors.remove ((key, time), a)
 
-  def receive (cells: Seq [Cell]) {
-    cells foreach {
-      case Cell (key, time, Some (chosen)) =>
-        val a = acceptors.get ((key, time))
-        if (a != null)
-          a.choose (chosen)
-      case _ => ()
-    }}
-
   def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
     guard {
       archive.probe (groups)
@@ -51,30 +42,20 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
 
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
-      val residents = library.residents
       for {
-        meta <- archive.compact (groups, residents)
+        meta <- archive.compact (groups, library.residents)
         _ <- Acceptors.checkpoint.record (meta)
       } yield ()
     }
 
   def checkpoint(): Async [Unit] =
     guard {
-
-      val residents = library.residents
-
-      val _archive = for {
-        meta <- archive.checkpoint (residents)
+      for {
+        _ <- materialize (acceptors.values) .latch.unit foreach (_.checkpoint())
+        meta <- archive.checkpoint (library.residents)
         _ <- Acceptors.checkpoint.record (meta)
+
       } yield ()
-
-      val _acceptors = for {
-        a <- materialize (acceptors.values) .latch.unit
-      } {
-        a.checkpoint()
-      }
-
-      latch (_archive, _acceptors) .map (_ => ())
     }
 
   def attach () (implicit launch: Disk.Launch) {

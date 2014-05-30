@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import com.treode.async.Async
 import com.treode.async.misc.materialize
 import com.treode.disk.Disk
-import com.treode.store.{TableId, TxClock, WriteOp}
+import com.treode.store.{Cell, TableId, TxClock, WriteOp}
 import com.treode.store.tier.{TierMedic, TierTable}
 
 import Async.guard
@@ -31,6 +31,9 @@ private class TimedMedic (kit: RecoveryKit) {
         case op: Delete => t.delete (gen, op.key, wt)
       }}}
 
+  def receive (id: TableId, gen: Long, novel: Seq [Cell]): Unit =
+    get (id) .receive (gen, novel)
+
   def checkpoint (id: TableId, meta: TierTable.Meta): Unit =
     get (id) .checkpoint (meta)
 
@@ -39,5 +42,4 @@ private class TimedMedic (kit: RecoveryKit) {
       val id = entry.getKey
       val t = entry.getValue.close()
       (id, t)
-    }}
-}
+    }}}

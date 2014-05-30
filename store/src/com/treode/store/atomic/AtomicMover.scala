@@ -15,7 +15,7 @@ import Cohort.Moving
 import AtomicMover.{Batch, Point, Range, Targets, Tracker, move}
 
 private class AtomicMover (kit: AtomicKit) {
-  import kit.{cluster, library, place, random, scheduler, tables}
+  import kit.{cluster, disks, library, place, random, scheduler, tables}
   import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
 
   private val fiber = new Fiber
@@ -25,44 +25,45 @@ private class AtomicMover (kit: AtomicKit) {
 
   queue.launch()
 
-  def split (start: Point.Middle, limit: Point, targets: Targets): Async [(TableId, Batch, Point)] = {
+  def split (start: Point.Middle, limit: Point, targets: Targets): Async [(TableId, Batch, Point)] =
+    disks.join {
 
-    var batch = Map.empty [Int, List [Cell]]
-    var entries = 0
-    var bytes = 0
+      var batch = Map.empty [Int, List [Cell]]
+      var entries = 0
+      var bytes = 0
 
-    val residents = library.residents
-    val (table, iter, next) =
-      tables.ceiling (start.table) match {
-        case Some (table) if table.id == start.table =>
-          (table.id, table.iterator (start.key, start.time, residents), Point.Middle (table.id))
-        case Some (table) if Point.Middle (table.id) < limit =>
-          (table.id, table.iterator (residents), Point.Middle (table.id.id+1))
-        case _ =>
-          (TableId.MinValue, AsyncIterator.empty [Cell], limit)
-      }
-
-    iter.whilst { cell =>
-      entries < rebalanceEntries &&
-      bytes < rebalanceBytes &&
-      Point.Middle (start.table, cell.key, cell.time) < limit
-    } { cell =>
-      val num = place (table, cell.key)
-      if (targets contains num) {
-        batch.get (num) match {
-          case Some (cs) => batch += num -> (cell::cs)
-          case None => batch += num -> List (cell)
+      val residents = library.residents
+      val (table, iter, next) =
+        tables.ceiling (start.table) match {
+          case Some (table) if table.id == start.table =>
+            (table.id, table.iterator (start.key, start.time, residents), Point.Middle (table.id.id + 1))
+          case Some (table) if Point.Middle (table.id) < limit =>
+            (table.id, table.iterator (residents), Point.Middle (table.id.id + 1))
+          case _ =>
+            (TableId.MinValue, AsyncIterator.empty [Cell], limit)
         }
-        entries += 1
-        bytes += cell.byteSize
-      }
-      supply()
-    } .map {
-      case Some (cell) =>
-        (table, batch, Point.Middle (table, cell.key, cell.time))
-      case None =>
-        (table, batch, next)
-    }}
+
+      iter.whilst { cell =>
+        entries < rebalanceEntries &&
+        bytes < rebalanceBytes &&
+        Point.Middle (start.table, cell.key, cell.time) < limit
+      } { cell =>
+        val num = place (table, cell.key)
+        if (targets contains num) {
+          batch.get (num) match {
+            case Some (cs) => batch += num -> (cell::cs)
+            case None => batch += num -> List (cell)
+          }
+          entries += 1
+          bytes += cell.byteSize
+        }
+        supply()
+      } .map {
+        case Some (cell) =>
+          (table, batch, Point.Middle (table, cell.key, cell.time))
+        case None =>
+          (table, batch, next)
+      }}
 
   move.listen { case ((table, cells), from) =>
     tables.receive (table, cells)
@@ -99,17 +100,12 @@ private class AtomicMover (kit: AtomicKit) {
         send (table, cells, targets (num))
     }
 
-  def continue (next: Point): Unit =
-    fiber.execute {
-      tracker.continue (next)
-    }
-
   def rebalance (start: Point.Middle, limit: Point, targets: Targets): Async [Unit] = {
     for {
       (table, batch, next) <- split (start, limit, targets)
       _ <- send (table, batch, targets)
-    } yield {
-      continue (next)
+    } yield fiber.execute {
+      tracker.continue (next)
     }}
 
   def next(): Option [Runnable] =
@@ -170,9 +166,9 @@ private object AtomicMover {
 
     val empty = new Targets (Map.empty)
 
-    private def targets (cohort: Cohort): Set [HostId] =
+    private def targets (cohort: Cohort, host: HostId): Set [HostId] =
       cohort match {
-        case Moving (origin, target) => target -- origin
+        case Moving (origin, target) if origin contains host => target - host
         case _ => Set.empty
       }
 
@@ -180,7 +176,7 @@ private object AtomicMover {
       val builder = Map.newBuilder [Int, Set [Peer]]
       for {
         (c, i) <- atlas.cohorts.zipWithIndex
-        ts = targets (c)
+        ts = targets (c, cluster.localId)
         if !ts.isEmpty
       }  builder += i -> (ts map (cluster.peer _))
       new Targets (builder.result)

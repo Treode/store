@@ -24,7 +24,7 @@ private class AtomicKit (implicit
     val config: StoreConfig
 ) extends Store {
 
-  import library.atlas
+  import library.{atlas, releaser}
 
   val tables = new TimedStore (this)
   val reader = new ReadDeputy (this)
@@ -42,10 +42,10 @@ private class AtomicKit (implicit
     locate (op.table, op.key)
 
   def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
-    ReadDirector.read (rt, ops, this)
+    releaser.join (ReadDirector.read (rt, ops, this))
 
   def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock] =
-    WriteDirector.write (xid, ct, ops, this)
+    releaser.join (WriteDirector.write (xid, ct, ops, this))
 
   def status (xid: TxId): Async [TxStatus] =
     deliberate.propose (xid.id, xid.time, TxStatus.Aborted)

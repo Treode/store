@@ -82,13 +82,13 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     private def maybeNextState() {
       if (prepares.quorum) {
         if (advance) {
-          state = new Aborting (true)
+          state = new Aborting
           cb.fail (new StaleException)
         } else if (!ks.isEmpty) {
-          state = new Aborting (true)
+          state = new Aborting
           cb.fail (new CollisionException (ks.toSeq))
         } else if (failure) {
-          state = new Aborting (true)
+          state = new Aborting
           cb.fail (new RemoteException)
         } else {
           state = new Deliberating (ft+1, cb)
@@ -123,7 +123,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
         prepares.rouse()
         fiber.delay (backoff.next) (state.timeout())
       } else {
-        state = new Aborting (true)
+        state = new Aborting
         cb.fail (new TimeoutException)
       }}
 
@@ -133,21 +133,23 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
   class Deliberating (wt: TxClock, cb: Callback [TxClock]) extends State {
     import TxStatus._
 
-    deliberate.lead (xid.id, xid.time, Committed (wt)) run {
+    _commit()
 
-      case Success (status) => fiber.execute {
-        status match {
-          case Committed (wt) =>
-            state = new Committing (wt)
-            cb.pass (wt)
-          case Aborted =>
-            state = new Aborting (false)
-            cb.fail (new TimeoutException)
-        }}
+    def _commit() {
+      deliberate.lead (xid.id, xid.time, Committed (wt)) run {
 
-      case Failure (t) => fiber.execute {
-        state = new Aborting (false)
-        cb.fail (t)
+        case Success (status) => fiber.execute {
+          status match {
+            case Committed (wt) =>
+              state = new Committing (wt)
+              cb.pass (wt)
+            case Aborted =>
+              state = new Aborting
+              cb.fail (new TimeoutException)
+          }}
+
+        case Failure (t) =>
+          _commit()
       }}
 
     override def prepared (ft: TxClock, from: Peer): Unit =
@@ -195,15 +197,21 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     override def toString = "Director.Committing"
   }
 
-  class Aborting (lead: Boolean) extends State {
+  class Aborting extends State {
 
     val aborts = BroadTracker (cohorts, kit) { hosts =>
       WriteDeputy.abort (xid) (hosts, port)
     }
 
-    if (lead)
-      deliberate.lead (xid.id, xid.time, TxStatus.Aborted) run (Callback.ignore)
+    _abort()
     aborts.rouse()
+    fiber.delay (backoff.next) (state.timeout())
+
+    def _abort() {
+      deliberate.lead (xid.id, xid.time, TxStatus.Aborted) run {
+        case Success (_) => ()
+        case Failure (_) => _abort()
+      }}
 
     override def aborted (from: Peer) {
       aborts += from

@@ -11,7 +11,7 @@ import com.treode.store.{Bytes, Cell, ReadOp, Residents, TableId, TxClock, TxId,
 import com.treode.store.locks.LockSpace
 import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
 
-import Async.{async, guard, supply}
+import Async.{async, guard, supply, when}
 import AtomicKit.locator
 import JavaConversions._
 
@@ -23,12 +23,10 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
 
   private def getTable (id: TableId): TierTable = {
     var t0 = tables.get (id)
-    if (t0 != null)
-      return t0
+    if (t0 != null) return t0
     val t1 = TierTable (TimedStore.table, id.id)
     t0 = tables.putIfAbsent (id, t1)
-    if (t0 != null)
-      return t0
+    if (t0 != null) return t0
     t1
   }
 
@@ -99,7 +97,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
 
   def receive (table: TableId, cells: Seq [Cell]): Async [Unit] = {
     val (gen, novel) = getTable (table) .receive (cells)
-    TimedStore.receive.record (table, gen, novel)
+    when (!novel.isEmpty) (TimedStore.receive.record (table, gen, novel))
   }
 
   def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =

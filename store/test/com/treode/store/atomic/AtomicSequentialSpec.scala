@@ -54,8 +54,6 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
 
         implicit val config = StoreTestConfig (messageFlakiness = flakiness)
 
-        "for one host" taggedAs (Intensive, Periodic) in {
-          for1host { implicit random =>
+        forVariousClusters { implicit random =>
             issueAtomicWrites (7, 3, 100, 5, 3)
-          }}
-      }}}}
+        }}}}}

@@ -6,7 +6,7 @@ import com.treode.async.{Async, Callback, Fiber}
 import com.treode.async.implicits._
 import com.treode.cluster.RequestDescriptor
 import com.treode.disk.RecordDescriptor
-import com.treode.store.{Bytes, TxClock, TxId, TxStatus, WriteOp, log}
+import com.treode.store.{Bytes, TimeoutException, TxClock, TxId, TxStatus, WriteOp, log}
 import com.treode.store.atomic.{WriteDeputy => WD}
 import com.treode.store.locks.LockSet
 
@@ -17,11 +17,13 @@ import WriteDirector.deliberate
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   import kit.{disks, paxos, scheduler, tables, writers}
   import kit.config.{closedLifetime, preparingTimeout}
+  import kit.library.releaser
 
   type WriteCallback = Callback [WriteResponse]
 
-  val fiber = new Fiber
-  var state: State = new Open
+  private val fiber = new Fiber
+  private val epoch = releaser.join()
+  private var state: State = new Open
 
   trait State {
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback)
@@ -29,6 +31,13 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     def abort (cb: WriteCallback)
     def checkpoint(): Async [Unit]
   }
+
+  private def panic (s: State, t: Throwable): Unit =
+    fiber.execute {
+      if (state == s) {
+        state = new Panicked (state, t)
+        throw t
+      }}
 
   private def timeout (s: State): Unit =
     fiber.delay (preparingTimeout) {
@@ -38,8 +47,10 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
             WriteDeputy.this.abort() run (ignore)
           case Success (TxStatus.Committed (wt)) =>
             WriteDeputy.this.commit (wt) run (ignore)
-          case Failure (t) =>
+          case Failure (_: TimeoutException) =>
             timeout (s)
+          case Failure (t) =>
+            panic (s, t)
         }}
 
   class Open extends State {
@@ -178,7 +189,8 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Tardy (wt: TxClock, cb: WriteCallback) extends State {
 
-    fiber.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
+    releaser.leave (epoch)
+    scheduler.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
       new Committing (wt, ops, None, cb)
@@ -241,7 +253,8 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Committed (gens: Seq [Long], wt: TxClock) extends State {
 
-    fiber.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
+    releaser.leave (epoch)
+    scheduler.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
       cb.pass (WriteResponse.Committed)
@@ -297,7 +310,8 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Aborted extends State {
 
-    fiber.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
+    releaser.leave (epoch)
+    scheduler.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def status = None
 
@@ -318,7 +332,8 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Panicked (s: State, thrown: Throwable) extends State {
 
-    fiber.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
+    releaser.leave (epoch)
+    scheduler.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def checkpoint(): Async [Unit] =
       s.checkpoint()
@@ -341,6 +356,9 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   def checkpoint(): Async [Unit] =
     fiber.guard (state.checkpoint())
+
+  def dispose(): Unit =
+    releaser.leave (epoch)
 
   override def toString = state.toString
 }

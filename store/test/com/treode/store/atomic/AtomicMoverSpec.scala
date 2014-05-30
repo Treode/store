@@ -60,7 +60,7 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
     def setup() = {
       implicit val kit = StoreTestKit.random()
       import kit._
-      implicit val cluster = new StubPeer (0)
+      implicit val cluster = new StubPeer (1)
       cluster
     }
 
@@ -84,7 +84,7 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
       assert (!ts.isEmpty)
       assert (!(ts contains 0))
       assert (!(ts contains 1))
-      assertPeers (5) (ts (2))
+      assertPeers (2, 5) (ts (2))
       assertPeers (6, 7) (ts (3))
     }}
 
@@ -107,7 +107,7 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
         def setup() = {
           implicit val kit = StoreTestKit.random()
           import kit._
-          implicit val cluster = new StubPeer (0)
+          implicit val cluster = new StubPeer (1)
           val tracker = new RichTracker
           (cluster, tracker)
         }
@@ -129,7 +129,7 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
         "rebalance is started with a cohort moving, it should start work" in {
           implicit val (cluster, t) = setup()
           t.start (moving (1, 2, 3) (1, 2, 4))
-          assertTask (begin (0), 0 -> Set (4)) (t.deque())
+          assertTask (begin (0), 0 -> Set (2, 4)) (t.deque())
           intercept [AssertionError] (t.deque())
           t.continue (Point.End)
           assertNone (t.deque())
@@ -142,17 +142,17 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
         def setup() = {
           implicit val kit = StoreTestKit.random()
           import kit._
-          implicit val cluster = new StubPeer (0)
+          implicit val cluster = new StubPeer (1)
           val t = new RichTracker
           t.start (moving (1, 2, 3) (1, 2, 4))
-          assertTask (begin (0), 0 -> Set (4)) (t.deque())
+          assertTask (begin (0), 0 -> Set (2, 4)) (t.deque())
           t.continue (7)
           (cluster, t)
         }
 
         "rebalance is not restarted, it should continue work" in {
           implicit val (cluster, t) = setup()
-          assertTask (begin (7), 0 -> Set (4)) (t.deque())
+          assertTask (begin (7), 0 -> Set (2, 4)) (t.deque())
           t.continue (Point.End)
           assertNone (t.deque())
         }
@@ -168,7 +168,7 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
           "with the same cohort moving the same way, it should continue work" in {
             implicit val (cluster, t) = setup()
             t.start (moving (1, 2, 3) (1, 2, 4))
-            assertTask (begin (7), 0 -> Set (4)) (t.deque())
+            assertTask (begin (7), 0 -> Set (2, 4)) (t.deque())
             t.continue (Point.End)
             assertNone (t.deque())
           }
@@ -186,8 +186,8 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
 
           "with the same cohort moving a different way, it should restart work" in {
             implicit val (cluster, t) = setup()
-            t.start (moving (1, 2, 3) (1, 2, 5))
-            assertTask (begin (0), 0 -> Set (5)) (t.deque())
+            t.start (moving (1, 2, 3) (1, 5, 6))
+            assertTask (begin (0), 0 -> Set (5, 6)) (t.deque())
             t.continue (Point.End)
             assertNone (t.deque())
           }
@@ -197,7 +197,7 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
             t.start (
                 settled (1, 2, 3),
                 moving (1, 2, 3) (1, 2, 4))
-            assertTask (begin (0), 1 -> Set (4)) (t.deque())
+            assertTask (begin (0), 1 -> Set (2, 4)) (t.deque())
             t.continue (Point.End)
             assertNone (t.deque())
           }}}}
@@ -209,10 +209,10 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
         def setup() = {
           implicit val kit = StoreTestKit.random()
           import kit._
-          implicit val cluster = new StubPeer (0)
+          implicit val cluster = new StubPeer (1)
           val t = new RichTracker
           t.start (moving (1, 2, 3) (1, 2, 4))
-          assertTask (begin (0), 0 -> Set (4)) (t.deque())
+          assertTask (begin (0), 0 -> Set (2, 4)) (t.deque())
           t.start (moving (1, 2, 3) (1, 4, 5))
           t.continue (7)
           assertTask (range (0, 7), 0 -> Set (5)) (t.deque())
@@ -249,8 +249,8 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
 
           "with the same cohort moving a different way, it should restart work" in {
             implicit val (cluster, t) = setup()
-            t.start (moving (1, 2, 3) (1, 2, 6))
-            assertTask (begin (0), 0 -> Set (6)) (t.deque())
+            t.start (moving (1, 2, 3) (1, 6, 7))
+            assertTask (begin (0), 0 -> Set (6, 7)) (t.deque())
             t.continue (Point.End)
             assertNone (t.deque())
           }
@@ -260,7 +260,7 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
             t.start (
                 settled (1, 2, 3),
                 moving (1, 2, 3) (1, 2, 4))
-            assertTask (begin (0), 1 -> Set (4)) (t.deque())
+            assertTask (begin (0), 1 -> Set (2, 4)) (t.deque())
             t.continue (Point.End)
             assertNone (t.deque())
           }}}}}}

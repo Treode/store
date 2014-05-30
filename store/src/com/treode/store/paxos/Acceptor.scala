@@ -161,7 +161,8 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
       if (state == Deliberating.this)
         kit.propose (key, time, default) .run {
           case Success (v) => Acceptor.this.choose (v)
-          case Failure (_) => timeout()
+          case Failure (_: TimeoutException) => timeout()
+          case Failure (t) => panic (Deliberating.this, t)
         }}
 
     def open (ballot: Long, default: Bytes, proposer: Peer): Unit =
@@ -230,7 +231,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
   class Closed (val chosen: Bytes, gen: Long) extends State {
 
     releaser.leave (epoch)
-    fiber.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
+    scheduler.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
 
     def query (proposer: Peer, ballot: Long, default: Bytes): Unit =
       Proposer.chosen (key, time, chosen) (proposer)
@@ -250,7 +251,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
   class Panicked (s: State, thrown: Throwable) extends State {
 
     releaser.leave (epoch)
-    fiber.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
+    scheduler.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
 
     def query (proposer: Peer, ballot: Long, default: Bytes): Unit = ()
 

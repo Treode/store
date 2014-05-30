@@ -9,13 +9,13 @@ import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.{CrashChecks, StubDiskDrive}
 import com.treode.store._
-import org.scalatest.{Informing, Suite}
+import org.scalatest.FreeSpec
 
 import Async.supply
 import PaxosTestTools._
 
 trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
-  this: Suite with Informing =>
+  this: FreeSpec =>
 
   private def scan (hosts: Seq [StubPaxosHost]) (implicit scheduler: Scheduler): Async [Seq [Cell]] = {
     val iter = AsyncIterator.merge (hosts map (_.scan))

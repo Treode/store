@@ -20,8 +20,10 @@ private class WriteDeputies (kit: AtomicKit) {
       return d0
     val d1 = new WriteDeputy (xid, kit)
     d0 = deputies.putIfAbsent (xid, d1)
-    if (d0 != null)
+    if (d0 != null) {
+      d1.dispose()
       return d0
+    }
     d1
   }
 

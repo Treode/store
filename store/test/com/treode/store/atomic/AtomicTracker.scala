@@ -132,9 +132,15 @@ class AtomicTracker {
   def check (cells: TrackedCells) {
     for ((tk, expected) <- accepted) {
       val found = cells (tk)
+      val tried = attempted (tk)
+      val unexplained = for {
+        (time, value) <- found
+        if expected.get (time) != Some (value)
+        if !(tried contains value)
+      } yield (time, value)
       assert (
-          found == expected,
-          s"Expected tk to be $expected, found $found.")
+          unexplained.isEmpty,
+          s"Unexplained values for $tk: $unexplained")
     }}}
 
 object AtomicTracker {

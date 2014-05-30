@@ -10,7 +10,8 @@ import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.StubDiskDrive
-import org.scalatest.{Assertions, Informing, Suite}
+import com.treode.tags.{Intensive, Periodic}
+import org.scalatest.FreeSpec
 import org.scalatest.time.SpanSugar
 
 import Async.async
@@ -20,7 +21,7 @@ import StoreClusterChecks.{Host, Package}
 import StoreTestTools._
 
 trait StoreClusterChecks extends AsyncChecks {
-  this: Suite with Informing =>
+  this: FreeSpec =>
 
   private val ntargets =
     intensity match {
@@ -1717,7 +1718,113 @@ trait StoreClusterChecks extends AsyncChecks {
         for8hosts (_) (init)) (
             for8to3 (_, _) (init))
     info (s"Average time for 8 shrinking to 3: ${average}ms")
-  }}
+  }
+
+  def forVariousClusters [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+
+    "for one host" taggedAs (Intensive, Periodic) in {
+      for1host (init)
+    }
+
+    "three stable hosts" taggedAs (Intensive, Periodic) in {
+      for3hosts (init)
+    }
+
+    "eight stable hosts" taggedAs (Intensive, Periodic) in {
+      for8hosts (init)
+    }
+
+    "one of three hosts is offline" taggedAs (Intensive, Periodic) in {
+      for3with1offline (init)
+    }
+
+    "one of three hosts crashes" taggedAs (Intensive, Periodic) in {
+      for3with1crashing (init)
+    }
+
+    "one of three hosts reboots" taggedAs (Intensive, Periodic) in {
+      for3with1rebooting (init)
+    }
+
+    "one of three hosts bounces" taggedAs (Intensive, Periodic) in {
+      for3with1bouncing (init)
+    }
+
+    "one host moving to another" taggedAs (Intensive, Periodic) in {
+      for1to1 (init)
+    }
+
+    "one host growing to three" taggedAs (Intensive, Periodic) in {
+      for1to3 (init)
+    }
+
+    "one host growing to three, one bounces" taggedAs (Intensive, Periodic) in {
+      for1to3with1bouncing (init)
+    }
+
+    "three hosts shrinking to one" taggedAs (Intensive, Periodic) in {
+      for3to1 (init)
+    }
+
+    "three hosts shrinking to one, one bounces" taggedAs (Intensive, Periodic) in {
+      for3to1with1bouncing (init)
+    }
+
+    "three hosts replacing one" taggedAs (Intensive, Periodic) in {
+      for3replacing1 (init)
+    }
+
+    "three hosts replacing one, source bounces" taggedAs (Intensive, Periodic) in {
+      for3replacing1withSourceBouncing (init)
+    }
+
+    "three hosts replacing one, target bounces" taggedAs (Intensive, Periodic) in {
+      for3replacing1withTargetBouncing (init)
+    }
+
+    "three hosts replacing one, common bounces" taggedAs (Intensive, Periodic) in {
+      for3replacing1withCommonBouncing (init)
+    }
+
+    "three hosts replacing two" taggedAs (Intensive, Periodic) in {
+      for3replacing2 (init)
+    }
+
+    "three hosts replacing two, source bounces" taggedAs (Intensive, Periodic) in {
+      for3replacing2withSourceBouncing (init)
+    }
+
+    "three hosts replacing two, target bounces" taggedAs (Intensive, Periodic) in {
+      for3replacing2withTargetBouncing (init)
+    }
+
+    "three hosts replacing two, common bounces" taggedAs (Intensive, Periodic) in {
+      for3replacing2withCommonBouncing (init)
+    }
+
+    "three hosts moving to three others" taggedAs (Intensive, Periodic) in {
+      for3to3 (init)
+    }
+
+    "three hosts moving to three others, source bounces" taggedAs (Intensive, Periodic) in {
+      for3to3withSourceBouncing (init)
+    }
+
+    "three hosts moving to three others, target bounces" taggedAs (Intensive, Periodic) in {
+      for3to3withTargetBouncing (init)
+    }
+
+    "for three hosts growing to eight" taggedAs (Intensive, Periodic) in {
+      for3to8 (init)
+    }
+
+    "for eight hosts shrinking to three" taggedAs (Intensive, Periodic) in {
+      for8to3 (init)
+    }}}
 
 object StoreClusterChecks {
 

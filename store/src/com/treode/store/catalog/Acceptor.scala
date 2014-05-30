@@ -4,7 +4,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async.{Callback, Fiber}
 import com.treode.cluster.{MessageDescriptor, Peer}
-import com.treode.store.{BallotNumber, CatalogId}
+import com.treode.store.{BallotNumber, CatalogId, TimeoutException}
 
 import Callback.ignore
 
@@ -80,7 +80,8 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
       if (state == Deliberating.this)
         kit.propose (key, default) .run {
           case Success (v) => Acceptor.this.choose (v)
-          case Failure (_) => timeout()
+          case Failure (_: TimeoutException) => timeout()
+          case Failure (t) => panic (Deliberating.this, t)
         }}
 
     def query (proposer: Peer, _ballot: Long, default: Patch) {
@@ -115,7 +116,7 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
 
     broker.patch (key, chosen) run {
       case Success (v) =>
-        fiber.delay (closedLifetime) (acceptors.remove (key, version, Acceptor.this))
+        scheduler.delay (closedLifetime) (acceptors.remove (key, version, Acceptor.this))
       case Failure (t) =>
         panic (Closed.this, t)
     }
@@ -134,7 +135,7 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
 
   class Panicked (thrown: Throwable) extends State {
 
-    fiber.delay (closedLifetime) (acceptors.remove (key, version, Acceptor.this))
+    scheduler.delay (closedLifetime) (acceptors.remove (key, version, Acceptor.this))
 
     def query (proposer: Peer, ballot: Long, default: Patch): Unit = ()
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit = ()
