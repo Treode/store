@@ -64,18 +64,19 @@ private class SynthTable (
       readLock.unlock()
     }
 
-    var candidate = Cell.sentinel
+    var candidate: Cell = null
+
     var entry = primary.ceilingEntry (mkey)
     if (entry != null) {
       val Key (k, t) = entry.getKey
-      if (key == k && candidate.time < t) {
+      if (key == k && (candidate == null || candidate.time < t)) {
         candidate = memTierEntryToCell (entry)
       }}
 
     entry = secondary.ceilingEntry (mkey)
     if (entry != null) {
       val Key (k, t) = entry.getKey
-      if (key == k && candidate.time < t) {
+      if (key == k && (candidate == null || candidate.time < t)) {
         candidate = memTierEntryToCell (entry)
       }}
 
@@ -83,16 +84,16 @@ private class SynthTable (
     whilst (i < tiers.size) {
       val tier = tiers (i)
       i += 1
-      when (tier.earliest <= time && candidate.time < tier.latest) {
+      when (tier.earliest <= time && (candidate == null || candidate.time < tier.latest)) {
         tier.get (desc, key, time) .map {
-         case Some (c @ Cell (k, t, v)) if key == k && candidate.time < t =>
+         case Some (c @ Cell (k, t, v)) if key == k && (candidate == null || candidate.time < t) =>
             candidate = c
           case _ =>
             ()
         }}
     } .map { _ =>
-      if (candidate == Cell.sentinel)
-        Cell (key, TxClock.zero, None)
+      if (candidate == null)
+        Cell (key, TxClock.MinValue, None)
       else
         candidate
     }}

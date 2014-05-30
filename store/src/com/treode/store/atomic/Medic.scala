@@ -31,7 +31,7 @@ private class Medic (val xid: TxId, kit: RecoveryKit)  {
     if (_aborted)
       w.abort() .run (ignore)
     if (_preparing.isDefined)
-      w.prepare (TxClock.zero, _preparing.get) run (ignore)
+      w.prepare (TxClock.MinValue, _preparing.get) run (ignore)
     w
   }
 

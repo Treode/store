@@ -12,7 +12,7 @@ private class TestTable (table: TierTable) (implicit disks: Disk)
 extends PageHandler [Long] {
 
   def get (key: Int): Async [Option [Int]] = guard {
-    for (cell <- table.get (Bytes (key), TxClock.max))
+    for (cell <- table.get (Bytes (key), TxClock.MaxValue))
       yield cell.value.map (_.int)
   }
 
@@ -27,12 +27,12 @@ extends PageHandler [Long] {
     toSeq.toMap
 
   def put (key: Int, value: Int): Async [Unit] = guard {
-    val gen = table.put (Bytes (key), TxClock.zero, Bytes (value))
+    val gen = table.put (Bytes (key), TxClock.MinValue, Bytes (value))
     TestTable.put.record (gen, key, value)
   }
 
   def delete (key: Int): Async [Unit] = guard {
-    val gen = table.delete (Bytes (key), TxClock.zero)
+    val gen = table.delete (Bytes (key), TxClock.MinValue)
     TestTable.delete.record (gen, key)
   }
 

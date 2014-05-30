@@ -23,11 +23,11 @@ private class TestMedic (
   }
 
   put.replay { case (gen, key, value) =>
-    medic.put (gen, Bytes (key), TxClock.zero, Bytes (value))
+    medic.put (gen, Bytes (key), TxClock.MinValue, Bytes (value))
   }
 
   delete.replay { case (gen, key) =>
-    medic.delete (gen, Bytes (key), TxClock.zero)
+    medic.delete (gen, Bytes (key), TxClock.MinValue)
   }
 
   def launch (implicit launch: Disk.Launch): Async [TestTable] = supply {

@@ -57,8 +57,8 @@ private class TierBuilder (
   private val stack = new ArrayDeque [IndexNode]
   private val rstack = new ArrayDeque [IndexNode]
   private var cells = new CellsNode
-  private var earliestTime = TxClock.max
-  private var latestTime = TxClock.zero
+  private var earliestTime = TxClock.MaxValue
+  private var latestTime = TxClock.MinValue
   private var totalKeys = 0L
   private var totalEntries = 0L
   private var totalDiskBytes = 0L

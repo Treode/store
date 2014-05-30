@@ -11,8 +11,6 @@ case class Key (key: Bytes, time: TxClock) extends Ordered [Key] {
 
 object Key extends Ordering [Key] {
 
-  val sentinel = Key (Bytes.empty, TxClock.sentinel)
-
   def compare (x: Key, y: Key): Int =
     x compare y
 

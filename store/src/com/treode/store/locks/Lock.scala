@@ -19,7 +19,7 @@ private class Lock {
   // reader as of a timestamp greater than this must wait for the current writer to release the
   // lock since that writer could commit the value with timestamp forecast+1; then the reader must
   // raise the forecasted value to prevent later writers from invalidating its read.
-  private var forecast = TxClock.zero
+  private var forecast = TxClock.MinValue
 
   // Does a writer hold the lock?  If non-null, a writer holds the lock.  If it commits values,
   // they will be timestamped greater than the forecasted timestamp.
@@ -79,9 +79,9 @@ private class Lock {
     require (engaged == w0, "The writer releasing the lock does not hold it.")
     var rs = NoReaders
     var w = Option.empty [LockWriter]
-    var ft = TxClock.zero
+    var ft = TxClock.MinValue
     synchronized {
-      var rt = TxClock.zero
+      var rt = TxClock.MinValue
       var i = 0
       while (i < readers.length) {
         if (rt < readers(i).rt)

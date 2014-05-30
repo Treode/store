@@ -23,12 +23,12 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
   private val data = new ConcurrentSkipListMap [StubKey, Option [Bytes]]
 
   private def get (table: TableId, key: Bytes, time: TxClock): Value = {
-    val limit = StubKey (table, key, TxClock.zero)
+    val limit = StubKey (table, key, TxClock.MinValue)
     var entry = data.ceilingEntry (StubKey (table, key, time))
     if (entry != null && entry.getKey <= limit)
       Value (entry.getKey.time, entry.getValue)
     else
-      Value (TxClock.zero, None)
+      Value (TxClock.MinValue, None)
   }
 
   def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] = {
@@ -49,7 +49,7 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
     op.isInstanceOf [WriteOp.Create] && value.value.isDefined
 
   private def prepare (ct: TxClock, op: WriteOp): (Boolean, TxClock) = {
-    val value = get (op.table, op.key, TxClock.max)
+    val value = get (op.table, op.key, TxClock.MaxValue)
     (collided (op, value), value.time)
   }
 
@@ -73,7 +73,7 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
         try {
           val results = ops.map (op => prepare (ct, op))
           val collisions = for (((c, t), i) <- results.zipWithIndex; if c) yield i
-          val vt = results.filterNot (_._1) .map (_._2) .fold (TxClock.zero) (TxClock.max _)
+          val vt = results.filterNot (_._1) .map (_._2) .fold (TxClock.MinValue) (TxClock.max _)
           val wt = TxClock.max (vt, locks.ft) + 1
           if (ct < vt)
             throw new StaleException

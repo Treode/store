@@ -10,7 +10,7 @@ case class Value (time: TxClock, value: Option [Bytes]) {
 
 object Value {
 
-  val empty = Value (TxClock.zero, None)
+  val empty = Value (TxClock.MinValue, None)
 
   val pickler = {
     import StorePicklers._

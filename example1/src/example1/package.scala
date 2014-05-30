@@ -90,7 +90,7 @@ package object example1 {
             .parse (ct)
             .getOrElse (throw new BadRequestException (s"Bad If-Modified-Since value: $ct"))
         case None =>
-          TxClock.zero
+          TxClock.MinValue
       }
 
     def getIfUnmodifiedSince: TxClock =

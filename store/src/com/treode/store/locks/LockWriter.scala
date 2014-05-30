@@ -13,7 +13,7 @@ private class LockWriter (
     private var cb: Callback [LockSet]) extends LockSet {
 
   // For testing mocks.
-  def this() = this (null, TxClock.zero, SortedSet.empty, Callback.ignore)
+  def this() = this (null, TxClock.MinValue, SortedSet.empty, Callback.ignore)
 
   private var iter = ids.iterator
   private var max = _ft

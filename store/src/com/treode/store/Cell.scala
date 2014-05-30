@@ -17,8 +17,6 @@ case class Cell (key: Bytes, time: TxClock, value: Option [Bytes]) extends Order
 
 object Cell extends Ordering [Cell] {
 
-  val sentinel = Cell (Bytes.empty, TxClock.sentinel, None)
-
   def compare (x: Cell, y: Cell): Int =
     x compare y
 

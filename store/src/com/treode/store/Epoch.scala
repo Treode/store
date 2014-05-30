@@ -11,7 +11,7 @@ object Epoch {
 
   case class Const (limit: TxClock) extends Epoch
 
-  val zero = Const (TxClock.zero)
+  val zero = Const (TxClock.MinValue)
 
   object StartOfYesterday extends Epoch {
 

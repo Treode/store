@@ -16,10 +16,12 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
     Targets (Atlas (cohorts.toArray, 1))
 
   private def begin (start: Int): Range =
-    Range (Point.Middle (start, Bytes.empty, TxClock.max), Point.End)
+    Range (Point.Middle (start, Bytes.MinValue, TxClock.MaxValue), Point.End)
 
   private def range (start: Int, end: Int): Range =
-    Range (Point.Middle (start, Bytes.empty, TxClock.max), Point.Middle (end, Bytes.empty, TxClock.max))
+    Range (
+        Point.Middle (start, Bytes.MinValue, TxClock.MaxValue),
+        Point.Middle (end, Bytes.MinValue, TxClock.MaxValue))
 
   def assertPeers (expected: HostId*) (actual: Set [Peer]): Unit =
     assertResult (expected.toSet) (actual map (_.id))
@@ -47,7 +49,7 @@ class AtomicMoverSpec extends FreeSpec with ShouldMatchers {
       tracker.continue (point)
 
     def continue (table: Int): Unit =
-      tracker.continue (Point.Middle (table, Bytes.empty, TxClock.max))
+      tracker.continue (Point.Middle (table, Bytes.MinValue, TxClock.MaxValue))
 
     def start (cohorts: Cohort*) (implicit cluster: Cluster): Unit =
       tracker.start (targets (cohorts: _*))

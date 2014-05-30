@@ -209,7 +209,7 @@ private object AtomicMover {
     object Middle {
 
       def apply (table: TableId): Middle =
-        Middle (table.id, Bytes.empty, TxClock.max)
+        Middle (table.id, Bytes.MinValue, TxClock.MaxValue)
     }
 
     case object End extends Point {
@@ -220,7 +220,7 @@ private object AtomicMover {
           case _ => 1
         }}
 
-    val Start = Middle (0, Bytes.empty, TxClock.max)
+    val Start = Middle (0, Bytes.MinValue, TxClock.MaxValue)
 
     def compare (x: Point, y: Point): Int =
       x compare y

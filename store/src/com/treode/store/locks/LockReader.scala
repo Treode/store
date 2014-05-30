@@ -8,7 +8,7 @@ import com.treode.store.TxClock
 private class LockReader (_rt: TxClock, cb: Callback [Unit]) {
 
   // For testing mocks.
-  def this() = this (TxClock.zero, Callback.ignore)
+  def this() = this (TxClock.MinValue, Callback.ignore)
 
   private var needed = 0
 

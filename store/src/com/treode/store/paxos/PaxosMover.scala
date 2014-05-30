@@ -211,7 +211,7 @@ private object PaxosMover {
           case _ => 1
         }}
 
-    val Start = Middle (Bytes.empty, TxClock.max)
+    val Start = Middle (Bytes.MinValue, TxClock.MaxValue)
 
     def compare (x: Point, y: Point): Int =
       x compare y

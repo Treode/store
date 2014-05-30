@@ -19,13 +19,15 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
     if (start == 0)
       Range (Point.Start, Point.End)
     else
-      Range (Point.Middle (Bytes (start), TxClock.max), Point.End)
+      Range (Point.Middle (Bytes (start), TxClock.MaxValue), Point.End)
 
   private def range (start: Int, end: Int): Range =
     if (start == 0)
-      Range (Point.Start, Point.Middle (Bytes (end), TxClock.max))
+      Range (Point.Start, Point.Middle (Bytes (end), TxClock.MaxValue))
     else
-      Range (Point.Middle (Bytes (start), TxClock.max), Point.Middle (Bytes (end), TxClock.max))
+      Range (
+          Point.Middle (Bytes (start), TxClock.MaxValue),
+          Point.Middle (Bytes (end), TxClock.MaxValue))
 
   def assertPeers (expected: HostId*) (actual: Set [Peer]): Unit =
     assertResult (expected.toSet) (actual map (_.id))
@@ -53,7 +55,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
       tracker.continue (point)
 
     def continue (key: Int): Unit =
-      tracker.continue (Point.Middle (Bytes (key), TxClock.max))
+      tracker.continue (Point.Middle (Bytes (key), TxClock.MaxValue))
 
     def start (cohorts: Cohort*) (implicit cluster: Cluster): Unit =
       tracker.start (targets (cohorts: _*))

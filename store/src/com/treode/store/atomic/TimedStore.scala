@@ -57,7 +57,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     op.isInstanceOf [WriteOp.Create] && cell.value.isDefined
 
   private def prepare (ct: TxClock, op: WriteOp): Async [(Boolean, TxClock)] = {
-    for (cell <- getTable (op.table) .get (op.key, TxClock.max))
+    for (cell <- getTable (op.table) .get (op.key, TxClock.MaxValue))
       yield (collided (op, cell), cell.time)
   }
 
@@ -72,7 +72,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
           prepare (ct, op)
     } yield {
       val collisions = for (((c, t), i) <- results.zipWithIndex; if c) yield i
-      val vt = results.filterNot (_._1) .map (_._2) .fold (TxClock.zero) (TxClock.max _)
+      val vt = results.filterNot (_._1) .map (_._2) .fold (TxClock.MinValue) (TxClock.max _)
       if (ct < vt) {
         locks.release()
         Stale

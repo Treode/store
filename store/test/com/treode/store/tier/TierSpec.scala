@@ -243,7 +243,7 @@ class TierSpec extends WordSpec {
         val tier = buildTier (pageBytes)
 
         def get (key: Bytes): Bytes =
-          tier.get (descriptor, key, TxClock.max) .pass.get.key
+          tier.get (descriptor, key, TxClock.MaxValue) .pass.get.key
 
         assertResult (Apple) (get (Apple))
         assertResult (Orange) (get (Orange))

@@ -47,7 +47,7 @@ class AtomicTracker {
     synchronized {
       val vs = accepted ((table, key))
       if (vs.isEmpty)
-        TxClock.zero
+        TxClock.MinValue
       else
         vs.keySet.max
     }
@@ -102,7 +102,7 @@ class AtomicTracker {
 
   def read (host: StubAtomicHost, table: Long, key: Long): Async [Int] =
     for {
-      found <- host.read (TxClock.max, ReadOp (TableId (table), Bytes (key)))
+      found <- host.read (TxClock.MaxValue, ReadOp (TableId (table), Bytes (key)))
     } yield {
       found.head.value.map (_.int) .getOrElse (-1)
     }
