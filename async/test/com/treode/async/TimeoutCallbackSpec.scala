@@ -25,7 +25,9 @@ class TimeoutCallbackSpec extends FlatSpec {
     implicit val (random, scheduler, fiber, captor) = setup()
     var count = 0
     val timer = captor.timeout (fiber, backoff) (count += 1)
+    timer.rouse()
     timer.pass()
+    scheduler.run()
     assert (timer.invoked)
     captor.assertInvoked()
     scheduler.run (timers = true)
@@ -36,7 +38,9 @@ class TimeoutCallbackSpec extends FlatSpec {
     implicit val (random, scheduler, fiber, captor) = setup()
     var count = 0
     val timer = captor.timeout (fiber, backoff) (count += 1)
+    timer.rouse()
     timer.fail (new DistinguishedException)
+    scheduler.run()
     assert (timer.invoked)
     captor.failed [DistinguishedException]
     scheduler.run (timers = true)
@@ -47,40 +51,46 @@ class TimeoutCallbackSpec extends FlatSpec {
     implicit val (random, scheduler, fiber, captor) = setup()
     var count = 0
     val timer = captor.timeout (fiber, backoff) (count += 1)
+    timer.rouse()
+    scheduler.run()
     assert (!timer.invoked)
     captor.assertNotInvoked()
-    scheduler.run (timers = true, count = 2)
-    assertResult (2) (count)
+    scheduler.run (timers = count < 3)
     assert (!timer.invoked)
     captor.assertNotInvoked()
     timer.pass()
+    scheduler.run()
     assert (timer.invoked)
     captor.assertInvoked()
     scheduler.run (timers = true)
-    assertResult (2) (count)
+    assertResult (3) (count)
   }
 
   it should "rouse until the work fails when it does fail eventually" in {
     implicit val (random, scheduler, fiber, captor) = setup()
     var count = 0
     val timer = captor.timeout (fiber, backoff) (count += 1)
+    timer.rouse()
+    scheduler.run()
     assert (!timer.invoked)
     captor.assertNotInvoked()
-    scheduler.run (timers = true, count = 2)
-    assertResult (2) (count)
+    scheduler.run (timers = count < 3)
     assert (!timer.invoked)
     captor.assertNotInvoked()
     timer.fail (new DistinguishedException)
+    scheduler.run()
     assert (timer.invoked)
     captor.failed [DistinguishedException]
     scheduler.run (timers = true)
-    assertResult (2) (count)
+    assertResult (3) (count)
   }
 
   it should "rouse until the iterator is exhaused when the work does not pass or fail" in {
     implicit val (random, scheduler, fiber, captor) = setup()
     var count = 0
     val timer = captor.timeout (fiber, backoff) (count += 1)
+    timer.rouse()
+    scheduler.run()
     assert (!timer.invoked)
     captor.assertNotInvoked()
     scheduler.run (timers = true)
@@ -93,6 +103,8 @@ class TimeoutCallbackSpec extends FlatSpec {
     implicit val (random, scheduler, fiber, captor) = setup()
     var flag = false
     val timer = captor.ensure (flag = true) .timeout (fiber, backoff) ()
+    timer.rouse()
+    scheduler.run()
     timer.pass()
     scheduler.run (timers = true)
     assert (timer.invoked)
@@ -104,6 +116,8 @@ class TimeoutCallbackSpec extends FlatSpec {
     implicit val (random, scheduler, fiber, captor) = setup()
     var flag = false
     val timer = captor.ensure (flag = true) .timeout (fiber, backoff) ()
+    timer.rouse()
+    scheduler.run()
     timer.fail (new DistinguishedException)
     scheduler.run (timers = true)
     assert (timer.invoked)
@@ -115,6 +129,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     implicit val (random, scheduler, fiber, captor) = setup()
     var flag = false
     val timer = captor.ensure (flag = true) .timeout (fiber, backoff) ()
+    timer.rouse()
     scheduler.run (timers = true)
     assert (timer.invoked)
     captor.failed [TimeoutException]

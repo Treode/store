@@ -80,7 +80,8 @@ private class PaxosMover (kit: PaxosKit) {
     } .timeout (fiber, rebalanceBackoff) {
       move (cells) (acks, port)
     }
-    move (cells) (acks, port)
+
+    timer.rouse()
 
     def got (from: Peer) {
       acks += from

@@ -28,14 +28,13 @@ object Echo {
       supply (s)
     }
 
-    def loop: Async [Unit] = async { cb =>
+    class Loop (cb: Callback [Unit]) {
 
       val hosts = ReplyTracker.settled (0, 1, 2)
 
       val port = echo.open { (_, from) =>
-        fiber.execute {
-          hosts += from
-        }}
+        got (from)
+      }
 
       val timer = cb.ensure {
         port.close()
@@ -48,8 +47,18 @@ object Echo {
           start = System.currentTimeMillis
         }
       } .timeout (fiber, backoff) {
-        echo ("Hello World")
+        echo ("Hello World") (hosts, port)
+      }
+
+      timer.rouse()
+
+      def got (from: Peer): Unit = fiber.execute {
+        hosts += from
+        if (hosts.quorum)
+          timer.pass()
       }}
+
+    def loop: Async [Unit] = async (new Loop (_))
 
     if (localId == HostId (2)) {
       start = System.currentTimeMillis

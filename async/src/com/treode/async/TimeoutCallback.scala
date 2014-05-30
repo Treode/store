@@ -9,7 +9,7 @@ import Scheduler.toRunnable
 class TimeoutCallback [A] private [async] (
     fiber: Fiber,
     backoff: Backoff,
-    rouse: => Any,
+    _rouse: => Any,
     private var cb: Callback [_]
 ) (
     implicit random: Random
@@ -19,7 +19,6 @@ class TimeoutCallback [A] private [async] (
 
   if (iter.hasNext)
     fiber.delay (iter.next) (timeout())
-  rouse
 
   private def _apply (v: Try [A]) {
     val _cb = cb .asInstanceOf [Callback [A]]
@@ -27,7 +26,7 @@ class TimeoutCallback [A] private [async] (
     _cb (v)
   }
 
-  private def timeout(): Unit = synchronized {
+  private def timeout() {
     if (cb != null) {
       if (iter.hasNext) {
         try {
@@ -43,7 +42,10 @@ class TimeoutCallback [A] private [async] (
   def invoked: Boolean =
     cb == null
 
-  def apply (v: Try [A]): Unit = synchronized {
+  def rouse(): Unit =
+    fiber.execute (_rouse)
+
+  def apply (v: Try [A]): Unit = fiber.execute {
     if (cb != null)
       _apply (v)
   }}

@@ -4,7 +4,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async._
 import com.treode.async.implicits._
-import com.treode.cluster.{Cluster, HostId, Peer, RequestDescriptor}
+import com.treode.cluster.{Cluster, HostId, Peer, RequestDescriptor, ReplyTracker}
 import com.treode.disk.{ObjectId, TypeId}
 import com.treode.store._
 import com.treode.store.tier.TierTable
@@ -68,22 +68,30 @@ private class AtomicMover (kit: AtomicKit) {
     tables.receive (table, cells)
   }
 
+  private class Sender (table: TableId, cells: Seq [Cell], hosts: Set [Peer], cb: Callback [Unit]) {
+
+    val acks = ReplyTracker.settled (hosts map (_.id))
+
+    val port = move.open { case (_, from) =>
+      got (from)
+    }
+
+    val timer = cb.ensure {
+      port.close()
+    } .timeout (fiber, rebalanceBackoff) {
+      move (table, cells) (acks, port)
+    }
+
+    timer.rouse()
+
+    def got (from: Peer) {
+      acks += from
+      if (acks.quorum)
+        timer.pass()
+    }}
+
   def send (table: TableId, cells: Seq [Cell], hosts: Set [Peer]): Async [Unit] =
-    async { cb =>
-
-      var awaiting = hosts
-
-      val port = move.open { case (_, from) =>
-        awaiting -= from
-        if (awaiting.isEmpty)
-          cb.pass()
-      }
-
-      val timer = cb.ensure {
-        port.close()
-      } .timeout (fiber, rebalanceBackoff) {
-        move (table, cells) (awaiting, port)
-      }}
+    async (new Sender (table, cells, hosts, _))
 
   def send (table: TableId, batch: Batch, targets: Targets): Async [Unit] =
     guard {
