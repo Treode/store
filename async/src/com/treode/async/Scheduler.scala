@@ -34,6 +34,12 @@ trait Scheduler extends Executor {
   def at (millis: Long) (task: => Any): Unit =
     at (millis, toRunnable (task))
 
+  def sleep (millis: Long): Async [Unit] =
+    async (cb => delay (millis) (pass (cb, ())))
+
+  def awake (millis: Long): Async [Unit] =
+    async (cb => at (millis) (pass (cb, ())))
+
   def pass [A] (cb: Callback [A], v: A): Unit =
     execute (cb, Success (v))
 

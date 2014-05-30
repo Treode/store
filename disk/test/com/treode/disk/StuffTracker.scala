@@ -36,14 +36,13 @@ class StuffTracker (implicit random: Random) {
       written += seed -> pos
     }}
 
- def batch (nbatches: Int, nwrites: Int) (implicit
-    scheduler: Scheduler, disks: Disk): Async [Unit] =
-  for {
-    _ <- (0 until nbatches) .async
-    _ <- (0 until nwrites) .latch.unit
-  } {
-    write()
-  }
+  def batch (nbatches: Int, nwrites: Int) (implicit scheduler: Scheduler, disks: Disk): Async [Unit] =
+    for {
+      _ <- (0 until nbatches) .async
+      _ <- (0 until nwrites) .latch.unit
+    } {
+      write() .flatMap (_ => scheduler.sleep (1))
+    }
 
   def attach () (implicit scheduler: Scheduler, launch: Disk.Launch) {
     import launch.disks
