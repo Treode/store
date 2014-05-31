@@ -9,7 +9,7 @@ import com.treode.disk.{ObjectId, TypeId}
 import com.treode.store._
 import com.treode.store.tier.TierTable
 
-import Async.{async, guard, supply, when}
+import Async.{async, guard, latch, supply, when}
 import Callback.ignore
 import Cohort.Moving
 import PaxosMover.{Batch, Point, Range, Targets, Tracker, move}
@@ -17,6 +17,7 @@ import PaxosMover.{Batch, Point, Range, Targets, Tracker, move}
 private class PaxosMover (kit: PaxosKit) {
   import kit.{acceptors, archive, cluster, disks, library, random, scheduler}
   import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
+  import kit.library.releaser
 
   private val fiber = new Fiber
   private val queue = AsyncQueue (fiber) (next())
@@ -62,7 +63,10 @@ private class PaxosMover (kit: PaxosKit) {
 
   move.listen { case (cells, from) =>
     val (gen, novel) = archive.receive (cells)
-    when (!novel.isEmpty) (Acceptors.receive.record (gen, novel))
+    latch (
+        when (!novel.isEmpty) (Acceptors.receive.record (gen, novel)),
+        releaser.release()
+    ) .map (_ => ())
   }
 
   private class Sender (cells: Seq [Cell], hosts: Set [Peer], cb: Callback [Unit]) {

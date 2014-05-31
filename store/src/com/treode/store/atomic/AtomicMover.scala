@@ -17,6 +17,7 @@ import AtomicMover.{Batch, Point, Range, Targets, Tracker, move}
 private class AtomicMover (kit: AtomicKit) {
   import kit.{cluster, disks, library, random, scheduler, tables}
   import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
+  import kit.library.releaser
 
   private val fiber = new Fiber
   private val queue = AsyncQueue (fiber) (next())
@@ -68,7 +69,10 @@ private class AtomicMover (kit: AtomicKit) {
       }}
 
   move.listen { case ((table, cells), from) =>
-    tables.receive (table, cells)
+    for {
+      _ <- tables.receive (table, cells)
+      _ <- releaser.release()
+    } yield ()
   }
 
   private class Sender (table: TableId, cells: Seq [Cell], hosts: Set [Peer], cb: Callback [Unit]) {
