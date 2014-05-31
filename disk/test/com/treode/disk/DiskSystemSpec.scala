@@ -208,28 +208,42 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
 
   "The logger should write more data than disk" - {
 
-    "write more data than disk" taggedAs (Intensive, Periodic) in {
+    "when randomly scheduled" taggedAs (Intensive, Periodic) in {
       forAllSeeds { implicit random =>
 
-        implicit val config = DiskTestConfig (checkpointEntries = 1000, cleaningFrequency = 3)
-        val geometry = DiskGeometry.test()
+        implicit val config = DiskTestConfig (
+            maximumRecordBytes = 1<<9,
+            maximumPageBytes = 1<<9,
+            checkpointEntries = 1000,
+            cleaningFrequency = 3)
+        val geometry = DiskGeometry.test (
+            segmentBits = 10,
+            blockBits = 6,
+            diskBytes = 1<<16)
         val tracker = new LogTracker
 
         implicit val scheduler = StubScheduler.random (random)
-        val file = StubFile (1<<20)
+        val file = StubFile (1<<16)
         implicit val recovery = Disk.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
         import launch.disks
         tracker.attach()
         launch.launchAndPass()
-        tracker.batches (80, 100000, 10) .pass
+        tracker.batches (20, 1000, 2) .pass
       }}
 
     "when multithreaded" taggedAs (Intensive, Periodic) in {
       multithreaded { implicit scheduler =>
 
-        implicit val config = DiskTestConfig (checkpointEntries = 1000, cleaningFrequency = 3)
-        val geometry = DiskGeometry.test()
+        implicit val config = DiskTestConfig (
+            maximumRecordBytes = 1<<9,
+            maximumPageBytes = 1<<9,
+            checkpointEntries = 1000,
+            cleaningFrequency = 3)
+        val geometry = DiskGeometry.test (
+            segmentBits = 10,
+            blockBits = 6,
+            diskBytes = 1<<16)
         val tracker = new LogTracker
 
         implicit val random = Random
@@ -239,7 +253,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         import launch.disks
         tracker.attach()
         launch.launch()
-        tracker.batches (80, 100000, 10) .await()
+        tracker.batches (20, 1000, 2) .await()
       }}}
 
   "The pager should read and write" - {
@@ -413,17 +427,24 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
     "more data than disk" taggedAs (Intensive, Periodic) in {
       forAllSeeds { implicit random =>
 
-        implicit val config = DiskTestConfig (cleaningFrequency = 3)
-        val geometry = DiskGeometry.test (diskBytes=1<<22)
+        implicit val config = DiskTestConfig (
+            maximumRecordBytes = 1<<9,
+            maximumPageBytes = 1<<9,
+            checkpointEntries = 1000,
+            cleaningFrequency = 3)
+        val geometry = DiskGeometry.test (
+            segmentBits = 10,
+            blockBits = 6,
+            diskBytes = 1<<18)
         val tracker = new StuffTracker
 
         implicit val scheduler = StubScheduler.random (random)
-        val file = StubFile (1<<20)
+        val file = StubFile (1<<18)
         implicit val recovery = Disk.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
         import launch.disks
         tracker.attach()
         launch.launch()
-        tracker.batch (1000, 10) .pass
-        assert (tracker.maximum > (1<<21), "Expected growth.")
+        tracker.batch (100, 10) .pass
+        assert (tracker.maximum > (1<<17), "Expected growth.")
       }}}}
