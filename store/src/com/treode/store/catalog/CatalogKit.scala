@@ -20,9 +20,6 @@ private class CatalogKit (val broker: Broker) (implicit
 
   val proposers = new Proposers (this)
 
-  def lead (key: CatalogId, patch: Patch): Async [Patch] =
-    proposers.propose (0, key, patch)
-
   def propose (key: CatalogId, patch: Patch): Async [Patch] =
     proposers.propose (random.nextInt (17) + 1, key, patch)
 
@@ -32,7 +29,7 @@ private class CatalogKit (val broker: Broker) (implicit
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit] = {
     for {
       patch <- broker.diff (desc) (version, cat)
-      chosen <- lead (desc.id, patch)
+      chosen <- propose (desc.id, patch)
       _ <- broker.patch (desc.id, chosen)
     } yield {
       if (patch.checksum != chosen.checksum)

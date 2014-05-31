@@ -48,7 +48,7 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
     "issueAtomicWrites with" - {
 
       for { (name, flakiness) <- Seq (
-          //"a reliable network" -> 0.0,
+          "a reliable network" -> 0.0,
           "a flakey network"   -> 0.1)
       } s"$name and" - {
 

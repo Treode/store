@@ -1,12 +1,11 @@
 package com.treode.store.catalog
 
-import java.util.concurrent.TimeoutException
 import scala.util.Random
 
 import com.treode.async.stubs.AsyncChecks
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
-import com.treode.store.{Bytes, CatalogDescriptor, StaleException, StoreTestKit}
+import com.treode.store._
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
@@ -20,10 +19,10 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
   val val2 = Bytes (cat1.pcat, 0x8041608E94F55C6DL)
 
   private val patch1 =
-    Patch (0, val1.murmur32, Seq (Patch.diff (val0, val1)))
+    Patch (1, val1.murmur32, Seq (Patch.diff (val0, val1)))
 
   private val patch2 =
-    Patch (0, val2.murmur32, Seq (Patch.diff (val0, val2)))
+    Patch (1, val2.murmur32, Seq (Patch.diff (val0, val2)))
 
   private class Summary (var timedout: Boolean, var chosen: Set [Update]) {
 

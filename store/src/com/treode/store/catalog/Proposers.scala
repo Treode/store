@@ -4,8 +4,11 @@ import com.treode.async.Async
 import com.treode.store.CatalogId
 
 import Async.async
+import Proposer.{accept, chosen, promise, refuse}
 
 private class Proposers (kit: CatalogKit) {
+  import kit.cluster
+  import kit.library.releaser
 
   private val proposers = newProposersMap
 
@@ -24,15 +27,14 @@ private class Proposers (kit: CatalogKit) {
     proposers.remove ((key, version), p)
 
   def propose (ballot: Long, key: CatalogId, patch: Patch): Async [Patch] =
-    async { cb =>
-      val p = get (key, patch.version)
-      p.open (ballot, patch)
-      p.learn (cb)
-    }
+    releaser.join {
+      async { cb =>
+        val p = get (key, patch.version)
+        p.open (ballot, patch)
+        p.learn (cb)
+      }}
 
   def attach() {
-    import Proposer.{accept, chosen, promise, refuse}
-    import kit.cluster
 
     refuse.listen { case ((key, version, ballot), c) =>
       get (key, version) refuse (ballot)

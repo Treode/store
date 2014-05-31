@@ -11,8 +11,10 @@ import Callback.ignore
 private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
   import kit.{acceptors, broker, cluster, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
+  import kit.library.releaser
 
   private val fiber = new Fiber
+  private val epoch = releaser.join()
   var state: State = null
 
   trait State {
@@ -20,6 +22,17 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
     def propose (proposer: Peer, ballot: Long, patch: Patch)
     def choose (chosen: Patch)
   }
+
+  private def cleanup() {
+    releaser.leave (epoch)
+    scheduler.delay (closedLifetime) (acceptors.remove (key, version, Acceptor.this))
+  }
+
+  private def cleanup (s: State): Unit =
+    fiber.execute {
+      if (state == s)
+        cleanup()
+    }
 
   private def panic (s: State, t: Throwable): Unit =
     fiber.execute {
@@ -45,16 +58,19 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
   class Getting (var op: State => Unit, default: Patch) extends State {
 
     broker.get (key) run {
-      case Success (cat) => got (cat)
-      case Failure (t) => panic (Getting.this, t)
+      case Success (cat) =>
+        fiber.execute {
+          if (state == Getting.this) {
+            state =
+              if (version == cat.version + 1)
+                new Deliberating (default)
+              else
+                new Stale
+            op (state)
+          }}
+      case Failure (t) =>
+        panic (Getting.this, t)
     }
-
-    def got (cat: Handler): Unit =
-      fiber.execute {
-        if (state == Getting.this) {
-          state = new Deliberating (cat, default)
-          op (state)
-        }}
 
     def query (proposer: Peer, ballot: Long, default: Patch): Unit =
       op = (_.query (proposer, ballot, default))
@@ -68,7 +84,7 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
     override def toString = "Acceptor.Getting"
   }
 
-  class Deliberating (handler: Handler, default: Patch) extends State {
+  class Deliberating (default: Patch) extends State {
 
     var ballot: BallotNumber = BallotNumber.zero
     var proposal: Proposal = Option.empty
@@ -77,12 +93,19 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
     fiber.delay (deliberatingTimeout) (timeout())
 
     def timeout() {
-      if (state == Deliberating.this)
-        kit.propose (key, default) .run {
-          case Success (v) => Acceptor.this.choose (v)
-          case Failure (_: TimeoutException) => timeout()
-          case Failure (t) => panic (Deliberating.this, t)
-        }}
+      if (state == Deliberating.this) {
+        kit.propose (key, default) .run { result =>
+          fiber.execute {
+            if (state == Deliberating.this) {
+              result match {
+                case Success (v) =>
+                  state = new Closed (v)
+                case Failure (_: TimeoutException) =>
+                  state = new Stale
+                case Failure (t) =>
+                  state = new Panicked (t)
+                  throw t
+              }}}}}}
 
     def query (proposer: Peer, _ballot: Long, default: Patch) {
       proposers += proposer
@@ -116,7 +139,7 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
 
     broker.patch (key, chosen) run {
       case Success (v) =>
-        scheduler.delay (closedLifetime) (acceptors.remove (key, version, Acceptor.this))
+        cleanup (Closed.this)
       case Failure (t) =>
         panic (Closed.this, t)
     }
@@ -133,9 +156,22 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
     override def toString = s"Acceptor.Closed($key, $chosen)"
   }
 
+  class Stale extends State {
+
+    cleanup()
+
+    def query (proposer: Peer, ballot: Long, default: Patch): Unit = ()
+
+    def propose (proposer: Peer, ballot: Long, patch: Patch): Unit = ()
+
+    def choose (chosen: Patch): Unit = ()
+
+    override def toString = s"Acceptor.Stale($key)"
+  }
+
   class Panicked (thrown: Throwable) extends State {
 
-    scheduler.delay (closedLifetime) (acceptors.remove (key, version, Acceptor.this))
+    cleanup()
 
     def query (proposer: Peer, ballot: Long, default: Patch): Unit = ()
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit = ()
@@ -152,6 +188,9 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
 
   def choose (chosen: Patch): Unit =
     fiber.execute (state.choose (chosen))
+
+  def dispose(): Unit =
+    releaser.leave (epoch)
 
   override def toString = state.toString
 }
