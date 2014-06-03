@@ -21,7 +21,7 @@ trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
   private def scan (hosts: Seq [StubAtomicHost]) (implicit scheduler: Scheduler) = {
     var cells = newTrackedCells
     for {
-      _ <- for ((t, c) <- AsyncIterator.merge (hosts map (_.scan))) supply {
+      _ <- for ((t, c) <- AsyncIterator.merge (hosts map (_.audit))) supply {
         val tk = (t.id, c.key.long)
         cells += tk -> (cells (tk) + ((c.time, c.value.get.int)))
       }

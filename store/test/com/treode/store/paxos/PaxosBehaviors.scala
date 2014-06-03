@@ -18,7 +18,7 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
   this: FreeSpec =>
 
   private def scan (hosts: Seq [StubPaxosHost]) (implicit scheduler: Scheduler): Async [Seq [Cell]] = {
-    val iter = AsyncIterator.merge (hosts map (_.scan))
+    val iter = AsyncIterator.merge (hosts map (_.audit))
     val cells = Seq.newBuilder [Cell]
     for {
       _ <- iter.dedupe.foreach (c => supply (cells += c))

@@ -86,7 +86,7 @@ private class StubPaxosHost (
   def proposersOpen: Boolean =
     !paxos.proposers.proposers.isEmpty
 
-  def scan: AsyncIterator [Cell] =
+  def audit: AsyncIterator [Cell] =
     paxos.archive.iterator (Residents.all)
 
   def propose (key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =

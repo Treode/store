@@ -53,12 +53,6 @@ private trait AtomicTestTools extends StoreTestTools {
 
     def nextUpdates (keys: Set [(Long, Long)]): Seq [WriteOp.Update] =
       keys.toSeq.map (nextUpdate _)
-  }
-
-  def expectAtlas (version: Int, cohorts: Cohort*) (hosts: Seq [StubAtomicHost]) {
-    val atlas = Atlas (cohorts.toArray, version)
-    for (host <- hosts)
-      host.expectAtlas (atlas)
   }}
 
 private object AtomicTestTools extends AtomicTestTools

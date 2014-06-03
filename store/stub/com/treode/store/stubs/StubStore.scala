@@ -97,7 +97,10 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
     }
 
   def scan (table: TableId, key: Bytes, time: TxClock): AsyncIterator [Cell] = {
-    val entries = data .tailMap (StubKey (table, key, time)) .takeWhile (_._1.table == table)
+    val entries = data
+        .tailMap (StubKey (table, key, time))
+        .iterator
+        .takeWhile (_._1.table == table)
     for ((key, value) <- entries.async)
       yield Cell (key.key, key.time, value)
   }

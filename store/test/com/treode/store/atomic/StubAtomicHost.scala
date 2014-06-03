@@ -87,7 +87,7 @@ private class StubAtomicHost (
   def deputiesOpen: Boolean =
     !atomic.writers.deputies.isEmpty
 
-  def scan: AsyncIterator [(TableId, Cell)] =
+  def audit: AsyncIterator [(TableId, Cell)] =
     for {
       e <- atomic.tables.tables.entrySet.async
       cell <- e.getValue.iterator (Residents.all)
@@ -101,22 +101,15 @@ private class StubAtomicHost (
   def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock] =
     atomic.write (xid, ct, ops:_*)
 
+  def status (xid: TxId): Async [TxStatus] =
+    atomic.status (xid)
+
   def scan (table: TableId, key: Bytes, time: TxClock): CellIterator =
     atomic.scan (table, key,  time)
 
   def putCells (id: TableId, cs: Cell*) (implicit scheduler: StubScheduler): Unit =
     atomic.tables.receive (id, cs) .pass
-
-  def expectAtlas (atlas: Atlas) {
-    assertResult (atlas) (library.atlas)
-    assertResult (librarian.issued) (atlas.version)
-    assert (librarian.receipts forall (_._2 == atlas.version))
-  }
-
-  def expectCells (id: TableId) (cs: Cell*) (implicit scheduler: StubScheduler) {
-    val t = atomic.tables.tables.get (id)
-    assertResult (cs) (t .iterator (library.residents) .toSeq)
-  }}
+}
 
 private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost] {
 

@@ -6,6 +6,7 @@ import scala.util.Random
 
 import com.treode.async.Async
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
+import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId
 import com.treode.disk.{CellId, DiskConfig, DiskGeometry}
 import org.scalatest.Assertions
@@ -27,6 +28,9 @@ private trait StoreTestTools {
 
   implicit def longToTxClock (v: Long): TxClock =
     new TxClock (v)
+
+  implicit def longToTxId (v: Long): TxId =
+    TxId (Bytes (v), 0)
 
   implicit def stringToPath (path: String): Path =
     Paths.get (path)
@@ -53,6 +57,12 @@ private trait StoreTestTools {
 
     def nextTxId: TxId =
       TxId (Bytes (fixedLongLong, (random.nextLong, random.nextLong)), 0)
+  }
+
+  implicit class RichStore (store: Store) {
+
+    def expectCells (table: TableId) (expected: Cell*) (implicit scheduler: StubScheduler) =
+        assertResult (expected) (store.scan (table, Bytes.empty, TxClock.MaxValue) .toSeq)
   }
 
   implicit class RichTxClock (v: TxClock) {

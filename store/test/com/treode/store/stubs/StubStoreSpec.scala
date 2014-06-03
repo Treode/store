@@ -12,25 +12,12 @@ import StoreTestTools._
 
 class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
 
-  private class TestableStubStore (implicit kit: StoreTestKit) extends TestableStore {
-    import kit.scheduler
-
-    private val delegate = new StubStore
-
-    def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
-      delegate.read (rt, ops:_*)
-
-    def write (ct: TxClock, ops: WriteOp*): Async [TxClock] =
-      delegate.write (Random.nextTxId, ct, ops:_*)
-
-    def expectCells (t: TableId) (expected: Cell*): Unit =
-      assertResult (expected.sorted) (delegate.scan (t))
-  }
+  def newStubStore (kit: StoreTestKit): StubStore =
+    new StubStore () (kit.scheduler)
 
   "The StubStore should" - {
 
-    behave like aStore (implicit kit => new TestableStubStore)
+    behave like aStore (newStubStore _)
 
-    behave like aMultithreadableStore (10000) { implicit kit =>
-      new TestableStubStore
-    }}}
+    behave like aMultithreadableStore (10000) (newStubStore _)
+  }}
