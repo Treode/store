@@ -45,7 +45,7 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
               crashAndRecover (nbatches, ntables, nkeys, nwrites, nops)
             }}}}}}
 
-    "issueAtomicWrites with" - {
+    "issue atomic writes with" - {
 
       for { (name, flakiness) <- Seq (
           "a reliable network" -> 0.0,
@@ -56,4 +56,18 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
 
         forVariousClusters { implicit random =>
             issueAtomicWrites (7, 3, 100, 5, 3)
-        }}}}}
+        }}}
+
+    "scan the whole databse with" - {
+
+      for { (name, flakiness) <- Seq (
+          "a reliable network" -> 0.0,
+          "a flakey network"   -> 0.1)
+      } s"$name and" - {
+
+        implicit val config = StoreTestConfig (messageFlakiness = flakiness)
+
+        forVariousClusters { implicit random =>
+            scanWholeDatabase()
+        }}}
+  }}

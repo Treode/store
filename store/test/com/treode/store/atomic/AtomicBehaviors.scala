@@ -4,6 +4,7 @@ import scala.collection.{JavaConversions, SortedMap}
 import scala.util.Random
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.implicits._
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.{CrashChecks, StubDiskDrive}
@@ -18,7 +19,22 @@ import JavaConversions._
 trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
   this: FreeSpec =>
 
-  private def scan (hosts: Seq [StubAtomicHost]) (implicit scheduler: Scheduler) = {
+  private def scan (ntables: Int, host: StubAtomicHost) (implicit scheduler: Scheduler) = {
+    var cells = newTrackedCells
+    for {
+      _ <-
+        for {
+          id <- (0L until ntables) .async
+          c <- host.scan (id, Bytes.empty, TxClock.MaxValue)
+        } supply {
+          val tk = (id, c.key.long)
+          cells += tk -> (cells (tk) + ((c.time, c.value.get.int)))
+        }
+    } yield {
+      cells
+    }}
+
+  private def audit (hosts: Seq [StubAtomicHost]) (implicit scheduler: Scheduler) = {
     var cells = newTrackedCells
     for {
       _ <- for ((t, c) <- AsyncIterator.merge (hosts map (_.audit))) supply {
@@ -102,7 +118,31 @@ trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
 
     .audit { implicit scheduler => hosts =>
       for {
-        cells <- scan (hosts)
+        cells <- audit (hosts)
       } yield {
         tracker.check (cells)
-      }}}}
+      }}}
+
+  private [atomic] def scanWholeDatabase () (implicit random: Random) = {
+
+    val ntables = 100
+    val tracker = new AtomicTracker
+
+    cluster.info (s"scanWholeDatabase()")
+
+    .host (StubAtomicHost)
+
+    .setup { implicit scheduler => h1 =>
+      tracker.batches (10, ntables, 10000, 10, 3, h1)
+    }
+
+    .run { implicit scheduler => (h1, h2) =>
+      for {
+        cells <- scan (ntables, h1)
+      } yield {
+        tracker.check (cells)
+      }}
+
+    .audit { implicit scheduler => hosts =>
+      supply()
+    }}}
