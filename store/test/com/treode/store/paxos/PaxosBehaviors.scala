@@ -65,7 +65,7 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
 
     .host (StubPaxosHost)
 
-    .setup { implicit scheduler => (h1, h2) =>
+    .run { implicit scheduler => (h1, h2) =>
       tracker.batches (nbatches, nputs, h1, h2)
     }
 

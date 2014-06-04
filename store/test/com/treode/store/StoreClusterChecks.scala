@@ -14,7 +14,7 @@ import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 import org.scalatest.time.SpanSugar
 
-import Async.async
+import Async.{async, supply}
 import Callback.{ignore => disregard}
 import SpanSugar._
 import StoreClusterChecks.{Host, Package}
@@ -32,6 +32,21 @@ trait StoreClusterChecks extends AsyncChecks {
   private val nthreads =
     if (Runtime.getRuntime.availableProcessors < 8) 4 else 8
 
+  private def defaultSetup: Scheduler => Host => Async [Unit] =
+    _ => _ => supply()
+
+  private def defaultRun: Scheduler => (Host, Host) => Async [Unit] =
+    _ => (_, _) => supply()
+
+  private def defaultVerify: Scheduler => Host => Async [Unit] =
+    _ => _ => supply()
+
+  private def defaultAudit: Scheduler => Seq [Host] => Async [Unit] =
+    _ => _ => supply()
+
+  private def defaultCond: Seq [Host] => Boolean =
+    _ => false
+
   override val timeLimit = 15 minutes
 
   val H1 = 0x44L
@@ -46,12 +61,14 @@ trait StoreClusterChecks extends AsyncChecks {
 
   class ForStoreClusterRunner [H <: Host] (
       val messages: Seq [String],
-      val pkg: Package [H],
-      val _setup: Scheduler => (H, H) => Async [_],
-      val _verifyCond: Seq [H] => Boolean,
-      val _verify: Scheduler => H => Async [_],
-      val _auditCond: Seq [H] => Boolean,
-      val _audit: Scheduler => Seq [H] => Async [_]
+      pkg: Package [H],
+      _setup: Scheduler => H => Async [_],
+      setupCond: Seq [H] => Boolean,
+      _run: Scheduler => (H, H) => Async [_],
+      runCond: Seq [H] => Boolean,
+      _verify: Scheduler => H => Async [_],
+      verifyCond: Seq [H] => Boolean,
+      audit: Scheduler => Seq [H] => Async [_]
   ) {
 
     def install (
@@ -87,6 +104,16 @@ trait StoreClusterChecks extends AsyncChecks {
       pkg.boot (id, drive, false)
 
     def setup (
+        host: H
+    ) (implicit
+        scheduler: StubScheduler
+    ): Async [Unit] = {
+      for {
+        _ <- _setup (scheduler) (host)
+      } yield ()
+    }
+
+    def run (
         h1: H,
         h2: H
     ) (implicit
@@ -96,7 +123,7 @@ trait StoreClusterChecks extends AsyncChecks {
     ): Async [Unit] = {
       network.messageFlakiness = config.messageFlakiness
       for {
-        _ <- _setup (scheduler) (h1, h2)
+        _ <- _run (scheduler) (h1, h2)
       } yield {
         network.messageFlakiness = 0.0
       }}
@@ -107,73 +134,131 @@ trait StoreClusterChecks extends AsyncChecks {
         scheduler: StubScheduler,
         network: StubNetwork
     ): Async [Unit] = {
-      scheduler.run (timers = _verifyCond (hs))
+      scheduler.run (timers = runCond (hs))
       for {
         _ <- _verify (scheduler) (hs.head)
-        _ = scheduler.run (timers = _auditCond (hs))
-        _ <- _audit (scheduler) (hs) .map (_ => ())
+        _ = scheduler.run (timers = verifyCond (hs))
+        _ <- audit (scheduler) (hs) .map (_ => ())
       } yield ()
     }}
 
-  class ForStoreClusterAudit [H <: Host] (
+  class ForStoreClusterBuilder [H <: Host] (
       val messages: Seq [String],
-      val pkg: Package [H],
-      val setup: Scheduler => (H, H) => Async [_],
-      val verifyCond: Seq [H] => Boolean,
-      val verify: Scheduler => H => Async [_],
-      val auditCond: Seq [H] => Boolean
+      pkg: Package [H],
+      setup: Scheduler => H => Async [_],
+      setupCond: Seq [H] => Boolean,
+      run: Scheduler => (H, H) => Async [_],
+      runCond: Seq [H] => Boolean,
+      verify: Scheduler => H => Async [_],
+      verifyCond: Seq [H] => Boolean,
+      audit: Scheduler => Seq [H] => Async [_]
   ) {
+
+    def this (messages: Seq [String], pkg: Package [H]) =
+      this (
+          messages,
+          pkg,
+          defaultSetup,
+          defaultCond,
+          defaultRun,
+          defaultCond,
+          defaultVerify,
+          defaultCond,
+          defaultAudit)
+
+    def copy (
+        messages: Seq [String] = this.messages,
+        pkg: Package [H] = this.pkg,
+        setup: Scheduler => H => Async [_] = this.setup,
+        setupCond: Seq [H] => Boolean = this.setupCond,
+        run: Scheduler => (H, H) => Async [_] = this.run,
+        runCond: Seq [H] => Boolean = this.runCond,
+        verify: Scheduler => H => Async [_] = this.verify,
+        verifyCond: Seq [H] => Boolean = this.verifyCond,
+        audit: Scheduler => Seq [H] => Async [_] = this.audit
+    ): ForStoreClusterBuilder [H] =
+      new ForStoreClusterBuilder (
+          messages,
+          pkg,
+          setup,
+          setupCond,
+          run,
+          runCond,
+          verify,
+          verifyCond,
+          audit)
+
+    def result: ForStoreClusterRunner [H] =
+      new ForStoreClusterRunner (
+          messages,
+          pkg,
+          setup,
+          setupCond,
+          run,
+          runCond,
+          verify,
+          verifyCond,
+          audit)
+  }
+
+  class ForStoreClusterAudit [H <: Host] (runner: ForStoreClusterBuilder [H]) {
 
     def audit (test: Scheduler => Seq [H] => Async [Unit]) =
-      new ForStoreClusterRunner [H] (messages, pkg, setup, verifyCond, verify, auditCond, test)
+      runner.copy (audit = test) .result
   }
 
-  class ForStoreClusterVerifyCond [H <: Host] (
-      val messages: Seq [String],
-      val pkg: Package [H],
-      val setup: Scheduler => (H, H) => Async [_],
-      val verifyCond: Seq [H] => Boolean,
-      val verify: Scheduler => H => Async [_]
-  ) {
+  class ForStoreClusterVerifyCond [H <: Host] (runner: ForStoreClusterBuilder [H]) {
 
     def whilst (cond: Seq [H] => Boolean) =
-      new ForStoreClusterAudit [H] (messages, pkg, setup, verifyCond, verify, cond)
+      new ForStoreClusterAudit (runner.copy (verifyCond = cond))
 
-    def audit (test: Scheduler => Seq [H] => Async [Unit])  =
-      new ForStoreClusterRunner [H] (messages, pkg, setup, verifyCond, verify, _ => false, test)
+    def audit (test: Scheduler => Seq [H] => Async [Unit]) =
+      runner.copy (audit = test) .result
   }
 
-  class ForStoreClusterRecover [H <: Host] (
-      messages: Seq [String],
-      pkg: Package [H],
-      setup: Scheduler => (H, H) => Async [_],
-      verifyCond: Seq [H] => Boolean
-  ) {
+  class ForStoreClusterVerify [H <: Host] (runner: ForStoreClusterBuilder [H]) {
 
     def verify (test: Scheduler => H => Async [_]) =
-      new ForStoreClusterVerifyCond [H] (messages, pkg, setup, verifyCond, test)
+      new ForStoreClusterVerifyCond (runner.copy (verify = test))
+
+    def audit (test: Scheduler => Seq [H] => Async [Unit]) =
+      runner.copy (audit = test) .result
   }
 
-  class ForStoreClusterSetupCond [H <: Host] (
-      messages: Seq [String],
-      pkg: Package [H],
-      setup: Scheduler => (H, H) => Async [_]
-  ) {
+  class ForStoreClusterRunCond [H <: Host] (runner: ForStoreClusterBuilder [H]) {
 
     def whilst (cond: Seq [H] => Boolean) =
-      new ForStoreClusterRecover [H] (messages, pkg, setup, cond)
+      new ForStoreClusterVerify (runner.copy (runCond = cond))
 
     def verify (test: Scheduler => H => Async [_]) =
-      new ForStoreClusterVerifyCond [H] (messages, pkg, setup, _ => false, test)
+      new ForStoreClusterVerifyCond (runner.copy (verify = test))
+
+    def audit (test: Scheduler => Seq [H] => Async [Unit]) =
+      runner.copy (audit = test) .result
   }
 
-  class ForStoreClusterSetup [H <: Host] (
-      messages: Seq [String],
-      pkg: Package [H]
-  ) {
+  class ForStoreClusterRun [H <: Host] (runner: ForStoreClusterBuilder [H]) {
 
-    def setup (setup: Scheduler => (H, H) => Async [_]) =
-      new ForStoreClusterSetupCond (messages, pkg, setup)
+    def run (test: Scheduler => (H, H) => Async [_]) =
+      new ForStoreClusterRunCond (runner.copy (run = test))
+  }
+
+  class ForStoreClusterSetupCond [H <: Host] (runner: ForStoreClusterBuilder [H]) {
+
+    def whilst (cond: Seq [H] => Boolean) =
+      new ForStoreClusterRun (runner.copy (setupCond = cond))
+
+    def run (test: Scheduler => (H, H) => Async [_]) =
+      new ForStoreClusterRunCond (runner.copy (run = test))
+  }
+
+  class ForStoreClusterSetup [H <: Host] (runner: ForStoreClusterBuilder [H]) {
+
+    def setup (setup: Scheduler => H => Async [_]) =
+      new ForStoreClusterSetupCond (runner.copy (setup = setup))
+
+    def run (test: Scheduler => (H, H) => Async [_]) =
+      new ForStoreClusterRunCond (runner.copy (run = test))
   }
 
   class ForStoreClusterHost {
@@ -185,8 +270,8 @@ trait StoreClusterChecks extends AsyncChecks {
       this
     }
 
-    def host [H <: Host] (pkg: Package [H]): ForStoreClusterSetup [H] =
-      new ForStoreClusterSetup (messages.result, pkg)
+    def host [H <: Host] (pkg: Package [H]) =
+      new ForStoreClusterSetup (new ForStoreClusterBuilder (messages.result, pkg))
   }
 
   def cluster: ForStoreClusterHost =
@@ -360,7 +445,8 @@ trait StoreClusterChecks extends AsyncChecks {
       val hs = Seq (h1)
       h1.setAtlas (settled (h1))
 
-      val cb = runner.setup  (h1, h1) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run  (h1, h1) .capture()
       val count = scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
 
@@ -397,7 +483,8 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       val count = scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
 
@@ -432,8 +519,9 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
+      runner.setup (h1) .await()
       val start = System.currentTimeMillis
-      runner.setup (h1, h2) .passOrTimeout
+      runner.run (h1, h2) .passOrTimeout
       val end = System.currentTimeMillis
 
       runner.verify (hs) .await()
@@ -461,7 +549,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (cohortsFor8 (hs): _*) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       val count = scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
 
@@ -502,7 +591,8 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       val count = scheduler.run (timers = !cb.wasInvoked, oblivious = true)
       cb.passedOrTimedout
 
@@ -543,8 +633,9 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
+      runner.setup (h1) .await()
       val start = System.currentTimeMillis
-      runner.setup (h1, h2) .passOrTimeout
+      runner.run (h1, h2) .passOrTimeout
       val end = System.currentTimeMillis
 
       for (h <- hs)
@@ -576,7 +667,8 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
       h3.shutdown()
       val count = scheduler.run (timers = !cb.wasInvoked, oblivious = true)
@@ -623,9 +715,10 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
+      runner.setup (h1) .await()
       val start = System.currentTimeMillis
       scheduler.delay (target) (h3.shutdown())
-      runner.setup (h1, h2) .passOrTimeout
+      runner.run (h1, h2) .passOrTimeout
       val end = System.currentTimeMillis
 
       scheduler.run (timers = network.active (h3.localId))
@@ -672,7 +765,8 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target, timers = true, oblivious = true)
       val cb2 = runner.reboot (H3, d3) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked, oblivious = true)
@@ -719,7 +813,8 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target1, timers = true, oblivious = true)
       h3.shutdown()
       scheduler.run (count = target2, timers = true, oblivious = true)
@@ -768,6 +863,7 @@ trait StoreClusterChecks extends AsyncChecks {
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
 
+      runner.setup (h1) .await()
       val _h3 =
         (for {
           _ <- Async.delay (target1)
@@ -776,7 +872,7 @@ trait StoreClusterChecks extends AsyncChecks {
           _ = scheduler.run (timers = network.active (h3.localId))
           h <- runner.reboot (H3, d3)
         } yield h) .toFuture
-      runner.setup (h1, h2) .passOrTimeout
+      runner.run (h1, h2) .passOrTimeout
       h3 = _h3.await()
 
       hs = Seq (h1, h2, h3)
@@ -817,7 +913,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1)) .pass
 
-      val cb = runner.setup (h1, h1) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h1) .capture()
       scheduler.run (count = target, timers = true)
       h1.issueAtlas (issuing (h1) (h2)) .pass
       scheduler.run (timers = !cb.wasInvoked)
@@ -858,7 +955,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1)) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
       h1.issueAtlas (issuing (h1) (h1, h2, h3)) .pass
       val count = scheduler.run (timers = !cb.wasInvoked)
@@ -905,7 +1003,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1)) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target1, timers = true)
       h1.issueAtlas (issuing (h1) (h1, h2, h3)) .pass
       scheduler.run (count = target2, timers = true)
@@ -953,7 +1052,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h1)) .pass
       val count = scheduler.run (timers = !cb.wasInvoked)
@@ -1000,7 +1100,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target1, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h1)) .pass
       scheduler.run (count = target2, timers = true)
@@ -1049,7 +1150,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h1, h2, h4)) .pass
       val count = scheduler.run (timers = !cb.wasInvoked)
@@ -1097,7 +1199,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target1, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h1, h2, h4)) .pass
       scheduler.run (count = target2, timers = true)
@@ -1150,7 +1253,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target1, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h1, h2, h4)) .pass
       scheduler.run (count = target2, timers = true)
@@ -1203,7 +1307,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h3) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h3) .capture()
       scheduler.run (count = target1, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h1, h2, h4)) .pass
       scheduler.run (count = target2, timers = true)
@@ -1253,7 +1358,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h1, h4, h5)) .pass
       val count = scheduler.run (timers = !cb.wasInvoked)
@@ -1302,7 +1408,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target1, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h1, h4, h5)) .pass
       scheduler.run (count = target2, timers = true)
@@ -1356,7 +1463,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target1, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h1, h4, h5)) .pass
       scheduler.run (count = target2, timers = true)
@@ -1410,7 +1518,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h2, h3) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h2, h3) .capture()
       scheduler.run (count = target1, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h1, h4, h5)) .pass
       scheduler.run (count = target2, timers = true)
@@ -1461,7 +1570,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h4) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h4) .capture()
       scheduler.run (count = target, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h4, h5, h6)) .pass
       val count = scheduler.run (timers = !cb.wasInvoked)
@@ -1511,7 +1621,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h4) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h4) .capture()
       scheduler.run (count = target1, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h4, h5, h6)) .pass
       scheduler.run (count = target2, timers = true)
@@ -1566,7 +1677,8 @@ trait StoreClusterChecks extends AsyncChecks {
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3)) .pass
 
-      val cb = runner.setup (h1, h4) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h4) .capture()
       scheduler.run (count = target1, timers = true)
       h1.issueAtlas (issuing (h1, h2, h3) (h4, h5, h6)) .pass
       scheduler.run (count = target2, timers = true)
@@ -1615,7 +1727,8 @@ trait StoreClusterChecks extends AsyncChecks {
       val atlas1 = Seq (settled (h1, h2, h3))
       h1.issueAtlas (atlas1: _*) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
       h1.issueAtlas (rewriteFor3to8 (atlas1, hs): _*) .pass
       scheduler.run (timers = !cb.wasInvoked)
@@ -1656,11 +1769,12 @@ trait StoreClusterChecks extends AsyncChecks {
       val atlas1 = Seq (settled (h1, h2, h3))
       h1.issueAtlas (atlas1: _*) .pass
 
+      runner.setup (h1) .await()
       val start = System.currentTimeMillis
       scheduler.delay (target) {
         h1.issueAtlas (rewriteFor3to8 (atlas1, hs): _*) .run (disregard)
       }
-      runner.setup (h1, h2) .passOrTimeout
+      runner.run (h1, h2) .passOrTimeout
       val end = System.currentTimeMillis
 
       runner.verify (hs) .await()
@@ -1700,7 +1814,8 @@ trait StoreClusterChecks extends AsyncChecks {
       val atlas1 = cohortsFor8 (hs)
       h1.issueAtlas (atlas1: _*) .pass
 
-      val cb = runner.setup (h1, h2) .capture()
+      runner.setup (h1) .pass
+      val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
       h1.issueAtlas (rewriteFor8to3 (atlas1, hs): _*) .pass
       scheduler.run (timers = !cb.wasInvoked)

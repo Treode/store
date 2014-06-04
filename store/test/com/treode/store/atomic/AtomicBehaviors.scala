@@ -80,7 +80,7 @@ trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
 
     .host (StubAtomicHost)
 
-    .setup { implicit scheduler => (h1, h2) =>
+    .run { implicit scheduler => (h1, h2) =>
       tracker.batches (nbatches, ntables, nkeys, nwrites, nops, h1)
     }
 
