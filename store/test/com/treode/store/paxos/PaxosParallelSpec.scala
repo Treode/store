@@ -1,5 +1,7 @@
 package com.treode.store.paxos
 
+import scala.util.Random
+
 import com.treode.store.StoreTestConfig
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.{FreeSpec, ParallelTestExecution}
@@ -10,21 +12,13 @@ class PaxosParallelSpec extends FreeSpec with ParallelTestExecution with PaxosBe
 
     "achieve consensus with" - {
 
-      "a flakey network and" - {
+      implicit val config = StoreTestConfig()
 
-        implicit val config = StoreTestConfig()
+      val init = { implicit random: Random =>
+        achieveConsensus (10, 10)
+      }
 
-        "three stable hosts (multithreaded)" taggedAs (Intensive, Periodic) in {
-          for3hostsMT { implicit random =>
-            achieveConsensus (10, 10)
-          }}
-
-        "a host bounces (multithreaded)" taggedAs (Intensive, Periodic) in {
-          for3with1bouncingMT { implicit random =>
-            achieveConsensus (10, 10)
-          }}
-
-        "for three hosts growing to eight (multithreaded)" taggedAs (Intensive, Periodic) in {
-          for3to8MT { implicit random =>
-            achieveConsensus (10, 10)
-          }}}}}}
+      for3hostsMT (init)
+      for3with1bouncingMT  (init)
+      for3to8MT (init)
+    }}}

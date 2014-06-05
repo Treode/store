@@ -1,5 +1,7 @@
 package com.treode.store.paxos
 
+import scala.util.Random
+
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.StubDiskDrive
@@ -44,13 +46,35 @@ class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
 
     "achieve consensus with" - {
 
-      for { (name, flakiness) <- Seq (
-          "a reliable network" -> 0.0,
-          "a flakey network"   -> 0.1)
-      } s"$name and" - {
+      implicit val config = StoreTestConfig()
 
-        implicit val config = StoreTestConfig (messageFlakiness = flakiness)
+      val init = { implicit random: Random =>
+        achieveConsensus (10, 10)
+      }
 
-        forVariousClusters { implicit random =>
-          achieveConsensus (10, 10)
-        }}}}}
+      for1host (init)
+      for3hosts (init)
+      for8hosts (init)
+      for3with1offline (init)
+      for3with1crashing (init)
+      for3with1rebooting (init)
+      for3with1bouncing (init)
+      for1to1 (init)
+      for1to3 (init)
+      for1to3with1bouncing (init)
+      for3to1 (init)
+      for3to1with1bouncing (init)
+      for3replacing1 (init)
+      for3replacing1withSourceBouncing (init)
+      for3replacing1withTargetBouncing (init)
+      for3replacing1withCommonBouncing (init)
+      for3replacing2 (init)
+      for3replacing2withSourceBouncing (init)
+      for3replacing2withTargetBouncing (init)
+      for3replacing2withCommonBouncing (init)
+      for3to3 (init)
+      for3to3withSourceBouncing (init)
+      for3to3withTargetBouncing (init)
+      for3to8 (init)
+      for8to3 (init)
+    }}}

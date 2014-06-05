@@ -460,9 +460,10 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forSeeds (for1host (_) (init))
-    info (s"Average time on one host: ${average}ms")
-  }
+    "for one host" taggedAs (Intensive, Periodic) in {
+      val average = forSeeds (for1host (_) (init))
+      info (s"Average time on one host: ${average}ms")
+    }}
 
   def for3hosts [H <: Host] (
       seed: Long
@@ -498,11 +499,12 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forSeeds (for3hosts (_) (init))
-    info (s"Average time on three stable hosts: ${average}ms")
-  }
+    "three stable hosts" taggedAs (Intensive, Periodic) in {
+      val average = forSeeds (for3hosts (_) (init))
+      info (s"Average time on three stable hosts: ${average}ms")
+    }}
 
-  def for3hostsMT [H <: Host] (
+  def _for3hostsMT [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
@@ -528,6 +530,15 @@ trait StoreClusterChecks extends AsyncChecks {
 
       (end - start).toInt
     }
+
+  def for3hostsMT [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    "three stable hosts (multithreaded)" taggedAs (Intensive, Periodic) in {
+      _for3hostsMT (init)
+    }}
 
   def for8hosts [H <: Host] (
       seed: Long
@@ -564,9 +575,10 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forSeeds (for8hosts (_) (init))
-    info (s"Average time on eight stable hosts: ${average}ms")
-  }
+    "eight stable hosts" taggedAs (Intensive, Periodic) in {
+      val average = forSeeds (for8hosts (_) (init))
+      info (s"Average time on eight stable hosts: ${average}ms")
+    }}
 
   def for3with1offline [H <: Host] (
       seed: Long
@@ -608,9 +620,10 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forSeeds (for3with1offline (_) (init))
-    info (s"Average time with one host crashed: ${average}ms")
-  }
+    "one of three hosts is offline" taggedAs (Intensive, Periodic) in {
+      val average = forSeeds (for3with1offline (_) (init))
+      info (s"Average time with one host crashed: ${average}ms")
+    }}
 
   def for3with1offlineMT [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
@@ -688,11 +701,12 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forTargets (
-        for3hosts (_) (init)) (
-            for3with1crashing (_, _) (init))
-    info (s"Average time with one host crashing: ${average}ms")
-  }
+    "one of three hosts crashes" taggedAs (Intensive, Periodic) in {
+      val average = forTargets (
+          for3hosts (_) (init)) (
+              for3with1crashing (_, _) (init))
+      info (s"Average time with one host crashing: ${average}ms")
+    }}
 
   def for3with1crashingMT [H <: Host] (
       target: Int
@@ -737,7 +751,7 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val time = for3hostsMT (init)
+    val time = _for3hostsMT (init)
     val target =  Random.nextInt ((time * 0.7).toInt) + (time * 0.1).toInt
     for3with1crashingMT (target) (init)
   }
@@ -784,11 +798,12 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forTargets (
-        for3with1offline (_) (init)) (
-            for3with1rebooting (_, _) (init))
-    info (s"Average time with one host rebooting: ${average}ms")
-  }
+    "one of three hosts reboots" taggedAs (Intensive, Periodic) in {
+      val average = forTargets (
+          for3with1offline (_) (init)) (
+              for3with1rebooting (_, _) (init))
+      info (s"Average time with one host rebooting: ${average}ms")
+    }}
 
   def for3with1bouncing [H <: Host] (
       seed: Long,
@@ -834,12 +849,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forDoubleTargets (
-        for3hosts (_) (init)) (
-            for3with1crashing (_, _) (init)) (
-                for3with1bouncing (_, _, _) (init))
-    info (s"Average time with one host bouncing: ${average}ms")
-  }
+    "one of three hosts bounces" taggedAs (Intensive, Periodic) in {
+      val average = forDoubleTargets (
+          for3hosts (_) (init)) (
+              for3with1crashing (_, _) (init)) (
+                  for3with1bouncing (_, _, _) (init))
+      info (s"Average time with one host bouncing: ${average}ms")
+    }}
 
   def for3with1bouncingMT [H <: Host] (
       target1: Int,
@@ -886,12 +902,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val time1 = for3hostsMT (init)
-    val target1 = Random.nextInt ((time1 * 0.7).toInt) + (time1 * 0.1).toInt
-    val time2 = for3with1crashingMT (target1) (init)
-    val target2 =  Random.nextInt ((time2 * 0.7).toInt) + (time2 * 0.1).toInt
-    for3with1bouncingMT (target1, target2) (init)
-  }
+    "a host bounces (multithreaded)" taggedAs (Intensive, Periodic) in {
+      val time1 = _for3hostsMT (init)
+      val target1 = Random.nextInt ((time1 * 0.7).toInt) + (time1 * 0.1).toInt
+      val time2 = for3with1crashingMT (target1) (init)
+      val target2 =  Random.nextInt ((time2 * 0.7).toInt) + (time2 * 0.1).toInt
+      for3with1bouncingMT (target1, target2) (init)
+    }}
 
   def for1to1 [H <: Host] (
       seed: Long,
@@ -928,11 +945,12 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forTargets (
-        for1host (_) (init)) (
-            for1to1 (_, _) (init))
-    info (s"Average time with one host moving: ${average}ms")
-  }
+    "one host moving to another" taggedAs (Intensive, Periodic) in {
+      val average = forTargets (
+          for1host (_) (init)) (
+              for1to1 (_, _) (init))
+      info (s"Average time with one host moving: ${average}ms")
+    }}
 
   def for1to3 [H <: Host] (
       seed: Long,
@@ -972,11 +990,12 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forTargets (
-        for1host (_) (init)) (
-            for1to3 (_, _) (init))
-    info (s"Average time with one host growing to three: ${average}ms")
-  }
+    "one host growing to three" taggedAs (Intensive, Periodic) in {
+      val average = forTargets (
+          for1host (_) (init)) (
+              for1to3 (_, _) (init))
+      info (s"Average time with one host growing to three: ${average}ms")
+    }}
 
   def for1to3with1bouncing [H <: Host] (
       seed: Long,
@@ -1024,12 +1043,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forDoubleTargets (
-        for1host (_) (init)) (
-            for1to3 (_, _) (init)) (
-                for1to3with1bouncing (_, _, _) (init))
-    info (s"Average time with one host growing to three, one bounces: ${average}ms")
-  }
+    "one host growing to three, one bounces" taggedAs (Intensive, Periodic) in {
+      val average = forDoubleTargets (
+          for1host (_) (init)) (
+              for1to3 (_, _) (init)) (
+                  for1to3with1bouncing (_, _, _) (init))
+      info (s"Average time with one host growing to three, one bounces: ${average}ms")
+    }}
 
   def for3to1 [H <: Host] (
       seed: Long,
@@ -1069,11 +1089,12 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forTargets (
-        for1host (_) (init)) (
-            for3to1 (_, _) (init))
-    info (s"Average time with three hosts shriking to one: ${average}ms")
-  }
+    "three hosts shrinking to one" taggedAs (Intensive, Periodic) in {
+      val average = forTargets (
+          for1host (_) (init)) (
+              for3to1 (_, _) (init))
+      info (s"Average time with three hosts shriking to one: ${average}ms")
+    }}
 
   def for3to1with1bouncing [H <: Host] (
       seed: Long,
@@ -1121,12 +1142,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forDoubleTargets (
-        for3hosts (_) (init)) (
-            for3to1 (_, _) (init)) (
-                for3to1with1bouncing (_, _, _) (init))
-    info (s"Average time with three hosts shriking to one, one bounces: ${average}ms")
-  }
+    "three hosts shrinking to one, one bounces" taggedAs (Intensive, Periodic) in {
+      val average = forDoubleTargets (
+          for3hosts (_) (init)) (
+              for3to1 (_, _) (init)) (
+                  for3to1with1bouncing (_, _, _) (init))
+      info (s"Average time with three hosts shriking to one, one bounces: ${average}ms")
+    }}
 
   def for3replacing1 [H <: Host] (
       seed: Long,
@@ -1167,11 +1189,12 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forTargets (
-        for3hosts (_) (init)) (
-            for3replacing1 (_, _) (init))
-    info (s"Average time with three hosts replacing one: ${average}ms")
-  }
+    "three hosts replacing one" taggedAs (Intensive, Periodic) in {
+      val average = forTargets (
+          for3hosts (_) (init)) (
+              for3replacing1 (_, _) (init))
+      info (s"Average time with three hosts replacing one: ${average}ms")
+    }}
 
   def for3replacing1withSourceBouncing [H <: Host] (
       seed: Long,
@@ -1220,12 +1243,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forDoubleTargets (
-        for3hosts (_) (init)) (
-            for3replacing1 (_, _) (init)) (
-                for3replacing1withSourceBouncing (_, _, _) (init))
-    info (s"Average time with three hosts replacing one, a source host bounces: ${average}ms")
-  }
+    "three hosts replacing one, source bounces" taggedAs (Intensive, Periodic) in {
+      val average = forDoubleTargets (
+          for3hosts (_) (init)) (
+              for3replacing1 (_, _) (init)) (
+                  for3replacing1withSourceBouncing (_, _, _) (init))
+      info (s"Average time with three hosts replacing one, a source host bounces: ${average}ms")
+    }}
 
   def for3replacing1withTargetBouncing [H <: Host] (
       seed: Long,
@@ -1274,12 +1298,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forDoubleTargets (
-        for3hosts (_) (init)) (
-            for3replacing1 (_, _) (init)) (
-                for3replacing1withTargetBouncing (_, _, _) (init))
-    info (s"Average time with three hosts replacing one, a target host bounces: ${average}ms")
-  }
+    "three hosts replacing one, target bounces" taggedAs (Intensive, Periodic) in {
+      val average = forDoubleTargets (
+          for3hosts (_) (init)) (
+              for3replacing1 (_, _) (init)) (
+                  for3replacing1withTargetBouncing (_, _, _) (init))
+      info (s"Average time with three hosts replacing one, a target host bounces: ${average}ms")
+    }}
 
   def for3replacing1withCommonBouncing [H <: Host] (
       seed: Long,
@@ -1328,12 +1353,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forDoubleTargets (
-        for3hosts (_) (init)) (
-            for3replacing1 (_, _) (init)) (
-                for3replacing1withCommonBouncing (_, _, _) (init))
-    info (s"Average time with three hosts replacing one, a common host bounces: ${average}ms")
-  }
+    "three hosts replacing one, common bounces" taggedAs (Intensive, Periodic) in {
+      val average = forDoubleTargets (
+          for3hosts (_) (init)) (
+              for3replacing1 (_, _) (init)) (
+                  for3replacing1withCommonBouncing (_, _, _) (init))
+      info (s"Average time with three hosts replacing one, a common host bounces: ${average}ms")
+    }}
 
   def for3replacing2 [H <: Host] (
       seed: Long,
@@ -1375,11 +1401,12 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forTargets (
-        for3hosts (_) (init)) (
-            for3replacing2 (_, _) (init))
-    info (s"Average time with three hosts replacing two: ${average}ms")
-  }
+    "three hosts replacing two" taggedAs (Intensive, Periodic) in {
+      val average = forTargets (
+          for3hosts (_) (init)) (
+              for3replacing2 (_, _) (init))
+      info (s"Average time with three hosts replacing two: ${average}ms")
+    }}
 
   def for3replacing2withSourceBouncing [H <: Host] (
       seed: Long,
@@ -1429,12 +1456,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forDoubleTargets (
-        for3hosts (_) (init)) (
-            for3replacing2 (_, _) (init)) (
-                for3replacing2withSourceBouncing (_, _, _) (init))
-    info (s"Average time with three hosts replacing two, a source host bounces: ${average}ms")
-  }
+    "three hosts replacing two, source bounces" taggedAs (Intensive, Periodic) in {
+      val average = forDoubleTargets (
+          for3hosts (_) (init)) (
+              for3replacing2 (_, _) (init)) (
+                  for3replacing2withSourceBouncing (_, _, _) (init))
+      info (s"Average time with three hosts replacing two, a source host bounces: ${average}ms")
+    }}
 
   def for3replacing2withTargetBouncing [H <: Host] (
       seed: Long,
@@ -1484,12 +1512,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forDoubleTargets (
-        for3hosts (_) (init)) (
-            for3replacing2 (_, _) (init)) (
-                for3replacing2withTargetBouncing (_, _, _) (init))
-    info (s"Average time with three hosts replacing two, a target host bounces: ${average}ms")
-  }
+    "three hosts replacing two, target bounces" taggedAs (Intensive, Periodic) in {
+      val average = forDoubleTargets (
+          for3hosts (_) (init)) (
+              for3replacing2 (_, _) (init)) (
+                  for3replacing2withTargetBouncing (_, _, _) (init))
+      info (s"Average time with three hosts replacing two, a target host bounces: ${average}ms")
+    }}
 
   def for3replacing2withCommonBouncing [H <: Host] (
       seed: Long,
@@ -1539,12 +1568,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forDoubleTargets (
-        for3hosts (_) (init)) (
-            for3replacing2 (_, _) (init)) (
-                for3replacing2withCommonBouncing (_, _, _) (init))
-    info (s"Average time with three hosts replacing two, a common host bounces: ${average}ms")
-  }
+    "three hosts replacing two, common bounces" taggedAs (Intensive, Periodic) in {
+      val average = forDoubleTargets (
+          for3hosts (_) (init)) (
+              for3replacing2 (_, _) (init)) (
+                  for3replacing2withCommonBouncing (_, _, _) (init))
+      info (s"Average time with three hosts replacing two, a common host bounces: ${average}ms")
+    }}
 
   def for3to3 [H <: Host] (
       seed: Long,
@@ -1587,11 +1617,12 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forTargets (
-        for3hosts (_) (init)) (
-            for3to3 (_, _) (init))
-    info (s"Average time with three hosts moving: ${average}ms")
-  }
+    "three hosts moving to three others" taggedAs (Intensive, Periodic) in {
+      val average = forTargets (
+          for3hosts (_) (init)) (
+              for3to3 (_, _) (init))
+      info (s"Average time with three hosts moving: ${average}ms")
+    }}
 
   def for3to3withSourceBouncing [H <: Host] (
       seed: Long,
@@ -1642,12 +1673,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forDoubleTargets (
-        for3hosts (_) (init)) (
-            for3to3 (_, _) (init)) (
-                for3to3withSourceBouncing (_, _, _) (init))
-    info (s"Average time with three hosts moving, a source host bounces: ${average}ms")
-  }
+    "three hosts moving to three others, source bounces" taggedAs (Intensive, Periodic) in {
+      val average = forDoubleTargets (
+          for3hosts (_) (init)) (
+              for3to3 (_, _) (init)) (
+                  for3to3withSourceBouncing (_, _, _) (init))
+      info (s"Average time with three hosts moving, a source host bounces: ${average}ms")
+    }}
 
   def for3to3withTargetBouncing [H <: Host] (
       seed: Long,
@@ -1698,12 +1730,13 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forDoubleTargets (
-        for3hosts (_) (init)) (
-            for3to3 (_, _) (init)) (
-                for3to3withTargetBouncing (_, _, _) (init))
-    info (s"Average time with three hosts moving, a target host bounces: ${average}ms")
-  }
+    "three hosts moving to three others, target bounces" taggedAs (Intensive, Periodic) in {
+      val average = forDoubleTargets (
+          for3hosts (_) (init)) (
+              for3to3 (_, _) (init)) (
+                  for3to3withTargetBouncing (_, _, _) (init))
+      info (s"Average time with three hosts moving, a target host bounces: ${average}ms")
+    }}
 
   def for3to8 [H <: Host] (
       seed: Long,
@@ -1742,11 +1775,12 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forTargets (
-        for3hosts (_) (init)) (
-            for3to8 (_, _) (init))
-    info (s"Average time for 3 growing to 8: ${average}ms")
-  }
+    "for three hosts growing to eight" taggedAs (Intensive, Periodic) in {
+      val average = forTargets (
+          for3hosts (_) (init)) (
+              for3to8 (_, _) (init))
+      info (s"Average time for 3 growing to 8: ${average}ms")
+    }}
 
   def for3to8MT [H <: Host] (
       target: Int
@@ -1787,10 +1821,11 @@ trait StoreClusterChecks extends AsyncChecks {
   ) (implicit
       config: StoreTestConfig
   ) {
-    val time = for3hostsMT (init)
-    val target =  Random.nextInt ((time * 0.7).toInt) + (time * 0.1).toInt
-    for3to8MT (target) (init)
-  }
+    "for three hosts growing to eight (multithreaded)" taggedAs (Intensive, Periodic) in {
+      val time = _for3hostsMT (init)
+      val target =  Random.nextInt ((time * 0.7).toInt) + (time * 0.1).toInt
+      for3to8MT (target) (init)
+    }}
 
   def for8to3 [H <: Host] (
       seed: Long,
@@ -1824,121 +1859,16 @@ trait StoreClusterChecks extends AsyncChecks {
       runner.verify (hs) .pass
     }
 
-    def for8to3 [H <: Host] (
+  def for8to3 [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
-    val average = forTargets (
-        for8hosts (_) (init)) (
-            for8to3 (_, _) (init))
-    info (s"Average time for 8 shrinking to 3: ${average}ms")
-  }
-
-  def forVariousClusters [H <: Host] (
-      init: Random => ForStoreClusterRunner [H]
-  ) (implicit
-      config: StoreTestConfig
-  ) {
-
-    "for one host" taggedAs (Intensive, Periodic) in {
-      for1host (init)
-    }
-
-    "three stable hosts" taggedAs (Intensive, Periodic) in {
-      for3hosts (init)
-    }
-
-    "eight stable hosts" taggedAs (Intensive, Periodic) in {
-      for8hosts (init)
-    }
-
-    "one of three hosts is offline" taggedAs (Intensive, Periodic) in {
-      for3with1offline (init)
-    }
-
-    "one of three hosts crashes" taggedAs (Intensive, Periodic) in {
-      for3with1crashing (init)
-    }
-
-    "one of three hosts reboots" taggedAs (Intensive, Periodic) in {
-      for3with1rebooting (init)
-    }
-
-    "one of three hosts bounces" taggedAs (Intensive, Periodic) in {
-      for3with1bouncing (init)
-    }
-
-    "one host moving to another" taggedAs (Intensive, Periodic) in {
-      for1to1 (init)
-    }
-
-    "one host growing to three" taggedAs (Intensive, Periodic) in {
-      for1to3 (init)
-    }
-
-    "one host growing to three, one bounces" taggedAs (Intensive, Periodic) in {
-      for1to3with1bouncing (init)
-    }
-
-    "three hosts shrinking to one" taggedAs (Intensive, Periodic) in {
-      for3to1 (init)
-    }
-
-    "three hosts shrinking to one, one bounces" taggedAs (Intensive, Periodic) in {
-      for3to1with1bouncing (init)
-    }
-
-    "three hosts replacing one" taggedAs (Intensive, Periodic) in {
-      for3replacing1 (init)
-    }
-
-    "three hosts replacing one, source bounces" taggedAs (Intensive, Periodic) in {
-      for3replacing1withSourceBouncing (init)
-    }
-
-    "three hosts replacing one, target bounces" taggedAs (Intensive, Periodic) in {
-      for3replacing1withTargetBouncing (init)
-    }
-
-    "three hosts replacing one, common bounces" taggedAs (Intensive, Periodic) in {
-      for3replacing1withCommonBouncing (init)
-    }
-
-    "three hosts replacing two" taggedAs (Intensive, Periodic) in {
-      for3replacing2 (init)
-    }
-
-    "three hosts replacing two, source bounces" taggedAs (Intensive, Periodic) in {
-      for3replacing2withSourceBouncing (init)
-    }
-
-    "three hosts replacing two, target bounces" taggedAs (Intensive, Periodic) in {
-      for3replacing2withTargetBouncing (init)
-    }
-
-    "three hosts replacing two, common bounces" taggedAs (Intensive, Periodic) in {
-      for3replacing2withCommonBouncing (init)
-    }
-
-    "three hosts moving to three others" taggedAs (Intensive, Periodic) in {
-      for3to3 (init)
-    }
-
-    "three hosts moving to three others, source bounces" taggedAs (Intensive, Periodic) in {
-      for3to3withSourceBouncing (init)
-    }
-
-    "three hosts moving to three others, target bounces" taggedAs (Intensive, Periodic) in {
-      for3to3withTargetBouncing (init)
-    }
-
-    "for three hosts growing to eight" taggedAs (Intensive, Periodic) in {
-      for3to8 (init)
-    }
-
     "for eight hosts shrinking to three" taggedAs (Intensive, Periodic) in {
-      for8to3 (init)
+      val average = forTargets (
+          for8hosts (_) (init)) (
+              for8to3 (_, _) (init))
+      info (s"Average time for 8 shrinking to 3: ${average}ms")
     }}}
 
 object StoreClusterChecks {
