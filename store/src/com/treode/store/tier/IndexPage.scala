@@ -3,16 +3,22 @@ package com.treode.store.tier
 import java.util.{Arrays, ArrayList}
 
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{Bound, Bytes, Key, TxClock}
 
 private class IndexPage (val entries: Array [IndexEntry]) extends TierPage {
 
   def get (i: Int): IndexEntry =
     entries (i)
 
-  def ceiling (key: Bytes, time: TxClock): Int = {
-    val i = Arrays.binarySearch (entries, IndexEntry (key, time, 0, 0, 0), IndexEntry)
-    if (i < 0) -i-1 else i
+  def ceiling (start: Bound [Key]): Int = {
+    val target = IndexEntry (start.bound.key, start.bound.time, 0, 0, 0)
+    val i = Arrays.binarySearch (entries, target, IndexEntry)
+       if (i < 0)
+      -i-1
+    else if (start.inclusive && i < entries.length)
+      i
+    else
+      i+1
   }
 
   def size: Int = entries.size

@@ -3,16 +3,22 @@ package com.treode.store.tier
 import java.util.{Arrays, ArrayList}
 
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
-import com.treode.store.{Bytes, Cell, TxClock}
+import com.treode.store.{Bound, Bytes, Cell, Key, TxClock}
 
 private class CellPage (val entries: Array [Cell]) extends TierPage {
 
   def get (i: Int): Cell =
     entries (i)
 
-  def ceiling (key: Bytes, time: TxClock): Int = {
-    val i = Arrays.binarySearch (entries, Cell (key, time, None), Cell)
-    if (i < 0) -i-1 else i
+  def ceiling (start: Bound [Key]): Int = {
+    val target = Cell (start.bound.key, start.bound.time, None)
+    val i = Arrays.binarySearch (entries, target, Cell)
+    if (i < 0)
+      -i-1
+    else if (start.inclusive && i < entries.length)
+      i
+    else
+      i+1
   }
 
   def size: Int = entries.size

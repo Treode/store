@@ -5,14 +5,15 @@ import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, Callback, Fiber}
 import com.treode.cluster.Peer
-import com.treode.store.{Bytes, Cell, CellIterator, Key, TableId, TimeoutException, TxClock}
+import com.treode.store._
 
 import Async.async
+import Bound.Exclusive
 import ScanDeputy.{Cells, Point}
 import ScanDirector._
 
 private class ScanDirector (
-    var prev: Key,
+    var start: Bound [Key],
     table: TableId,
     kit: AtomicKit,
     body: Cell => Async [Unit],
@@ -56,10 +57,10 @@ private class ScanDirector (
         case _ =>
           backoff = scanBatchBackoff.iterator
           state = Awaiting
-          rouse (prev)
+          rouse (start)
       }}}
 
-  rouse (prev)
+  rouse (start)
 
   def quorum: Boolean = {
     val acks = this.acks
@@ -90,9 +91,9 @@ private class ScanDirector (
       assert (count > 0)
       acks += element.from -> (count - 1, end)
       if (count < 5 && end.isDefined)
-        ScanDeputy.scan (table, end.get.key, end.get.time) (element.from, port)
+        ScanDeputy.scan ((table, Exclusive (end.get))) (element.from, port)
       state = Processing
-      prev = element.cell.timedKey
+      start = Exclusive (element.cell.timedKey)
       body (element.cell) run (take)
     }}
 
@@ -102,7 +103,7 @@ private class ScanDirector (
       acks get (from) match {
         case Some ((count, Some (end))) =>
           var count = 0
-          for (c <- cells; k = c.timedKey; if prev < k && k < end) {
+          for (c <- cells; k = c.timedKey; if start <* k && k < end) {
             pq.enqueue (Element (c, from))
             count += 1
           }
@@ -112,7 +113,7 @@ private class ScanDirector (
           ()
         case None =>
           var count = 0
-          for (c <- cells; k = c.timedKey; if prev < k) {
+          for (c <- cells; k = c.timedKey; if start <* k) {
             pq.enqueue (Element (c, from))
             count += 1
           }
@@ -123,16 +124,16 @@ private class ScanDirector (
         give()
     }
 
-  def rouse (mark: Key): Unit =
+  def rouse (mark: Bound [Key]): Unit =
     fiber.execute {
       state match {
         case Closed =>
           ()
-        case _ if mark != prev =>
+        case _ if !(mark eq start) =>
           ()
         case _ if backoff.hasNext =>
-          ScanDeputy.scan (table, prev.key, prev.time) (awaiting, port)
-          scheduler.delay (backoff.next) (rouse (prev))
+          ScanDeputy.scan ((table, start)) (awaiting, port)
+          scheduler.delay (backoff.next) (rouse (start))
         case Awaiting =>
           state = Closed
           port.close()
@@ -157,10 +158,10 @@ private object ScanDirector {
       x compare y
   }
 
-  def scan (table: TableId, key: Bytes, time: TxClock, kit: AtomicKit): CellIterator = {
+  def scan (table: TableId, start: Bound [Key], kit: AtomicKit): CellIterator = {
     val iter = new CellIterator {
       def foreach (f: Cell => Async [Unit]): Async [Unit] =
-        async (new ScanDirector (Key (key, time), table, kit, f, _))
+        async (new ScanDirector (start, table, kit, f, _))
     }
     iter.dedupe
   }}

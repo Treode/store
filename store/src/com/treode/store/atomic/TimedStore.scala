@@ -7,7 +7,7 @@ import com.treode.async.{Async, AsyncIterator, Callback, Latch}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disk, ObjectId, PageHandler, Position, RecordDescriptor}
-import com.treode.store.{Bytes, Cell, ReadOp, Residents, TableId, TxClock, TxId, Value, WriteOp}
+import com.treode.store._
 import com.treode.store.locks.LockSpace
 import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
 
@@ -91,8 +91,8 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
         case op: Delete => t.delete (op.key, wt)
       }}}
 
-  def scan (table: TableId, key: Bytes, time: TxClock): AsyncIterator [Cell] =
-    getTable (table) .iterator (key, time, library.residents)
+  def scan (table: TableId, start: Bound [Key]): AsyncIterator [Cell] =
+    getTable (table) .iterator (start, library.residents)
 
   def receive (table: TableId, cells: Seq [Cell]): Async [Unit] = {
     val (gen, novel) = getTable (table) .receive (cells)

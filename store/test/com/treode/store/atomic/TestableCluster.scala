@@ -24,6 +24,6 @@ extends Store {
   def status (xid: TxId): Async [TxStatus] =
     randomHost.status (xid)
 
-  def scan (table: TableId, key: Bytes, time: TxClock): CellIterator =
-    randomHost.scan (table, key, time)
+  def scan (table: TableId, start: Bound [Key]): CellIterator =
+    randomHost.scan (table, start)
 }

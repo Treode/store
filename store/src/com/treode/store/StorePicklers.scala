@@ -2,13 +2,15 @@ package com.treode.store
 
 import com.treode.cluster.{HostId, PortId}
 import com.treode.disk.{ObjectId, Position, TypeId}
-import com.treode.pickle.Picklers
+import com.treode.pickle.{Pickler, Picklers}
 import com.treode.store.tier.TierTable
 import org.joda.time.Instant
 
 private trait StorePicklers extends Picklers {
 
   lazy val instant = wrap (ulong) build (new Instant (_)) inspect (_.getMillis)
+
+  def bound [A] (pa: Pickler [A]) = Bound.pickler (pa)
 
   def atlas = Atlas.pickler
   def ballotNumber = BallotNumber.pickler

@@ -96,9 +96,9 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
         cb.pass (st)
     }
 
-  def scan (table: TableId, key: Bytes, time: TxClock): AsyncIterator [Cell] = {
+  def scan (table: TableId, start: Bound [Key]): AsyncIterator [Cell] = {
     val entries = data
-        .tailMap (StubKey (table, key, time))
+        .tailMap (StubKey (table, start.bound.key, start.bound.time), start.inclusive)
         .iterator
         .takeWhile (_._1.table == table)
     for ((key, value) <- entries.async)

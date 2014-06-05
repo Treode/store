@@ -14,7 +14,7 @@ trait Store {
 
   def status (xid: TxId): Async [TxStatus]
 
-  def scan (table: TableId, key: Bytes, time: TxClock): AsyncIterator [Cell]
+  def scan (table: TableId, start: Bound [Key]): AsyncIterator [Cell]
 }
 
 object Store {

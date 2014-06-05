@@ -61,8 +61,11 @@ private trait StoreTestTools {
 
   implicit class RichStore (store: Store) {
 
+    def scan (table: TableId): CellIterator =
+      store.scan (table, Bound.Inclusive (Key.MinValue))
+
     def expectCells (table: TableId) (expected: Cell*) (implicit scheduler: StubScheduler) =
-        assertResult (expected) (store.scan (table, Bytes.empty, TxClock.MaxValue) .toSeq)
+        assertResult (expected) (store.scan (table) .toSeq)
   }
 
   implicit class RichTxClock (v: TxClock) {

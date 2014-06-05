@@ -39,7 +39,7 @@ private class AtomicMover (kit: AtomicKit) {
       val (table, iter, next) =
         tables.ceiling (start.table) match {
           case Some (table) if table.id == start.table =>
-            (table.id, table.iterator (start.key, start.time, residents), Point.Middle (table.id.id + 1))
+            (table.id, table.iterator (start.start, residents), Point.Middle (table.id.id + 1))
           case Some (table) if Point.Middle (table.id) < limit =>
             (table.id, table.iterator (residents), Point.Middle (table.id.id + 1))
           case _ =>
@@ -193,6 +193,8 @@ private object AtomicMover {
   object Point extends Ordering [Point] {
 
     case class Middle (table: TableId, key: Bytes, time: TxClock) extends Point {
+
+      def start: Bound [Key] = Bound.Inclusive (Key (key, time))
 
       def compare (other: Middle): Int = {
         var r = table compare other.table

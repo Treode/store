@@ -25,7 +25,7 @@ trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
       _ <-
         for {
           id <- (0L until ntables) .async
-          c <- host.scan (id, Bytes.empty, TxClock.MaxValue)
+          c <- host.scan (id, Bound.Inclusive (Key.MinValue))
         } supply {
           val tk = (id, c.key.long)
           cells += tk -> (cells (tk) + ((c.time, c.value.get.int)))

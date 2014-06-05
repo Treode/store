@@ -36,7 +36,7 @@ private class PaxosMover (kit: PaxosKit) {
       val atlas = library.atlas
       val residents = library.residents
 
-      val iter = archive.iterator (start.key, start.time, residents)
+      val iter = archive.iterator (start.start, residents)
       val next = limit
 
       iter.whilst { cell =>
@@ -192,6 +192,8 @@ private object PaxosMover {
   object Point extends Ordering [Point] {
 
     case class Middle (key: Bytes, time: TxClock) extends Point {
+
+      def start: Bound [Key] = Bound.Inclusive (Key (key, time))
 
       def compare (other: Middle): Int = {
         val r = key compare other.key

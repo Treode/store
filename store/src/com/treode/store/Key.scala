@@ -11,6 +11,8 @@ case class Key (key: Bytes, time: TxClock) extends Ordered [Key] {
 
 object Key extends Ordering [Key] {
 
+  val MinValue = Key (Bytes.MinValue, TxClock.MaxValue)
+
   def compare (x: Key, y: Key): Int =
     x compare y
 

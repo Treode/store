@@ -17,7 +17,7 @@ private [store] trait TierTable {
 
   def iterator (residents: Residents): CellIterator
 
-  def iterator (key: Bytes, time: TxClock, residents: Residents): CellIterator
+  def iterator (start: Bound [Key], residents: Residents): CellIterator
 
   def put (key: Bytes, time: TxClock, value: Bytes): Long
 

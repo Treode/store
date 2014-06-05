@@ -76,9 +76,9 @@ class TierSpec extends WordSpec {
     TierIterator (descriptor, tier.root) .toSeq
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
-  private def iterateTier (tier: Tier, key: Bytes, time: TxClock) (
+  private def iterateTier (tier: Tier, key: Bytes, time: TxClock, inclusive: Boolean) (
       implicit scheduler: StubScheduler, disks: Disk): Seq [Cell] =
-    TierIterator (descriptor, tier.root, key, time) .toSeq
+    TierIterator (descriptor, tier.root, Bound (Key (key, time), inclusive)) .toSeq
 
   private def toSeq (builder: Builder [Cell, _], pos: Position) (
       implicit scheduler: StubScheduler, disks: Disk) {
@@ -207,7 +207,7 @@ class TierSpec extends WordSpec {
           checkIterator (1 << 16)
         }}}
 
-    "starting from the middle" should {
+    "starting from the middle inclusive" should {
 
       "iterate all remaining keys" when {
 
@@ -215,8 +215,33 @@ class TierSpec extends WordSpec {
           implicit val (scheduler, disks) = setup()
           val tier = buildTier (pageBytes)
           for (start <- AllFruits) {
-            val expected = AllFruits.dropWhile (_ != start) .toSeq
-            val actual = iterateTier (tier, start, 0) map (_.key)
+            val expected = AllFruits.dropWhile (_ < start) .toSeq
+            val actual = iterateTier (tier, start, 0, true) map (_.key)
+            assertResult (expected) (actual)
+          }}
+
+        "the pages are limited to one byte" in {
+          checkIterator (1)
+        }
+
+        "the pages are limited to 256 bytes" in {
+          checkIterator (1 << 8)
+        }
+
+        "the pages are limited to 64K" in {
+          checkIterator (1 << 16)
+        }}}
+
+    "starting from the middle exclusive" should {
+
+      "iterate all remaining keys" when {
+
+        def checkIterator (pageBytes: Int) {
+          implicit val (scheduler, disks) = setup()
+          val tier = buildTier (pageBytes)
+          for (start <- AllFruits) {
+            val expected = AllFruits.dropWhile (_ <= start) .toSeq
+            val actual = iterateTier (tier, start, 0, false) map (_.key)
             assertResult (expected) (actual)
           }}
 

@@ -5,7 +5,7 @@ import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback}
 import com.treode.async.implicits._
 import com.treode.disk.{Disk, Position}
-import com.treode.store.{Bytes, Cell, Residents, StorePicklers, TxClock}
+import com.treode.store.{Bytes, Bound, Cell, Key, Residents, StorePicklers, TxClock}
 
 import Async.async
 
@@ -26,10 +26,12 @@ private case class Tier (
 
       import desc.pager
 
+      val target = Bound.Inclusive (Key (key, time))
+
       val loop = Callback.fix [TierPage] { loop => {
 
         case Success (p: IndexPage) =>
-          val i = p.ceiling (key, time)
+          val i = p.ceiling (target)
           if (i == p.size) {
             cb.pass (None)
           } else {
@@ -38,7 +40,7 @@ private case class Tier (
           }
 
         case Success (p: CellPage) =>
-          val i = p.ceiling (key, time)
+          val i = p.ceiling (target)
           if (i == p.size)
             cb.pass (None)
           else

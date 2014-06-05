@@ -128,7 +128,7 @@ private class SynthTable (
         .clean (desc, id, residents)
   }
 
-  def iterator (key: Bytes, time: TxClock, residents: Residents): CellIterator = {
+  def iterator (start: Bound [Key], residents: Residents): CellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -136,7 +136,7 @@ private class SynthTable (
       readLock.unlock()
     }
     TierIterator
-        .merge (desc, key, time, primary, secondary, tiers)
+        .merge (desc, start, primary, secondary, tiers)
         .clean (desc, id, residents)
   }
 
