@@ -4,7 +4,7 @@ import java.nio.file.{Path, Paths}
 import scala.language.implicitConversions
 import scala.util.Random
 
-import com.treode.async.Async
+import com.treode.async.{Async, AsyncIterator}
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId
@@ -18,6 +18,39 @@ private trait StoreTestTools {
   private val fixedLongLong = {
     import StorePicklers._
     tuple (fixedLong, fixedLong)
+  }
+
+  val MinStart = Bound.Inclusive (Key.MinValue)
+
+  val AllTimes = TimeBounds.Through (Bound.Inclusive (TxClock.MaxValue), TxClock.MinValue)
+
+  def Get (id: TableId, key: Bytes): ReadOp =
+    ReadOp (id, key)
+
+  def settled (hosts: StubStoreHost*): Cohort =
+    Cohort.settled (hosts map (_.localId): _*)
+
+  def issuing (origin: StubStoreHost*) (target: StubStoreHost*): Cohort =
+    Cohort.issuing (origin map (_.localId): _*) (target map (_.localId): _*)
+
+  def moving (origin: StubStoreHost*) (target: StubStoreHost*): Cohort =
+    Cohort.moving (origin map (_.localId): _*) (target map (_.localId): _*)
+
+  def testStringOf (cell: Cell): String = {
+    val k = cell.key.string
+    val t = cell.time.time
+    cell.value match {
+      case Some (v) => s"$k##$t::${v.int}"
+      case None => s"$k##$t::_"
+    }}
+
+  def testStringOf (cells: Seq [Cell]): String =
+    cells.map (testStringOf _) .mkString ("[", ", ", "]")
+
+  def assertCells (expected: Cell*) (actual: AsyncIterator [Cell]) (implicit scheduler: StubScheduler) {
+    val _actual = actual.toSeq
+    if (expected != _actual)
+      fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
   }
 
   implicit def intToBytes (v: Int): Bytes =
@@ -62,10 +95,13 @@ private trait StoreTestTools {
   implicit class RichStore (store: Store) {
 
     def scan (table: TableId): CellIterator =
-      store.scan (table, Bound.Inclusive (Key.MinValue))
+      store.scan (
+          table,
+          Bound.Inclusive (Key.MinValue),
+          TimeBounds.Through (Bound.Inclusive (TxClock.MaxValue), TxClock.MinValue))
 
     def expectCells (table: TableId) (expected: Cell*) (implicit scheduler: StubScheduler) =
-        assertResult (expected) (store.scan (table) .toSeq)
+      assertCells (expected: _*) (store.scan (table))
   }
 
   implicit class RichTxClock (v: TxClock) {
@@ -88,19 +124,6 @@ private trait StoreTestTools {
       assert (
           cb.hasPassed || cb.hasFailed [TimeoutException],
           s"Expected success or timeout, found $cb")
-  }
-
-  def Get (id: TableId, key: Bytes): ReadOp =
-    ReadOp (id, key)
-
-  def settled (hosts: StubStoreHost*): Cohort =
-    Cohort.settled (hosts map (_.localId): _*)
-
-  def issuing (origin: StubStoreHost*) (target: StubStoreHost*): Cohort =
-    Cohort.issuing (origin map (_.localId): _*) (target map (_.localId): _*)
-
-  def moving (origin: StubStoreHost*) (target: StubStoreHost*): Cohort =
-    Cohort.moving (origin map (_.localId): _*) (target map (_.localId): _*)
-}
+  }}
 
 private object StoreTestTools extends StoreTestTools

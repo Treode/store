@@ -91,8 +91,8 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
         case op: Delete => t.delete (op.key, wt)
       }}}
 
-  def scan (table: TableId, start: Bound [Key]): AsyncIterator [Cell] =
-    getTable (table) .iterator (start, library.residents)
+  def scan (table: TableId, start: Bound [Key], window: TimeBounds): AsyncIterator [Cell] =
+    window.filter (getTable (table) .iterator (start, library.residents))
 
   def receive (table: TableId, cells: Seq [Cell]): Async [Unit] = {
     val (gen, novel) = getTable (table) .receive (cells)

@@ -8,14 +8,15 @@ import com.treode.store._
 import org.scalatest.FlatSpec
 
 import AtomicTestTools._
+import Bound.{Exclusive, Inclusive}
 import Fruits._
+import TimeBounds.{Between, Recent, Through}
 
 class ScanSpec extends FlatSpec {
 
-  val ID: TableId = 0x67FDFBBE91E7CE8EL
-
-  def assertSeq [A] (expected: A*) (actual: AsyncIterator [A]) (implicit s: StubScheduler): Unit =
-    assertResult (expected) (actual.toSeq)
+  val EMPTY =TableId (0x67)
+  val SHORT = TableId (0xFD)
+  val LONG = TableId (0xBE)
 
   private def setup (populate: Boolean) = {
     implicit val kit = StoreTestKit.random()
@@ -26,11 +27,13 @@ class ScanSpec extends FlatSpec {
     for (h <- hs)
       h.setAtlas (settled (h1, h2, h3))
 
-    if (populate) {
-      h1.putCells (ID, Apple##1::1, Banana##1::1)
-      h2.putCells (ID, Banana##1::1, Grape##1::1)
-      h3.putCells (ID, Apple##1::1, Grape##1::1)
-    }
+    h1.putCells (SHORT, Apple##1::1, Banana##1::1)
+    h2.putCells (SHORT, Banana##1::1, Grape##1::1)
+    h3.putCells (SHORT, Apple##1::1, Grape##1::1)
+
+    h1.putCells (LONG, Apple##2::2, Apple##1::1, Banana##2::2, Banana##1::1)
+    h2.putCells (LONG, Apple##3::3, Apple##2::2, Banana##3::3, Banana##1::1)
+    h3.putCells (LONG, Apple##3::3, Apple##1::1, Banana##3::3, Banana##2::2)
 
     (kit, h1)
   }
@@ -40,32 +43,48 @@ class ScanSpec extends FlatSpec {
     val (kit, host) = setup (false)
     import kit.scheduler
 
-    assertSeq () (host.scan (ID, Bound.Inclusive (Key.MinValue)))
-  }
-
-  it should "handle a filled table (through all)" in {
-
-    val (kit, host) = setup (true)
-    import kit.scheduler
-
-    assertSeq (Apple##1::1, Banana##1::1, Grape##1::1) {
-      host.scan (ID, Bound.Inclusive (Key.MinValue))
+    assertCells () {
+      host.scan (EMPTY, MinStart, AllTimes)
     }}
 
-  it should "handle a filled table (inclusive)" in {
+  it should "handle a non-empty table" in {
 
     val (kit, host) = setup (true)
     import kit.scheduler
 
-    assertSeq (Banana##1::1, Grape##1::1) {
-      host.scan (ID, Bound.Inclusive (Key (Banana, 1)))
+    assertCells (Apple##1::1, Banana##1::1, Grape##1::1) {
+      host.scan (SHORT, MinStart, AllTimes)
     }}
 
-  it should "handle a filled table (exclusive)" in {
+  it should "handle an inclusive start position" in {
 
     val (kit, host) = setup (true)
     import kit.scheduler
 
-    assertSeq (Banana##1::1, Grape##1::1) {
-      host.scan (ID, Bound.Exclusive (Key (Apple, 1)))
+    assertCells (Banana##1::1, Grape##1::1) {
+      host.scan (SHORT, Inclusive (Key (Banana, 1)), AllTimes)
+    }}
+
+  it should "handle an exclusive start position" in {
+
+    val (kit, host) = setup (true)
+    import kit.scheduler
+
+    assertCells (Banana##1::1, Grape##1::1) {
+      host.scan (SHORT, Exclusive (Key (Apple, 1)), AllTimes)
+    }}
+
+  it should "handle a filter" in {
+
+    val (kit, host) = setup (true)
+    import kit.scheduler
+
+    assertCells (Apple##1::1, Banana##1::1) {
+      host.scan (LONG, MinStart,  Recent (1, true))
+    }
+    assertCells (Apple##2::2, Banana##2::2) {
+      host.scan (LONG, MinStart,  Recent (2, true))
+    }
+    assertCells (Apple##3::3, Banana##3::3) {
+      host.scan (LONG, MinStart,  Recent (3, true))
     }}}

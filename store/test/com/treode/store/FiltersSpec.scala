@@ -10,17 +10,6 @@ import StoreTestTools._
 
 class FiltersSpec extends FreeSpec {
 
-  def testStringOf (cell: Cell): String = {
-    val k = cell.key.string
-    val t = cell.time.time
-    cell.value match {
-      case Some (v) => s"$k##$t::${v.int}"
-      case None => s"$k##$t::_"
-    }}
-
-  def testStringOf (cells: Seq [Cell]): String =
-    cells.map (testStringOf _) .mkString ("[", ", ", "]")
-
   def concat [A, B] (x: (Seq [A], Seq [B]), y: (Seq [A], Seq [B])): (Seq [A], Seq [B]) =
     (x._1 ++ y._1, x._2 ++ y._2)
 
@@ -31,7 +20,7 @@ class FiltersSpec extends FreeSpec {
       val out = items .map (_._2) .flatten
       s"handle ${testStringOf (in)}" in {
         implicit val scheduler = StubScheduler.random()
-        assertResult (out) (Filters.dedupe (in.iterator.async) .toSeq)
+        assertCells (out: _*) (Filters.dedupe (in.iterator.async))
       }}
 
     val apple1 = (
@@ -80,7 +69,7 @@ class FiltersSpec extends FreeSpec {
       val out = item._2
       s"handle ${testStringOf (in)}" in {
         implicit val scheduler = StubScheduler.random()
-        assertResult (out) (Filters.retire (in.iterator.async, 7) .toSeq)
+        assertCells (out: _*) (Filters.retire (in.iterator.async, 7))
       }}
 
     val apple1 = (

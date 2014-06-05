@@ -11,24 +11,8 @@ import StoreTestTools._
 
 class TimeBoundsSpec extends FreeSpec {
 
-  def testStringOf (cell: Cell): String = {
-    val k = cell.key.string
-    val t = cell.time.time
-    cell.value match {
-      case Some (v) => s"$k##$t::${v.int}"
-      case None => s"$k##$t::_"
-    }}
-
-  def testStringOf (cells: Seq [Cell]): String =
-    cells.map (testStringOf _) .mkString ("[", ", ", "]")
-
   def concat [A, B] (x: (Seq [A], Seq [B]), y: (Seq [A], Seq [B])): (Seq [A], Seq [B]) =
     (x._1 ++ y._1, x._2 ++ y._2)
-
-  def assertCells (expected: Seq [Cell]) (actual: Seq [Cell]): Unit = {
-    if (expected != actual)
-      fail (s"Expected ${expected map (testStringOf _)}, found ${actual map (testStringOf _)}")
-  }
 
   "TimeBounds.Recent should" - {
 
@@ -39,7 +23,7 @@ class TimeBoundsSpec extends FreeSpec {
       val out = items .map (_._2) .flatten
       s"handle ${testStringOf (in)}" in {
         implicit val scheduler = StubScheduler.random()
-        assertCells (out) (filter.filter (in.iterator.async) .toSeq)
+        assertCells (out: _*) (filter.filter (in.iterator.async))
       }}
 
     val apple1 = (
@@ -103,7 +87,7 @@ class TimeBoundsSpec extends FreeSpec {
       val out = items .map (_._2) .flatten
       s"handle ${testStringOf (in)}" in {
         implicit val scheduler = StubScheduler.random()
-        assertCells (out) (filter.filter (in.iterator.async) .toSeq)
+        assertCells (out: _*) (filter.filter (in.iterator.async))
       }}
 
     val apple1 = (
@@ -150,7 +134,7 @@ class TimeBoundsSpec extends FreeSpec {
       val out = items .map (_._2) .flatten
       s"handle ${testStringOf (in)}" in {
         implicit val scheduler = StubScheduler.random()
-        assertCells (out) (filter.filter (in.iterator.async) .toSeq)
+        assertCells (out: _*) (filter.filter (in.iterator.async))
       }}
 
     val apple1 = (
