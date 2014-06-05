@@ -24,7 +24,7 @@ private trait StoreTestTools {
 
   val AllSlices = Slice (0, 1)
 
-  val AllTimes = TimeBounds.Through (Bound.Inclusive (TxClock.MaxValue), TxClock.MinValue)
+  val AllTimes = Window.Through (Bound.Inclusive (TxClock.MaxValue), TxClock.MinValue)
 
   def Get (id: TableId, key: Bytes): ReadOp =
     ReadOp (id, key)

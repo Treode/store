@@ -2,14 +2,14 @@ package com.treode.store
 
 import com.treode.async.AsyncIterator
 
-sealed abstract class TimeBounds {
+sealed abstract class Window {
 
   def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell]
 }
 
-object TimeBounds {
+object Window {
 
-  case class Recent (time: Bound [TxClock]) extends TimeBounds {
+  case class Recent (time: Bound [TxClock]) extends Window {
 
     def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell] = {
       var key = Option.empty [Bytes]
@@ -27,7 +27,7 @@ object TimeBounds {
       Recent (Bound (time, inclusive))
   }
 
-  case class Between (later: Bound [TxClock], earlier: Bound [TxClock]) extends TimeBounds {
+  case class Between (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
 
     def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell] =
       iter.filter (cell => later >* cell.time && earlier <* cell.time)
@@ -39,7 +39,7 @@ object TimeBounds {
       Between (Bound (later, linc), Bound (earlier, einc))
   }
 
-  case class Through (later: Bound [TxClock], earlier: TxClock) extends TimeBounds {
+  case class Through (later: Bound [TxClock], earlier: TxClock) extends Window {
 
     def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell] = {
       var key = Option.empty [Bytes]
@@ -62,7 +62,7 @@ object TimeBounds {
 
   val pickler = {
     import StorePicklers._
-    tagged [TimeBounds] (
+    tagged [Window] (
       0x1 -> wrap (bound (txClock)) .build (new Recent (_)) .inspect (_.time),
       0x2 -> wrap (tuple (bound (txClock), bound (txClock)))
           .build (v => (new Between (v._1, v._2)))

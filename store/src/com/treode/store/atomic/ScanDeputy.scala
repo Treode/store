@@ -4,7 +4,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async.Async
 import com.treode.cluster.RequestDescriptor
-import com.treode.store.{Bytes, Bound, Cell, Key, Slice, TableId, TimeBounds, TxClock}
+import com.treode.store.{Bytes, Bound, Cell, Key, Slice, TableId, TxClock, Window}
 
 import Async.supply
 import ScanDeputy._
@@ -13,7 +13,7 @@ private class ScanDeputy (kit: AtomicKit) {
   import kit.{cluster, disks, tables}
   import kit.config.{scanBatchBytes, scanBatchEntries}
 
-  def scan (table: TableId, start: Bound [Key], window: TimeBounds, slice: Slice): Async [(Cells, Point)] =
+  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): Async [(Cells, Point)] =
     disks.join {
 
       val builder = Seq.newBuilder [Cell]
@@ -44,6 +44,6 @@ private object ScanDeputy {
     import AtomicPicklers._
     RequestDescriptor (
         0xFF9A8D740D013A6BL,
-        tuple (tableId, bound (key), timeBounds, slice),
+        tuple (tableId, bound (key), window, slice),
         tuple (seq (cell), option (key)))
   }}

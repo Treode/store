@@ -10,7 +10,7 @@ import org.scalatest.FlatSpec
 import AtomicTestTools._
 import Bound.{Exclusive, Inclusive}
 import Fruits._
-import TimeBounds.{Between, Recent, Through}
+import Window.{Between, Recent, Through}
 
 class ScanSpec extends FlatSpec {
 

@@ -104,7 +104,7 @@ private class StubAtomicHost (
   def status (xid: TxId): Async [TxStatus] =
     atomic.status (xid)
 
-  def scan (table: TableId, start: Bound [Key], window: TimeBounds, slice: Slice): CellIterator =
+  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
     atomic.scan (table, start, window, slice)
 
   def putCells (id: TableId, cs: Cell*) (implicit scheduler: StubScheduler): Unit =

@@ -15,7 +15,7 @@ import ScanDirector._
 private class ScanDirector (
     var start: Bound [Key],
     table: TableId,
-    window: TimeBounds,
+    window: Window,
     slice: Slice,
     kit: AtomicKit,
     body: Cell => Async [Unit],
@@ -163,7 +163,7 @@ private object ScanDirector {
   def scan (
       table: TableId,
       start: Bound [Key],
-      window: TimeBounds,
+      window: Window,
       slice: Slice,
       kit: AtomicKit
   ): CellIterator = {

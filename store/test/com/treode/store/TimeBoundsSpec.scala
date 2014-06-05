@@ -6,8 +6,8 @@ import com.treode.async.stubs.implicits._
 import org.scalatest.FreeSpec
 
 import Fruits.{Apple, Banana}
-import TimeBounds.{Recent, Between, Through}
 import StoreTestTools._
+import Window.{Recent, Between, Through}
 
 class TimeBoundsSpec extends FreeSpec {
 

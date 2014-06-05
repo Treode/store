@@ -38,7 +38,7 @@ package object store {
     def slice (table: TableId, slice: Slice): CellIterator =
       iter.filter (c => slice.contains (Cell.locator, (table, c.key)))
 
-    def window (window: TimeBounds) =
+    def window (window: Window) =
       window.filter (iter)
   }
 
