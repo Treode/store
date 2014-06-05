@@ -31,9 +31,9 @@ class ScanSpec extends FlatSpec {
     h2.putCells (SHORT, Banana##1::1, Grape##1::1)
     h3.putCells (SHORT, Apple##1::1, Grape##1::1)
 
-    h1.putCells (LONG, Apple##2::2, Apple##1::1, Banana##2::2, Banana##1::1)
-    h2.putCells (LONG, Apple##3::3, Apple##2::2, Banana##3::3, Banana##1::1)
-    h3.putCells (LONG, Apple##3::3, Apple##1::1, Banana##3::3, Banana##2::2)
+    h1.putCells (LONG, Apple##2::2, Apple##1::1, Grape##2::2, Grape##1::1)
+    h2.putCells (LONG, Apple##3::3, Apple##2::2, Grape##3::3, Grape##1::1)
+    h3.putCells (LONG, Apple##3::3, Apple##1::1, Grape##3::3, Grape##2::2)
 
     (kit, h1)
   }
@@ -44,7 +44,7 @@ class ScanSpec extends FlatSpec {
     import kit.scheduler
 
     assertCells () {
-      host.scan (EMPTY, MinStart, AllTimes)
+      host.scan (EMPTY, MinStart, AllTimes, AllSlices)
     }}
 
   it should "handle a non-empty table" in {
@@ -53,7 +53,7 @@ class ScanSpec extends FlatSpec {
     import kit.scheduler
 
     assertCells (Apple##1::1, Banana##1::1, Grape##1::1) {
-      host.scan (SHORT, MinStart, AllTimes)
+      host.scan (SHORT, MinStart, AllTimes, AllSlices)
     }}
 
   it should "handle an inclusive start position" in {
@@ -62,7 +62,7 @@ class ScanSpec extends FlatSpec {
     import kit.scheduler
 
     assertCells (Banana##1::1, Grape##1::1) {
-      host.scan (SHORT, Inclusive (Key (Banana, 1)), AllTimes)
+      host.scan (SHORT, Inclusive (Key (Banana, 1)), AllTimes, AllSlices)
     }}
 
   it should "handle an exclusive start position" in {
@@ -71,7 +71,7 @@ class ScanSpec extends FlatSpec {
     import kit.scheduler
 
     assertCells (Banana##1::1, Grape##1::1) {
-      host.scan (SHORT, Exclusive (Key (Apple, 1)), AllTimes)
+      host.scan (SHORT, Exclusive (Key (Apple, 1)), AllTimes, AllSlices)
     }}
 
   it should "handle a filter" in {
@@ -79,12 +79,30 @@ class ScanSpec extends FlatSpec {
     val (kit, host) = setup (true)
     import kit.scheduler
 
-    assertCells (Apple##1::1, Banana##1::1) {
-      host.scan (LONG, MinStart,  Recent (1, true))
+    assertCells (Apple##1::1, Grape##1::1) {
+      host.scan (LONG, MinStart, Recent (1, true), AllSlices)
     }
-    assertCells (Apple##2::2, Banana##2::2) {
-      host.scan (LONG, MinStart,  Recent (2, true))
+    assertCells (Apple##2::2, Grape##2::2) {
+      host.scan (LONG, MinStart, Recent (2, true), AllSlices)
     }
-    assertCells (Apple##3::3, Banana##3::3) {
-      host.scan (LONG, MinStart,  Recent (3, true))
+    assertCells (Apple##3::3, Grape##3::3) {
+      host.scan (LONG, MinStart, Recent (3, true), AllSlices)
+    }}
+
+  it should "return only a slice" in {
+
+    val (kit, host) = setup (true)
+    import kit.scheduler
+
+    assertCells () {
+      host.scan (LONG, MinStart, AllTimes, Slice (0, 4))
+    }
+    assertCells (Grape##3::3, Grape##2::2, Grape##1::1) {
+      host.scan (LONG, MinStart, AllTimes, Slice (1, 4))
+    }
+    assertCells () {
+      host.scan (LONG, MinStart, AllTimes, Slice (2, 4))
+    }
+    assertCells (Apple##3::3, Apple##2::2, Apple##1::1) {
+      host.scan (LONG, MinStart, AllTimes, Slice (3, 4))
     }}}

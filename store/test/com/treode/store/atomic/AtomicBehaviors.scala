@@ -19,13 +19,14 @@ import JavaConversions._
 trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
   this: FreeSpec =>
 
-  private def scan (ntables: Int, host: StubAtomicHost) (implicit scheduler: Scheduler) = {
+  private def scan (ntables: Int, nslices: Int, host: StubAtomicHost) (implicit scheduler: Scheduler) = {
     var cells = newTrackedCells
     for {
       _ <-
         for {
           id <- (0L until ntables) .async
-          c <- host.scan (id, MinStart, AllTimes)
+          slice <- (0 until nslices) .async
+          c <- host.scan (id, MinStart, AllTimes, Slice (slice, nslices))
         } supply {
           val tk = (id, c.key.long)
           cells += tk -> (cells (tk) + ((c.time, c.value.get.int)))
@@ -123,7 +124,7 @@ trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
         tracker.check (cells)
       }}}
 
-  private [atomic] def scanWholeDatabase () (implicit random: Random) = {
+  private [atomic] def scanWholeDatabase (nslices: Int) (implicit random: Random) = {
 
     val ntables = 100
     val tracker = new AtomicTracker
@@ -138,7 +139,7 @@ trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
 
     .run { implicit scheduler => (h1, h2) =>
       for {
-        cells <- scan (ntables, h1)
+        cells <- scan (ntables, nslices, h1)
       } yield {
         tracker.check (cells)
       }}

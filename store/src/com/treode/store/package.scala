@@ -34,6 +34,12 @@ package object store {
 
     def retire (limit: TxClock): CellIterator =
       Filters.retire (iter, limit)
+
+    def slice (table: TableId, slice: Slice): CellIterator =
+      iter.filter (c => slice.contains (Cell.locator, (table, c.key)))
+
+    def window (window: TimeBounds) =
+      window.filter (iter)
   }
 
   private [store] object log {

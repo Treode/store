@@ -60,14 +60,18 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
 
     "scan the whole databse with" - {
 
-      for { (name, flakiness) <- Seq (
-          "a reliable network" -> 0.0,
-          "a flakey network"   -> 0.1)
+      for { (name, nslices) <- Seq (
+          "one slice" -> 1,
+          "four slices" -> 4)
       } s"$name and" - {
 
-        implicit val config = StoreTestConfig (messageFlakiness = flakiness)
+        for { (name, flakiness) <- Seq (
+            "a reliable network" -> 0.0,
+            "a flakey network"   -> 0.1)
+        } s"$name and" - {
 
-        forVariousClusters { implicit random =>
-            scanWholeDatabase()
-        }}}
-  }}
+          implicit val config = StoreTestConfig (messageFlakiness = flakiness)
+
+          forVariousClusters { implicit random =>
+              scanWholeDatabase (nslices)
+          }}}}}}

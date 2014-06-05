@@ -20,6 +20,11 @@ object Cell extends Ordering [Cell] {
   def compare (x: Cell, y: Cell): Int =
     x compare y
 
+  val locator = {
+    import StorePicklers._
+    tuple (tableId, bytes)
+  }
+
   val pickler = {
     import StorePicklers._
     wrap (bytes, txClock, option (bytes))

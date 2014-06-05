@@ -24,6 +24,7 @@ private trait StorePicklers extends Picklers {
   def pos = Position.pickler
   def readOp = ReadOp.pickler
   def residents = Residents.pickler
+  def slice = Slice.pickler
   def tableId = TableId.pickler
   def tierMeta = TierTable.Meta.pickler
   def timeBounds = TimeBounds.pickler

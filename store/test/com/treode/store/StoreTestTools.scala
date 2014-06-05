@@ -22,6 +22,8 @@ private trait StoreTestTools {
 
   val MinStart = Bound.Inclusive (Key.MinValue)
 
+  val AllSlices = Slice (0, 1)
+
   val AllTimes = TimeBounds.Through (Bound.Inclusive (TxClock.MaxValue), TxClock.MinValue)
 
   def Get (id: TableId, key: Bytes): ReadOp =
@@ -95,10 +97,7 @@ private trait StoreTestTools {
   implicit class RichStore (store: Store) {
 
     def scan (table: TableId): CellIterator =
-      store.scan (
-          table,
-          Bound.Inclusive (Key.MinValue),
-          TimeBounds.Through (Bound.Inclusive (TxClock.MaxValue), TxClock.MinValue))
+      store.scan (table, MinStart, AllTimes, AllSlices)
 
     def expectCells (table: TableId) (expected: Cell*) (implicit scheduler: StubScheduler) =
       assertCells (expected: _*) (store.scan (table))

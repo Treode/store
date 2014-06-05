@@ -16,6 +16,7 @@ private class ScanDirector (
     var start: Bound [Key],
     table: TableId,
     window: TimeBounds,
+    slice: Slice,
     kit: AtomicKit,
     body: Cell => Async [Unit],
     cb: Callback [Unit]
@@ -92,7 +93,7 @@ private class ScanDirector (
       assert (count > 0)
       acks += element.from -> (count - 1, end)
       if (count < 5 && end.isDefined)
-        ScanDeputy.scan ((table, Exclusive (end.get), window)) (element.from, port)
+        ScanDeputy.scan ((table, Exclusive (end.get), window, slice)) (element.from, port)
       state = Processing
       start = Exclusive (element.cell.timedKey)
       body (element.cell) run (take)
@@ -133,7 +134,7 @@ private class ScanDirector (
         case _ if !(mark eq start) =>
           ()
         case _ if backoff.hasNext =>
-          ScanDeputy.scan ((table, start, window)) (awaiting, port)
+          ScanDeputy.scan ((table, start, window, slice)) (awaiting, port)
           scheduler.delay (backoff.next) (rouse (start))
         case Awaiting =>
           state = Closed
@@ -159,10 +160,16 @@ private object ScanDirector {
       x compare y
   }
 
-  def scan (table: TableId, start: Bound [Key], window: TimeBounds, kit: AtomicKit): CellIterator = {
+  def scan (
+      table: TableId,
+      start: Bound [Key],
+      window: TimeBounds,
+      slice: Slice,
+      kit: AtomicKit
+  ): CellIterator = {
     val iter = new CellIterator {
       def foreach (f: Cell => Async [Unit]): Async [Unit] =
-        async (new ScanDirector (start, table, window, kit, f, _))
+        async (new ScanDirector (start, table, window, slice, kit, f, _))
     }
     window.filter (iter.dedupe)
   }}

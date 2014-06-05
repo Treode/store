@@ -91,8 +91,11 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
         case op: Delete => t.delete (op.key, wt)
       }}}
 
-  def scan (table: TableId, start: Bound [Key], window: TimeBounds): AsyncIterator [Cell] =
-    window.filter (getTable (table) .iterator (start, library.residents))
+  def scan (table: TableId, start: Bound [Key], window: TimeBounds, slice: Slice): CellIterator =
+      getTable (table)
+        .iterator (start, library.residents)
+        .slice (table, slice)
+        .window (window)
 
   def receive (table: TableId, cells: Seq [Cell]): Async [Unit] = {
     val (gen, novel) = getTable (table) .receive (cells)
@@ -141,7 +144,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
 private object TimedStore {
 
   val table = TierDescriptor (0xB500D51FACAEA961L) { (residents, id, cell) =>
-    resident (residents, id, cell.key)
+    residents.contains (Cell.locator, (id, cell.key))
   }
 
   val receive = {
