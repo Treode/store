@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import scala.util.Random
 
 import com.treode.async.{Async, Callback, Scheduler}
-import com.treode.cluster.{Cluster, ReplyTracker}
+import com.treode.cluster.{Cluster, Peer, ReplyTracker}
 import com.treode.disk.Disk
 import com.treode.store._
 import com.treode.store.paxos.Paxos
@@ -42,6 +42,9 @@ private class AtomicKit (implicit
 
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
     ScanDirector.scan (table, start, window, slice, this)
+
+  def hosts (slice: Slice): Seq [(Peer, Int)] =
+    atlas.hosts (slice) .map {case (host, count) => (cluster.peer (host), count)}
 
   def rebalance (atlas: Atlas): Async [Unit] = {
     val targets = Targets (atlas)

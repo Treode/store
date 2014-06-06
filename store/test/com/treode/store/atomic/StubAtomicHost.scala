@@ -6,7 +6,7 @@ import com.treode.async.{Async, AsyncIterator, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.cluster.{Cluster, HostId}
+import com.treode.cluster.{Cluster, HostId, Peer}
 import com.treode.cluster.stubs.{StubPeer, StubNetwork}
 import com.treode.disk.Disk
 import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
@@ -106,6 +106,9 @@ private class StubAtomicHost (
 
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
     atomic.scan (table, start, window, slice)
+
+  def hosts (slice: Slice): Seq [(Peer, Int)] =
+    atomic.hosts (slice)
 
   def putCells (id: TableId, cs: Cell*) (implicit scheduler: StubScheduler): Unit =
     atomic.tables.receive (id, cs) .pass

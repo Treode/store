@@ -43,6 +43,17 @@ class Atlas private (
     new Residents (nums.toSet, cohorts.size - 1)
   }
 
+  def hosts (slice: Slice): Seq [(HostId, Int)] = {
+    Stream
+        .iterate (slice.slice & mask) (_ + slice.nslices)
+        .takeWhile (_ < cohorts.length)
+        .map (cohorts (_) .hosts)
+        .flatten
+        .groupBy (x => x)
+        .toSeq
+        .map {case (host, count) => (host, count.length)}
+  }
+
   private def cohortsAsObjects: Array [Object] =
     cohorts.asInstanceOf [Array [Object]]
 

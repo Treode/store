@@ -3,7 +3,7 @@ package com.treode.store
 import scala.util.Random
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
-import com.treode.cluster.Cluster
+import com.treode.cluster.{Cluster, Peer}
 import com.treode.disk.Disk
 
 trait Store {
@@ -15,6 +15,8 @@ trait Store {
   def status (xid: TxId): Async [TxStatus]
 
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): AsyncIterator [Cell]
+
+  def hosts (slice: Slice): Seq [(Peer, Int)]
 }
 
 object Store {

@@ -6,6 +6,7 @@ import scala.collection.JavaConversions
 import com.treode.async.{Async, AsyncIterator, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
+import com.treode.cluster.Peer
 import com.treode.store._
 import com.treode.store.locks.LockSpace
 
@@ -106,6 +107,9 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
         .slice (table, slice)
         .window (window)
   }
+
+  def hosts (slice: Slice): Seq [(Peer, Int)] =
+    Seq.empty
 
   def scan (table: TableId): Seq [Cell] =
     for ((key, value) <- data.toSeq; if key.table == table)
