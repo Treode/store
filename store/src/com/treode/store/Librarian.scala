@@ -49,25 +49,9 @@ private class Librarian private (
   private def advance() {
     if (!active) return
     if (atlas.version != issued) return
-    val current = receipts .filter (_._2 == issued) .keySet
-    if (!atlas.quorum (current)) return
-    val moved = moves .filter (_._2 == issued) .keySet
-    var changed = false
-    val cohorts =
-      for (cohort <- atlas.cohorts) yield
-        cohort match {
-          case Issuing (origin, targets) =>
-            changed = true
-            Moving (origin, targets)
-          case Moving (origin, targets) if cohort.quorum (moved) =>
-            changed = true
-            Settled (targets)
-          case _ =>
-            cohort
-      }
-    if (!changed) return
-    val version = atlas.version + 1
-    catalogs.issue (Atlas.catalog) (version, Atlas (cohorts, version)) run {
+    val next = atlas.advance (receipts, moves)
+    if (next.isEmpty) return
+    catalogs.issue (Atlas.catalog) (next.get.version, next.get) run {
       case Success (_) => ()
       case Failure (_: StaleException) => install (library.atlas)
       case Failure (_: TimeoutException) => install (library.atlas)

@@ -54,6 +54,33 @@ class Atlas private (
         .map {case (host, count) => (host, count.length)}
   }
 
+  def advance (receipts: Map [HostId, Int], moves: Map [HostId, Int]): Option [Atlas] = {
+
+    val current = receipts.filter (_._2 == version) .keySet
+    if (!quorum (current))
+      return None
+
+    val moved = moves.filter (_._2 == version) .keySet
+    var changed = false
+    val next =
+      for (cohort <- cohorts) yield
+        cohort match {
+          case Issuing (origin, targets) =>
+            changed = true
+            Moving (origin, targets)
+          case Moving (origin, targets) if cohort.quorum (moved) =>
+            changed = true
+            Settled (targets)
+          case _ =>
+            cohort
+      }
+
+    if (changed)
+      Some (Atlas (next, version + 1))
+    else
+      None
+  }
+
   private def cohortsAsObjects: Array [Object] =
     cohorts.asInstanceOf [Array [Object]]
 
