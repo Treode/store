@@ -4,6 +4,7 @@ import java.util.{Arrays, Objects}
 import com.treode.cluster.{HostId, RumorDescriptor}
 import com.treode.pickle.Pickler
 
+import Atlas.shrink
 import Cohort.{Issuing, Moving, Settled}
 import Integer.highestOneBit
 
@@ -54,7 +55,7 @@ class Atlas private (
         .map {case (host, count) => (host, count.length)}
   }
 
-  def advance (receipts: Map [HostId, Int], moves: Map [HostId, Int]): Option [Atlas] = {
+  private [store] def advance (receipts: Map [HostId, Int], moves: Map [HostId, Int]): Option [Atlas] = {
 
     val current = receipts.filter (_._2 == version) .keySet
     if (!quorum (current))
@@ -74,11 +75,10 @@ class Atlas private (
           case _ =>
             cohort
       }
+    if (!changed)
+      return None
 
-    if (changed)
-      Some (Atlas (next, version + 1))
-    else
-      None
+    Some (Atlas (shrink (next), version + 1))
   }
 
   private def cohortsAsObjects: Array [Object] =
@@ -100,6 +100,21 @@ class Atlas private (
 }
 
 object Atlas {
+
+  private [store] def shrink (cohorts: Array [Cohort]): Array [Cohort] = {
+    val groups = (0 until cohorts.length) groupBy (cohorts.apply (_))
+    val sizes = groups.values.map (_.size)  .toSet
+    if (sizes.size != 1 || sizes.head == 1)
+      return cohorts
+    val reduction = sizes.head
+    if (reduction != highestOneBit (reduction))
+      return cohorts
+    val size = cohorts.length / reduction
+    val mask = size - 1
+    if (groups.map (_._2.map (_ & mask) .toSet.size) .toSet.size != 1)
+      return cohorts
+    Arrays.copyOf (cohorts, size)
+  }
 
   def apply (cohorts: Array [Cohort], version: Int): Atlas = {
 

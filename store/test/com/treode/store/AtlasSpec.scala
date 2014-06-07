@@ -33,6 +33,66 @@ class AtlasSpec extends FreeSpec {
   def atlas (version: Int) (cohorts: Cohort*): Atlas =
     Atlas (cohorts.toArray, version)
 
+  "Atlas.shrink should" - {
+
+    def shrink (cohorts: Cohort*): Seq [Cohort] =
+      Atlas.shrink (cohorts.toArray) .toSeq
+
+    "not shrink an atlas of size one" in {
+      assertResult {
+        Seq (settled (H1, H2, H3))
+      } {
+        shrink (settled (H1, H2, H3))
+      }}
+
+    "not shrink an atlas with different cohorts" in {
+      assertResult {
+        Seq (
+            settled (H1, H2, H3),
+            settled (H1, H2, H4))
+      } {
+        shrink (
+            settled (H1, H2, H3),
+            settled (H1, H2, H4))
+      }}
+
+    "not shrink an atlas with one different cohort" in {
+      assertResult {
+        Seq (
+            settled (H1, H2, H3),
+            settled (H1, H2, H4),
+            settled (H1, H2, H3),
+            settled (H1, H2, H3))
+      } {
+        shrink (
+            settled (H1, H2, H3),
+            settled (H1, H2, H4),
+            settled (H1, H2, H3),
+            settled (H1, H2, H3))
+      }}
+
+    "shrink an atlas with one repeating cohorts" in {
+      assertResult {
+        Seq (settled (H1, H2, H3))
+      } {
+        shrink (
+            settled (H1, H2, H3),
+            settled (H1, H2, H3))
+      }}
+
+    "shrink an atlas with two repeating cohorts" in {
+      assertResult {
+        Seq (
+            settled (H1, H2, H3),
+            settled (H1, H2, H4))
+      } {
+        shrink (
+            settled (H1, H2, H3),
+            settled (H1, H2, H4),
+            settled (H1, H2, H3),
+            settled (H1, H2, H4))
+      }}}
+
   "Atlas.hosts should yield the prefered hosts when" - {
 
     val a = atlas (1) (
@@ -68,7 +128,7 @@ class AtlasSpec extends FreeSpec {
     "not change an issuing cohorts when the receipts are behind" in {
       assertResult (None) {
         atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
-            .advance (hostsAt1, hostsAt1)
+        .advance (hostsAt1, hostsAt1)
       }}
 
     "change issuing to moving when a quorum is current" in {
@@ -76,8 +136,8 @@ class AtlasSpec extends FreeSpec {
         atlas (3) (moving (H1, H2, H3) (H4, H5, H6))
       } {
         atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
-            .advance (hostsAt1.set (2) (H1, H2, H4, H5), hostsAt1)
-            .get
+        .advance (hostsAt1.set (2) (H1, H2, H4, H5), hostsAt1)
+        .get
       }}
 
     "not change a moving cohort when the moves are behind" in {
@@ -91,6 +151,6 @@ class AtlasSpec extends FreeSpec {
         atlas (3) (settled (H4, H5, H6))
       } {
         atlas (2) (moving (H1, H2, H3) (H4, H5, H6))
-            .advance (hostsAt2, hostsAt1.set (2) (H1, H2, H4, H5))
-            .get
+        .advance (hostsAt2, hostsAt1.set (2) (H1, H2, H4, H5))
+        .get
       }}}}
