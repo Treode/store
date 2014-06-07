@@ -21,7 +21,7 @@ private class AtomicKit (implicit
     val library: Library,
     val paxos: Paxos,
     val config: StoreConfig
-) extends Store {
+) extends Atomic {
 
   import library.{atlas, releaser}
 
@@ -54,21 +54,3 @@ private class AtomicKit (implicit
       if (targets.isEmpty)
         tables.compact()
     }}}
-
-private [store] object AtomicKit {
-
-  trait Recovery {
-
-    def launch (implicit launch: Disk.Launch, paxos: Paxos): Async [Store]
-  }
-
-  def recover() (implicit
-      random: Random,
-      scheduler: Scheduler,
-      cluster: Cluster,
-      library: Library,
-      recovery: Disk.Recovery,
-      config: StoreConfig
-  ): Recovery =
-    new RecoveryKit
-}

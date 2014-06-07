@@ -107,7 +107,7 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
     implicit val recovery = StubDisk.recover (config.stubDiskConfig)
     implicit val _catalogs = Catalogs.recover()
     val _paxos = Paxos.recover()
-    val _atomic = AtomicKit.recover()
+    val _atomic = Atomic.recover()
 
     for {
       launch <- if (init) recovery.attach (drive) else recovery.reattach (drive)

@@ -23,7 +23,7 @@ private class RecoveryKit (implicit
     val library: Library,
     val recovery: Disk.Recovery,
     val config: StoreConfig
-) extends AtomicKit.Recovery {
+) extends Atomic.Recovery {
 
   val tables = new TimedMedic (this)
   val writers = newWriterMedicsMap
@@ -57,7 +57,7 @@ private class RecoveryKit (implicit
     tables.checkpoint (tab, meta)
   }
 
-  def launch (implicit launch: Disk.Launch, paxos: Paxos): Async [Store] =
+  def launch (implicit launch: Disk.Launch, paxos: Paxos): Async [Atomic] =
     supply {
       import launch.disks
 

@@ -32,11 +32,11 @@ object StandAlone {
     def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =
       controller.listen (desc) (f)
 
-    def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Unit =
+    def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit] =
       controller.issue (desc) (version, cat)
 
-    def issue (atlas: Atlas): Unit =
-      controller.issue (Atlas.catalog) (atlas.version - 1, atlas)
+    def rebalance (cohorts: Seq [Cohort]): Unit =
+      controller.rebalance (cohorts)
   }
 
   def create (

@@ -27,9 +27,9 @@ object Store {
 
     def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any)
 
-    def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C)
+    def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit]
 
-    def issue (atlas: Atlas)
+    def rebalance (cohorts: Seq [Cohort])
   }
 
   trait Recovery {
