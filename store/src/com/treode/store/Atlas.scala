@@ -15,6 +15,12 @@ class Atlas private (
 
   private val mask = cohorts.length - 1
 
+  private def _arraysEqual (x: Array [Cohort], y: Array [Cohort]): Boolean =
+      Arrays.equals (x.asInstanceOf [Array [Object]], y.asInstanceOf [Array [Object]])
+
+  private def _arrayHash (x: Array [Cohort]): Int =
+      Arrays.hashCode (x.asInstanceOf [Array [Object]])
+
   def place (id: Int): Int =
     id & mask
 
@@ -55,6 +61,31 @@ class Atlas private (
         .map {case (host, count) => (host, count.length)}
   }
 
+  def change (cohorts: Array [Cohort]): Option [Atlas] = {
+    require (
+        highestOneBit (cohorts.length) == cohorts.length,
+        "Number of cohorts must be a power of two.")
+
+    val mask = cohorts.length - 1
+    val size = math.max (cohorts.length, this.cohorts.length)
+    val next = Array.tabulate [Cohort] (size) { i =>
+      val before = this.cohorts (i & this.mask)
+      val after = cohorts (i & mask)
+      if (before.target == after.target)
+        if (before.settled)
+          Settled (before.target)
+        else
+          before
+      else
+        Issuing (before.origin, after.target)
+    }
+
+    if (_arraysEqual (this.cohorts, next))
+      return None
+
+    Some (Atlas (shrink (next), version + 1))
+  }
+
   private [store] def advance (receipts: Map [HostId, Int], moves: Map [HostId, Int]): Option [Atlas] = {
 
     val current = receipts.filter (_._2 == version) .keySet
@@ -81,19 +112,16 @@ class Atlas private (
     Some (Atlas (shrink (next), version + 1))
   }
 
-  private def cohortsAsObjects: Array [Object] =
-    cohorts.asInstanceOf [Array [Object]]
-
   override def equals (other: Any): Boolean =
     other match {
       case that: Atlas =>
-         Arrays.equals (cohortsAsObjects, that.cohortsAsObjects) && version == that.version
+        _arraysEqual (cohorts, that.cohorts) && version == that.version
       case _ =>
         false
     }
 
   override def hashCode: Int =
-    Objects.hashCode (Arrays.hashCode (cohortsAsObjects), version)
+    Objects.hashCode (_arrayHash (cohorts), version)
 
   override def toString: String =
     s"Atlas($version,\n   ${cohorts mkString "\n    "})"

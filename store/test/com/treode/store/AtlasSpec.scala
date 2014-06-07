@@ -21,6 +21,12 @@ class AtlasSpec extends FreeSpec {
   val hostsAt1 = Map.empty [HostId, Int] .set (1) (HS: _*)
   val hostsAt2 = Map.empty [HostId, Int] .set (2) (HS: _*)
 
+  implicit class RichAtlas (atlas: Atlas) {
+
+    def change (cohorts: Cohort*): Option [Atlas] =
+      atlas.change (cohorts.toArray)
+  }
+
   implicit class RichHostMap (map: Map [HostId, Int]) {
 
     def set (version: Int) (hosts: HostId*): Map [HostId, Int] = {
@@ -121,6 +127,143 @@ class AtlasSpec extends FreeSpec {
     "the number of slices is larger than the cohort map" in {
       assertResult (Map (H1 -> 1, H3 -> 1, H7 -> 1)) {
         a.hosts (Slice (1, 16)) .toMap
+      }}}
+
+  "Atlas.change should" - {
+
+    "not change settled when the new one is settled the same way" in {
+      assertResult (None) {
+        atlas (1) (settled (H1, H2, H3))
+        .change (settled (H1, H2, H3))
+      }}
+
+    "not change settled when the new one is issuing to the same target" in {
+      assertResult (None) {
+        atlas (1) (settled (H1, H2, H3))
+        .change (issuing (H4, H5, H6) (H1, H2, H3))
+      }}
+
+    "not change settled when the new one is moving to the same target" in {
+      assertResult (None) {
+        atlas (1) (settled (H1, H2, H3))
+        .change (issuing (H4, H5, H6) (H1, H2, H3))
+      }}
+
+    "change settled to issuing when the new one is settled a different way" in {
+      assertResult {
+        atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
+      } {
+        atlas (1) (settled (H1, H2, H3))
+        .change (settled (H4, H5, H6))
+        .get
+      }}
+
+    "change settled to issuing when the new one is issuing a different way" in {
+      assertResult {
+        atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
+      } {
+        atlas (1) (settled (H1, H2, H3))
+        .change (issuing (H1, H2, H3) (H4, H5, H6))
+        .get
+      }}
+
+    "change settled to issuing when the new one is moving a different way" in {
+      assertResult {
+        atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
+      } {
+        atlas (1) (settled (H1, H2, H3))
+        .change (moving (H1, H2, H3) (H4, H5, H6))
+        .get
+      }}
+
+    "not change issuing when the new one is settled to the same target" in {
+      assertResult (None) {
+        atlas (1) (issuing (H4, H5, H6) (H1, H2, H3))
+        .change (settled (H1, H2, H3))
+      }}
+
+    "not change issuing when the new one is issuing to the same target" in {
+      assertResult (None) {
+        atlas (1) (issuing (H4, H7, H8) (H1, H2, H3))
+        .change (issuing (H4, H5, H6) (H1, H2, H3))
+      }}
+
+    "not change issuing when the new one is moving to the same target" in {
+      assertResult (None) {
+        atlas (1) (moving (H4, H5, H6) (H1, H2, H3))
+        .change (issuing (H4, H5, H6) (H1, H2, H3))
+      }}
+
+    "change issuing when the new one is settled a different way" in {
+      assertResult {
+        atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
+      } {
+        atlas (1) (issuing (H1, H2, H3) (H4, H7, H8))
+        .change (settled (H4, H5, H6))
+        .get
+      }}
+
+    "change issuing when the new one is issuing a different way" in {
+      assertResult {
+        atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
+      } {
+        atlas (1) (issuing (H1, H2, H3) (H4, H7, H8))
+        .change (issuing (H1, H2, H3) (H4, H5, H6))
+        .get
+      }}
+
+    "change issuing when the new one is moving a different way" in {
+      assertResult {
+        atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
+      } {
+        atlas (1) (issuing (H1, H2, H3) (H4, H7, H8))
+        .change (moving (H1, H2, H3) (H4, H5, H6))
+        .get
+      }}
+
+    "not change moving when the new one is settled to the same target" in {
+      assertResult (None) {
+        atlas (1) (moving (H4, H5, H6) (H1, H2, H3))
+        .change (settled (H1, H2, H3))
+      }}
+
+    "not change moving when the new one is issuing to the same target" in {
+      assertResult (None) {
+        atlas (1) (moving (H4, H7, H8) (H1, H2, H3))
+        .change (issuing (H4, H5, H6) (H1, H2, H3))
+      }}
+
+    "not change moving when the new one is moving to the same target" in {
+      assertResult (None) {
+        atlas (1) (moving (H4, H5, H6) (H1, H2, H3))
+        .change (issuing (H4, H5, H6) (H1, H2, H3))
+      }}
+
+    "change moving when the new one is settled a different way" in {
+      assertResult {
+        atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
+      } {
+        atlas (1) (moving (H1, H2, H3) (H4, H7, H8))
+        .change (settled (H4, H5, H6))
+        .get
+      }}
+
+    "change moving when the new one is issuing a different way" in {
+      assertResult {
+        atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
+      } {
+        atlas (1) (moving (H1, H2, H3) (H4, H7, H8))
+        .change (issuing (H1, H2, H3) (H4, H5, H6))
+        .get
+      }}
+
+    "change moving when the new one is moving a different way" in {
+      assertResult {
+        atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
+      } {
+        atlas (1) (moving (H1, H2, H3) (H4, H7, H8))
+        .change (moving (H1, H2, H3) (H4, H5, H6))
+        .get
       }}}
 
   "Atlas.advance should" - {

@@ -8,6 +8,8 @@ import Cohort._
 sealed abstract class Cohort {
 
   def hosts: Set [HostId]
+  def origin: Set [HostId]
+  def target: Set [HostId]
   def track: ReplyTracker
   def quorum (acks: Set [HostId]): Boolean
 
@@ -24,6 +26,8 @@ object Cohort {
   case object Empty extends Cohort {
 
     def hosts = Set.empty
+    def origin = Set.empty
+    def target = Set.empty
 
     def track: ReplyTracker =
       ReplyTracker.empty
@@ -37,6 +41,9 @@ object Cohort {
     val nquorum = (hosts.size >> 1) + 1
 
     require (hosts.size.isOdd, "The cohort needs an odd number of hosts.")
+
+    def origin = hosts
+    def target = hosts
 
     def track: ReplyTracker =
       ReplyTracker.settled (hosts)
