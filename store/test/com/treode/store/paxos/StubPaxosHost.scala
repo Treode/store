@@ -45,34 +45,8 @@ private class StubPaxosHost (
     library.residents = atlas.residents (localId)
   }
 
-  def issueAtlas (cohorts: Cohort*): Async [Unit] = {
-    var issued = false
-    var tries = 0
-    scheduler.whilst (!issued) {
-      val save = (library.atlas, library.residents)
-      val version = library.atlas.version + 1
-      val atlas = Atlas (cohorts.toArray, version)
-      library.atlas = atlas
-      library.residents = atlas.residents (localId)
-      catalogs
-          .issue (Atlas.catalog) (version, atlas)
-          .map (_ => issued = true)
-          .recover {
-            case _: Throwable if !(library.atlas eq atlas) && library.atlas == atlas =>
-              issued = true
-            case t: StaleException if tries < 16 =>
-              if (library.atlas eq atlas) {
-                library.atlas = save._1
-                library.residents = save._2
-              }
-              tries += 1
-            case t: TimeoutException if tries < 16 =>
-              if (library.atlas eq atlas) {
-                library.atlas = save._1
-                library.residents = save._2
-              }
-              tries += 1
-          }}}
+  def issueAtlas (cohorts: Cohort*): Unit =
+    librarian.issueAtlas (cohorts.toArray)
 
   def atlas: Atlas =
     library.atlas

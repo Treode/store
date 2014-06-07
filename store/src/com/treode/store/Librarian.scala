@@ -6,7 +6,7 @@ import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.cluster.{Cluster, HostId, Peer}
 import com.treode.store.catalog.Catalogs
 
-import Async.guard
+import Async.{guard, supply}
 import Callback.ignore
 import Cohort._
 
@@ -80,6 +80,46 @@ private class Librarian private (
     if (issued < issue) issued = issue
     moves += peer.id -> issue
     if (moving) advance()
+  }
+
+  def issueAtlas (cohorts: Array [Cohort]): Unit = fiber.execute {
+    var issued = false
+    var tries = 0
+    scheduler.whilst (!issued) {
+      val change =
+        if (library.atlas.version == 0)
+          Some (Atlas (cohorts, 1))
+        else
+          library.atlas.change (cohorts)
+      if (change.isEmpty) {
+        supply (issued = true)
+      } else {
+        val save = (library.atlas, library.residents)
+        val atlas = change.get
+        if (library.atlas.version == 0) {
+          library.atlas = atlas
+          library.residents = atlas.residents (localId)
+        }
+        catalogs
+            .issue (Atlas.catalog) (atlas.version, atlas)
+            .map (_ => issued = true)
+            .recover {
+              case _: Throwable if !(library.atlas eq atlas) && library.atlas == atlas =>
+                issued = true
+              case t: StaleException if tries < 16 =>
+                if (library.atlas eq atlas) {
+                  library.atlas = save._1
+                  library.residents = save._2
+                }
+                tries += 1
+              case t: TimeoutException if tries < 16 =>
+                if (library.atlas eq atlas) {
+                  library.atlas = save._1
+                  library.residents = save._2
+                }
+                tries += 1
+            }}
+    } .run (ignore)
   }}
 
 private object Librarian {
