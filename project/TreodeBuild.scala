@@ -192,8 +192,8 @@ object TreodeBuild extends Build {
         "-Yinline-warnings"),
 
       libraryDependencies ++= Seq (
-        "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.3.2",
-        "com.twitter" %% "finatra" % "1.5.2"),
+        "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.0",
+        "com.twitter" %% "finatra" % "1.5.3"),
 
       resolvers += "Twitter" at "http://maven.twttr.com")
 

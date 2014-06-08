@@ -25,11 +25,13 @@ object Store {
 
     implicit def store: Store
 
+    def cohorts: Seq [Cohort]
+
+    def cohorts_= (cohorts: Seq [Cohort])
+
     def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any)
 
     def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit]
-
-    def rebalance (cohorts: Seq [Cohort])
   }
 
   trait Recovery {

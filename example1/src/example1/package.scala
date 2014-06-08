@@ -21,8 +21,10 @@ package example1 {
 
 package object example1 {
 
-  private val textJson = new ObjectMapper()
-  private val binaryJson = new ObjectMapper (new SmileFactory)
+  val textJson = new ObjectMapper()
+  textJson.registerModule (TreodeModule)
+
+  val binaryJson = new ObjectMapper (new SmileFactory)
 
   val ContentType = "Content-Type"
   val ETag = "ETag"

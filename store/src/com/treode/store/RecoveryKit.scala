@@ -39,5 +39,5 @@ private class RecoveryKit (implicit
         latch (paxos.rebalance (atlas), atomic.rebalance (atlas)) .map (_ => ())
       } (scheduler, cluster, catalogs, library)
 
-      new ControllerAgent (catalogs, librarian, atomic)
+      new ControllerAgent (library, librarian, catalogs, atomic)
     }}}

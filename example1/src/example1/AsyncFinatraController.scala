@@ -1,6 +1,7 @@
 package example1
 
 import com.treode.async.Async
+import com.treode.store.TimeoutException
 import com.twitter.finatra.{Controller => FinatraController, Request, ResponseBuilder}
 import com.twitter.util.Future
 
@@ -13,7 +14,9 @@ trait AsyncFinatraController {
   private def adapt (cb: Request => Async [ResponseBuilder]) (request: Request): Future [ResponseBuilder] = {
     cb (request) .toTwitterFuture rescue {
       case e: BadRequestException =>
-        render.status (400) .plain (e.message) .toFuture
+        render.status (400) .plain (e.message + "\n") .toFuture
+      case e: TimeoutException =>
+        render.status (500) .plain ("Server timed out.\n") .toFuture
     }}
 
   def head (path: String) (callback: Request => Async [ResponseBuilder]): Unit =

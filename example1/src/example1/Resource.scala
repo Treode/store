@@ -68,6 +68,4 @@ class Resource (store: Store) extends AsyncFinatraController {
         render.status (Conflict) .nothing
       case _: StaleException =>
         render.status (PreconditionFailed) .nothing
-      case _: TimeoutException =>
-        render.status (500) .nothing
     }}}

@@ -21,4 +21,5 @@ object Server extends AsyncFinatraServer {
   }
 
   register (new Resource (controller.store))
+  register (new AdminAtlas (controller))
 }
