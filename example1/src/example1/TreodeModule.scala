@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.treode.cluster.HostId
 import com.treode.store.Cohort
 
-import Cohort.{Empty, Issuing, Moving, Settled}
+import Cohort.{Issuing, Moving, Settled}
 
 object TreodeModule extends SimpleModule (
     "TreodeModule",
@@ -18,20 +18,10 @@ object TreodeModule extends SimpleModule (
          classOf [Cohort] -> CohortDeserializer,
          classOf [HostId] -> HostIdDeserializer),
      List (
-         EmptySerializer,
          HostIdSerializer,
          IssuingSerializer,
          MovingSerializer,
          SettledSerializer))
-
-object EmptySerializer
-extends StdSerializer [Empty.type] (Empty.getClass.asInstanceOf [Class [Empty.type]]) {
-
-  def serialize (value: Empty.type, jgen: JsonGenerator, provider: SerializerProvider) {
-    jgen.writeStartObject()
-    jgen.writeObjectField ("state", "empty")
-    jgen.writeEndObject()
-  }}
 
 object HostIdSerializer extends StdSerializer [HostId] (classOf [HostId]) {
 
@@ -133,10 +123,6 @@ object CohortDeserializer extends StdDeserializer [Cohort] (classOf [Cohort]) {
     val origin = readHosts (jparser, node, "origin")
     val target = readHosts (jparser, node, "target")
     state match {
-      case "empty" if hosts.isEmpty && origin.isEmpty && target.isEmpty =>
-        Cohort.empty
-      case "empty" =>
-        throw context.mappingException ("An empty cohort should not have hosts, origin or target")
       case "settled" if !hosts.isEmpty && origin.isEmpty && target.isEmpty =>
         Cohort.Settled (hosts)
       case "settled" =>

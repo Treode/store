@@ -18,6 +18,8 @@ package store {
 
   class RemoteException extends CRemoteException
 
+  class EmptyAtlasException extends Exception
+
   trait Op {
     def table: TableId
     def key: Bytes
