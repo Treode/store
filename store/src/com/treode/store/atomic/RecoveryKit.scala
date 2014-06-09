@@ -19,7 +19,6 @@ import WriteDeputy.{aborted, committed, preparing}
 private class RecoveryKit (implicit
     val random: Random,
     val scheduler: Scheduler,
-    val cluster: Cluster,
     val library: Library,
     val recovery: Disk.Recovery,
     val config: StoreConfig
@@ -57,7 +56,7 @@ private class RecoveryKit (implicit
     tables.checkpoint (tab, meta)
   }
 
-  def launch (implicit launch: Disk.Launch, paxos: Paxos): Async [Atomic] =
+  def launch (implicit launch: Disk.Launch, cluster: Cluster, paxos: Paxos): Async [Atomic] =
     supply {
       import launch.disks
 

@@ -13,7 +13,6 @@ import Async.guard
 private class RecoveryKit (implicit
     random: Random,
     scheduler: Scheduler,
-    cluster: Cluster,
     library: Library,
     recovery: Disk.Recovery,
     config: StoreConfig
@@ -47,7 +46,7 @@ private class RecoveryKit (implicit
       (id, handler)
     }
 
-  def launch (implicit launch: Disk.Launch): Async [Catalogs] =
+  def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Catalogs] =
     fiber.guard {
       import launch.disks
       for {

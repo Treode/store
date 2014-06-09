@@ -15,7 +15,6 @@ import Store.Controller
 private class RecoveryKit (implicit
     random: Random,
     scheduler: Scheduler,
-    cluster: Cluster,
     recovery: Disk.Recovery,
     config: StoreConfig
 ) extends Store.Recovery {
@@ -26,13 +25,13 @@ private class RecoveryKit (implicit
   val _paxos = Paxos.recover()
   val _atomic = Atomic.recover()
 
-  def launch (launch: Disk.Launch): Async [Controller] = {
+  def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Controller] = {
     import launch.disks
 
     for {
-      catalogs <- _catalogs.launch (launch)
-      paxos <- _paxos.launch (launch)
-      atomic <- _atomic.launch (launch, paxos)
+      catalogs <- _catalogs.launch (launch, cluster)
+      paxos <- _paxos.launch (launch, cluster)
+      atomic <- _atomic.launch (launch, cluster, paxos)
     } yield {
 
       val librarian = Librarian { atlas =>

@@ -91,8 +91,8 @@ private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] 
 
     for {
       launch <- if (init) recovery.attach (drive) else recovery.reattach (drive)
-      catalogs <- _catalogs.launch (launch)
-      paxos <- _paxos.launch (launch) map (_.asInstanceOf [PaxosKit])
+      catalogs <- _catalogs.launch (launch, cluster)
+      paxos <- _paxos.launch (launch, cluster) map (_.asInstanceOf [PaxosKit])
     } yield {
       launch.launch()
       new StubPaxosHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, paxos)

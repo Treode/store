@@ -20,13 +20,12 @@ private [store] object Paxos {
 
   trait Recovery {
 
-    def launch (implicit launch: Disk.Launch): Async [Paxos]
+    def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Paxos]
   }
 
   def recover() (implicit
       random: Random,
       scheduler: Scheduler,
-      cluster: Cluster,
       library: Library,
       recovery: Disk.Recovery,
       config: StoreConfig

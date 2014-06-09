@@ -17,13 +17,12 @@ private [store] object Atomic {
 
   trait Recovery {
 
-    def launch (implicit launch: Disk.Launch, paxos: Paxos): Async [Atomic]
+    def launch (implicit launch: Disk.Launch, cluster: Cluster, paxos: Paxos): Async [Atomic]
   }
 
   def recover() (implicit
       random: Random,
       scheduler: Scheduler,
-      cluster: Cluster,
       library: Library,
       recovery: Disk.Recovery,
       config: StoreConfig

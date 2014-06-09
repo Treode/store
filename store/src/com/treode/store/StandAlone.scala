@@ -60,11 +60,11 @@ object StandAlone {
 
     val _disks = Disk.recover () (scheduler, disksConfig)
 
-    val _store = Store.recover () (random, scheduler, cluster, _disks, storeConfig)
+    val _store = Store.recover () (random, scheduler, _disks, storeConfig)
 
     for {
       launch <- _disks.attach (items: _*)
-      store <- _store.launch (launch)
+      store <- _store.launch (launch, cluster)
     } yield {
       new Controller (executor, cluster, launch.controller, store)
     }}
@@ -87,11 +87,11 @@ object StandAlone {
 
     val _disks = Disk.recover () (scheduler, disksConfig)
 
-    val _store = Store.recover () (random, scheduler, cluster, _disks, storeConfig)
+    val _store = Store.recover () (random, scheduler, _disks, storeConfig)
 
     for {
       launch <- _disks.reattach (items: _*)
-      store <- _store.launch (launch)
+      store <- _store.launch (launch, cluster)
     } yield {
       new Controller (executor, cluster, launch.controller, store)
     }}}

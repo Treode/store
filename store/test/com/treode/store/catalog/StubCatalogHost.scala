@@ -36,7 +36,7 @@ extends StubStoreHost {
   val _launch =
     for {
       launch <- recovery.attach (diskDrive)
-      catalogs <- _catalogs.launch (launch) .map (_.asInstanceOf [CatalogKit])
+      catalogs <- _catalogs.launch (launch, cluster) .map (_.asInstanceOf [CatalogKit])
     } yield {
       launch.launch()
       catalogs.listen (cat1) (v1 = _)

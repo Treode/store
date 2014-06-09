@@ -19,7 +19,6 @@ import JavaConversions._
 private class RecoveryKit (implicit
     val random: Random,
     val scheduler: Scheduler,
-    val cluster: Cluster,
     val library: Library,
     val recovery: Disk.Recovery,
     val config: StoreConfig
@@ -65,7 +64,7 @@ private class RecoveryKit (implicit
     archive.checkpoint (meta)
   }
 
-  def launch (implicit launch: Disk.Launch): Async [Paxos] =
+  def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Paxos] =
     supply {
       import launch.disks
       val kit = new PaxosKit (archive.close())

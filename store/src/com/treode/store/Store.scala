@@ -36,13 +36,12 @@ object Store {
 
   trait Recovery {
 
-    def launch (launch: Disk.Launch): Async [Controller]
+    def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Controller]
   }
 
   def recover() (implicit
       random: Random,
       scheduler: Scheduler,
-      cluster: Cluster,
       recovery: Disk.Recovery,
       config: StoreConfig
   ): Recovery =

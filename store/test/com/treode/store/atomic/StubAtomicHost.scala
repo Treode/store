@@ -111,9 +111,9 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
 
     for {
       launch <- if (init) recovery.attach (drive) else recovery.reattach (drive)
-      catalogs <- _catalogs.launch (launch)
-      paxos <- _paxos.launch (launch)
-      atomic <- _atomic.launch (launch, paxos) .map (_.asInstanceOf [AtomicKit])
+      catalogs <- _catalogs.launch (launch, cluster)
+      paxos <- _paxos.launch (launch, cluster)
+      atomic <- _atomic.launch (launch, cluster, paxos) .map (_.asInstanceOf [AtomicKit])
     } yield {
       launch.launch()
       new StubAtomicHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, paxos, atomic)
