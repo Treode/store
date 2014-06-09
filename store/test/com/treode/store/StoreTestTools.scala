@@ -8,7 +8,7 @@ import com.treode.async.{Async, AsyncIterator}
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId
-import com.treode.disk.{CellId, DiskConfig, DiskGeometry}
+import com.treode.disk.{DiskConfig, DiskGeometry}
 import org.scalatest.Assertions
 
 import Assertions.{assertResult, fail}

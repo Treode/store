@@ -23,6 +23,8 @@ private object DiskTestTools {
 
   type ReattachItem = (Path, StubFile)
 
+  val sysid = new Array [Byte] (0)
+
   implicit def stringToPath (path: String): Path =
     Paths.get (path)
 
@@ -186,7 +188,7 @@ private object DiskTestTools {
     val agent = recovery.asInstanceOf [RecoveryAgent]
 
     def attachAndWait (items: AttachItem*): Async [Launch] =
-      agent._attach (items: _*)
+      agent._attach (sysid, items: _*)
 
     def attachAndCapture (items: AttachItem*): CallbackCaptor [Launch] =
       attachAndWait (items: _*) .capture()

@@ -1,7 +1,7 @@
 package example1
 
 import java.nio.file.Paths
-import com.treode.disk.CellId
+import com.treode.cluster.{CellId, HostId}
 import com.treode.store.StandAlone
 import com.twitter.app.App
 import com.twitter.conversions.storage._
@@ -10,6 +10,8 @@ import com.twitter.util.StorageUnit
 class Initializer extends App {
 
   val cell = flag [CellId] ("cell", "Cell ID")
+
+  val host = flag [HostId] ("host", "Host ID")
 
   val superBlockBits =
       flag [Int] ("superBlockBits",  14, "Size of the super block (log base 2)")
@@ -25,8 +27,8 @@ class Initializer extends App {
 
   def main() {
 
-    if (!cell.isDefined) {
-      println ("-cell is required.")
+    if (!cell.isDefined || !host.isDefined) {
+      println ("-cell and -host are required.")
       return
     }
 
@@ -38,6 +40,7 @@ class Initializer extends App {
     val paths = args map (Paths.get (_))
 
     StandAlone.init (
+        host(),
         cell(),
         superBlockBits(),
         segmentBits(),

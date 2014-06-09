@@ -8,7 +8,6 @@ private trait DiskPicklers extends Picklers {
   def path = wrap (string) build (Paths.get (_)) inspect (_.toString)
 
   def boot = BootBlock.pickler
-  def cellId = CellId.pickler
   def intSet = IntSet.pickler
   def geometry = DiskGeometry.pickler
   def objectId = ObjectId.pickler

@@ -1,6 +1,6 @@
 package com.treode.store
 
-import com.treode.cluster.{HostId, PortId}
+import com.treode.cluster.{CellId, HostId, PortId}
 import com.treode.disk.{ObjectId, Position, TypeId}
 import com.treode.pickle.{Pickler, Picklers}
 import com.treode.store.tier.TierTable
@@ -10,6 +10,8 @@ private trait StorePicklers extends Picklers {
 
   lazy val instant = wrap (ulong) build (new Instant (_)) inspect (_.getMillis)
 
+  lazy val sysid = tuple (hostId, cellId)
+
   def bound [A] (pa: Pickler [A]) = Bound.pickler (pa)
 
   def atlas = Atlas.pickler
@@ -17,6 +19,7 @@ private trait StorePicklers extends Picklers {
   def bytes = Bytes.pickler
   def catId = CatalogId.pickler
   def cell = Cell.pickler
+  def cellId = CellId.pickler
   def cohort = Cohort.pickler
   def hostId = HostId.pickler
   def key = Key.pickler

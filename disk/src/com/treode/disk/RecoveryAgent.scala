@@ -12,7 +12,6 @@ import SuperBlocks.{chooseSuperBlock, verifyReattachment}
 
 private class RecoveryAgent (implicit scheduler: Scheduler, config: DiskConfig)
 extends Disk.Recovery {
-  import config.cell
 
   private val records = new RecordRegistry
   private var open = true
@@ -32,7 +31,7 @@ extends Disk.Recovery {
       open = false
     }
 
-  def _attach (items: (Path, File, DiskGeometry)*): Async [Launch] =
+  def _attach (sysid: Array [Byte], items: (Path, File, DiskGeometry)*): Async [Launch] =
     guard {
 
       val attaching = items.map (_._1) .toSet
@@ -40,8 +39,8 @@ extends Disk.Recovery {
       require (attaching.size == items.size, "Cannot attach a path multiple times.")
       close()
 
-      val kit = new DiskKit (0)
-      val boot = BootBlock.apply (cell, 0, items.size, attaching)
+      val kit = new DiskKit (sysid, 0)
+      val boot = BootBlock.apply (sysid, 0, items.size, attaching)
       for {
         drives <-
           for (((path, file, geometry), i) <- items.zipWithIndex.latch.seq)
@@ -51,12 +50,12 @@ extends Disk.Recovery {
         new LaunchAgent (kit)
       }}
 
-  def attach (items: (Path, DiskGeometry)*): Async [Launch] =
+  def attach (sysid: Array [Byte], items: (Path, DiskGeometry)*): Async [Launch] =
     guard {
       val files =
         for ((path, geom) <- items)
           yield (path, openFile (path, geom), geom)
-      _attach (files: _*)
+      _attach (sysid, files: _*)
     }
 
   def reopen (items: Seq [(Path, File)]): Async [Seq [SuperBlocks]] =

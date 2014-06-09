@@ -386,6 +386,7 @@ private object DiskDrive {
     }
 
   def init (
+      sysid: Array [Byte],
       items: Seq [(Path, DiskGeometry)]
   ) (implicit
       scheduler: Scheduler,
@@ -395,14 +396,14 @@ private object DiskDrive {
       val attaching = items.map (_._1) .toSet
       require (!items.isEmpty, "Must list at least one file or device to initialize.")
       require (attaching.size == items.size, "Cannot initialize a path multiple times.")
-      val boot = BootBlock.apply (config.cell, 0, items.size, attaching)
+      val boot = BootBlock.apply (sysid, 0, items.size, attaching)
       for (((path, geom), id) <- items.zipWithIndex.latch.unit) {
         val file = openFile (path, geom)
         init (id, path, file, geom, boot) .ensure (file.close())
       }}
 
   def init (
-      cell: CellId,
+      sysid: Array [Byte],
       superBlockBits: Int,
       segmentBits: Int,
       blockBits: Int,
@@ -412,10 +413,10 @@ private object DiskDrive {
     val executor = Executors.newSingleThreadScheduledExecutor()
     try {
       implicit val scheduler = Scheduler (executor)
-      implicit val config = DiskConfig.recommended (cell = cell, superBlockBits = superBlockBits)
+      implicit val config = DiskConfig.recommended (superBlockBits = superBlockBits)
       val geom = DiskGeometry (segmentBits, blockBits, diskBytes)
       val items = paths map (path => (path, geom))
-      init (items) .await()
+      init (sysid, items) .await()
     } finally {
       executor.shutdown()
     }}}

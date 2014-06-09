@@ -9,6 +9,7 @@ import Async.{guard, latch}
 import Callback.ignore
 
 private class DiskKit (
+    val sysid: Array [Byte],
     logBatch: Long
 ) (implicit
     val scheduler: Scheduler,

@@ -1,7 +1,6 @@
 package com.treode.disk
 
 class DiskConfig private [disk] (
-    val cell: CellId,
     val superBlockBits: Int,
     val maximumRecordBytes: Int,
     val maximumPageBytes: Int,
@@ -30,7 +29,6 @@ class DiskConfig private [disk] (
 object DiskConfig {
 
   def apply (
-      cell: CellId,
       superBlockBits: Int,
       maximumRecordBytes: Int,
       maximumPageBytes: Int,
@@ -63,7 +61,6 @@ object DiskConfig {
         "The cleaning load must be more than 0 segemnts.")
 
     new DiskConfig (
-        cell,
         superBlockBits,
         maximumRecordBytes,
         maximumPageBytes,
@@ -74,7 +71,6 @@ object DiskConfig {
   }
 
   def recommended (
-      cell: CellId,
       superBlockBits: Int = 14,
       maximumRecordBytes: Int = 1<<24,
       maximumPageBytes: Int = 1<<24,
@@ -84,7 +80,6 @@ object DiskConfig {
       cleaningLoad: Int = 1
   ): DiskConfig =
     DiskConfig (
-        cell: CellId,
         superBlockBits,
         maximumRecordBytes,
         maximumPageBytes,
@@ -92,18 +87,4 @@ object DiskConfig {
         checkpointEntries,
         cleaningFrequency,
         cleaningLoad)
-
-  val pickler = {
-    import DiskPicklers._
-    wrap (cellId, uint, uint, uint, uint, uint, uint, uint)
-    .build ((apply _).tupled)
-    .inspect (v => (
-        v.cell,
-        v.superBlockBits,
-        v.maximumRecordBytes,
-        v.maximumPageBytes,
-        v.checkpointBytes,
-        v.checkpointEntries,
-        v.cleaningFrequency,
-        v.cleaningLoad))
-  }}
+}

@@ -7,8 +7,7 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.treode.async.Async
 import com.treode.async.misc.parseUnsignedLong
-import com.treode.cluster.HostId
-import com.treode.disk.CellId
+import com.treode.cluster.{CellId, HostId}
 import com.treode.store.{Bytes, TxClock}
 import com.twitter.app.Flaggable
 import com.twitter.finagle.http.{MediaType, ParamMap}

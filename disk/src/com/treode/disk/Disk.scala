@@ -33,6 +33,8 @@ object Disk {
 
     implicit def controller: Controller
 
+    def sysid: Array [Byte]
+
     def checkpoint (f: => Async [Unit])
 
     def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G])
@@ -48,14 +50,14 @@ object Disk {
   }
 
   def init (
-      cell: CellId,
+      sysid: Array [Byte],
       superBlockBits: Int,
       segmentBits: Int,
       blockBits: Int,
       diskBytes: Long,
       paths: Path*
   ): Unit =
-    DiskDrive.init (cell, superBlockBits, segmentBits, blockBits, diskBytes, paths)
+    DiskDrive.init (sysid, superBlockBits, segmentBits, blockBits, diskBytes, paths)
 
 
   def recover () (implicit scheduler: Scheduler, config: DiskConfig): Recovery =

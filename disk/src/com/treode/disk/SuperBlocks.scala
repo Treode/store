@@ -66,9 +66,6 @@ private object SuperBlocks {
     val expected = boot.disks.toSet
     val found = superbs.map (_.path) .toSet
 
-    if (config.cell != boot.cell)
-      throw new CellMismatchException (config.cell, boot.cell)
-
     if (!(expected forall (found contains _))) {
       val missing = (expected -- found).toSeq.sorted
       throw new MissingDisksException (missing)

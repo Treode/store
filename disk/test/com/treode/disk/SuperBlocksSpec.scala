@@ -18,7 +18,7 @@ class SuperBlocksSpec extends FreeSpec {
 
   private def superb (gen: Int, disks: Set [Path] = Set (path)) = {
     val free = IntSet()
-    val boot = BootBlock (0, gen, 0, disks)
+    val boot = BootBlock (sysid, gen, 0, disks)
     new SuperBlock (0, boot, geom, false, free, 0)
   }
 
@@ -270,12 +270,6 @@ class SuperBlocksSpec extends FreeSpec {
     "require some superblocks" in {
       intercept [NoSuperBlocksException] {
         verifyReattachment()
-      }}
-
-    "require the config's cell match the boot block's cell" in {
-      val config2 = DiskTestConfig (cell = 1)
-      intercept [CellMismatchException] {
-        verifyReattachment (superbs (0, 1)) (config2)
       }}
 
     "require the list of superblocks contain all of the disks in the boot block" in {

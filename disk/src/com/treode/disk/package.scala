@@ -17,10 +17,6 @@ package disk {
     override def getMessage = "Cannot drain all disks."
   }
 
-  private class CellMismatchException (expected: CellId, found: CellId) extends Exception {
-    override def getMessage = s"Expected $expected, found $found."
-  }
-
   private class DiskFullException extends Exception {
     override def getMessage = "Disk full."
   }

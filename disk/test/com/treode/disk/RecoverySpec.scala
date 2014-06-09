@@ -147,12 +147,13 @@ class RecoverySpec extends FreeSpec {
 
       "pass through an exception from verifyReattachment" in {
         implicit val scheduler = StubScheduler.random()
-        val file = StubFile()
+        val file1 = StubFile()
+        val file2 = StubFile()
         var recovery = Disk.recover()
-        recovery.attachAndLaunch (("a", file, geom))
-        val config2 = DiskTestConfig (cell = 1)
-        recovery = Disk.recover () (scheduler, config2)
-        recovery.reattachAndWait (("a", file)) .fail [CellMismatchException]
+        recovery.attachAndLaunch (("a", file1, geom), ("b", file2, geom))
+        recovery = Disk.recover ()
+        recovery.reattachAndWait (("a", file1)) .fail [MissingDisksException]
+
       }}
 
     "when given opened files should" - {

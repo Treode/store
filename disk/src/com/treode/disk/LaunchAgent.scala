@@ -15,7 +15,9 @@ private class LaunchAgent (val kit: DiskKit) extends Disk.Launch {
 
   implicit val disks: Disk = new DiskAgent (kit)
 
-  val controller: Disk.Controller = new ControllerAgent (kit, disks)
+  implicit val controller: Disk.Controller = new ControllerAgent (kit, disks)
+
+  val sysid = kit.sysid
 
   def requireOpen(): Unit =
     require (open, "Disk have already launched.")

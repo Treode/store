@@ -1,8 +1,9 @@
-package com.treode.disk
+package com.treode.cluster
 
 import scala.language.implicitConversions
 
 import com.google.common.primitives.UnsignedLongs
+import com.treode.pickle.Picklers
 
 class CellId private (val id: Long) extends AnyVal with Ordered [CellId] {
 
@@ -26,6 +27,6 @@ object CellId extends Ordering [CellId] {
     x compare y
 
   val pickler = {
-    import DiskPicklers._
-    wrap (fixedLong) build (new CellId (_)) inspect (_.id)
+    import Picklers._
+    wrap (fixedLong) build (apply _) inspect (_.id)
   }}

@@ -6,8 +6,8 @@ import java.util.concurrent.{ExecutorService, Executors}
 import scala.util.{Failure, Random}
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.cluster.{Cluster, HostId}
-import com.treode.disk.{CellId, Disk, DiskConfig, DiskGeometry}
+import com.treode.cluster.{CellId, Cluster, HostId}
+import com.treode.disk.{Disk, DiskConfig, DiskGeometry}
 
 import Async.guard
 
@@ -45,17 +45,19 @@ object StandAlone {
   }
 
   def init (
-      cell: CellId,
+      hostId: HostId,
+      cellId: CellId,
       superBlockBits: Int,
       segmentBits: Int,
       blockBits: Int,
       diskBytes: Long,
       paths: Path*
-  ): Unit =
-      Disk.init (cell, superBlockBits, segmentBits, blockBits, diskBytes, paths: _*)
+  ): Unit = {
+    val sysid = StorePicklers.sysid.toByteArray ((hostId, cellId))
+    Disk.init (sysid, superBlockBits, segmentBits, blockBits, diskBytes, paths: _*)
+  }
 
   def recover (
-      localId: HostId,
       localAddr: SocketAddress,
       disksConfig: DiskConfig,
       storeConfig: StoreConfig,
@@ -68,10 +70,10 @@ object StandAlone {
       val scheduler = Scheduler (executor)
       val _disks = Disk.recover () (scheduler, disksConfig)
       val _store = Store.recover () (random, scheduler, _disks, storeConfig)
-
       for {
         launch <- _disks.reattach (paths: _*)
-        cluster = Cluster.live (localId, localAddr) (random, scheduler)
+        (hostId, cellId) = StorePicklers.sysid.fromByteArray (launch.sysid)
+        cluster = Cluster.live (hostId, localAddr) (random, scheduler)
         store <- _store.launch (launch, cluster)
       } yield {
         new Controller (executor, cluster, launch.controller, store)

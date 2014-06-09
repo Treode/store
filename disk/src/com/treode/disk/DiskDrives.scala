@@ -13,8 +13,7 @@ import Async.{async, guard}
 import Callback.ignore
 
 private class DiskDrives (kit: DiskKit) {
-  import kit.{checkpointer, compactor, scheduler}
-  import kit.config.cell
+  import kit.{checkpointer, compactor, scheduler, sysid}
 
   type AttachItem = (Path, File, DiskGeometry)
   type AttachRequest = (Seq [AttachItem], Callback [Unit])
@@ -71,7 +70,7 @@ private class DiskDrives (kit: DiskKit) {
       val bootgen = this.bootgen + 1
       val number = this.number + items.size
       val attached = priorPaths ++ newPaths
-      val newBoot = BootBlock (cell, bootgen, number, attached)
+      val newBoot = BootBlock (sysid, bootgen, number, attached)
 
       if (newPaths exists (priorPaths contains _)) {
         val already = (newPaths -- priorPaths).toSeq.sorted
@@ -113,7 +112,7 @@ private class DiskDrives (kit: DiskKit) {
       val disks = this.disks -- (items map (_.id))
       val bootgen = this.bootgen + 1
       val attached = disks.values.setBy (_.path)
-      val newboot = BootBlock (cell, bootgen, number, attached)
+      val newboot = BootBlock (sysid, bootgen, number, attached)
 
       for {
         _ <- disks.values.latch.unit foreach (_.checkpoint (newboot, None))
@@ -161,7 +160,7 @@ private class DiskDrives (kit: DiskKit) {
     queue.run (cb) {
       val bootgen = this.bootgen + 1
       val attached = disks.values.map (_.path) .toSet
-      val newBoot = BootBlock (cell, bootgen, number, attached)
+      val newBoot = BootBlock (sysid, bootgen, number, attached)
       for {
         _ <- disks.values.latch.unit foreach (disk => disk.checkpoint (newBoot, marks get disk.id))
       } yield {
