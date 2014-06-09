@@ -1,5 +1,6 @@
 package com.treode.async
 
+import java.math.BigInteger
 import java.net.InetSocketAddress
 
 import com.google.common.net.HostAndPort
@@ -76,6 +77,29 @@ package object misc {
   def parseLong (s: String): Option [Long] = {
     try {
       Some (java.lang.Long.decode (s))
+    } catch {
+      case _: NumberFormatException => None
+    }}
+
+  private def parseUnsigendLong (string: String, radix: Int): Option [Long] = {
+    val big = BigInt (new BigInteger (string, radix))
+    if (big > new BigInteger ("FFFFFFFFFFFFFFFF", 16))
+      return None
+    Some (big.longValue())
+  }
+
+  def parseUnsignedLong (s: String): Option [Long] = {
+    try {
+      if (s.length == 0 || s.head == '-')
+        return None
+      if (s.startsWith ("0x") || s.startsWith ("0X"))
+        parseUnsigendLong (s.substring (2), 16)
+      else if (s.head == '#')
+        parseUnsigendLong (s.substring (1), 16)
+      else if (s.head == '0')
+        parseUnsigendLong (s, 8)
+      else
+        parseUnsigendLong (s, 10)
     } catch {
       case _: NumberFormatException => None
     }}
