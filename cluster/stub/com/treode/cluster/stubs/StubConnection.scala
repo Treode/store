@@ -29,5 +29,6 @@ extends Peer {
       case _ => false
     }
 
-  override def toString = s"StubConnection($localId->$id)"
+  override def toString =
+    f"StubConnection(${localId.id}%02X->${id.id}%02X)"
 }

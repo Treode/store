@@ -41,6 +41,7 @@ object Cluster {
   }
 
   def live (
+      cellId: CellId,
       localId: HostId,
       localAddr: SocketAddress
   ) (implicit
@@ -56,11 +57,11 @@ object Cluster {
 
       group = AsynchronousChannelGroup.withFixedThreadPool (1, Executors.defaultThreadFactory)
 
-      val peers = PeerRegistry.live (localId, group, ports)
+      val peers = PeerRegistry.live (cellId, localId, group, ports)
 
       val scuttlebutt = new Scuttlebutt (localId, peers)
 
-      val listener = new Listener (localId, localAddr, group, peers)
+      val listener = new Listener (cellId, localId, localAddr, group, peers)
 
       implicit val cluster  = new ClusterLive (localId, ports, peers, listener, scuttlebutt)
 

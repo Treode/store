@@ -13,6 +13,8 @@ import sun.misc.{SignalHandler, Signal}
 
 class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
+  private val cellId = CellId (0x9E)
+
   private val _random = Random
   private val _exiting = new AtomicBoolean (false)
 
@@ -90,11 +92,11 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
     _group = AsynchronousChannelGroup.withFixedThreadPool (1, Executors.defaultThreadFactory)
 
-    _peers = PeerRegistry.live (localId, _group, _ports) (_random, _scheduler)
+    _peers = PeerRegistry.live (cellId, localId, _group, _ports) (_random, _scheduler)
     for ((a, i) <- addresses.zipWithIndex)
       _peers.get (i) .address = a
 
-    _listener = new Listener (localId, addresses (localId.id.toInt), _group, _peers) (_scheduler)
+    _listener = new Listener (cellId, localId, addresses (localId.id.toInt), _group, _peers) (_scheduler)
     _listener.startup()
 
     val cluster = new Cluster {

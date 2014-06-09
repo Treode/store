@@ -73,7 +73,7 @@ object StandAlone {
       for {
         launch <- _disks.reattach (paths: _*)
         (hostId, cellId) = StorePicklers.sysid.fromByteArray (launch.sysid)
-        cluster = Cluster.live (hostId, localAddr) (random, scheduler)
+        cluster = Cluster.live (cellId, hostId, localAddr) (random, scheduler)
         store <- _store.launch (launch, cluster)
       } yield {
         new Controller (executor, cluster, launch.controller, store)

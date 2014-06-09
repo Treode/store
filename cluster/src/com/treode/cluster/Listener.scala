@@ -9,6 +9,7 @@ import com.treode.async.io.{Socket, ServerSocket}
 import com.treode.buffer.PagedBuffer
 
 private class Listener (
+  cellId: CellId,
   localId: HostId,
   localAddr: SocketAddress,
   group: AsynchronousChannelGroup,
@@ -21,7 +22,7 @@ private class Listener (
 
   private def sayHello (socket: Socket, input: PagedBuffer, remoteId: HostId) {
     val buffer = PagedBuffer (12)
-    Hello.pickler.pickle (Hello (localId), buffer)
+    Hello.pickler.pickle (Hello (localId, cellId), buffer)
     socket.flush (buffer) run {
       case Success (v) =>
         peers.get (remoteId) connect (socket, input, remoteId)
@@ -34,7 +35,7 @@ private class Listener (
     val buffer = PagedBuffer (12)
     socket.fill (buffer, 9) run {
       case Success (v) =>
-        val Hello (remoteId) = Hello.pickler.unpickle (buffer)
+        val Hello (remoteId, remoteCellId) = Hello.pickler.unpickle (buffer)
         sayHello (socket, buffer, remoteId)
       case Failure (t) =>
         log.exceptionWhileGreeting (t)

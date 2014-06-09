@@ -16,7 +16,7 @@ import com.treode.pickle.Pickler
 private class RemoteConnection (
   val id: HostId,
   localId: HostId,
-  fiber: Fiber,
+  cellId: CellId,
   group: AsynchronousChannelGroup,
   ports: PortRegistry
 ) (implicit
@@ -159,6 +159,7 @@ private class RemoteConnection (
 
   private val BlockedTimer = Backoff (500, 500, 1 minutes)
 
+  private val fiber = new Fiber
   private var state: State = new Disconnected (BlockedTimer.iterator (Random))
 
   def loop (socket: Socket, input: PagedBuffer) {
@@ -178,7 +179,7 @@ private class RemoteConnection (
     val input = PagedBuffer (12)
     socket.fill (input, 9) run {
       case Success (v) =>
-        val Hello (clientId) = Hello.pickler.unpickle (input)
+        val Hello (clientId, cellId) = Hello.pickler.unpickle (input)
         if (clientId == id) {
           connect (socket, input, localId)
         } else {
@@ -192,7 +193,7 @@ private class RemoteConnection (
 
   private def sayHello (socket: Socket) {
     val buffer = PagedBuffer (12)
-    Hello.pickler.pickle (Hello (localId), buffer)
+    Hello.pickler.pickle (Hello (localId, cellId), buffer)
     socket.flush (buffer) run {
       case Success (v) =>
         hearHello (socket)
@@ -242,5 +243,6 @@ private class RemoteConnection (
       case _ => false
     }
 
-  override def toString = "Peer(%08X)" format id.id
+  override def toString =
+    if (id.id < 256) f"Peer:${id.id}%02X" else f"Peer:${id.id}%016X"
 }
