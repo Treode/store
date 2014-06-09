@@ -6,7 +6,11 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.treode.async.Async
+import com.treode.async.misc.parseUnsignedLong
+import com.treode.cluster.HostId
+import com.treode.disk.CellId
 import com.treode.store.{Bytes, TxClock}
+import com.twitter.app.Flaggable
 import com.twitter.finagle.http.{MediaType, ParamMap}
 import com.twitter.finatra.Request
 import com.twitter.util.{Future, Promise, Return, Throw, Try}
@@ -20,6 +24,12 @@ package example1 {
 }
 
 package object example1 {
+
+  implicit val flaggableCellId: Flaggable [CellId] =
+    Flaggable.mandatory (s => CellId (parseUnsignedLong (s) .get))
+
+  implicit val flaggableHostId: Flaggable [HostId] =
+    Flaggable.mandatory (s => HostId (parseUnsignedLong (s) .get))
 
   val textJson = new ObjectMapper()
   textJson.registerModule (TreodeModule)

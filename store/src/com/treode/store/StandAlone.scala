@@ -3,11 +3,13 @@ package com.treode.store
 import java.net.SocketAddress
 import java.nio.file.Path
 import java.util.concurrent.{ExecutorService, Executors}
-import scala.util.Random
+import scala.util.{Failure, Random}
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.disk.{Disk, DiskConfig, DiskGeometry}
+import com.treode.disk.{CellId, Disk, DiskConfig, DiskGeometry}
+
+import Async.guard
 
 object StandAlone {
 
@@ -42,56 +44,40 @@ object StandAlone {
       controller.issue (desc) (version, cat)
   }
 
-  def create (
-      localId: HostId,
-      localAddr: SocketAddress,
-      disksConfig: DiskConfig,
-      storeConfig: StoreConfig,
-      items: (Path, DiskGeometry)*
-  ): Async [Controller] = {
-
-    val random = Random
-
-    val nthreads = Runtime.getRuntime.availableProcessors
-    val executor = Executors.newScheduledThreadPool (nthreads)
-    val scheduler = Scheduler (executor)
-
-    val cluster = Cluster.live (localId, localAddr) (random, scheduler)
-
-    val _disks = Disk.recover () (scheduler, disksConfig)
-
-    val _store = Store.recover () (random, scheduler, _disks, storeConfig)
-
-    for {
-      launch <- _disks.attach (items: _*)
-      store <- _store.launch (launch, cluster)
-    } yield {
-      new Controller (executor, cluster, launch.controller, store)
-    }}
+  def init (
+      cell: CellId,
+      superBlockBits: Int,
+      segmentBits: Int,
+      blockBits: Int,
+      diskBytes: Long,
+      paths: Path*
+  ): Unit =
+      Disk.init (cell, superBlockBits, segmentBits, blockBits, diskBytes, paths: _*)
 
   def recover (
       localId: HostId,
       localAddr: SocketAddress,
       disksConfig: DiskConfig,
       storeConfig: StoreConfig,
-      items: Path*
+      paths: Path*
   ): Async [Controller] = {
-
-    val random = Random
-
     val nthreads = Runtime.getRuntime.availableProcessors
     val executor = Executors.newScheduledThreadPool (nthreads)
-    val scheduler = Scheduler (executor)
+    guard {
+      val random = Random
+      val scheduler = Scheduler (executor)
+      val _disks = Disk.recover () (scheduler, disksConfig)
+      val _store = Store.recover () (random, scheduler, _disks, storeConfig)
 
-    val cluster = Cluster.live (localId, localAddr) (random, scheduler)
-
-    val _disks = Disk.recover () (scheduler, disksConfig)
-
-    val _store = Store.recover () (random, scheduler, _disks, storeConfig)
-
-    for {
-      launch <- _disks.reattach (items: _*)
-      store <- _store.launch (launch, cluster)
-    } yield {
-      new Controller (executor, cluster, launch.controller, store)
+      for {
+        launch <- _disks.reattach (paths: _*)
+        cluster = Cluster.live (localId, localAddr) (random, scheduler)
+        store <- _store.launch (launch, cluster)
+      } yield {
+        new Controller (executor, cluster, launch.controller, store)
+      }
+    } .rescue {
+      case t: Throwable =>
+        executor.shutdown()
+        Failure (t)
     }}}

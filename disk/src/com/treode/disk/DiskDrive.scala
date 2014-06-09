@@ -2,11 +2,12 @@ package com.treode.disk
 
 import java.nio.file.Path
 import java.util.{Arrays, ArrayDeque}
+import java.util.concurrent.Executors
 import scala.collection.JavaConversions._
 import scala.collection.mutable.UnrolledBuffer
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, Callback, Fiber, Latch}
+import com.treode.async.{Async, Callback, Fiber, Latch, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
@@ -356,4 +357,65 @@ private object DiskDrive {
         new DiskDrive (
             id, path, file, geometry, alloc, kit, false, logSegs, logSeg.base, logSeg.base,
             logSeg.limit, PagedBuffer (12), pageSeg, pageSeg.limit, new PageLedger, true)
-      }}}
+       }}
+
+  def init (
+      id: Int,
+      path: Path,
+      file: File,
+      geometry: DiskGeometry,
+      boot: BootBlock
+  ) (implicit
+      config: DiskConfig
+  ): Async [Unit] =
+    guard {
+
+      val alloc = Allocator (geometry, config)
+      val logSeg = alloc.alloc (geometry, config)
+      val logSegs = new ArrayDeque [Int]
+      logSegs.add (logSeg.num)
+      val pageSeg = alloc.alloc (geometry, config)
+
+      val superb = SuperBlock (id, boot, geometry, false, alloc.free, logSeg.base)
+
+      for {
+        _ <- latch (
+            SuperBlock.write (superb, file) (config),
+            RecordHeader.write (LogEnd, file, logSeg.base))
+      } yield ()
+    }
+
+  def init (
+      items: Seq [(Path, DiskGeometry)]
+  ) (implicit
+      scheduler: Scheduler,
+      config: DiskConfig
+  ): Async [Unit] =
+    guard {
+      val attaching = items.map (_._1) .toSet
+      require (!items.isEmpty, "Must list at least one file or device to initialize.")
+      require (attaching.size == items.size, "Cannot initialize a path multiple times.")
+      val boot = BootBlock.apply (config.cell, 0, items.size, attaching)
+      for (((path, geom), id) <- items.zipWithIndex.latch.unit) {
+        val file = openFile (path, geom)
+        init (id, path, file, geom, boot) .ensure (file.close())
+      }}
+
+  def init (
+      cell: CellId,
+      superBlockBits: Int,
+      segmentBits: Int,
+      blockBits: Int,
+      diskBytes: Long,
+      paths: Seq [Path]
+  ) {
+    val executor = Executors.newSingleThreadScheduledExecutor()
+    try {
+      implicit val scheduler = Scheduler (executor)
+      implicit val config = DiskConfig.recommended (cell = cell, superBlockBits = superBlockBits)
+      val geom = DiskGeometry (segmentBits, blockBits, diskBytes)
+      val items = paths map (path => (path, geom))
+      init (items) .await()
+    } finally {
+      executor.shutdown()
+    }}}

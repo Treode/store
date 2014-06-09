@@ -45,9 +45,18 @@ object Disk {
     def replay [R] (desc: RecordDescriptor [R]) (f: R => Any)
 
     def reattach (items: Path*): Async [Launch]
-
-    def attach (items: (Path, DiskGeometry)*): Async [Launch]
   }
+
+  def init (
+      cell: CellId,
+      superBlockBits: Int,
+      segmentBits: Int,
+      blockBits: Int,
+      diskBytes: Long,
+      paths: Path*
+  ): Unit =
+    DiskDrive.init (cell, superBlockBits, segmentBits, blockBits, diskBytes, paths)
+
 
   def recover () (implicit scheduler: Scheduler, config: DiskConfig): Recovery =
     new RecoveryAgent

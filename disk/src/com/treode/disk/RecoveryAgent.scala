@@ -53,29 +53,15 @@ extends Disk.Recovery {
 
   def attach (items: (Path, DiskGeometry)*): Async [Launch] =
     guard {
-      val files = items map (openFile (_))
+      val files =
+        for ((path, geom) <- items)
+          yield (path, openFile (path, geom), geom)
       _attach (files: _*)
     }
 
   def reopen (items: Seq [(Path, File)]): Async [Seq [SuperBlocks]] =
     for ((path, file) <- items.latch.casual)
       SuperBlocks.read (path, file)
-
-  def _reattach (items: (Path, File)*): Async [Launch] =
-    guard {
-
-      val reattaching = items.map (_._1) .toSet
-      require (!items.isEmpty, "Must list at least one file or device to reaattach.")
-      require (reattaching.size == items.size, "Cannot reattach a path multiple times.")
-      close()
-
-      for {
-        superbs <- reopen (items)
-        _ = verifyReattachment (superbs)
-        kit <- LogIterator.replay (superbs, records)
-      } yield {
-        new LaunchAgent (kit)
-      }}
 
   def reopen (path: Path): Async [SuperBlocks] =
     guard {
@@ -103,6 +89,22 @@ extends Disk.Recovery {
     } .map { _ =>
       superbs
     }}
+
+  def _reattach (items: (Path, File)*): Async [Launch] =
+    guard {
+
+      val reattaching = items.map (_._1) .toSet
+      require (!items.isEmpty, "Must list at least one file or device to reaattach.")
+      require (reattaching.size == items.size, "Cannot reattach a path multiple times.")
+      close()
+
+      for {
+        superbs <- reopen (items)
+        _ = verifyReattachment (superbs)
+        kit <- LogIterator.replay (superbs, records)
+      } yield {
+        new LaunchAgent (kit)
+      }}
 
   def _reattach (items: Seq [Path]) (_reopen: Path => Async [SuperBlocks]): Async [Launch] =
     guard {

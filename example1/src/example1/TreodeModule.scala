@@ -54,15 +54,16 @@ object HostIdDeserializer extends StdDeserializer [HostId] (classOf [HostId]) {
 object IssuingSerializer extends StdSerializer [Issuing] (classOf [Issuing]) {
 
   def serialize (value: Issuing, jgen: JsonGenerator, provider: SerializerProvider) {
+    val codec = jgen.getCodec
     jgen.writeStartObject()
     jgen.writeObjectField ("state", "issuing")
     jgen.writeArrayFieldStart("origin")
     for (h <- value.origin)
-      jgen.writeObject (h)
+      codec.writeValue (jgen, h)
     jgen.writeEndArray()
     jgen.writeArrayFieldStart("target")
     for (h <- value.target)
-      jgen.writeObject (h)
+      codec.writeValue (jgen, h)
     jgen.writeEndArray()
     jgen.writeEndObject()
   }}
@@ -70,15 +71,16 @@ object IssuingSerializer extends StdSerializer [Issuing] (classOf [Issuing]) {
 object MovingSerializer extends StdSerializer [Moving] (classOf [Moving]) {
 
   def serialize (value: Moving, jgen: JsonGenerator, provider: SerializerProvider) {
+    val codec = jgen.getCodec
     jgen.writeStartObject()
     jgen.writeObjectField ("state", "moving")
     jgen.writeArrayFieldStart("origin")
     for (h <- value.origin)
-      jgen.writeObject (h)
+      codec.writeValue (jgen, h)
     jgen.writeEndArray()
     jgen.writeArrayFieldStart("target")
     for (h <- value.target)
-      jgen.writeObject (h)
+      codec.writeValue (jgen, h)
     jgen.writeEndArray()
     jgen.writeEndObject()
   }}
@@ -86,11 +88,12 @@ object MovingSerializer extends StdSerializer [Moving] (classOf [Moving]) {
 object SettledSerializer extends StdSerializer [Settled] (classOf [Settled]) {
 
   def serialize (value: Settled, jgen: JsonGenerator, provider: SerializerProvider) {
+    val codec = jgen.getCodec
     jgen.writeStartObject()
     jgen.writeObjectField ("state", "settled")
     jgen.writeArrayFieldStart("hosts")
     for (h <- value.hosts)
-      jgen.writeObject (h)
+      codec.writeValue (jgen, h)
     jgen.writeEndArray()
     jgen.writeEndObject()
   }}

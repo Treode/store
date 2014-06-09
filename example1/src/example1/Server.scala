@@ -2,24 +2,53 @@ package example1
 
 import java.net.InetSocketAddress
 import java.nio.file.Paths
-import com.treode.disk.{DiskConfig, DiskGeometry}
+import com.treode.cluster.HostId
+import com.treode.disk.{CellId, DiskConfig, DiskGeometry}
 import com.treode.store.{StandAlone, StoreConfig}
 
-object Server extends AsyncFinatraServer {
+class Server extends AsyncFinatraServer {
 
-  implicit val disksConfig =
-    DiskConfig.recommended (0x7D7A5F10A567B675L)
+  val cell = flag [CellId] ("cell", "Cell ID")
 
-  val controller = {
-    val c = StandAlone.create (
-        localId = 0x288ACE6509E0CA47L,
-        localAddr = InetSocketAddress.createUnresolved ("*", 6782),
-        disksConfig = disksConfig,
-        storeConfig = StoreConfig.recommended(),
-        items = Paths.get ("store.db") -> DiskGeometry (28, 13, 1L<<38))
-    c.await()
-  }
+  val host = flag [HostId] ("host", "Host ID")
 
-  register (new Resource (controller.store))
-  register (new AdminAtlas (controller))
-}
+  val superBlockBits = flag [Int] (
+      "superBlockBits",
+      14,
+      "Size of the super block (log base 2)")
+
+  val peerPort = flag [InetSocketAddress] (
+      "peerPort",
+      InetSocketAddress.createUnresolved ("*", 6278),
+      "Port on which to listen for peers")
+
+  override def main() {
+
+    if (!cell.isDefined || !host.isDefined) {
+      println ("-cell and -host are required.")
+      return
+    }
+
+    if (args.length == 0) {
+      println ("At least one path is required.")
+      return
+    }
+
+    implicit val disksConfig =
+        DiskConfig.recommended (cell(), superBlockBits = superBlockBits())
+
+    val controller = {
+      val c = StandAlone.recover (
+          localId = host(),
+          localAddr = peerPort(),
+          disksConfig = disksConfig,
+          storeConfig = StoreConfig.recommended(),
+          paths = args map (Paths.get (_)): _*)
+      c.await()
+    }
+
+    register (new Resource (controller.store))
+    register (new AdminAtlas (controller))
+
+    super.main()
+  }}

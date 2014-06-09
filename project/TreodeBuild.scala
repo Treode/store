@@ -179,7 +179,7 @@ object TreodeBuild extends Build {
       scalaVersion := "2.10.3",
 
       jarName in assembly := "server.jar",
-      mainClass in assembly := Some ("example1.Server"),
+      mainClass in assembly := Some ("example1.Main"),
       test in assembly := {},
 
       unmanagedSourceDirectories in Compile <<=
