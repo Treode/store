@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 import java.nio.file.Paths
 import com.treode.cluster.{CellId, HostId}
 import com.treode.disk.{DiskConfig, DiskGeometry}
-import com.treode.store.{StandAlone, StoreConfig}
+import com.treode.store.{Store, StoreConfig}
 
 class Server extends AsyncFinatraServer {
 
@@ -33,7 +33,7 @@ class Server extends AsyncFinatraServer {
         DiskConfig.recommended (superBlockBits = superBlockBits())
 
     val controller = {
-      val c = StandAlone.recover (
+      val c = Store.recover (
           bindAddr = if (bindAddr.isDefined) bindAddr() else shareAddr(),
           shareAddr = shareAddr(),
           disksConfig = disksConfig,

@@ -1,5 +1,6 @@
 package com.treode.store
 
+import java.util.concurrent.ExecutorService
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
@@ -38,5 +39,5 @@ private class RecoveryKit (implicit
         latch (paxos.rebalance (atlas), atomic.rebalance (atlas)) .map (_ => ())
       } (scheduler, cluster, catalogs, library)
 
-      new ControllerAgent (library, librarian, catalogs, atomic)
+      new SimpleController (cluster, launch.controller, library, librarian, catalogs, atomic)
     }}}

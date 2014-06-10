@@ -2,7 +2,7 @@ package example1
 
 import java.nio.file.Paths
 import com.treode.cluster.{CellId, HostId}
-import com.treode.store.StandAlone
+import com.treode.store.Store
 import com.twitter.app.App
 import com.twitter.conversions.storage._
 import com.twitter.util.StorageUnit
@@ -39,7 +39,7 @@ class Initializer extends App {
 
     val paths = args map (Paths.get (_))
 
-    StandAlone.init (
+    Store.init (
         host(),
         cell(),
         superBlockBits(),
