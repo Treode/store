@@ -30,14 +30,14 @@ class Server extends AsyncFinatraServer {
     }
 
     implicit val disksConfig =
-        DiskConfig.recommended (superBlockBits = superBlockBits())
+        DiskConfig.suggested (superBlockBits = superBlockBits())
 
     val controller = {
       val c = Store.recover (
           bindAddr = if (bindAddr.isDefined) bindAddr() else shareAddr(),
           shareAddr = shareAddr(),
           disksConfig = disksConfig,
-          storeConfig = StoreConfig.recommended(),
+          storeConfig = StoreConfig.suggested(),
           paths = args map (Paths.get (_)): _*)
       c.await()
     }

@@ -70,7 +70,7 @@ object DiskConfig {
         cleaningLoad)
   }
 
-  def recommended (
+  def suggested (
       superBlockBits: Int = 14,
       maximumRecordBytes: Int = 1<<24,
       maximumPageBytes: Int = 1<<24,

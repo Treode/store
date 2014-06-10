@@ -413,7 +413,7 @@ private object DiskDrive {
     val executor = Executors.newSingleThreadScheduledExecutor()
     try {
       implicit val scheduler = Scheduler (executor)
-      implicit val config = DiskConfig.recommended (superBlockBits = superBlockBits)
+      implicit val config = DiskConfig.suggested (superBlockBits = superBlockBits)
       val geom = DiskGeometry (segmentBits, blockBits, diskBytes)
       val items = paths map (path => (path, geom))
       init (sysid, items) .await()

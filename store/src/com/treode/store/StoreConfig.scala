@@ -65,7 +65,7 @@ object StoreConfig {
         rebalanceEntries)
   }
 
-  def recommended (
+  def suggested (
       priorValueEpoch: Epoch = Epoch.StartOfYesterday,
       falsePositiveProbability: Double = 0.01,
       lockSpaceBits: Int = 10,
