@@ -92,6 +92,34 @@ class TreodeModuleSpec extends FreeSpec {
         """[]"""
       }}}
 
+  "Serializing an empty cohort should" - {
+
+    "produce an object with state:empty" in {
+      assertString ("""{"state":"empty"}""") (Empty)
+    }}
+
+  "Deserializing an empty cohort should" - {
+
+    "work" in {
+      assertCohort (Empty) {
+        """{"state":"empty"}"""
+      }}
+
+    "reject an object with hosts" in {
+      rejectCohort {
+        """{"state":"empty", "hosts":[1]}"""
+      }}
+
+    "reject an object with an origin" in {
+      rejectCohort {
+        """{"state":"empty", "origin":[1]}"""
+      }}
+
+    "reject an object with a target" in {
+      rejectCohort {
+        """{"state":"empty", "target":[1]}"""
+      }}}
+
   "Serializing a settled cohort should" - {
 
     "produce an object with state:settled and hosts" in {

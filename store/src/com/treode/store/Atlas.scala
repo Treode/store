@@ -129,33 +129,6 @@ class Atlas private (
 
 object Atlas {
 
-  private class Empty extends Atlas (new Array (0), 0) {
-
-    override def place (id: Int): Int =
-      throw new EmptyAtlasException
-
-    override def locate (id: Int): Cohort =
-      throw new EmptyAtlasException
-
-    override def quorum (hosts: Set [HostId]): Boolean =
-      false
-
-    override def settled: Boolean =
-      false
-
-    override def residents (host: HostId): Residents =
-      Residents.all
-
-    override def hosts (slice: Slice): Seq [(HostId, Int)] =
-      throw new EmptyAtlasException
-
-    override def change (cohorts: Array [Cohort]): Option [Atlas] =
-      Some (Atlas (shrink (cohorts), 1))
-
-    override def toString: String =
-      s"Atlas.Empty"
-  }
-
   private [store] def shrink (cohorts: Array [Cohort]): Array [Cohort] = {
     val groups = (0 until cohorts.length) groupBy (cohorts.apply (_))
     val sizes = groups.values.map (_.size)  .toSet
@@ -174,8 +147,8 @@ object Atlas {
   def apply (cohorts: Array [Cohort], version: Int): Atlas = {
 
     require (
-        cohorts.length > 0 && highestOneBit (cohorts.length) == cohorts.length,
-        "Number of cohorts must be a power of two and positive.")
+        highestOneBit (cohorts.length) == cohorts.length,
+        "Number of cohorts must be a power of two.")
     require (
         version > 0,
         "Atlas version must be positive.")
@@ -183,7 +156,7 @@ object Atlas {
     new Atlas (cohorts, version)
   }
 
-  val empty: Atlas = new Empty
+  val empty = new Atlas (Array (Cohort.empty), 0)
 
   val pickler = {
     import StorePicklers._

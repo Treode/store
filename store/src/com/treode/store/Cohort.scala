@@ -23,6 +23,19 @@ sealed abstract class Cohort {
 
 object Cohort {
 
+  case object Empty extends Cohort {
+
+    def hosts = Set.empty
+    def origin = Set.empty
+    def target = Set.empty
+
+    def track: ReplyTracker =
+      ReplyTracker.empty
+
+    def quorum (acks: Set [HostId]): Boolean =
+      false
+  }
+
   case class Settled (hosts: Set [HostId]) extends Cohort {
 
     val nquorum = (hosts.size >> 1) + 1
@@ -83,6 +96,8 @@ object Cohort {
 
   def moving (active: HostId*) (target: HostId*): Cohort =
     new Moving (active.toSet, target.toSet)
+
+  val empty = Empty
 
   val pickler = {
     import StorePicklers._
