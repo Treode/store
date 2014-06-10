@@ -1,7 +1,7 @@
 package com.treode.cluster
 
 import java.net.{InetSocketAddress, SocketAddress}
-import java.nio.channels.{AsynchronousChannelGroup, AsynchronousCloseException}
+import java.nio.channels.AsynchronousChannelGroup
 import scala.util.{Failure, Success}
 
 import com.treode.async.{Callback, Scheduler}
@@ -22,10 +22,12 @@ private class Listener (
 
   private def sayHello (socket: Socket, input: PagedBuffer, remoteId: HostId) {
     val buffer = PagedBuffer (12)
-    Hello.pickler.pickle (Hello (localId, cellId), buffer)
+    Hello.pickler.frame (Hello (localId, cellId), buffer)
     socket.flush (buffer) run {
       case Success (v) =>
         peers.get (remoteId) connect (socket, input, remoteId)
+      case Failure (t) if isClosedException (t) =>
+        ()
       case Failure (t) =>
         log.exceptionWhileGreeting (t)
         socket.close()
@@ -33,10 +35,17 @@ private class Listener (
 
   private def hearHello (socket: Socket) {
     val buffer = PagedBuffer (12)
-    socket.fill (buffer, 9) run {
-      case Success (v) =>
+    socket.deframe (buffer) run {
+      case Success (length) =>
         val Hello (remoteId, remoteCellId) = Hello.pickler.unpickle (buffer)
-        sayHello (socket, buffer, remoteId)
+        if (remoteCellId == cellId) {
+          sayHello (socket, buffer, remoteId)
+        } else {
+          log.rejectedForeignCell (remoteId, remoteCellId)
+          socket.close()
+        }
+      case Failure (t) if isClosedException (t) =>
+        ()
       case Failure (t) =>
         log.exceptionWhileGreeting (t)
         socket.close()
@@ -47,20 +56,19 @@ private class Listener (
       case Success (socket) =>
         scheduler.execute (hearHello (socket))
         loop()
-      case Failure (e: AsynchronousCloseException) =>
-        server.close()
-      case Failure (e: Throwable) =>
-        log.recyclingMessengerSocket (e)
+      case Failure (t) if isClosedException (t) =>
+        ()
+      case Failure (t: Throwable) =>
+        log.recyclingMessengerSocket (t)
         server.close()
         scheduler.delay (200) (startup())
-        throw e
+        throw t
     }}
 
   def startup() {
     server = ServerSocket.open (group)
     server.bind (localAddr)
-    if (localAddr.isInstanceOf [InetSocketAddress])
-      println ("Accepting messenger connections on " + localAddr)
+    log.acceptingConnections (localId, localAddr)
     loop()
   }
 

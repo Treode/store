@@ -51,7 +51,7 @@ class PicklerRegistry [T] private (default: Long => T) {
   }
 
   def unpickle (buf: PagedBuffer, len: Int): T =
-    unpickle (buf.readVarULong(), buf, len)
+    unpickle (buf.readLong(), buf, len-8)
 
   def unpickle (id: Long, buf: InputBuffer): T = {
     val u = openers.get (id)

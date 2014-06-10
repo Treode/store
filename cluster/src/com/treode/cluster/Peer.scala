@@ -43,6 +43,11 @@ trait Peer {
 
 object Peer {
 
+  private [cluster] val address = {
+    import ClusterPicklers._
+    RumorDescriptor (0x4E39A29FA7477F53L, socketAddress)
+  }
+
   private [cluster] val load = {
     import ClusterPicklers._
     RumorDescriptor (0x13DB5A22A5B05595L, double)

@@ -55,25 +55,13 @@ private class RemoteConnection (
     def buffer: PagedBuffer
     def backoff: Iterator [Int]
 
-    val flushed: Callback [Unit] = {
-      case Success (v) =>
-        RemoteConnection.this.sent()
-      case Failure (t) =>
-        log.exceptionWritingMessage (t)
-        RemoteConnection.this.disconnect (socket)
-    }
-
-    def flush(): Unit = scheduler.execute {
-      socket.flush (buffer) run (flushed)
-    }
-
     def enque (message: PickledMessage) {
       message (buffer)
     }
 
     override def disconnect (socket: Socket) {
       if (socket == this.socket) {
-        socket.close()
+        _close (socket)
         state = Disconnected (backoff)
       }}
 
@@ -81,27 +69,27 @@ private class RemoteConnection (
       if (buffer.readableBytes == 0) {
         state = Connected (socket, clientId, buffer)
       } else {
-        flush()
+        flush (socket, buffer)
         state = Sending (socket, clientId)
       }}
 
     override def connect (socket: Socket, input: PagedBuffer, clientId: HostId) {
       if (clientId < this.clientId) {
-        socket.close()
+        _close (socket)
       } else {
         if (socket != this.socket)
-          this.socket.close()
+          _close (this.socket)
         loop (socket, input)
         if (buffer.readableBytes == 0) {
           state = Connected (socket, clientId, buffer)
         } else {
-          flush()
+          flush (socket, buffer)
           state = Sending (socket, clientId)
         }}}
 
     override def close() {
-      socket.close()
       state = Closed
+      _close (socket)
     }
 
     override def send (message: PickledMessage): Unit =
@@ -113,11 +101,15 @@ private class RemoteConnection (
     val time = System.currentTimeMillis
 
     override def send (message: PickledMessage) {
-      val socket = Socket.open (group)
-      greet (socket)
-      state = new Connecting (socket, localId, time, backoff)
-      state.send (message)
-    }}
+      if (address != null) {
+        val socket = Socket.open (group)
+        greet (socket)
+        state = new Connecting (socket, localId, time, backoff)
+        state.send (message)
+      }}
+
+    override def toString = "Disconnected"
+  }
 
   case class Connecting (socket: Socket,  clientId: HostId, time: Long, backoff: Iterator [Int])
   extends HaveSocket {
@@ -126,25 +118,39 @@ private class RemoteConnection (
 
     override def disconnect (socket: Socket) {
       if (socket == this.socket) {
-        socket.close()
         state = Block (time, backoff)
-      }}}
+        _close (socket)
+      }}
+
+    override def toString = "Connecting"
+  }
 
   case class Connected (socket: Socket, clientId: HostId, buffer: PagedBuffer) extends HaveSocket {
 
     def backoff = BlockedTimer.iterator (Random)
 
+    override def sent() {
+      if (buffer.readableBytes > 0) {
+        flush (socket, buffer)
+        state = Sending (socket, clientId)
+      }}
+
     override def send (message: PickledMessage) {
       enque (message)
-      flush()
+      flush (socket, buffer)
       state = Sending (socket, clientId)
-    }}
+    }
+
+    override def toString = "Connected"
+  }
 
   case class Sending (socket: Socket, clientId: HostId) extends HaveSocket {
 
     val buffer = PagedBuffer (12)
 
     def backoff = BlockedTimer.iterator (Random)
+
+    override def toString = "Sending"
   }
 
   case class Block (time: Long, backoff: Iterator [Int]) extends State {
@@ -153,39 +159,70 @@ private class RemoteConnection (
 
     override def unblock() {
       state = Disconnected (backoff)
-    }}
+    }
 
-  case object Closed extends State
+    override def toString = "Block"
+  }
+
+  case object Closed extends State {
+
+    override def toString = "Closed"
+  }
 
   private val BlockedTimer = Backoff (500, 500, 1 minutes)
 
   private val fiber = new Fiber
   private var state: State = new Disconnected (BlockedTimer.iterator (Random))
 
-  def loop (socket: Socket, input: PagedBuffer) {
+  private def _close (socket: Socket): Unit =
+    try {
+      log.disconnected (id, socket.localAddress, socket.remoteAddress)
+      socket.close()
+    } catch {
+      case t: Throwable if isClosedException (t) => ()
+    }
 
+  def loop (socket: Socket, input: PagedBuffer) {
+    log.connected (id, socket.localAddress, socket.remoteAddress)
     val loop = Callback.fix [Unit] { loop => {
       case Success (v) =>
         ports.deliver (RemoteConnection.this, socket, input) run (loop)
+      case Failure (t) if isClosedException (t) =>
+        disconnect (socket)
       case Failure (t) =>
         log.exceptionReadingMessage (t)
         disconnect (socket)
     }}
-
     scheduler.execute (loop.pass())
   }
 
+  def flush (socket: Socket, buffer: PagedBuffer): Unit = scheduler.execute {
+    socket.flush (buffer) run {
+      case Success (v) =>
+        sent()
+      case Failure (t) if isClosedException (t) =>
+        disconnect (socket)
+      case Failure (t) =>
+        log.exceptionWritingMessage (t)
+        disconnect (socket)
+    }}
+
   private def hearHello (socket: Socket) {
     val input = PagedBuffer (12)
-    socket.fill (input, 9) run {
-      case Success (v) =>
-        val Hello (clientId, cellId) = Hello.pickler.unpickle (input)
-        if (clientId == id) {
+    socket.deframe (input) run {
+      case Success (length) =>
+        val Hello (clientId, clientCellId) = Hello.pickler.unpickle (input)
+        if (clientId == id && clientCellId == cellId) {
           connect (socket, input, localId)
+        } else if (clientCellId != cellId) {
+          log.rejectedForeignCell (clientId, clientCellId)
+          disconnect (socket)
         } else {
           log.errorWhileGreeting (id, clientId)
           disconnect (socket)
         }
+      case Failure (t) if isClosedException (t) =>
+        disconnect (socket)
       case Failure (t) =>
         log.exceptionWhileGreeting (t)
         disconnect (socket)
@@ -193,10 +230,12 @@ private class RemoteConnection (
 
   private def sayHello (socket: Socket) {
     val buffer = PagedBuffer (12)
-    Hello.pickler.pickle (Hello (localId, cellId), buffer)
+    Hello.pickler.frame (Hello (localId, cellId), buffer)
     socket.flush (buffer) run {
       case Success (v) =>
         hearHello (socket)
+      case Failure (t) if isClosedException (t) =>
+        disconnect (socket)
       case Failure (t) =>
         log.exceptionWhileGreeting (t)
         disconnect (socket)
@@ -206,6 +245,8 @@ private class RemoteConnection (
     socket.connect (address) run {
       case Success (v) =>
         sayHello (socket)
+      case Failure (t) if isClosedException (t) =>
+        disconnect (socket)
       case Failure (t) =>
         log.exceptionWhileGreeting (t)
         disconnect (socket)

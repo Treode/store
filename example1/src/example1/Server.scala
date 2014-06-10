@@ -13,10 +13,14 @@ class Server extends AsyncFinatraServer {
       14,
       "Size of the super block (log base 2)")
 
-  val peerPort = flag [InetSocketAddress] (
-      "peerPort",
-      InetSocketAddress.createUnresolved ("*", 6278),
-      "Port on which to listen for peers")
+  val bindAddr = flag [InetSocketAddress] (
+      "bind",
+      "Address on which to listen for peers (default share)")
+
+  val shareAddr = flag [InetSocketAddress] (
+      "share",
+      new InetSocketAddress (6278),
+      "Address to share with peers")
 
   override def main() {
 
@@ -30,7 +34,8 @@ class Server extends AsyncFinatraServer {
 
     val controller = {
       val c = StandAlone.recover (
-          localAddr = peerPort(),
+          bindAddr = if (bindAddr.isDefined) bindAddr() else shareAddr(),
+          shareAddr = shareAddr(),
           disksConfig = disksConfig,
           storeConfig = StoreConfig.recommended(),
           paths = args map (Paths.get (_)): _*)

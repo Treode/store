@@ -17,6 +17,12 @@ import TimeUnit.MILLISECONDS
 class Socket (socket: AsynchronousSocketChannel) (implicit scheduler: Scheduler) {
   import scheduler.whilst
 
+  def localAddress: SocketAddress =
+    socket.getLocalAddress
+
+  def remoteAddress: SocketAddress =
+    socket.getRemoteAddress
+
   def connect (addr: SocketAddress): Async [Unit] =
     async { cb =>
       try {

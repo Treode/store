@@ -42,8 +42,9 @@ object Cluster {
 
   def live (
       cellId: CellId,
-      localId: HostId,
-      localAddr: SocketAddress
+      hostId: HostId,
+      bindAddr: SocketAddress,
+      shareAddr: SocketAddress
   ) (implicit
       random: Random,
       scheduler: Scheduler
@@ -57,13 +58,13 @@ object Cluster {
 
       group = AsynchronousChannelGroup.withFixedThreadPool (1, Executors.defaultThreadFactory)
 
-      val peers = PeerRegistry.live (cellId, localId, group, ports)
+      val peers = PeerRegistry.live (cellId, hostId, group, ports)
 
-      val scuttlebutt = new Scuttlebutt (localId, peers)
+      val scuttlebutt = new Scuttlebutt (hostId, peers)
 
-      val listener = new Listener (cellId, localId, localAddr, group, peers)
+      val listener = new Listener (cellId, hostId, bindAddr, group, peers)
 
-      implicit val cluster  = new ClusterLive (localId, ports, peers, listener, scuttlebutt)
+      implicit val cluster  = new ClusterLive (hostId, ports, peers, listener, scuttlebutt)
 
       Peer.load.listen { (load, peer) =>
         peer.load = load
@@ -72,6 +73,8 @@ object Cluster {
       Peer.time.listen { (time, peer) =>
         peer.time = time
       }
+
+      Peer.address.spread (shareAddr)
 
       scheduler.delay (1000) (spreadLocalStats())
 
