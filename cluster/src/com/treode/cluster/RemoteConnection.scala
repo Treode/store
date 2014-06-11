@@ -20,8 +20,11 @@ private class RemoteConnection (
   group: AsynchronousChannelGroup,
   ports: PortRegistry
 ) (implicit
-    scheduler: Scheduler
+    scheduler: Scheduler,
+    config: ClusterConfig
 ) extends Peer {
+
+  import config.connectingBackoff
 
   require (id != localId)
 
@@ -127,7 +130,7 @@ private class RemoteConnection (
 
   case class Connected (socket: Socket, clientId: HostId, buffer: PagedBuffer) extends HaveSocket {
 
-    def backoff = BlockedTimer.iterator (Random)
+    def backoff = connectingBackoff.iterator (Random)
 
     override def sent() {
       if (buffer.readableBytes > 0) {
@@ -148,7 +151,7 @@ private class RemoteConnection (
 
     val buffer = PagedBuffer (12)
 
-    def backoff = BlockedTimer.iterator (Random)
+    def backoff = connectingBackoff.iterator (Random)
 
     override def toString = "Sending"
   }
@@ -169,10 +172,8 @@ private class RemoteConnection (
     override def toString = "Closed"
   }
 
-  private val BlockedTimer = Backoff (500, 500, 1 minutes)
-
   private val fiber = new Fiber
-  private var state: State = new Disconnected (BlockedTimer.iterator (Random))
+  private var state: State = new Disconnected (connectingBackoff.iterator (Random))
 
   private def _close (socket: Socket): Unit =
     try {

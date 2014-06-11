@@ -17,6 +17,7 @@ import Callback.{ignore => disregard}
 class ClusterLiveSpec extends FlatSpec with AsyncChecks {
 
   implicit val random = Random
+  implicit val config = ClusterConfig.suggested
 
   val Cell1 = CellId (0x89)
   val Cell2 = CellId (0x27)

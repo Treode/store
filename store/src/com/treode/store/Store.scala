@@ -6,7 +6,7 @@ import java.util.concurrent.Executors
 import scala.util.{Failure, Random}
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
-import com.treode.cluster.{CellId, Cluster, HostId, Peer}
+import com.treode.cluster.{CellId, Cluster, ClusterConfig, HostId, Peer}
 import com.treode.disk.{Disk, DiskConfig, DiskGeometry}
 
 import Async.guard
@@ -72,21 +72,23 @@ object Store {
   def recover (
       bindAddr: SocketAddress,
       shareAddr: SocketAddress,
-      disksConfig: DiskConfig,
-      storeConfig: StoreConfig,
       paths: Path*
+  ) (implicit
+      disksConfig: DiskConfig,
+      clusterConfig: ClusterConfig,
+      storeConfig: StoreConfig
   ): Async [Controller] = {
     val nthreads = Runtime.getRuntime.availableProcessors
     val executor = Executors.newScheduledThreadPool (nthreads)
     guard {
-      val random = Random
-      val scheduler = Scheduler (executor)
-      val _disks = Disk.recover () (scheduler, disksConfig)
-      val _store = Store.recover () (random, scheduler, _disks, storeConfig)
+      implicit val random = Random
+      implicit val scheduler = Scheduler (executor)
+      implicit val _disks = Disk.recover()
+      val _store = Store.recover()
       for {
         launch <- _disks.reattach (paths: _*)
         (hostId, cellId) = StorePicklers.sysid.fromByteArray (launch.sysid)
-        cluster = Cluster.live (cellId, hostId, bindAddr, shareAddr) (random, scheduler)
+        cluster = Cluster.live (cellId, hostId, bindAddr, shareAddr)
         store <- _store.launch (launch, cluster)
       } yield {
         (new ExtendedController (executor, store)): Controller

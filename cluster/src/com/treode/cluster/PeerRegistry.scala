@@ -43,8 +43,16 @@ private class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit 
 
 private object PeerRegistry {
 
-  def live (cellId: CellId, localId: HostId, group: AsynchronousChannelGroup, ports: PortRegistry) (
-      implicit random: Random, scheduler: Scheduler): PeerRegistry = {
+  def live (
+      cellId: CellId,
+      localId: HostId,
+      group: AsynchronousChannelGroup,
+      ports: PortRegistry
+  ) (implicit
+      random: Random,
+      scheduler: Scheduler,
+      config: ClusterConfig
+  ): PeerRegistry = {
 
     def newPeer (remoteId: HostId): Peer =
       if (remoteId == localId)

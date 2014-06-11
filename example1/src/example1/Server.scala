@@ -2,7 +2,7 @@ package example1
 
 import java.net.InetSocketAddress
 import java.nio.file.Paths
-import com.treode.cluster.{CellId, HostId}
+import com.treode.cluster.{CellId, ClusterConfig, HostId}
 import com.treode.disk.{DiskConfig, DiskGeometry}
 import com.treode.store.{Store, StoreConfig}
 
@@ -29,12 +29,14 @@ class Server extends AsyncFinatraServer {
       return
     }
 
+    implicit val disksConfig = DiskConfig.suggested.copy (superBlockBits = superBlockBits())
+    implicit val clusterConfig = ClusterConfig.suggested
+    implicit val storeConfig = StoreConfig.suggested
+
     val controller = {
       val c = Store.recover (
           bindAddr = if (bindAddr.isDefined) bindAddr() else shareAddr(),
           shareAddr = shareAddr(),
-          disksConfig = DiskConfig.suggested.copy (superBlockBits = superBlockBits()),
-          storeConfig = StoreConfig.suggested,
           paths = args map (Paths.get (_)): _*)
       c.await()
     }

@@ -34,10 +34,14 @@ object Cluster {
 
   private val osBean = ManagementFactory.getPlatformMXBean (classOf [OperatingSystemMXBean]);
 
-  private def spreadLocalStats () (implicit scheduler: Scheduler, cluser: Cluster) {
+  private def updateLocalStats () (implicit
+      scheduler: Scheduler,
+      cluser: Cluster,
+      config: ClusterConfig
+  ) {
     Peer.load.spread (osBean.getSystemLoadAverage)
     Peer.time.spread (System.currentTimeMillis)
-    scheduler.delay (1000) (spreadLocalStats())
+    scheduler.delay (config.statsUpdatePeriod) (updateLocalStats())
   }
 
   def live (
@@ -47,7 +51,8 @@ object Cluster {
       shareAddr: SocketAddress
   ) (implicit
       random: Random,
-      scheduler: Scheduler
+      scheduler: Scheduler,
+      config: ClusterConfig
   ): Cluster = {
 
     var group: AsynchronousChannelGroup = null
@@ -75,8 +80,7 @@ object Cluster {
       }
 
       Peer.address.spread (shareAddr)
-
-      scheduler.delay (1000) (spreadLocalStats())
+      updateLocalStats()
 
       cluster
 
