@@ -26,12 +26,13 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       scheduler: StubScheduler,
       config: StoreTestConfig
   ): TestTable = {
-      implicit val recovery = StubDisk.recover (config.stubDiskConfig)
-      val _table = new TestMedic (ID)
-      val launch = recovery.attach (diskDrive) .pass
-      val table = _table.launch (launch) .pass
-      launch.launch()
-      table
+    import config._
+    implicit val recovery = StubDisk.recover()
+    val _table = new TestMedic (ID)
+    val launch = recovery.attach (diskDrive) .pass
+    val table = _table.launch (launch) .pass
+    launch.launch()
+    table
   }
 
   private def recover (
@@ -41,7 +42,8 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       scheduler: StubScheduler,
       config: StoreTestConfig
   ): TestTable = {
-    implicit val recovery = StubDisk.recover (config.stubDiskConfig)
+    import config._
+    implicit val recovery = StubDisk.recover()
     val _table = new TestMedic (ID)
     val launch = recovery.reattach (diskDrive) .pass
     val table = _table.launch (launch) .pass

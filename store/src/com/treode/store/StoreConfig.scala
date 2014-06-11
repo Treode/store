@@ -5,7 +5,7 @@ import scala.language.postfixOps
 import com.treode.async.Backoff
 import com.treode.async.misc.RichInt
 
-class StoreConfig private [store] (
+case class StoreConfig (
     val priorValueEpoch: Epoch,
     val falsePositiveProbability: Double,
     val lockSpaceBits: Int,
@@ -13,6 +13,22 @@ class StoreConfig private [store] (
     val rebalanceBytes: Int,
     val rebalanceEntries: Int
 ) {
+
+  require (
+      0 < falsePositiveProbability && falsePositiveProbability < 1,
+      "The false positive probability must be between 0 and 1 exclusive.")
+  require (
+      0 <= lockSpaceBits && lockSpaceBits <= 14,
+      "The size of the lock space must be between 0 and 14 bits.")
+  require (
+      targetPageBytes > 0,
+      "The target size of a page must be more than zero bytes.")
+  require (
+      rebalanceBytes > 0,
+      "The rebalance batch size must be more than 0 bytes.")
+  require (
+      rebalanceEntries > 0,
+      "The rebalance batch size must be more than 0 entries.")
 
   val scanBatchBytes = 1<<16
   val scanBatchEntries = 1000
@@ -31,53 +47,11 @@ class StoreConfig private [store] (
 
 object StoreConfig {
 
-  def apply (
-      priorValueEpoch: Epoch,
-      falsePositiveProbability: Double,
-      lockSpaceBits: Int,
-      targetPageBytes: Int,
-      rebalanceBytes: Int,
-      rebalanceEntries: Int
-  ): StoreConfig = {
-
-    require (
-        0 < falsePositiveProbability && falsePositiveProbability < 1,
-        "The false positive probability must be between 0 and 1 exclusive.")
-    require (
-        0 <= lockSpaceBits && lockSpaceBits <= 14,
-        "The size of the lock space must be between 0 and 14 bits.")
-    require (
-        targetPageBytes > 0,
-        "The target size of a page must be more than zero bytes.")
-    require (
-        rebalanceBytes > 0,
-        "The rebalance batch size must be more than 0 bytes.")
-    require (
-        rebalanceEntries > 0,
-        "The rebalance batch size must be more than 0 entries.")
-
-    new StoreConfig (
-        priorValueEpoch,
-        falsePositiveProbability,
-        lockSpaceBits,
-        targetPageBytes,
-        rebalanceBytes,
-        rebalanceEntries)
-  }
-
-  def suggested (
-      priorValueEpoch: Epoch = Epoch.StartOfYesterday,
-      falsePositiveProbability: Double = 0.01,
-      lockSpaceBits: Int = 10,
-      targetPageBytes: Int = 1<<20,
-      rebalanceBytes: Int = 1<<20,
-      rebalanceEntries: Int = 10000
-  ): StoreConfig =
-    StoreConfig (
-        priorValueEpoch,
-        falsePositiveProbability,
-        lockSpaceBits,
-        targetPageBytes,
-        rebalanceBytes,
-        rebalanceEntries)
+  val suggested = StoreConfig (
+      priorValueEpoch = Epoch.StartOfYesterday,
+      falsePositiveProbability = 0.01,
+      lockSpaceBits = 10,
+      targetPageBytes = 1<<20,
+      rebalanceBytes = 1<<20,
+      rebalanceEntries = 10000)
 }

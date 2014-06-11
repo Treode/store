@@ -19,14 +19,19 @@ import TierTestTools._
 
 class TierSpec extends WordSpec {
 
-  private def setup(): (StubScheduler, Disk) = {
+  private def setup (targetPageBytes: Int = 1<<20): (StubScheduler, Disk, StoreConfig) = {
+    val config = StoreTestConfig (
+        checkpointProbability = 0.0,
+        compactionProbability = 0.0,
+        targetPageBytes = targetPageBytes)
+    import config._
     implicit val random = new Random (0)
     implicit val scheduler = StubScheduler.random (random)
-    implicit val recovery = StubDisk.recover (0.0, 0.0)
+    implicit val recovery = StubDisk.recover()
     val diskDrive = new StubDiskDrive
     val launch = recovery.attach (diskDrive) .pass
     launch.launch()
-    (scheduler, launch.disks)
+    (scheduler, launch.disks, config.storeConfig)
   }
 
   private def newBuilder (est: Long) (
@@ -62,9 +67,8 @@ class TierSpec extends WordSpec {
     }}
 
   /** Build a tier from fruit. */
-  private def buildTier (pageBytes: Int) (
-      implicit scheduler: StubScheduler, disks: Disk): Tier = {
-    implicit val config = StoreTestConfig (targetPageBytes = pageBytes)
+  private def buildTier () (
+      implicit scheduler: StubScheduler, disks: Disk, config: StoreConfig): Tier = {
     val builder = newBuilder (AllFruits.length)
     AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .pass
     builder.result.pass
@@ -100,24 +104,21 @@ class TierSpec extends WordSpec {
   "The TierBuilder" should {
 
     "require that added entries are not duplicated" in {
-      implicit val (scheduler, disks) = setup()
-      implicit val config = StoreTestConfig()
+      implicit val (scheduler, disks, config) = setup()
       val builder = newBuilder (2)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
 
     "require that added entries are sorted by key" in {
-      implicit val (scheduler, disks) = setup()
-      implicit val config = StoreTestConfig()
+      implicit val (scheduler, disks, config) = setup()
       val builder = newBuilder (2)
       builder.add (Cell (Orange, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
 
     "allow properly sorted entries" in {
-      implicit val (scheduler, disks) = setup()
-      implicit val config = StoreTestConfig()
+      implicit val (scheduler, disks, config) = setup()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Orange, 0, None)) .pass
@@ -125,8 +126,7 @@ class TierSpec extends WordSpec {
     }
 
     "track the number of entries and keys" in {
-      implicit val (scheduler, disks) = setup()
-      implicit val config = StoreTestConfig()
+      implicit val (scheduler, disks, config) = setup()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 3, None)) .pass
       builder.add (Cell (Apple, 1, None)) .pass
@@ -139,8 +139,7 @@ class TierSpec extends WordSpec {
     }
 
     "track the bounds on the times" in {
-      implicit val (scheduler, disks) = setup()
-      implicit val config = StoreTestConfig()
+      implicit val (scheduler, disks, config) = setup()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 3, None)) .pass
       builder.add (Cell (Orange, 5, None)) .pass
@@ -151,8 +150,7 @@ class TierSpec extends WordSpec {
     }
 
     "track the number of bytes" in {
-      implicit val (scheduler, disks) = setup()
-      implicit val config = StoreTestConfig()
+      implicit val (scheduler, disks, config) = setup()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 1, None)) .pass
       val tier = builder.result(). pass
@@ -162,8 +160,8 @@ class TierSpec extends WordSpec {
     "build a balanced tree with all keys" when {
 
       def checkBuild (pageBytes: Int, expectedDiskBytes: Int) {
-        implicit val (scheduler, disks) = setup()
-        val tier = buildTier (pageBytes)
+        implicit val (scheduler, disks, config) = setup (pageBytes)
+        val tier = buildTier()
         expectBalanced (tier)
         assertResult (AllFruits.toSeq) (toSeq (tier) .map (_.key))
         assertResult (AllFruits.length) (tier.keys)
@@ -190,8 +188,8 @@ class TierSpec extends WordSpec {
       "iterate all keys" when {
 
         def checkIterator (pageBytes: Int) {
-          implicit val (scheduler, disks) = setup()
-          val tier = buildTier (pageBytes)
+          implicit val (scheduler, disks, config) = setup (pageBytes)
+          val tier = buildTier()
           assertResult (AllFruits.toSeq) (iterateTier (tier) map (_.key))
         }
 
@@ -212,8 +210,8 @@ class TierSpec extends WordSpec {
       "iterate all remaining keys" when {
 
         def checkIterator (pageBytes: Int) {
-          implicit val (scheduler, disks) = setup()
-          val tier = buildTier (pageBytes)
+          implicit val (scheduler, disks, config) = setup (pageBytes)
+          val tier = buildTier()
           for (start <- AllFruits) {
             val expected = AllFruits.dropWhile (_ < start) .toSeq
             val actual = iterateTier (tier, start, 0, true) map (_.key)
@@ -237,8 +235,8 @@ class TierSpec extends WordSpec {
       "iterate all remaining keys" when {
 
         def checkIterator (pageBytes: Int) {
-          implicit val (scheduler, disks) = setup()
-          val tier = buildTier (pageBytes)
+          implicit val (scheduler, disks, config) = setup (pageBytes)
+          val tier = buildTier()
           for (start <- AllFruits) {
             val expected = AllFruits.dropWhile (_ <= start) .toSeq
             val actual = iterateTier (tier, start, 0, false) map (_.key)
@@ -264,8 +262,8 @@ class TierSpec extends WordSpec {
 
       def checkFind (pageBytes: Int) {
 
-        implicit val (scheduler, disks) = setup()
-        val tier = buildTier (pageBytes)
+        implicit val (scheduler, disks, config) = setup (pageBytes)
+        val tier = buildTier()
 
         def get (key: Bytes): Bytes =
           tier.get (descriptor, key, TxClock.MaxValue) .pass.get.key

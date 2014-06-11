@@ -22,12 +22,12 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
   extends StubStoreHost {
     import kit._
 
+    val config = StoreTestConfig()
+    import config._
+
     implicit val cluster = new StubPeer (localId)
-
     implicit val library = new Library
-
-    implicit val config = StoreTestConfig()
-    implicit val recovery = StubDisk.recover (config.stubDiskConfig)
+    implicit val recovery = StubDisk.recover()
     implicit val _catalogs = Catalogs.recover()
 
     val diskDrive = new StubDiskDrive

@@ -44,14 +44,15 @@ object BrokerBehaviors extends FreeSpec {
 
   private class RichBroker (implicit random: Random, scheduler: StubScheduler) {
 
+    val config = StoreTestConfig()
+    import config._
+
     val diskDrive = new StubDiskDrive
 
     implicit val recovery = StubDisk.recover()
     implicit val launch = recovery.attach (diskDrive) .pass
     implicit val disks = launch.disks
     launch.launch()
-
-    implicit val storeConfig = StoreTestConfig()
 
     val broker = new Broker (Map.empty)
 

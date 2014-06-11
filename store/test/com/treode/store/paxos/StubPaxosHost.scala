@@ -80,12 +80,12 @@ private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] 
       config: StoreTestConfig
   ): Async [StubPaxosHost] = {
 
-    import config.{checkpointProbability, compactionProbability}
+    import config._
 
     implicit val scheduler = new ChildScheduler (parent)
     implicit val cluster = new StubPeer (id)
     implicit val library = new Library
-    implicit val recovery = StubDisk.recover (config.stubDiskConfig)
+    implicit val recovery = StubDisk.recover()
     implicit val _catalogs = Catalogs.recover()
     val _paxos = Paxos.recover()
 

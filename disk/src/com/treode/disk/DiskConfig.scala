@@ -1,14 +1,36 @@
 package com.treode.disk
 
-class DiskConfig private [disk] (
-    val superBlockBits: Int,
-    val maximumRecordBytes: Int,
-    val maximumPageBytes: Int,
-    val checkpointBytes: Int,
-    val checkpointEntries: Int,
-    val cleaningFrequency: Int,
-    val cleaningLoad: Int
+case class DiskConfig (
+    superBlockBits: Int,
+    maximumRecordBytes: Int,
+    maximumPageBytes: Int,
+    checkpointBytes: Int,
+    checkpointEntries: Int,
+    cleaningFrequency: Int,
+    cleaningLoad: Int
 ) {
+
+  require (
+      superBlockBits > 0,
+      "A superblock must have more than 0 bytes.")
+  require (
+      maximumRecordBytes > 0,
+      "The maximum record size must be more than 0 bytes.")
+  require (
+      maximumPageBytes > 0,
+      "The maximum page size must be more than 0 bytes.")
+  require (
+      checkpointBytes > 0,
+      "The checkpoint interval must be more than 0 bytes.")
+  require (
+      checkpointEntries > 0,
+      "The checkpoint interval must be more than 0 entries.")
+  require (
+      cleaningFrequency > 0,
+      "The cleaning interval must be more than 0 segments.")
+  require (
+      cleaningLoad > 0,
+      "The cleaning load must be more than 0 segemnts.")
 
   val superBlockBytes = 1 << superBlockBits
   val superBlockMask = superBlockBytes - 1
@@ -28,63 +50,12 @@ class DiskConfig private [disk] (
 
 object DiskConfig {
 
-  def apply (
-      superBlockBits: Int,
-      maximumRecordBytes: Int,
-      maximumPageBytes: Int,
-      checkpointBytes: Int,
-      checkpointEntries: Int,
-      cleaningFrequency: Int,
-      cleaningLoad: Int
-  ): DiskConfig = {
-
-    require (
-        superBlockBits > 0,
-        "A superblock must have more than 0 bytes.")
-    require (
-        maximumRecordBytes > 0,
-        "The maximum record size must be more than 0 bytes.")
-    require (
-        maximumPageBytes > 0,
-        "The maximum page size must be more than 0 bytes.")
-    require (
-        checkpointBytes > 0,
-        "The checkpoint interval must be more than 0 bytes.")
-    require (
-        checkpointEntries > 0,
-        "The checkpoint interval must be more than 0 entries.")
-    require (
-        cleaningFrequency > 0,
-        "The cleaning interval must be more than 0 segments.")
-    require (
-        cleaningLoad > 0,
-        "The cleaning load must be more than 0 segemnts.")
-
-    new DiskConfig (
-        superBlockBits,
-        maximumRecordBytes,
-        maximumPageBytes,
-        checkpointBytes,
-        checkpointEntries,
-        cleaningFrequency,
-        cleaningLoad)
-  }
-
-  def suggested (
-      superBlockBits: Int = 14,
-      maximumRecordBytes: Int = 1<<24,
-      maximumPageBytes: Int = 1<<24,
-      checkpointBytes: Int = 1<<24,
-      checkpointEntries: Int = 10000,
-      cleaningFrequency: Int = 7,
-      cleaningLoad: Int = 1
-  ): DiskConfig =
-    DiskConfig (
-        superBlockBits,
-        maximumRecordBytes,
-        maximumPageBytes,
-        checkpointBytes,
-        checkpointEntries,
-        cleaningFrequency,
-        cleaningLoad)
+  val suggested = DiskConfig (
+      superBlockBits = 14,
+      maximumRecordBytes = 1<<24,
+      maximumPageBytes = 1<<24,
+      checkpointBytes = 1<<24,
+      checkpointEntries = 10000,
+      cleaningFrequency = 7,
+      cleaningLoad = 1)
 }

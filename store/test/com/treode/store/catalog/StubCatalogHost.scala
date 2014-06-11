@@ -20,11 +20,11 @@ private class StubCatalogHost (val localId: HostId) (implicit kit: StoreTestKit)
 extends StubStoreHost {
   import kit._
 
+  val config = StoreTestConfig()
+  import config._
+
   implicit val cluster = new StubPeer (localId)
-
   implicit val library = new Library
-
-  implicit val storeConfig = StoreTestConfig()
   implicit val recovery = StubDisk.recover()
   implicit val _catalogs = Catalogs.recover()
 

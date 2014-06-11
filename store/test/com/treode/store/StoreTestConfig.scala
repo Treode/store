@@ -1,31 +1,21 @@
 package com.treode.store
 
+import scala.language.postfixOps
+
+import com.treode.async.Backoff
+import com.treode.async.misc.RichInt
 import com.treode.disk.stubs.StubDiskConfig
 
 class StoreTestConfig (
-    priorValueEpoch: Epoch,
-    falsePositiveProbability: Double,
-    lockSpaceBits: Int,
-    targetPageBytes: Int,
-    rebalanceBytes: Int,
-    rebalanceEntries: Int,
-    val checkpointProbability: Double,
-    val compactionProbability: Double,
     val messageFlakiness: Double
-) extends StoreConfig (
-    priorValueEpoch,
-    falsePositiveProbability,
-    lockSpaceBits,
-    targetPageBytes,
-    rebalanceBytes,
-    rebalanceEntries
+) (implicit
+    val stubDiskConfig: StubDiskConfig,
+    val storeConfig: StoreConfig
 ) {
 
-  val stubDiskConfig = StubDiskConfig (
-      checkpointProbability,
-      compactionProbability)
-
   override def toString = {
+    import stubDiskConfig._
+    import storeConfig._
     val s = new StringBuilder
     s ++= "StoreTestConfig("
     s ++= s"priorValueEpoch = $priorValueEpoch, "
@@ -53,15 +43,18 @@ object StoreTestConfig {
       checkpointProbability: Double = 0.1,
       compactionProbability: Double = 0.1,
       messageFlakiness: Double = 0.1
-  ): StoreTestConfig =
+  ): StoreTestConfig = {
     new StoreTestConfig (
-        priorValueEpoch,
-        falsePositiveProbability,
-        lockSpaceBits,
-        targetPageBytes,
-        rebalanceBytes,
-        rebalanceEntries,
-        checkpointProbability,
-        compactionProbability,
-        messageFlakiness)
-}
+        messageFlakiness = messageFlakiness
+    ) (
+        stubDiskConfig = StubDiskConfig (
+            checkpointProbability = checkpointProbability,
+            compactionProbability = compactionProbability),
+        storeConfig = StoreConfig (
+            priorValueEpoch = priorValueEpoch,
+            falsePositiveProbability = falsePositiveProbability,
+            lockSpaceBits = lockSpaceBits,
+            targetPageBytes = targetPageBytes,
+            rebalanceBytes = rebalanceBytes,
+            rebalanceEntries = rebalanceEntries))
+  }}

@@ -147,7 +147,8 @@ class LockSpec extends WordSpec with MockFactory {
 
     "acquire all locks before proceeding" in {
       implicit val scheduler = StubScheduler.random()
-      implicit val config = StoreTestConfig (lockSpaceBits = 8)
+      val config = StoreTestConfig (lockSpaceBits = 8)
+      import config._
       val locks = new LockSpace
       val w1 = locks.write (1, Apple, Banana) .pass
       val w2 = locks.write (2, Banana, Orange) .capture()

@@ -10,7 +10,8 @@ import TierTestTools._
 
 class TiersSpec extends FreeSpec {
 
-  implicit val config = StoreTestConfig()
+  val config = StoreTestConfig()
+  import config._
 
   private def residents (cohorts: Int*): Residents =
     Atlas (cohorts .map (settled (_)) .toArray, 1) .residents (0)

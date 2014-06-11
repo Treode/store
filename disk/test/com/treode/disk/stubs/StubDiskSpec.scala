@@ -23,7 +23,8 @@ class StubDiskSpec extends FreeSpec with CrashChecks {
       var checkpointed = false
 
       setup { implicit scheduler =>
-        implicit val recovery = StubDisk.recover (checkpoint, compaction)
+        implicit val config = StubDiskConfig (checkpoint, compaction)
+        implicit val recovery = StubDisk.recover()
         implicit val launch = recovery.attach (drive) .pass
         import launch.disks
         tracker.attach()
@@ -38,7 +39,8 @@ class StubDiskSpec extends FreeSpec with CrashChecks {
       .assert (!checkpointing || checkpointed, "Expected a checkpoint")
 
       .recover { implicit scheduler =>
-        implicit val recovery = StubDisk.recover (checkpoint, compaction)
+        implicit val config = StubDiskConfig (checkpoint, compaction)
+        implicit val recovery = StubDisk.recover()
         val replayer = new LogReplayer
         replayer.attach (recovery)
         implicit val disks = recovery.reattach (drive) .pass.disks
@@ -71,7 +73,8 @@ class StubDiskSpec extends FreeSpec with CrashChecks {
       val drive = new StubDiskDrive
 
       setup { implicit scheduler =>
-        implicit val recovery = StubDisk.recover (checkpoint, compaction)
+        implicit val config = StubDiskConfig (checkpoint, compaction)
+        implicit val recovery = StubDisk.recover()
         implicit val launch = recovery.attach (drive) .pass
         import launch.disks
         if (cleaning) tracker.attach()
@@ -82,7 +85,8 @@ class StubDiskSpec extends FreeSpec with CrashChecks {
       .assert (!cleaning || tracker.probed && tracker.compacted, "Expected cleaning")
 
       .recover { implicit scheduler =>
-        implicit val recovery = StubDisk.recover (checkpoint, compaction)
+        implicit val config = StubDiskConfig (checkpoint, compaction)
+        implicit val recovery = StubDisk.recover()
         implicit val disks = recovery.attach (drive) .pass.disks
         tracker.check()
       }}
