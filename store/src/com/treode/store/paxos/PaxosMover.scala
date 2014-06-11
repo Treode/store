@@ -16,7 +16,7 @@ import PaxosMover.{Batch, Point, Range, Targets, Tracker, move}
 
 private class PaxosMover (kit: PaxosKit) {
   import kit.{acceptors, archive, cluster, disks, library, random, scheduler}
-  import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
+  import kit.config.{moveBatchBackoff, moveBatchBytes, moveBatchEntries}
   import kit.library.releaser
 
   private val fiber = new Fiber
@@ -40,8 +40,8 @@ private class PaxosMover (kit: PaxosKit) {
       val next = limit
 
       iter.whilst { cell =>
-        entries < rebalanceEntries &&
-        bytes < rebalanceBytes &&
+        entries < moveBatchEntries &&
+        bytes < moveBatchBytes &&
         Point.Middle (cell.key, cell.time) < limit
       } { cell =>
         val num = place (atlas, cell.key, cell.time)
@@ -79,7 +79,7 @@ private class PaxosMover (kit: PaxosKit) {
 
     val timer = cb.ensure {
       port.close()
-    } .timeout (fiber, rebalanceBackoff) {
+    } .timeout (fiber, moveBatchBackoff) {
       move (cells) (acks, port)
     }
 

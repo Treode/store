@@ -10,11 +10,8 @@ import com.treode.store.{Atlas, BallotNumber, Bytes, TimeoutException, TxClock}
 
 private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   import kit.{cluster, library, random, scheduler}
+  import kit.config.{closedLifetime, proposingBackoff}
   import kit.proposers.remove
-
-  private val proposingBackoff = Backoff (200, 300, 1 minutes, 7)
-  private val confirmingBackoff = Backoff (200, 300, 1 minutes, 7)
-  private val closedLifetime = 2 seconds
 
   private val fiber = new Fiber
   var state: State = Opening

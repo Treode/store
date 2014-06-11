@@ -16,7 +16,7 @@ import AtomicMover.{Batch, Point, Range, Targets, Tracker, move}
 
 private class AtomicMover (kit: AtomicKit) {
   import kit.{cluster, disks, library, random, scheduler, tables}
-  import kit.config.{rebalanceBackoff, rebalanceBytes, rebalanceEntries}
+  import kit.config.{moveBatchBackoff, moveBatchBytes, moveBatchEntries}
   import kit.library.releaser
 
   private val fiber = new Fiber
@@ -47,8 +47,8 @@ private class AtomicMover (kit: AtomicKit) {
         }
 
       iter.whilst { cell =>
-        entries < rebalanceEntries &&
-        bytes < rebalanceBytes &&
+        entries < moveBatchEntries &&
+        bytes < moveBatchBytes &&
         Point.Middle (start.table, cell.key, cell.time) < limit
       } { cell =>
         val num = place (atlas, table, cell.key)
@@ -85,7 +85,7 @@ private class AtomicMover (kit: AtomicKit) {
 
     val timer = cb.ensure {
       port.close()
-    } .timeout (fiber, rebalanceBackoff) {
+    } .timeout (fiber, moveBatchBackoff) {
       move (table, cells) (acks, port)
     }
 

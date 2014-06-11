@@ -11,10 +11,7 @@ import com.treode.store.{Atlas, BallotNumber, CatalogId, TimeoutException}
 private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
   import kit.proposers.remove
   import kit.{cluster, library, random, scheduler}
-
-  private val proposingBackoff = Backoff (200, 300, 1 minutes, 7)
-  private val confirmingBackoff = Backoff (200, 300, 1 minutes, 7)
-  private val closedLifetime = 2 seconds
+  import kit.config.{closedLifetime, proposingBackoff}
 
   private val fiber = new Fiber
   var state: State = Opening
