@@ -34,7 +34,7 @@ class StoreTestConfig (
 object StoreTestConfig {
 
   def apply (
-      priorValueEpoch: Epoch = Epoch.zero,
+      priorValueEpoch: Epoch = Epoch.UnixEpoch,
       falsePositiveProbability: Double = 0.01,
       lockSpaceBits: Int = 4,
       targetPageBytes: Int = 1<<10,
