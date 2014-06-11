@@ -47,7 +47,7 @@ class ClusterLiveSpec extends FlatSpec with AsyncChecks {
 
       val fiber = new Fiber
 
-      val backoff = Backoff (10, 20, 1000, 3)
+      val backoff = Backoff (100, 200, 1000, 7)
 
       val port = request.open { (_, from) =>
         got()
