@@ -8,7 +8,9 @@ import com.treode.async.{Async, Future}
 
 import Async.guard
 
-private class PageCache (disks: DiskDrives) {
+private class PageCache (kit: DiskKit) {
+  import kit.config.pageCacheEntries
+  import kit.disks
 
   class Load (desc: PageDescriptor [_, Any], pos: Position)
   extends Callable [Future [Any]] {
@@ -17,7 +19,7 @@ private class PageCache (disks: DiskDrives) {
   }
 
   private val pages = CacheBuilder.newBuilder
-      .maximumSize (10000)
+      .maximumSize (pageCacheEntries)
       .build()
       .asInstanceOf [Cache [(Int, Long), Future [Any]]]
 

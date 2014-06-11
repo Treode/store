@@ -9,7 +9,7 @@ private class DiskAgent (val kit: DiskKit) extends Disk {
   import kit.{compactor, disks, logd, paged, releaser}
   import kit.config.{maximumPageBytes, maximumRecordBytes}
 
-  val cache = new PageCache (disks)
+  val cache = new PageCache (kit)
 
   def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit] =
     async { cb =>
