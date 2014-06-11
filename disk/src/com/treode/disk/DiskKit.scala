@@ -32,4 +32,10 @@ private class DiskKit (
         _ <- disks.launch()
       } yield ()
     } run (ignore)
+
+  def close(): Async [Unit] =
+    for {
+      _ <- compactor.close()
+      _ <- disks.close()
+    } yield ()
 }

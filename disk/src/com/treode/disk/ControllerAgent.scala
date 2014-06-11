@@ -12,4 +12,7 @@ private class ControllerAgent (kit: DiskKit, val disks: Disk) extends Disk.Contr
 
   def drain (items: Path*): Async [Unit] =
     drives.drain (items)
+
+  def shutdown(): Async [Unit] =
+    kit.close()
 }

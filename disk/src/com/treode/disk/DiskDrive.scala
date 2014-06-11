@@ -43,9 +43,12 @@ private class DiskDrive (
   val pagemp = new Multiplexer [PickledPage] (kit.paged)
   val pager: (Long, UnrolledBuffer [PickledPage]) => Unit = (receivePages _)
   var compacting = IntSet()
+  var open = true
 
-  def record (entry: RecordHeader): Async [Unit] =
-    async (cb => logmp.send (PickledRecord (id, entry, cb)))
+  def record (entry: RecordHeader): Async [Unit] = {
+    async { cb =>
+      logmp.send (PickledRecord (id, entry, cb))
+    }}
 
   def added() {
     if (draining) {
@@ -124,14 +127,15 @@ private class DiskDrive (
 
   def free (seg: SegmentPointer): Unit =
     fiber.execute {
-      val nums = IntSet (seg.num)
-      assert (!(_protected contains seg.num))
-      compacting = compacting.remove (nums)
-      alloc.free (nums)
-      record (SegmentFree (nums)) run (ignore)
-      if (draining && alloc.drained (_protected))
-        disks.detach (this)
-    }
+      if (open) {
+        val nums = IntSet (seg.num)
+        assert (!(_protected contains seg.num))
+        compacting = compacting.remove (nums)
+        alloc.free (nums)
+        record (SegmentFree (nums)) run (ignore)
+        if (draining && alloc.drained (_protected))
+          disks.detach (this)
+      }}
 
   private def _writeLedger(): Async [Unit] =
     when (pageLedgerDirty) {
@@ -152,10 +156,22 @@ private class DiskDrive (
       }}
 
   def detach(): Unit =
+    fiber.execute {
+      open = false
+      logmp.close()
+      .ensure (file.close())
+      .run (ignore)
+    }
+
+  def close(): Async [Unit] =
     fiber.guard {
-      for (_ <- logmp.close())
-        yield file.close()
-    } run (ignore)
+      open = false
+      for {
+        _ <- pagemp.close()
+        _ <- logmp.close()
+      } yield {
+        file.close()
+      }}
 
   private def splitRecords (entries: UnrolledBuffer [PickledRecord]) = {
     val accepts = new UnrolledBuffer [PickledRecord]

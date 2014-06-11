@@ -33,10 +33,13 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file = StubFile (1<<20)
           implicit val recovery = Disk.recover()
           val launch = recovery.attachAndWait (("a", file, geometry)) .pass
-          import launch.disks
+          import launch.{controller, disks}
           launch.checkpoint (fail ("Expected no checkpoints"))
           launch.launch()
-          tracker.batches (80, 40, 10)
+          for {
+            _ <- tracker.batches (80, 40, 10)
+            _ <- launch.controller.shutdown()
+          } yield ()
         }
 
         .recover { implicit scheduler =>
@@ -61,11 +64,14 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file = StubFile (1<<20)
           implicit val recovery = Disk.recover()
           implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
-          import launch.disks
+          import launch.{controller, disks}
           tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
-          tracker.batches (80, 40, 10)
+          for {
+            _ <- tracker.batches (80, 40, 10)
+            _ <- controller.shutdown()
+          } yield ()
         }
 
         .assert (checkpoint, "Expected a checkpoint")
@@ -99,11 +105,14 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
               ("a", file1, geometry),
               ("b", file2, geometry),
               ("c", file3, geometry)) .pass
-          import launch.disks
+          import launch.{controller, disks}
           tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
-          tracker.batches (80, 40, 10)
+          for {
+            _ <- tracker.batches (80, 40, 10)
+            _ <- controller.shutdown()
+          } yield ()
         }
 
         .assert (checkpoint, "Expected a checkpoint")
@@ -137,7 +146,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file2 = StubFile (1<<20)
           implicit val recovery = Disk.recover()
           implicit val launch = recovery.attachAndWait (("a", file1, geometry)) .pass
-          import launch.{disks, controller}
+          import launch.{controller, disks}
           tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
@@ -147,6 +156,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
                 tracker.batch (80, 2, 10),
                 controller.attachAndWait (("b", file2, geometry)))
             _ <- tracker.batches (80, 2, 10, 3)
+            _ <- controller.shutdown()
           } yield ()
         }
 
@@ -178,7 +188,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val recovery = Disk.recover()
           implicit val launch =
             recovery.attachAndWait (("a", file1, geometry), ("b", file2, geometry)) .pass
-          import launch.{disks, controller}
+          import launch.{controller, disks}
           tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
           launch.launch()
@@ -188,6 +198,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
                 tracker.batch (80, 2, 3),
                 controller.drainAndWait ("b"))
             _ <- tracker.batches (80, 2, 3, 3)
+            _ <- controller.shutdown()
           } yield ()
         }
 
@@ -226,10 +237,11 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         val file = StubFile (1<<16)
         implicit val recovery = Disk.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
-        import launch.disks
+        import launch.{controller, disks}
         tracker.attach()
         launch.launchAndPass()
         tracker.batches (20, 1000, 2) .pass
+        controller.shutdown() .pass
       }}
 
     "when multithreaded" taggedAs (Intensive, Periodic) in {
@@ -250,10 +262,11 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         val file = StubFile (1<<20)
         implicit val recovery = Disk.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geometry)) .await()
-        import launch.disks
+        import launch.{controller, disks}
         tracker.attach()
         launch.launch()
         tracker.batches (20, 1000, 2) .await()
+        controller.shutdown() .await()
       }}}
 
   "The pager should read and write" - {
@@ -269,8 +282,13 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         setup { implicit scheduler =>
           file = StubFile (1<<20)
           implicit val recovery = Disk.recover()
-          implicit val disks = recovery.attachAndLaunch (("a", file, geometry))
-          tracker.batch (40, 10)
+          val launch = recovery.attachAndWait (("a", file, geometry)) .pass
+          import launch.{controller, disks}
+          launch.launch()
+          for {
+            _ <- tracker.batch (40, 10)
+            _ <- controller.shutdown()
+          } yield ()
         }
 
         .recover { implicit scheduler =>
@@ -292,10 +310,13 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file = StubFile (1<<20)
           implicit val recovery = Disk.recover()
           implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
-          import launch.disks
+          import launch.{controller, disks}
           tracker.attach()
           launch.launch()
-          tracker.batch (40, 10)
+          for {
+            _ <- tracker.batch (40, 10)
+            _ <- controller.shutdown()
+          } yield ()
         }
 
         .assert (tracker.probed && tracker.compacted, "Expected cleaning.")
@@ -326,10 +347,13 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
               ("a", file1, geometry),
               ("b", file2, geometry),
               ("c", file3, geometry)) .pass
-          import launch.disks
+          import launch.{controller, disks}
           tracker.attach()
           launch.launch()
-          tracker.batch (40, 10)
+          for {
+            _ <- tracker.batch (40, 10)
+            _ <- controller.shutdown()
+          } yield ()
         }
 
         .assert (tracker.probed && tracker.compacted, "Expected cleaning.")
@@ -370,6 +394,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
                 tracker.batch (7, 10),
                 controller.attachAndWait (("b", file2, geometry)))
             _ <- tracker.batch (7, 10)
+            _ <- controller.shutdown()
           } yield ()
         }
 
@@ -408,6 +433,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
                 tracker.batch (7, 10),
                 controller.drainAndWait ("b"))
             _ <- tracker.batch (7, 10)
+            _ <- controller.shutdown
           } yield ()
         }
 
@@ -442,9 +468,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         val file = StubFile (1<<18)
         implicit val recovery = Disk.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
-        import launch.disks
+        import launch.{controller, disks}
         tracker.attach()
         launch.launch()
         tracker.batch (100, 10) .pass
+        controller.shutdown() .pass
         assert (tracker.maximum > (1<<17), "Expected growth.")
       }}}}

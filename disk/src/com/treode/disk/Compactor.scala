@@ -24,10 +24,13 @@ private class Compactor (kit: DiskKit) {
   var segments = 0
   var cleanreq = false
   var drainreq = Queue.empty [DrainReq]
+  var closed = false
   var engaged = true
 
   private def reengage() {
-    if (cleanreq) {
+    if (closed) {
+      ()
+    } else if (cleanreq) {
       cleanreq = false
       probeForClean()
     } else if (!drainreq.isEmpty) {
@@ -157,4 +160,10 @@ private class Compactor (kit: DiskKit) {
         probeForDrain (iter)
       else
         drainreq = drainreq.enqueue (iter)
+    }
+
+  def close(): Async [Unit] =
+    fiber.guard {
+      closed = true
+      pages.close()
     }}

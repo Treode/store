@@ -5,6 +5,8 @@ import scala.reflect.ClassTag
 
 import com.treode.async.{Async, Callback, Fiber, Scheduler}
 
+import Callback.fanout
+
 private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     implicit scheduler: Scheduler, mtag: ClassTag [M]) {
 
@@ -21,8 +23,8 @@ private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
   case object Open extends State
   case object Paused extends State
   case object Closed extends State
-  case class Pausing (cb: Callback [Unit]) extends State
-  case class Closing (cb: Callback [Unit]) extends State
+  case class Pausing (cbs: List [Callback [Unit]]) extends State
+  case class Closing (cbs: List [Callback [Unit]]) extends State
 
   private def execute (f: State => Any): Unit =
     fiber.execute (f (state))
@@ -56,16 +58,19 @@ private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
   private def closedException =
     new IllegalStateException ("Multiplexer is closed.")
 
-  def send (message: M): Unit = execute {
+  def send (message: M): Unit = {
+    val e = closedException
+    execute {
+
     case Closing (_) =>
-      throw closedException
+      throw e
     case Closed =>
-      throw closedException
+      throw e
     case _ if receiver.isDefined =>
       deliver (remove(), true, 0L, singleton (message))
     case _ =>
       messages += message
-  }
+  }}
 
   private def _dispatch (batch: Long, messages: UnrolledBuffer [M]): Unit = execute {
     case Open if receiver.isDefined =>
@@ -91,15 +96,15 @@ private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
       add (receiver)
     case Paused =>
       add (receiver)
-    case Pausing (cb) =>
+    case Pausing (cbs) =>
       state = Paused
       add (receiver)
-      scheduler.pass (cb, ())
+      scheduler.pass (fanout (cbs), ())
     case Closed =>
       ()
-    case Closing (cb) =>
+    case Closing (cbs) =>
       state = Closed
-      scheduler.pass (cb, ())
+      scheduler.pass (fanout (cbs), ())
   }
 
   def replace (rejects: UnrolledBuffer [M]): Unit = execute {
@@ -115,9 +120,11 @@ private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
       state = Paused
       scheduler.pass (cb, ())
     case (cb, Open) =>
-      state = Pausing (cb)
-    case (cb1, Closing (cb2)) =>
-      state = Closing (Callback.fanout (Seq (cb1, cb2)))
+      state = Pausing (List (cb))
+    case (cb, Pausing (cbs)) =>
+      state = Pausing (cb :: cbs)
+    case (cb, Closing (cbs)) =>
+      state = Closing (cb :: cbs)
     case (cb, _) =>
       scheduler.pass (cb, ())
   }
@@ -135,14 +142,14 @@ private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
 
   def close(): Async [Unit] = async {
     case (cb, Closed) =>
-      scheduler.fail (cb, closedException)
-    case (cb, Closing (_)) =>
-      scheduler.fail (cb, closedException)
-    case (cb1, Pausing (cb2)) =>
-      state = Closing (Callback.fanout (Seq (cb1, cb2)))
+      scheduler.pass (cb, ())
+    case (cb, Pausing (cbs)) =>
+      state = Closing (cb :: cbs)
+    case (cb, Closing (cbs)) =>
+      state = Closing (cb :: cbs)
     case (cb, _) if receiver.isDefined =>
       state = Closed
       scheduler.pass (cb, ())
     case (cb, _) =>
-      state = Closing (cb)
+      state = Closing (List (cb))
   }}

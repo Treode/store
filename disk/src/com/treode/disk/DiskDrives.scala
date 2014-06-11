@@ -10,13 +10,14 @@ import com.treode.async.implicits._
 import com.treode.async.io.File
 
 import Async.{async, guard}
-import Callback.ignore
+import Callback.{fanout, ignore}
 
 private class DiskDrives (kit: DiskKit) {
   import kit.{checkpointer, compactor, scheduler, sysid}
 
   type AttachItem = (Path, File, DiskGeometry)
   type AttachRequest = (Seq [AttachItem], Callback [Unit])
+  type CloseRequest = Callback [Unit]
   type DrainRequest = (Seq [Path], Callback [Unit])
   type DetachRequest = DiskDrive
   type CheckpointRequest = (Map [Int, Long], Callback [Unit])
@@ -24,16 +25,24 @@ private class DiskDrives (kit: DiskKit) {
   val fiber = new Fiber
 
   var disks = Map.empty [Int, DiskDrive]
+  var closereqs = List.empty [CloseRequest]
   var attachreqs = Queue.empty [AttachRequest]
   var detachreqs = List.empty [DetachRequest]
   var drainreqs = Queue.empty [DrainRequest]
   var checkreqs = Queue.empty [CheckpointRequest]
 
+  var closed = false
   var bootgen = 0
   var number = 0
 
   val queue = AsyncQueue (fiber) {
-    if (!attachreqs.isEmpty) {
+    if (closed) {
+      None
+    } else if (!closereqs.isEmpty) {
+      val cb = fanout [Unit] (closereqs)
+      closereqs = List.empty
+      _close (cb)
+    } else if (!attachreqs.isEmpty) {
       val ((items, cb), rest) = attachreqs.dequeue
       attachreqs = rest
       _attach (items, cb)
@@ -59,6 +68,17 @@ private class DiskDrives (kit: DiskKit) {
     } yield {
       compactor.drain (segs.iterator.flatten)
       queue.launch()
+    }
+
+  def _close (cb: Callback [Unit]): Option [Runnable] =
+    queue.run (cb) {
+      closed = true
+      disks.values.latch.unit.foreach (_.close())
+    }
+
+  def close(): Async [Unit] =
+    queue.async { cb =>
+      closereqs ::= cb
     }
 
   private def _attach (items: Seq [AttachItem], cb: Callback [Unit]): Option [Runnable] =

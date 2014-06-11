@@ -25,6 +25,8 @@ object Disk {
     def attach (items: (Path, DiskGeometry)*): Async [Unit]
 
     def drain (items: Path*): Async [Unit]
+
+    def shutdown(): Async [Unit]
   }
 
   trait Launch {

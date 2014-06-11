@@ -399,4 +399,60 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           val recovery = Disk.recover()
           val controller = recovery.reattachAndLaunch (("a", file))
           controller.assertDisks ("a")
-        }}}}}
+        }}}
+
+     "when shutdown, should" - {
+
+      "queue attaching a new item" in {
+
+        var file1: StubFile = null
+        var file2: StubFile = null
+
+        {
+          implicit val scheduler = StubScheduler.random()
+          file1 = StubFile()
+          file2 = StubFile()
+          val recovery = Disk.recover()
+          val controller = recovery.attachAndControl (("a", file1, geom))
+          controller.shutdown() .pass
+          val cb = controller.attachAndCapture (("b", file2, geom))
+          cb.assertNotInvoked()
+          controller.assertDisks ("a")
+        }
+
+        {
+          implicit val scheduler = StubScheduler.random()
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
+          val recovery = Disk.recover()
+          val controller = recovery.reattachAndLaunch (("a", file1))
+          controller.assertDisks ("a")
+        }}
+
+      "queue draining an item" in {
+
+        var file1: StubFile = null
+        var file2: StubFile = null
+
+        {
+          implicit val scheduler = StubScheduler.random()
+          file1 = StubFile()
+          file2 = StubFile()
+          val recovery = Disk.recover()
+          val controller = recovery.attachAndControl (("a", file1, geom), ("b", file2, geom))
+          controller.shutdown() .pass
+          val cb = controller.drainAndCapture ("b")
+          cb.assertNotInvoked()
+          controller.assertDisks ("a", "b")
+        }
+
+        {
+          implicit val scheduler = StubScheduler.random()
+          file1 = StubFile (file1.data)
+          file2 = StubFile (file2.data)
+          val recovery = Disk.recover()
+          val controller = recovery.reattachAndLaunch (("a", file1), ("b", file2))
+          controller.assertDisks ("a", "b")
+        }}
+
+     }}}
