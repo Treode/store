@@ -70,6 +70,9 @@ class ClusterLiveSpec extends FlatSpec with AsyncChecks {
 
     def hail (remote: Host): Unit =
       cluster.hail (remote.host, local (remote.port))
+
+    def shutdown(): Async [Unit] =
+      cluster.shutdown()
   }
 
   def converse (h1: Host, h2: Host) (implicit scheduler: StubScheduler) {
@@ -94,6 +97,8 @@ class ClusterLiveSpec extends FlatSpec with AsyncChecks {
       h1.hail (h2)
       h2.hail (h1)
       converse (h1, h2)
+      h1.shutdown() .await()
+      h2.shutdown() .await()
     }}
 
   it should "broadcast its listening address" in {
@@ -102,6 +107,8 @@ class ClusterLiveSpec extends FlatSpec with AsyncChecks {
       val h2 = new Host (Cell1, Host2, 7433)
       h1.hail (h2)
       converse (h1, h2)
+      h1.shutdown() .await()
+      h2.shutdown() .await()
     }}
 
   it should "reject foreign cells" in {
@@ -111,4 +118,7 @@ class ClusterLiveSpec extends FlatSpec with AsyncChecks {
       h1.hail (h2)
       intercept [TimeoutException] {
         h1.send (0, h2) .await()
-      }}}}
+      }
+      h1.shutdown() .await()
+      h2.shutdown() .await()
+    }}}

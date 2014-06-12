@@ -5,7 +5,8 @@ import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions._
 import scala.util.Random
 
-import com.treode.async.{Fiber, Scheduler}
+import com.treode.async.{Async, Fiber, Scheduler}
+import com.treode.async.implicits._
 
 private class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit random: Random) {
 
@@ -33,8 +34,8 @@ private class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit 
       None
     }}
 
-  def shutdown(): Unit =
-    peers.values foreach (_.close())
+  def shutdown(): Async [Unit] =
+    peers.values.latch.unit foreach (_.close())
 
   override def toString =
     "PeerRegistry" +

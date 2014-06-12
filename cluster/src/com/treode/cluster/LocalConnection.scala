@@ -1,15 +1,18 @@
 package com.treode.cluster
 
+import com.treode.async.Async
 import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
 import com.treode.pickle.Pickler
+
+import Async.supply
 
 private class LocalConnection (val id: HostId, ports: PortRegistry) extends Peer {
 
   def connect (socket: Socket, input: PagedBuffer, clientId: HostId) =
     throw new IllegalArgumentException
 
-  def close() = ()
+  def close(): Async [Unit] = supply()
 
   def send [M] (p: Pickler [M], port: PortId, msg: M): Unit =
     ports.deliver (p, this, port, msg)

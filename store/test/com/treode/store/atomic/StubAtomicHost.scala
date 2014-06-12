@@ -25,7 +25,7 @@ private class StubAtomicHost (
     val random: Random,
     val scheduler: ChildScheduler,
     val cluster: StubPeer,
-    val disks: Disk,
+    val disk: Disk,
     val library: Library,
     val catalogs: Catalogs,
     val paxos: Paxos,
@@ -38,10 +38,12 @@ private class StubAtomicHost (
 
   cluster.startup()
 
-  def shutdown() {
-    cluster.shutdown()
-    scheduler.shutdown()
-  }
+  def shutdown(): Async [Unit] =
+    for {
+      _ <- cluster.shutdown()
+    } yield {
+      scheduler.shutdown()
+    }
 
   def setAtlas (cohorts: Cohort*) {
     val atlas = Atlas (cohorts.toArray, 1)

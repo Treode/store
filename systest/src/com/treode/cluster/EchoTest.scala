@@ -6,10 +6,12 @@ import java.util.concurrent._
 import java.util.concurrent.atomic.AtomicBoolean
 import scala.util.Random
 
-import com.treode.async.Scheduler
+import com.treode.async.{Async, Scheduler}
 import com.treode.async.misc._
 import com.treode.pickle.Pickler
 import sun.misc.{SignalHandler, Signal}
+
+import Async.supply
 
 class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
@@ -129,6 +131,9 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
       def startup(): Unit =
         _listener.startup()
+
+      def shutdown(): Async [Unit] =
+        supply (_shutdown())
     }
 
     Echo.attach (localId) (_random, _scheduler, cluster)

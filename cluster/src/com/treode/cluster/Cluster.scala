@@ -6,7 +6,7 @@ import java.nio.channels.AsynchronousChannelGroup
 import java.util.concurrent.Executors
 import scala.util.Random
 
-import com.treode.async.Scheduler
+import com.treode.async.{Async, Scheduler}
 import com.treode.pickle.Pickler
 
 trait Cluster {
@@ -19,8 +19,6 @@ trait Cluster {
 
   def hail (remoteId: HostId, remoteAddr: SocketAddress)
 
-  def startup()
-
   def peer (id: HostId): Peer
 
   def rpeer: Option [Peer]
@@ -28,6 +26,10 @@ trait Cluster {
   def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralPort [M]
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M)
+
+  def startup()
+
+  def shutdown(): Async [Unit]
 }
 
 object Cluster {

@@ -2,10 +2,13 @@ package com.treode.cluster.stubs
 
 import java.net.SocketAddress
 
+import com.treode.async.Async
 import com.treode.async.io.Socket
 import com.treode.buffer.PagedBuffer
 import com.treode.cluster.{HostId, Peer, PortId}
 import com.treode.pickle.Pickler
+
+import Async.supply
 
 private class StubConnection (val id: HostId, localId: HostId, network: StubNetwork)
 extends Peer {
@@ -19,7 +22,7 @@ extends Peer {
   def connect (socket: Socket, input: PagedBuffer, clientId: HostId) =
     throw new UnsupportedOperationException
 
-  def close(): Unit = ()
+  def close(): Async [Unit] = supply()
 
   override def hashCode() = id.hashCode()
 

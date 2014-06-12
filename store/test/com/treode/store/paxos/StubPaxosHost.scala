@@ -34,10 +34,12 @@ private class StubPaxosHost (
 
   cluster.startup()
 
-  def shutdown() {
-    cluster.shutdown()
-    scheduler.shutdown()
-  }
+  def shutdown(): Async [Unit] =
+    for {
+      _ <- cluster.shutdown()
+    } yield {
+      scheduler.shutdown()
+    }
 
   def setAtlas (cohorts: Cohort*) {
     val atlas = Atlas (cohorts.toArray, 1)

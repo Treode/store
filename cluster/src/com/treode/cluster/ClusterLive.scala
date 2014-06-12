@@ -2,7 +2,10 @@ package com.treode.cluster
 
 import java.net.SocketAddress
 
+import com.treode.async.Async
 import com.treode.pickle.Pickler
+
+import Async.guard
 
 private class ClusterLive (
     val localId: HostId,
@@ -23,6 +26,12 @@ private class ClusterLive (
 
   def startup(): Unit =
     listener.startup()
+
+  def shutdown(): Async [Unit] =
+    guard {
+      listener.shutdown()
+      peers.shutdown()
+    }
 
   def peer (id: HostId): Peer =
     peers.get (id)

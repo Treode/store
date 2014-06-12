@@ -3,9 +3,11 @@ package com.treode.cluster.stubs
 import java.net.SocketAddress
 import scala.util.Random
 
-import com.treode.async.Scheduler
+import com.treode.async.{Async, Scheduler}
 import com.treode.cluster._
 import com.treode.pickle.Pickler
+
+import Async.supply
 
 class StubPeer (
     val localId: HostId
@@ -41,8 +43,8 @@ class StubPeer (
     network.install (this)
   }
 
-  def shutdown(): Unit =
-    network.remove (this)
+  def shutdown(): Async [Unit] =
+    supply (network.remove (this))
 
   def peer (id: HostId): Peer =
     peers.get (id)

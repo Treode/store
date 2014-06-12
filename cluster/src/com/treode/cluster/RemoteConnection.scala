@@ -6,7 +6,7 @@ import scala.collection.JavaConversions._
 import scala.language.postfixOps
 import scala.util.{Failure, Random, Success}
 
-import com.treode.async.{Backoff, Callback, Fiber, Scheduler}
+import com.treode.async.{Async, Backoff, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.io.Socket
 import com.treode.async.misc.RichInt
@@ -269,7 +269,7 @@ private class RemoteConnection (
     state.connect (socket, input, clientId)
   }
 
-  def close(): Unit = fiber.execute {
+  def close(): Async [Unit] = fiber.supply {
     state.close()
   }
 
