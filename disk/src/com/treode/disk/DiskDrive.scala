@@ -21,7 +21,7 @@ private class DiskDrive (
     val id: Int,
     val path: Path,
     val file: File,
-    val geometry: DiskGeometry,
+    val geometry: DriveGeometry,
     val alloc: Allocator,
     val kit: DiskKit,
     var draining: Boolean,
@@ -354,7 +354,7 @@ private object DiskDrive {
       id: Int,
       path: Path,
       file: File,
-      geometry: DiskGeometry,
+      geometry: DriveGeometry,
       boot: BootBlock,
       kit: DiskKit
   ): Async [DiskDrive] =
@@ -385,7 +385,7 @@ private object DiskDrive {
       id: Int,
       path: Path,
       file: File,
-      geometry: DiskGeometry,
+      geometry: DriveGeometry,
       boot: BootBlock
   ) (implicit
       config: DiskConfig
@@ -410,7 +410,7 @@ private object DiskDrive {
 
   def init (
       sysid: Array [Byte],
-      items: Seq [(Path, File, DiskGeometry)]
+      items: Seq [(Path, File, DriveGeometry)]
   ) (implicit
       scheduler: Scheduler,
       config: DiskConfig
@@ -436,7 +436,7 @@ private object DiskDrive {
     try {
       implicit val scheduler = Scheduler (executor)
       implicit val config = DiskConfig.suggested.copy (superBlockBits = superBlockBits)
-      val geom = DiskGeometry (segmentBits, blockBits, diskBytes)
+      val geom = DriveGeometry (segmentBits, blockBits, diskBytes)
       val items = paths map (path => (path, openFile (path, geom), geom))
       init (sysid, items) .await()
     } finally {

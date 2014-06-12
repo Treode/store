@@ -9,7 +9,7 @@ import Async.guard
 private case class SuperBlock (
     id: Int,
     boot: BootBlock,
-    geometry: DiskGeometry,
+    geometry: DriveGeometry,
     draining: Boolean,
     free: IntSet,
     logHead: Long)

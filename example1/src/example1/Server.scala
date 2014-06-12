@@ -4,7 +4,7 @@ import java.net.InetSocketAddress
 import java.nio.file.Paths
 
 import com.treode.cluster.{CellId, ClusterConfig, HostId}
-import com.treode.disk.{DiskConfig, DiskGeometry}
+import com.treode.disk.{DiskConfig, DriveGeometry}
 import com.treode.store.{Store, StoreConfig}
 import com.twitter.logging.{ConsoleHandler, Level, LoggerFactory}
 

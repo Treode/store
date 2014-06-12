@@ -19,7 +19,7 @@ import JavaConversions._
 
 private object DiskTestTools {
 
-  type AttachItem = (Path, StubFile, DiskGeometry)
+  type AttachItem = (Path, StubFile, DriveGeometry)
 
   type ReattachItem = (Path, StubFile)
 
@@ -133,7 +133,7 @@ private object DiskTestTools {
       compactor.clean()
   }
 
-  implicit class RichDiskGeometryObject (obj: DiskGeometry.type) {
+  implicit class RichDriveGeometryObject (obj: DriveGeometry.type) {
 
     def test (
         segmentBits: Int = 12,
@@ -141,8 +141,8 @@ private object DiskTestTools {
         diskBytes: Long = 1<<20
     ) (implicit
         config: DiskConfig
-     ): DiskGeometry =
-       DiskGeometry (
+     ): DriveGeometry =
+       DriveGeometry (
            segmentBits,
            blockBits,
            diskBytes)

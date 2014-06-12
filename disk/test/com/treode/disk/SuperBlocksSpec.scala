@@ -14,7 +14,7 @@ class SuperBlocksSpec extends FreeSpec {
 
   implicit val config = DiskTestConfig()
   val path = Paths.get ("a")
-  val geom = DiskGeometry.test()
+  val geom = DriveGeometry.test()
 
   private def superb (gen: Int, disk: Set [Path] = Set (path)) = {
     val free = IntSet()

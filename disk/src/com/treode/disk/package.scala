@@ -12,9 +12,9 @@ import Level.INFO
 
 package disk {
 
-  case class DriveAttachment (path: Path, geometry: DiskGeometry)
+  case class DriveAttachment (path: Path, geometry: DriveGeometry)
 
-  case class DriveDigest (path: Path, geometry: DiskGeometry, allocated: Int, draining: Boolean)
+  case class DriveDigest (path: Path, geometry: DriveGeometry, allocated: Int, draining: Boolean)
 
   class ControllerException (val message: String) extends IllegalArgumentException (message)
 
@@ -62,7 +62,7 @@ package object disk {
 
   private [disk] val checksum = Hashing.murmur3_32
 
-  private [disk] def openFile (path: Path, geom: DiskGeometry) (implicit scheduler: Scheduler) = {
+  private [disk] def openFile (path: Path, geom: DriveGeometry) (implicit scheduler: Scheduler) = {
     import StandardOpenOption.{CREATE, READ, WRITE}
     File.open (path, CREATE, READ, WRITE)
   }

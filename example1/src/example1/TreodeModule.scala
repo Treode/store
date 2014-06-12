@@ -9,7 +9,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.treode.cluster.HostId
-import com.treode.disk.{DiskGeometry, DriveAttachment, DriveDigest}
+import com.treode.disk.{DriveAttachment, DriveDigest, DriveGeometry}
 import com.treode.store.Cohort
 
 import Cohort.{Empty, Issuing, Moving, Settled}
@@ -18,13 +18,13 @@ object TreodeModule extends SimpleModule (
     "TreodeModule",
      new Version (0, 1, 0, "", "", ""),
      Map [Class [_], JsonDeserializer [_]] (
-         classOf [DiskGeometry] -> DiskGeometryDeserializer,
+         classOf [DriveGeometry] -> DriveGeometryDeserializer,
          classOf [DriveAttachment] -> DriveAttachmentDeserializer,
          classOf [Cohort] -> CohortDeserializer,
          classOf [HostId] -> HostIdDeserializer,
          classOf [Path] -> PathDeserializer),
      List (
-         DiskGeometrySerializer,
+         DriveGeometrySerializer,
          DriveAttachmentSerializer,
          DriveDigestSerializer,
          EmptySerializer,
@@ -34,9 +34,9 @@ object TreodeModule extends SimpleModule (
          PathSerializer,
          SettledSerializer))
 
-object DiskGeometrySerializer extends StdSerializer [DiskGeometry] (classOf [DiskGeometry]) {
+object DriveGeometrySerializer extends StdSerializer [DriveGeometry] (classOf [DriveGeometry]) {
 
-  def serialize (value: DiskGeometry, jgen: JsonGenerator, provider: SerializerProvider) {
+  def serialize (value: DriveGeometry, jgen: JsonGenerator, provider: SerializerProvider) {
     val codec = jgen.getCodec
     jgen.writeStartObject()
     jgen.writeObjectField ("segmentBits", value.segmentBits)
@@ -45,18 +45,18 @@ object DiskGeometrySerializer extends StdSerializer [DiskGeometry] (classOf [Dis
     jgen.writeEndObject()
   }}
 
-object DiskGeometryDeserializer extends StdDeserializer [DiskGeometry] (classOf [DiskGeometry]) {
+object DriveGeometryDeserializer extends StdDeserializer [DriveGeometry] (classOf [DriveGeometry]) {
 
-  def deserialize (jparser: JsonParser, context: DeserializationContext): DiskGeometry = {
+  def deserialize (jparser: JsonParser, context: DeserializationContext): DriveGeometry = {
     val codec = jparser.getCodec
     val node = codec.readTree [TreeNode] (jparser)
     val segmentBits = node.get ("segmentBits") .asInstanceOf [JsonNode]
     val blockBits = node.get ("blockBits") .asInstanceOf [JsonNode]
     val diskBytes = node.get ("diskBytes") .asInstanceOf [JsonNode]
     if (segmentBits == null || blockBits == null || diskBytes == null)
-      throw context.mappingException ("Malformed disk geometry")
+      throw context.mappingException ("Malformed drive geometry")
     try {
-      DiskGeometry (segmentBits.asInt, blockBits.asInt, diskBytes.asLong)
+      DriveGeometry (segmentBits.asInt, blockBits.asInt, diskBytes.asLong)
     } catch {
       case e: IllegalArgumentException =>
         throw context.mappingException (e.getMessage)
@@ -116,9 +116,9 @@ extends StdDeserializer [DriveAttachment] (classOf [DriveAttachment]) {
     val _geom = node.get ("geometry") .asInstanceOf [JsonNode]
     val geom =
       if (_geom == null)
-        DiskGeometry.standard (0)
+        DriveGeometry.standard (0)
       else
-        codec.treeToValue (_geom, classOf [DiskGeometry])
+        codec.treeToValue (_geom, classOf [DriveGeometry])
     DriveAttachment (path, geom)
   }}
 

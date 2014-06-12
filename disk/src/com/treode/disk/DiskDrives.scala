@@ -15,7 +15,7 @@ import Callback.{fanout, ignore}
 private class DiskDrives (kit: DiskKit) {
   import kit.{checkpointer, compactor, config, scheduler, sysid}
 
-  type AttachItem = (Path, File, DiskGeometry)
+  type AttachItem = (Path, File, DriveGeometry)
   type AttachRequest = (Seq [AttachItem], Callback [Unit])
   type CloseRequest = Callback [Unit]
   type DrainRequest = (Seq [Path], Callback [Unit])

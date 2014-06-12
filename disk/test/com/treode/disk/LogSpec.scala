@@ -20,7 +20,7 @@ class LogSpec extends FlatSpec with CrashChecks {
   class DistinguishedException extends Exception
 
   implicit val config = DiskTestConfig()
-  val geometry = DiskGeometry.test()
+  val geometry = DriveGeometry.test()
 
   object records {
     val str = RecordDescriptor (0xBF, Picklers.string)

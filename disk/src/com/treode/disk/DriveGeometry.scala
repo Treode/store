@@ -1,6 +1,6 @@
 package com.treode.disk
 
-class DiskGeometry private (
+class DriveGeometry private (
     val segmentBits: Int,
     val blockBits: Int,
     val diskBytes: Long
@@ -42,7 +42,7 @@ class DiskGeometry private (
 
   override def equals (other: Any): Boolean =
     other match {
-      case that: DiskGeometry =>
+      case that: DriveGeometry =>
         segmentBits == that.segmentBits &&
         blockBits == that.blockBits &&
         diskBytes == that.diskBytes
@@ -51,16 +51,16 @@ class DiskGeometry private (
     }
 
   override def toString: String =
-    s"DiskGeometry($segmentBits, $blockBits, $diskBytes)"
+    s"DriveGeometry($segmentBits, $blockBits, $diskBytes)"
 }
 
-object DiskGeometry {
+object DriveGeometry {
 
   def apply (
       segmentBits: Int,
       blockBits: Int,
       diskBytes: Long
-  ): DiskGeometry = {
+  ): DriveGeometry = {
 
     require (
         segmentBits > 0,
@@ -78,7 +78,7 @@ object DiskGeometry {
         diskBytes >> segmentBits >= 16,
         "A disk must have at least 16 segments")
 
-    new DiskGeometry (
+    new DriveGeometry (
         segmentBits,
         blockBits,
         diskBytes)
@@ -88,8 +88,8 @@ object DiskGeometry {
       segmentBits: Int = 30,
       blockBits: Int = 13,
       diskBytes: Long = -1
-  ): DiskGeometry =
-     DiskGeometry (
+  ): DriveGeometry =
+     DriveGeometry (
          segmentBits,
          blockBits,
          diskBytes)
@@ -100,7 +100,7 @@ object DiskGeometry {
     .build { v =>
       val (s, b, d) = v
       require (s > 0 && b > 0 && d > 0)
-      new DiskGeometry (s, b, d)
+      new DriveGeometry (s, b, d)
     }
     .inspect (v => (v.segmentBits, v.blockBits, v.diskBytes))
   }}

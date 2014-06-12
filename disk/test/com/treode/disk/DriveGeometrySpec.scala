@@ -2,7 +2,7 @@ package com.treode.disk
 
 import org.scalatest.FlatSpec
 
-class DiskGeometrySpec extends FlatSpec {
+class DriveGeometrySpec extends FlatSpec {
 
   implicit val config = DiskTestConfig (superBlockBits=12)
 
@@ -12,10 +12,10 @@ class DiskGeometrySpec extends FlatSpec {
   def assertBounds (id: Int, pos: Long, limit: Long) (actual: SegmentBounds): Unit =
     assertResult (SegmentBounds (id, pos, limit)) (actual)
 
-  "DiskGeometry" should "compute the segment count" in {
+  "DriveGeometry" should "compute the segment count" in {
     val disk1 = 1<<20
     val disk2 = 1<<21
-    def c (diskBytes: Long) = DiskGeometry (16, 12, diskBytes).segmentCount
+    def c (diskBytes: Long) = DriveGeometry (16, 12, diskBytes).segmentCount
     assertResult (16) (c (disk1))
     assertResult (17) (c (disk1 + 4*block))
     assertResult (32) (c (disk2))
@@ -26,7 +26,7 @@ class DiskGeometrySpec extends FlatSpec {
   }
 
   it should "align block length" in {
-    val c = DiskGeometry (16, 12, 1<<20)
+    val c = DriveGeometry (16, 12, 1<<20)
     assertResult (0) (c.blockAlignLength (0))
     assertResult (block) (c.blockAlignLength (1))
     assertResult (block) (c.blockAlignLength (4095))
@@ -35,7 +35,7 @@ class DiskGeometrySpec extends FlatSpec {
   }
 
   it should "compute the segment bounds" in {
-    val c = DiskGeometry (16, 12, (1<<20) + 6*block)
+    val c = DriveGeometry (16, 12, (1<<20) + 6*block)
     assertBounds (0, config.diskLeadBytes, seg) (c.segmentBounds (0))
     assertBounds (1, seg, 2*seg) (c.segmentBounds (1))
     assertBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))

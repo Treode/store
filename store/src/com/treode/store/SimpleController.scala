@@ -6,7 +6,7 @@ import java.util.concurrent.ExecutorService
 
 import com.treode.async.Async
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.disk.{Disk, DiskGeometry, DriveAttachment, DriveDigest}
+import com.treode.disk.{Disk, DriveAttachment, DriveDigest, DriveGeometry}
 import com.treode.store.catalog.Catalogs
 
 import Async.supply

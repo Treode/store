@@ -19,7 +19,7 @@ class SuperBlockSpec extends FlatSpec {
         maximumRecordBytes = 1<<6,
         maximumPageBytes = 1<<6)
     val boot = BootBlock (sysid, 0, 0, Set.empty)
-    val geom = DiskGeometry.test (blockBits=4) (config)
+    val geom = DriveGeometry.test (blockBits=4) (config)
     val free = IntSet()
     val superb = new SuperBlock (0, boot, geom, false, free, 0)
 

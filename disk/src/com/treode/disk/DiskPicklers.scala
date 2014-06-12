@@ -9,7 +9,7 @@ private trait DiskPicklers extends Picklers {
 
   def boot = BootBlock.pickler
   def intSet = IntSet.pickler
-  def geometry = DiskGeometry.pickler
+  def geometry = DriveGeometry.pickler
   def objectId = ObjectId.pickler
   def pageGroup = PageGroup.pickler
   def pageLedger = PageLedger.Zipped.pickler

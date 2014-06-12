@@ -60,6 +60,6 @@ private class StubRecoveryAgent (implicit
   def reattach (items: Path*): Async [Launch] =
     guard (throw new UnsupportedOperationException ("The StubDisk do not use files."))
 
-  def attach (items: (Path, DiskGeometry)*): Async [Launch] =
+  def attach (items: (Path, DriveGeometry)*): Async [Launch] =
     guard (throw new UnsupportedOperationException ("The StubDisk do not use files."))
 }

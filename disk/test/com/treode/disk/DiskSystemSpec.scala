@@ -25,7 +25,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig()
-        val geometry = DiskGeometry.test()
+        val geometry = DriveGeometry.test()
         val tracker = new LogTracker
         var file: StubFile = null
 
@@ -55,7 +55,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig (checkpointEntries = 57)
-        val geometry = DiskGeometry.test()
+        val geometry = DriveGeometry.test()
         val tracker = new LogTracker
         var file: StubFile = null
         var checkpoint = false
@@ -89,7 +89,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig (checkpointEntries = 57)
-        val geometry = DiskGeometry.test()
+        val geometry = DriveGeometry.test()
         val tracker = new LogTracker
         var file1: StubFile = null
         var file2: StubFile = null
@@ -135,7 +135,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig (checkpointEntries = 17)
-        val geometry = DiskGeometry.test()
+        val geometry = DriveGeometry.test()
         val tracker = new LogTracker
         var file1: StubFile = null
         var file2: StubFile = null
@@ -176,7 +176,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig (checkpointEntries = 17)
-        val geometry = DiskGeometry.test()
+        val geometry = DriveGeometry.test()
         val tracker = new LogTracker
         var file1: StubFile = null
         var file2: StubFile = null
@@ -227,7 +227,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
             maximumPageBytes = 1<<9,
             checkpointEntries = 1000,
             cleaningFrequency = 3)
-        val geometry = DiskGeometry.test (
+        val geometry = DriveGeometry.test (
             segmentBits = 10,
             blockBits = 6,
             diskBytes = 1<<16)
@@ -252,7 +252,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
             maximumPageBytes = 1<<9,
             checkpointEntries = 1000,
             cleaningFrequency = 3)
-        val geometry = DiskGeometry.test (
+        val geometry = DriveGeometry.test (
             segmentBits = 10,
             blockBits = 6,
             diskBytes = 1<<16)
@@ -275,7 +275,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig()
-        val geometry = DiskGeometry.test()
+        val geometry = DriveGeometry.test()
         val tracker = new StuffTracker
         var file: StubFile = null
 
@@ -302,7 +302,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig (cleaningFrequency = 3)
-        val geometry = DiskGeometry.test()
+        val geometry = DriveGeometry.test()
         val tracker = new StuffTracker
         var file: StubFile = null
 
@@ -332,7 +332,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig (cleaningFrequency = 3)
-        val geometry = DiskGeometry.test()
+        val geometry = DriveGeometry.test()
         val tracker = new StuffTracker
         var file1: StubFile = null
         var file2: StubFile = null
@@ -374,7 +374,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig (cleaningFrequency = 3)
-        val geometry = DiskGeometry.test()
+        val geometry = DriveGeometry.test()
         val tracker = new StuffTracker
         var file1: StubFile = null
         var file2: StubFile = null
@@ -412,7 +412,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig (cleaningFrequency = 3)
-        val geometry = DiskGeometry.test()
+        val geometry = DriveGeometry.test()
         val tracker = new StuffTracker
         var file1: StubFile = null
         var file2: StubFile = null
@@ -458,7 +458,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
             maximumPageBytes = 1<<9,
             checkpointEntries = 1000,
             cleaningFrequency = 3)
-        val geometry = DiskGeometry.test (
+        val geometry = DriveGeometry.test (
             segmentBits = 10,
             blockBits = 6,
             diskBytes = 1<<18)

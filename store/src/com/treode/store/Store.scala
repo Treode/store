@@ -7,7 +7,7 @@ import scala.util.{Failure, Random}
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
 import com.treode.cluster.{CellId, Cluster, ClusterConfig, HostId, Peer}
-import com.treode.disk.{Disk, DiskConfig, DiskGeometry, DriveAttachment, DriveDigest}
+import com.treode.disk.{Disk, DiskConfig, DriveAttachment, DriveDigest, DriveGeometry}
 
 import Async.guard
 

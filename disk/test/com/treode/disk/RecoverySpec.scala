@@ -13,7 +13,7 @@ import DiskTestTools._
 class RecoverySpec extends FreeSpec {
 
   implicit val config = DiskTestConfig()
-  val geom = DiskGeometry.test()
+  val geom = DriveGeometry.test()
   val record = RecordDescriptor (0x1BF6DBABE6A70060L, DiskPicklers.int)
 
   "Recovery.replay should" - {
