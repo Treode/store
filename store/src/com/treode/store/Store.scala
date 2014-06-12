@@ -34,13 +34,15 @@ object Store {
 
     def cohorts_= (cohorts: Seq [Cohort])
 
+    def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any)
+
+    def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit]
+
     def attach (items: (Path, DiskGeometry)*): Async [Unit]
 
     def hail (remoteId: HostId, remoteAddr: SocketAddress)
 
-    def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any)
-
-    def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit]
+    def shutdown(): Async [Unit]
   }
 
   trait Recovery {
@@ -91,7 +93,9 @@ object Store {
         cluster = Cluster.live (cellId, hostId, bindAddr, shareAddr)
         store <- _store.launch (launch, cluster)
       } yield {
-        (new ExtendedController (executor, store)): Controller
+        launch.launch()
+        cluster.startup()
+        (new ExtendedController (executor, launch.controller, cluster, store)): Controller
       }
     } .rescue {
       case t: Throwable =>

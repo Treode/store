@@ -71,7 +71,8 @@ object Cluster {
 
       val listener = new Listener (cellId, hostId, bindAddr, group, peers)
 
-      implicit val cluster  = new ClusterLive (hostId, ports, peers, listener, scuttlebutt)
+      implicit val cluster  =
+        new ClusterLive (hostId, group, ports, peers, listener, scuttlebutt)
 
       Peer.load.listen { (load, peer) =>
         peer.load = load

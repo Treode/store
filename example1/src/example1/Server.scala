@@ -2,9 +2,11 @@ package example1
 
 import java.net.InetSocketAddress
 import java.nio.file.Paths
+
 import com.treode.cluster.{CellId, ClusterConfig, HostId}
 import com.treode.disk.{DiskConfig, DiskGeometry}
 import com.treode.store.{Store, StoreConfig}
+import com.twitter.logging.{ConsoleHandler, Level, Logger, LoggerFactory}
 
 class Server extends AsyncFinatraServer {
 
@@ -21,6 +23,14 @@ class Server extends AsyncFinatraServer {
       "share",
       new InetSocketAddress (6278),
       "Address to share with peers")
+
+  premain {
+    LoggerFactory (
+        node = "com.treode",
+        level = Some (Level.INFO),
+        handlers = ConsoleHandler() :: Nil
+    ) .apply()
+  }
 
   override def main() {
 
@@ -40,6 +50,8 @@ class Server extends AsyncFinatraServer {
           paths = args map (Paths.get (_)): _*)
       c.await()
     }
+
+    onExit (controller.shutdown().await())
 
     register (new Resource (controller.store))
     register (new AdminAtlas (controller))

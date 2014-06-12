@@ -5,21 +5,26 @@ import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 
 import com.treode.async.Async
+import com.treode.async.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.disk.{Disk, DiskGeometry}
 
+import Async.guard
+
 private class ExtendedController (
     executor: ExecutorService,
+    disk: Disk.Controller,
+    cluster: Cluster,
     controller: Store.Controller
 ) extends Store.Controller {
 
   implicit val store: Store = controller.store
 
   def attach (items: (Path, DiskGeometry)*): Async [Unit] =
-    controller.attach (items:_*)
+    disk.attach (items:_*)
 
   def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
-    controller.hail (remoteId, remoteAddr)
+    cluster.hail (remoteId, remoteAddr)
 
   def cohorts: Seq [Cohort] =
     controller.cohorts
@@ -32,4 +37,13 @@ private class ExtendedController (
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit] =
     controller.issue (desc) (version, cat)
-}
+
+  def shutdown(): Async [Unit] =
+    guard [Unit] {
+      for {
+        _ <- cluster.shutdown()
+        _ <- disk.shutdown()
+      } yield ()
+    } .ensure {
+      executor.shutdownNow()
+    }}

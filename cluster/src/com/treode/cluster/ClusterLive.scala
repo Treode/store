@@ -1,6 +1,7 @@
 package com.treode.cluster
 
 import java.net.SocketAddress
+import java.nio.channels.AsynchronousChannelGroup
 
 import com.treode.async.Async
 import com.treode.pickle.Pickler
@@ -9,6 +10,7 @@ import Async.guard
 
 private class ClusterLive (
     val localId: HostId,
+    group: AsynchronousChannelGroup,
     ports: PortRegistry,
     peers: PeerRegistry,
     listener: Listener,
@@ -30,8 +32,11 @@ private class ClusterLive (
   def shutdown(): Async [Unit] =
     guard {
       listener.shutdown()
-      peers.shutdown()
-    }
+      for {
+        _ <- peers.shutdown()
+      } yield {
+        group.shutdownNow()
+      }}
 
   def peer (id: HostId): Peer =
     peers.get (id)

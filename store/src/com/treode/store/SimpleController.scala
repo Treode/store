@@ -9,6 +9,8 @@ import com.treode.cluster.{Cluster, HostId}
 import com.treode.disk.{Disk, DiskGeometry}
 import com.treode.store.catalog.Catalogs
 
+import Async.supply
+
 private class SimpleController (
     cluster: Cluster,
     disks: Disk.Controller,
@@ -35,4 +37,7 @@ private class SimpleController (
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit] =
     catalogs.issue (desc) (version, cat)
+
+  def shutdown(): Async [Unit] =
+    supply()
 }
