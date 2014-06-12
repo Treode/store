@@ -31,7 +31,7 @@ private class TestMedic (
   }
 
   def launch (implicit launch: Disk.Launch): Async [TestTable] = supply {
-    import launch.{checkpoint, disks}
+    import launch.{checkpoint, disk}
     val table = new TestTable (medic.close())
     checkpoint (table.checkpoint())
     descriptor.handle (table)

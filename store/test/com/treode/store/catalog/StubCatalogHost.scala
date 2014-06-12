@@ -41,14 +41,14 @@ extends StubStoreHost {
       launch.launch()
       catalogs.listen (cat1) (v1 = _)
       catalogs.listen (cat2) (v2 = _)
-      (launch.disks, catalogs)
+      (launch.disk, catalogs)
     }
 
   val captor = _launch.capture()
   scheduler.run()
   while (!captor.wasInvoked)
     Thread.sleep (10)
-  implicit val (disks, catalogs) = captor.passed
+  implicit val (disk, catalogs) = captor.passed
 
   val acceptors = catalogs.acceptors
 

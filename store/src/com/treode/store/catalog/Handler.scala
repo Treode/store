@@ -21,7 +21,7 @@ private class Handler (
     var history: ArrayDeque [Bytes],
     var saved: Option [Meta]
 ) (implicit
-    disks: Disk
+    disk: Disk
 ) {
 
   def diff (other: Int): Update = {
@@ -138,6 +138,6 @@ private object Handler {
     PageDescriptor (0x8407E7035A50C6CFL, uint, tuple (uint, bytes, seq (bytes)))
   }
 
-  def apply (id: CatalogId) (implicit disks: Disk): Handler =
+  def apply (id: CatalogId) (implicit disk: Disk): Handler =
     new Handler (id, 0, Bytes.empty.murmur32, Bytes.empty, new ArrayDeque, None)
 }

@@ -8,7 +8,7 @@ import com.treode.store.{Bytes, Residents, StorePicklers, TxClock}
 
 import Async.guard
 
-private class TestTable (table: TierTable) (implicit disks: Disk)
+private class TestTable (table: TierTable) (implicit disk: Disk)
 extends PageHandler [Long] {
 
   def get (key: Int): Async [Option [Int]] = guard {

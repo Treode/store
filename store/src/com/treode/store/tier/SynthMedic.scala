@@ -116,7 +116,7 @@ private class SynthMedic (
     }}
 
   def close () (implicit launch: Disk.Launch): TierTable = {
-    import launch.disks
+    import launch.disk
 
     writeLock.lock()
     val (gen, primary, tiers) = try {

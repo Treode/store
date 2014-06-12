@@ -20,7 +20,7 @@ object Disk {
 
   trait Controller {
 
-    implicit def disks: Disk
+    implicit def disk: Disk
 
     def attach (items: (Path, DiskGeometry)*): Async [Unit]
 
@@ -31,7 +31,7 @@ object Disk {
 
   trait Launch {
 
-    implicit def disks: Disk
+    implicit def disk: Disk
 
     implicit def controller: Controller
 

@@ -120,7 +120,7 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
       atomic <- _atomic.launch (launch, cluster, paxos) .map (_.asInstanceOf [AtomicKit])
     } yield {
       launch.launch()
-      new StubAtomicHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, paxos, atomic)
+      new StubAtomicHost (id) (random, scheduler, cluster, launch.disk, library, catalogs, paxos, atomic)
     }}
 
   def install () (implicit kit: StoreTestKit): Async [StubAtomicHost] = {

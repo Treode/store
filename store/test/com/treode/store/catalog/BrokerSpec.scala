@@ -51,7 +51,7 @@ object BrokerBehaviors extends FreeSpec {
 
     implicit val recovery = StubDisk.recover()
     implicit val launch = recovery.attach (diskDrive) .pass
-    implicit val disks = launch.disks
+    implicit val disk = launch.disk
     launch.launch()
 
     val broker = new Broker (Map.empty)

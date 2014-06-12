@@ -356,7 +356,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file2 = StubFile()
           val recovery = Disk.recover()
           val launch = recovery.attachAndWait (("a", file1, geom), ("b", file2, geom)) .pass
-          import launch.{controller, disks}
+          import launch.{controller, disk}
           val cb = controller.drainAndCapture ("b")
           cb.assertNotInvoked()
           controller.assertDisks ("a", "b")
@@ -384,7 +384,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file = StubFile()
           val recovery = Disk.recover()
           val launch = recovery.attachAndWait (("a", file, geom)) .pass
-          import launch.{controller, disks}
+          import launch.{controller, disk}
           val cb = controller.drainAndCapture()
           cb.assertNotInvoked()
           controller.assertDisks ("a")

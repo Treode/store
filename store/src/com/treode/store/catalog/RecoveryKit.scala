@@ -39,7 +39,7 @@ private class RecoveryKit (implicit
     fiber.execute (getMedic (id) checkpoint (meta))
   }
 
-  private def close (id: CatalogId) (implicit disks: Disk): Async [(CatalogId, Handler)] =
+  private def close (id: CatalogId) (implicit disk: Disk): Async [(CatalogId, Handler)] =
     for {
       handler <- getMedic (id) .close()
     } yield {
@@ -48,7 +48,7 @@ private class RecoveryKit (implicit
 
   def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Catalogs] =
     fiber.guard {
-      import launch.disks
+      import launch.disk
       for {
         handlers <- medics.keySet.latch.map foreach (close (_))
         broker = new Broker (handlers)

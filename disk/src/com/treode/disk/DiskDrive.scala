@@ -35,7 +35,7 @@ private class DiskDrive (
     var pageLedger: PageLedger,
     var pageLedgerDirty: Boolean
 ) {
-  import kit.{checkpointer, compactor, config, disks, scheduler}
+  import kit.{checkpointer, compactor, config, drives, scheduler}
 
   val fiber = new Fiber
   val logmp = new Multiplexer [PickledRecord] (kit.logd)
@@ -134,7 +134,7 @@ private class DiskDrive (
         alloc.free (nums)
         record (SegmentFree (nums)) run (ignore)
         if (draining && alloc.drained (_protected))
-          disks.detach (this)
+          drives.detach (this)
       }}
 
   private def _writeLedger(): Async [Unit] =

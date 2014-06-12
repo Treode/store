@@ -43,7 +43,7 @@ class LogReplayer {
     records.checkpoint.replay ((checkpoint _).tupled)
   }
 
-  def check (tracker: LogTracker) (implicit scheduler: StubScheduler, disks: Disk) {
+  def check (tracker: LogTracker) (implicit scheduler: StubScheduler, disk: Disk) {
     reread match {
       case Some (pos) =>
         val saved = pagers.table.read (pos) .pass

@@ -63,7 +63,7 @@ private object SuperBlocks {
 
     val useGen0 = chooseSuperBlock (superbs)
     val boot = superbs.head.superb (useGen0) .boot
-    val expected = boot.disks.toSet
+    val expected = boot.drives.toSet
     val found = superbs.map (_.path) .toSet
 
     if (!(expected forall (found contains _))) {

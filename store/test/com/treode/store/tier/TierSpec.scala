@@ -31,21 +31,21 @@ class TierSpec extends WordSpec {
     val diskDrive = new StubDiskDrive
     val launch = recovery.attach (diskDrive) .pass
     launch.launch()
-    (scheduler, launch.disks, config.storeConfig)
+    (scheduler, launch.disk, config.storeConfig)
   }
 
   private def newBuilder (est: Long) (
-      implicit scheduler: StubScheduler, disks: Disk, config: StoreConfig) =
+      implicit scheduler: StubScheduler, disk: Disk, config: StoreConfig) =
     new TierBuilder (descriptor, 0, 0, Residents.all, BloomFilter (est, config.falsePositiveProbability))
 
   /** Get the depths of ValueBlocks reached from the index entries. */
   private def getDepths (entries: Iterable [IndexEntry], depth: Int) (
-      implicit scheduler: StubScheduler, disks: Disk): Set [Int] =
+      implicit scheduler: StubScheduler, disk: Disk): Set [Int] =
     entries.map (e => getDepths (e.pos, depth+1)) .fold (Set.empty) (_ ++ _)
 
   /** Get the depths of ValueBlocks for the tree root at `pos`. */
   private def getDepths (pos: Position, depth: Int) (
-      implicit scheduler: StubScheduler, disks: Disk): Set [Int] = {
+      implicit scheduler: StubScheduler, disk: Disk): Set [Int] = {
     descriptor.pager.read (pos) .pass match {
       case b: IndexPage => getDepths (b.entries, depth+1)
       case b: CellPage => Set (depth)
@@ -54,7 +54,7 @@ class TierSpec extends WordSpec {
   /** Check that tree rooted at `pos` has all ValueBlocks at the same depth, expect those under
     * the final index entry.
     */
-  private def expectBalanced (tier: Tier) (implicit scheduler: StubScheduler, disks: Disk) {
+  private def expectBalanced (tier: Tier) (implicit scheduler: StubScheduler, disk: Disk) {
     descriptor.pager.read (tier.root) .pass match {
       case b: IndexPage =>
         val ds1 = getDepths (b.entries.take (b.size-1), 1)
@@ -68,7 +68,7 @@ class TierSpec extends WordSpec {
 
   /** Build a tier from fruit. */
   private def buildTier () (
-      implicit scheduler: StubScheduler, disks: Disk, config: StoreConfig): Tier = {
+      implicit scheduler: StubScheduler, disk: Disk, config: StoreConfig): Tier = {
     val builder = newBuilder (AllFruits.length)
     AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .pass
     builder.result.pass
@@ -76,16 +76,16 @@ class TierSpec extends WordSpec {
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier) (
-      implicit scheduler: StubScheduler, disks: Disk): Seq [Cell] =
+      implicit scheduler: StubScheduler, disk: Disk): Seq [Cell] =
     TierIterator (descriptor, tier.root) .toSeq
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier, key: Bytes, time: TxClock, inclusive: Boolean) (
-      implicit scheduler: StubScheduler, disks: Disk): Seq [Cell] =
+      implicit scheduler: StubScheduler, disk: Disk): Seq [Cell] =
     TierIterator (descriptor, tier.root, Bound (Key (key, time), inclusive)) .toSeq
 
   private def toSeq (builder: Builder [Cell, _], pos: Position) (
-      implicit scheduler: StubScheduler, disks: Disk) {
+      implicit scheduler: StubScheduler, disk: Disk) {
     descriptor.pager.read (pos) .pass match {
       case page: IndexPage =>
         page.entries foreach (e => toSeq (builder, e.pos))
@@ -95,7 +95,7 @@ class TierSpec extends WordSpec {
 
   /** Build a sequence of the cells in the tier using old-fashioned recursion. */
   private def toSeq (tier: Tier) (
-      implicit scheduler: StubScheduler, disks: Disk): Seq [Cell] = {
+      implicit scheduler: StubScheduler, disk: Disk): Seq [Cell] = {
     val builder = Seq.newBuilder [Cell]
     toSeq (builder, tier.root)
     builder.result
@@ -104,21 +104,21 @@ class TierSpec extends WordSpec {
   "The TierBuilder" should {
 
     "require that added entries are not duplicated" in {
-      implicit val (scheduler, disks, config) = setup()
+      implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (2)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
 
     "require that added entries are sorted by key" in {
-      implicit val (scheduler, disks, config) = setup()
+      implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (2)
       builder.add (Cell (Orange, 0, None)) .pass
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
 
     "allow properly sorted entries" in {
-      implicit val (scheduler, disks, config) = setup()
+      implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 0, None)) .pass
       builder.add (Cell (Orange, 0, None)) .pass
@@ -126,7 +126,7 @@ class TierSpec extends WordSpec {
     }
 
     "track the number of entries and keys" in {
-      implicit val (scheduler, disks, config) = setup()
+      implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 3, None)) .pass
       builder.add (Cell (Apple, 1, None)) .pass
@@ -139,7 +139,7 @@ class TierSpec extends WordSpec {
     }
 
     "track the bounds on the times" in {
-      implicit val (scheduler, disks, config) = setup()
+      implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 3, None)) .pass
       builder.add (Cell (Orange, 5, None)) .pass
@@ -150,7 +150,7 @@ class TierSpec extends WordSpec {
     }
 
     "track the number of bytes" in {
-      implicit val (scheduler, disks, config) = setup()
+      implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (3)
       builder.add (Cell (Apple, 1, None)) .pass
       val tier = builder.result(). pass
@@ -160,7 +160,7 @@ class TierSpec extends WordSpec {
     "build a balanced tree with all keys" when {
 
       def checkBuild (pageBytes: Int, expectedDiskBytes: Int) {
-        implicit val (scheduler, disks, config) = setup (pageBytes)
+        implicit val (scheduler, disk, config) = setup (pageBytes)
         val tier = buildTier()
         expectBalanced (tier)
         assertResult (AllFruits.toSeq) (toSeq (tier) .map (_.key))
@@ -188,7 +188,7 @@ class TierSpec extends WordSpec {
       "iterate all keys" when {
 
         def checkIterator (pageBytes: Int) {
-          implicit val (scheduler, disks, config) = setup (pageBytes)
+          implicit val (scheduler, disk, config) = setup (pageBytes)
           val tier = buildTier()
           assertResult (AllFruits.toSeq) (iterateTier (tier) map (_.key))
         }
@@ -210,7 +210,7 @@ class TierSpec extends WordSpec {
       "iterate all remaining keys" when {
 
         def checkIterator (pageBytes: Int) {
-          implicit val (scheduler, disks, config) = setup (pageBytes)
+          implicit val (scheduler, disk, config) = setup (pageBytes)
           val tier = buildTier()
           for (start <- AllFruits) {
             val expected = AllFruits.dropWhile (_ < start) .toSeq
@@ -235,7 +235,7 @@ class TierSpec extends WordSpec {
       "iterate all remaining keys" when {
 
         def checkIterator (pageBytes: Int) {
-          implicit val (scheduler, disks, config) = setup (pageBytes)
+          implicit val (scheduler, disk, config) = setup (pageBytes)
           val tier = buildTier()
           for (start <- AllFruits) {
             val expected = AllFruits.dropWhile (_ <= start) .toSeq
@@ -262,7 +262,7 @@ class TierSpec extends WordSpec {
 
       def checkFind (pageBytes: Int) {
 
-        implicit val (scheduler, disks, config) = setup (pageBytes)
+        implicit val (scheduler, disk, config) = setup (pageBytes)
         val tier = buildTier()
 
         def get (key: Bytes): Bytes =

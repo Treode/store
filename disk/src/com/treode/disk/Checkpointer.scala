@@ -9,7 +9,7 @@ import Async.guard
 import Callback.{fanout, ignore}
 
 private class Checkpointer (kit: DiskKit) {
-  import kit.{config, disks, scheduler}
+  import kit.{config, drives, scheduler}
 
   val fiber = new Fiber
   var checkpoints: CheckpointRegistry = null
@@ -30,9 +30,9 @@ private class Checkpointer (kit: DiskKit) {
     guard {
       engaged = true
       for {
-        marks <- disks.mark()
+        marks <- drives.mark()
         _ <- checkpoints.checkpoint()
-        _ <- disks.checkpoint (marks)
+        _ <- drives.checkpoint (marks)
       } yield fiber.execute {
         reengage()
       }

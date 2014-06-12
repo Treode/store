@@ -10,7 +10,7 @@ import com.treode.store.tier.{TierDescriptor, TierTable}
 import Async.{guard, latch, supply}
 
 private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
-  import kit.{archive, cluster, disks, library}
+  import kit.{archive, cluster, disk, library}
   import kit.library.atlas
 
   val acceptors = newAcceptorsMap

@@ -14,7 +14,7 @@ package disk {
   }
 
   private class CannotDrainAllException extends IllegalArgumentException {
-    override def getMessage = "Cannot drain all disks."
+    override def getMessage = "Cannot drain all disk."
   }
 
   private class DiskFullException extends Exception {
@@ -22,7 +22,7 @@ package disk {
   }
 
   private class ExtraDisksException (paths: Seq [Path]) extends IllegalArgumentException {
-    override def getMessage = s"Extra disks in reattachment: ${paths mkString ", "}"
+    override def getMessage = s"Extra disk in reattachment: ${paths mkString ", "}"
   }
 
   private class InconsistentSuperBlocksException extends Exception {
@@ -30,7 +30,7 @@ package disk {
   }
 
   private class MissingDisksException (paths: Seq [Path]) extends IllegalArgumentException {
-    override def getMessage = s"Missing disks in reattachment: ${paths mkString ", "}"
+    override def getMessage = s"Missing disk in reattachment: ${paths mkString ", "}"
   }
 
   private class NoSuperBlocksException extends Exception {
@@ -38,7 +38,7 @@ package disk {
   }
 
   private class NotAttachedException (paths: Seq [Path]) extends IllegalArgumentException {
-    override def getMessage = s"No such disks are attached: ${paths mkString ", "}"
+    override def getMessage = s"No such disk are attached: ${paths mkString ", "}"
   }
 
   private class OversizedPageException (maximum: Int, found: Int) extends IllegalArgumentException {

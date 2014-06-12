@@ -16,9 +16,9 @@ class SuperBlocksSpec extends FreeSpec {
   val path = Paths.get ("a")
   val geom = DiskGeometry.test()
 
-  private def superb (gen: Int, disks: Set [Path] = Set (path)) = {
+  private def superb (gen: Int, disk: Set [Path] = Set (path)) = {
     val free = IntSet()
-    val boot = BootBlock (sysid, gen, 0, disks)
+    val boot = BootBlock (sysid, gen, 0, disk)
     new SuperBlock (0, boot, geom, false, free, 0)
   }
 
@@ -26,10 +26,10 @@ class SuperBlocksSpec extends FreeSpec {
       gen0: Int,
       gen1: Int,
       path: Path = path,
-      disks: Set [Path] = Set (path)
+      disk: Set [Path] = Set (path)
   ) = {
-    val sb0 = if (gen0 < 0) None else Some (superb (gen0, disks))
-    val sb1 = if (gen1 < 0) None else Some (superb (gen1, disks))
+    val sb0 = if (gen0 < 0) None else Some (superb (gen0, disk))
+    val sb1 = if (gen1 < 0) None else Some (superb (gen1, disk))
     new SuperBlocks (path, null, sb0, sb1)
   }
 
@@ -253,18 +253,18 @@ class SuperBlocksSpec extends FreeSpec {
 
   "SuperBlocks.verifyReattachment should" - {
 
-    "accept a singleton list of superblocks that matches the boot block's disks" in {
+    "accept a singleton list of superblocks that matches the boot block's disk" in {
       verifyReattachment (superbs (0, 1))
     }
 
-    "accept a list of superblocks that matches the boot block's disks" in {
+    "accept a list of superblocks that matches the boot block's disk" in {
       val pathb = Paths.get ("b")
       val pathc = Paths.get ("c")
-      val disks = Set (path, pathb, pathc)
+      val disk = Set (path, pathb, pathc)
       verifyReattachment (
-          superbs (0, 1, path, disks),
-          superbs (0, 1, pathb, disks),
-          superbs (0, 1, pathc, disks))
+          superbs (0, 1, path, disk),
+          superbs (0, 1, pathb, disk),
+          superbs (0, 1, pathc, disk))
     }
 
     "require some superblocks" in {
@@ -272,24 +272,24 @@ class SuperBlocksSpec extends FreeSpec {
         verifyReattachment()
       }}
 
-    "require the list of superblocks contain all of the disks in the boot block" in {
+    "require the list of superblocks contain all of the disk in the boot block" in {
       val pathb = Paths.get ("b")
       val pathc = Paths.get ("c")
-      val disks = Set (path, pathb, pathc)
+      val disk = Set (path, pathb, pathc)
       intercept [MissingDisksException] {
-        verifyReattachment (superbs (0, 1, path, disks), superbs (0, 1, pathc, disks))
+        verifyReattachment (superbs (0, 1, path, disk), superbs (0, 1, pathc, disk))
       }
     }
 
-    "require the list of superblocks contain only the disks in the boot block" in {
+    "require the list of superblocks contain only the disk in the boot block" in {
       val pathb = Paths.get ("b")
       val pathc = Paths.get ("c")
-      val disks = Set (path, pathc)
+      val disk = Set (path, pathc)
       intercept [ExtraDisksException] {
         verifyReattachment (
-            superbs (0, 1, path, disks),
-            superbs (0, 1, pathb, disks),
-            superbs (0, 1, pathc, disks))
+            superbs (0, 1, path, disk),
+            superbs (0, 1, pathb, disk),
+            superbs (0, 1, pathc, disk))
       }}}
 
   "SuperBlocks.read should" - {

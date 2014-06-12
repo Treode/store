@@ -6,7 +6,7 @@ import com.treode.async.Async
 import Async.{async, guard}
 
 private class DiskAgent (val kit: DiskKit) extends Disk {
-  import kit.{compactor, disks, logd, paged, releaser}
+  import kit.{compactor, logd, paged, releaser}
   import kit.config.{maximumPageBytes, maximumRecordBytes}
 
   val cache = new PageCache (kit)

@@ -16,7 +16,7 @@ private class Broker (
     private var catalogs: Map [CatalogId, Handler]
 ) (implicit
     scheduler: Scheduler,
-    disks: Disk
+    disk: Disk
 ) extends PageHandler [Int] {
 
   private val fiber = new Fiber

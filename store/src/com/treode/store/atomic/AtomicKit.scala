@@ -17,7 +17,7 @@ private class AtomicKit (implicit
     val random: Random,
     val scheduler: Scheduler,
     val cluster: Cluster,
-    val disks: Disk,
+    val disk: Disk,
     val library: Library,
     val paxos: Paxos,
     val config: StoreConfig

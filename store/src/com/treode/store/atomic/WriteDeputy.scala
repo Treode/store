@@ -15,7 +15,7 @@ import Callback.ignore
 import WriteDirector.deliberate
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
-  import kit.{disks, paxos, scheduler, tables, writers}
+  import kit.{disk, paxos, scheduler, tables, writers}
   import kit.config.{closedLifetime, preparingTimeout}
   import kit.library.releaser
 

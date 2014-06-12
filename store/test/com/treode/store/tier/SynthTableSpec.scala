@@ -27,7 +27,7 @@ class SynthTableSpec extends FreeSpec {
     import config._
     implicit val recovery = StubDisk.recover()
     implicit val launch = recovery.attach (diskDrive) .pass
-    implicit val disks = launch.disks
+    implicit val disk = launch.disk
     launch.launch()
     SynthTable (tier, 0x62)
   }

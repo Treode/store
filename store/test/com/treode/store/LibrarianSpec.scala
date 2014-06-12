@@ -38,14 +38,14 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
         catalogs <- _catalogs.launch (launch, cluster)
       } yield {
         launch.launch()
-        (launch.disks, catalogs)
+        (launch.disk, catalogs)
       }
 
     val captor = _launch.capture()
     scheduler.run()
     while (!captor.wasInvoked)
       Thread.sleep (10)
-    implicit val (disks, catalogs) = captor.passed
+    implicit val (disk, catalogs) = captor.passed
 
     val rebalancer = AsyncCaptor [Unit]
 

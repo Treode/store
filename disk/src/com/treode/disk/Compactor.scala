@@ -11,7 +11,7 @@ import Callback.ignore
 import PageLedger.Groups
 
 private class Compactor (kit: DiskKit) {
-  import kit.{config, disks, releaser, scheduler}
+  import kit.{config, drives, releaser, scheduler}
 
   type DrainReq = Iterator [SegmentPointer]
 
@@ -80,7 +80,7 @@ private class Compactor (kit: DiskKit) {
       segments = 0
       engaged = true
       for {
-        iter <- disks.cleanable()
+        iter <- drives.cleanable()
         (segs, groups) <- pages.probeByUtil (iter, 9000)
       } yield compact (groups, segs, true)
     } run (probed)

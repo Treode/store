@@ -41,7 +41,7 @@ private class SynthTable (
 
 ) (implicit
     scheduler: Scheduler,
-    disks: Disk,
+    disk: Disk,
     config: StoreConfig
 ) extends TierTable {
   import desc.pager
@@ -53,7 +53,7 @@ private class SynthTable (
 
   def typ = desc.id
 
-  def get (key: Bytes, time: TxClock): Async [Cell] = disks.join {
+  def get (key: Bytes, time: TxClock): Async [Cell] = disk.join {
 
     val mkey = Key (key, time)
 

@@ -11,7 +11,7 @@ private class CatalogKit (val broker: Broker) (implicit
     val random: Random,
     val scheduler: Scheduler,
     val cluster: Cluster,
-    val disks: Disk,
+    val disk: Disk,
     val library: Library,
     val config: StoreConfig
 ) extends Catalogs {

@@ -24,7 +24,7 @@ private class StubPaxosHost (
     val random: Random,
     val scheduler: ChildScheduler,
     val cluster: StubPeer,
-    val disks: Disk,
+    val disk: Disk,
     val library: Library,
     val catalogs: Catalogs,
     val paxos: PaxosKit
@@ -97,7 +97,7 @@ private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] 
       paxos <- _paxos.launch (launch, cluster) map (_.asInstanceOf [PaxosKit])
     } yield {
       launch.launch()
-      new StubPaxosHost (id) (random, scheduler, cluster, launch.disks, library, catalogs, paxos)
+      new StubPaxosHost (id) (random, scheduler, cluster, launch.disk, library, catalogs, paxos)
     }}
 
   def install () (implicit r: Random, s: Scheduler, n: StubNetwork): Async [StubPaxosHost] = {

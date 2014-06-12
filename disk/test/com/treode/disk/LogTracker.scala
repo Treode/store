@@ -16,7 +16,7 @@ class LogTracker {
   private var accepted = Map.empty [Int, Int] .withDefaultValue (-1)
   private var gen = 0
 
-  def put (n: Int, k: Int, v: Int) (implicit disks: Disk): Async [Unit] = {
+  def put (n: Int, k: Int, v: Int) (implicit disk: Disk): Async [Unit] = {
     attempted += k -> v
     val g = gen
     for {
@@ -26,12 +26,12 @@ class LogTracker {
     }}
 
   def batch (nkeys: Int, round: Int, nputs: Int) (
-      implicit random: Random, disks: Disk): Async [Unit] =
+      implicit random: Random, disk: Disk): Async [Unit] =
     for (k <- random.nextInts (nputs, nkeys) .latch.unit)
       put (round, k, random.nextInt (1<<20))
 
   def batches (nkeys: Int, nbatches: Int, nputs: Int, start: Int = 0) (
-      implicit random: Random, scheduler: Scheduler, disks: Disk): Async [Unit] =
+      implicit random: Random, scheduler: Scheduler, disk: Disk): Async [Unit] =
     for {
       n <- (0 until nbatches) .async
       k <- random.nextInts (nputs, nkeys) .latch.unit
@@ -39,7 +39,7 @@ class LogTracker {
       put (n + start, k, random.nextInt (1<<20))
     }
 
-  def checkpoint () (implicit disks: Disk): Async [Unit] =
+  def checkpoint () (implicit disk: Disk): Async [Unit] =
     guard {
       val save = attempted
       val g = gen
@@ -53,13 +53,13 @@ class LogTracker {
   def probe (groups: Set [Int]) (implicit scheduler: Scheduler): Async [Set [Int]] =
     supply (groups)
 
-  def compact () (implicit disks: Disk): Async [Unit] =
+  def compact () (implicit disk: Disk): Async [Unit] =
     guard {
       checkpoint()
     }
 
   def attach () (implicit scheduler: Scheduler, launch: Disk.Launch) {
-    import launch.disks
+    import launch.disk
 
     launch.checkpoint (checkpoint())
 

@@ -10,11 +10,11 @@ import Async.supply
 import ScanDeputy._
 
 private class ScanDeputy (kit: AtomicKit) {
-  import kit.{cluster, disks, tables}
+  import kit.{cluster, disk, tables}
   import kit.config.{scanBatchBytes, scanBatchEntries}
 
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): Async [(Cells, Point)] =
-    disks.join {
+    disk.join {
 
       val builder = Seq.newBuilder [Cell]
       var entries = 0

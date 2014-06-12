@@ -13,9 +13,9 @@ private class LaunchAgent (val kit: DiskKit) extends Disk.Launch {
   private val pages = new PageRegistry (kit)
   private var open = true
 
-  implicit val disks: Disk = new DiskAgent (kit)
+  implicit val disk: Disk = new DiskAgent (kit)
 
-  implicit val controller: Disk.Controller = new ControllerAgent (kit, disks)
+  implicit val controller: Disk.Controller = new ControllerAgent (kit, disk)
 
   val sysid = kit.sysid
 

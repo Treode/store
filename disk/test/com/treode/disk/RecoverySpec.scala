@@ -158,7 +158,7 @@ class RecoverySpec extends FreeSpec {
 
     "when given opened files should" - {
 
-      "require the given file paths match the boot blocks disks" in {
+      "require the given file paths match the boot blocks disk" in {
         implicit val scheduler = StubScheduler.random()
         val file = StubFile()
         val file2 = StubFile()

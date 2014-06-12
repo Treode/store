@@ -15,7 +15,7 @@ import Cohort.Moving
 import PaxosMover.{Batch, Point, Range, Targets, Tracker, move}
 
 private class PaxosMover (kit: PaxosKit) {
-  import kit.{acceptors, archive, cluster, disks, library, random, scheduler}
+  import kit.{acceptors, archive, cluster, disk, library, random, scheduler}
   import kit.config.{moveBatchBackoff, moveBatchBytes, moveBatchEntries}
   import kit.library.releaser
 
@@ -27,7 +27,7 @@ private class PaxosMover (kit: PaxosKit) {
   queue.launch()
 
   def split (start: Point.Middle, limit: Point, targets: Targets): Async [(Batch, Point)] =
-    disks.join {
+    disk.join {
 
       var batch = Map.empty [Int, List [Cell]]
       var entries = 0

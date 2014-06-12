@@ -45,7 +45,7 @@ extends Disk.Recovery {
         drives <-
           for (((path, file, geometry), i) <- items.zipWithIndex.latch.seq)
             DiskDrive.init (i, path, file, geometry, boot, kit)
-        _ <- kit.disks.add (drives)
+        _ <- kit.drives.add (drives)
       } yield {
         new LaunchAgent (kit)
       }}
@@ -82,7 +82,7 @@ extends Disk.Recovery {
         superbs ++= _superbs
         val useGen0 = chooseSuperBlock (superbs)
         val boot = superbs.head.superb (useGen0) .boot
-        val expecting = boot.disks.toSet
+        val expecting = boot.drives.toSet
         opening = expecting -- opened
       }
     } .map { _ =>

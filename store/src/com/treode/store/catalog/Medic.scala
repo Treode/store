@@ -53,7 +53,7 @@ private class Medic (id: CatalogId) {
         patch (end, patches)
     }
 
-  def patch (meta: Meta) (implicit disks: Disk): Async [Unit] =
+  def patch (meta: Meta) (implicit disk: Disk): Async [Unit] =
     guard {
       for {
         (version, bytes, history) <- pager.read (meta.pos)
@@ -64,7 +64,7 @@ private class Medic (id: CatalogId) {
   def checkpoint (meta: Meta): Unit =
     this.saved = Some (meta)
 
-  def close() (implicit disks: Disk): Async [Handler] =
+  def close() (implicit disk: Disk): Async [Handler] =
     guard {
       for {
         _ <- when (saved.isDefined) (patch (saved.get))

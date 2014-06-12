@@ -21,7 +21,7 @@ private case class Tier (
     diskBytes: Long
 ) {
 
-  def get (desc: TierDescriptor, key: Bytes, time: TxClock) (implicit disks: Disk): Async [Option [Cell]] =
+  def get (desc: TierDescriptor, key: Bytes, time: TxClock) (implicit disk: Disk): Async [Option [Cell]] =
     async { cb =>
 
       import desc.pager

@@ -27,7 +27,7 @@ private class RecoveryKit (implicit
   val _atomic = Atomic.recover()
 
   def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Controller] = {
-    import launch.disks
+    import launch.disk
 
     for {
       catalogs <- _catalogs.launch (launch, cluster)

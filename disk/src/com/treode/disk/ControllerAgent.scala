@@ -4,8 +4,8 @@ import java.nio.file.Path
 import com.treode.async.Async
 import com.treode.async.io.File
 
-private class ControllerAgent (kit: DiskKit, val disks: Disk) extends Disk.Controller  {
-  import kit.{disks => drives}
+private class ControllerAgent (kit: DiskKit, val disk: Disk) extends Disk.Controller  {
+  import kit.drives
 
   def attach (items: (Path, DiskGeometry)*): Async [Unit] =
     drives.attach (items)

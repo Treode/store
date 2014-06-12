@@ -76,7 +76,7 @@ object Store {
       shareAddr: SocketAddress,
       paths: Path*
   ) (implicit
-      disksConfig: DiskConfig,
+      diskConfig: DiskConfig,
       clusterConfig: ClusterConfig,
       storeConfig: StoreConfig
   ): Async [Controller] = {
@@ -85,10 +85,10 @@ object Store {
     guard {
       implicit val random = Random
       implicit val scheduler = Scheduler (executor)
-      implicit val _disks = Disk.recover()
+      implicit val _disk = Disk.recover()
       val _store = Store.recover()
       for {
-        launch <- _disks.reattach (paths: _*)
+        launch <- _disk.reattach (paths: _*)
         (hostId, cellId) = StorePicklers.sysid.fromByteArray (launch.sysid)
         cluster = Cluster.live (cellId, hostId, bindAddr, shareAddr)
         store <- _store.launch (launch, cluster)

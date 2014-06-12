@@ -196,6 +196,6 @@ private object LogIterator {
           val superb = read.superb (useGen0)
           logs (superb.id) .close (kit)
         }
-      _ <- kit.disks.add (drives)
+      _ <- kit.drives.add (drives)
     } yield kit
   }}

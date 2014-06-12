@@ -10,12 +10,12 @@ import Async.guard
 
 private class PageCache (kit: DiskKit) {
   import kit.config.pageCacheEntries
-  import kit.disks
+  import kit.drives
 
   class Load (desc: PageDescriptor [_, Any], pos: Position)
   extends Callable [Future [Any]] {
     def call(): Future [Any] =
-      disks.fetch (desc, pos) .toFuture
+      drives.fetch (desc, pos) .toFuture
   }
 
   private val pages = CacheBuilder.newBuilder

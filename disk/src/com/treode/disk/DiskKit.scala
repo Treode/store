@@ -18,7 +18,7 @@ private class DiskKit (
 
   val logd = new Dispatcher [PickledRecord] (logBatch)
   val paged = new Dispatcher [PickledPage] (0L)
-  val disks = new DiskDrives (this)
+  val drives = new DiskDrives (this)
   val checkpointer = new Checkpointer (this)
   val releaser = new EpochReleaser
   val compactor = new Compactor (this)
@@ -29,13 +29,13 @@ private class DiskKit (
         _ <- latch (
             checkpointer.launch (checkpoints),
             compactor.launch (pages))
-        _ <- disks.launch()
+        _ <- drives.launch()
       } yield ()
     } run (ignore)
 
   def close(): Async [Unit] =
     for {
       _ <- compactor.close()
-      _ <- disks.close()
+      _ <- drives.close()
     } yield ()
 }

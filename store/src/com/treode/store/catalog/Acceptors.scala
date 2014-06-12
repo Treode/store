@@ -3,7 +3,7 @@ package com.treode.store.catalog
 import com.treode.store.CatalogId
 
 private class Acceptors (kit: CatalogKit) {
-  import kit.{cluster, disks}
+  import kit.{cluster, disk}
   import kit.library.atlas
 
   val acceptors = newAcceptorsMap

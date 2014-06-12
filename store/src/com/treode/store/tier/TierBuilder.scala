@@ -17,7 +17,7 @@ private class TierBuilder (
     bloom: BloomFilter
 ) (implicit
     scheduler: Scheduler,
-    disks: Disk,
+    disk: Disk,
     config: StoreConfig
 ) {
 
@@ -196,7 +196,7 @@ private object TierBuilder {
       iter: CellIterator
   ) (implicit
       scheduler: Scheduler,
-      disks: Disk,
+      disk: Disk,
       config: StoreConfig
   ): Async [Tier] = {
     val bloom = BloomFilter (math.max (1L, est), config.falsePositiveProbability)

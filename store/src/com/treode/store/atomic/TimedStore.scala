@@ -15,7 +15,7 @@ import Async.{async, guard, supply, when}
 import JavaConversions._
 
 private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
-  import kit.{config, disks, library, scheduler}
+  import kit.{config, disk, library, scheduler}
 
   val space = new LockSpace
   val tables = newTablesMap

@@ -6,7 +6,7 @@ import java.nio.file.Paths
 import com.treode.cluster.{CellId, ClusterConfig, HostId}
 import com.treode.disk.{DiskConfig, DiskGeometry}
 import com.treode.store.{Store, StoreConfig}
-import com.twitter.logging.{ConsoleHandler, Level, Logger, LoggerFactory}
+import com.twitter.logging.{ConsoleHandler, Level, LoggerFactory}
 
 class Server extends AsyncFinatraServer {
 
@@ -39,7 +39,7 @@ class Server extends AsyncFinatraServer {
       return
     }
 
-    implicit val disksConfig = DiskConfig.suggested.copy (superBlockBits = superBlockBits())
+    implicit val diskConfig = DiskConfig.suggested.copy (superBlockBits = superBlockBits())
     implicit val clusterConfig = ClusterConfig.suggested
     implicit val storeConfig = StoreConfig.suggested
 

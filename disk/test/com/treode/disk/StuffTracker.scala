@@ -23,7 +23,7 @@ class StuffTracker (implicit random: Random) {
   def compacted = _compacted
   def maximum = _maximum
 
-  def write() (implicit disks: Disk): Async [Unit] = {
+  def write() (implicit disk: Disk): Async [Unit] = {
     var seed = random.nextLong()
     while (written contains seed)
       seed = random.nextLong()
@@ -36,7 +36,7 @@ class StuffTracker (implicit random: Random) {
       written += seed -> pos
     }}
 
-  def batch (nbatches: Int, nwrites: Int) (implicit scheduler: Scheduler, disks: Disk): Async [Unit] =
+  def batch (nbatches: Int, nwrites: Int) (implicit scheduler: Scheduler, disk: Disk): Async [Unit] =
     for {
       _ <- (0 until nbatches) .async
       _ <- (0 until nwrites) .latch.unit
@@ -45,7 +45,7 @@ class StuffTracker (implicit random: Random) {
     }
 
   def attach () (implicit scheduler: Scheduler, launch: Disk.Launch) {
-    import launch.disks
+    import launch.disk
 
     _probed = false
     _compacted = false
@@ -71,9 +71,9 @@ class StuffTracker (implicit random: Random) {
         }}})
   }
 
-  def check () (implicit scheduler: StubScheduler, disks: Disk) {
+  def check () (implicit scheduler: StubScheduler, disk: Disk) {
     for ((seed, pos) <- written) {
-      if (disks.isInstanceOf [DiskAgent])
+      if (disk.isInstanceOf [DiskAgent])
         pager.assertInLedger (pos, 0, seed)
       pager.read (pos) .expect (Stuff (seed))
     }}}

@@ -13,7 +13,7 @@ import Async.supply
 
 private class SimpleController (
     cluster: Cluster,
-    disks: Disk.Controller,
+    disk: Disk.Controller,
     library: Library,
     librarian: Librarian,
     catalogs: Catalogs,
@@ -27,7 +27,7 @@ private class SimpleController (
     librarian.issueAtlas (v.toArray)
 
   def attach (items: (Path, DiskGeometry)*): Async [Unit] =
-    disks.attach (items: _*)
+    disk.attach (items: _*)
 
   def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
     cluster.hail (remoteId, remoteAddr)

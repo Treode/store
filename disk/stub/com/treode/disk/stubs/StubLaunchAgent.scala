@@ -10,11 +10,11 @@ import Disk.{Controller, Launch}
 
 private class StubLaunchAgent (
     releaser: EpochReleaser,
-    val disks: StubDisk
+    val disk: StubDisk
 ) (implicit
     random: Random,
     scheduler: Scheduler,
-    disk: StubDiskDrive,
+    drive: StubDiskDrive,
     config: StubDiskConfig
 ) extends Launch {
 
@@ -38,7 +38,7 @@ private class StubLaunchAgent (
     synchronized {
       requireOpen()
       open = false
-      disks.launch (roots, pages)
+      disk.launch (roots, pages)
     }
 
   def controller: Controller =

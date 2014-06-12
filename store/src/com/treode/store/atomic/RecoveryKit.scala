@@ -58,7 +58,7 @@ private class RecoveryKit (implicit
 
   def launch (implicit launch: Disk.Launch, cluster: Cluster, paxos: Paxos): Async [Atomic] =
     supply {
-      import launch.disks
+      import launch.disk
 
       val kit = new AtomicKit()
       kit.tables.recover (tables.close())

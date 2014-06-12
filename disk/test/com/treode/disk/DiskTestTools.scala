@@ -30,23 +30,23 @@ private object DiskTestTools {
 
   implicit class RichControllerAgent (controller: Disk.Controller) {
     val agent = controller.asInstanceOf [ControllerAgent]
-    import agent.disks
+    import agent.disk
 
     def assertDisks (paths: String*): Unit =
-      disks.assertDisks (paths: _*)
+      disk.assertDisks (paths: _*)
 
     def assertDraining (paths: String*): Unit =
-      disks.assertDraining (paths: _*)
+      disk.assertDraining (paths: _*)
 
     def attachAndWait (items: AttachItem*): Async [Unit] =
-      disks.attachAndWait (items: _*)
+      disk.attachAndWait (items: _*)
 
     def attachAndCapture (items: AttachItem*): CallbackCaptor [Unit] =
       attachAndWait (items: _*) .capture
 
     def attachAndPass (items: AttachItem*) (implicit scheduler: StubScheduler) {
       attachAndWait (items: _*) .pass
-      disks.assertReady()
+      disk.assertReady()
     }
 
     def drainAndWait (items: Path*): Async [Unit] =
@@ -57,26 +57,26 @@ private object DiskTestTools {
 
     def drainAndPass (items: Path*) (implicit scheduler: StubScheduler) {
       drainAndWait (items: _*) .pass
-      disks.tickle()
-      disks.assertReady()
+      disk.tickle()
+      disk.assertReady()
     }}
 
-  implicit class RichDiskAgent (disks: Disk) {
-    val agent = disks.asInstanceOf [DiskAgent]
-    import agent.kit.{disks => drives, checkpointer, compactor, config, logd, paged}
+  implicit class RichDiskAgent (disk: Disk) {
+    val agent = disk.asInstanceOf [DiskAgent]
+    import agent.kit.{drives, checkpointer, compactor, config, logd, paged}
 
     def attachAndWait (items: AttachItem*): Async [Unit] =
       drives._attach (items)
 
     def assertDisks (paths: String*) {
       val expected = paths.map (Paths.get (_)) .toSet
-      val actual = drives.disks.values.map (_.path) .toSet
+      val actual = drives.drives.values.map (_.path) .toSet
       assertResult (expected) (actual)
     }
 
     def assertDraining (paths: String*) {
       val draining = paths.map (Paths.get (_)) .toSet
-      assert (drives.disks.values forall (disk => disk.draining == (draining contains disk.path)))
+      assert (drives.drives.values forall (disk => disk.draining == (draining contains disk.path)))
     }
 
     def assertLaunched() {
@@ -86,17 +86,17 @@ private object DiskTestTools {
     }
 
     def assertReady()  {
-      assert (!drives.queue.engaged, "Expected disks to be disengaged.")
+      assert (!drives.queue.engaged, "Expected disk to be disengaged.")
       assert (!checkpointer.engaged, "Expected checkpointer to be disengaged.")
       assert (!compactor.engaged, "Expected compactor to be disengaged.")
-      val nreceivers = drives.disks.values.filterNot (_.draining) .size
+      val nreceivers = drives.drives.values.filterNot (_.draining) .size
       assertResult (nreceivers) (logd.receivers.size)
       assertResult (nreceivers) (paged.receivers.size)
     }
 
     def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, grp: PageGroup) (
         implicit scheduler: StubScheduler) {
-      val drive = drives.disks (pos.disk)
+      val drive = drives.drives (pos.disk)
       val num = (pos.offset >> drive.geometry.segmentBits).toInt
       if (num == drive.pageSeg.num) {
         val ledger = drive.pageLedger
@@ -150,24 +150,24 @@ private object DiskTestTools {
 
   implicit class RichLaunchAgent (launch: Disk.Launch) {
     val agent = launch.asInstanceOf [LaunchAgent]
-    import agent.disks
+    import agent.disk
 
     def launchAndPass (tickle: Boolean = false) (implicit scheduler: StubScheduler) {
       agent.launch()
       scheduler.run()
       if (tickle)
-        disks.tickle()
-      disks.assertLaunched()
+        disk.tickle()
+      disk.assertLaunched()
     }}
 
   implicit class RichPager [G, P] (pager: PageDescriptor [G, P]) {
 
     def assertInLedger (pos: Position, obj: ObjectId, grp: G) (
-        implicit scheduler: StubScheduler, disks: Disk): Unit =
-      disks.assertInLedger (pos, pager.id, obj, PageGroup (pager.pgrp, grp))
+        implicit scheduler: StubScheduler, disk: Disk): Unit =
+      disk.assertInLedger (pos, pager.id, obj, PageGroup (pager.pgrp, grp))
 
-    def fetch (pos: Position) (implicit disks: Disk): Async [P] =
-      disks.asInstanceOf [DiskAgent] .kit.disks.fetch (pager, pos)
+    def fetch (pos: Position) (implicit disk: Disk): Async [P] =
+      disk.asInstanceOf [DiskAgent] .kit.drives.fetch (pager, pos)
   }
 
   implicit class RichRandom (random: Random) {
@@ -203,7 +203,7 @@ private object DiskTestTools {
     def attachAndLaunch (items: AttachItem*) (implicit scheduler: StubScheduler): Disk = {
       val launch = attachAndWait (items: _*) .pass
       launch.launchAndPass()
-      launch.disks
+      launch.disk
     }
 
     def reattachAndWait (items: ReattachItem*): Async [Launch] =
@@ -212,7 +212,7 @@ private object DiskTestTools {
     def reattachAndLaunch (items: ReattachItem*) (implicit scheduler: StubScheduler): Disk = {
       val launch = reattachAndWait (items: _*) .pass
       launch.launchAndPass()
-      launch.disks
+      launch.disk
     }
 
     def reopenAndWait (paths: Path*) (items: ReattachItem*) (
@@ -226,5 +226,5 @@ private object DiskTestTools {
         implicit scheduler: StubScheduler, config: DiskConfig): Disk = {
       val launch = reopenAndWait (paths: _*) (items: _*) .pass
       launch.launchAndPass()
-      launch.disks
+      launch.disk
     }}}

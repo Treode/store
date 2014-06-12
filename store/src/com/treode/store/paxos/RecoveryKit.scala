@@ -66,7 +66,7 @@ private class RecoveryKit (implicit
 
   def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Paxos] =
     supply {
-      import launch.disks
+      import launch.disk
       val kit = new PaxosKit (archive.close())
       medics.values foreach (_.close (kit))
       kit.acceptors.attach()

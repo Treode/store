@@ -15,7 +15,7 @@ import Cohort.Moving
 import AtomicMover.{Batch, Point, Range, Targets, Tracker, move}
 
 private class AtomicMover (kit: AtomicKit) {
-  import kit.{cluster, disks, library, random, scheduler, tables}
+  import kit.{cluster, disk, library, random, scheduler, tables}
   import kit.config.{moveBatchBackoff, moveBatchBytes, moveBatchEntries}
   import kit.library.releaser
 
@@ -27,7 +27,7 @@ private class AtomicMover (kit: AtomicKit) {
   queue.launch()
 
   def split (start: Point.Middle, limit: Point, targets: Targets): Async [(TableId, Batch, Point)] =
-    disks.join {
+    disk.join {
 
       var batch = Map.empty [Int, List [Cell]]
       var entries = 0

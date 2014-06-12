@@ -13,14 +13,14 @@ class PageDescriptor [G, P] private (
   def handle (handler: PageHandler [G]) (implicit launch: Disk.Launch): Unit =
     launch.handle (this, handler)
 
-  def read (pos: Position) (implicit disks: Disk): Async [P] =
-    disks.read (this, pos)
+  def read (pos: Position) (implicit disk: Disk): Async [P] =
+    disk.read (this, pos)
 
-  def write (obj: ObjectId, group: G, page: P) (implicit disks: Disk): Async [Position] =
-    disks.write (this, obj, group, page)
+  def write (obj: ObjectId, group: G, page: P) (implicit disk: Disk): Async [Position] =
+    disk.write (this, obj, group, page)
 
-  def compact (obj: ObjectId) (implicit disks: Disk): Async [Unit] =
-    disks.compact (this, obj)
+  def compact (obj: ObjectId) (implicit disk: Disk): Async [Unit] =
+    disk.compact (this, obj)
 
   override def toString = s"PageDescriptor($id)"
 }
