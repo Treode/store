@@ -1,10 +1,13 @@
 
+import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
 import scala.util.{Try => ScalaTry, Failure, Success}
 
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
+import com.fasterxml.jackson.core.JsonProcessingException
+import com.fasterxml.jackson.databind.{JavaType, JsonNode, ObjectMapper}
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.Async
 import com.treode.async.misc.parseUnsignedLong
 import com.treode.cluster.{CellId, HostId}
@@ -30,7 +33,8 @@ package object example1 {
   implicit val flaggableHostId: Flaggable [HostId] =
     Flaggable.mandatory (s => HostId (parseUnsignedLong (s) .get))
 
-  val textJson = new ObjectMapper()
+  val textJson = new ObjectMapper with ScalaObjectMapper
+  textJson.registerModule (DefaultScalaModule)
   textJson.registerModule (TreodeModule)
 
   val binaryJson = new ObjectMapper (new SmileFactory)
@@ -124,15 +128,23 @@ package object example1 {
           TxClock.now
       }
 
-    def readJson(): JsonNode = {
+    def readJson(): JsonNode =
       try {
         if (request.contentType != Some (MediaType.Json))
           throw new BadRequestException ("Expected JSON entity.")
         request.withReader (textJson.readTree _)
       } catch {
-        case e: JsonParseException =>
+        case e: JsonProcessingException =>
           throw new BadRequestException (e.getMessage)
-      }}}
+      }
+
+    def readJsonAs [A] () (implicit m: Manifest [A]): A =
+      try {
+        request.withReader (textJson.readValue [A] (_))
+      } catch {
+        case e: JsonProcessingException =>
+          throw new BadRequestException (e.getMessage)
+      }}
 
   implicit class RichTry [A] (v: Try [A]) {
 

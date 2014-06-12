@@ -2,58 +2,55 @@ package com.treode
 
 import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService
+import java.util.logging.{Level, Logger}
 
 import com.google.common.hash.Hashing
 import com.treode.async.{AsyncIterator, Scheduler}
 import com.treode.async.io.File
 
+import Level.INFO
+
 package disk {
 
-  private class AlreadyAttachedException (paths: Seq [Path]) extends IllegalArgumentException {
-    override def getMessage = s"Disk already attached: ${paths mkString ", "}"
-  }
+  case class DriveAttachment (path: Path, geometry: DiskGeometry)
 
-  private class CannotDrainAllException extends IllegalArgumentException {
-    override def getMessage = "Cannot drain all disk."
-  }
+  case class DriveDigest (path: Path, geometry: DiskGeometry, allocated: Int, draining: Boolean)
 
-  private class DiskFullException extends Exception {
+  class ControllerException (val message: String) extends IllegalArgumentException (message)
+
+  class DiskFullException extends Exception {
     override def getMessage = "Disk full."
   }
 
-  private class ExtraDisksException (paths: Seq [Path]) extends IllegalArgumentException {
+  class ExtraDisksException (val paths: Seq [Path]) extends IllegalArgumentException {
     override def getMessage = s"Extra disk in reattachment: ${paths mkString ", "}"
   }
 
-  private class InconsistentSuperBlocksException extends Exception {
+  class InconsistentSuperBlocksException extends Exception {
     override def getMessage = "Inconsistent superblocks."
   }
 
-  private class MissingDisksException (paths: Seq [Path]) extends IllegalArgumentException {
-    override def getMessage = s"Missing disk in reattachment: ${paths mkString ", "}"
+  class MissingDisksException (paths: Seq [Path]) extends IllegalArgumentException {
+    override def getMessage = s"Missing disks in reattachment: ${paths mkString ", "}"
   }
 
-  private class NoSuperBlocksException extends Exception {
+  class NoSuperBlocksException extends Exception {
     override def getMessage = "No superblocks."
   }
 
-  private class NotAttachedException (paths: Seq [Path]) extends IllegalArgumentException {
-    override def getMessage = s"No such disk are attached: ${paths mkString ", "}"
-  }
-
-  private class OversizedPageException (maximum: Int, found: Int) extends IllegalArgumentException {
+  class OversizedPageException (maximum: Int, found: Int) extends IllegalArgumentException {
     override def getMessage = s"The page of $found bytes exceeds the limit of $maximum bytes."
   }
 
-  private class OversizedRecordException (maximum: Int, found: Int) extends IllegalArgumentException {
+  class OversizedRecordException (maximum: Int, found: Int) extends IllegalArgumentException {
     override def getMessage = s"The record of $found bytes exceeds the limit of $maximum bytes."
   }
 
-  private class PageLedgerOverflowException extends Exception {
+  class PageLedgerOverflowException extends Exception {
     override def getMessage = "The page ledger is to large for its allocated disk space."
   }
 
-  private class SuperblockOverflowException extends Exception {
+  class SuperblockOverflowException extends Exception {
     override def getMessage = "The superblock data is to large for its allocated disk space."
   }}
 
@@ -64,6 +61,16 @@ package object disk {
   private [disk] type ReplayIterator = AsyncIterator [(Long, Unit => Any)]
 
   private [disk] val checksum = Hashing.murmur3_32
+
+  private [disk] def openFile (path: Path, geom: DiskGeometry) (implicit scheduler: Scheduler) = {
+    import StandardOpenOption.{CREATE, READ, WRITE}
+    File.open (path, CREATE, READ, WRITE)
+  }
+
+  private [disk] def reopenFile (path: Path) (implicit scheduler: Scheduler) = {
+    import StandardOpenOption.{READ, WRITE}
+    File.open (path, READ, WRITE)
+  }
 
   private [disk] implicit class RichIteratable [A] (iter: Iterable [A]) {
 
@@ -85,12 +92,19 @@ package object disk {
       b.result
     }}
 
-  private [disk] def openFile (path: Path, geom: DiskGeometry) (implicit scheduler: Scheduler) = {
-    import StandardOpenOption.{CREATE, READ, WRITE}
-    File.open (path, CREATE, READ, WRITE)
-  }
+  private [disk] object log {
 
-  private [disk] def reopenFile (path: Path) (implicit scheduler: Scheduler) = {
-    import StandardOpenOption.{READ, WRITE}
-    File.open (path, READ, WRITE)
+    val logger = Logger.getLogger ("com.treode.disk")
+
+    def attachedDrives (paths: Set [Path]): Unit =
+      logger.log (INFO, s"Attached drives ${paths mkString ", "}")
+
+    def detachedDrives (paths: Set [Path]): Unit =
+      logger.log (INFO, s"Detached drives ${paths mkString ", "}")
+
+    def drainingDrives (paths: Set [Path]): Unit =
+      logger.log (INFO, s"Draining drives ${paths mkString ", "}")
+
+    def openedDrives (paths: Set [Path]): Unit =
+      logger.log (INFO, s"Opened drives ${paths mkString ", "}")
   }}

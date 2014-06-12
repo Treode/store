@@ -22,7 +22,9 @@ object Disk {
 
     implicit def disk: Disk
 
-    def attach (items: (Path, DiskGeometry)*): Async [Unit]
+    def drives: Async [Seq [DriveDigest]]
+
+    def attach (items: DriveAttachment*): Async [Unit]
 
     def drain (items: Path*): Async [Unit]
 

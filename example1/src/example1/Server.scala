@@ -54,7 +54,7 @@ class Server extends AsyncFinatraServer {
     onExit (controller.shutdown().await())
 
     register (new Resource (controller.store))
-    register (new AdminAtlas (controller))
+    register (new Admin (controller))
 
     super.main()
   }}

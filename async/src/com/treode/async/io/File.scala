@@ -37,7 +37,7 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
           throw new Exception ("End of file reached.")
         input.writePos = input.writePos + result
         _pos += result
-        if (_buf.remaining == 0)
+        if (_buf.remaining == 0 && input.readableBytes < len)
           _buf = input.buffer (input.writePos, input.writeableBytes)
       }}}
 
@@ -97,7 +97,7 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
           throw new Exception ("File write failed.")
         output.readPos = output.readPos + result
         _pos += result
-        if (_buf.remaining == 0)
+        if (_buf.remaining == 0 && output.readableBytes > 0)
           _buf = output.buffer (output.readPos, output.readableBytes)
       }}}
 

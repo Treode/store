@@ -22,10 +22,19 @@ class DiskGeometry private (
 
   private [disk] def segmentBounds (num: Int) (implicit config: DiskConfig): SegmentBounds = {
     require (0 <= num && num < segmentCount)
-    val pos = if (num == 0) config.diskLeadBytes else num << segmentBits
-    val end = (num + 1) << segmentBits
+    val pos = if (num == 0) config.diskLeadBytes else num.toLong << segmentBits
+    val end = (num.toLong + 1) << segmentBits
     val limit = if (end > diskBytes) diskBytes else end
     SegmentBounds (num, pos, limit)
+  }
+
+  private [disk] def validForConfig() (implicit config: DiskConfig) {
+    require (
+        blockBits <= config.superBlockBits,
+        "A superblock must be at least one disk block.")
+    require (
+        segmentBits >= config.minimumSegmentBits,
+        "A segment must be larger than the largest record or page.")
   }
 
   override def hashCode: Int =
@@ -51,16 +60,14 @@ object DiskGeometry {
       segmentBits: Int,
       blockBits: Int,
       diskBytes: Long
-  ) (implicit
-      config: DiskConfig
   ): DiskGeometry = {
 
     require (
         segmentBits > 0,
-        "A segment must have more than 0 bytes.")
+        "A segment must have more than 2^0 bytes.")
     require (
         blockBits > 0,
-        "A block must have more than 0 bytes.")
+        "A block must have more than 2^0 bytes.")
     require (
         diskBytes > 0,
         "A disk must have more than 0 bytes.")
@@ -68,14 +75,8 @@ object DiskGeometry {
         segmentBits >= blockBits,
         "A segment must be at least one block.")
     require (
-        blockBits <= config.superBlockBits,
-        "A superblock must be at least one disk block.")
-    require (
-        segmentBits >= config.minimumSegmentBits,
-        "A segment must be larger than the largest record or page.")
-
-    val free = (diskBytes >> segmentBits) - (config.diskLeadBytes >> segmentBits)
-    require (free >= 16, "A disk must have at least 16 segments")
+        diskBytes >> segmentBits >= 16,
+        "A disk must have at least 16 segments")
 
     new DiskGeometry (
         segmentBits,
@@ -87,9 +88,7 @@ object DiskGeometry {
       segmentBits: Int = 30,
       blockBits: Int = 13,
       diskBytes: Long = -1
-  ) (implicit
-      config: DiskConfig
-   ): DiskGeometry =
+  ): DiskGeometry =
      DiskGeometry (
          segmentBits,
          blockBits,

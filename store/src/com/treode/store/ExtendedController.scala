@@ -7,7 +7,7 @@ import java.util.concurrent.ExecutorService
 import com.treode.async.Async
 import com.treode.async.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.disk.{Disk, DiskGeometry}
+import com.treode.disk.{Disk, DiskGeometry, DriveAttachment, DriveDigest}
 
 import Async.guard
 
@@ -20,12 +20,6 @@ private class ExtendedController (
 
   implicit val store: Store = controller.store
 
-  def attach (items: (Path, DiskGeometry)*): Async [Unit] =
-    disk.attach (items:_*)
-
-  def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
-    cluster.hail (remoteId, remoteAddr)
-
   def cohorts: Seq [Cohort] =
     controller.cohorts
 
@@ -37,6 +31,18 @@ private class ExtendedController (
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit] =
     controller.issue (desc) (version, cat)
+
+  def drives: Async [Seq [DriveDigest]] =
+    disk.drives
+
+  def attach (items: DriveAttachment*): Async [Unit] =
+    disk.attach (items:_*)
+
+  def drain (paths: Path*): Async [Unit] =
+    disk.drain (paths: _*)
+
+  def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
+    cluster.hail (remoteId, remoteAddr)
 
   def shutdown(): Async [Unit] =
     guard [Unit] {

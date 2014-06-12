@@ -50,6 +50,12 @@ private class DiskDrive (
       logmp.send (PickledRecord (id, entry, cb))
     }}
 
+  def digest: Async [DriveDigest] =
+    fiber.supply {
+      val allocated = geometry.segmentCount - alloc.free.size
+      new DriveDigest (path, geometry, allocated, draining)
+    }
+
   def added() {
     if (draining) {
       logmp.pause() run (ignore)
@@ -155,12 +161,11 @@ private class DiskDrive (
         segs
       }}
 
-  def detach(): Unit =
-    fiber.execute {
+  def detach(): Async [Unit] =
+    fiber.guard {
       open = false
       logmp.close()
       .ensure (file.close())
-      .run (ignore)
     }
 
   def close(): Async [Unit] =
@@ -368,6 +373,7 @@ private object DiskDrive {
       for {
         _ <- latch (
             SuperBlock.write (superb, file),
+            SuperBlock.clear (boot.gen + 1, file),
             RecordHeader.write (LogEnd, file, logSeg.base))
       } yield {
         new DiskDrive (
@@ -396,14 +402,15 @@ private object DiskDrive {
 
       for {
         _ <- latch (
-            SuperBlock.write (superb, file) (config),
+            SuperBlock.write (superb, file),
+            SuperBlock.clear (boot.gen + 1, file),
             RecordHeader.write (LogEnd, file, logSeg.base))
       } yield ()
     }
 
   def init (
       sysid: Array [Byte],
-      items: Seq [(Path, DiskGeometry)]
+      items: Seq [(Path, File, DiskGeometry)]
   ) (implicit
       scheduler: Scheduler,
       config: DiskConfig
@@ -413,8 +420,7 @@ private object DiskDrive {
       require (!items.isEmpty, "Must list at least one file or device to initialize.")
       require (attaching.size == items.size, "Cannot initialize a path multiple times.")
       val boot = BootBlock.apply (sysid, 0, items.size, attaching)
-      for (((path, geom), id) <- items.zipWithIndex.latch.unit) {
-        val file = openFile (path, geom)
+      for (((path, file, geom), id) <- items.zipWithIndex.latch.unit) {
         init (id, path, file, geom, boot) .ensure (file.close())
       }}
 
@@ -431,7 +437,7 @@ private object DiskDrive {
       implicit val scheduler = Scheduler (executor)
       implicit val config = DiskConfig.suggested.copy (superBlockBits = superBlockBits)
       val geom = DiskGeometry (segmentBits, blockBits, diskBytes)
-      val items = paths map (path => (path, geom))
+      val items = paths map (path => (path, openFile (path, geom), geom))
       init (sysid, items) .await()
     } finally {
       executor.shutdown()

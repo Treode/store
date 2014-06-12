@@ -6,7 +6,7 @@ import java.util.concurrent.ExecutorService
 
 import com.treode.async.Async
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.disk.{Disk, DiskGeometry}
+import com.treode.disk.{Disk, DiskGeometry, DriveAttachment, DriveDigest}
 import com.treode.store.catalog.Catalogs
 
 import Async.supply
@@ -26,17 +26,23 @@ private class SimpleController (
   def cohorts_= (v: Seq [Cohort]): Unit =
     librarian.issueAtlas (v.toArray)
 
-  def attach (items: (Path, DiskGeometry)*): Async [Unit] =
-    disk.attach (items: _*)
-
-  def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
-    cluster.hail (remoteId, remoteAddr)
-
   def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =
     catalogs.listen (desc) (f)
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit] =
     catalogs.issue (desc) (version, cat)
+
+  def drives: Async [Seq [DriveDigest]] =
+    disk.drives
+
+  def attach (items: DriveAttachment*): Async [Unit] =
+    disk.attach (items: _*)
+
+  def drain (paths: Path*): Async [Unit] =
+    disk.drain (paths: _*)
+
+  def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
+    cluster.hail (remoteId, remoteAddr)
 
   def shutdown(): Async [Unit] =
     supply()

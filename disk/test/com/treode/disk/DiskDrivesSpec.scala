@@ -145,7 +145,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file = StubFile()
           val recovery = Disk.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
-          controller.attachAndWait (("a", file, geom)).fail [AlreadyAttachedException]
+          controller.attachAndWait (("a", file, geom)).fail [ControllerException]
           controller.assertDisks ("a")
         }
 
@@ -253,7 +253,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file = StubFile()
           val recovery = Disk.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
-          controller.drainAndWait ("b") .fail [NotAttachedException]
+          controller.drainAndWait ("b") .fail [ControllerException]
           controller.assertDisks ("a")
           controller.assertDraining ()
         }
@@ -275,7 +275,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file = StubFile()
           val recovery = Disk.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
-          controller.drainAndWait ("a") .fail [CannotDrainAllException]
+          controller.drainAndWait ("a") .fail [ControllerException]
           controller.assertDisks ("a")
           controller.assertDraining ()
         }
@@ -453,6 +453,4 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           val recovery = Disk.recover()
           val controller = recovery.reattachAndLaunch (("a", file1), ("b", file2))
           controller.assertDisks ("a", "b")
-        }}
-
-     }}}
+        }}}}}

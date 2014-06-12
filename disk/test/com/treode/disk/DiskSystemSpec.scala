@@ -85,7 +85,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           replayer.check (tracker)
         }}}
 
-    "using multiple disk" taggedAs (Intensive, Periodic) in {
+    "using multiple disks" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig (checkpointEntries = 57)
@@ -328,7 +328,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           tracker.check()
         }}}
 
-    "using multiple disk" taggedAs (Intensive, Periodic) in {
+    "using multiple disks" taggedAs (Intensive, Periodic) in {
       forAllCrashes { implicit random =>
 
         implicit val config = DiskTestConfig (cleaningFrequency = 3)

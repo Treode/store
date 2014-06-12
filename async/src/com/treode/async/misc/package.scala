@@ -49,13 +49,28 @@ package object misc {
         case None => throw e
       }}
 
-  def materialize [A] (vs: java.lang.Iterable [A]): Seq [A] = {
+  def materialize [A] (i: java.util.Iterator [A]): Seq [A] = {
     // Do the convenient methods in Scala's library return a materialized collection or some view?
     // Nobody can be sure.
-    val i = vs.iterator
     val b = Seq.newBuilder [A]
     while (i.hasNext)
       b += i.next
+    b.result
+  }
+
+  def materialize [A] (vs: java.lang.Iterable [A]): Seq [A] =
+    materialize (vs.iterator)
+
+  def materialize [A] (i: Iterator [A]): Seq [A] = {
+    val b = Seq.newBuilder [A]
+    while (i.hasNext)
+      b += i.next
+    b.result
+  }
+
+  def materialize [A] (vs: Traversable [A]): Seq [A] = {
+    val b = Seq.newBuilder [A]
+    vs foreach (b += _)
     b.result
   }
 

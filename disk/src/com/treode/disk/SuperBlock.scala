@@ -30,6 +30,14 @@ private object SuperBlock {
   def position (gen: Int) (implicit config: DiskConfig): Long =
     if ((gen & 0x1) == 0) 0L else config.superBlockBytes
 
+  def clear (gen: Int, file: File) (implicit config: DiskConfig): Async [Unit] =
+    guard {
+      val buf = PagedBuffer (12)
+      buf.writeInt (0)
+      buf.writeZeroToAlign (config.superBlockBits)
+      file.flush (buf, position (gen))
+    }
+
   def write (superb: SuperBlock, file: File) (implicit config: DiskConfig): Async [Unit] =
     guard {
       val buf = PagedBuffer (12)

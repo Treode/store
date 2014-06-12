@@ -37,6 +37,7 @@ extends Disk.Recovery {
       val attaching = items.map (_._1) .toSet
       require (!items.isEmpty, "Must list at least one file or device to attach.")
       require (attaching.size == items.size, "Cannot attach a path multiple times.")
+      items foreach (_._3.validForConfig())
       close()
 
       val kit = new DiskKit (sysid, 0)

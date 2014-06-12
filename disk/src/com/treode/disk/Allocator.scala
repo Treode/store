@@ -37,8 +37,8 @@ private object Allocator {
 
   def segmentBounds (num: Int, geometry: DiskGeometry, config: DiskConfig): SegmentBounds = {
     require (0 <= num && num < geometry.segmentCount)
-    val pos = if (num == 0) config.diskLeadBytes else num << geometry.segmentBits
-    val end = (num + 1) << geometry.segmentBits
+    val pos = if (num == 0) config.diskLeadBytes else num.toLong << geometry.segmentBits
+    val end = (num.toLong + 1) << geometry.segmentBits
     val limit = if (end > geometry.diskBytes) geometry.diskBytes else end
     SegmentBounds (num, pos, limit)
   }

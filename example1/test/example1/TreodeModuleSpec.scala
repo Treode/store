@@ -1,7 +1,10 @@
 package example1
 
+import java.nio.file.{Path, Paths}
+
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.treode.disk.{DiskGeometry, DriveAttachment, DriveDigest}
 import com.treode.cluster.HostId
 import com.treode.store.Cohort
 import org.scalatest.FreeSpec
@@ -16,11 +19,126 @@ class TreodeModuleSpec extends FreeSpec {
   def assertString (expected: String) (input: Any): Unit =
     assertResult (expected) (mapper.writeValueAsString (input))
 
-  def assertCohort (expected: Cohort) (input: String): Unit =
-    assertResult (expected) (mapper.readValue (input, classOf [Cohort]))
+  def accept [A] (expected: A) (input: String) (implicit m: Manifest [A]): Unit =
+    assertResult (expected) (mapper.readValue (input, m.runtimeClass))
 
-  def rejectCohort (input: String): Unit =
-    intercept [JsonProcessingException] (mapper.readValue (input, classOf [Cohort]))
+  def reject [A] (input: String) (implicit m: Manifest [A]): Unit =
+    intercept [JsonProcessingException] (mapper.readValue (input, m.runtimeClass))
+
+  "Serializing a path should" - {
+
+    "produce a string" in {
+      assertString ("\"/a\"") (Paths.get ("/a"))
+    }}
+
+  "Deserializing a path should" - {
+
+    "read a sring" in {
+      accept (Paths.get ("/a")) ("\"/a\"")
+    }
+
+    "reject an integer" in {
+      reject [Path] ("1")
+    }
+
+    "reject a float" in {
+      reject [Path] ("1.0")
+    }
+
+    "reject an array" in {
+      reject [Path] ("[]")
+    }
+
+    "reject an object" in {
+      reject [Path] ("{}")
+    }}
+
+  "Serializing a drive attachment should" - {
+
+    "work" in {
+      assertString ("""{"path":"/a","geometry":{"segmentBits":30,"blockBits":13,"diskBytes":1099511627776}}""") {
+        DriveAttachment (Paths.get ("/a"), DiskGeometry (30, 13, 1L<<40))
+      }}}
+
+  "Deserializing a drive attachment should" - {
+
+    "work" in {
+      accept (DriveAttachment (Paths.get ("/a"), DiskGeometry (30, 13, 1L<<40))) {
+        """{"path":"/a","geometry":{"segmentBits":30,"blockBits":13,"diskBytes":1099511627776}}"""
+      }}
+
+    "reject an attachment with a bad path" in {
+      reject [DriveAttachment] {
+        """{"path": 1, geometry: {"segmentBits":30,"blockBits":13,"diskBytes":1099511627776}}"""
+      }}
+
+    "reject an attachment with bad geometry values" in {
+      reject [DriveAttachment] {
+        """{"path": "/a", geometry: {"segmentBits":-1,"blockBits":-1,"diskBytes":-1}}"""
+      }}
+
+    "reject an attachment with a bad geometry object" in {
+      reject [DriveAttachment] {
+        """{"path": "/a", geometry: 1}"""
+      }}
+
+    "reject an empty object" in {
+      reject [DiskGeometry] ("{}")
+    }
+
+    "reject an integer" in {
+      reject [DiskGeometry] ("1")
+    }
+
+    "reject a float" in {
+      reject [DiskGeometry] ("1.0")
+    }
+
+    "reject an array" in {
+      reject [DiskGeometry] ("[]")
+    }}
+
+  "Serializing a drive digest should" - {
+
+    "work" in {
+      assertString ("""{"path":"/a","geometry":{"segmentBits":30,"blockBits":13,"diskBytes":1099511627776},"allocated":1,"draining":false}""") {
+        DriveDigest (Paths.get ("/a"), DiskGeometry (30, 13, 1L<<40), 1, false)
+      }}}
+
+  "Serializing drive geometry should" - {
+
+    "work" in {
+      assertString ("""{"segmentBits":30,"blockBits":13,"diskBytes":1099511627776}""") {
+        DiskGeometry (30, 13, 1L<<40)
+      }}}
+
+  "Deserializing drive geometry should" - {
+
+    "work" in {
+      accept (DiskGeometry (30, 13, 1L<<40)) {
+        """{"segmentBits":30,"blockBits":13,"diskBytes":1099511627776}"""
+      }}
+
+    "reject a geometry with bad values" in {
+      reject [DiskGeometry] {
+        """{"segmentBits":-1,"blockBits":-1,"diskBytes":-1}"""
+      }}
+
+    "reject an empty object" in {
+      reject [DiskGeometry] ("{}")
+    }
+
+    "reject an integer" in {
+      reject [DiskGeometry] ("1")
+    }
+
+    "reject a float" in {
+      reject [DiskGeometry] ("1.0")
+    }
+
+    "reject an array" in {
+      reject [DiskGeometry] ("[]")
+    }}
 
   "Serializing a HostId should" - {
 
@@ -31,66 +149,54 @@ class TreodeModuleSpec extends FreeSpec {
   "Deserializing a HostId should" - {
 
     "handle an decimal long" in {
-      assertResult (HostId (0x778EE7AD8196BB93L)) {
-        mapper.readValue ("8615077869595835283", classOf [HostId])
-      }}
+      accept (HostId (0x778EE7AD8196BB93L)) ("8615077869595835283")
+    }
 
     "handle a hexadecimal string" in {
-      assertResult (HostId (0x778EE7AD8196BB93L)) {
-        mapper.readValue ("\"0x778EE7AD8196BB93\"", classOf [HostId])
-      }}
+      accept (HostId (0x778EE7AD8196BB93L)) ("\"0x778EE7AD8196BB93\"")
+    }
 
     "handle a host string" in {
-      assertResult (HostId (0x778EE7AD8196BB93L)) {
-        mapper.readValue ("\"Host:778EE7AD8196BB93\"", classOf [HostId])
-      }}
+      accept (HostId (0x778EE7AD8196BB93L)) ("\"Host:778EE7AD8196BB93\"")
+    }
 
     "reject a bad string" in {
-      intercept [JsonProcessingException] {
-        mapper.readValue ("\"hst:AB\"", classOf [HostId])
-      }}
+      reject [HostId] ("\"hst:AB\"")
+    }
 
     "reject a float" in {
-      intercept [JsonProcessingException] {
-        mapper.readValue ("1.0", classOf [HostId])
-      }}
+      reject [HostId] ("1.0")
+    }
 
     "reject an array" in {
-      intercept [JsonProcessingException] {
-        mapper.readValue ("[]", classOf [HostId])
-      }}
+      reject [HostId] ("[]")
+    }
 
     "reject an object" in {
-      intercept [JsonProcessingException] {
-        mapper.readValue ("{}", classOf [HostId])
-      }}}
+      reject [HostId] ("{}")
+    }}
 
   "Deserializing a cohort should" - {
 
-    "reject an object with no state or hosts" in {
-      rejectCohort {
-        """{}"""
-      }}
+    "reject an empty object" in {
+      reject [Cohort] ("{}")
+    }
 
     "reject an integer" in {
-      rejectCohort {
-        "1"
-      }}
+      reject [Cohort] ("1")
+    }
 
     "reject a float" in {
-      rejectCohort {
-        "1.0"
-      }}
+      reject [Cohort] ("1.0")
+    }
 
     "reject a string" in {
-      rejectCohort {
-        "\"hello\""
-      }}
+      reject [Cohort] ("\"hello\"")
+    }
 
     "reject an array" in {
-      rejectCohort {
-        """[]"""
-      }}}
+      reject [Cohort] ("[]")
+    }}
 
   "Serializing an empty cohort should" - {
 
@@ -101,22 +207,22 @@ class TreodeModuleSpec extends FreeSpec {
   "Deserializing an empty cohort should" - {
 
     "work" in {
-      assertCohort (Empty) {
+      accept [Cohort] (Empty) {
         """{"state":"empty"}"""
       }}
 
     "reject an object with hosts" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"empty", "hosts":[1]}"""
       }}
 
     "reject an object with an origin" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"empty", "origin":[1]}"""
       }}
 
     "reject an object with a target" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"empty", "target":[1]}"""
       }}}
 
@@ -130,22 +236,22 @@ class TreodeModuleSpec extends FreeSpec {
   "Deserializing a settled cohort should" - {
 
     "work" in {
-      assertCohort (settled (1)) {
+      accept (settled (1)) {
         """{"state":"settled", "hosts":[1]}"""
       }}
 
     "reject an object with no hosts" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"settled", "hosts":[]}"""
       }}
 
     "reject an object with an origin" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"settled", "origin":[1]}"""
       }}
 
     "reject an object with a target" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"settled", "target":[1]}"""
       }}}
 
@@ -159,22 +265,22 @@ class TreodeModuleSpec extends FreeSpec {
   "Deserializing an issuing cohort should" - {
 
     "work" in {
-      assertCohort (issuing (1) (2)) {
+      accept (issuing (1) (2)) {
         """{"state":"issuing", "origin":[1], "target":[2]}"""
       }}
 
     "reject an object with hosts" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"issuing", "hosts":[1], "origin":[1], "target":[2]"}"""
       }}
 
     "reject an object with no origin" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"issuing", "origin":[], "target":[2]"}"""
       }}
 
     "reject an object with no target" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"issuing", "origin":[1], "target":[]"}"""
       }}}
 
@@ -188,21 +294,21 @@ class TreodeModuleSpec extends FreeSpec {
   "Deserializing a moving cohort should" - {
 
     "work" in {
-      assertCohort (moving (1) (2)) {
+      accept (moving (1) (2)) {
         """{"state":"moving", "origin":[1], "target":[2]}"""
       }}
 
     "reject an object with hosts" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"moving", "hosts":[1], "origin":[1], "target":[2]"}"""
       }}
 
     "reject an object with no origin" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"moving", "origin":[], "target":[2]"}"""
       }}
 
     "reject an object with no target" in {
-      rejectCohort {
+      reject [Cohort] {
         """{"state":"moving", "origin":[1], "target":[]"}"""
       }}}}

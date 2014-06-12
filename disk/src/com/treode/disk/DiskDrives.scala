@@ -9,11 +9,11 @@ import com.treode.async.{Async, AsyncQueue, Callback, Fiber}
 import com.treode.async.implicits._
 import com.treode.async.io.File
 
-import Async.{async, guard}
+import Async.{async, guard, supply}
 import Callback.{fanout, ignore}
 
 private class DiskDrives (kit: DiskKit) {
-  import kit.{checkpointer, compactor, scheduler, sysid}
+  import kit.{checkpointer, compactor, config, scheduler, sysid}
 
   type AttachItem = (Path, File, DiskGeometry)
   type AttachRequest = (Seq [AttachItem], Callback [Unit])
@@ -62,13 +62,18 @@ private class DiskDrives (kit: DiskKit) {
       None
     }}
 
-  def launch(): Async [Unit] =
+  def launch(): Async [Unit] = {
+    val attached = drives.values.setBy (_.path)
+    val draining = drives.values.filter (_.draining)
     for {
-      segs <- drives.values.filter (_.draining) .latch.casual foreach (_.drain())
+      segs <- draining.latch.casual foreach (_.drain())
     } yield {
       compactor.drain (segs.iterator.flatten)
       queue.launch()
-    }
+      log.openedDrives (attached)
+      if (!draining.isEmpty)
+        log.drainingDrives (draining.setBy (_.path))
+    }}
 
   def _close (cb: Callback [Unit]): Option [Runnable] =
     queue.run (cb) {
@@ -79,6 +84,11 @@ private class DiskDrives (kit: DiskKit) {
   def close(): Async [Unit] =
     queue.async { cb =>
       closereqs ::= cb
+    }
+
+  def digest: Async [Seq [DriveDigest]] =
+    fiber.guard {
+      drives.values.latch.casual.foreach (_.digest)
     }
 
   private def _attach (items: Seq [AttachItem], cb: Callback [Unit]): Option [Runnable] =
@@ -94,7 +104,7 @@ private class DiskDrives (kit: DiskKit) {
 
       if (newPaths exists (priorPaths contains _)) {
         val already = (newPaths -- priorPaths).toSeq.sorted
-        throw new AlreadyAttachedException (already)
+        throw new ControllerException (s"Disks already attached: ${already mkString ", "}")
       }
 
       for {
@@ -107,40 +117,45 @@ private class DiskDrives (kit: DiskKit) {
         this.bootgen = bootgen
         this.number = number
         newDisks foreach (_.added())
+        log.attachedDrives (newDisks.setBy (_.path))
       }}
 
-  def _attach (items: Seq [(Path, File, DiskGeometry)]): Async [Unit] = {
+  def _attach (items: Seq [AttachItem]): Async [Unit] = {
     queue.async { cb =>
-      val attaching = items.map (_._1) .toSet
-      require (!items.isEmpty, "Must list at least one file or device to attach.")
-      require (attaching.size == items.size, "Cannot attach a path multiple times.")
+      val attaching = items.setBy (_._1)
+      if (items.isEmpty)
+        throw new ControllerException ("Must list at least one file or device to attach.")
+      if (attaching.size != items.size)
+        throw new ControllerException ("Cannot attach a path multiple times.")
+      items foreach (_._3.validForConfig())
       attachreqs = attachreqs.enqueue (items, cb)
     }}
 
-  def attach (items: Seq [(Path, DiskGeometry)]): Async [Unit] =
+  def attach (items: Seq [DriveAttachment]): Async [Unit] =
     guard {
       val files =
-        for ((path, geom) <- items)
-          yield (path, openFile (path, geom), geom)
+        for (item <- items)
+          yield (item.path, openFile (item.path, item.geometry), item.geometry)
       _attach (files)
     }
 
   private def _detach (items: List [DiskDrive]): Option [Runnable] =
     queue.run (ignore) {
 
-      val paths = items map (_.path)
-      val drives = this.drives -- (items map (_.id))
+      val keepDrives = this.drives -- (items map (_.id))
+      val keepPaths = keepDrives.values.setBy (_.path)
       val bootgen = this.bootgen + 1
-      val attached = drives.values.setBy (_.path)
-      val newboot = BootBlock (sysid, bootgen, number, attached)
+      val newboot = BootBlock (sysid, bootgen, number, keepPaths)
 
       for {
         _ <- drives.values.latch.unit foreach (_.checkpoint (newboot, None))
+        _ <- supply {
+          this.drives = keepDrives
+          this.bootgen = bootgen
+        }
+        _ <- items.latch.unit.foreach (_.detach())
       } yield {
-        this.drives = drives
-        this.bootgen = bootgen
-        items foreach (_.detach())
-        // TODO: add detach hooks
+        log.detachedDrives (items.setBy (_.path))
       }}
 
   def detach (disk: DiskDrive): Unit =
@@ -152,34 +167,40 @@ private class DiskDrives (kit: DiskKit) {
     queue.run (cb) {
 
       val byPath = drives.values.mapBy (_.path)
+
       if (!(items forall (byPath contains _))) {
         val unattached = (items.toSet -- byPath.keySet).toSeq.sorted
-        throw new NotAttachedException (unattached)
+        throw new ControllerException (s"No such disks are attached: ${unattached mkString ", "}")
       }
 
-      if (items.size == drives.values.filterNot (_.draining) .size) {
-        throw new CannotDrainAllException
-      }
+      val drainDrives = items .map (byPath.apply _) .filterNot (_.draining)
+      val drainPaths = drainDrives.setBy (_.path)
 
-      val draining = items map (byPath.apply _)
+      if (drainDrives.size == drives.values.filterNot (_.draining) .size)
+        throw new ControllerException ("Cannot drain all disks.")
+
       for {
-        segs <- draining.latch.casual foreach (_.drain())
+        segs <- drainDrives.latch.casual foreach (_.drain())
       } yield {
         checkpointer.checkpoint()
             .ensure (compactor.drain (segs.iterator.flatten))
             .run (ignore)
+        log.drainingDrives (drainPaths)
       }}
 
   def drain (items: Seq [Path]): Async [Unit] =
     queue.async { cb =>
-      require (!items.isEmpty, "Must list at least one file or device to attach.")
+      if (items.isEmpty)
+        throw new ControllerException ("Must list at least one file or device to drain.")
+      if (items.size != items.toSet.size)
+        throw new ControllerException ("Cannot drain a file or device twice.")
       drainreqs = drainreqs.enqueue (items, cb)
     }
 
   private def _checkpoint (marks: Map [Int, Long], cb: Callback [Unit]): Option [Runnable] =
     queue.run (cb) {
       val bootgen = this.bootgen + 1
-      val attached = drives.values.map (_.path) .toSet
+      val attached = drives.values.setBy (_.path)
       val newBoot = BootBlock (sysid, bootgen, number, attached)
       for {
         _ <- drives.values.latch.unit foreach (disk => disk.checkpoint (newBoot, marks get disk.id))

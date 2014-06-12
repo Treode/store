@@ -7,7 +7,7 @@ import scala.util.{Failure, Random}
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
 import com.treode.cluster.{CellId, Cluster, ClusterConfig, HostId, Peer}
-import com.treode.disk.{Disk, DiskConfig, DiskGeometry}
+import com.treode.disk.{Disk, DiskConfig, DiskGeometry, DriveAttachment, DriveDigest}
 
 import Async.guard
 
@@ -38,7 +38,11 @@ object Store {
 
     def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit]
 
-    def attach (items: (Path, DiskGeometry)*): Async [Unit]
+    def drives: Async [Seq [DriveDigest]]
+
+    def attach (items: DriveAttachment*): Async [Unit]
+
+    def drain (paths: Path*): Async [Unit]
 
     def hail (remoteId: HostId, remoteAddr: SocketAddress)
 
