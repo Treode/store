@@ -5,7 +5,7 @@ import java.util.{Arrays, ArrayDeque}
 import java.util.concurrent.Executors
 import scala.collection.JavaConversions._
 import scala.collection.mutable.UnrolledBuffer
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 import com.treode.async.{Async, Callback, Fiber, Latch, Scheduler}
 import com.treode.async.implicits._
@@ -416,12 +416,16 @@ private object DiskDrive {
       config: DiskConfig
   ): Async [Unit] =
     guard {
-      val attaching = items.map (_._1) .toSet
+      val attaching = items.setBy (_._1)
       require (!items.isEmpty, "Must list at least one file or device to initialize.")
       require (attaching.size == items.size, "Cannot initialize a path multiple times.")
       val boot = BootBlock.apply (sysid, 0, items.size, attaching)
-      for (((path, file, geom), id) <- items.zipWithIndex.latch.unit) {
-        init (id, path, file, geom, boot) .ensure (file.close())
+      for {
+        _ <-
+        for (((path, file, geom), id) <- items.zipWithIndex.latch.unit)
+          init (id, path, file, geom, boot)
+      } yield {
+        log.initializedDrives (attaching)
       }}
 
   def init (
@@ -433,12 +437,19 @@ private object DiskDrive {
       paths: Seq [Path]
   ) {
     val executor = Executors.newSingleThreadScheduledExecutor()
+    var items = Seq.empty [Try [(Path, File, DriveGeometry)]]
     try {
       implicit val scheduler = Scheduler (executor)
       implicit val config = DiskConfig.suggested.copy (superBlockBits = superBlockBits)
       val geom = DriveGeometry (segmentBits, blockBits, diskBytes)
-      val items = paths map (path => (path, openFile (path, geom), geom))
-      init (sysid, items) .await()
+      items =
+        for (path <- paths)
+          yield Try ((path, openFile (path, geom), geom))
+      init (sysid, items.map (_.get)) .await()
     } finally {
+      items foreach {
+        case Success ((_, file, _)) => file.close()
+        case Failure (_) => ()
+      }
       executor.shutdown()
     }}}

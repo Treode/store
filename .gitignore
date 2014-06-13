@@ -1,4 +1,5 @@
 *.db
+*.jar
 .cache
 .classpath
 .history

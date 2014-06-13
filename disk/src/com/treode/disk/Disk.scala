@@ -63,7 +63,6 @@ object Disk {
   ): Unit =
     DiskDrive.init (sysid, superBlockBits, segmentBits, blockBits, diskBytes, paths)
 
-
   def recover () (implicit scheduler: Scheduler, config: DiskConfig): Recovery =
     new RecoveryAgent
 }

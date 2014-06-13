@@ -105,6 +105,9 @@ package object disk {
     def drainingDrives (paths: Set [Path]): Unit =
       logger.log (INFO, s"Draining drives ${paths mkString ", "}")
 
+    def initializedDrives (paths: Set [Path]): Unit =
+      logger.log (INFO, s"Initialized drives ${paths mkString ", "}")
+
     def openedDrives (paths: Set [Path]): Unit =
       logger.log (INFO, s"Opened drives ${paths mkString ", "}")
   }}
