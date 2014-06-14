@@ -12,7 +12,7 @@ import WriteOp._
 class ResourceSpec extends FreeSpec with Matchers with SpecTools {
 
   def newMock (store: StubStore) = {
-    val resource = new Resource (store)
+    val resource = new Resource (0x6F, store)
     MockApp (resource.delegate)
   }
 

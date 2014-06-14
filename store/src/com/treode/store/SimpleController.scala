@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 
 import com.treode.async.Async
-import com.treode.cluster.{Cluster, HostId}
+import com.treode.cluster.{CellId, Cluster, HostId}
 import com.treode.disk.{Disk, DriveAttachment, DriveDigest, DriveGeometry}
 import com.treode.store.catalog.Catalogs
 
@@ -40,6 +40,12 @@ private class SimpleController (
 
   def drain (paths: Path*): Async [Unit] =
     disk.drain (paths: _*)
+
+  def cellId: CellId =
+    cluster.cellId
+
+  def hostId: HostId =
+    cluster.localId
 
   def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
     cluster.hail (remoteId, remoteAddr)

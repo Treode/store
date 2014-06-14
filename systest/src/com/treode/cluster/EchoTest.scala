@@ -106,6 +106,8 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
       private val scuttlebutt: Scuttlebutt =
         new Scuttlebutt (EchoTest.this.localId, _peers) (_scheduler)
 
+      def cellId = CellId (0xE8)
+
       def localId = EchoTest.this.localId
 
       def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =

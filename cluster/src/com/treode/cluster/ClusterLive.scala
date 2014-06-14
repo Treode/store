@@ -9,6 +9,7 @@ import com.treode.pickle.Pickler
 import Async.guard
 
 private class ClusterLive (
+    val cellId: CellId,
     val localId: HostId,
     group: AsynchronousChannelGroup,
     ports: PortRegistry,

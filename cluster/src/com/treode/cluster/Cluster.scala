@@ -11,6 +11,8 @@ import com.treode.pickle.Pickler
 
 trait Cluster {
 
+  def cellId: CellId
+
   def localId: HostId
 
   def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any)
@@ -72,7 +74,7 @@ object Cluster {
       val listener = new Listener (cellId, hostId, bindAddr, group, peers)
 
       implicit val cluster  =
-        new ClusterLive (hostId, group, ports, peers, listener, scuttlebutt)
+        new ClusterLive (cellId, hostId, group, ports, peers, listener, scuttlebutt)
 
       Peer.load.listen { (load, peer) =>
         peer.load = load

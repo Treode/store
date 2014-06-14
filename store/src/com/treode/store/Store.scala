@@ -44,6 +44,10 @@ object Store {
 
     def drain (paths: Path*): Async [Unit]
 
+    def cellId: CellId
+
+    def hostId: HostId
+
     def hail (remoteId: HostId, remoteAddr: SocketAddress)
 
     def shutdown(): Async [Unit]

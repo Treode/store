@@ -29,6 +29,8 @@ class StubPeer (
   private [stubs] def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M): Unit =
     ports.deliver (p, peers.get (from), port, msg)
 
+  def cellId = CellId (0x0D)
+
   def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
     ports.listen (desc.pmsg, desc.id) (f)
 

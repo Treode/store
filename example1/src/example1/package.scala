@@ -11,7 +11,7 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.Async
 import com.treode.async.misc.parseUnsignedLong
 import com.treode.cluster.{CellId, HostId}
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{Bytes, TxClock, TxId}
 import com.twitter.app.Flaggable
 import com.twitter.finagle.http.{MediaType, ParamMap}
 import com.twitter.finatra.Request
@@ -44,6 +44,7 @@ package object example1 {
   val IfModifiedSince = "If-Modified-Since"
   val IfUnmodifiedSince = "If-Unmodified-Since"
   val LastModificationBefore = "Last-Modification-Before"
+  val TransactionId = "Transaction-ID"
 
   val Conflict = HttpResponseStatus.CONFLICT.getCode
   val NotFound = HttpResponseStatus.NOT_FOUND.getCode
@@ -126,6 +127,16 @@ package object example1 {
             .getOrElse (throw new BadRequestException (s"Bad Last-Modification-Before value: $rt"))
         case None =>
           TxClock.now
+      }
+
+    def getTransactionId (host: HostId): TxId =
+      request.headerMap.get (TransactionId) match {
+        case Some (tx) =>
+          TxId
+            .parse (tx)
+            .getOrElse (throw new BadRequestException (s"Bad Transaction-ID value: $tx"))
+        case None =>
+          TxId.random (host)
       }
 
     def readJson(): JsonNode =

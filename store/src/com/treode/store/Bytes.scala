@@ -43,6 +43,9 @@ class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
   /** Only applies if this was created using `Bytes (Long)`. */
   def long: Long = unpickle (Picklers.fixedLong)
 
+  def toHexString: String =
+    BigInt (1, bytes) .toString (16)
+
   def compare (that: Bytes): Int =
     UnsignedBytes.lexicographicalComparator.compare (this.bytes, that.bytes)
 
@@ -80,6 +83,9 @@ object Bytes extends Ordering [Bytes] {
   /** Yield a Bytes object that will sort identically to the long. */
   def apply (n: Long): Bytes =
     Bytes (Picklers.fixedLong, n)
+
+  def fromHexString (s: String): Bytes =
+    Bytes (BigInt (s, 16) .toByteArray)
 
   def compare (x: Bytes, y: Bytes): Int =
     x compare y
