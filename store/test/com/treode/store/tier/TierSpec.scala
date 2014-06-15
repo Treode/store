@@ -77,12 +77,12 @@ class TierSpec extends WordSpec {
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier) (
       implicit scheduler: StubScheduler, disk: Disk): Seq [Cell] =
-    TierIterator (descriptor, tier.root) .toSeq
+    TierIterator (descriptor, tier.root) .toSeq.pass
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier, key: Bytes, time: TxClock, inclusive: Boolean) (
       implicit scheduler: StubScheduler, disk: Disk): Seq [Cell] =
-    TierIterator (descriptor, tier.root, Bound (Key (key, time), inclusive)) .toSeq
+    TierIterator (descriptor, tier.root, Bound (Key (key, time), inclusive)) .toSeq.pass
 
   private def toSeq (builder: Builder [Cell, _], pos: Position) (
       implicit scheduler: StubScheduler, disk: Disk) {

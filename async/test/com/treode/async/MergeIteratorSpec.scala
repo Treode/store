@@ -172,7 +172,7 @@ class MergeIteratorSpec extends FlatSpec {
     var c2 = Set.empty [Int]
     var provided = Set.empty [Int]
     assertFail [DistinguishedException] {
-      val i1 = failNow
+      val i1 = failNow [Int]
       val j1 = track (adapt (2, 4, 6, 8)) (c2 += _)
       track (AsyncIterator.merge (Seq (i1, j1))) (provided += _)
     }
@@ -202,7 +202,7 @@ class MergeIteratorSpec extends FlatSpec {
     var provided = Set.empty [Int]
     assertFail [DistinguishedException] {
       val i1 = track (adapt (1, 3, 5, 7)) (c1 += _)
-      val j1 = failNow
+      val j1 = failNow [Int]
       track (AsyncIterator.merge (Seq (i1, j1))) (provided += _)
     }
     assertResult (Set (1)) (c1)

@@ -156,12 +156,12 @@ class AsyncIteratorSpec extends FlatSpec {
 
   "AsyncIterator.filter" should "handle [] -> []" in {
     implicit val scheduler = StubScheduler.random()
-    assertSeq () (filter () (_ => false))
+    assertSeq () (filter [Int] () (_ => false))
   }
 
   it should "handle [1] -> []" in {
     implicit val scheduler = StubScheduler.random()
-    assertSeq () (filter () (_ => false))
+    assertSeq () (filter [Int] () (_ => false))
   }
 
   it should "handle [1] -> [1]" in {

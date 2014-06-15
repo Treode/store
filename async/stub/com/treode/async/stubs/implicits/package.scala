@@ -49,13 +49,4 @@ package object implicits {
       */
     def expectSeq [B] (xs: B*) (implicit s: StubScheduler, w: A <:< Seq [B]): Unit =
       assertResult (xs) (pass)
-  }
-
-  implicit class TestingAsyncIterator [A] (iter: AsyncIterator [A]) {
-
-    /** Iterate the entire asynchronous iterator and return a standard sequence. */
-    def toSeq (implicit scheduler: StubScheduler): Seq [A] = {
-      val builder = Seq.newBuilder [A]
-      iter.foreach (x => supply (builder += x)) .pass
-      builder.result
-    }}}
+  }}

@@ -6,10 +6,10 @@ import scala.util.{Failure, Success}
 
 import com.treode.async.implicits._
 
-import Async.{async, when}
+import Async.{async, supply, when}
 
 /** Concrete classes should implement `foreach`. */
-trait AsyncIterator [+A] {
+trait AsyncIterator [A] {
   self =>
 
   /** Execute the asynchronous operation `f` foreach element. */
@@ -52,7 +52,13 @@ trait AsyncIterator [+A] {
       } run {
         case Success (v) => close.pass (None)
         case Failure (t) => close.fail (t)
-      }}}
+      }}
+
+  /** Iterate the entire asynchronous iterator and return a standard sequence. */
+  def toSeq: Async [Seq [A]] = {
+    val builder = Seq.newBuilder [A]
+    foreach (x => supply (builder += x)) .map (_ => builder.result)
+  }}
 
 object AsyncIterator {
 

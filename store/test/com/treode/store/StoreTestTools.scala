@@ -50,7 +50,7 @@ private trait StoreTestTools {
     cells.map (testStringOf _) .mkString ("[", ", ", "]")
 
   def assertCells (expected: Cell*) (actual: AsyncIterator [Cell]) (implicit scheduler: StubScheduler) {
-    val _actual = actual.toSeq
+    val _actual = actual.toSeq.pass
     if (expected != _actual)
       fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
   }
