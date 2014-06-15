@@ -9,12 +9,12 @@ sealed abstract class Window {
 
 object Window {
 
-  case class Recent (time: Bound [TxClock]) extends Window {
+  case class Recent (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
 
     def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell] = {
       var key = Option.empty [Bytes]
       iter.filter { cell =>
-        if (time >* cell.time && (key.isEmpty || cell.key != key.get)) {
+        if (later >* cell.time && earlier <* cell.time && (key.isEmpty || cell.key != key.get)) {
           key = Some (cell.key)
           true
         } else {
@@ -23,8 +23,11 @@ object Window {
 
   object Recent {
 
-    def apply (time: TxClock, inclusive: Boolean): Recent =
-      Recent (Bound (time, inclusive))
+    def apply (later: TxClock, linc: Boolean, earlier: TxClock, einc: Boolean): Recent =
+      Recent (Bound (later, linc), Bound (earlier, einc))
+
+    def apply (later: TxClock, inclusive: Boolean): Recent =
+      Recent (Bound (later, inclusive), Bound (TxClock.MinValue, true))
   }
 
   case class Between (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
@@ -56,14 +59,16 @@ object Window {
 
   object Through {
 
-    def apply (later: TxClock, inclusive: Boolean, earlier: TxClock): Through =
-      Through (Bound (later, inclusive), earlier)
+    def apply (later: TxClock, linc: Boolean, earlier: TxClock): Through =
+      Through (Bound (later, linc), earlier)
   }
 
   val pickler = {
     import StorePicklers._
     tagged [Window] (
-      0x1 -> wrap (bound (txClock)) .build (new Recent (_)) .inspect (_.time),
+      0x1 -> wrap (tuple (bound (txClock), bound (txClock)))
+          .build (v => new Recent (v._1, v._2))
+          .inspect (v => (v.later, v.earlier)),
       0x2 -> wrap (tuple (bound (txClock), bound (txClock)))
           .build (v => (new Between (v._1, v._2)))
           .inspect (v => (v.later, v.earlier)),
