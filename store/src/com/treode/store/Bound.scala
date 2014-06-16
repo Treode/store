@@ -40,6 +40,8 @@ object Bound {
     else
       Exclusive (bound)
 
+  val firstKey = Inclusive (Key.MinValue)
+
   def pickler [A] (pa: Pickler [A]) = {
     import StorePicklers._
     tagged [Bound [A]] (

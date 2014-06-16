@@ -22,6 +22,8 @@ case class Slice (slice: Int, nslices: Int) {
 
 object Slice {
 
+  val all = Slice (0, 1)
+
   val pickler = {
     import StorePicklers._
     wrap (tuple (uint, uint))

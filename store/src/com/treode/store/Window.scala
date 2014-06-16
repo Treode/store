@@ -23,6 +23,8 @@ object Window {
 
   object Recent {
 
+    def now = Recent (TxClock.now, true)
+
     def apply (later: TxClock, linc: Boolean, earlier: TxClock, einc: Boolean): Recent =
       Recent (Bound (later, linc), Bound (earlier, einc))
 

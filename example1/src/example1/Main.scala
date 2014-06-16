@@ -102,7 +102,7 @@ object Main extends AsyncFinatraServer {
     onExit (controller.shutdown().await())
 
     if (solo())
-      controller.cohorts = Array (Cohort.settled (host()))
+      controller.cohorts = Array (Cohort.settled (controller.hostId))
 
     register (new Resource (controller.hostId, controller.store))
     register (new Admin (controller))

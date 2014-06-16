@@ -11,7 +11,7 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.Async
 import com.treode.async.misc.parseUnsignedLong
 import com.treode.cluster.{CellId, HostId}
-import com.treode.store.{Bytes, TxClock, TxId}
+import com.treode.store.{Bytes, TxClock, TxId, Value}
 import com.twitter.app.Flaggable
 import com.twitter.finagle.http.{MediaType, ParamMap}
 import com.twitter.finatra.Request
@@ -156,6 +156,18 @@ package object example1 {
         case e: JsonProcessingException =>
           throw new BadRequestException (e.getMessage)
       }}
+
+  implicit class RichTimedValue (v: Value) {
+
+    def toJsonNode: JsonNode = {
+      val node = textJson.createObjectNode
+      node.put ("time", v.time.time)
+      if (v.value.isDefined)
+        node.put ("value", v.value.get.toJsonNode)
+      else
+        node.putNull("value")
+      node
+    }}
 
   implicit class RichTry [A] (v: Try [A]) {
 
