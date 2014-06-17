@@ -14,7 +14,7 @@ import Store.Controller
 class Admin (controller: Controller) extends AsyncFinatraController {
 
   get ("/atlas") { request =>
-    supply (renderJson (controller.cohorts))
+    supply (render.appjson (controller.cohorts))
   }
 
   put ("/atlas") { request =>
@@ -26,7 +26,7 @@ class Admin (controller: Controller) extends AsyncFinatraController {
     for {
       drives <- controller.drives
     } yield {
-      renderJson (drives)
+      render.appjson (drives)
     }}
 
   post ("/drives/attach") { request =>

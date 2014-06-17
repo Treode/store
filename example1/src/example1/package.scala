@@ -13,7 +13,7 @@ import com.treode.cluster.{CellId, HostId}
 import com.treode.store.{Bytes, Slice, TableId, TxClock, TxId, Value}
 import com.twitter.app.Flaggable
 import com.twitter.finagle.http.{MediaType, ParamMap}
-import com.twitter.finatra.Request
+import com.twitter.finatra.{Request, ResponseBuilder}
 import com.twitter.util.{Future, Promise, Return, Throw, Try}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
@@ -34,7 +34,8 @@ package object example1 {
 
   val textJson = new ObjectMapper with ScalaObjectMapper
   textJson.registerModule (DefaultScalaModule)
-  textJson.registerModule (TreodeModule)
+  textJson.registerModule (DefaultTreodeModule)
+  textJson.registerModule (AppModule)
 
   val binaryJson = new ObjectMapper (new SmileFactory)
 
@@ -172,16 +173,13 @@ package object example1 {
           throw new BadRequestException (e.getMessage)
       }}
 
-  implicit class RichTimedValue (v: Value) {
+  implicit class RichResponseBuilder (response: ResponseBuilder) {
 
-    def toJsonNode: JsonNode = {
-      val node = textJson.createObjectNode
-      node.put ("time", v.time.time)
-      if (v.value.isDefined)
-        node.put ("value", v.value.get.toJsonNode)
-      else
-        node.putNull("value")
-      node
+    // It would be handy if we could add our modules to the mapper Finatra's using.
+    def appjson (v: Any): ResponseBuilder = {
+      response.contentType (MediaType.Json)
+      response.body (textJson.writeValueAsBytes (v))
+      response
     }}
 
   implicit class RichTry [A] (v: Try [A]) {

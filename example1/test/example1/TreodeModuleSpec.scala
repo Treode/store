@@ -14,7 +14,7 @@ import Cohort._
 class TreodeModuleSpec extends FreeSpec {
 
   val mapper = new ObjectMapper()
-  mapper.registerModule (TreodeModule)
+  mapper.registerModule (DefaultTreodeModule)
 
   def assertString (expected: String) (input: Any): Unit =
     assertResult (expected) (mapper.writeValueAsString (input))

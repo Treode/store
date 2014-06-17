@@ -14,7 +14,7 @@ import com.treode.store.Cohort
 
 import Cohort.{Empty, Issuing, Moving, Settled}
 
-object TreodeModule extends SimpleModule (
+class TreodeModule extends SimpleModule (
     "TreodeModule",
      new Version (0, 1, 0, "", "", ""),
      Map [Class [_], JsonDeserializer [_]] (
@@ -33,6 +33,8 @@ object TreodeModule extends SimpleModule (
          MovingSerializer,
          PathSerializer,
          SettledSerializer))
+
+object DefaultTreodeModule extends TreodeModule
 
 object DriveGeometrySerializer extends StdSerializer [DriveGeometry] (classOf [DriveGeometry]) {
 

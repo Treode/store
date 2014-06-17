@@ -23,7 +23,7 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
       val v = vs.head
       v.value match {
         case Some (value) if ct < v.time =>
-          render.header (ETag, v.time.toString) .json (value.toJsonNode)
+          render.header (ETag, v.time.toString) .appjson (value)
         case Some (value) =>
           render.status (NotModified) .nothing
         case None =>
@@ -38,11 +38,11 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
     val iter = store
         .scan (table, Bound.firstKey, window, slice)
         .filter (_.value.isDefined)
-        .map (_.value.get.toJsonNode)
+        .map (_.value.get)
     for {
       vs <- iter.toSeq
     } yield {
-      render.json (vs)
+      render.appjson (vs)
     }}
 
   get ("/table/:name") { request =>
@@ -63,11 +63,11 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
     val slice = request.getSlice
     val iter = store
         .scan (table, Bound.firstKey, window, slice)
-        .map (_.timedValue.toJsonNode)
+        .map (_.timedValue)
     for {
       vs <- iter.toSeq
     } yield {
-      render.json (vs)
+      render.appjson (vs)
     }}
 
   put ("/table/:name") { request =>

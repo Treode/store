@@ -15,9 +15,6 @@ trait AsyncFinatraController {
 
   def render = delegate.render
 
-  def renderJson [A] (v: A): ResponseBuilder =
-    render.json (textJson.convertValue (v, classOf [JsonNode]))
-
   private def adapt (cb: Request => Async [ResponseBuilder]) (request: Request): Future [ResponseBuilder] =
     guard {
       cb (request)
