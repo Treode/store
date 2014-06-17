@@ -1,5 +1,4 @@
 
-import java.util.concurrent.ConcurrentHashMap
 import scala.collection.mutable
 import scala.util.{Try => ScalaTry, Failure, Success}
 
@@ -9,9 +8,9 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.Async
-import com.treode.async.misc.parseUnsignedLong
+import com.treode.async.misc.{RichOption, parseInt, parseUnsignedLong}
 import com.treode.cluster.{CellId, HostId}
-import com.treode.store.{Bytes, TxClock, TxId, Value}
+import com.treode.store.{Bytes, Slice, TableId, TxClock, TxId, Value}
 import com.twitter.app.Flaggable
 import com.twitter.finagle.http.{MediaType, ParamMap}
 import com.twitter.finatra.Request
@@ -128,6 +127,22 @@ package object example1 {
         case None =>
           TxClock.now
       }
+
+    def getSlice: Slice = {
+      val slice = request.params.getInt ("slice")
+      val nslices = request.params.getInt ("nslices")
+      if (slice.isDefined && nslices.isDefined)
+        Slice (slice.get, nslices.get)
+      else if (slice.isDefined || nslices.isDefined)
+        throw new BadRequestException ("Both slice and nslices are needed together")
+      else
+        Slice.all
+    }
+
+    def getTableId: TableId = {
+       val s = request.routeParams.getOrThrow ("name", new BadRequestException ("Expected table ID"))
+       parseUnsignedLong (s) .getOrThrow (new BadRequestException ("Bad table ID"))
+    }
 
     def getTransactionId (host: HostId): TxId =
       request.headerMap.get (TransactionId) match {

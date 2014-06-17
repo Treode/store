@@ -1,6 +1,5 @@
 package com.treode.cluster
 
-import java.lang.management.{ManagementFactory, OperatingSystemMXBean}
 import java.net.SocketAddress
 import java.nio.channels.AsynchronousChannelGroup
 import java.util.concurrent.Executors
@@ -36,18 +35,6 @@ trait Cluster {
 
 object Cluster {
 
-  private val osBean = ManagementFactory.getPlatformMXBean (classOf [OperatingSystemMXBean]);
-
-  private def updateLocalStats () (implicit
-      scheduler: Scheduler,
-      cluser: Cluster,
-      config: ClusterConfig
-  ) {
-    Peer.load.spread (osBean.getSystemLoadAverage)
-    Peer.time.spread (System.currentTimeMillis)
-    scheduler.delay (config.statsUpdatePeriod) (updateLocalStats())
-  }
-
   def live (
       cellId: CellId,
       hostId: HostId,
@@ -76,16 +63,7 @@ object Cluster {
       implicit val cluster  =
         new ClusterLive (cellId, hostId, group, ports, peers, listener, scuttlebutt)
 
-      Peer.load.listen { (load, peer) =>
-        peer.load = load
-      }
-
-      Peer.time.listen { (time, peer) =>
-        peer.time = time
-      }
-
       Peer.address.spread (shareAddr)
-      updateLocalStats()
 
       cluster
 

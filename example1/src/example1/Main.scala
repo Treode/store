@@ -1,6 +1,6 @@
 package example1
 
-import java.net.InetSocketAddress
+import java.net.{InetAddress, InetSocketAddress}
 import java.nio.file.Paths
 
 import com.treode.cluster.{CellId, ClusterConfig, HostId}
@@ -34,14 +34,7 @@ object Main extends AsyncFinatraServer {
   val diskBytes =
       flag [StorageUnit] ("diskBytes", 1.terabyte, "Maximum size of disk (bytes)")
 
-  val bindAddr = flag [InetSocketAddress] (
-      "bind",
-      "Address on which to listen for peers (default share)")
-
-  val shareAddr = flag [InetSocketAddress] (
-      "share",
-      new InetSocketAddress (6278),
-      "Address to share with peers")
+  val port = flag [Int] ("port", 6278, "Address on which peers should connect")
 
   premain {
     LoggerFactory (
@@ -93,19 +86,20 @@ object Main extends AsyncFinatraServer {
 
     val controller = {
       val c = Store.recover (
-          bindAddr = if (bindAddr.isDefined) bindAddr() else shareAddr(),
-          shareAddr = shareAddr(),
+          bindAddr = new InetSocketAddress (port()),
+          shareAddr = new InetSocketAddress (InetAddress.getLocalHost, port()),
           paths = args map (Paths.get (_)): _*)
       c.await()
     }
 
-    onExit (controller.shutdown().await())
+    register (new Resource (controller.hostId, controller.store))
+    register (new Peers (controller))
+    register (new Admin (controller))
 
     if (solo())
       controller.cohorts = Array (Cohort.settled (controller.hostId))
 
-    register (new Resource (controller.hostId, controller.store))
-    register (new Admin (controller))
+    onExit (controller.shutdown().await())
 
     super.main()
   }

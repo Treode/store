@@ -2,7 +2,6 @@ package example1
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.treode.async.Async
-import com.treode.async.misc.{RichOption, parseLong}
 import com.treode.cluster.HostId
 import com.treode.store._
 import com.twitter.finatra.{Request, ResponseBuilder}
@@ -16,8 +15,7 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
   def read (request: Request, table: TableId, key: String): Async [ResponseBuilder] = {
     val rt = request.getLastModificationBefore
     val ct = request.getIfModifiedSince
-    val _table = request.routeParams.getOrThrow ("name", new BadRequestException ("Expected table ID"))
-    val table = parseLong (_table) .getOrThrow (new BadRequestException ("Bad table ID"))
+    val table = request.getTableId
     val ops = Seq (ReadOp (table, Bytes (key)))
     for {
       vs <- store.read (rt, ops:_*)
@@ -36,8 +34,9 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
     val rt = request.getLastModificationBefore
     val ct = request.getIfModifiedSince
     val window = Window.Recent (rt, true, ct, false)
+    val slice = request.getSlice
     val iter = store
-        .scan (table, Bound.firstKey, window, Slice.all)
+        .scan (table, Bound.firstKey, window, slice)
         .filter (_.value.isDefined)
         .map (_.value.get.toJsonNode)
     for {
@@ -47,8 +46,7 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
     }}
 
   get ("/table/:name") { request =>
-    val _table = request.routeParams.getOrThrow ("name", new BadRequestException ("Expected table ID"))
-    val table = parseLong (_table) .getOrThrow (new BadRequestException ("Bad table ID"))
+    val table = request.getTableId
     val key = request.params.get ("key")
     if (key.isDefined)
       read (request, table, key.get)
@@ -57,14 +55,14 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
   }
 
   get ("/history/:name") { request =>
-    val _table = request.routeParams.getOrThrow ("name", new BadRequestException ("Expected table ID"))
-    val table = parseLong (_table) .getOrThrow (new BadRequestException ("Bad table ID"))
+    val table = request.getTableId
     val start = Bound.Inclusive (Key.MinValue)
     val rt = request.getLastModificationBefore
     val ct = request.getIfModifiedSince
     val window = Window.Between (rt, true, ct, false)
+    val slice = request.getSlice
     val iter = store
-        .scan (table, Bound.firstKey, window, Slice.all)
+        .scan (table, Bound.firstKey, window, slice)
         .map (_.timedValue.toJsonNode)
     for {
       vs <- iter.toSeq
@@ -75,8 +73,7 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
   put ("/table/:name") { request =>
     val tx = request.getTransactionId (host)
     val ct = request.getIfUnmodifiedSince
-    val _table = request.routeParams.getOrThrow ("name", new BadRequestException ("Expected table ID"))
-    val table = parseLong (_table) .getOrThrow (new BadRequestException ("Bad table ID"))
+    val table = request.getTableId
     val key = request.params.getOrThrow ("key", new BadRequestException ("Expected key"))
     val value = request.readJson()
     val ops = Seq (Update (table, Bytes (key), value.toBytes))
@@ -92,8 +89,7 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
   delete ("/table/:name") { request =>
     val tx = request.getTransactionId (host)
     val ct = request.getIfUnmodifiedSince
-    val _table = request.routeParams.getOrThrow ("name", new BadRequestException ("Expected table ID"))
-    val table = parseLong (_table) .getOrThrow (new BadRequestException ("Bad table ID"))
+    val table = request.getTableId
     val key = request.params.getOrThrow ("key", new BadRequestException ("Expected key"))
     val ops = Seq (Delete (table, Bytes (key)))
     (for {

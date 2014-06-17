@@ -6,7 +6,7 @@ import java.util.concurrent.Executors
 import scala.util.{Failure, Random}
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
-import com.treode.cluster.{CellId, Cluster, ClusterConfig, HostId, Peer}
+import com.treode.cluster.{CellId, Cluster, ClusterConfig, HostId, Peer, RumorDescriptor}
 import com.treode.disk.{Disk, DiskConfig, DriveAttachment, DriveDigest, DriveGeometry}
 
 import Async.guard
@@ -21,7 +21,7 @@ trait Store {
 
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): AsyncIterator [Cell]
 
-  def hosts (slice: Slice): Seq [(Peer, Int)]
+  def hosts (slice: Slice): Seq [(HostId, Int)]
 }
 
 object Store {
@@ -49,6 +49,10 @@ object Store {
     def hostId: HostId
 
     def hail (remoteId: HostId, remoteAddr: SocketAddress)
+
+    def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any)
+
+    def spread [M] (desc: RumorDescriptor [M]) (msg: M)
 
     def shutdown(): Async [Unit]
   }

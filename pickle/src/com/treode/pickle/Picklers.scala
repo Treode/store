@@ -1,9 +1,9 @@
 package com.treode.pickle
 
+import java.net.{InetSocketAddress, SocketAddress}
 import scala.collection.generic.GenericCompanion
 import scala.language.{existentials, higherKinds, implicitConversions}
 import scala.reflect.ClassTag
-import java.lang.Enum
 
 trait Picklers {
   import Picklers.Tag
@@ -257,6 +257,20 @@ trait Picklers {
 
       override def toString = "either " + (pa, pb)
     }}
+
+  val socketAddress =
+    wrap (tuple (option (string), uint))
+    .build [SocketAddress] {
+      case (Some (host), port) => new InetSocketAddress (host, port)
+      case (None, port) => new InetSocketAddress (port)
+    } .inspect {
+      case addr: InetSocketAddress if addr.getAddress.isAnyLocalAddress =>
+        (None, addr.getPort)
+      case addr: InetSocketAddress =>
+        (Some (addr.getHostString), addr.getPort)
+      case addr =>
+        throw new MatchError (addr)
+    }
 
   object immutable {
     import _root_.scala.collection.immutable.SortedMap

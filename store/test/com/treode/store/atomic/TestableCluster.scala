@@ -3,7 +3,7 @@ package com.treode.store.atomic
 import scala.util.Random
 
 import com.treode.async.Async
-import com.treode.cluster.Peer
+import com.treode.cluster.HostId
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.store._
 
@@ -28,6 +28,6 @@ extends Store {
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
     randomHost.scan (table, start, window, slice)
 
-  def hosts (slice: Slice): Seq [(Peer, Int)] =
+  def hosts (slice: Slice): Seq [(HostId, Int)] =
     randomHost.hosts (slice)
 }

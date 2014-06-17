@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 
 import com.treode.async.Async
-import com.treode.cluster.{CellId, Cluster, HostId}
+import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
 import com.treode.disk.{Disk, DriveAttachment, DriveDigest, DriveGeometry}
 import com.treode.store.catalog.Catalogs
 
@@ -49,6 +49,12 @@ private class SimpleController (
 
   def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
     cluster.hail (remoteId, remoteAddr)
+
+  def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
+    cluster.listen (desc) (f)
+
+  def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
+    cluster.spread (desc) (msg)
 
   def shutdown(): Async [Unit] =
     supply()
