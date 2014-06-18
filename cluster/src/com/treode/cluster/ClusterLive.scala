@@ -27,8 +27,10 @@ private class ClusterLive (
   def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
     peers.get (remoteId) .address = remoteAddr
 
-  def startup(): Unit =
+  def startup(): Unit = {
+    scuttlebutt.attach (this)
     listener.startup()
+  }
 
   def shutdown(): Async [Unit] =
     guard {

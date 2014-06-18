@@ -63,6 +63,7 @@ object Cluster {
       implicit val cluster  =
         new ClusterLive (cellId, hostId, group, ports, peers, listener, scuttlebutt)
 
+      Peer.address.listen ((addr, peer) => peer.address = addr)
       Peer.address.spread (shareAddr)
 
       cluster

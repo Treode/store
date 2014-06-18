@@ -34,7 +34,13 @@ object Main extends AsyncFinatraServer {
   val diskBytes =
       flag [StorageUnit] ("diskBytes", 1.terabyte, "Maximum size of disk (bytes)")
 
-  val port = flag [Int] ("port", 6278, "Address on which peers should connect")
+  val port =
+      flag [Int] ("port", 6278, "Address on which peers should connect")
+
+  val hail = flag [Map [HostId, InetSocketAddress]] (
+      "hail",
+      Map.empty [HostId, InetSocketAddress],
+      "List of peers to hail on startup.")
 
   premain {
     LoggerFactory (
@@ -98,6 +104,9 @@ object Main extends AsyncFinatraServer {
 
     if (solo())
       controller.cohorts = Array (Cohort.settled (controller.hostId))
+
+    for ((id, addr) <- hail())
+      controller.hail (id, addr)
 
     onExit (controller.shutdown().await())
 

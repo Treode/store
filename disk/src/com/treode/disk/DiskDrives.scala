@@ -103,7 +103,7 @@ private class DiskDrives (kit: DiskKit) {
       val newBoot = BootBlock (sysid, bootgen, number, attached)
 
       if (newPaths exists (priorPaths contains _)) {
-        val already = (newPaths -- priorPaths).toSeq.sorted
+        val already = (newPaths intersect priorPaths).toSeq.sorted
         throw new ControllerException (s"Disks already attached: ${already mkString ", "}")
       }
 

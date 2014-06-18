@@ -1,6 +1,6 @@
 package com.treode.cluster
 
-import java.net.InetSocketAddress
+import java.net.{SocketAddress, InetSocketAddress}
 import java.util.concurrent.TimeoutException
 import scala.util.Random
 import scala.language.postfixOps
@@ -68,6 +68,9 @@ class ClusterLiveSpec extends FlatSpec with AsyncChecks {
     def send (i: Int, to: Host): Async [Unit] =
       async (new Loop (i, cluster.peer (to.host), _))
 
+    def address (id: HostId): SocketAddress =
+      cluster.peer (id) .address
+
     def hail (remote: Host): Unit =
       cluster.hail (remote.host, local (remote.port))
 
@@ -106,7 +109,7 @@ class ClusterLiveSpec extends FlatSpec with AsyncChecks {
       val h1 = new Host (Cell1, Host1, 7432)
       val h2 = new Host (Cell1, Host2, 7433)
       h1.hail (h2)
-      converse (h1, h2)
+      scheduler.run (h2.address (Host1) == null)
       h1.shutdown() .await()
       h2.shutdown() .await()
     }}

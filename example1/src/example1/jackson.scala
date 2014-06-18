@@ -6,13 +6,13 @@ import com.fasterxml.jackson.core._
 import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
-import com.treode.store.{Bytes, Value}
+import com.treode.store.{Bytes, Cell}
 
 object AppModule extends SimpleModule (
     "AppModule",
      new Version (0, 1, 0, "", "", ""),
      Map.empty [Class [_], JsonDeserializer [_]],
-     List (BytesSerializer, ValueSerializer))
+     List (BytesSerializer, CellSerializer))
 
 object BytesSerializer extends StdSerializer [Bytes] (classOf [Bytes]) {
 
@@ -20,10 +20,11 @@ object BytesSerializer extends StdSerializer [Bytes] (classOf [Bytes]) {
     jgen.writeObject (value.toJsonNode)
   }}
 
-object ValueSerializer extends StdSerializer [Value] (classOf [Value]) {
+object CellSerializer extends StdSerializer [Cell] (classOf [Cell]) {
 
-  def serialize (value: Value, jgen: JsonGenerator, provider: SerializerProvider) {
+  def serialize (value: Cell, jgen: JsonGenerator, provider: SerializerProvider) {
     jgen.writeStartObject()
+    jgen.writeObjectField ("key", value.key.string)
     jgen.writeObjectField ("time", value.time.time)
     value.value match {
       case Some (v) => jgen.writeObjectField ("value", v.toJsonNode)

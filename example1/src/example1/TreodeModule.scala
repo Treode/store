@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind._
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
+import com.treode.async.misc.parseUnsignedLong
 import com.treode.cluster.HostId
 import com.treode.disk.{DriveAttachment, DriveDigest, DriveGeometry}
 import com.treode.store.Cohort
@@ -148,15 +149,10 @@ object HostIdDeserializer extends StdDeserializer [HostId] (classOf [HostId]) {
           HostId (jparser.getValueAsLong)
         case JsonToken.VALUE_STRING =>
           val s = jparser.getValueAsString
-          try {
-            if (s.toLowerCase.startsWith ("host:"))
-              HostId (java.lang.Long.parseLong (s.substring (5), 16))
-            else
-              HostId (java.lang.Long.decode (s))
-          } catch {
-            case _: NumberFormatException =>
-              throw context.weirdStringException (s, classOf [HostId], "Malformed host ID")
-          }
+          val id = parseUnsignedLong (s)
+          if (id.isEmpty)
+            throw context.weirdStringException (s, classOf [HostId], "Malformed host ID")
+          HostId (id.get)
         case _ =>
           throw context.wrongTokenException (jparser, JsonToken.VALUE_STRING, "Malformed host ID")
       }}}

@@ -156,8 +156,8 @@ class TreodeModuleSpec extends FreeSpec {
       accept (HostId (0x778EE7AD8196BB93L)) ("\"0x778EE7AD8196BB93\"")
     }
 
-    "handle a host string" in {
-      accept (HostId (0x778EE7AD8196BB93L)) ("\"Host:778EE7AD8196BB93\"")
+    "handle a large hexadecimal string" in {
+      accept (HostId (0xFCFE52C72C64CABAL)) ("\"0xFCFE52C72C64CABA\"")
     }
 
     "reject a bad string" in {

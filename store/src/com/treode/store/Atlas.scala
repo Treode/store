@@ -76,6 +76,8 @@ class Atlas private (
           Settled (before.target)
         else
           before
+      else if (before.origin == after.target)
+        Settled (after.target)
       else
         Issuing (before.origin, after.target)
     }

@@ -149,7 +149,7 @@ class AtlasSpec extends FreeSpec {
         .change (issuing (H4, H5, H6) (H1, H2, H3))
       }}
 
-    "change settled to issuing when the new one is settled a different way" in {
+    "change settled to issuing when the new one is settled on a different target" in {
       assertResult {
         atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
       } {
@@ -158,7 +158,7 @@ class AtlasSpec extends FreeSpec {
         .get
       }}
 
-    "change settled to issuing when the new one is issuing a different way" in {
+    "change settled to issuing when the new one is issuing to a different target" in {
       assertResult {
         atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
       } {
@@ -167,7 +167,7 @@ class AtlasSpec extends FreeSpec {
         .get
       }}
 
-    "change settled to issuing when the new one is moving a different way" in {
+    "change settled to issuing when the new one is moving to a different target" in {
       assertResult {
         atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
       } {
@@ -194,7 +194,7 @@ class AtlasSpec extends FreeSpec {
         .change (issuing (H4, H5, H6) (H1, H2, H3))
       }}
 
-    "change issuing when the new one is settled a different way" in {
+    "change issuing when the new one is settled on a different target" in {
       assertResult {
         atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
       } {
@@ -203,7 +203,7 @@ class AtlasSpec extends FreeSpec {
         .get
       }}
 
-    "change issuing when the new one is issuing a different way" in {
+    "change issuing when the new one is issuing to a different target" in {
       assertResult {
         atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
       } {
@@ -212,12 +212,21 @@ class AtlasSpec extends FreeSpec {
         .get
       }}
 
-    "change issuing when the new one is moving a different way" in {
+    "change issuing when the new one is moving to a different target" in {
       assertResult {
         atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
       } {
         atlas (1) (issuing (H1, H2, H3) (H4, H7, H8))
         .change (moving (H1, H2, H3) (H4, H5, H6))
+        .get
+      }}
+
+    "change issuing to settled when the new one is settled on the original origin" in {
+      assertResult {
+        atlas (2) (settled (H1, H2, H3))
+      } {
+        atlas (1) (issuing (H1, H2, H3) (H4, H7, H8))
+        .change (settled (H1, H2, H3))
         .get
       }}
 
@@ -239,7 +248,7 @@ class AtlasSpec extends FreeSpec {
         .change (issuing (H4, H5, H6) (H1, H2, H3))
       }}
 
-    "change moving when the new one is settled a different way" in {
+    "change moving when the new one is settled on a different target" in {
       assertResult {
         atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
       } {
@@ -248,7 +257,7 @@ class AtlasSpec extends FreeSpec {
         .get
       }}
 
-    "change moving when the new one is issuing a different way" in {
+    "change moving when the new one is issuing to a different target" in {
       assertResult {
         atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
       } {
@@ -257,12 +266,21 @@ class AtlasSpec extends FreeSpec {
         .get
       }}
 
-    "change moving when the new one is moving a different way" in {
+    "change moving when the new one is moving to a different target" in {
       assertResult {
         atlas (2) (issuing (H1, H2, H3) (H4, H5, H6))
       } {
         atlas (1) (moving (H1, H2, H3) (H4, H7, H8))
         .change (moving (H1, H2, H3) (H4, H5, H6))
+        .get
+      }}
+
+    "change moving to settled when the new one is settled on the original origin" in {
+      assertResult {
+        atlas (2) (settled (H1, H2, H3))
+      } {
+        atlas (1) (moving (H1, H2, H3) (H4, H7, H8))
+        .change (settled (H1, H2, H3))
         .get
       }}}
 

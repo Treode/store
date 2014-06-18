@@ -38,7 +38,6 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
     val iter = store
         .scan (table, Bound.firstKey, window, slice)
         .filter (_.value.isDefined)
-        .map (_.value.get)
     for {
       vs <- iter.toSeq
     } yield {
@@ -61,9 +60,7 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
     val ct = request.getIfModifiedSince
     val window = Window.Between (rt, true, ct, false)
     val slice = request.getSlice
-    val iter = store
-        .scan (table, Bound.firstKey, window, slice)
-        .map (_.timedValue)
+    val iter = store.scan (table, Bound.firstKey, window, slice)
     for {
       vs <- iter.toSeq
     } yield {
