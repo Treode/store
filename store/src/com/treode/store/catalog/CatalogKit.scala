@@ -13,7 +13,7 @@ private class CatalogKit (val broker: Broker) (implicit
     val cluster: Cluster,
     val disk: Disk,
     val library: Library,
-    val config: StoreConfig
+    val config: Store.Config
 ) extends Catalogs {
 
   val acceptors = new Acceptors (this)

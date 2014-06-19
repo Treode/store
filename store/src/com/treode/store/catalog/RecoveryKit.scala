@@ -6,7 +6,7 @@ import com.treode.async.{Async, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.cluster.Cluster
 import com.treode.disk.{Disk, Position}
-import com.treode.store.{CatalogDescriptor, CatalogId, Library, StoreConfig}
+import com.treode.store.{CatalogDescriptor, CatalogId, Library, Store}
 
 import Async.guard
 
@@ -15,7 +15,7 @@ private class RecoveryKit (implicit
     scheduler: Scheduler,
     library: Library,
     recovery: Disk.Recovery,
-    config: StoreConfig
+    config: Store.Config
 ) extends Catalogs.Recovery {
 
   private val fiber = new Fiber

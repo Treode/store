@@ -3,9 +3,9 @@ package example1
 import java.net.{InetAddress, InetSocketAddress}
 import java.nio.file.Paths
 
-import com.treode.cluster.{CellId, ClusterConfig, HostId}
-import com.treode.disk.{DiskConfig, DriveGeometry}
-import com.treode.store.{Cohort, Store, StoreConfig}
+import com.treode.cluster.{CellId, Cluster, HostId}
+import com.treode.disk.{Disk, DriveGeometry}
+import com.treode.store.{Cohort, Store}
 import com.twitter.conversions.storage._
 import com.twitter.logging.{ConsoleHandler, Level, LoggerFactory}
 import com.twitter.util.StorageUnit
@@ -86,9 +86,9 @@ object Main extends AsyncFinatraServer {
       return
     }
 
-    implicit val diskConfig = DiskConfig.suggested.copy (superBlockBits = superBlockBits())
-    implicit val clusterConfig = ClusterConfig.suggested
-    implicit val storeConfig = StoreConfig.suggested
+    implicit val diskConfig = Disk.Config.suggested.copy (superBlockBits = superBlockBits())
+    implicit val clusterConfig = Cluster.Config.suggested
+    implicit val storeConfig = Store.Config.suggested
 
     val controller = {
       val c = Store.recover (

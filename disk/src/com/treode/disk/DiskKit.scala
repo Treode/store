@@ -13,7 +13,7 @@ private class DiskKit (
     logBatch: Long
 ) (implicit
     val scheduler: Scheduler,
-    val config: DiskConfig
+    val config: Disk.Config
 ) {
 
   val logd = new Dispatcher [PickledRecord] (logBatch)

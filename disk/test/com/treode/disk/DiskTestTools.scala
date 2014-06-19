@@ -140,7 +140,7 @@ private object DiskTestTools {
         blockBits: Int = 6,
         diskBytes: Long = 1<<20
     ) (implicit
-        config: DiskConfig
+        config: Disk.Config
      ): DriveGeometry =
        DriveGeometry (
            segmentBits,
@@ -216,14 +216,14 @@ private object DiskTestTools {
     }
 
     def reopenAndWait (paths: Path*) (items: ReattachItem*) (
-        implicit scheduler: StubScheduler, config: DiskConfig): Async [Launch] = {
+        implicit scheduler: StubScheduler, config: Disk.Config): Async [Launch] = {
       val files = items.toMap
       def superbs (path: Path) = SuperBlocks.read (path, files (path))
       agent._reattach (paths) (superbs _)
     }
 
     def reopenAndLaunch (paths: Path*) (items: ReattachItem*) (
-        implicit scheduler: StubScheduler, config: DiskConfig): Disk = {
+        implicit scheduler: StubScheduler, config: Disk.Config): Disk = {
       val launch = reopenAndWait (paths: _*) (items: _*) .pass
       launch.launchAndPass()
       launch.disk

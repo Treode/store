@@ -20,7 +20,7 @@ class DriveGeometry private (
   private [disk] def segmentNum (pos: Long): Int =
     (pos >> segmentBits) .toInt
 
-  private [disk] def segmentBounds (num: Int) (implicit config: DiskConfig): SegmentBounds = {
+  private [disk] def segmentBounds (num: Int) (implicit config: Disk.Config): SegmentBounds = {
     require (0 <= num && num < segmentCount)
     val pos = if (num == 0) config.diskLeadBytes else num.toLong << segmentBits
     val end = (num.toLong + 1) << segmentBits
@@ -28,7 +28,7 @@ class DriveGeometry private (
     SegmentBounds (num, pos, limit)
   }
 
-  private [disk] def validForConfig() (implicit config: DiskConfig) {
+  private [disk] def validForConfig() (implicit config: Disk.Config) {
     require (
         blockBits <= config.superBlockBits,
         "A superblock must be at least one disk block.")

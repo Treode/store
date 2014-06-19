@@ -42,7 +42,7 @@ private class SynthTable (
 ) (implicit
     scheduler: Scheduler,
     disk: Disk,
-    config: StoreConfig
+    config: Store.Config
 ) extends TierTable {
   import desc.pager
   import scheduler.whilst
@@ -265,7 +265,7 @@ private object SynthTable {
   val genStepMask = genStepSize - 1
 
   def apply (desc: TierDescriptor, id: TableId) (
-      implicit scheduler: Scheduler, disk: Disk, config: StoreConfig): SynthTable = {
+      implicit scheduler: Scheduler, disk: Disk, config: Store.Config): SynthTable = {
     val lock = new ReentrantReadWriteLock
     new SynthTable (desc, id, lock, genStepSize, newMemTier, newMemTier, Tiers.empty)
   }}

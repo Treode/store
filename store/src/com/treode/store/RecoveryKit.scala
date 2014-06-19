@@ -17,7 +17,7 @@ private class RecoveryKit (implicit
     random: Random,
     scheduler: Scheduler,
     recovery: Disk.Recovery,
-    config: StoreConfig
+    config: Store.Config
 ) extends Store.Recovery {
 
   implicit val library = new Library

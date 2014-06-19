@@ -10,7 +10,7 @@ import Async.guard
 import Disk.Launch
 import SuperBlocks.{chooseSuperBlock, verifyReattachment}
 
-private class RecoveryAgent (implicit scheduler: Scheduler, config: DiskConfig)
+private class RecoveryAgent (implicit scheduler: Scheduler, config: Disk.Config)
 extends Disk.Recovery {
 
   private val records = new RecordRegistry

@@ -4,11 +4,11 @@ import scala.collection.SortedSet
 import scala.language.postfixOps
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.store.{StoreConfig, TxClock}
+import com.treode.store.{Store, TxClock}
 
 import Async.async
 
-private [store] class LockSpace (implicit config: StoreConfig) {
+private [store] class LockSpace (implicit config: Store.Config) {
   import config.lockSpaceBits
 
   private val mask = (1 << lockSpaceBits) - 1

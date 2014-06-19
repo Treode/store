@@ -21,7 +21,7 @@ private class RemoteConnection (
   ports: PortRegistry
 ) (implicit
     scheduler: Scheduler,
-    config: ClusterConfig
+    config: Cluster.Config
 ) extends Peer {
 
   import config.connectingBackoff

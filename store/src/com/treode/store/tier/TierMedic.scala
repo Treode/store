@@ -2,7 +2,7 @@ package com.treode.store.tier
 
 import com.treode.async.Scheduler
 import com.treode.disk.Disk
-import com.treode.store.{Bytes, Cell, StoreConfig, TableId, TxClock}
+import com.treode.store.{Bytes, Cell, Store, TableId, TxClock}
 
 private [store] trait TierMedic {
 
@@ -24,7 +24,7 @@ private [store] object TierMedic {
       id: TableId
   ) (implicit
       scheduler: Scheduler,
-      config: StoreConfig
+      config: Store.Config
   ): TierMedic =
     new SynthMedic (desc, id)
 }

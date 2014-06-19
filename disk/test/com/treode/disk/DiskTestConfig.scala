@@ -11,8 +11,8 @@ object DiskTestConfig {
       maximumPageBytes: Int = 1<<10,
       pageCacheEntries: Int = 100,
       superBlockBits: Int = 8
-  ): DiskConfig =
-    DiskConfig (
+  ): Disk.Config =
+    Disk.Config (
         checkpointBytes = checkpointBytes,
         checkpointEntries = checkpointEntries,
         cleaningFrequency = cleaningFrequency,

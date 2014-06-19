@@ -20,7 +20,7 @@ private class AtomicKit (implicit
     val disk: Disk,
     val library: Library,
     val paxos: Paxos,
-    val config: StoreConfig
+    val config: Store.Config
 ) extends Atomic {
 
   import library.{atlas, releaser}

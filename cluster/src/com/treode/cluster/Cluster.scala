@@ -5,7 +5,8 @@ import java.nio.channels.AsynchronousChannelGroup
 import java.util.concurrent.Executors
 import scala.util.Random
 
-import com.treode.async.{Async, Scheduler}
+import com.treode.async.{Async, Backoff, Scheduler}
+import com.treode.async.misc.RichInt
 import com.treode.pickle.Pickler
 
 trait Cluster {
@@ -35,6 +36,23 @@ trait Cluster {
 
 object Cluster {
 
+  case class Config (
+      connectingBackoff: Backoff,
+      statsUpdatePeriod: Int
+  ) {
+
+    require (
+        statsUpdatePeriod > 0,
+        "The stats update period must be more than 0 milliseconds.")
+  }
+
+  object Config {
+
+    val suggested = Config (
+        connectingBackoff = Backoff (3.seconds, 2.seconds, 3.minutes),
+        statsUpdatePeriod = 1.minutes)
+  }
+
   def live (
       cellId: CellId,
       hostId: HostId,
@@ -43,7 +61,7 @@ object Cluster {
   ) (implicit
       random: Random,
       scheduler: Scheduler,
-      config: ClusterConfig
+      config: Config
   ): Cluster = {
 
     var group: AsynchronousChannelGroup = null

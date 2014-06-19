@@ -15,7 +15,7 @@ private class StubPageRegistry (releaser: EpochReleaser) (implicit
     random: Random,
     scheduler: Scheduler,
     disk: StubDiskDrive,
-    config: StubDiskConfig
+    config: StubDisk.Config
 ) extends AbstractPageRegistry {
 
   import config.compactionProbability

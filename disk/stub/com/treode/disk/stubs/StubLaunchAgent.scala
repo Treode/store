@@ -15,7 +15,7 @@ private class StubLaunchAgent (
     random: Random,
     scheduler: Scheduler,
     drive: StubDiskDrive,
-    config: StubDiskConfig
+    config: StubDisk.Config
 ) extends Launch {
 
   private val roots = new CheckpointRegistry

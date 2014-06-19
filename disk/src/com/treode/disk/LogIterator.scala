@@ -24,7 +24,7 @@ private class LogIterator private (
     private var logSeg: SegmentBounds
 ) (implicit
     scheduler: Scheduler,
-    config: DiskConfig
+    config: Disk.Config
 ) extends AsyncIterator [(Long, Unit => Any)] {
 
   private var draining = superb.draining
@@ -146,7 +146,7 @@ private object LogIterator {
       records: RecordRegistry
   ) (implicit
       scheduler: Scheduler,
-      config: DiskConfig
+      config: Disk.Config
   ): Async [(Int, LogIterator)] = {
 
     val path = read.path
@@ -172,7 +172,7 @@ private object LogIterator {
       records: RecordRegistry
   ) (implicit
       scheduler: Scheduler,
-      config: DiskConfig
+      config: Disk.Config
   ): Async [DiskKit] = {
 
     val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)

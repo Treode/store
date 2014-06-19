@@ -52,7 +52,7 @@ private object PeerRegistry {
   ) (implicit
       random: Random,
       scheduler: Scheduler,
-      config: ClusterConfig
+      config: Cluster.Config
   ): PeerRegistry = {
 
     def newPeer (remoteId: HostId): Peer =

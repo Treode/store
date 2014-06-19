@@ -16,7 +16,7 @@ import Async.supply
 class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
   private val _cellId = CellId (0x9E)
-  private val _config = ClusterConfig.suggested
+  private val _config = Cluster.Config.suggested
   private val _random = Random
   private val _exiting = new AtomicBoolean (false)
 

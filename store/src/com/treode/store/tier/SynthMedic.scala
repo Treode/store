@@ -4,7 +4,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.Scheduler
 import com.treode.disk.{Disk, Position}
-import com.treode.store.{Bytes, Cell, Key, StoreConfig, TableId, TxClock}
+import com.treode.store.{Bytes, Cell, Key, Store, TableId, TxClock}
 
 import SynthTable.{genStepBits, genStepMask, genStepSize}
 
@@ -13,7 +13,7 @@ private class SynthMedic (
     id: TableId
 ) (implicit
     scheduler: Scheduler,
-    config: StoreConfig
+    config: Store.Config
 ) extends TierMedic {
 
   private val lock = new ReentrantReadWriteLock

@@ -19,7 +19,7 @@ import TierTestTools._
 
 class TierSpec extends WordSpec {
 
-  private def setup (targetPageBytes: Int = 1<<20): (StubScheduler, Disk, StoreConfig) = {
+  private def setup (targetPageBytes: Int = 1<<20): (StubScheduler, Disk, Store.Config) = {
     val config = StoreTestConfig (
         checkpointProbability = 0.0,
         compactionProbability = 0.0,
@@ -35,7 +35,7 @@ class TierSpec extends WordSpec {
   }
 
   private def newBuilder (est: Long) (
-      implicit scheduler: StubScheduler, disk: Disk, config: StoreConfig) =
+      implicit scheduler: StubScheduler, disk: Disk, config: Store.Config) =
     new TierBuilder (descriptor, 0, 0, Residents.all, BloomFilter (est, config.falsePositiveProbability))
 
   /** Get the depths of ValueBlocks reached from the index entries. */
@@ -68,7 +68,7 @@ class TierSpec extends WordSpec {
 
   /** Build a tier from fruit. */
   private def buildTier () (
-      implicit scheduler: StubScheduler, disk: Disk, config: StoreConfig): Tier = {
+      implicit scheduler: StubScheduler, disk: Disk, config: Store.Config): Tier = {
     val builder = newBuilder (AllFruits.length)
     AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .pass
     builder.result.pass

@@ -17,7 +17,7 @@ import StubDisk.StubRecovery
 private class StubRecoveryAgent (implicit
     random: Random,
     scheduler: Scheduler,
-    config: StubDiskConfig
+    config: StubDisk.Config
 ) extends StubRecovery {
 
   private val records = new RecordRegistry

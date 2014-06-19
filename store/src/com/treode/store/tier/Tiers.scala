@@ -1,7 +1,7 @@
 package com.treode.store.tier
 
 import com.treode.disk.Position
-import com.treode.store.{Residents, StoreConfig, StorePicklers}
+import com.treode.store.{Residents, Store, StorePicklers}
 
  private case class Tiers (tiers: Seq [Tier]) {
 
@@ -26,7 +26,7 @@ import com.treode.store.{Residents, StoreConfig, StorePicklers}
   def active: Set [Long] =
     tiers .map (_.gen) .toSet
 
-  def choose (gens: Set [Long], residents: Residents) (implicit config: StoreConfig): Tiers = {
+  def choose (gens: Set [Long], residents: Residents) (implicit config: Store.Config): Tiers = {
     var selected = -1
     var bytes = 0L
     var i = 0
@@ -81,7 +81,7 @@ private object Tiers extends Ordering [Tiers] {
   def apply (tier: Tier): Tiers =
     new Tiers (Array (tier))
 
-  def compare (x: Tiers, y: Tiers): Int = 
+  def compare (x: Tiers, y: Tiers): Int =
     x compare y
 
   val pickler = {

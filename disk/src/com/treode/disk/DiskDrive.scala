@@ -388,7 +388,7 @@ private object DiskDrive {
       geometry: DriveGeometry,
       boot: BootBlock
   ) (implicit
-      config: DiskConfig
+      config: Disk.Config
   ): Async [Unit] =
     guard {
 
@@ -413,7 +413,7 @@ private object DiskDrive {
       items: Seq [(Path, File, DriveGeometry)]
   ) (implicit
       scheduler: Scheduler,
-      config: DiskConfig
+      config: Disk.Config
   ): Async [Unit] =
     guard {
       val attaching = items.setBy (_._1)
@@ -440,7 +440,7 @@ private object DiskDrive {
     var items = Seq.empty [Try [(Path, File, DriveGeometry)]]
     try {
       implicit val scheduler = Scheduler (executor)
-      implicit val config = DiskConfig.suggested.copy (superBlockBits = superBlockBits)
+      implicit val config = Disk.Config.suggested.copy (superBlockBits = superBlockBits)
       val geom = DriveGeometry (segmentBits, blockBits, diskBytes)
       items =
         for (path <- paths)

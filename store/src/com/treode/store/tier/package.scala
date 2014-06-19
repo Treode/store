@@ -20,7 +20,7 @@ package object tier {
   private [tier] implicit class RichCellIterator (iter: CellIterator) {
 
     def clean (desc: TierDescriptor, id: TableId, residents: Residents) (
-        implicit config: StoreConfig): CellIterator =
+        implicit config: Store.Config): CellIterator =
       iter.dedupe
           .retire (config.priorValueEpoch.limit)
           .filter (desc.residency (residents, id, _))
