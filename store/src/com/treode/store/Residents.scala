@@ -30,6 +30,8 @@ class Residents private [store] (
 
   def exodus (other: Residents) (implicit config: Store.Config): Boolean =
     1 - stability (other) > config.exodusThreshold
+
+  override def toString = s"Residents($nums, $mask)"
 }
 
 object Residents {

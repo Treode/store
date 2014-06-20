@@ -4,7 +4,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async._
 import com.treode.async.implicits._
-import com.treode.cluster.{Cluster, HostId, Peer, RequestDescriptor, ReplyTracker}
+import com.treode.cluster._
 import com.treode.disk.{ObjectId, TypeId}
 import com.treode.store._
 import com.treode.store.tier.TierTable
@@ -17,7 +17,7 @@ import AtomicMover.{Batch, Point, Range, Targets, Tracker, move}
 private class AtomicMover (kit: AtomicKit) {
   import kit.{cluster, disk, library, random, scheduler, tables}
   import kit.config.{moveBatchBackoff, moveBatchBytes, moveBatchEntries}
-  import kit.library.releaser
+  import kit.library.{atlas, releaser}
 
   private val fiber = new Fiber
   private val queue = AsyncQueue (fiber) (next())
@@ -68,14 +68,22 @@ private class AtomicMover (kit: AtomicKit) {
           (table, batch, next)
       }}
 
-  move.listen { case ((table, cells), from) =>
+  move.listen { case ((version, table, cells), from) =>
+    if (version < atlas.version - 1 || atlas.version + 1 < version)
+      throw new IgnoreRequestException
     for {
       _ <- tables.receive (table, cells)
       _ <- releaser.release()
     } yield ()
   }
 
-  private class Sender (table: TableId, cells: Seq [Cell], hosts: Set [Peer], cb: Callback [Unit]) {
+  private class Sender (
+      version: Int,
+      table: TableId,
+      cells: Seq [Cell],
+      hosts: Set [Peer],
+      cb: Callback [Unit]
+  ) {
 
     val acks = ReplyTracker.settled (hosts map (_.id))
 
@@ -86,7 +94,7 @@ private class AtomicMover (kit: AtomicKit) {
     val timer = cb.ensure {
       port.close()
     } .timeout (fiber, moveBatchBackoff) {
-      move (table, cells) (acks, port)
+      move (version, table, cells) (acks, port)
     }
 
     timer.rouse()
@@ -97,13 +105,13 @@ private class AtomicMover (kit: AtomicKit) {
         timer.pass()
     }}
 
-  def send (table: TableId, cells: Seq [Cell], hosts: Set [Peer]): Async [Unit] =
-    async (new Sender (table, cells, hosts, _))
+  def send (version: Int, table: TableId, cells: Seq [Cell], hosts: Set [Peer]): Async [Unit] =
+    async (new Sender (version, table, cells, hosts, _))
 
   def send (table: TableId, batch: Batch, targets: Targets): Async [Unit] =
     guard {
       for ((num, cells) <- batch.latch.unit)
-        send (table, cells, targets (num))
+        send (targets.version, table, cells, targets (num))
     }
 
   def rebalance (start: Point.Middle, limit: Point, targets: Targets): Async [Unit] = {
@@ -134,7 +142,7 @@ private object AtomicMover {
 
   type Batch = Map [Int, Seq [Cell]]
 
-  case class Targets (targets: Map [Int, Set [Peer]]) {
+  case class Targets (version: Int, targets: Map [Int, Set [Peer]]) {
 
     def apply (num: Int): Set [Peer] =
       targets (num)
@@ -153,7 +161,7 @@ private object AtomicMover {
             if (!rs.isEmpty) builder += num -> rs
           case None => ()
         }
-      new Targets (builder.result)
+      new Targets (math.max (version, other.version), builder.result)
     }
 
     def -- (other: Targets): Targets = {
@@ -165,12 +173,12 @@ private object AtomicMover {
             if (!rs.isEmpty) builder += num -> rs
           case None => builder += num -> ps
         }
-      new Targets (builder.result)
+      new Targets (math.max (version, other.version), builder.result)
     }}
 
   object Targets {
 
-    val empty = new Targets (Map.empty)
+    val empty = new Targets (0, Map.empty)
 
     private def targets (cohort: Cohort, host: HostId): Set [HostId] =
       cohort match {
@@ -185,7 +193,7 @@ private object AtomicMover {
         ts = targets (c, cluster.localId)
         if !ts.isEmpty
       }  builder += i -> (ts map (cluster.peer _))
-      new Targets (builder.result)
+      new Targets (atlas.version, builder.result)
     }}
 
   sealed abstract class Point extends Ordered [Point]
@@ -290,5 +298,5 @@ private object AtomicMover {
 
   val move = {
     import StorePicklers._
-    RequestDescriptor (0xFF580230349D330BL, tuple (tableId, seq (cell)), unit)
+    RequestDescriptor (0xFF580230349D330BL, tuple (uint, tableId, seq (cell)), unit)
   }}

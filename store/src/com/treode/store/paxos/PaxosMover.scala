@@ -4,7 +4,7 @@ import scala.util.{Failure, Success}
 
 import com.treode.async._
 import com.treode.async.implicits._
-import com.treode.cluster.{Cluster, HostId, Peer, RequestDescriptor, ReplyTracker}
+import com.treode.cluster._
 import com.treode.disk.{ObjectId, TypeId}
 import com.treode.store._
 import com.treode.store.tier.TierTable
@@ -17,7 +17,7 @@ import PaxosMover.{Batch, Point, Range, Targets, Tracker, move}
 private class PaxosMover (kit: PaxosKit) {
   import kit.{acceptors, archive, cluster, disk, library, random, scheduler}
   import kit.config.{moveBatchBackoff, moveBatchBytes, moveBatchEntries}
-  import kit.library.releaser
+  import kit.library.{atlas, releaser}
 
   private val fiber = new Fiber
   private val queue = AsyncQueue (fiber) (next())
@@ -61,7 +61,9 @@ private class PaxosMover (kit: PaxosKit) {
           (batch, next)
       }}
 
-  move.listen { case (cells, from) =>
+  move.listen { case ((version, cells), from) =>
+    if (version < atlas.version - 1 || atlas.version + 1 < version)
+      throw new IgnoreRequestException
     val (gen, novel) = archive.receive (cells)
     latch (
         when (!novel.isEmpty) (Acceptors.receive.record (gen, novel)),
@@ -69,7 +71,7 @@ private class PaxosMover (kit: PaxosKit) {
     ) .map (_ => ())
   }
 
-  private class Sender (cells: Seq [Cell], hosts: Set [Peer], cb: Callback [Unit]) {
+  private class Sender (version: Int, cells: Seq [Cell], hosts: Set [Peer], cb: Callback [Unit]) {
 
     val acks = ReplyTracker.settled (hosts map (_.id))
 
@@ -80,7 +82,7 @@ private class PaxosMover (kit: PaxosKit) {
     val timer = cb.ensure {
       port.close()
     } .timeout (fiber, moveBatchBackoff) {
-      move (cells) (acks, port)
+      move (version, cells) (acks, port)
     }
 
     timer.rouse()
@@ -91,13 +93,13 @@ private class PaxosMover (kit: PaxosKit) {
         timer.pass()
     }}
 
-  def send (cells: Seq [Cell], hosts: Set [Peer]): Async [Unit] =
-    async (new Sender (cells, hosts, _))
+  def send (version: Int, cells: Seq [Cell], hosts: Set [Peer]): Async [Unit] =
+    async (new Sender (version, cells, hosts, _))
 
   def send (batch: Batch, targets: Targets): Async [Unit] =
     guard {
       for ((num, cells) <- batch.latch.unit)
-        send (cells, targets (num))
+        send (targets.version, cells, targets (num))
     }
 
   def continue (next: Point): Unit =
@@ -133,7 +135,7 @@ private object PaxosMover {
 
   type Batch = Map [Int, Seq [Cell]]
 
-  case class Targets (targets: Map [Int, Set [Peer]]) {
+  case class Targets (version: Int, targets: Map [Int, Set [Peer]]) {
 
     def apply (num: Int): Set [Peer] =
       targets (num)
@@ -152,7 +154,7 @@ private object PaxosMover {
             if (!rs.isEmpty) builder += num -> rs
           case None => ()
         }
-      new Targets (builder.result)
+      new Targets (math.max (version, other.version), builder.result)
     }
 
     def -- (other: Targets): Targets = {
@@ -164,12 +166,12 @@ private object PaxosMover {
             if (!rs.isEmpty) builder += num -> rs
           case None => builder += num -> ps
         }
-      new Targets (builder.result)
+      new Targets (math.max (version, other.version), builder.result)
     }}
 
   object Targets {
 
-    val empty = new Targets (Map.empty)
+    val empty = new Targets (0, Map.empty)
 
     private def targets (cohort: Cohort, host: HostId): Set [HostId] =
       cohort match {
@@ -184,7 +186,7 @@ private object PaxosMover {
         ts = targets (c, cluster.localId)
         if !ts.isEmpty
       }  builder += i -> (ts map (cluster.peer _))
-      new Targets (builder.result)
+      new Targets (atlas.version, builder.result)
     }}
 
   sealed abstract class Point extends Ordered [Point]
@@ -281,5 +283,5 @@ private object PaxosMover {
 
   val move = {
     import StorePicklers._
-    RequestDescriptor (0xFFA56C0DFF8CAD56L, seq (cell), unit)
+    RequestDescriptor (0xFFA56C0DFF8CAD56L, tuple (uint, seq (cell)), unit)
   }}
