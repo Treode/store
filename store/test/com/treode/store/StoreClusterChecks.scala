@@ -605,7 +605,7 @@ trait StoreClusterChecks extends AsyncChecks {
 
       runner.setup (h1) .pass
       val cb = runner.run (h1, h2) .capture()
-      val count = scheduler.run (timers = !cb.wasInvoked, oblivious = true)
+      val count = scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
 
       for (h <- hs)
@@ -684,7 +684,7 @@ trait StoreClusterChecks extends AsyncChecks {
       val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
       h3.shutdown() .pass
-      val count = scheduler.run (timers = !cb.wasInvoked, oblivious = true)
+      val count = scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
 
       h3 = runner.reboot (H3, d3) .pass
@@ -781,9 +781,9 @@ trait StoreClusterChecks extends AsyncChecks {
 
       runner.setup (h1) .pass
       val cb = runner.run (h1, h2) .capture()
-      scheduler.run (count = target, timers = true, oblivious = true)
+      scheduler.run (count = target, timers = true)
       val cb2 = runner.reboot (H3, d3) .capture()
-      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked, oblivious = true)
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h3 = cb2.passed
 
@@ -830,11 +830,11 @@ trait StoreClusterChecks extends AsyncChecks {
 
       runner.setup (h1) .pass
       val cb = runner.run (h1, h2) .capture()
-      scheduler.run (count = target1, timers = true, oblivious = true)
+      scheduler.run (count = target1, timers = true)
       h3.shutdown() .pass
-      scheduler.run (count = target2, timers = true, oblivious = true)
+      scheduler.run (count = target2, timers = true)
       val cb2 = runner.reboot (H3, d3) .capture()
-      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked, oblivious = true)
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h3 = cb2.passed
 

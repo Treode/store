@@ -22,33 +22,27 @@ private class RandomScheduler (random: Random) extends StubScheduler {
   def spawn (task: Runnable): Unit =
     tasks.append (task)
 
-  def nextTask (oblivious: Boolean): Unit = {
+  def nextTask(): Unit = {
     val i = random.nextInt (tasks.size)
     val t = tasks (i)
     tasks (i) = tasks (tasks.size-1)
     tasks.reduceToSize (tasks.size-1)
-    try {
-      t.run()
-    } catch {
-      case _: Throwable if oblivious => ()
-    }}
+    t.run()
+  }
 
-  def nextTimer (oblivious: Boolean) {
+  def nextTimer() {
     val t = timers.dequeue()
     time = t.time
-    try {
-      t.task.run()
-    } catch {
-      case _: Throwable if oblivious => ()
-    }}
+    t.task.run()
+  }
 
-  def run (cond: => Boolean, count: Int, oblivious: Boolean): Int = {
+  def run (cond: => Boolean, count: Int): Int = {
     var n = 0
     while (n < count && (!tasks.isEmpty || cond && !timers.isEmpty)) {
       if (tasks.isEmpty)
-        nextTimer (oblivious)
+        nextTimer()
       else
-        nextTask (oblivious)
+        nextTask()
       n += 1
     }
     n
