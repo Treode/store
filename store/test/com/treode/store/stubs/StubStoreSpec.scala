@@ -5,6 +5,7 @@ import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.stubs.{AsyncChecks, StubScheduler}
+import com.treode.tags.{Intensive, Periodic}
 import com.treode.store._
 import org.scalatest.FreeSpec
 
@@ -12,12 +13,16 @@ import StoreTestTools._
 
 class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
 
-  def newStubStore (kit: StoreTestKit): StubStore =
+  val newStore = { kit: StoreTestKit =>
     new StubStore () (kit.scheduler)
+  }
 
   "The StubStore should" - {
 
-    behave like aStore (newStubStore _)
+    behave like aStore (newStore)
 
-    behave like aMultithreadableStore (10000) (newStubStore _)
-  }}
+    "conserve money during account transfers (multithreaded)" taggedAs (Intensive, Periodic) in {
+      multithreaded { scheduler =>
+        implicit val kit = StoreTestKit.multithreaded (scheduler)
+        testAccountTransfers (100) (newStore)
+      }}}}

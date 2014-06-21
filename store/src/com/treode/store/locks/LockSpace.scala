@@ -12,6 +12,7 @@ private [store] class LockSpace (implicit config: Store.Config) {
   import config.lockSpaceBits
 
   private val mask = (1 << lockSpaceBits) - 1
+  private val all = (0 to mask) .toSet
   private val locks = Array.fill (1 << lockSpaceBits) (new Lock)
 
   // Returns true if the lock was granted immediately.  Queues the acquisition to be called back
@@ -28,7 +29,7 @@ private [store] class LockSpace (implicit config: Store.Config) {
     locks (id) .release (w)
 
   def read (rt: TxClock, ids: Seq [Int]): Async [Unit] =
-    async {cb =>
+    async { cb =>
       val _ids = ids map (_ & mask) toSet;
       new LockReader (rt, cb) .init (this, _ids)
     }
@@ -37,4 +38,9 @@ private [store] class LockSpace (implicit config: Store.Config) {
     async { cb =>
       val _ids = SortedSet (ids map (_ & mask): _*)
       new LockWriter (this, ft, _ids, cb) .init()
+    }
+
+  def scan (rt: TxClock): Async [Unit] =
+    async { cb =>
+      new LockReader (rt, cb) .init (this, all)
     }}

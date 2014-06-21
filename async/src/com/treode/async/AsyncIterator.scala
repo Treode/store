@@ -82,6 +82,12 @@ object AsyncIterator {
         scheduler.whilst (iter.hasNext) (f (iter.next))
   }
 
+  def make [A] (maker: => Async [AsyncIterator [A]]): AsyncIterator [A] =
+    new AsyncIterator [A] {
+      def foreach (f: A => Async [Unit]): Async [Unit] =
+        maker.flatMap (_.foreach (f))
+    }
+
   /** Given asynchronous iterators of sorted items, merge them into a single asynchronous iterator
     * that maintains the sort.  Keep duplicate elements, and when two or more input iterators
     * duplicate an element, first list the element from the earlier iterator, that is by position

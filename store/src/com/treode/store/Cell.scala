@@ -1,8 +1,16 @@
 package com.treode.store
 
+import com.treode.pickle.Pickler
+
 case class Cell (key: Bytes, time: TxClock, value: Option [Bytes]) extends Ordered [Cell] {
 
   def byteSize = Cell.pickler.byteSize (this)
+
+  def key [K] (p: Pickler [K]): K =
+    key.unpickle (p)
+
+  def value [V] (p: Pickler [V]): Option [V] =
+    value map (_.unpickle (p))
 
   def timedKey: Key = Key (key, time)
 

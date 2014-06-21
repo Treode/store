@@ -2,7 +2,6 @@ package com.treode.store
 
 import java.util.concurrent.{CountDownLatch, Executors}
 import java.util.concurrent.atomic.AtomicInteger
-import scala.util.Random
 
 import com.treode.async._
 import com.treode.async.implicits._
@@ -10,9 +9,10 @@ import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.pickle.Picklers
 import com.treode.tags.{Intensive, Periodic}
+import org.joda.time.Instant
 import org.scalatest.FreeSpec
 
-import Async.{async, guard, latch}
+import Async.{async, guard, latch, when}
 import Fruits.Apple
 import StoreBehaviors.Accounts
 import StoreTestTools._
@@ -22,6 +22,117 @@ trait StoreBehaviors {
   this: FreeSpec with AsyncChecks =>
 
   val T1 = TableId (0xA1)
+
+  def testAccountTransfers (ntransfers: Int) (newStore: StoreTestKit => Store) (implicit kit: StoreTestKit) {
+    import kit.{scheduler, random}
+    import scheduler.whilst
+
+    val naccounts = 100
+    val nbrokers = 8
+    val opening = 1000
+    val supply = naccounts * opening
+
+    implicit val store = newStore (kit)
+
+    val clock = new AtomicInteger (1)
+    val brokerLatch = new CountDownLatch (nbrokers)
+    val countAuditsPassed = new AtomicInteger (0)
+    val countTransferPassed = new AtomicInteger (0)
+    val countTransferAdvanced = new AtomicInteger (0)
+
+    for (i <- 0 until naccounts)
+      store.write (random.nextTxId, 0, Accounts.create (i, opening)) .pass
+
+    def nextTick = TxClock (new Instant (clock.getAndIncrement))
+
+    var running = true
+
+    // Check that the sum of the account balances equals the supply
+    def audit(): Async [Unit] =
+      guard [Unit] {
+        for {
+          cells <- Accounts.recent (nextTick) .toSeq
+        } yield {
+          val total = cells.map (_.value.get) .sum
+          assert (supply == total)
+          countAuditsPassed.incrementAndGet()
+        }}
+
+    def check(): Async [Unit] =
+      guard  {
+        val firstTime = Bound (TxClock.MinValue, true)
+        val lastTime = Bound (TxClock.MaxValue, true)
+        val allTimes = Window.Between (lastTime, firstTime)
+        val recent = Window.Recent (nextTick, true)
+        for {
+          _history <- Accounts.scan (allTimes, Slice.all) .toSeq
+        } yield {
+          var tracker = Map.empty [Int, Int] .withDefaultValue (opening)
+          var supply = naccounts * opening
+          val history = _history
+              .groupBy (_.time)
+              .toSeq
+              .sortBy (_._1)
+          for ((time, cells) <- history) {
+            for (c <- cells)
+              tracker += c.key -> c.value.get
+            val total = tracker.values.sum
+            assert (supply == total)
+          }}}
+
+    // Transfer a random amount between two random accounts.
+    def transfer(): Async [Unit] =
+      guard [Unit] {
+        val x = random.nextInt (naccounts)
+        var y = random.nextInt (naccounts)
+        while (x == y)
+          y = random.nextInt (naccounts)
+        val rops = Seq (Accounts.read (x), Accounts.read (y))
+        val rt = nextTick
+        for {
+          vs <- store.read (rt, rops: _*)
+          ct = vs.map (_.time) .max
+          Seq (b1, b2) = vs map (Accounts.value (_) .get)
+          n = random.nextInt (b1)
+          wops = Seq (Accounts.update (x, b1-n), Accounts.update (y, b2+n))
+          wt <- store.write (random.nextTxId, ct, wops: _*)
+        } yield {
+          countTransferPassed.incrementAndGet()
+        }
+      } .recover {
+        case _: CollisionException => throw new IllegalArgumentException
+        case _: StaleException => countTransferAdvanced.incrementAndGet()
+        case _: TimeoutException => ()
+      }
+
+    // Conduct many transfers.
+    def broker (num: Int): Async [Unit] = {
+      var i = 0
+      whilst (i < ntransfers) {
+        i += 1
+        transfer()
+      }}
+
+    val brokers = {
+      for {
+        _ <- (0 until nbrokers) .latch.unit foreach (broker (_))
+      } yield {
+        running = false
+      }}
+
+    // Conduct many audits.
+    val auditor = {
+      whilst (running) {
+        audit()
+      }}
+
+    latch (brokers, auditor) .pass
+    check() .pass
+
+    assert (countAuditsPassed.get > 0, "Expected at least one audit to pass.")
+    assert (countTransferPassed.get > 0, "Expected at least one transfer to pass.")
+    assert (countTransferAdvanced.get > 0, "Expected at least one trasfer to advance.")
+  }
 
   def aStore (newStore: StoreTestKit => Store) {
 
@@ -245,104 +356,7 @@ trait StoreBehaviors {
             val (s, ts1, ts2) = setup()
             import kit.{random, scheduler}
             s.read (ts1-1, Get (T1, Apple)) .expectSeq (0::None)
-          }}}}}
-
-  def aMultithreadableStore (transfers: Int) (newStore: StoreTestKit => Store) {
-
-    "serialize concurrent operations" taggedAs (Intensive, Periodic) in {
-
-      multithreaded { implicit scheduler =>
-
-        val store = newStore (StoreTestKit.multithreaded (scheduler))
-
-        val accounts = 100
-        val threads = 8
-        val opening = 1000
-
-        import scheduler.whilst
-
-        val supply = accounts * opening
-        for (i <- 0 until accounts)
-          store.write (Random.nextTxId, 0, Accounts.create (i, opening)) .await()
-
-        val brokerLatch = new CountDownLatch (threads)
-        val countAuditsPassed = new AtomicInteger (0)
-        val countAuditsFailed = new AtomicInteger (0)
-        val countTransferPassed = new AtomicInteger (0)
-        val countTransferAdvanced = new AtomicInteger (0)
-
-        var running = true
-
-        // Check that the sum of the account balances equals the supply
-        def audit(): Async [Unit] =
-          guard [Unit] {
-            val ops = for (i <- 0 until accounts) yield Accounts.read (i)
-            for {
-              accounts <- store.read (TxClock.now, ops: _*)
-              total = accounts.map (Accounts.value (_) .get) .sum
-            } yield {
-              if (supply == total)
-                countAuditsPassed.incrementAndGet()
-              else
-                countAuditsFailed.incrementAndGet()
-            }
-          }
-
-        // Transfer a random amount between two random accounts.
-        def transfer(): Async [Unit] =
-          guard [Unit] {
-            val x = Random.nextInt (accounts)
-            var y = Random.nextInt (accounts)
-            while (x == y)
-              y = Random.nextInt (accounts)
-            val rops = Seq (Accounts.read (x), Accounts.read (y))
-            for {
-              vs <- store.read (TxClock.now, rops: _*)
-              ct = vs.map (_.time) .max
-              Seq (b1, b2) = vs map (Accounts.value (_) .get)
-              n = Random.nextInt (b1)
-              wops = Seq (Accounts.update (x, b1-n), Accounts.update (y, b2+n))
-              result <- store.write (Random.nextTxId, ct, wops: _*)
-            } yield {
-              countTransferPassed.incrementAndGet()
-            }
-          } .recover {
-            case _: CollisionException => throw new IllegalArgumentException
-            case _: StaleException => countTransferAdvanced.incrementAndGet()
-            case _: TimeoutException => ()
-          }
-
-        // Conduct many transfers.
-        def broker (num: Int): Async [Unit] = {
-          var i = 0
-          whilst (i < transfers) {
-            i += 1
-            transfer()
-          }}
-
-        val brokers = {
-          for {
-            _ <- (0 until threads) .latch.unit foreach (broker (_))
-          } yield {
-            running = false
-          }}
-
-        def sleep (millis: Int): Async [Unit] =
-          async (cb => scheduler.delay (millis) (cb.pass()))
-
-        // Conduct many audits.
-        val auditor = {
-          whilst (running) {
-            audit() .flatMap (_ => sleep (100))
-          }}
-
-        latch (brokers, auditor) .await()
-
-        assert (countAuditsPassed.get > 0, "Expected at least one audit to pass.")
-        assert (countAuditsFailed.get == 0, "Expected no audits to fail.")
-        assert (countTransferPassed.get > 0, "Expected at least one transfer to pass.")
-        assert (countTransferAdvanced.get > 0, "Expected at least one trasfer to advance.")
-      }}}}
+          }}}}}}
 
 object StoreBehaviors {
 

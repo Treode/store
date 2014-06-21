@@ -4,6 +4,8 @@ import com.treode.async.AsyncIterator
 
 sealed abstract class Window {
 
+  def later: Bound [TxClock]
+
   def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell]
 }
 

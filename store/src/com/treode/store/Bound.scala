@@ -8,6 +8,8 @@ sealed abstract class Bound [A] {
   def inclusive: Boolean
   def <* (v: A) (implicit ordering: Ordering [A]): Boolean
   def >* (v: A) (implicit ordering: Ordering [A]): Boolean
+
+  def map [B] (f: A => B): Bound [B]
 }
 
 object Bound {
@@ -21,6 +23,9 @@ object Bound {
 
     def >* (other: A) (implicit ordering: Ordering [A]) =
       ordering.gteq (bound, other)
+
+    def map [B] (f: A => B): Bound [B] =
+      Inclusive (f (bound))
   }
 
   case class Exclusive [A] (bound: A) extends Bound [A] {
@@ -32,6 +37,9 @@ object Bound {
 
     def >*  (other: A) (implicit ordering: Ordering [A]) =
       ordering.gt (bound, other)
+
+    def map [B] (f: A => B): Bound [B] =
+      Exclusive (f (bound))
   }
 
   def apply [A] (bound: A, inclusive: Boolean): Bound [A] =

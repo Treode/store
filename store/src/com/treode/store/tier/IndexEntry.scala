@@ -11,8 +11,12 @@ extends Ordered [IndexEntry] {
 
   def byteSize = IndexEntry.pickler.byteSize (this)
 
-  def compare (that: IndexEntry): Int = key compare that.key
-}
+  def compare (that: IndexEntry): Int = {
+    val r = key compare that.key
+    if (r != 0) return r
+    // Reverse chronological order
+    that.time compare time
+  }}
 
 private object IndexEntry extends Ordering [IndexEntry] {
 

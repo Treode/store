@@ -1,6 +1,11 @@
 package com.treode.store
 
+import com.treode.pickle.Pickler
+
 case class Key (key: Bytes, time: TxClock) extends Ordered [Key] {
+
+  def key [K] (p: Pickler [K]): K =
+    key.unpickle (p)
 
   def compare (that: Key): Int = {
     val r = key compare that.key
@@ -12,6 +17,9 @@ case class Key (key: Bytes, time: TxClock) extends Ordered [Key] {
 object Key extends Ordering [Key] {
 
   val MinValue = Key (Bytes.MinValue, TxClock.MaxValue)
+
+  def apply [K] (pk: Pickler [K], key: K, time: TxClock): Key =
+    Key (Bytes (pk, key), time)
 
   def compare (x: Key, y: Key): Int =
     x compare y
