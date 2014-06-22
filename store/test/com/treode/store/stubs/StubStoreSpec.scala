@@ -24,5 +24,5 @@ class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
     "conserve money during account transfers (multithreaded)" taggedAs (Intensive, Periodic) in {
       multithreaded { scheduler =>
         implicit val kit = StoreTestKit.multithreaded (scheduler)
-        testAccountTransfers (100) (newStore)
+        testAccountTransfers (500) (newStore)
       }}}}

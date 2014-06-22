@@ -96,16 +96,20 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
         cb.pass (st)
     }
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): AsyncIterator [Cell] = {
-    data
-        .tailMap (StubKey (table, start.bound.key, start.bound.time), start.inclusive)
-        .iterator
-        .takeWhile (_._1.table == table)
-        .map {case (key, value) => Cell (key.key, key.time, value)}
-        .async
-        .slice (table, slice)
-        .window (window)
-  }
+  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): AsyncIterator [Cell] =
+    AsyncIterator.make {
+      for {
+        _ <- space.scan (window.later.bound)
+      } yield {
+        data
+            .tailMap (StubKey (table, start.bound.key, start.bound.time), start.inclusive)
+            .iterator
+            .takeWhile (_._1.table == table)
+            .map {case (key, value) => Cell (key.key, key.time, value)}
+            .async
+            .slice (table, slice)
+            .window (window)
+      }}
 
   def hosts (slice: Slice): Seq [(HostId, Int)] =
     Seq.empty
