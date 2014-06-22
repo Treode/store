@@ -120,7 +120,6 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
         "rebalance is not started, it should yield no work" in {
           implicit val (cluster, t) = setup()
           assertNone (t.deque())
-          intercept [AssertionError] (t.continue (0))
         }
 
         "rebalance is started with all cohorts settled, it should yield no work" in {
@@ -128,7 +127,6 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
           t.start (settled (1, 2, 3))
           assertNone (t.deque())
           assertNone (t.deque())
-          intercept [AssertionError] (t.continue (0))
         }
 
         "rebalance is started with a cohort moving, it should start work" in {

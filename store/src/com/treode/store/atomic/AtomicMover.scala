@@ -1,5 +1,6 @@
 package com.treode.store.atomic
 
+import java.util.concurrent.{TimeoutException => JTimeoutException}
 import scala.util.{Failure, Success}
 
 import com.treode.async._
@@ -114,13 +115,18 @@ private class AtomicMover (kit: AtomicKit) {
         send (targets.version, table, cells, targets (num))
     }
 
-  def rebalance (start: Point.Middle, limit: Point, targets: Targets): Async [Unit] = {
-    for {
-      (table, batch, next) <- split (start, limit, targets)
-      _ <- send (table, batch, targets)
-    } yield fiber.execute {
-      tracker.continue (next)
-    }}
+  def continue (next: Point): Unit =
+    fiber.execute (tracker.continue (next))
+
+  def rebalance (start: Point.Middle, limit: Point, targets: Targets): Async [Unit] =
+    guard {
+      for {
+        (table, batch, next) <- split (start, limit, targets)
+        _ <- send (table, batch, targets)
+      } yield continue (next)
+    } .recover {
+      case _: JTimeoutException => continue (start)
+    }
 
   def next(): Option [Runnable] =
     (tracker.deque: @unchecked) match {
@@ -269,14 +275,13 @@ private object AtomicMover {
       }}
 
     def continue (next: Point) {
-      assert (!moving.isEmpty)
       complete match {
         case (point, _) :: tail if next < point =>
           complete = (next, moving) :: complete
         case (point, _) :: tail if next == point =>
           complete = (next, moving) :: tail
-        case (point, _) :: _ =>
-          assert (false, "Moved too much.")
+        case _ :: _ =>
+          ()
         case Nil if next == Point.End =>
           targets = Targets.empty
           complete = List.empty
@@ -288,6 +293,7 @@ private object AtomicMover {
 
     def start (targets: Targets) {
       this.targets = targets
+      moving = moving intersect targets
       complete =
         for {
           (p, ts0) <- complete

@@ -100,7 +100,7 @@ object Store {
         exodusThreshold = 0.2D,
         falsePositiveProbability = 0.01,
         lockSpaceBits = 10,
-        moveBatchBackoff = Backoff (2.seconds, 1.seconds, 5.minutes),
+        moveBatchBackoff = Backoff (2.seconds, 1.seconds, 1.minutes, 7),
         moveBatchBytes = 1<<20,
         moveBatchEntries = 10000,
         prepareBackoff = Backoff (100, 100, 1.seconds, 7),

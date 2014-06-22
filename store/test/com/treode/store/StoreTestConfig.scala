@@ -51,7 +51,7 @@ object StoreTestConfig {
       falsePositiveProbability: Double = 0.01,
       lockSpaceBits: Int = 4,
       messageFlakiness: Double = 0.1,
-      moveBatchBackoff: Backoff = Backoff (2 seconds, 1 seconds, 5 minutes),
+      moveBatchBackoff: Backoff = Backoff (2 seconds, 1 seconds, 1 minutes, 7),
       moveBatchBytes: Int = Int.MaxValue,
       moveBatchEntries: Int = Int.MaxValue,
       prepareBackoff: Backoff = Backoff (100, 100, 1 seconds, 7),
