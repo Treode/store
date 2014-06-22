@@ -34,8 +34,11 @@ private class AtomicKit (implicit
   def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
     releaser.join (ReadDirector.read (rt, ops, this))
 
+  def write (xid: TxId, ct: TxClock, pt: TxClock, ops: WriteOp*): Async [TxClock] =
+    releaser.join (WriteDirector.write (xid, ct, pt, ops, this))
+
   def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock] =
-    releaser.join (WriteDirector.write (xid, ct, ops, this))
+    write (xid, ct, TxClock.now, ops: _*)
 
   def status (xid: TxId): Async [TxStatus] =
     deliberate.propose (xid.id, xid.time, TxStatus.Aborted)

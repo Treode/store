@@ -75,7 +75,7 @@ private class StubAtomicHost (
     atomic.read (rt, ops:_*)
 
   def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock] =
-    atomic.write (xid, ct, ops:_*)
+    atomic.write (xid, ct, 0, ops:_*)
 
   def status (xid: TxId): Async [TxStatus] =
     atomic.status (xid)

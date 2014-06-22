@@ -40,10 +40,10 @@ trait StoreBehaviors {
     val countTransferPassed = new AtomicInteger (0)
     val countTransferAdvanced = new AtomicInteger (0)
 
-    for (i <- 0 until naccounts)
-      store.write (random.nextTxId, 0, Accounts.create (i, opening)) .pass
-
     def nextTick = TxClock (new Instant (clock.getAndIncrement))
+
+    val creates = Seq.tabulate (naccounts) (Accounts.create (_, opening))
+    store.write (random.nextTxId, 0, creates: _*) .pass
 
     var running = true
 

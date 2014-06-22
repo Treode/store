@@ -14,7 +14,7 @@ import com.treode.store.paxos.PaxosAccessor
 import Async.async
 import WriteDirector.deliberate
 
-private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
+private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
   import kit.{cluster, library, paxos, random, scheduler}
   import kit.config.prepareBackoff
 
@@ -75,7 +75,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: At
     var failure = false
     var advance = false
     var ks = Set.empty [Int]
-    var ft = TxClock.now
+    var ft = pt
 
     responses.rouse()
     fiber.delay (backoff.next) (state.timeout())
@@ -268,6 +268,6 @@ private object WriteDirector {
     PaxosAccessor.value (txStatus)
   }
 
-  def write (xid: TxId, ct: TxClock, ops: Seq [WriteOp], kit: AtomicKit): Async [TxClock] =
-    async (cb => new WriteDirector (xid, ct, ops, kit) .open (cb))
+  def write (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [WriteOp], kit: AtomicKit): Async [TxClock] =
+    async (cb => new WriteDirector (xid, ct, pt, ops, kit) .open (cb))
 }
