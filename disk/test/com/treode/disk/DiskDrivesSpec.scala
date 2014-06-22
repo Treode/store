@@ -1,5 +1,6 @@
 package com.treode.disk
 
+import java.util.logging.{Level, Logger}
 import java.nio.file.Paths
 
 import com.treode.async.stubs.StubScheduler
@@ -12,6 +13,8 @@ import org.scalatest.FreeSpec
 import DiskTestTools._
 
 class DiskDrivesSpec extends FreeSpec with CrashChecks {
+
+  Logger.getLogger ("com.treode") .setLevel (Level.WARNING)
 
   implicit val config = DiskTestConfig()
   val geom = DriveGeometry.test()

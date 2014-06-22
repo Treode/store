@@ -1,5 +1,6 @@
 package com.treode.disk
 
+import java.util.logging.{Level, Logger}
 import scala.util.Random
 
 import com.treode.async.Async
@@ -16,6 +17,8 @@ import DiskTestTools._
 import SpanSugar._
 
 class DiskSystemSpec extends FreeSpec with CrashChecks {
+
+  Logger.getLogger ("com.treode") .setLevel (Level.WARNING)
 
   override val timeLimit = 15 minutes
 
