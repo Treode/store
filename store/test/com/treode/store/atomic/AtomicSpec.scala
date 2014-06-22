@@ -18,6 +18,8 @@ import WriteOp._
 
 class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
+  override val timeLimit = 15 minutes
+
   private val newStore = { implicit kit: StoreTestKit =>
     import kit.{random, scheduler, network}
     val hs = Seq.fill (3) (StubAtomicHost.install() .pass)
