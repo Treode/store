@@ -1,6 +1,7 @@
 package com.treode.disk
 
 import java.nio.file.Paths
+import java.util.logging.{Level, Logger}
 
 import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
@@ -11,6 +12,8 @@ import org.scalatest.FreeSpec
 import DiskTestTools._
 
 class RecoverySpec extends FreeSpec {
+
+  Logger.getLogger ("com.treode") .setLevel (Level.WARNING)
 
   implicit val config = DiskTestConfig()
   val geom = DriveGeometry.test()

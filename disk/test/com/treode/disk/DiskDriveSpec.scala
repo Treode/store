@@ -1,6 +1,7 @@
 package com.treode.disk
 
 import java.nio.file.Paths
+import java.util.logging.{Level, Logger}
 
 import com.treode.async.Async
 import com.treode.async.io.File
@@ -15,6 +16,8 @@ import org.scalatest.FreeSpec
 import DiskTestTools._
 
 class DiskDriveSpec extends FreeSpec {
+
+  Logger.getLogger ("com.treode") .setLevel (Level.WARNING)
 
   class DistinguishedException extends Exception
 
