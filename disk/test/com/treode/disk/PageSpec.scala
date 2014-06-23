@@ -1,5 +1,6 @@
 package com.treode.disk
 
+import java.util.logging.{Level, Logger}
 import scala.util.Random
 
 import com.treode.async.{Async, Callback}
@@ -13,10 +14,12 @@ import DiskTestTools._
 
 class PageSpec extends FreeSpec {
 
+  Logger.getLogger ("com.treode") .setLevel (Level.WARNING)
+
   class DistinguishedException extends Exception
 
   implicit val config = DiskTestConfig()
-  val geometry = DriveGeometry.test()
+  val geom = DriveGeometry.test()
 
   object pagers {
     import DiskPicklers._
@@ -28,7 +31,7 @@ class PageSpec extends FreeSpec {
 
     def setup (disk: StubFile) (implicit scheduler: StubScheduler) = {
       val recovery = Disk.recover()
-      recovery.attachAndLaunch (("a", disk, geometry))
+      recovery.attachAndLaunch (("a", disk, geom))
     }
 
     def recover (disk: StubFile) (implicit scheduler: StubScheduler) = {
@@ -43,7 +46,7 @@ class PageSpec extends FreeSpec {
 
       {
         implicit val scheduler = StubScheduler.random()
-        file = StubFile()
+        file = StubFile (1<<20, geom.blockBits)
         implicit val disk = setup (file)
         pos = pagers.str.write (0, 0, "one") .pass
         pagers.str.fetch (pos) .expect ("one")
@@ -51,7 +54,7 @@ class PageSpec extends FreeSpec {
 
       {
         implicit val scheduler = StubScheduler.random()
-        file = StubFile (file.data)
+        file = StubFile (file.data, geom.blockBits)
         implicit val disk = recover (file)
         pagers.str.fetch (pos) .expect ("one")
       }}
@@ -63,7 +66,7 @@ class PageSpec extends FreeSpec {
 
       {
         implicit val scheduler = StubScheduler.random()
-        file = StubFile()
+        file = StubFile (1<<20, geom.blockBits)
         implicit val disk = setup (file)
         pos = pagers.str.write (0, 0, "one") .pass
         file.stop = true
@@ -77,14 +80,14 @@ class PageSpec extends FreeSpec {
 
       {
         implicit val scheduler = StubScheduler.random()
-        file = StubFile()
+        file = StubFile (1<<20, geom.blockBits)
         implicit val disk = setup (file)
         pos = pagers.str.write (0, 0, "one") .pass
       }
 
       {
         implicit val scheduler = StubScheduler.random()
-        file = StubFile (file.data)
+        file = StubFile (file.data, geom.blockBits)
         implicit val disk = recover (file)
         pagers.str.read (pos) .expect ("one")
         file.stop = true
@@ -95,7 +98,7 @@ class PageSpec extends FreeSpec {
 
       {
         implicit val scheduler = StubScheduler.random()
-        val file = StubFile()
+        val file = StubFile (1<<20, geom.blockBits)
         implicit val disk = setup (file)
         pagers.stuff.write (0, 0, Stuff (0, 1000)) .fail [OversizedPageException]
       }}}
@@ -106,9 +109,9 @@ class PageSpec extends FreeSpec {
 
       implicit val random = new Random (0)
       implicit val scheduler = StubScheduler.random (random)
-      val file = StubFile()
+      val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
-      implicit val disk = recovery.attachAndLaunch (("a", file, geometry))
+      implicit val disk = recovery.attachAndLaunch (("a", file, geom))
       for (i <- 0 until 40)
         pagers.stuff.write (0, 0, Stuff (random.nextLong)) .pass
       disk.clean()
@@ -120,9 +123,9 @@ class PageSpec extends FreeSpec {
 
       implicit val random = new Random (0)
       implicit val scheduler = StubScheduler.random (random)
-      val file = StubFile()
+      val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
-      implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
+      implicit val launch = recovery.attachAndWait (("a", file, geom)) .pass
       import launch.disk
       pagers.stuff.handle (new PageHandler [Int] {
         def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
@@ -143,9 +146,9 @@ class PageSpec extends FreeSpec {
 
       implicit val random = new Random (0)
       implicit val scheduler = StubScheduler.random (random)
-      val file = StubFile()
+      val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
-      implicit val launch = recovery.attachAndWait (("a", file, geometry)) .pass
+      implicit val launch = recovery.attachAndWait (("a", file, geom)) .pass
       import launch.disk
       pagers.stuff.handle (new PageHandler [Int] {
         def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =

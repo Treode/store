@@ -1,5 +1,6 @@
 package com.treode.disk
 
+import java.util.logging.{Level, Logger}
 import scala.util.Random
 
 import com.treode.async._
@@ -17,10 +18,12 @@ import DiskTestTools._
 
 class LogSpec extends FlatSpec with CrashChecks {
 
+  Logger.getLogger ("com.treode") .setLevel (Level.WARNING)
+
   class DistinguishedException extends Exception
 
   implicit val config = DiskTestConfig()
-  val geometry = DriveGeometry.test()
+  val geom = DriveGeometry.test()
 
   object records {
     val str = RecordDescriptor (0xBF, Picklers.string)
@@ -33,14 +36,14 @@ class LogSpec extends FlatSpec with CrashChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      file = StubFile()
+      file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
-      implicit val disk = recovery.attachAndLaunch (("a", file, geometry))
+      implicit val disk = recovery.attachAndLaunch (("a", file, geom))
     }
 
     {
       implicit val scheduler = StubScheduler.random()
-      file = StubFile (file.data)
+      file = StubFile (file.data, geom.blockBits)
       implicit val recovery = Disk.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
@@ -54,20 +57,44 @@ class LogSpec extends FlatSpec with CrashChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      file = StubFile()
+      file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
-      implicit val disk = recovery.attachAndLaunch (("a", file, geometry))
+      implicit val disk = recovery.attachAndLaunch (("a", file, geom))
       records.str.record ("one") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
-      file = StubFile (file.data)
+      file = StubFile (file.data, geom.blockBits)
       implicit val recovery = Disk.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
       recovery.reattachAndLaunch (("a", file))
       assertResult (Seq ("one")) (replayed.result)
+    }}
+
+  it should "replay three items" in {
+
+    var file: StubFile = null
+
+    {
+      implicit val scheduler = StubScheduler.random()
+      file = StubFile (1<<20, geom.blockBits)
+      implicit val recovery = Disk.recover()
+      implicit val disk = recovery.attachAndLaunch (("a", file, geom))
+      records.str.record ("one") .pass
+      records.str.record ("two") .pass
+      records.str.record ("three") .pass
+    }
+
+    {
+      implicit val scheduler = StubScheduler.random()
+      file = StubFile (file.data, geom.blockBits)
+      implicit val recovery = Disk.recover()
+      val replayed = Seq.newBuilder [String]
+      records.str.replay (replayed += _)
+      recovery.reattachAndLaunch (("a", file))
+      assertResult (Seq ("one", "two", "three")) (replayed.result)
     }}
 
   it should "replay twice" in {
@@ -76,15 +103,15 @@ class LogSpec extends FlatSpec with CrashChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      file = StubFile()
+      file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
-      implicit val disk = recovery.attachAndLaunch (("a", file, geometry))
+      implicit val disk = recovery.attachAndLaunch (("a", file, geom))
       records.str.record ("one") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
-      file = StubFile (file.data)
+      file = StubFile (file.data, geom.blockBits)
       implicit val recovery = Disk.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
@@ -95,7 +122,7 @@ class LogSpec extends FlatSpec with CrashChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      file = StubFile (file.data)
+      file = StubFile (file.data, geom.blockBits)
       implicit val recovery = Disk.recover()
       val replayed = Seq.newBuilder [String]
       records.str.replay (replayed += _)
@@ -109,17 +136,16 @@ class LogSpec extends FlatSpec with CrashChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      file = StubFile()
+      file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
-      implicit val disk = recovery.attachAndLaunch (("a", file, geometry))
+      implicit val disk = recovery.attachAndLaunch (("a", file, geom))
       records.str.record ("one") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
-      file = StubFile (file.data)
+      file = StubFile (file.data, geom.blockBits)
       implicit val recovery = Disk.recover()
-      file = StubFile (file.data)
       recovery.reattachAndWait (("a", file)) .fail [InvalidTagException]
     }}
 
@@ -129,15 +155,15 @@ class LogSpec extends FlatSpec with CrashChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      file = StubFile()
+      file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
-      implicit val disk = recovery.attachAndLaunch (("a", file, geometry))
+      implicit val disk = recovery.attachAndLaunch (("a", file, geom))
       records.str.record ("one") .pass
     }
 
     {
       implicit val scheduler = StubScheduler.random()
-      file = StubFile (file.data)
+      file = StubFile (file.data, geom.blockBits)
       implicit val recovery = Disk.recover()
       records.str.replay (_ => throw new DistinguishedException)
       recovery.reattachAndWait (("a", file)) .fail [DistinguishedException]
@@ -147,9 +173,9 @@ class LogSpec extends FlatSpec with CrashChecks {
 
     {
       implicit val scheduler = StubScheduler.random()
-      val file = StubFile()
+      val file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
-      implicit val disk = recovery.attachAndLaunch (("a", file, geometry))
+      implicit val disk = recovery.attachAndLaunch (("a", file, geom))
       records.stuff.record (Stuff (0, 1000)) .fail [OversizedRecordException]
     }}
 
@@ -158,9 +184,9 @@ class LogSpec extends FlatSpec with CrashChecks {
     forAllSeeds { implicit random =>
 
       implicit val scheduler = StubScheduler.random (random)
-      val file = StubFile()
+      val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
-      val launch = recovery.attachAndWait (("a", file, geometry)) .pass
+      val launch = recovery.attachAndWait (("a", file, geom)) .pass
       import launch.disk
 
       var checkpointed = false

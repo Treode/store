@@ -170,7 +170,7 @@ class FileSpec extends FlatSpec {
 
   "AsyncFile.deframe" should "read from Pickler.frame" in {
     implicit val scheduler = StubScheduler.random()
-    val file = StubFile()
+    val file = StubFile (1<<12, 1)
     val pickler = Picklers.seq (Picklers.int)
     val out = Seq.fill (23) (Random.nextInt)
     val buffer = PagedBuffer (12)
@@ -184,7 +184,7 @@ class FileSpec extends FlatSpec {
 
   it should "read from Pickler.frame with hashing" in {
     implicit val scheduler = StubScheduler.random()
-    val file = StubFile()
+    val file = StubFile (1<<12, 1)
     val pickler = Picklers.seq (Picklers.int)
     val out = Seq.fill (23) (Random.nextInt)
     val buffer = PagedBuffer (12)
@@ -198,7 +198,7 @@ class FileSpec extends FlatSpec {
 
   it should "raise an error when the hash check fails" in {
     implicit val scheduler = StubScheduler.random()
-    val file = StubFile()
+    val file = StubFile (1<<12, 1)
     val pickler = Picklers.seq (Picklers.int)
     val out = Seq.fill (23) (Random.nextInt)
     val buffer = PagedBuffer (12)

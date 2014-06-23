@@ -16,6 +16,8 @@ class PageLedgerSpec extends FlatSpec {
 
     implicit val random = new Random
     implicit val scheduler = StubScheduler.random (random)
+    implicit val config = DiskTestConfig()
+    val geom = DriveGeometry.test()
 
     // Make a large ledger.
     val ledger = new PageLedger
@@ -26,7 +28,7 @@ class PageLedgerSpec extends FlatSpec {
     val buf = PagedBuffer (12)
     for (i <- 0 until 1024)
       buf.writeInt (i)
-    val file = StubFile (1<<12)
+    val file = StubFile (1<<20, 6)
     file.flush (buf, 0) .pass
 
     // Check that the write throws an exception.

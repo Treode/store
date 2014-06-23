@@ -1,6 +1,7 @@
 package com.treode.disk
 
 import java.nio.file.{Path, Paths}
+import scala.util.Random
 
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
@@ -41,7 +42,7 @@ class SuperBlocksSpec extends FreeSpec {
 
   private def setup() = {
     implicit val scheduler = StubScheduler.random()
-    val file = StubFile()
+    val file = StubFile (1<<20, geom.blockBits)
     val superb0 = superb (0)
     val superb1 = superb (1)
     SuperBlock.write (superb0, file) (config) .pass
@@ -304,8 +305,9 @@ class SuperBlocksSpec extends FreeSpec {
     "reject gen0 when it's hosed" in {
       implicit val (scheduler, file, superb0, superb1) = setup()
       val buf = PagedBuffer (12)
-      buf.writeInt (0xC84404F5)
-      file.flush (buf, 17) .pass
+      while (buf.readableBytes < geom.blockBytes)
+        buf.writeInt (Random.nextInt)
+      file.flush (buf, 0) .pass
       val superbs = SuperBlocks.read (path, file) (config) .pass
       assertResult (None) (superbs.sb0)
       assertResult (Some (superb1)) (superbs.sb1)
@@ -314,8 +316,9 @@ class SuperBlocksSpec extends FreeSpec {
     "reject gen1 when it's hosed" in {
       implicit val (scheduler, file, superb0, superb1) = setup()
       val buf = PagedBuffer (12)
-      buf.writeInt (0xC84404F5)
-      file.flush (buf, config.superBlockBytes + 17) .pass
+      while (buf.readableBytes < geom.blockBytes)
+        buf.writeInt (Random.nextInt)
+      file.flush (buf, config.superBlockBytes) .pass
       val superbs = SuperBlocks.read (path, file) (config) .pass
       assertResult (Some (superb0)) (superbs.sb0)
       assertResult (None) (superbs.sb1)

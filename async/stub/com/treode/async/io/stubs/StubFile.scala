@@ -23,7 +23,8 @@ import Async.async
   * [[com.treode.async.stubs.StubScheduler StubScheduler]].
   */
 class StubFile private (
-    var data: Array [Byte]
+    var data: Array [Byte],
+    mask: Int
 ) (implicit
     scheduler: Scheduler
 ) extends File (null) {
@@ -57,11 +58,13 @@ class StubFile private (
         f (cb)
       }}}
 
-  override def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
+  override def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] = {
+    require (pos >= 0, "Fill position must be non-negative")
+    require (pos + len < Int.MaxValue)
+    if ((pos & mask) != 0) println ("Fill position must be aligned")
+    if ((len & mask) != 0) println ("Fill length must be aligned")
     _stop { cb =>
       try {
-        require (pos >= 0)
-        require (pos + len < Int.MaxValue)
         if (len <= input.readableBytes) {
           scheduler.pass (cb, ())
         } else if (data.length < pos) {
@@ -78,20 +81,22 @@ class StubFile private (
           }}
       } catch {
         case t: Throwable => scheduler.fail (cb, t)
-      }}
+      }}}
 
-  override def flush (output: PagedBuffer, pos: Long): Async [Unit] =
+  override def flush (output: PagedBuffer, pos: Long): Async [Unit] = {
+    require (pos >= 0, "Flush position must be non-negative")
+    require (pos + output.readableBytes < Int.MaxValue)
+    if ((pos & mask) != 0) println ("Flush position must be aligned")
+    if ((output.readableBytes & mask) != 0) println ("Flush length must be aligned")
     _stop { cb =>
       try {
-        require (pos >= 0)
-        require (pos + output.readableBytes < Int.MaxValue)
         if (data.length < pos + output.readableBytes)
           data = Arrays.copyOf (data, pos.toInt + output.readableBytes)
         output.readBytes (data, pos.toInt, output.readableBytes)
         scheduler.pass (cb, ())
       } catch {
         case t: Throwable => scheduler.fail (cb, t)
-      }}
+      }}}
 
   override def close(): Unit =
     closed = true
@@ -101,12 +106,11 @@ class StubFile private (
 
 object StubFile {
 
-  def apply (data: Array [Byte]) (implicit scheduler: Scheduler): StubFile =
-    new StubFile (data)
+  def apply (data: Array [Byte], align: Int) (implicit scheduler: Scheduler): StubFile = {
+    require (align > 0, "Alignment must more than 0 bits")
+    new StubFile (data, align-1)
+  }
 
-  def apply (size: Int) (implicit scheduler: Scheduler): StubFile =
-    new StubFile (new Array (size))
-
-  def apply () (implicit scheduler: Scheduler): StubFile =
-    new StubFile (new Array (0))
+  def apply (size: Int, align: Int) (implicit scheduler: Scheduler): StubFile =
+    apply (new Array [Byte] (size), align)
 }

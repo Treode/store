@@ -34,7 +34,7 @@ class RecoverySpec extends FreeSpec {
 
     "reject registration of a record descriptor after attach" in {
       implicit val scheduler = StubScheduler.random()
-      val file = StubFile()
+      val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
       recovery.attachAndWait (("a", file, geom)) .pass
       intercept [IllegalArgumentException] {
@@ -43,7 +43,7 @@ class RecoverySpec extends FreeSpec {
 
     "reject registration of a record descriptor after reattach" in {
       implicit val scheduler = StubScheduler.random()
-      val file = StubFile()
+      val file = StubFile (1<<20, geom.blockBits)
       var recovery = Disk.recover()
       recovery.attachAndLaunch (("a", file, geom))
       recovery = Disk.recover()
@@ -56,15 +56,15 @@ class RecoverySpec extends FreeSpec {
 
     "allow attaching an item" in {
       implicit val scheduler = StubScheduler.random()
-      val file = StubFile()
+      val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
       recovery.attachAndLaunch (("a", file, geom))
     }
 
     "allow attaching multiple items" in {
       implicit val scheduler = StubScheduler.random()
-      val file1 = StubFile()
-      val file2 = StubFile()
+      val file1 = StubFile (1<<20, geom.blockBits)
+      val file2 = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
       recovery.attachAndLaunch (("a", file1, geom), ("b", file2, geom))
     }
@@ -77,7 +77,7 @@ class RecoverySpec extends FreeSpec {
 
     "reject attaching the same path multiply" in {
       implicit val scheduler = StubScheduler.random()
-      val file = StubFile()
+      val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
       recovery
           .attachAndWait (("a", file, geom), ("a", file, geom))
@@ -86,7 +86,7 @@ class RecoverySpec extends FreeSpec {
 
     "pass through an exception from DiskDrive.init" in {
       implicit val scheduler = StubScheduler.random()
-      val file = StubFile()
+      val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
       file.stop = true
       val cb = recovery.attachAndCapture (("a", file, geom))
@@ -104,7 +104,7 @@ class RecoverySpec extends FreeSpec {
 
       "allow reattaching an item" in {
         implicit val scheduler = StubScheduler.random()
-        val file = StubFile()
+        val file = StubFile (1<<20, geom.blockBits)
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom))
         recovery = Disk.recover()
@@ -113,8 +113,8 @@ class RecoverySpec extends FreeSpec {
 
       "allow reattaching multiple items" in {
         implicit val scheduler = StubScheduler.random()
-        val file1 = StubFile()
-        val file2 = StubFile()
+        val file1 = StubFile (1<<20, geom.blockBits)
+        val file2 = StubFile (1<<20, geom.blockBits)
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file1, geom), ("b", file2, geom))
         recovery = Disk.recover()
@@ -129,7 +129,7 @@ class RecoverySpec extends FreeSpec {
 
       "reject reattaching the same path multiply" in {
         implicit val scheduler = StubScheduler.random()
-        val file = StubFile()
+        val file = StubFile (1<<20, geom.blockBits)
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom))
         recovery = Disk.recover()
@@ -140,15 +140,15 @@ class RecoverySpec extends FreeSpec {
 
       "pass through an exception from chooseSuperBlock" in {
         implicit val scheduler = StubScheduler.random()
-        val file = StubFile()
+        val file = StubFile (1<<20, geom.blockBits)
         val recovery = Disk.recover()
         recovery.reattachAndWait (("a", file)) .fail [NoSuperBlocksException]
       }
 
       "pass through an exception from verifyReattachment" in {
         implicit val scheduler = StubScheduler.random()
-        val file1 = StubFile()
-        val file2 = StubFile()
+        val file1 = StubFile (1<<20, geom.blockBits)
+        val file2 = StubFile (1<<20, geom.blockBits)
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file1, geom), ("b", file2, geom))
         recovery = Disk.recover ()
@@ -160,8 +160,8 @@ class RecoverySpec extends FreeSpec {
 
       "require the given file paths match the boot blocks disk" in {
         implicit val scheduler = StubScheduler.random()
-        val file = StubFile()
-        val file2 = StubFile()
+        val file = StubFile (1<<20, geom.blockBits)
+        val file2 = StubFile (1<<20, geom.blockBits)
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
         recovery = Disk.recover()
@@ -172,8 +172,8 @@ class RecoverySpec extends FreeSpec {
 
       "pass when given all of the items" in {
         implicit val scheduler = StubScheduler.random()
-        val file = StubFile()
-        val file2 = StubFile()
+        val file = StubFile (1<<20, geom.blockBits)
+        val file2 = StubFile (1<<20, geom.blockBits)
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
         recovery = Disk.recover()
@@ -182,8 +182,8 @@ class RecoverySpec extends FreeSpec {
 
       "pass when given a subset of the items" in {
         implicit val scheduler = StubScheduler.random()
-        val file = StubFile()
-        val file2 = StubFile()
+        val file = StubFile (1<<20, geom.blockBits)
+        val file2 = StubFile (1<<20, geom.blockBits)
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
         recovery = Disk.recover()
@@ -192,9 +192,9 @@ class RecoverySpec extends FreeSpec {
 
       "fail when given extra uninitialized items" in {
         implicit val scheduler = StubScheduler.random()
-        val file = StubFile()
-        val file2 = StubFile()
-        val file3 = StubFile()
+        val file = StubFile (1<<20, geom.blockBits)
+        val file2 = StubFile (1<<20, geom.blockBits)
+        val file3 = StubFile (1<<20, geom.blockBits)
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
         recovery = Disk.recover()
@@ -205,9 +205,9 @@ class RecoverySpec extends FreeSpec {
 
       "fail when given extra initialized items" in {
         implicit val scheduler = StubScheduler.random()
-        val file = StubFile()
-        val file2 = StubFile()
-        val file3 = StubFile()
+        val file = StubFile (1<<20, geom.blockBits)
+        val file2 = StubFile (1<<20, geom.blockBits)
+        val file3 = StubFile (1<<20, geom.blockBits)
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
         recovery = Disk.recover()
