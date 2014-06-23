@@ -19,7 +19,7 @@ object TreodeBuild extends Build {
   lazy val commonPortion = Seq (
 
     organization := "com.treode",
-    version := "0.1",
+    version := "0.1.0",
     scalaVersion := "2.10.4",
 
     unmanagedSourceDirectories in Compile <<=
@@ -63,7 +63,7 @@ object TreodeBuild extends Build {
 
     libraryDependencies ++= Seq (
       "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "test",
-      "org.scalatest" %% "scalatest" % "2.1.7" % "test",
+      "org.scalatest" %% "scalatest" % "2.2.0" % "test",
       "org.scalacheck" %% "scalacheck" % "1.11.4" % "test"))
 
   // Settings for projects without stubs.
@@ -97,6 +97,8 @@ object TreodeBuild extends Build {
     testOptions in PeriodicTestWithStub := Seq (
       Tests.Argument ("-n", "com.treode.tags.Periodic", "-oDF")),
 
+    publishArtifact in Stub := true,
+
     unmanagedSourceDirectories in Stub <<=
       (baseDirectory ((base: File) => Seq (base / "stub"))),
 
@@ -105,12 +107,13 @@ object TreodeBuild extends Build {
 
     libraryDependencies ++= Seq (
       "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "stub->default",
-      "org.scalatest" %% "scalatest" % "2.1.0" % "stub->default",
-      "org.scalacheck" %% "scalacheck" % "1.11.3" % "stub->default"))
+      "org.scalatest" %% "scalatest" % "2.2.0" % "stub->default",
+      "org.scalacheck" %% "scalacheck" % "1.11.4" % "stub->default"))
 
   // Settings for projects with stubs.
   lazy val stubSettings =
     inConfig (Stub) (Defaults.configSettings) ++
+    addArtifact (artifact in (Stub, packageBin), packageBin in Stub) ++
     inConfig (TestWithStub) (Defaults.testTasks) ++
     inConfig (IntensiveTestWithStub) (Defaults.testTasks) ++
     inConfig (PeriodicTestWithStub) (Defaults.testTasks) ++
@@ -163,55 +166,24 @@ object TreodeBuild extends Build {
     .settings (standardSettings: _*)
     .settings (assemblySettings: _*)
     .settings (
-
       name := "systest",
-
-      test in assembly := {})
-
-  lazy val example1 = Project ("example1", file ("example1"))
-    .dependsOn (store % "compile;test->stub")
-    .settings (assemblySettings: _*)
-    .settings (
-
-      organization := "com.treode",
-      name := "example1",
-      version := "0.1",
-      scalaVersion := "2.10.3",
-
-      jarName in assembly := "server.jar",
-      mainClass in assembly := Some ("example1.Main"),
       test in assembly := {},
-
-      unmanagedSourceDirectories in Compile <<=
-        (baseDirectory ((base: File) => Seq (base / "src"))),
-
-      unmanagedSourceDirectories in TestWithStub <<=
-        (baseDirectory ((base: File) => Seq (base / "test"))),
-
-      scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked",
-        "-Yinline-warnings"),
-
-      libraryDependencies ++= Seq (
-        "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.3.3",
-        "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.3",
-        "com.twitter" %% "finatra" % "1.5.3"),
-
-      resolvers += "Twitter" at "http://maven.twttr.com")
+      publishArtifact := false)
 
   lazy val root = Project ("root", file ("."))
-    .aggregate (buffer, pickle, async, cluster, disk, store, systest, example1)
+    .aggregate (buffer, pickle, async, cluster, disk, store, systest)
     .settings (unidocSettings: _*)
     .settings (
 
       name := "root",
 
       scalacOptions in (ScalaUnidoc, unidoc) ++= Seq (
-        "-doc-title", "TreodeDB 0.1", 
+        "-doc-title", "TreodeDB 0.1.0", 
         "-doc-root-content", baseDirectory.value + "/rootdoc.txt"),
 
       unidocConfigurationFilter in (ScalaUnidoc, unidoc) := 
         inConfigurations (Compile, Stub),
 
       unidocProjectFilter in (ScalaUnidoc, unidoc) := 
-        inAnyProject -- inProjects (systest, example1))
+        inAnyProject -- inProjects (systest))
 }

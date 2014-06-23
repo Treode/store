@@ -7,8 +7,6 @@
 .idea_modules
 .project
 .settings
-/*/logs
-/*/target
-/logs
+/**/logs
+/**/target
 /project/project
-/target
