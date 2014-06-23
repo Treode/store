@@ -27,11 +27,18 @@ class DriveGeometrySpec extends FlatSpec {
 
   it should "align block length" in {
     val c = DriveGeometry (16, 12, 1<<20)
-    assertResult (0) (c.blockAlignLength (0))
-    assertResult (block) (c.blockAlignLength (1))
-    assertResult (block) (c.blockAlignLength (4095))
-    assertResult (block) (c.blockAlignLength (4096))
-    assertResult (2*block) (c.blockAlignLength (4097))
+
+    assertResult (0) (c.blockAlignUp (0))
+    assertResult (block) (c.blockAlignUp (1))
+    assertResult (block) (c.blockAlignUp (4095))
+    assertResult (block) (c.blockAlignUp (4096))
+    assertResult (2*block) (c.blockAlignUp (4097))
+
+    assertResult (0) (c.blockAlignDown (0))
+    assertResult (0) (c.blockAlignDown (1))
+    assertResult (0) (c.blockAlignDown (4095))
+    assertResult (block) (c.blockAlignDown (4096))
+    assertResult (block) (c.blockAlignDown (4097))
   }
 
   it should "compute the segment bounds" in {

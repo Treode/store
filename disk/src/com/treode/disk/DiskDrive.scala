@@ -262,8 +262,8 @@ private class DiskDrive (
     var realloc = false
     for (page <- pages) {
       projector.add (page.typ, page.obj, page.group)
-      val pageBytes = geometry.blockAlignLength (page.byteSize)
-      val ledgerBytes = geometry.blockAlignLength (projector.byteSize)
+      val pageBytes = geometry.blockAlignUp (page.byteSize)
+      val ledgerBytes = geometry.blockAlignUp (projector.byteSize)
       if (totalBytes + ledgerBytes + pageBytes < limit) {
         accepts.add (page)
         totalBytes += pageBytes
@@ -281,7 +281,7 @@ private class DiskDrive (
     for (page <- pages) {
       val start = buffer.writePos
       page.write (buffer)
-      buffer.writePos = geometry.blockAlignLength (buffer.writePos)
+      buffer.writePos = geometry.blockAlignUp (buffer.writePos)
       val length = buffer.writePos - start
       callbacks.add (offset (id, start, length, page.cb))
       ledger.add (page.typ, page.obj, page.group, length)

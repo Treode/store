@@ -14,8 +14,17 @@ class DriveGeometry private (
 
   val segmentCount = ((diskBytes + segmentBytes - (blockBytes<<2)) >> segmentBits).toInt
 
-  def blockAlignLength (length: Int): Int =
+  def blockAlignDown (pos: Int): Int =
+    pos & blockMask
+
+  def blockAlignDown (pos: Long): Long =
+    pos & blockMask.toLong
+
+  def blockAlignUp (length: Int): Int =
     (length + blockBytes - 1) & blockMask
+
+  def blockAlignUp (length: Long): Long =
+    (length + blockBytes - 1) & blockMask.toLong
 
   private [disk] def segmentNum (pos: Long): Int =
     (pos >> segmentBits) .toInt
