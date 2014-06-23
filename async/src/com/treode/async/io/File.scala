@@ -10,13 +10,16 @@ import com.google.common.hash.{HashCode, HashFunction}
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.buffer.PagedBuffer
 
-import Async.async
+import Async.{async, guard, when}
 
 /** A file that has useful behavior (flush/fill) and that can be mocked. */
 class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Scheduler) {
 
-  private def read (dst: ByteBuffer, pos: Long): Async [Int] =
+  private def read (dst: ByteBuffer, pos: Long): Async [Int] = {
+    require (file != null)
+    require (dst != null)
     async (file.read (dst, pos, _, Callback.IntHandler))
+  }
 
   private def write (src: ByteBuffer, pos: Long): Async [Int] =
     async (file.write (src, pos, _, Callback.IntHandler))
@@ -24,22 +27,27 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
   private def whilst (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
     scheduler.whilst (p) (f)
 
+  protected def _fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
+    guard {
+      input.capacity (input.readPos + len)
+      var _pos = pos
+      var _buf = input.buffer (input.writePos, input.writeableBytes)
+      whilst (input.readableBytes < len) {
+        for (result <- read (_buf, _pos)) yield {
+          if (result < 0)
+            throw new Exception ("End of file reached.")
+          input.writePos = input.writePos + result
+          _pos += result
+          if (_buf.remaining == 0 && input.readableBytes < len)
+            _buf = input.buffer (input.writePos, input.writeableBytes)
+        }}}
+
+
   /** Read from the file until `input` has at least `len` readable bytes.  If `input` already has
     * that many readable bytes, this will invoke the callback promptly.
     */
-  def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] = {
-    input.capacity (input.readPos + len)
-    var _pos = pos
-    var _buf = input.buffer (input.writePos, input.writeableBytes)
-    whilst (input.readableBytes < len) {
-      for (result <- read (_buf, _pos)) yield {
-        if (result < 0)
-          throw new Exception ("End of file reached.")
-        input.writePos = input.writePos + result
-        _pos += result
-        if (_buf.remaining == 0 && input.readableBytes < len)
-          _buf = input.buffer (input.writePos, input.writeableBytes)
-      }}}
+  def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
+    when (input.readableBytes < len) (_fill (input, pos, len))
 
   /** Read a frame with its own length from the file; return the length.
     *
@@ -57,6 +65,31 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
       _ <- fill (input, pos+4, len)
     } yield len
   }
+
+  private def _fill (input: PagedBuffer, pos: Long, len: Int, bytes: Int, mask: Int): Async [Unit] =
+    when (input.readableBytes < len) (_fill (input, pos, (len + bytes - 1) & mask))
+
+  def deframe (input: PagedBuffer, pos: Long, align: Int): Async [Int] =
+    guard {
+      val bytes = 1 << align
+      val mask = ~(bytes-1)
+      if ((input.writePos & ~mask) != 0) println ("Buffer writePos must be aligned.")
+      for {
+        _ <- _fill (input, pos, 4, bytes, mask)
+        len = input.readInt()
+        _ <- _fill (input, pos + 4, len, bytes, mask)
+      } yield len
+    }
+
+  private def verify (hashf: HashFunction, input: PagedBuffer, len: Int) {
+    val bytes = new Array [Byte] (hashf.bits >> 3)
+    input.readBytes (bytes, 0, bytes.length)
+    val expected = HashCode.fromBytes (bytes)
+    val found = input.hash (input.readPos, len, hashf)
+    if (found != expected) {
+      input.readPos += len
+      throw new HashMismatchException
+    }}
 
   /** Read a frame with its own checksum and length from the file; return the length.
     *
@@ -76,30 +109,39 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
       len = input.readInt()
       _ <- fill (input, pos+head, len)
     } yield {
-      val bytes = new Array [Byte] (hashf.bits >> 3)
-      input.readBytes (bytes, 0, bytes.length)
-      val expected = HashCode.fromBytes (bytes)
-      val found = input.hash (input.readPos, len, hashf)
-      if (found != expected) {
-        input.readPos += len
-        throw new HashMismatchException
-      }
+      verify (hashf, input, len)
       len
     }}
 
+  def deframe (hashf: HashFunction, input: PagedBuffer, pos: Long, align: Int): Async [Int] =
+    guard {
+      val bytes = 1 << align
+      val mask = ~(bytes-1)
+      if ((input.writePos & ~mask) != 0) println ("Buffer writePos must be aligned.")
+      val head = 4 + (hashf.bits >> 3)
+      for {
+        _ <- _fill (input, pos, head, bytes, mask)
+        len = input.readInt()
+        _ <- _fill (input, pos + head, len, bytes, mask)
+      } yield {
+        verify (hashf, input, len)
+        len
+      }}
+
   /** Write all readable bytes from `output` to the file at `pos`. */
-  def flush (output: PagedBuffer, pos: Long): Async [Unit] = {
-    var _pos = pos
-    var _buf = output.buffer (output.readPos, output.readableBytes)
-    whilst (output.readableBytes > 0) {
-      for (result <- write (_buf, _pos)) yield {
-        if (result < 0)
-          throw new Exception ("File write failed.")
-        output.readPos = output.readPos + result
-        _pos += result
-        if (_buf.remaining == 0 && output.readableBytes > 0)
-          _buf = output.buffer (output.readPos, output.readableBytes)
-      }}}
+  def flush (output: PagedBuffer, pos: Long): Async [Unit] =
+    when (output.readableBytes > 0) {
+      var _pos = pos
+      var _buf = output.buffer (output.readPos, output.readableBytes)
+      whilst (output.readableBytes > 0) {
+        for (result <- write (_buf, _pos)) yield {
+          if (result < 0)
+            throw new Exception ("File write failed.")
+          output.readPos = output.readPos + result
+          _pos += result
+          if (_buf.remaining == 0 && output.readableBytes > 0)
+            _buf = output.buffer (output.readPos, output.readableBytes)
+        }}}
 
   def close(): Unit = file.close()
 }

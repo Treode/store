@@ -97,7 +97,7 @@ private object DiskTestTools {
     def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, grp: PageGroup) (
         implicit scheduler: StubScheduler) {
       val drive = drives.drives (pos.disk)
-      val num = (pos.offset >> drive.geometry.segmentBits).toInt
+      val num = (pos.offset >> drive.geom.segmentBits).toInt
       if (num == drive.pageSeg.num) {
         val ledger = drive.pageLedger
         assert (
@@ -105,8 +105,8 @@ private object DiskTestTools {
             s"Expected ($typ, $obj, $grp) in restored from log.")
       } else {
         assert (!drive.alloc.free.contains (num), "Expected segment to be allocated.")
-        val seg = drive.geometry.segmentBounds (num)
-        val ledger = PageLedger.read (drive.file, seg.base) .pass
+        val seg = drive.geom.segmentBounds (num)
+        val ledger = PageLedger.read (drive.file, drive.geom, seg.base) .pass
         assert (
             ledger.get (typ, obj, grp) > 0,
             s"Expected ($typ, $obj, $grp) in ledger at ${seg.base} on ${drive.id}.")

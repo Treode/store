@@ -166,23 +166,24 @@ private object PageLedger {
     merger.result
   }
 
-  def read (file: File, pos: Long): Async [PageLedger] =
+  def read (file: File, geom: DriveGeometry, pos: Long): Async [PageLedger] =
     guard {
       val buf = PagedBuffer (12)
-      for (_ <- file.deframe (checksum, buf, pos))
+      for (_ <- file.deframe (checksum, buf, pos, geom.blockBits))
         yield Zipped.pickler.unpickle (buf) .unzip
     }
 
-  def write (ledger: Zipped, file: File, pos: Long, limit: Long): Async [Unit] =
+  def write (ledger: Zipped, file: File, geom: DriveGeometry, pos: Long, limit: Long): Async [Unit] =
     guard {
       val buf = PagedBuffer (12)
       Zipped.pickler.frame (checksum, ledger, buf)
+      buf.writePos = geom.blockAlignUp (buf.writePos)
       if (buf.writePos > limit - pos)
         throw new PageLedgerOverflowException
       file.flush (buf, pos)
     }
 
-  def write (ledger: PageLedger, file: File, pos: Long, limit: Long): Async [Unit] =
+  def write (ledger: PageLedger, file: File, geom: DriveGeometry, pos: Long, limit: Long): Async [Unit] =
     guard {
-      write (ledger.zip, file, pos, limit)
+      write (ledger.zip, file, geom, pos, limit)
     }}

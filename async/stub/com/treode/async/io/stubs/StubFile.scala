@@ -58,11 +58,11 @@ class StubFile private (
         f (cb)
       }}}
 
-  override def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] = {
+  override protected def _fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] = {
     require (pos >= 0, "Fill position must be non-negative")
     require (pos + len < Int.MaxValue)
-    if ((pos & mask) != 0) println ("Fill position must be aligned")
-    if ((len & mask) != 0) println ("Fill length must be aligned")
+    require ((pos & mask) == 0, "Fill position must be aligned")
+    require ((len & mask) == 0, "Fill length must be aligned")
     _stop { cb =>
       try {
         if (len <= input.readableBytes) {
@@ -86,8 +86,8 @@ class StubFile private (
   override def flush (output: PagedBuffer, pos: Long): Async [Unit] = {
     require (pos >= 0, "Flush position must be non-negative")
     require (pos + output.readableBytes < Int.MaxValue)
-    if ((pos & mask) != 0) println ("Flush position must be aligned")
-    if ((output.readableBytes & mask) != 0) println ("Flush length must be aligned")
+    require ((pos & mask) == 0, "Flush position must be aligned.")
+    require ((output.readableBytes & mask) == 0, "Flush length must be aligned.")
     _stop { cb =>
       try {
         if (data.length < pos + output.readableBytes)

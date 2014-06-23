@@ -15,7 +15,7 @@ private class SegmentPointer private (
     disk.compacting (Seq (this))
 
   def probe(): Async [PageLedger] =
-    PageLedger.read (disk.file, bounds.base)
+    PageLedger.read (disk.file, disk.geom, bounds.base)
 
   def free(): Unit =
     disk.free (this)

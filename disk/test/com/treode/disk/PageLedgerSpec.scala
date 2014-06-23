@@ -32,7 +32,7 @@ class PageLedgerSpec extends FlatSpec {
     file.flush (buf, 0) .pass
 
     // Check that the write throws an exception.
-    PageLedger.write (ledger, file, 0, 256) .fail [PageLedgerOverflowException]
+    PageLedger.write (ledger, file, geom, 0, 256) .fail [PageLedgerOverflowException]
 
     // Check that the file has not been overwritten.
     buf.clear()

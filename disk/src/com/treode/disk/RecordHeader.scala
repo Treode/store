@@ -44,9 +44,10 @@ private object RecordHeader {
 
   val overhead = 19 // byte count, tag, batch, typeId; 4 + 1 + 9 + 5
 
-  def write (entry: RecordHeader, file: File, pos: Long): Async [Unit] =
+  def init (file: File, geom: DriveGeometry, pos: Long): Async [Unit] =
     guard {
       val buf = PagedBuffer (12)
-      pickler.frame (entry, buf)
+      pickler.frame (LogEnd, buf)
+      buf.writePos = geom.blockAlignUp (buf.writePos)
       file.flush (buf, pos)
     }}

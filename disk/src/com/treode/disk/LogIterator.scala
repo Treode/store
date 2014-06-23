@@ -17,7 +17,7 @@ private class LogIterator private (
     records: RecordRegistry,
     path: Path,
     file: File,
-    buf: PagedBuffer,
+    logBuf: PagedBuffer,
     superb: SuperBlock,
     alloc: Allocator,
     logSegs: ArrayDeque [Int],
@@ -27,9 +27,11 @@ private class LogIterator private (
     config: Disk.Config
 ) extends AsyncIterator [(Long, Unit => Any)] {
 
+  import superb.{geometry => geom, id}
+  import superb.geometry.{blockAlignDown, blockBits, segmentNum}
+
   private var draining = superb.draining
   private var logPos = superb.logHead
-  private var logTail = -1L
   private var pagePos = Option.empty [Long]
   private var pageLedger = new PageLedger
 
@@ -51,67 +53,65 @@ private class LogIterator private (
     }
 
     def read (len: Int) {
-      val start = buf.readPos
-      val hdr = RecordHeader.pickler.unpickle (buf)
+      val start = logBuf.readPos
+      val hdr = RecordHeader.pickler.unpickle (logBuf)
       hdr match {
 
         case LogEnd =>
-          logTail = logPos
-          logPos = -1L
-          buf.clear()
+          logBuf.readPos = start - 4
           scheduler.pass (cb, ())
 
         case LogAlloc (next) =>
-          logSeg = alloc.alloc (next, superb.geometry, config)
+          logSeg = alloc.alloc (next, geom, config)
           logSegs.add (logSeg.num)
           logPos = logSeg.base
-          buf.clear()
-          file.deframe (buf, logPos) run (_read)
+          logBuf.clear()
+          file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case PageWrite (pos, _ledger) =>
-          val num = superb.geometry.segmentNum (pos)
-          alloc.alloc (num, superb.geometry, config)
+          val num = segmentNum (pos)
+          alloc.alloc (num, geom, config)
           pagePos = Some (pos)
           pageLedger.add (_ledger)
           logPos += len + 4
-          file.deframe (buf, logPos) run (_read)
+          file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case PageClose (num) =>
           alloc.alloc (num, superb.geometry, config)
           pagePos = None
           pageLedger = new PageLedger
           logPos += len + 4
-          file.deframe (buf, logPos) run (_read)
+          file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case SegmentFree (nums) =>
           alloc.free (nums)
           logPos += len + 4
-          file.deframe (buf, logPos) run (_read)
+          file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case Checkpoint (pos, _ledger) =>
-          val num = superb.geometry.segmentNum (pos - 1)
+          val num = segmentNum (pos - 1)
           alloc.alloc (num, superb.geometry, config)
           pagePos = Some (pos)
           pageLedger = _ledger.unzip
           logPos += len + 4
-          file.deframe (buf, logPos) run (_read)
+          file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case DiskDrain (num) =>
           draining = true
           pagePos = None
           pageLedger = new PageLedger
           logPos += len + 4
-          file.deframe (buf, logPos) run (_read)
+          file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case Entry (batch, id) =>
-          val end = buf.readPos
-          val entry = records.read (id.id, buf, len - end + start)
+          val end = logBuf.readPos
+          val entry = records.read (id.id, logBuf, len - end + start)
           logPos += len + 4
           f ((batch, entry)) run (_next)
       }}
 
     def next() {
-      file.deframe (buf, logPos) run (_read)
+      file.deframe (logBuf, logPos, blockBits) run (_read)
     }}
 
   def foreach (f: ((Long, Unit => Any)) => Async [Unit]): Async [Unit] =
@@ -123,19 +123,22 @@ private class LogIterator private (
         val seg = SegmentBounds (-1, -1L, -1L)
         (seg, -1L, new PageLedger, false)
       case Some (pos) =>
-        val num = superb.geometry.segmentNum (pos - 1)
-        val seg = alloc.alloc (num, superb.geometry, config)
+        val num = segmentNum (pos - 1)
+        val seg = alloc.alloc (num, geom, config)
         (seg, pos, pageLedger, true)
       case None =>
-        val seg = alloc.alloc (superb.geometry, config)
+        val seg = alloc.alloc (geom, config)
         (seg, seg.limit, pageLedger, true)
     }
 
   def close (kit: DiskKit): DiskDrive = {
     val (seg, head, ledger, dirty) = pages()
-    new DiskDrive (
-        superb.id, path, file, superb.geometry, alloc, kit, draining, logSegs,
-        superb.logHead, logTail, logSeg.limit, buf, seg, head, ledger, dirty)
+    val rpos = blockAlignDown (logBuf.readPos)
+    logBuf.writePos = logBuf.readPos
+    logBuf.readPos = rpos
+    logBuf.discard (rpos)
+    new DiskDrive (superb.id, path, file, geom, alloc, kit, logBuf, draining, logSegs,
+        superb.logHead, logPos, logSeg.limit, seg, head, ledger, dirty)
   }}
 
 private object LogIterator {
@@ -152,16 +155,19 @@ private object LogIterator {
     val path = read.path
     val file = read.file
     val superb = read.superb (useGen0)
+    val geom = superb.geometry
     val alloc = Allocator (superb.free)
-    val num = superb.geometry.segmentNum (superb.logHead)
-    val logSeg = alloc.alloc (num, superb.geometry, config)
+    val num = geom.segmentNum (superb.logHead)
+    val logSeg = alloc.alloc (num, geom, config)
     val logSegs = new ArrayDeque [Int]
     logSegs.add (logSeg.num)
     val buf = PagedBuffer (12)
 
+    val logBase = geom.blockAlignDown (superb.logHead)
     for {
-      _ <- file.fill (buf, superb.logHead, 1)
+      _ <- file.fill (buf, logBase, geom.blockBytes)
     } yield {
+      buf.readPos = (superb.logHead - logBase).toInt
       val iter =
           new LogIterator (records, path, file, buf, superb, alloc, logSegs, logSeg)
       (superb.id, iter)
