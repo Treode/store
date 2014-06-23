@@ -33,8 +33,8 @@ private object SuperBlock {
   def clear (gen: Int, file: File) (implicit config: Disk.Config): Async [Unit] =
     guard {
       val buf = PagedBuffer (12)
-      buf.writeInt (0)
-      buf.writeZeroToAlign (config.superBlockBits)
+      while (buf.writePos < config.superBlockBytes)
+        buf.writeInt (0)
       file.flush (buf, position (gen))
     }
 
@@ -44,5 +44,6 @@ private object SuperBlock {
       pickler.frame (checksum, superb, buf)
       if (buf.writePos > config.superBlockBytes)
         throw new SuperblockOverflowException
+      buf.writePos = config.superBlockBytes
       file.flush (buf, position (superb.boot.gen))
     }}

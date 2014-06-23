@@ -281,7 +281,7 @@ private class DiskDrive (
     for (page <- pages) {
       val start = buffer.writePos
       page.write (buffer)
-      buffer.writeZeroToAlign (geometry.blockBits)
+      buffer.writePos = geometry.blockAlignLength (buffer.writePos)
       val length = buffer.writePos - start
       callbacks.add (offset (id, start, length, page.cb))
       ledger.add (page.typ, page.obj, page.group, length)

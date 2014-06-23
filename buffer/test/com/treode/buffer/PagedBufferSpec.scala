@@ -128,34 +128,6 @@ class PagedBufferSpec extends FlatSpec {
   buffers (39, 56, 1, 2, 7, 31)
   buffers (39, 57, 1, 2, 7, 32)
 
-  def zeroAlign (offset: Int, bits: Int, length: Int) {
-    it should (s"zero align offset=$offset, bits=$bits") in {
-      val buffer = PagedBuffer (pageBits)
-      buffer.writePos = offset
-      buffer.writeZeroToAlign (bits)
-      assertResult (offset + length) (buffer.writePos)
-      buffer.readPos = offset
-      for (i <- 0 until length)
-        assertResult (0) (buffer.readByte())
-    }}
-
-  behavior of "PagedBuffer.zeroAlign"
-  zeroAlign (0, 5, 0)
-  zeroAlign (1, 5, 31)
-  zeroAlign (31, 5, 1)
-  zeroAlign (32, 5, 0)
-  zeroAlign (33, 5, 31)
-  zeroAlign (0, 3, 0)
-  zeroAlign (1, 3, 7)
-  zeroAlign (7, 3, 1)
-  zeroAlign (8, 3, 0)
-  zeroAlign (9, 3, 7)
-  zeroAlign (0, 7, 0)
-  zeroAlign (1, 7, 127)
-  zeroAlign (127, 7, 1)
-  zeroAlign (128, 7, 0)
-  zeroAlign (129, 7, 127)
-
   def writeAndReadBytes (size: Int, srcOff: Int, dstOff: Int, len: Int) {
     it should (s"write and read bytes size=$size, srcOff=$srcOff, dstOff=$dstOff, len=$len") in {
       var bytes = Array.tabulate (size) (i => (i + 1).toByte)
