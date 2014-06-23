@@ -18,6 +18,7 @@ libraryDependencies ++= Seq (
   "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.3.3",
   "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.3",
   "com.treode" %% "store" % "0.1.0" % "compile;test->stub",
+  "com.treode" %% "jackson" % "0.1.0",
   "com.twitter" %% "finatra" % "1.5.3")
 
 resolvers += "Twitter" at "http://maven.twttr.com"

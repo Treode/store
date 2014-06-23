@@ -157,6 +157,16 @@ object TreodeBuild extends Build {
     .dependsOn (cluster % "compile;stub->stub", disk % "compile;stub->stub")
     .settings (stubSettings: _*)
 
+  lazy val jackson = Project ("jackson", file ("jackson"))
+    .configs (IntensiveTest, PeriodicTest)
+    .dependsOn (store)
+    .settings (standardSettings: _*)
+    .settings (
+
+        libraryDependencies ++= Seq (
+          "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.3.3",
+          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.3"))
+
   // A standalone server for system tests.  Separated to keep system
   // testing components out of production code (these components are
   // in the "default" Ivy configuration in this project).
@@ -171,7 +181,7 @@ object TreodeBuild extends Build {
       publishArtifact := false)
 
   lazy val root = Project ("root", file ("."))
-    .aggregate (buffer, pickle, async, cluster, disk, store, systest)
+    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, systest)
     .settings (unidocSettings: _*)
     .settings (
 
