@@ -9,6 +9,7 @@ import com.google.common.hash.{HashCode, HashFunction, Hashing}
 import com.treode.buffer.ArrayBuffer
 import com.treode.pickle.{Pickler, Picklers, PickleContext, UnpickleContext}
 
+/** Convenience wrapper for an array of bytes; sorts lexigraphically. */
 class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
 
   def length = bytes.length

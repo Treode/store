@@ -2,6 +2,9 @@ package com.treode.store
 
 import com.treode.pickle.Pickler
 
+/** A complete row: the key, value and timestamp; sorts in reverse chronological order. If the
+  * value is `None`, that means the row was deleted at that timestamp.
+  */
 case class Cell (key: Bytes, time: TxClock, value: Option [Bytes]) extends Ordered [Cell] {
 
   def byteSize = Cell.pickler.byteSize (this)

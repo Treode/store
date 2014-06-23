@@ -1,5 +1,6 @@
 package com.treode.store
 
+/** The table and key of a row to read. */
 case class ReadOp (table: TableId, key: Bytes) extends Op
 
 object ReadOp {

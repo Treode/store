@@ -96,6 +96,9 @@ package object misc {
       case _: NumberFormatException => None
     }}
 
+  /** Doesn't mind large values that flip the sign.  It accepts positive values too large for 63
+    * bits, but it still rejects values too large for 64 bits.
+    */
   private def parseUnsigendLong (string: String, radix: Int): Option [Long] = {
     val big = BigInt (new BigInteger (string, radix))
     if (big > new BigInteger ("FFFFFFFFFFFFFFFF", 16))
@@ -103,6 +106,10 @@ package object misc {
     Some (big.longValue())
   }
 
+  /** Parses decimal (no leading zero), octal (leading zero) or hexadecimal (leading `0x` or `#`).
+    * Doesn't mind large values that flip the sign.  It accepts positive values too large for 63
+    * bits, but it still rejects values too large for 64 bits.
+    */
   def parseUnsignedLong (s: String): Option [Long] = {
     try {
       if (s.length == 0 || s.head == '-')

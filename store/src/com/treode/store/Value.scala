@@ -2,6 +2,9 @@ package com.treode.store
 
 import com.treode.pickle.Pickler
 
+/** A value together with its timestamp; sorts in reverse chronological order.  If the value is 
+  * `None`, that means the row was deleted at that timestamp.
+  */
 case class Value (time: TxClock, value: Option [Bytes]) {
 
   def value [V] (p: Pickler [V]): Option [V] =

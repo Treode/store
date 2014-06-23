@@ -5,6 +5,15 @@ import scala.language.implicitConversions
 import com.google.common.primitives.UnsignedLongs
 import com.treode.pickle.Picklers
 
+/** The identifier for a table.
+  *
+  * We recommend using a random long, which is highly likely to be unique.  This removes the need
+  * to keep a registry and is very easy to search.  To generate a random long, try
+  *
+  * '''
+  * head -c 8 /dev/urandom | hexdump -e "\"0x\" 8/1 \"%02X\" \"L\n\""
+  * '''
+  */
 class TableId private (val id: Long) extends AnyVal with Ordered [TableId] {
 
   def compare (that: TableId): Int =

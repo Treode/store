@@ -180,6 +180,8 @@ object TreodeBuild extends Build {
       test in assembly := {},
       publishArtifact := false)
 
+  lazy val copyDocAssetsTask = taskKey [Unit] ("Copy doc assets")
+
   lazy val root = Project ("root", file ("."))
     .aggregate (buffer, pickle, async, cluster, disk, store, jackson, systest)
     .settings (unidocSettings: _*)
@@ -188,12 +190,21 @@ object TreodeBuild extends Build {
       name := "root",
 
       scalacOptions in (ScalaUnidoc, unidoc) ++= Seq (
+        "-diagrams",
         "-doc-title", "TreodeDB 0.1.0", 
-        "-doc-root-content", baseDirectory.value + "/rootdoc.txt"),
+        "-doc-root-content", baseDirectory.value + "/doc/rootdoc.html"),
 
       unidocConfigurationFilter in (ScalaUnidoc, unidoc) := 
         inConfigurations (Compile, Stub),
 
       unidocProjectFilter in (ScalaUnidoc, unidoc) := 
-        inAnyProject -- inProjects (systest))
+        inAnyProject -- inProjects (systest),
+
+      copyDocAssetsTask := {
+        val sourceDir = file ("doc")
+        val targetDir = (target in (ScalaUnidoc, unidoc)).value
+        IO.copyDirectory (sourceDir, targetDir)
+      },
+
+      copyDocAssetsTask <<= copyDocAssetsTask triggeredBy (unidoc in Compile))
 }

@@ -2,11 +2,17 @@ package com.treode.store
 
 import com.treode.pickle.Pickler
 
+/** Inclusive and exclusive bounds.  Case classes are nested in the [[Bound$ companion object]]. */
 sealed abstract class Bound [A] {
 
   def bound: A
+
   def inclusive: Boolean
+
+  /** Less than accounting for inclusive/exclusive. */
   def <* (v: A) (implicit ordering: Ordering [A]): Boolean
+
+  /** Greater than accounting for inclusive/exclusive. */
   def >* (v: A) (implicit ordering: Ordering [A]): Boolean
 
   def map [B] (f: A => B): Bound [B]

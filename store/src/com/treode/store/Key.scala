@@ -2,6 +2,7 @@ package com.treode.store
 
 import com.treode.pickle.Pickler
 
+/** A key together with a timestamp; sorts in reverse chronological order. */
 case class Key (key: Bytes, time: TxClock) extends Ordered [Key] {
 
   def key [K] (p: Pickler [K]): K =

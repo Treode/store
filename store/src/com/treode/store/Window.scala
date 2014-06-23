@@ -2,6 +2,14 @@ package com.treode.store
 
 import com.treode.async.AsyncIterator
 
+/** A window of time for scanning a table.
+  *
+  * TreodeDB retains past values for rows, and windows permit the scanning of just one recent
+  * value for the row or its changes over time.  The case classes are nested in the
+  * [[Window$ companion object]].
+  *
+  * <img src="/img/windows.png"/>
+  */
 sealed abstract class Window {
 
   def later: Bound [TxClock]
@@ -9,8 +17,16 @@ sealed abstract class Window {
   def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell]
 }
 
+/** A window of time for scanning a table.
+  *
+  * TreodeDB retains past values for rows, and windows permit the scanning of just one recent
+  * value for the row or its changes over time.
+  *
+  * <img src="/img/windows.png"/>
+  */
 object Window {
 
+  /** Choose only the most recent value as of `later` so long as that was set after `earlier`. */
   case class Recent (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
 
     def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell] = {
@@ -34,6 +50,7 @@ object Window {
       Recent (Bound (later, inclusive), Bound (TxClock.MinValue, true))
   }
 
+  /** Choose all changes between `later` and `earlier`. */
   case class Between (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
 
     def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell] =
@@ -46,6 +63,9 @@ object Window {
       Between (Bound (later, linc), Bound (earlier, einc))
   }
 
+  /** Choose all changes between `later` and `earlier` and the most recent change as of 
+    * `earlier`.
+    */
   case class Through (later: Bound [TxClock], earlier: TxClock) extends Window {
 
     def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell] = {
