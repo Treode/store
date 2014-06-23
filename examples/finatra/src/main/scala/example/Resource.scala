@@ -1,4 +1,4 @@
-package example1
+package example
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.treode.async.Async

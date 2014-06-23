@@ -10,7 +10,7 @@ scalaVersion := "2.10.4"
 
 jarName in assembly := "server.jar"
 
-mainClass in assembly := Some ("example1.Main")
+mainClass in assembly := Some ("example.Main")
 
 test in assembly := {}
 

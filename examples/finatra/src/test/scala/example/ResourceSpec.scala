@@ -1,4 +1,4 @@
-package example1
+package example
 
 import com.treode.async.stubs.StubScheduler
 import com.treode.store.{Bytes, Cell, TxClock, TxId, WriteOp}

@@ -1,4 +1,4 @@
-package example1
+package example
 
 import java.nio.file.{Path, Paths}
 import scala.collection.JavaConversions._

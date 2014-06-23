@@ -19,12 +19,12 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 import Async.async
 
-package example1 {
+package example {
 
   class BadRequestException (val message: String) extends Exception
 }
 
-package object example1 {
+package object example {
 
   implicit val flaggableCellId: Flaggable [CellId] =
     Flaggable.mandatory (s => CellId (parseUnsignedLong (s) .get))
