@@ -1,12 +1,4 @@
-*.db
-*.jar
-.cache
-.classpath
-.history
-.idea
-.idea_modules
-.project
-.settings
-/**/logs
-/**/target
-/project/project
+Gemfile
+Gemfile.lock
+_layouts/node_modules/
+_site/
