@@ -41,7 +41,7 @@ private object SuperBlock {
   def write (superb: SuperBlock, file: File) (implicit config: Disk.Config): Async [Unit] =
     guard {
       val buf = PagedBuffer (12)
-      pickler.frame (checksum, superb, buf)
+      pickler.pickle (superb, buf)
       if (buf.writePos > config.superBlockBytes)
         throw new SuperblockOverflowException
       buf.writePos = config.superBlockBytes
