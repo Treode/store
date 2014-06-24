@@ -11,7 +11,7 @@ import com.treode.pickle.Pickler
   * run in parallel on different sets of hosts.  To determine which hosts serve some of the
   * replicas in a slice, use the `hosts` method in [[Store]].
   *
-  * <img src="/img/slices.png"></img>
+  * <img src="../../../img/slices.png"></img>
   *
   * @constructor Create a slice.
   * @param slice This slice; must be between 0 inclusive and nslices exclusive.

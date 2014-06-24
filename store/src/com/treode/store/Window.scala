@@ -8,7 +8,7 @@ import com.treode.async.AsyncIterator
   * value for the row or its changes over time.  The case classes are nested in the
   * [[Window$ companion object]].
   *
-  * <img src="/img/windows.png"/>
+  * <img src="../../../img/windows.png"/>
   */
 sealed abstract class Window {
 
@@ -22,7 +22,7 @@ sealed abstract class Window {
   * TreodeDB retains past values for rows, and windows permit the scanning of just one recent
   * value for the row or its changes over time.
   *
-  * <img src="/img/windows.png"/>
+  * <img src="../../../img/windows.png"/>
   */
 object Window {
 
