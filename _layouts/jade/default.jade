@@ -5,12 +5,12 @@ html(lang='en')
     meta(http-equiv='X-UA-Compatible', content='IE=edge')
     meta(name='viewport', content='width=device-width, initial-scale=1')
     meta(name='author', content='Treode, Inc.')
-    link(rel='shortcut icon', type='image/x-icon', href='/favicon.ico')
-    link(rel='apple-touch-icon-precomposed', sizes='114x114', href='/apple-touch-icon-114x114-precomposed.png')
-    link(rel='apple-touch-icon-precomposed', sizes='72x72', href='/apple-touch-icon-72x72-precomposed.png')
-    link(rel='apple-touch-icon-precomposed', href='/apple-touch-icon-precomposed.png')
-    link(rel='stylesheet', href='/css/bootstrap.min.css')
-    link(rel='stylesheet', href='/css/treode.min.css')
+    link(rel='shortcut icon', type='image/x-icon', href='favicon.ico')
+    link(rel='apple-touch-icon-precomposed', sizes='114x114', href='apple-touch-icon-114x114-precomposed.png')
+    link(rel='apple-touch-icon-precomposed', sizes='72x72', href='apple-touch-icon-72x72-precomposed.png')
+    link(rel='apple-touch-icon-precomposed', href='apple-touch-icon-precomposed.png')
+    link(rel='stylesheet', href='css/bootstrap.min.css')
+    link(rel='stylesheet', href='css/treode.min.css')
     //[if lt IE 9]
     script(src='https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js')
     script(src='https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js')
@@ -27,27 +27,27 @@ html(lang='en')
             span.icon-bar
             span.icon-bar
           a.navbar-brand(href='//treode.com')
-            img(src='/img/graphic-128x128.png', width='20px')
-          a.navbar-brand(href='/') TreodeDB
+            img(src='img/graphic-128x128.png', width='20px')
+          a.navbar-brand(href='./') TreodeDB
         .collapse.navbar-collapse
           ul.nav.navbar-nav
           
             | {% if page.tag == 'rws' %}
-            li.active: a(href='/read-write-scan.html') Read, Write, Scan
+            li.active: a(href='read-write-scan.html') Read, Write, Scan
             | {% else %}
-            li: a(href='/read-write-scan.html') Read, Write, Scan
+            li: a(href='read-write-scan.html') Read, Write, Scan
             | {% endif %}
 
             | {% if page.tag == 'disks' %}
-            li.active: a(href='/managing-disks.html') Managing Disks
+            li.active: a(href='managing-disks.html') Managing Disks
             | {% else %}
-            li: a(href='/managing-disks.html') Managing Disks
+            li: a(href='managing-disks.html') Managing Disks
             | {% endif %}
 
             | {% if page.tag == 'peers' %}
-            li.active: a(href='/managing-peers.html') Managing Peers
+            li.active: a(href='managing-peers.html') Managing Peers
             | {% else %}
-            li: a(href='/managing-peers.html') Managing Peers
+            li: a(href='managing-peers.html') Managing Peers
             | {% endif %}
 
     .container
@@ -58,9 +58,9 @@ html(lang='en')
     #footer
       .row
         .col-sm-4.footer-left
-          a(href='/privacyPolicy.html') Privacy Policy
+          a(href='//treode.com/privacyPolicy.html') Privacy Policy
           | &nbsp;&sdot;&nbsp;
-          a(href='/termsOfService.html') Terms of Service
+          a(href='//treode.com/termsOfService.html') Terms of Service
         .col-sm-4.footer-center
           | &copy;&nbsp;
           a(href='//treode.com') Treode, Inc.
@@ -68,18 +68,18 @@ html(lang='en')
           a(href='//creativecommons.org/licenses/by/4.0/') CC BY 4.0
         .col-sm-4.footer-right.social-bar
           a(href='//blog.treode.com/')
-            img(src='/img/blog-icon.png')
+            img(src='img/blog-icon.png')
           | &nbsp;
           a(href='//githum.com/Treode')
-            img(src='/img/github-icon.png')
+            img(src='img/github-icon.png')
           | &nbsp;
           a(href='//twitter.com/treode')
-            img(src='/img/twitter-icon.png')
+            img(src='img/twitter-icon.png')
           | &nbsp;
           a(href='//www.facebook.com/pages/Treode-Inc/486833728003266')
-            img(src='/img/facebook-icon.png')
+            img(src='img/facebook-icon.png')
           | &nbsp;
           a(href='//plus.google.com/111423248234655296020', rel='publisher')
-            img(src='/img/gplus-icon.png')
+            img(src='img/gplus-icon.png')
   script(src='https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js')
-  script(src='/js/bootstrap.min.js')
+  script(src='js/bootstrap.min.js')

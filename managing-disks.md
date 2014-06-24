@@ -193,4 +193,4 @@ Content-Length: 123
 
 That's all there is to adding and removing drives.  Move on to [manage peers][manage-peers].
 
-[manage-peers]: /managing-peers.html "Managing Peers"
+[manage-peers]: managing-peers.html "Managing Peers"

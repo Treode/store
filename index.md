@@ -43,9 +43,9 @@ temporary directory and link the built jar there.  Then proceed to the
 
 
 
-[arch]: /img/architecture.png "Architecture"
+[arch]: img/architecture.png "Architecture"
 [finatra]: //finatra.info/ "Finatra"
-[rws]: /read-write-scan.html "Read,Write, Scan"
+[rws]: read-write-scan.html "Read,Write, Scan"
 [sbt]: //www.scala-sbt.org/ "Simple Build Tool"
 [sbt-install]: //www.scala-sbt.org/0.13/tutorial/Setup.html "Install SBT"
 [scala]: //www.scala-lang.org/ "The Scala Programming Language

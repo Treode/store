@@ -328,10 +328,10 @@ After writing a complex servlet, you'll want to test it.  Finatra provides [one 
 Now you're an expert on reading, writing and scanning with TreodeDB.  Move on to [add and remove disks][manage-disks].
 
 [finatra-testing]: //finatra.info/docs/index.html#testing "Finatra Testing"
-[get-server]: / "Get the example server"
+[get-server]: ./ "Get the example server"
 [jackson]: //wiki.fasterxml.com/JacksonHome "Jackson JSON Processor"
-[manage-disks]: /managing-disks.html "Managing Disks"
-[manage-peers]: /managing-peers.html "Managing Peers"
+[manage-disks]: managing-disks.html "Managing Disks"
+[manage-peers]: managing-peers.html "Managing Peers"
 [source-servlet]: //github.com/Treode/store/blob/release/0.1.0/examples/finatra/src/main/scala/example/Resource.scala "Example servlet using the Store API"
 [source-spec]: //github.com/Treode/store/blob/release/0.1.0/examples/finatra/src/test/scala/example/ResourceSpec.scala "Example test using the stub store"
 [source-read]: //github.com/Treode/store/blob/release/0.1.0/examples/finatra/src/main/scala/example/Resource.scala#L15-31 "Example to handle GET for read"

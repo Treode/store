@@ -322,8 +322,8 @@ curl -w'\n' http://localhost:7071/table/0x1?slice=1\&amp;nslices=2
 
 Now that you know how to use TreodeDB, build something.
 
-[atlas]: /img/atlas.png "Atlas"
+[atlas]: img/atlas.png "Atlas"
 [managing-disks]: managing-disks.html "Managing Disks"
 [read-write-scan]: read-write-scan.html "Reading, Writing and Scanning"
-[slices]: /img/slices.png "Slices"
+[slices]: img/slices.png "Slices"
 [split-brain]: http://en.wikipedia.org/wiki/Split-brain_(computing) "Split Brain"
