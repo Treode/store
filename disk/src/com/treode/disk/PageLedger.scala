@@ -5,7 +5,7 @@ import com.treode.async.{Async, Callback}
 import com.treode.async.io.File
 
 import Async.guard
-import PageLedger.{Groups, Projector, Zipped, longBytes, varIntBytes}
+import PageLedger.{Groups, Projector, Zipped, longBytes, varIntBytes, varLongBytes}
 
 private class PageLedger (
     private var ledger: Map [(TypeId, ObjectId, PageGroup), Long],
@@ -14,7 +14,7 @@ private class PageLedger (
 ) extends Traversable [(TypeId, ObjectId, PageGroup, Long)] {
 
   def this() =
-    this (Map.empty, Set.empty, varIntBytes)
+    this (Map.empty, Set.empty, varLongBytes + varIntBytes)
 
   def foreach [U] (f: ((TypeId, ObjectId, PageGroup, Long)) => U) {
     for (((typ, obj, group), totalBytes) <- ledger)
@@ -85,6 +85,7 @@ private class PageLedger (
 private object PageLedger {
 
   val varIntBytes = 5
+  val varLongBytes = 9
   val longBytes = 8
 
   type Groups = Map [(TypeId, ObjectId), Set [PageGroup]]
@@ -155,9 +156,12 @@ private object PageLedger {
 
     val pickler = {
       import DiskPicklers._
-      wrap (seq (tuple (typeId, objectId, seq (tuple (pageGroup, ulong)))))
-      .build (new Zipped (_))
-      .inspect (_.ledger)
+      // Tagged for forwards compatibility.
+      tagged [Zipped] (
+          0x00863FA19918F4DAL ->
+              wrap (seq (tuple (typeId, objectId, seq (tuple (pageGroup, ulong)))))
+                  .build (new Zipped (_))
+                  .inspect (_.ledger))
     }}
 
   def merge (groups: Seq [Groups]): Groups = {
