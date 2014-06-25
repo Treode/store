@@ -22,6 +22,10 @@ libraryDependencies +=
 
 The multiple configurations keep your production code free of testing stubs, but they stump the central maven repository.  That's why we've hosted the Ivy package ourselves, and why you need to do a little extra work to link it.
 
+## Getting Help
+
+We watch [StackOverflow][stackoverflow] for the tag `treode`.  Browse [questions asked][stackoverflow-read] or [post a new one][stackoverflow-ask].  If you prefer, you can also [use the online forum][online-forum].
+
 ## Programming Interface
 
 TreodeDB maintains tables of rows, each row being a key and value, and it keeps past values back to some configurable point in time.  A long identifies the table, and the keys and values are arrays of bytes. TreodeDB primarily provides read, write and scan; the full interface includes details to implement [optimistic transactions][occ], which services HTTP ETags quite nicely.  We provide a rough overview here.  You may want to consult the [API docs][api] or the [walkthroughs][walkthroughs] for a meatier discussion.
@@ -148,6 +152,8 @@ In summary, hashing the key onto an array of cohorts allows read-write operation
 
 [hbase-web]: http://hbase.apache.org "Apache HBase&trade; (Website)"
 
+[online-forum]: https://groups.google.com/forum/?fromgroups#!forum/treode-users "Online forum for Treode users"
+
 [riak-web]: http://basho.com/riak/ "Riak (Website)"
 
 [scalaris-acm]: http://dl.acm.org/citation.cfm?id=1411273.1411280 "Scalaris: reliable transactional p2p key/value store (ACM Digital Library)"
@@ -157,5 +163,11 @@ In summary, hashing the key onto an array of cohorts allows read-write operation
 [sinfonia-acm]: http://dl.acm.org/citation.cfm?id=1629087.1629088 "Sinfonia: A new paradigm for building scalable distributed systems (ACM Digital Library)"
 
 [sinfonia-pdf]: http://www.sosp2007.org/papers/sosp064-aguilera.pdf "Sinfonia: A new paradigm for building scalable distributed systems (PDF)"
+
+[stackoverflow]: http://stackoverflow.com "Stack Overflow"
+
+[stackoverflow-read]: http://stackoverflow.com/questions/tagged/treode "Read questions on Stack Overflow tagged with treode"
+
+[stackoverflow-ask]: http://stackoverflow.com/questions/ask?tags=treode "Post a question on Stack Overflow tagged with treode"
 
 [walkthroughs]: http://treode.github.io/store "TreodeDB Walkthroughs"
