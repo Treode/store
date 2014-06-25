@@ -14,7 +14,7 @@ an example application using [the Scala Programming Language][scala] and
 [the Finatra web framework][finatra].  The walk throughs use a single `.jar`, which you can
 download or build yourself.
 
-## Downloading `server.jar`
+### Downloading `server.jar`
 
 Retrieve the prebuilt [server.jar][server-jar].  That was easy.
 
@@ -22,7 +22,7 @@ Throughout the discussions, we'll create database files.  To keep it tidy, you m
 temporary directory and move the downloaded jar there.  Then proceed to the 
 [first walk through][rws].
 
-## Building `server.jar`
+### Building `server.jar`
 
 You will need [SBT][sbt]; [install it][sbt-install] if you haven't already.
 
@@ -41,13 +41,35 @@ Throughout the discussions, we'll create database files.  To keep it tidy, you m
 temporary directory and link the built jar there.  Then proceed to the 
 [first walk through][rws].
 
+## Getting Help
+
+If you have questions while working through the tutorials, you can use the
+[online forum][online-forum].  If you have programming questions related to using TreodeDB, we watch
+[StackOverflow][stackoverflow] for the tag `treode`.  Browse [questions asked][stackoverflow-read] 
+or [post a new one][stackoverflow-ask].
+
 
 
 [arch]: img/architecture.png "Architecture"
+
 [finatra]: //finatra.info/ "Finatra"
+
+[online-forum]: https://groups.google.com/forum/?fromgroups#!forum/treode-users "Online forum for Treode users"
+
 [rws]: read-write-scan.html "Read,Write, Scan"
+
 [sbt]: //www.scala-sbt.org/ "Simple Build Tool"
+
 [sbt-install]: //www.scala-sbt.org/0.13/tutorial/Setup.html "Install SBT"
+
 [scala]: //www.scala-lang.org/ "The Scala Programming Language
+
 [server-jar]: https://oss.treode.com/jars/com.treode.store/0.1.0/server.jar
+
+[stackoverflow]: http://stackoverflow.com "Stack Overflow"
+
+[stackoverflow-read]: http://stackoverflow.com/questions/tagged/treode "Read questions on Stack Overflow tagged with treode"
+
+[stackoverflow-ask]: http://stackoverflow.com/questions/ask?tags=treode "Post a question on Stack Overflow tagged with treode"
+
 [store-github]: https://github.com/Treode/store "TreodeDB on GitHub"
