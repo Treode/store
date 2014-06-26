@@ -210,7 +210,7 @@ private class RemoteConnection (
         log.exceptionReadingMessage (t)
         disconnect (socket)
     }}
-    scheduler.execute (loop.pass())
+    scheduler.execute (loop.pass (()))
   }
 
   def flush (socket: Socket, buffer: PagedBuffer): Unit = scheduler.execute {

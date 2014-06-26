@@ -81,7 +81,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       state = new Tardy (wt, cb)
 
     def checkpoint(): Async [Unit] =
-      supply()
+      supply (())
 
     override def toString = s"WriteDeputy.Open($xid)"
   }
@@ -217,7 +217,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       throw new IllegalStateException
 
     def checkpoint(): Async [Unit] =
-      supply()
+      supply (())
 
     override def toString = s"WriteDeputy.Tardy($xid, $wt)"
   }

@@ -172,7 +172,7 @@ class SynthTableSpec extends FreeSpec {
       implicit val random = new Random (0)
       implicit val scheduler = StubScheduler.random (random)
       val (disk, table, cb) = setup (random, scheduler)
-      disk.last.pass()
+      disk.last.pass (())
       scheduler.run()
       cb.passed
       assert (table.secondary.isEmpty)

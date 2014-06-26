@@ -39,7 +39,7 @@ private class StubCheckpointer (implicit
   var engaged = true
 
   private def reengage() {
-    fanout (checkreqs) .pass()
+    fanout (checkreqs) .pass (())
     checkreqs = List.empty
     entries = 0
     engaged = false

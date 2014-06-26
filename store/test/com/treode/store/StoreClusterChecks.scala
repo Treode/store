@@ -49,16 +49,16 @@ trait StoreClusterChecks extends AsyncChecks {
     if (Runtime.getRuntime.availableProcessors < 8) 4 else 8
 
   private def defaultSetup: Scheduler => Host => Async [Unit] =
-    _ => _ => supply()
+    _ => _ => supply (())
 
   private def defaultRun: Scheduler => (Host, Host) => Async [Unit] =
-    _ => (_, _) => supply()
+    _ => (_, _) => supply (())
 
   private def defaultVerify: Scheduler => Host => Async [Unit] =
-    _ => _ => supply()
+    _ => _ => supply (())
 
   private def defaultAudit: Scheduler => Seq [Host] => Async [Unit] =
-    _ => _ => supply()
+    _ => _ => supply (())
 
   private def defaultCond: Seq [Host] => Boolean =
     _ => false

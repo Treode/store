@@ -64,7 +64,7 @@ class RichCallbackSpec extends FlatSpec {
     val captor = CallbackCaptor [Unit]
     var flag = false
     val cb = captor.continue [Unit] (_ => Some (flag = true))
-    cb.pass()
+    cb.pass (())
     captor.passed
     assertResult (true) (flag)
   }
@@ -73,7 +73,7 @@ class RichCallbackSpec extends FlatSpec {
     val captor = CallbackCaptor [Unit]
     var flag = false
     val cb = captor.continue [Unit] {_ => flag = true; None}
-    cb.pass()
+    cb.pass (())
     captor.assertNotInvoked
     assertResult (true) (flag)
   }
@@ -81,7 +81,7 @@ class RichCallbackSpec extends FlatSpec {
   it should "report an exception from the body through the callback" in {
     val captor = CallbackCaptor [Unit]
     val cb = captor.continue [Unit] (_ => throw new DistinguishedException)
-    cb.pass()
+    cb.pass (())
     captor.failed [DistinguishedException]
   }
 
@@ -96,7 +96,7 @@ class RichCallbackSpec extends FlatSpec {
     val cb1 = CallbackCaptor [Unit]
     var flag = false
     val cb2 = cb1.ensure (flag = true)
-    cb2.pass()
+    cb2.pass (())
     cb1.passed
     assertResult (true) (flag)
   }
@@ -113,7 +113,7 @@ class RichCallbackSpec extends FlatSpec {
   it should "report an exception from the body on pass" in {
     val cb1 = CallbackCaptor [Unit]
     val cb2 = cb1.ensure (throw new DistinguishedException)
-    cb2.pass()
+    cb2.pass (())
     cb1.failed [DistinguishedException]
   }
 

@@ -56,5 +56,5 @@ object AsyncIteratorTestTools {
     assertResult (expected) (actual.toSeq.pass)
 
   def assertFail [E] (iter: AsyncIterator [_]) (implicit s: StubScheduler, m: Manifest [E]): Unit =
-    iter.foreach (_ => supply()) .fail [E]
+    iter.foreach (_ => supply (())) .fail [E]
 }

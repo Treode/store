@@ -205,7 +205,7 @@ private object LogIterator {
     def replay (_entry: (Long, Unit => Any)) {
       val (batch, entry) = _entry
       logBatch = batch
-      entry()
+      entry (())
     }
 
     for {

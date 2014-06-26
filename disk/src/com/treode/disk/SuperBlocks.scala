@@ -52,8 +52,8 @@ private object SuperBlocks {
       val buf0 = PagedBuffer (bits)
       val buf1 = PagedBuffer (bits)
       for {
-        _ <- file.fill (buf0, 0, bytes) .recover {case _ => 0}
-        _ <- file.fill (buf1, bytes, bytes) .recover {case _ => 0}
+        _ <- file.fill (buf0, 0, bytes) .recover {case _ => ()}
+        _ <- file.fill (buf1, bytes, bytes) .recover {case _ => ()}
       } yield {
         val sb0 = unpickle (buf0)
         val sb1 = unpickle (buf1)

@@ -140,10 +140,10 @@ private abstract class TierIterator (
           pager.read (b.get (i) .pos) .run (_push)
           None
         } else {
-          Some()
+          Some (())
         }
       } else {
-        Some()
+        Some (())
       }}}}
 
 private object TierIterator {

@@ -81,7 +81,7 @@ object AsyncIterator {
   def empty [A] =
     new AsyncIterator [A] {
       def foreach (f: A => Async [Unit]): Async [Unit] =
-        async (_.pass())
+        async (_.pass (()))
     }
 
   /** Transform a Scala iterator into an AsyncIterator. */

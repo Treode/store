@@ -32,16 +32,15 @@ object HostIdSerializer extends StdSerializer [HostId] (classOf [HostId]) {
 object HostIdDeserializer extends StdDeserializer [HostId] (classOf [HostId]) {
 
   def deserialize (jparser: JsonParser, context: DeserializationContext): HostId =
-    try {
-      jparser.getCurrentToken match {
-        case JsonToken.VALUE_NUMBER_INT =>
-          HostId (jparser.getValueAsLong)
-        case JsonToken.VALUE_STRING =>
-          val s = jparser.getValueAsString
-          val id = parseUnsignedLong (s)
-          if (id.isEmpty)
-            throw context.weirdStringException (s, classOf [HostId], "Malformed host ID")
-          HostId (id.get)
-        case _ =>
-          throw context.wrongTokenException (jparser, JsonToken.VALUE_STRING, "Malformed host ID")
-      }}}
+    jparser.getCurrentToken match {
+      case JsonToken.VALUE_NUMBER_INT =>
+        HostId (jparser.getValueAsLong)
+      case JsonToken.VALUE_STRING =>
+        val s = jparser.getValueAsString
+        val id = parseUnsignedLong (s)
+        if (id.isEmpty)
+          throw context.weirdStringException (s, classOf [HostId], "Malformed host ID")
+        HostId (id.get)
+      case _ =>
+        throw context.wrongTokenException (jparser, JsonToken.VALUE_STRING, "Malformed host ID")
+    }}

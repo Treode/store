@@ -78,7 +78,7 @@ class ClusterLiveSpec extends FlatSpec with AsyncChecks {
       timer.rouse()
 
       def got(): Unit =
-        timer.pass()
+        timer.pass (())
     }
 
     def send (i: Int, to: Host): Async [Unit] =

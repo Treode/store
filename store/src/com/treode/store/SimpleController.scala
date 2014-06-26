@@ -73,5 +73,5 @@ private class SimpleController (
     cluster.spread (desc) (msg)
 
   def shutdown(): Async [Unit] =
-    supply()
+    supply (())
 }

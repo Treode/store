@@ -74,7 +74,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     }
 
     def checkpoint(): Async [Unit] =
-      supply()
+      supply (())
   }
 
   class Restoring (default: Bytes) extends State {
@@ -135,7 +135,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     }
 
     def checkpoint(): Async [Unit] =
-      supply()
+      supply (())
 
     override def toString = s"Acceptor.Restoring($key, $time)"
   }
@@ -259,7 +259,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
       require (chosen == this.chosen, "Paxos disagreement")
 
     def checkpoint(): Async [Unit] =
-      supply()
+      supply (())
 
     override def toString = s"Acceptor.Closed($key, $time, $chosen)"
   }
@@ -275,7 +275,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
     def choose (chosen: Bytes): Unit = ()
 
-    def checkpoint(): Async [Unit] = supply()
+    def checkpoint(): Async [Unit] = supply (())
 
     override def toString = s"Acceptor.Panicked($key, $time, $thrown)"
   }

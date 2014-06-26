@@ -114,7 +114,7 @@ private class TierBuilder (
       if (stack.isEmpty || height < node.height) {
         push (key, time, pos, height)
         rpop()
-        supply()
+        supply (())
 
       } else {
 
@@ -125,7 +125,7 @@ private class TierBuilder (
         if (node.byteSize + entryByteSize < config.targetPageBytes || node.size < 2) {
           node.add (entry, entryByteSize)
           rpop()
-          supply()
+          supply (())
 
         } else {
           stack.pop()
@@ -162,7 +162,7 @@ private class TierBuilder (
       // Ensure that a value page has at least one entry.
       if (cells.byteSize + byteSize < config.targetPageBytes || cells.size < 1) {
         cells.add (cell, byteSize)
-        supply()
+        supply (())
 
       } else {
         val page = TierCellPage (cells.entries)

@@ -35,7 +35,7 @@ private class Checkpointer (kit: DiskKit) {
   var engaged = true
 
   private def reengage() {
-    fanout (checkreqs) .pass()
+    fanout (checkreqs) .pass (())
     checkreqs = List.empty
     bytes = 0
     entries = 0

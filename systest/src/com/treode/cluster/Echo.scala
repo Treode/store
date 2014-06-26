@@ -71,7 +71,7 @@ object Echo {
       def got (from: Peer): Unit = fiber.execute {
         hosts += from
         if (hosts.quorum)
-          timer.pass()
+          timer.pass (())
       }}
 
     def loop: Async [Unit] = async (new Loop (_))

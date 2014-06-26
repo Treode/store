@@ -77,7 +77,7 @@ private class AtomicMover (kit: AtomicKit) {
           entries += 1
           bytes += cell.byteSize
         }
-        supply()
+        supply (())
       } .map {
         case Some (cell) =>
           (table, batch, Point.Middle (table, cell.key, cell.time))
@@ -119,7 +119,7 @@ private class AtomicMover (kit: AtomicKit) {
     def got (from: Peer) {
       acks += from
       if (acks.quorum)
-        timer.pass()
+        timer.pass (())
     }}
 
   def send (version: Int, table: TableId, cells: Seq [Cell], hosts: Set [Peer]): Async [Unit] =
@@ -149,7 +149,7 @@ private class AtomicMover (kit: AtomicKit) {
       case Some ((Range (start: Point.Middle, end), targets)) =>
         queue.run (ignore) (rebalance (start, end, targets))
       case None =>
-        callbacks foreach (_.pass())
+        callbacks foreach (_.pass (()))
         callbacks = List.empty
         None
     }

@@ -36,7 +36,7 @@ object TreodeBuild extends Build {
 
     organization := "com.treode",
     version := "0.1.0",
-    scalaVersion := "2.10.4",
+    scalaVersion := "2.11.1",
 
     unmanagedSourceDirectories in Compile <<=
       (baseDirectory ((base: File) => Seq (base / "src"))),
@@ -78,7 +78,7 @@ object TreodeBuild extends Build {
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "test",
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.1" % "test",
       "org.scalatest" %% "scalatest" % "2.2.0" % "test",
       "org.scalacheck" %% "scalacheck" % "1.11.4" % "test"))
 
@@ -122,7 +122,7 @@ object TreodeBuild extends Build {
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "stub->default",
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.1" % "stub->default",
       "org.scalatest" %% "scalatest" % "2.2.0" % "stub->default",
       "org.scalacheck" %% "scalacheck" % "1.11.4" % "stub->default"))
 
@@ -180,8 +180,8 @@ object TreodeBuild extends Build {
     .settings (
 
         libraryDependencies ++= Seq (
-          "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.3.3",
-          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.3"))
+          "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.0-rc2",
+          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.0-rc2"))
 
   // A standalone server for system tests.  Separated to keep system
   // testing components out of production code (these components are

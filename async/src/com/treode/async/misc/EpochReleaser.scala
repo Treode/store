@@ -67,7 +67,7 @@ class EpochReleaser {
     release (toRunnable (action))
 
   def release(): Async [Unit] =
-    async (cb => release (toRunnable (cb, Success())))
+    async (cb => release (toRunnable (cb, Success (()))))
 
   def join(): Int = synchronized {
     parties += 1

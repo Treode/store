@@ -52,12 +52,16 @@ trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
     }}
 
   private def audit (hosts: Seq [StubAtomicHost]) (implicit scheduler: Scheduler) = {
+    val ordering = Ordering.Tuple2 [TableId, Cell]
+    val iter = AsyncIterator.merge (hosts map (_.audit)) (ordering, scheduler)
     var cells = newTrackedCells
     for {
-      _ <- for ((t, c) <- AsyncIterator.merge (hosts map (_.audit))) supply {
-        val tk = (t.id, c.key.long)
-        cells += tk -> (cells (tk) + ((c.time, c.value.get.int)))
-      }
+      _ <-
+        for ((t, c) <- iter)
+          supply {
+            val tk = (t.id, c.key.long)
+            cells += tk -> (cells (tk) + ((c.time, c.value.get.int)))
+          }
     } yield {
       cells
     }}
@@ -161,5 +165,5 @@ trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
       }}
 
     .audit { implicit scheduler => hosts =>
-      supply()
+      supply (())
     }}}

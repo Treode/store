@@ -231,15 +231,15 @@ object Async {
     }
 
   def at (millis: Int) (implicit s: Scheduler): Async [Unit] =
-    _async (cb => s.at (millis) (cb (Success())))
+    _async (cb => s.at (millis) (cb (Success (()))))
 
   def delay (millis: Int) (implicit s: Scheduler): Async [Unit] =
-    _async (cb => s.delay (millis) (cb (Success())))
+    _async (cb => s.delay (millis) (cb (Success (()))))
 
   /** Perform the asynchronous operation `f` only when the predicate `p` is true. */
   def when [A] (p: => Boolean) (f: => Async [A]): Async [Unit] =
     try {
-      if (p) f map (_ => ()) else _pass()
+      if (p) f map (_ => ()) else _pass (())
     } catch {
       case t: NonLocalReturnControl [_] => _fail (new ReturnException)
       case t: Throwable => _fail (t)

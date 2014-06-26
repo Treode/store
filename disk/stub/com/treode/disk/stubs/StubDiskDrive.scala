@@ -64,8 +64,8 @@ class StubDiskDrive (implicit random: Random) {
     for (rs <- records.async; r <- rs.latch.unit)
       async [Unit] { cb =>
         scheduler.execute {
-          registry.read (r.typ, r.data) ()
-          cb.pass()
+          registry.read (r.typ, r.data) (())
+          cb.pass (())
         }}
 
   private [stubs] def mark(): Int =
@@ -83,7 +83,7 @@ class StubDiskDrive (implicit random: Random) {
   private [stubs] def log (records: Seq [StubRecord]): Async [Unit] =
     _stop { cb =>
       this.records.add (records)
-      cb.pass()
+      cb.pass (())
     }
 
   private [stubs] def write (page: StubPage): Async [Long] =

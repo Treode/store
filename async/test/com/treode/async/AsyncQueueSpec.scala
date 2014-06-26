@@ -53,7 +53,7 @@ class AsyncQueueSpec extends FlatSpec {
     }
 
     def pass() {
-      captor.pass()
+      captor.pass (())
       scheduler.run()
     }
 

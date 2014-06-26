@@ -29,7 +29,7 @@ private class LockReader (_rt: TxClock, cb: Callback [Unit]) {
   private var needed = 0
 
   private def finish(): Unit =
-    cb.pass()
+    cb.pass (())
 
   // Attempt to acquire the locks.  Some of them will be granted immediately.  For others, we
   // will receive a callback via grant().

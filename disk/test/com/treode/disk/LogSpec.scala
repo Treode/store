@@ -211,7 +211,7 @@ class LogSpec extends FlatSpec with CrashChecks {
         assert (!checkpointing, "Expected one checkpoint at a time.")
         scheduler.execute {
           checkpointing = false
-          cb.pass()
+          cb.pass (())
         }
         checkpointed = true
         checkpointing = true

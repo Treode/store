@@ -28,7 +28,7 @@ private class LocalConnection (val id: HostId, ports: PortRegistry) extends Peer
   def connect (socket: Socket, input: PagedBuffer, clientId: HostId) =
     throw new IllegalArgumentException
 
-  def close(): Async [Unit] = supply()
+  def close(): Async [Unit] = supply (())
 
   def send [M] (p: Pickler [M], port: PortId, msg: M): Unit =
     ports.deliver (p, this, port, msg)

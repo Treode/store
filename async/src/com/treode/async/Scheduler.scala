@@ -78,7 +78,7 @@ trait Scheduler extends Executor {
            }
         case Failure (t) => fail (cb, t)
       }}
-      loop.pass()
+      loop.pass (())
     }
 
   /** Implements what is needed by AsynchronousFileChannel. */

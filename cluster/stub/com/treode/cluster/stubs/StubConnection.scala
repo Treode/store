@@ -38,7 +38,7 @@ extends Peer {
   def connect (socket: Socket, input: PagedBuffer, clientId: HostId) =
     throw new UnsupportedOperationException
 
-  def close(): Async [Unit] = supply()
+  def close(): Async [Unit] = supply (())
 
   override def hashCode() = id.hashCode()
 

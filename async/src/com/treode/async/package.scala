@@ -60,7 +60,7 @@ package object async {
 
     /** Adapts Callback to Java's NIO CompletionHandler. */
     private [async] object UnitHandler extends CompletionHandler [Void, Callback [Unit]] {
-      def completed (v: Void, cb: Callback [Unit]) = cb.pass()
+      def completed (v: Void, cb: Callback [Unit]) = cb.pass (())
       def failed (t: Throwable, cb: Callback [Unit]) = cb.fail (t)
     }
 

@@ -70,7 +70,7 @@ private class PaxosMover (kit: PaxosKit) {
           entries += 1
           bytes += cell.byteSize
         }
-        supply()
+        supply (())
       } .map {
         case Some (cell) =>
           (batch, Point.Middle (cell.key, cell.time))
@@ -107,7 +107,7 @@ private class PaxosMover (kit: PaxosKit) {
     def got (from: Peer) {
       acks += from
       if (acks.quorum)
-        timer.pass()
+        timer.pass (())
     }}
 
   def send (version: Int, cells: Seq [Cell], hosts: Set [Peer]): Async [Unit] =
