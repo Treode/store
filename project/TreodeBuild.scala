@@ -29,22 +29,28 @@ object TreodeBuild extends Build {
   lazy val IntensiveTest = config ("intensive") extend (Test)
   lazy val PeriodicTest = config ("periodic") extend (Test)
 
+  lazy val versionInfo = Seq (
+    organization := "com.treode",
+    version := "0.1.0",
+    scalaVersion := "2.11.1",
+    crossScalaVersions := Seq ("2.10.4", "2.11.1"))
+
   // Settings common to both projects with stubs and without stubs.
   // Adds production libraries to the "main" configuration.  Squashes
   // the source directory structure.
   lazy val commonPortion = Seq (
 
-    organization := "com.treode",
-    version := "0.1.0",
-    scalaVersion := "2.11.1",
-
     unmanagedSourceDirectories in Compile <<=
       (baseDirectory ((base: File) => Seq (base / "src"))),
 
-    scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", 
-      "-Ywarn-unused-import"),
+    scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked"),
 
-    libraryDependencies <+= (scalaVersion) ("org.scala-lang" % "scala-reflect" % _),
+    scalacOptions <++= scalaVersion map { 
+      case "2.10.4" => Seq.empty
+      case "2.11.1" => Seq ("-Ywarn-unused-import")
+    },
+
+    libraryDependencies <+= scalaVersion ("org.scala-lang" % "scala-reflect" % _),
 
     libraryDependencies ++= Seq (
       "com.codahale.metrics" % "metrics-core" % "3.0.2",
@@ -77,8 +83,12 @@ object TreodeBuild extends Build {
     unmanagedSourceDirectories in Test <<=
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
+    libraryDependencies <+= scalaVersion {
+      case "2.10.4" => "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "test"
+      case "2.11.1" => "org.scalamock" %% "scalamock-scalatest-support" % "3.1.1" % "test"
+    },
+
     libraryDependencies ++= Seq (
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.1" % "test",
       "org.scalatest" %% "scalatest" % "2.2.0" % "test",
       "org.scalacheck" %% "scalacheck" % "1.11.4" % "test"))
 
@@ -86,6 +96,7 @@ object TreodeBuild extends Build {
   lazy val standardSettings =
     inConfig (IntensiveTest) (Defaults.testTasks) ++ 
     inConfig (PeriodicTest) (Defaults.testTasks) ++ 
+    versionInfo ++
     commonPortion ++
     standardPortion
 
@@ -121,8 +132,12 @@ object TreodeBuild extends Build {
     unmanagedSourceDirectories in TestWithStub <<=
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
+    libraryDependencies <+= scalaVersion {
+      case "2.10.4" => "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "stub->default"
+      case "2.11.1" => "org.scalamock" %% "scalamock-scalatest-support" % "3.1.1" % "stub->default"
+    },
+
     libraryDependencies ++= Seq (
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.1" % "stub->default",
       "org.scalatest" %% "scalatest" % "2.2.0" % "stub->default",
       "org.scalacheck" %% "scalacheck" % "1.11.4" % "stub->default"))
 
@@ -133,6 +148,7 @@ object TreodeBuild extends Build {
     inConfig (TestWithStub) (Defaults.testTasks) ++
     inConfig (IntensiveTestWithStub) (Defaults.testTasks) ++
     inConfig (PeriodicTestWithStub) (Defaults.testTasks) ++
+    versionInfo ++
     commonPortion ++
     stubPortion
 
@@ -200,6 +216,7 @@ object TreodeBuild extends Build {
 
   lazy val root = Project ("root", file ("."))
     .aggregate (buffer, pickle, async, cluster, disk, store, jackson, systest)
+    .settings (versionInfo: _*)
     .settings (unidocSettings: _*)
     .settings (
 
