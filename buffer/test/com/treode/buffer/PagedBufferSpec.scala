@@ -188,7 +188,7 @@ class PagedBufferSpec extends FlatSpec {
   private def writeAndHashBytes (off: Int, len: Int) {
     it should (s"write and hash bytes off=$off, len=$len") in {
       val hashf = Hashing.murmur3_32()
-      var bytes = Array.tabulate (len) (i => (i + 1).toByte)
+      val bytes = Array.tabulate (len) (i => (i + 1).toByte)
       val buffer = PagedBuffer (pageBits)
       buffer.writePos = off
       buffer.writeBytes (bytes, 0, len)

@@ -59,8 +59,6 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
       case None => value
     }}
 
-  private def illegal = throw new IllegalStateException
-
   object Opening extends State {
 
     override def open (ballot: Long, value: Bytes) =

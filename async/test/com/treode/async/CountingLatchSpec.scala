@@ -27,7 +27,7 @@ class CountingLatchSpec extends FlatSpec {
 
   "The CountingLatch" should "release immediately for count==0" in {
     val cb = CallbackCaptor [Unit]
-    val ltch = Latch.unit (0, cb)
+    Latch.unit (0, cb)
     cb.passed
   }
 

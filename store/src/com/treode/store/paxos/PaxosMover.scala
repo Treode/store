@@ -38,7 +38,7 @@ private class PaxosMover (kit: PaxosKit) {
 
   private val fiber = new Fiber
   private val queue = AsyncQueue (fiber) (next())
-  private var tracker = new Tracker
+  private val tracker = new Tracker
   private var callbacks = List.empty [Callback [Unit]]
 
   queue.launch()

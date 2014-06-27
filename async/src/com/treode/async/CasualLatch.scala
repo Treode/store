@@ -25,7 +25,7 @@ private class CasualLatch [A] (
     manifest: Manifest [A]
 ) extends AbstractLatch [Seq [A]] (count, cb) with Callback [A] {
 
-  private var values = Seq.newBuilder [A]
+  private val values = Seq.newBuilder [A]
   values.sizeHint (count)
 
   init()

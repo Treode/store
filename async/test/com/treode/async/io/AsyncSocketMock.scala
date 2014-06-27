@@ -49,7 +49,7 @@ class AsyncSocketMock extends AsynchronousSocketChannel (null) with Assertions {
     override def toString = "Expecting nothing."
   }
 
-  private var expectations = new ArrayDeque [Expectation] ()
+  private val expectations = new ArrayDeque [Expectation] ()
   private var completion: Callback [Int] = null
 
   def completeLast (v: Int) (implicit scheduler: StubScheduler) = {

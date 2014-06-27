@@ -45,7 +45,7 @@ class StubFile private (
     scheduler: Scheduler
 ) extends File (null) {
 
-  private var stack = new ArrayDeque [Callback [Unit]]
+  private val stack = new ArrayDeque [Callback [Unit]]
 
   /** If true, the next call to `flush` or `fill` will be captured and push on a stack. */
   var stop: Boolean = false

@@ -29,10 +29,10 @@ import Async.async
 
 class StubDiskDrive (implicit random: Random) {
 
+  private val stack = new ArrayDeque [Callback [Unit]]
   private var records = new ArrayList [Seq [StubRecord]]
   private var pages = Map.empty [Long, StubPage]
-  private var stack = new ArrayDeque [Callback [Unit]]
-
+  
   /** If true, the next call to `flush` or `fill` will be captured and push on a stack. */
   var stop: Boolean = false
 

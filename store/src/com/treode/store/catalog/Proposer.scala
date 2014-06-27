@@ -63,8 +63,6 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
   private def track (atlas: Atlas): ReplyTracker =
     atlas.locate (0) .track
 
-  private def illegal = throw new IllegalStateException
-
   object Opening extends State {
 
     override def open (ballot: Long, patch: Patch) =

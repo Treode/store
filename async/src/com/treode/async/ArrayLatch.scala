@@ -21,7 +21,7 @@ import scala.util.{Failure, Success, Try}
 private class ArrayLatch [A] (count: Int, cb: Callback [Seq [A]]) (implicit manifest: Manifest [A])
 extends AbstractLatch [Seq [A]] (count, cb) with Callback [(Int, A)] {
 
-  private var values = new Array [A] (count)
+  private val values = new Array [A] (count)
 
   init()
 

@@ -67,7 +67,7 @@ class AsyncIteratorSpec extends FlatSpec {
   }
 
   it should "work with the for keyword" in {
-    var xs = Seq.newBuilder [Int]
+    val xs = Seq.newBuilder [Int]
     implicit val scheduler = StubScheduler.random()
     val task =
       for (x <- adapt (1, 2, 3))

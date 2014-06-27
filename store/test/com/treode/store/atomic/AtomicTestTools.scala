@@ -48,7 +48,7 @@ private trait AtomicTestTools extends StoreTestTools {
       actual.expect (Stale)
 
     def abort() (implicit s: StubScheduler) {
-      val (vt, locks) = expectPrepared
+      val (_, locks) = expectPrepared
       locks.release()
     }}
 

@@ -40,7 +40,7 @@ class FileSpec extends FlatSpec {
   }
 
   "AsyncFile.flush" should "handle an empty buffer" in {
-    implicit val (scheduler, async, file) = mkFile
+    implicit val (scheduler, _, file) = mkFile
     val buffer = PagedBuffer (5)
     file.flush (buffer, 0) .pass
   }
@@ -61,7 +61,6 @@ class FileSpec extends FlatSpec {
     implicit val (scheduler, async, file) = mkFile
     val output = PagedBuffer (5)
     output.writeInt (0)
-    var _pos = 0
     async.expectWrite (0, 0, 4)
     async.expectWrite (2, 2, 4)
     val cb = file.flush (output, 0) .capture()
@@ -86,13 +85,13 @@ class FileSpec extends FlatSpec {
   }
 
   "AsyncFile.fill" should "handle a request for 0 bytes" in {
-    implicit val (scheduler, async, file) = mkFile
+    implicit val (scheduler, _, file) = mkFile
     val input = PagedBuffer (5)
     file.fill (input, 0, 0) .pass
   }
 
   it should "handle a request for bytes available at the beginning" in {
-    implicit val (scheduler, async, file) = mkFile
+    implicit val (scheduler, _, file) = mkFile
     val input = PagedBuffer (5)
     input.writePos = 4
     file.fill (input, 0, 4) .pass

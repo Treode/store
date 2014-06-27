@@ -44,21 +44,21 @@ class TripleLatchSpec extends FlatSpec {
 
   it should "reject two sets on a" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
-    val (la, lb, lc) = triple [Int, Int, Int] (cb)
+    val (la, _, _) = triple [Int, Int, Int] (cb)
     la.pass (1)
     intercept [Exception] (la.pass (0))
   }
 
   it should "reject two sets on b" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
-    val (la, lb, lc) = triple [Int, Int, Int] (cb)
+    val (_, lb, _) = triple [Int, Int, Int] (cb)
     lb.pass (2)
     intercept [Exception] (lb.pass (0))
   }
 
   it should "reject two sets on c" in {
     val cb = CallbackCaptor [(Int, Int, Int)]
-    val (la, lb, lc) = triple [Int, Int, Int] (cb)
+    val (_, _, lc) = triple [Int, Int, Int] (cb)
     lc.pass (4)
     intercept [Exception] (lc.pass (0))
   }

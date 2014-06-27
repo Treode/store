@@ -40,7 +40,7 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
 
   private def get (table: TableId, key: Bytes, time: TxClock): Value = {
     val limit = StubKey (table, key, TxClock.MinValue)
-    var entry = data.ceilingEntry (StubKey (table, key, time))
+    val entry = data.ceilingEntry (StubKey (table, key, time))
     if (entry != null && entry.getKey <= limit)
       Value (entry.getKey.time, entry.getValue)
     else

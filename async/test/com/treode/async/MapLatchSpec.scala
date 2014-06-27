@@ -26,7 +26,7 @@ class MapLatchSpec extends FlatSpec {
 
   "The MapLatch" should "release immediately for count==0" in {
     val cb = CallbackCaptor [Map [Int, Int]]
-    val ltch = Latch.map [Int, Int] (0, cb)
+    Latch.map [Int, Int] (0, cb)
     assertResult (Map [Int, Int] ()) (cb.passed)
   }
 

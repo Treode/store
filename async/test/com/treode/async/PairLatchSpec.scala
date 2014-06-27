@@ -41,14 +41,14 @@ class PairLatchSpec extends FlatSpec {
 
   it should "reject two sets on a" in {
     val cb = CallbackCaptor [(Int, Int)]
-    val (la, lb) = pair [Int, Int] (cb)
+    val (la, _) = pair [Int, Int] (cb)
     la.pass (1)
     intercept [Exception] (la.pass (0))
   }
 
   it should "reject two sets on b" in {
     val cb = CallbackCaptor [(Int, Int)]
-    val (la, lb) = pair[Int, Int]  (cb)
+    val (_, lb) = pair[Int, Int]  (cb)
     lb.pass (2)
     intercept [Exception] (lb.pass (0))
   }

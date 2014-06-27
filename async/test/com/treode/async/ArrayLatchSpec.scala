@@ -26,7 +26,7 @@ class ArrayLatchSpec extends FlatSpec {
 
   "The ArrayLatch" should "release immediately for count==0" in {
     val cb = CallbackCaptor [Seq [Int]]
-    val ltch = Latch.seq [Int] (0, cb)
+    Latch.seq [Int] (0, cb)
     assertResult (Seq [Int] ()) (cb.passed.toSeq)
   }
 

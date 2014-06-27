@@ -134,7 +134,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
         }
 
         "rebalance is not started, it should yield no work" in {
-          implicit val (cluster, t) = setup()
+          implicit val (_, t) = setup()
           assertNone (t.deque())
         }
 
@@ -170,7 +170,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
         }
 
         "rebalance is not restarted, it should continue work" in {
-          implicit val (cluster, t) = setup()
+          implicit val (_, t) = setup()
           assertTask (begin (7), 0 -> Set (2, 4)) (t.deque())
           t.continue (Point.End)
           assertNone (t.deque())
@@ -221,7 +221,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
             assertNone (t.deque())
           }}}}
 
-    "twos point of completed work and" - {
+    "two points of completed work and" - {
 
       "no work underway and" - {
 
@@ -240,7 +240,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
         }
 
         "rebalance is not restarted, it should continue work" in {
-          implicit val (cluster, t) = setup()
+          implicit val (_, t) = setup()
           assertTask (range (3, 7), 0 -> Set (5)) (t.deque())
           t.continue (7)
           assertTask (begin (7), 0 -> Set (4, 5)) (t.deque())

@@ -319,7 +319,7 @@ class SuperBlocksSpec extends FreeSpec {
     }
 
     "reject gen0 when it's hosed" in {
-      implicit val (scheduler, file, superb0, superb1) = setup()
+      implicit val (scheduler, file, _, superb1) = setup()
       val buf = PagedBuffer (12)
       while (buf.readableBytes < geom.blockBytes)
         buf.writeInt (Random.nextInt)
@@ -330,7 +330,7 @@ class SuperBlocksSpec extends FreeSpec {
     }
 
     "reject gen1 when it's hosed" in {
-      implicit val (scheduler, file, superb0, superb1) = setup()
+      implicit val (scheduler, file, superb0, _) = setup()
       val buf = PagedBuffer (12)
       while (buf.readableBytes < geom.blockBytes)
         buf.writeInt (Random.nextInt)

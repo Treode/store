@@ -54,7 +54,7 @@ class LogSpec extends FlatSpec with CrashChecks {
       implicit val scheduler = StubScheduler.random()
       file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
-      implicit val disk = recovery.attachAndLaunch (("a", file, geom))
+      recovery.attachAndLaunch (("a", file, geom))
     }
 
     {

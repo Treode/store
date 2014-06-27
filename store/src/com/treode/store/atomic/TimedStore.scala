@@ -46,7 +46,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
   }
 
   def ceiling (id: TableId): Option [TierTable] = {
-    var table = tables.get (id)
+    val table = tables.get (id)
     if (table != null) return Some (table)
     val rest = tables.entrySet.filter (_.getKey > id)
     if (rest.isEmpty) return None

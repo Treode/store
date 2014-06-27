@@ -51,7 +51,6 @@ trait StoreBehaviors {
     implicit val store = newStore (kit)
 
     val clock = new AtomicInteger (1)
-    val brokerLatch = new CountDownLatch (nbrokers)
     val countAuditsPassed = new AtomicInteger (0)
     val countTransferPassed = new AtomicInteger (0)
     val countTransferAdvanced = new AtomicInteger (0)
@@ -79,12 +78,11 @@ trait StoreBehaviors {
         val firstTime = Bound (TxClock.MinValue, true)
         val lastTime = Bound (TxClock.MaxValue, true)
         val allTimes = Window.Between (lastTime, firstTime)
-        val recent = Window.Recent (nextTick, true)
         for {
           _history <- Accounts.scan (allTimes, Slice.all) .toSeq
         } yield {
           var tracker = Map.empty [Int, Int] .withDefaultValue (opening)
-          var supply = naccounts * opening
+          val supply = naccounts * opening
           val history = _history
               .groupBy (_.time)
               .toSeq
@@ -341,14 +339,14 @@ trait StoreBehaviors {
 
           "find ts2::2 for Apple##ts2+1" in {
             implicit val kit = StoreTestKit.random()
-            val (s, ts1, ts2) = setup()
+            val (s, _, ts2) = setup()
             import kit.{random, scheduler}
             s.read (ts2+1, Get (T1, Apple)) .expectSeq (ts2::2)
           }
 
           "find ts2::2 for Apple##ts2" in {
             implicit val kit = StoreTestKit.random()
-            val (s, ts1, ts2) = setup()
+            val (s, _, ts2) = setup()
             import kit.{random, scheduler}
             s.read (ts2, Get (T1, Apple)) .expectSeq (ts2::2)
           }
@@ -362,14 +360,14 @@ trait StoreBehaviors {
 
           "find ts1::1 for Apple##ts1" in {
             implicit val kit = StoreTestKit.random()
-            val (s, ts1, ts2) = setup()
+            val (s, ts1, _) = setup()
             import kit.{random, scheduler}
             s.read (ts1, Get (T1, Apple)) .expectSeq (ts1::1)
           }
 
           "find 0::None for Apple##ts1-1" in {
             implicit val kit = StoreTestKit.random()
-            val (s, ts1, ts2) = setup()
+            val (s, ts1, _) = setup()
             import kit.{random, scheduler}
             s.read (ts1-1, Get (T1, Apple)) .expectSeq (0::None)
           }}}}}}

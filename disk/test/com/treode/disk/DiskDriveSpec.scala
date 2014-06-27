@@ -54,7 +54,7 @@ class DiskDriveSpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random()
       val file = StubFile (1<<20, 6)
       val kit = new DiskKit (sysid, 0)
-      val drive = init (file, kit) .pass
+      init (file, kit) .pass
     }
 
     "issue three writes to the disk" in {

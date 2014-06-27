@@ -1604,13 +1604,13 @@ trait StoreClusterChecks extends AsyncChecks {
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      var h1 = runner.install (H1) .pass
+      val h1 = runner.install (H1) .pass
       val h2 = runner.install (H2) .pass
       val h3 = runner.install (H3) .pass
       val h4 = runner.install (H4) .pass
       val h5 = runner.install (H5) .pass
       val h6 = runner.install (H6) .pass
-      var hs = Seq (h1, h2, h3, h4, h5, h6)
+      val hs = Seq (h1, h2, h3, h4, h5, h6)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
       h1.issueAtlas (settled (h1, h2, h3))
@@ -1858,7 +1858,7 @@ trait StoreClusterChecks extends AsyncChecks {
       val hs =
         for (id <- Seq (H1, H2, H3, H4, H5, H6, H7, H8))
           yield runner.install (id) .pass
-      val Seq (h1, h2, h3) = hs take 3
+      val Seq (h1, h2, _) = hs take 3
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
       val atlas1 = cohortsFor8 (hs)

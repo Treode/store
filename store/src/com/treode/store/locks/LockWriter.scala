@@ -31,7 +31,7 @@ private class LockWriter (
   // For testing mocks.
   def this() = this (null, TxClock.MinValue, SortedSet.empty, Callback.ignore)
 
-  private var iter = ids.iterator
+  private val iter = ids.iterator
   private var max = _ft
 
   private def finish() {

@@ -423,7 +423,6 @@ private object DiskDrive {
       val logSeg = alloc.alloc (geom, config)
       val logSegs = new ArrayDeque [Int]
       logSegs.add (logSeg.num)
-      val pageSeg = alloc.alloc (geom, config)
 
       val superb = SuperBlock (id, boot, geom, false, alloc.free, logSeg.base)
 

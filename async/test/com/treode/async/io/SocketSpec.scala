@@ -38,7 +38,7 @@ class SocketSpec extends FlatSpec {
   }
 
   "AsyncSocket.flush" should "handle an empty buffer" in {
-    implicit val (scheduler, async, socket, buffer) = mkSocket
+    implicit val (scheduler, _, socket, buffer) = mkSocket
     socket.flush (buffer) .pass
   }
 
@@ -56,7 +56,6 @@ class SocketSpec extends FlatSpec {
   it should "loop to flush an int" in {
     implicit val (scheduler, async, socket, output) = mkSocket
     output.writeInt (0)
-    var _pos = 0
     async.expectWrite (0, 4)
     async.expectWrite (2, 4)
     val cb = socket.flush (output) .capture()
@@ -80,12 +79,12 @@ class SocketSpec extends FlatSpec {
   }
 
   "AsyncSocket.fill" should "handle a request for 0 bytes" in {
-    implicit val (scheduler, async, socket, input) = mkSocket
+    implicit val (scheduler, _, socket, input) = mkSocket
     socket.fill (input, 0) .pass
   }
 
   it should "handle a request for bytes available at the beginning" in {
-    implicit val (scheduler, async, socket, input) = mkSocket
+    implicit val (scheduler, _, socket, input) = mkSocket
     input.writePos = 4
     socket.fill (input, 4) .pass
   }

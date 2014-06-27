@@ -26,7 +26,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   "An ArrayBuffer" should "hash bytes at the beginning" in {
     val hashf = Hashing.murmur3_32()
-    var bytes = Array.tabulate (11) (i => (i + 1).toByte)
+    val bytes = Array.tabulate (11) (i => (i + 1).toByte)
     val buf = ArrayBuffer (32)
     buf.writeBytes (bytes, 0, 11)
     assertResult (hashf.hashBytes (bytes)) (buf.hash (0, 11, hashf))
@@ -34,7 +34,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   it should "hash bytes in the middle" in {
     val hashf = Hashing.murmur3_32()
-    var bytes = Array.tabulate (11) (i => (i + 1).toByte)
+    val bytes = Array.tabulate (11) (i => (i + 1).toByte)
     val buf = ArrayBuffer (32)
     buf.writePos = 7
     buf.writeBytes (bytes, 0, 11)
@@ -43,7 +43,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   it should "hash bytes at the end" in {
     val hashf = Hashing.murmur3_32()
-    var bytes = Array.tabulate (11) (i => (i + 1).toByte)
+    val bytes = Array.tabulate (11) (i => (i + 1).toByte)
     val buf = ArrayBuffer (32)
     buf.writePos = 21
     buf.writeBytes (bytes, 0, 11)

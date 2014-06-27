@@ -21,8 +21,6 @@ import scala.util.{Failure, Success, Try}
 private class CountingLatch [A] (count: Int, cb: Callback [Unit])
 extends AbstractLatch (count, cb) with Callback [A] {
 
-  private var thrown = List.empty [Throwable]
-
   init()
 
   def value = ()
