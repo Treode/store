@@ -47,7 +47,7 @@ trait CrashChecks extends AsyncChecks {
     private val asserts = Seq.newBuilder [Unit => Unit]
 
     def assert (cond: => Boolean, msg: String): ForCrashesRecover = {
-      asserts += (_ => Assertions.assert (cond, msg))
+      asserts += (_ => if (!cond) fail (msg))
       this
     }
 

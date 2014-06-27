@@ -34,7 +34,7 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
       val _second = Thread.currentThread.getStackTrace
       println ("First invokation:\n    " + (_invokation take (10) mkString "\n    "))
       println ("Second invokation:\n    " + (_second take (10) mkString "\n    "))
-      assert (false, "Callback was already invoked.")
+      fail ("Callback was already invoked.")
     }}
 
   def apply (v: Try [T]): Unit = synchronized {
@@ -63,7 +63,8 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
 
   /** Throw a testing error if the callback was not invoked. */
   def assertInvoked(): Unit = synchronized {
-    assert (_invokation != null, "Expected callback to have been invoked, but it was not.")
+    if (_invokation == null)
+      fail ("Expected callback to have been invoked, but it was not.")
   }
 
   /** Throw a testing error if the callback was invoked. */
@@ -91,9 +92,8 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
       fail (
           "Expected operation to fail, but it passed:\n" +
           (_invokation take (10) mkString "\n"))
-    assert (
-        m.runtimeClass.isInstance (_t),
-        s"Expected ${m.runtimeClass.getSimpleName}, found ${_t.getClass.getSimpleName}")
+    if (!m.runtimeClass.isInstance (_t))
+      fail (s"Expected ${m.runtimeClass.getSimpleName}, found ${_t.getClass.getSimpleName}")
     _t.asInstanceOf [E]
   }
 
