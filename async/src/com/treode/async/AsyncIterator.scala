@@ -55,6 +55,11 @@ trait AsyncIterator [A] {
   /** Execute the asynchronous operation `f` foreach element while `p` is true.  Return the first
     * element for which `p` fails, or `None` if `p` never fails and the whole sequence is
     * consumed.
+    *
+    * @param p The condition on which to continue iterating.
+    * @param f The function to invoke for each element matching `p`.
+    * @return `None` if `p` always returned `true` and the entire sequence was consumed, or `Some`
+    *   with the first element on which `p` returned `false`.
     */
   def whilst [B >: A] (p: A => Boolean) (f: A => Async [Unit]): Async [Option [B]] =
     async { close =>
@@ -70,10 +75,39 @@ trait AsyncIterator [A] {
         case Failure (t) => close.fail (t)
       }}
 
-  /** Iterate the entire asynchronous iterator and return a standard sequence. */
+  /** Iterate the entire asynchronous iterator and build a standard map. */
+  def toMap [K, V] (implicit witness: <:< [A, (K, V)]): Async [Map [K, V]] = {
+    val builder = Map.newBuilder [K, V]
+    foreach (x => supply (builder += x)) .map (_ => builder.result)
+  }
+
+  /** Iterate the asynchronous iterator while `p` is true and build a standard map.
+    *
+    * @param p The condition on which to continue adding elements to the map.
+    * @return The map and the next element if there is one.  The next element is the first
+    *   element for which `p` returned false.
+    */
+  def toMapWhile [K, V] (p: A => Boolean) (implicit witness: <:< [A, (K, V)]):
+      Async [(Map [K, V], Option [A])] = {
+    val builder = Map.newBuilder [K, V]
+    whilst (p) (x => supply (builder += x)) .map (n => (builder.result, n))
+  }
+
+  /** Iterate the entire asynchronous iterator and build a standard sequence. */
   def toSeq: Async [Seq [A]] = {
     val builder = Seq.newBuilder [A]
     foreach (x => supply (builder += x)) .map (_ => builder.result)
+  }
+
+  /** Iterate the asynchronous iterator while `p` is true and build a standard sequence.
+    *
+    * @param p The condition on which to continue adding elements to the sequence.
+    * @return The sequence and the next element if there is one.  The next element is the first
+    *   element for which `p` returned false.
+    */
+  def toSeqWhile (p: A => Boolean): Async [(Seq [A], Option [A])] = {
+    val builder = Seq.newBuilder [A]
+    whilst (p) (x => supply (builder += x)) .map (n => (builder.result, n))
   }}
 
 object AsyncIterator {

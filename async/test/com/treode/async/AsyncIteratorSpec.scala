@@ -346,4 +346,64 @@ class AsyncIteratorSpec extends FlatSpec {
     } .fail [DistinguishedException]
     assertResult (Set (1, 2, 3)) (consumed)
     assertResult (Set (1, 2)) (seen)
-  }}
+  }
+
+  "AsyncIterator.toMap" should "build the elements into a map" in {
+    implicit val scheduler = StubScheduler.random()
+    assertResult (Map.empty) {
+      adapt() .toMap.pass
+    }
+    assertResult (Map (1 -> 10)) {
+      adapt (1 -> 10) .toMap.pass
+    }
+    assertResult (Map (1 -> 10, 2 -> 20)) {
+      adapt (1 -> 10, 2 -> 20) .toMap.pass
+    }
+    assertResult (Map (1 -> 10, 2 -> 20, 3 -> 30)) {
+      adapt (1 -> 10, 2 -> 20, 3 -> 30) .toMap.pass
+    }}
+
+  "AsyncIterator.toMapWhile" should "build the initial elements into a map" in {
+    implicit val scheduler = StubScheduler.random()
+    assertResult ((Map.empty, None)) {
+      adapt [(Int, Int)] () .toMapWhile (_._1 < 2) .pass
+    }
+    assertResult ((Map (1 -> 10), None)) {
+      adapt (1 -> 10) .toMapWhile (_._1 < 2) .pass
+    }
+    assertResult ((Map (1 -> 10), Some (2 -> 20))) {
+      adapt (1 -> 10, 2 -> 20) .toMapWhile (_._1 < 2) .pass
+    }
+    assertResult ((Map (1 -> 10), Some (2 -> 20))) {
+      adapt (1 -> 10, 2 -> 20, 3 -> 30) .toMapWhile (_._1 < 2) .pass
+    }}
+
+  "AsyncIterator.toSeq" should "build the elements into a sequence" in {
+    implicit val scheduler = StubScheduler.random()
+    assertResult (Seq.empty) {
+      adapt() .toSeq.pass
+    }
+    assertResult (Seq (1)) {
+      adapt (1) .toSeq.pass
+    }
+    assertResult (Seq (1, 2)) {
+      adapt (1, 2) .toSeq.pass
+    }
+    assertResult (Seq (1, 2, 3)) {
+      adapt (1, 2, 3) .toSeq.pass
+    }}
+
+  "AsyncIterator.toSeqWhile" should "build the initial elements into a sequence" in {
+    implicit val scheduler = StubScheduler.random()
+    assertResult ((Seq.empty, None)) {
+      adapt [Int] () .toSeqWhile (_ < 2) .pass
+    }
+    assertResult ((Seq (1), None)) {
+      adapt (1) .toSeqWhile (_ < 2) .pass
+    }
+    assertResult ((Seq (1), Some (2))) {
+      adapt (1, 2) .toSeqWhile (_ < 2) .pass
+    }
+    assertResult ((Seq (1), Some (2))) {
+      adapt (1, 2, 3) .toSeqWhile (_ < 2) .pass
+    }}}
