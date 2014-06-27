@@ -16,7 +16,7 @@
 
 package com.treode.disk
 
-import com.treode.async.{Async, Callback}
+import com.treode.async.Async
 import com.treode.pickle.Pickler
 
 class RecordDescriptor [R] private (val id: TypeId, val prec: Pickler [R]) {

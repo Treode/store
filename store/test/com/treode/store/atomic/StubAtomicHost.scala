@@ -32,7 +32,6 @@ import com.treode.store.paxos.Paxos
 import org.scalatest.Assertions
 
 import Async.latch
-import Assertions._
 import AtomicTestTools._
 
 private class StubAtomicHost (

@@ -29,7 +29,6 @@ import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.{FreeSpec, PropSpec, Suites}
 import org.scalatest.concurrent.TimeLimitedTests
 
-import CatalogTestTools._
 import StubCatalogHost.{cat1, cat2}
 
 class BrokerSpec extends Suites (BrokerBehaviors, new BrokerProperties)

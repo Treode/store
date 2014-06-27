@@ -17,7 +17,6 @@
 package com.treode.disk.stubs
 
 import java.util.{ArrayDeque, ArrayList, HashMap}
-import scala.collection.JavaConversions
 import scala.util.{Failure, Random, Success}
 
 import com.treode.async.{Async, Callback, Scheduler}
@@ -27,7 +26,6 @@ import com.treode.buffer.ArrayBuffer
 import com.treode.disk.RecordRegistry
 
 import Async.async
-import JavaConversions._
 
 class StubDiskDrive (implicit random: Random) {
 

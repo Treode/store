@@ -77,10 +77,7 @@ private object TestTable {
     def launch (implicit launch: Disk.Launch): Async [TestTable]
   }
 
-  val descriptor = {
-    import StorePicklers._
-    TierDescriptor (0x28) ((_, _, _) => true)
-  }
+  val descriptor = TierDescriptor (0x28) ((_, _, _) => true)
 
   val put = {
     import StorePicklers._

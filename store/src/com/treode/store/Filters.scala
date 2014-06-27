@@ -16,8 +16,6 @@
 
 package com.treode.store
 
-import com.treode.async.{AsyncIterator, Callback}
-
 private object Filters {
 
   /** Preserves first cell for key and time and eliminates subsequent ones.  Expects the input

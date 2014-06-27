@@ -16,7 +16,7 @@
 
 package com.treode.store.atomic
 
-import scala.collection.{JavaConversions, SortedMap}
+import scala.collection.SortedMap
 import scala.util.Random
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
@@ -30,7 +30,6 @@ import org.scalatest.FreeSpec
 import Async.supply
 import AtomicTestTools._
 import AtomicTracker._
-import JavaConversions._
 
 trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
   this: FreeSpec =>

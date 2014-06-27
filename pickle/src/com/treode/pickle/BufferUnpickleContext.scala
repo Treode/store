@@ -16,7 +16,6 @@
 
 package com.treode.pickle
 
-import java.io.DataInput
 import com.treode.buffer.Input
 
 private class BufferUnpickleContext (in: Input) extends UnpickleContext {

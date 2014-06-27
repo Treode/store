@@ -17,7 +17,6 @@
 package com.treode.disk
 
 import java.nio.file.{Path, Paths}
-import scala.collection.JavaConversions
 import scala.collection.mutable.UnrolledBuffer
 import scala.language.implicitConversions
 import scala.reflect.ClassTag
@@ -31,7 +30,6 @@ import org.scalatest.Assertions
 
 import Assertions.assertResult
 import Disk.Launch
-import JavaConversions._
 
 private object DiskTestTools {
 

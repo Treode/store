@@ -22,8 +22,6 @@ import com.treode.store.StoreTestConfig
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
-import AtomicTestTools._
-
 class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
 
   "The atomic implementation should" - {

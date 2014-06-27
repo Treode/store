@@ -30,7 +30,6 @@ import org.scalatest.time.SpanSugar
 
 import AtomicTestTools._
 import SpanSugar._
-import WriteOp._
 
 class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 

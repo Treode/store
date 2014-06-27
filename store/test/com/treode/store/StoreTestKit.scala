@@ -16,11 +16,9 @@
 
 package com.treode.store
 
-import java.util.concurrent.Executors
 import scala.util.Random
 
 import com.treode.async.stubs.StubScheduler
-import com.treode.cluster.HostId
 import com.treode.cluster.stubs.StubNetwork
 
 class StoreTestKit private (implicit

@@ -21,9 +21,8 @@ import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 
 import com.treode.async.Async
-import com.treode.async.implicits._
 import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
-import com.treode.disk.{Disk, DriveAttachment, DriveDigest, DriveGeometry}
+import com.treode.disk.{Disk, DriveAttachment, DriveDigest}
 
 import Async.guard
 

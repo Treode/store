@@ -25,7 +25,6 @@ import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
 import Async.supply
-import DiskTestTools._
 
 class StubDiskSpec extends FreeSpec with CrashChecks {
 

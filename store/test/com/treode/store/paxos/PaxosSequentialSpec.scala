@@ -18,14 +18,11 @@ package com.treode.store.paxos
 
 import scala.util.Random
 
-import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.StubDiskDrive
 import com.treode.store.{Bytes, StoreTestConfig, StoreTestKit}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
-
-import PaxosTestTools._
 
 class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
 

@@ -16,13 +16,6 @@
 
 package com.treode.async
 
-import scala.runtime.NonLocalReturnControl
-
-import com.treode.async._
-import com.treode.async.implicits._
-
-import Callback.ignore
-
 /** Experimental. */
 class AsyncQueue (fiber: Fiber) (deque: => Option [Runnable]) {
 

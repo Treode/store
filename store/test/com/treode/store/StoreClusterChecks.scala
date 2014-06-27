@@ -20,7 +20,6 @@ import java.util.concurrent.Executors
 import scala.util.Random
 
 import com.treode.async.{Async, Callback, Scheduler}
-import com.treode.async.implicits._
 import com.treode.async.stubs.{AsyncChecks, CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId

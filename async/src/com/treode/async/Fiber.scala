@@ -19,8 +19,6 @@ package com.treode.async
 import java.util.ArrayDeque
 import scala.runtime.NonLocalReturnControl
 
-import com.treode.async.implicits._
-
 /** Serialize operations; not quite entirely unlike Actors.
   *
   * A fiber provides a lightweight mechanism to serialize operations on an object.  As a simple

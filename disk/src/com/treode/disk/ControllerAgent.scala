@@ -18,7 +18,6 @@ package com.treode.disk
 
 import java.nio.file.Path
 import com.treode.async.Async
-import com.treode.async.io.File
 
 private class ControllerAgent (kit: DiskKit, val disk: Disk) extends Disk.Controller  {
 

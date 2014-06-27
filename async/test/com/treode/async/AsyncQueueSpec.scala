@@ -18,7 +18,6 @@ package com.treode.async
 
 import java.util.ArrayDeque
 
-import com.treode.async.implicits._
 import com.treode.async.stubs.{AsyncCaptor, CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import org.scalatest.FlatSpec

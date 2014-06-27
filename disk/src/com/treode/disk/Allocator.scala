@@ -16,8 +16,6 @@
 
 package com.treode.disk
 
-import scala.collection.mutable.ArrayBuffer
-
 import Allocator.segmentBounds
 
 private class Allocator private (private var _free: IntSet) {

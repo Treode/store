@@ -20,7 +20,6 @@ import scala.collection.mutable.UnrolledBuffer
 import scala.util.{Failure, Random, Success}
 
 import com.treode.async.{Async, Callback, Scheduler}
-import com.treode.async.implicits._
 import com.treode.async.misc.EpochReleaser
 import com.treode.disk._
 

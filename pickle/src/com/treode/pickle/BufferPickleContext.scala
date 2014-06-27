@@ -16,7 +16,6 @@
 
 package com.treode.pickle
 
-import java.io.DataOutput
 import com.treode.buffer.Output
 
 private class BufferPickleContext (out: Output) extends PickleContext {

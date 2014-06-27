@@ -21,7 +21,6 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
-import com.treode.async.stubs.implicits._
 import com.treode.store.{Bytes, Cell, TimeoutException}
 
 import Async.guard

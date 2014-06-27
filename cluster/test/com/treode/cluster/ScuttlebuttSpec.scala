@@ -28,7 +28,7 @@ import com.treode.cluster.stubs.{StubPeer, StubNetwork}
 import com.treode.pickle.{Pickler, Picklers, PicklerRegistry}
 import org.scalatest.{FreeSpec, PropSpec, Suites}
 
-import Scuttlebutt.{Handler, Sync, Value}
+import Scuttlebutt.{Sync, Value}
 
 class ScuttlebuttSpec extends Suites (ScuttlebuttBehaviors, new ScuttlebuttProperties)
 

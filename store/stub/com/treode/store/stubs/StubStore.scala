@@ -81,7 +81,6 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
 
   def write (xid: TxId, ct: TxClock, ops: WriteOp*): Async [TxClock] =
     guard {
-      import TxClock._
       val ids = ops map (op => (op.table, op.key).hashCode)
       for {
         locks <- space.write (ct, ids)

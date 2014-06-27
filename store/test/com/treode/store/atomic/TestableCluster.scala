@@ -23,8 +23,6 @@ import com.treode.cluster.HostId
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.store._
 
-import StoreTestTools._
-
 private class TestableCluster (hosts: Seq [StubAtomicHost]) (implicit kit: StoreTestKit)
 extends Store {
   import kit.{random, scheduler}

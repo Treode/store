@@ -19,7 +19,6 @@ package com.treode.store.paxos
 import scala.util.Random
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
-import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork

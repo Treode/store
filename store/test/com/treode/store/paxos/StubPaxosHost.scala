@@ -20,7 +20,6 @@ import scala.util.Random
 
 import com.treode.async.{Async, AsyncIterator, Scheduler}
 import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubPeer, StubNetwork}
 import com.treode.disk.Disk
@@ -30,9 +29,7 @@ import com.treode.store.catalog.Catalogs
 import com.treode.store.tier.TierTable
 import org.scalatest.Assertions
 
-import Assertions._
 import Async.{guard, supply}
-import PaxosTestTools._
 
 private class StubPaxosHost (
     val localId: HostId

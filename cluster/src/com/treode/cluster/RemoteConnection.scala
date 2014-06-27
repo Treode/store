@@ -18,7 +18,6 @@ package com.treode.cluster
 
 import java.nio.channels.AsynchronousChannelGroup
 import java.util
-import scala.collection.JavaConversions._
 import scala.language.postfixOps
 import scala.util.{Failure, Random, Success}
 

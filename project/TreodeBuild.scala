@@ -42,7 +42,7 @@ object TreodeBuild extends Build {
       (baseDirectory ((base: File) => Seq (base / "src"))),
 
     scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked", 
-      "-Yinline-warnings"),
+      "-Ywarn-unused-import"),
 
     libraryDependencies <+= (scalaVersion) ("org.scala-lang" % "scala-reflect" % _),
 

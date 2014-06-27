@@ -20,8 +20,6 @@ import scala.collection.mutable.PriorityQueue
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-import com.treode.async.implicits._
-
 import Async.{guard, async}
 
 private class MergeIterator [A] (

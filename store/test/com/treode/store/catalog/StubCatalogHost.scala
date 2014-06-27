@@ -29,7 +29,6 @@ import org.scalatest.Assertions
 
 import Assertions.assertResult
 import Callback.ignore
-import CatalogTestTools._
 import StubCatalogHost.{cat1, cat2}
 
 private class StubCatalogHost (val localId: HostId) (implicit kit: StoreTestKit)

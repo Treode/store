@@ -16,7 +16,7 @@
 
 package com.treode.cluster
 
-import com.treode.pickle.{Pickler, Picklers}
+import com.treode.pickle.Pickler
 
 class RumorDescriptor [M] (val id: RumorId, val pmsg: Pickler [M]) {
 

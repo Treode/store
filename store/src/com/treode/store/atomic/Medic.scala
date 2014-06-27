@@ -16,13 +16,12 @@
 
 package com.treode.store.atomic
 
-import com.treode.async.{Async, Callback, Fiber}
+import com.treode.async.Callback
 import com.treode.store.{TxClock, TxId, WriteOp}
 
 import Callback.ignore
 
 private class Medic (val xid: TxId, kit: RecoveryKit)  {
-  import kit.tables
 
   var _preparing = Option.empty [Seq [WriteOp]]
   var _committed = Option.empty [TxClock]

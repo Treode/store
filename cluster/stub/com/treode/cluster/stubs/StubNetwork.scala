@@ -17,7 +17,6 @@
 package com.treode.cluster.stubs
 
 import java.util.concurrent.{ConcurrentHashMap, Executors}
-import scala.collection.JavaConversions._
 import scala.util.Random
 
 import com.treode.async.stubs.StubScheduler

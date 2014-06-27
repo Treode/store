@@ -20,7 +20,6 @@ import scala.collection.JavaConversions
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
 import com.treode.disk.Disk

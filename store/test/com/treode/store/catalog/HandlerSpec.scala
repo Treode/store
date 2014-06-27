@@ -29,7 +29,6 @@ import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, CatalogId, StoreTestConfig, StoreTestTools}
 
 import JavaConversions._
-import StoreTestTools._
 
 class HandlerSpec extends FreeSpec {
 

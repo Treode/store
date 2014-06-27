@@ -25,8 +25,6 @@ import com.treode.tags.{Intensive, Periodic}
 import com.treode.store._
 import org.scalatest.FreeSpec
 
-import StoreTestTools._
-
 class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
 
   val newStore = { kit: StoreTestKit =>

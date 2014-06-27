@@ -18,7 +18,6 @@ package com.treode.store
 
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
-import com.treode.async.stubs.implicits._
 import org.scalatest.FreeSpec
 
 import Fruits.{Apple, Banana}

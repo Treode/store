@@ -17,11 +17,8 @@
 package com.treode.disk
 
 import java.util.ArrayList
-import scala.collection.JavaConversions
 
 import com.treode.async.{Async, Callback, Scheduler}
-
-import JavaConversions._
 
 private class LaunchAgent (val kit: DiskKit) extends Disk.Launch {
 

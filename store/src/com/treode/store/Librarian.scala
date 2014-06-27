@@ -24,7 +24,6 @@ import com.treode.store.catalog.Catalogs
 
 import Async.{guard, supply}
 import Callback.ignore
-import Cohort._
 
 private class Librarian private (
     rebalance: Atlas => Async [Unit]

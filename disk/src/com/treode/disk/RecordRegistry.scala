@@ -17,7 +17,7 @@
 package com.treode.disk
 
 import com.treode.buffer.{ArrayBuffer, PagedBuffer}
-import com.treode.pickle.{Pickler, PicklerRegistry}
+import com.treode.pickle.PicklerRegistry
 
 private class RecordRegistry {
 

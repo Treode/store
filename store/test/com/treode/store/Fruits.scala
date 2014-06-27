@@ -16,8 +16,6 @@
 
 package com.treode.store
 
-import com.treode.pickle.Picklers
-
 object Fruits {
 
   // Thank you Wikipedia, http://simple.wikipedia.org/wiki/List_of_fruits

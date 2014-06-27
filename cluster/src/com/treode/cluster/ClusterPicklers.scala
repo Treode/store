@@ -16,8 +16,7 @@
 
 package com.treode.cluster
 
-import java.net.{InetSocketAddress, SocketAddress}
-import com.treode.pickle.{PickleContext, Pickler, Picklers, UnpickleContext}
+import com.treode.pickle.Picklers
 
 private trait ClusterPicklers extends Picklers {
 
