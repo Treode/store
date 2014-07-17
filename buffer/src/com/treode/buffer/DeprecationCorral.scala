@@ -20,10 +20,10 @@ package com.treode.buffer
   * See https://issues.scala-lang.org/browse/SI-7934
   */
 @deprecated ("", "")
-private class DeprecationCoral {
+private class DeprecationCorral {
 
   def getBytes (src: String, srcBegin: Int, srcEnd: Int, dst: Array [Byte], dstBegin: Int) =
     src.getBytes (srcBegin, srcEnd, dst, dstBegin)
 }
 
-private object DeprecationCoral extends DeprecationCoral
+private object DeprecationCorral extends DeprecationCorral

@@ -789,7 +789,7 @@ class PagedBuffer private (pageBits: Int) extends Buffer {
     writeVarUInt (v.length)
     if (v.length < 64 && v.length <= pageSize - wpos && isAscii (v)) {
       // Super fast case for short ASCII strings within a page.
-      DeprecationCoral.getBytes (v, 0, v.length, wpage, wpos)
+      DeprecationCorral.getBytes (v, 0, v.length, wpage, wpos)
       wpos += v.length
     } else {
       var i = 0

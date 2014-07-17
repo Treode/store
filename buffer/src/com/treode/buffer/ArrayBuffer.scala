@@ -410,7 +410,7 @@ class ArrayBuffer private (val data: Array [Byte]) extends Buffer {
     writeVarUInt (v.length)
     if (v.length < 64 && v.length <= data.length - wpos && isAscii (v)) {
       // Super fast case for short ASCII strings within a page.
-      DeprecationCoral.getBytes (v, 0, v.length, data, wpos)
+      DeprecationCorral.getBytes (v, 0, v.length, data, wpos)
       wpos += v.length
     } else {
       var i = 0
