@@ -18,15 +18,15 @@ package com.treode.store.paxos
 
 import scala.util.Random
 
-import com.treode.store.{Atlas, Bytes, Cohort, StoreTestTools}
+import com.treode.store.StoreTestTools
 
 private object PaxosTestTools extends StoreTestTools {
 
   implicit class PaxosRichRandom (random: Random) {
 
-    def nextKey(): Bytes =
-      Bytes (PaxosPicklers.fixedLong, random.nextLong & 0x7FFFFFFFFFFFFFFFL)
+    def nextKey(): Long =
+      random.nextLong & 0x7FFFFFFFFFFFFFFFL
 
-    def nextKeys (count: Int): Seq [Bytes] =
+    def nextKeys (count: Int): Seq [Long] =
       Seq.fill (count) (nextKey())
   }}

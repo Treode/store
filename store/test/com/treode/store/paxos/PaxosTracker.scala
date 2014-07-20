@@ -28,16 +28,16 @@ import PaxosTestTools._
 
 class PaxosTracker {
 
-  private var attempted = Map .empty [Bytes, Set [Int]] .withDefaultValue (Set.empty)
-  private var accepted = Map.empty [Bytes, Int] .withDefaultValue (-1)
+  private var attempted = Map .empty [Long, Set [Int]] .withDefaultValue (Set.empty)
+  private var accepted = Map.empty [Long, Int] .withDefaultValue (-1)
 
-  private def proposing (key: Bytes, value: Int): Unit =
+  private def proposing (key: Long, value: Int): Unit =
     synchronized {
       if (!(accepted contains key))
         attempted += key -> (attempted (key) + value)
     }
 
-  private def learned (key: Bytes, value: Int): Unit =
+  private def learned (key: Long, value: Int): Unit =
     synchronized {
       attempted -= key
       if (accepted contains key)
@@ -46,12 +46,12 @@ class PaxosTracker {
         accepted += key -> value
     }
 
-  def propose (host: StubPaxosHost, key: Bytes, value: Int): Async [Unit] =
+  def propose (host: StubPaxosHost, key: Long, value: Int): Async [Unit] =
     guard {
       require (value >= 0)
       proposing (key, value)
       for {
-        got <- host.propose (key, 0, Bytes (value))
+        got <- host.propose (key, value)
       } yield {
         learned (key, got.int)
       }
@@ -70,12 +70,8 @@ class PaxosTracker {
     for (n <- (0 until nbatches) .async)
       batch (nputs, hs:_*)
 
-  def read (host: StubPaxosHost, key: Bytes): Async [Int] =
-    for {
-      _got <- host.propose (key, 0, Bytes (-1))
-    } yield {
-      _got.int
-    }
+  def read (host: StubPaxosHost, key: Long): Async [Int] =
+    host.propose (key, -1)
 
   def check (host: StubPaxosHost) (implicit scheduler: Scheduler): Async [Unit] =
     for {
@@ -98,7 +94,7 @@ class PaxosTracker {
     } yield ()
 
   def check (cells: Seq [Cell]) {
-    val all = cells.map (c => (c.key, c.value.get.int)) .toMap.withDefaultValue (-1)
+    val all = cells.map (c => (c.key.long, c.value.get.int)) .toMap.withDefaultValue (-1)
     for ((key, value) <- accepted) {
       val found = all (key)
       assert (
@@ -109,7 +105,6 @@ class PaxosTracker {
       val values = attempted (key)
       assert (
           values contains found,
-          s"Expected ${key.long} to be one of $values, found $found")
+          s"Expected $key to be one of $values, found $found")
 
     }}}
-
