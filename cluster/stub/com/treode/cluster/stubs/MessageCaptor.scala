@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-package com.treode.store
+package com.treode.cluster.stubs
 
-import com.treode.cluster.{Cluster, HostId}
+import com.treode.cluster.{HostId, PortId}
+import com.treode.pickle.Pickler
 
-trait StubStoreHost {
+class MessageCaptor (val localId: HostId) extends StubPeer {
 
-  def localId: HostId
-
-  def cluster: Cluster
-
-  def hail (remoteId: HostId): Unit =
-    cluster.hail (remoteId, null)
+  private [stubs] def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M): Unit =
+    ()
 }

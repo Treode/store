@@ -24,6 +24,7 @@ import com.treode.async.{Async, AsyncIterator}
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId
+import com.treode.cluster.stubs.StubPeer
 import com.treode.disk.DriveGeometry
 import org.scalatest.Assertions
 
@@ -45,13 +46,13 @@ private trait StoreTestTools {
   def Get (id: TableId, key: Bytes): ReadOp =
     ReadOp (id, key)
 
-  def settled (hosts: StubStoreHost*): Cohort =
+  def settled (hosts: StubPeer*): Cohort =
     Cohort.settled (hosts map (_.localId): _*)
 
-  def issuing (origin: StubStoreHost*) (target: StubStoreHost*): Cohort =
+  def issuing (origin: StubPeer*) (target: StubPeer*): Cohort =
     Cohort.issuing (origin map (_.localId): _*) (target map (_.localId): _*)
 
-  def moving (origin: StubStoreHost*) (target: StubStoreHost*): Cohort =
+  def moving (origin: StubPeer*) (target: StubPeer*): Cohort =
     Cohort.moving (origin map (_.localId): _*) (target map (_.localId): _*)
 
   def testStringOf (cell: Cell): String = {

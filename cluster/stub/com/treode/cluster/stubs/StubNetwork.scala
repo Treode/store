@@ -62,8 +62,9 @@ class StubNetwork private (implicit random: Random) {
 object StubNetwork {
 
   private [stubs] val inactive =
-    new StubPeer (0) (null, null, null) {
-      override def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M) = ()
+    new StubPeer {
+      val localId = HostId (0)
+      def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M) = ()
     }
 
   def apply (random: Random): StubNetwork =

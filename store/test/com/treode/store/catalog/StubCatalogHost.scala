@@ -22,7 +22,7 @@ import com.treode.async.{Async, Callback}
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.cluster.stubs.StubPeer
+import com.treode.cluster.stubs.{StubCluster, StubHost}
 import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.store._
 import org.scalatest.Assertions
@@ -32,13 +32,13 @@ import Callback.ignore
 import StubCatalogHost.{cat1, cat2}
 
 private class StubCatalogHost (val localId: HostId) (implicit kit: StoreTestKit)
-extends StubStoreHost {
+extends StubHost {
   import kit._
 
   val config = StoreTestConfig()
   import config._
 
-  implicit val cluster = new StubPeer (localId)
+  implicit val cluster = new StubCluster (localId)
   implicit val library = new Library
   implicit val recovery = StubDisk.recover()
   implicit val _catalogs = Catalogs.recover()

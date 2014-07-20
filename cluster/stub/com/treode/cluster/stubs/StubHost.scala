@@ -19,9 +19,16 @@ package com.treode.cluster.stubs
 import com.treode.cluster.{HostId, PortId}
 import com.treode.pickle.Pickler
 
-trait StubPeer {
+trait StubHost extends StubPeer {
 
   def localId: HostId
 
-  private [stubs] def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M)
+  def cluster: StubCluster
+
+  private [stubs] def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M): Unit =
+    cluster.deliver (p, from, port, msg)
+
+  def hail (remoteId: HostId): Unit =
+    // StubCluster does not use the remote address
+    cluster.hail (remoteId, null)
 }

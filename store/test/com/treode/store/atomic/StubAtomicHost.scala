@@ -23,7 +23,7 @@ import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId, Peer}
-import com.treode.cluster.stubs.{StubPeer, StubNetwork}
+import com.treode.cluster.stubs.{StubCluster, StubNetwork}
 import com.treode.disk.Disk
 import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.store._
@@ -39,7 +39,7 @@ private class StubAtomicHost (
 ) (implicit
     val random: Random,
     val scheduler: ChildScheduler,
-    val cluster: StubPeer,
+    val cluster: StubCluster,
     val disk: Disk,
     val library: Library,
     val catalogs: Catalogs,
@@ -121,7 +121,7 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
     import config._
 
     implicit val scheduler = new ChildScheduler (parent)
-    implicit val cluster = new StubPeer (id)
+    implicit val cluster = new StubCluster (id)
     implicit val library = new Library
     implicit val recovery = StubDisk.recover()
     implicit val _catalogs = Catalogs.recover()

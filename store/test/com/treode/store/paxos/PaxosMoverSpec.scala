@@ -18,7 +18,7 @@ package com.treode.store.paxos
 
 import com.treode.async.stubs.StubScheduler
 import com.treode.cluster.{Cluster, HostId, Peer}
-import com.treode.cluster.stubs.StubPeer
+import com.treode.cluster.stubs.StubCluster
 import com.treode.store.{Atlas, Bytes, Cohort, StoreTestKit, StoreTestTools, TxClock}
 import org.scalatest.{FreeSpec, ShouldMatchers}
 
@@ -82,7 +82,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
     def setup() = {
       implicit val kit = StoreTestKit.random()
       import kit._
-      implicit val cluster = new StubPeer (1)
+      implicit val cluster = new StubCluster (1)
       cluster
     }
 
@@ -128,7 +128,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
         def setup() = {
           implicit val kit = StoreTestKit.random()
           import kit._
-          implicit val cluster = new StubPeer (1)
+          implicit val cluster = new StubCluster (1)
           val tracker = new RichTracker
           (cluster, tracker)
         }
@@ -161,7 +161,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
         def setup() = {
           implicit val kit = StoreTestKit.random()
           import kit._
-          implicit val cluster = new StubPeer (1)
+          implicit val cluster = new StubCluster (1)
           val t = new RichTracker
           t.start (moving (1, 2, 3) (1, 2, 4))
           assertTask (begin (0), 0 -> Set (2, 4)) (t.deque())
@@ -228,7 +228,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
         def setup() = {
           implicit val kit = StoreTestKit.random()
           import kit._
-          implicit val cluster = new StubPeer (1)
+          implicit val cluster = new StubCluster (1)
           val t = new RichTracker
           t.start (moving (1, 2, 3) (1, 2, 4))
           assertTask (begin (0), 0 -> Set (2, 4)) (t.deque())

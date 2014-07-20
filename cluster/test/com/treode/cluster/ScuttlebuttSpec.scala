@@ -24,7 +24,7 @@ import com.treode.async.io.Socket
 import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.buffer.PagedBuffer
-import com.treode.cluster.stubs.{StubPeer, StubNetwork}
+import com.treode.cluster.stubs.{StubCluster, StubNetwork}
 import com.treode.pickle.{Pickler, Picklers, PicklerRegistry}
 import org.scalatest.{FreeSpec, PropSpec, Suites}
 
@@ -223,7 +223,7 @@ class ScuttlebuttProperties extends PropSpec with AsyncChecks {
        network: StubNetwork
    ) {
 
-    implicit val cluster = new StubPeer (localId)
+    implicit val cluster = new StubCluster (localId)
 
     var heard = Map.empty [(HostId, RumorId), Int]
 

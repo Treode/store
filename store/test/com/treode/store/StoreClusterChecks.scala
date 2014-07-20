@@ -23,7 +23,7 @@ import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.stubs.{AsyncChecks, CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId
-import com.treode.cluster.stubs.StubNetwork
+import com.treode.cluster.stubs.{StubHost, StubNetwork}
 import com.treode.disk.stubs.StubDiskDrive
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
@@ -403,7 +403,7 @@ trait StoreClusterChecks extends AsyncChecks {
     (end - start) / nruns
   }
 
-  private def cohortsFor8 (hs: Seq [StubStoreHost]): Seq [Cohort] = {
+  private def cohortsFor8 (hs: Seq [StubHost]): Seq [Cohort] = {
     val Seq (h1, h2, h3, h4, h5, h6, h7, h8) = hs
     Seq (
         settled (h1, h2, h6),
@@ -416,7 +416,7 @@ trait StoreClusterChecks extends AsyncChecks {
         settled (h5, h6, h7))
   }
 
-  private def rewriteFor3to8 (prev: Seq [Cohort], hosts: Seq [StubStoreHost]): Seq [Cohort] = {
+  private def rewriteFor3to8 (prev: Seq [Cohort], hosts: Seq [StubHost]): Seq [Cohort] = {
     import Cohort.{Issuing, Moving, Settled}
     for ((Settled (hs1), i) <- cohortsFor8 (hosts) .zipWithIndex) yield {
       prev (i % prev.length) match {
@@ -434,7 +434,7 @@ trait StoreClusterChecks extends AsyncChecks {
           Issuing (hs0, hs1)
       }}}
 
-  private def rewriteFor8to3 (prev: Seq [Cohort], hosts: Seq [StubStoreHost]): Seq [Cohort] = {
+  private def rewriteFor8to3 (prev: Seq [Cohort], hosts: Seq [StubHost]): Seq [Cohort] = {
     import Cohort.{Issuing, Moving, Settled}
     val hs1 = hosts .take (3) .map (_.localId) .toSet
     for ((Settled (hs0), i) <- prev.zipWithIndex) yield
@@ -1888,7 +1888,7 @@ trait StoreClusterChecks extends AsyncChecks {
 
 object StoreClusterChecks {
 
-  trait Host extends StubStoreHost {
+  trait Host extends StubHost {
 
     def setAtlas (cohorts: Cohort*)
     def issueAtlas (cohorts: Cohort*)
