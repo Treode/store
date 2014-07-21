@@ -16,11 +16,62 @@
 
 package com.treode.cluster.stubs
 
-import com.treode.cluster.{HostId, PortId}
-import com.treode.pickle.Pickler
+import java.util.ArrayList
+import scala.collection.JavaConversions
+import scala.util.Random
 
-class MessageCaptor (val localId: HostId) extends StubPeer {
+import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
+import com.treode.cluster.{HostId, MessageDescriptor, PeerRegistry, PortId, Peer}
+import com.treode.pickle.Pickler
+import org.scalatest.Assertions
+
+import JavaConversions._
+
+class MessageCaptor (
+    val localId: HostId
+) (implicit
+    random: Random,
+    network: StubNetwork
+) extends StubPeer with Assertions {
+
+  private val peers: PeerRegistry =
+    new PeerRegistry (localId, new StubConnection (_, localId, network))
+
+  private var msgs = new ArrayList [(PortId, Any, Array [Byte], HostId)]
 
   private [stubs] def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M): Unit =
-    ()
+    synchronized {
+      msgs.add ((port, msg, p.toByteArray (msg), from))
+    }
+
+  def expect [M] (desc: MessageDescriptor [M]) (implicit s: StubScheduler): (M, Peer) = {
+    if (!msgs.exists (_._1 == desc.id))
+      s.run (timers = !msgs.exists (_._1 == desc.id))
+    val (port, msg, bytes, from) = synchronized {
+      val i = msgs.indexWhere (_._1 == desc.id)
+      msgs.remove (math.max (0, i))
+    }
+    if (desc.id != port)
+      fail (s"Expected ${desc.id}, found $port ($msg)")
+    (desc.pmsg.fromByteArray (bytes), peers.get (from))
+  }
+
+  def expectNone () (implicit s: StubScheduler) {
+    s.run (timers = false)
+    synchronized {
+      if (!msgs.isEmpty) {
+        val (port, msg, bytes, from) = msgs.remove (0)
+        fail (s"Expected none, found $port ($msg)")
+      }}}
+
+  override def toString =
+    msgs.map {case (port, msg, _, from) => (from, port, msg)} .mkString ("\n")
 }
+
+object MessageCaptor {
+
+  def install() (implicit random: Random, network: StubNetwork): MessageCaptor = {
+    val c = new MessageCaptor (random.nextLong)
+    network.install (c)
+    c
+  }}
