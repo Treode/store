@@ -34,7 +34,7 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
   var state: State = null
 
   trait State {
-    def query (proposer: Peer, ballot: Long, default: Patch)
+    def ask (proposer: Peer, ballot: Long, default: Patch)
     def propose (proposer: Peer, ballot: Long, patch: Patch)
     def choose (chosen: Patch)
   }
@@ -59,8 +59,8 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
 
   class Opening extends State {
 
-    def query (proposer: Peer, ballot: Long, default: Patch): Unit =
-      state = new Getting (_.query (proposer, ballot, default), default)
+    def ask (proposer: Peer, ballot: Long, default: Patch): Unit =
+      state = new Getting (_.ask (proposer, ballot, default), default)
 
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit =
       state = new Getting (_.propose (proposer, ballot, patch), patch)
@@ -88,8 +88,8 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
         panic (Getting.this, t)
     }
 
-    def query (proposer: Peer, ballot: Long, default: Patch): Unit =
-      op = (_.query (proposer, ballot, default))
+    def ask (proposer: Peer, ballot: Long, default: Patch): Unit =
+      op = (_.ask (proposer, ballot, default))
 
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit =
       op = (_.propose (proposer, ballot, patch))
@@ -123,14 +123,14 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
                   throw t
               }}}}}}
 
-    def query (proposer: Peer, _ballot: Long, default: Patch) {
+    def ask (proposer: Peer, _ballot: Long, default: Patch) {
       proposers += proposer
       val ballot = BallotNumber (_ballot, proposer.id)
       if (ballot < this.ballot) {
         Proposer.refuse (key, version, this.ballot.number) (proposer)
       } else {
         this.ballot = ballot
-        Proposer.promise (key, version, ballot.number, proposal) (proposer)
+        Proposer.grant (key, version, ballot.number, proposal) (proposer)
       }}
 
     def propose (proposer: Peer, _ballot: Long, patch: Patch) {
@@ -160,7 +160,7 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
         panic (Closed.this, t)
     }
 
-    def query (proposer: Peer, ballot: Long, default: Patch): Unit =
+    def ask (proposer: Peer, ballot: Long, default: Patch): Unit =
       Proposer.chosen (key, version, chosen) (proposer)
 
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit =
@@ -176,7 +176,7 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
 
     cleanup()
 
-    def query (proposer: Peer, ballot: Long, default: Patch): Unit = ()
+    def ask (proposer: Peer, ballot: Long, default: Patch): Unit = ()
 
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit = ()
 
@@ -189,15 +189,15 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
 
     cleanup()
 
-    def query (proposer: Peer, ballot: Long, default: Patch): Unit = ()
+    def ask (proposer: Peer, ballot: Long, default: Patch): Unit = ()
     def propose (proposer: Peer, ballot: Long, patch: Patch): Unit = ()
     def choose (chosen: Patch): Unit = ()
 
     override def toString = s"Acceptor.Panicked($key, $thrown)"
   }
 
-  def query (proposer: Peer, ballot: Long, default: Patch): Unit =
-    fiber.execute (state.query (proposer, ballot, default))
+  def ask (proposer: Peer, ballot: Long, default: Patch): Unit =
+    fiber.execute (state.ask (proposer, ballot, default))
 
   def propose (proposer: Peer, ballot: Long, patch: Patch): Unit =
     fiber.execute (state.propose (proposer, ballot, patch))
@@ -213,7 +213,7 @@ private class Acceptor (val key: CatalogId, val version: Int, kit: CatalogKit) {
 
 private object Acceptor {
 
-  val query = {
+  val ask = {
     import CatalogPicklers._
     MessageDescriptor (0xFF9BFCEDF7D2E129L, tuple (uint, catId, uint, ulong, patch))
   }

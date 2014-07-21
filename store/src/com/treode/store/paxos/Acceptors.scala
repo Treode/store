@@ -74,15 +74,15 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
     }
 
   def attach () (implicit launch: Disk.Launch) {
-    import Acceptor.{choose, propose, query}
+    import Acceptor.{ask, choose, propose}
 
     launch.checkpoint (checkpoint())
 
     Acceptors.archive.handle (this)
 
-    query.listen { case ((version, key, time, ballot, default), c) =>
+    ask.listen { case ((version, key, time, ballot, default), c) =>
       if (atlas.version - 1 <= version && version <= atlas.version + 1)
-        get (key, time) query (c, ballot, default)
+        get (key, time) ask (c, ballot, default)
     }
 
     propose.listen { case ((version, key, time, ballot, value), c) =>

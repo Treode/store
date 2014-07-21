@@ -36,7 +36,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     def open (ballot: Long, value: Bytes) = ()
     def learn (k: Learner)
     def refuse (from: Peer, ballot: Long)
-    def promise (from: Peer, ballot: Long, proposal: Proposal)
+    def grant (from: Peer, ballot: Long, proposal: Proposal)
     def accept (from: Peer, ballot: Long)
     def chosen (value: Bytes)
     def timeout()
@@ -68,7 +68,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
     def refuse (from: Peer, ballot: Long) = ()
 
-    def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
+    def grant (from: Peer, ballot: Long, proposal: Proposal) = ()
 
     def accept (from: Peer, ballot: Long) = ()
 
@@ -86,14 +86,14 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     var refused = ballot
     var proposed = Option.empty [(BallotNumber, Bytes)]
     var atlas = library.atlas
-    var promised = track (atlas, key, time)
+    var granted = track (atlas, key, time)
     var accepted = track (atlas, key, time)
 
     // Ballot number zero was implicitly accepted.
     if (ballot == 0)
-      Acceptor.propose (atlas.version, key, time, ballot, value) (promised)
+      Acceptor.propose (atlas.version, key, time, ballot, value) (granted)
     else
-      Acceptor.query (atlas.version, key, time, ballot, value) (promised)
+      Acceptor.ask (atlas.version, key, time, ballot, value) (granted)
 
     val backoff = proposingBackoff.iterator
     fiber.delay (backoff.next) (state.timeout())
@@ -103,15 +103,15 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
     def refuse (from: Peer, ballot: Long) = {
       refused = math.max (refused, ballot)
-      promised = track (atlas, key, time)
+      granted = track (atlas, key, time)
       accepted = track (atlas, key, time)
     }
 
-    def promise (from: Peer, ballot: Long, proposal: Proposal) {
+    def grant (from: Peer, ballot: Long, proposal: Proposal) {
       if (ballot == this.ballot) {
-        promised += from
+        granted += from
         proposed = max (proposed, proposal)
-        if (promised.quorum) {
+        if (granted.quorum) {
           val v = agreement (proposed, value)
           Acceptor.propose (atlas.version, key, time, ballot, v) (accepted)
         }}}
@@ -134,11 +134,11 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     def timeout() {
       if (backoff.hasNext) {
         atlas = library.atlas
-        promised = track (atlas, key, time)
+        granted = track (atlas, key, time)
         accepted = track (atlas, key, time)
         ballot = refused + random.nextInt (17) + 1
         refused = ballot
-        Acceptor.query (atlas.version, key, time, ballot, value) (promised)
+        Acceptor.ask (atlas.version, key, time, ballot, value) (granted)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         remove (key, time, Proposer.this)
@@ -162,7 +162,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
       if (ballot == this.ballot)
         Acceptor.choose (key, time, value) (from)
 
-    def promise (from: Peer, ballot: Long, proposal: Proposal) =
+    def grant (from: Peer, ballot: Long, proposal: Proposal) =
       if (ballot == this.ballot)
         Acceptor.choose (key, time, value) (from)
 
@@ -179,7 +179,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
     def learn (k: Learner) = ()
     def refuse (from: Peer, ballot: Long) = ()
-    def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
+    def grant (from: Peer, ballot: Long, proposal: Proposal) = ()
     def accept (from: Peer, ballot: Long) = ()
     def chosen (v: Bytes) = ()
     def timeout() = ()
@@ -196,8 +196,8 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   def refuse (from: Peer, ballot: Long) =
     fiber.execute  (state.refuse (from, ballot))
 
-  def promise (from: Peer, ballot: Long, proposal: Proposal) =
-    fiber.execute  (state.promise (from, ballot, proposal))
+  def grant (from: Peer, ballot: Long, proposal: Proposal) =
+    fiber.execute  (state.grant (from, ballot, proposal))
 
   def accept (from: Peer, ballot: Long) =
     fiber.execute  (state.accept (from, ballot))
@@ -215,7 +215,7 @@ private object Proposer {
     MessageDescriptor (0xFF3725D9448D98D0L, tuple (bytes, txClock, ulong))
   }
 
-  val promise = {
+  val grant = {
     import PaxosPicklers._
     MessageDescriptor (0xFF52232E0CCEE1D2L, tuple (bytes, txClock, ulong, proposal))
   }

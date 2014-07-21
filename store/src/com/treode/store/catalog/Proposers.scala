@@ -20,7 +20,7 @@ import com.treode.async.Async
 import com.treode.store.CatalogId
 
 import Async.async
-import Proposer.{accept, chosen, promise, refuse}
+import Proposer.{accept, chosen, grant, refuse}
 
 private class Proposers (kit: CatalogKit) {
   import kit.cluster
@@ -56,8 +56,8 @@ private class Proposers (kit: CatalogKit) {
       get (key, version) refuse (ballot)
     }
 
-    promise.listen { case ((key, version, ballot, proposal), c) =>
-      get (key, version) promise (c, ballot, proposal)
+    grant.listen { case ((key, version, ballot, proposal), c) =>
+      get (key, version) grant (c, ballot, proposal)
     }
 
     accept.listen { case ((key, version, ballot), c) =>

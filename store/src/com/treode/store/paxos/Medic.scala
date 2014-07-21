@@ -36,7 +36,7 @@ private class Medic (
       this.default = Some (default)
   }
 
-  def promised (ballot: BallotNumber): Unit = synchronized {
+  def granted (ballot: BallotNumber): Unit = synchronized {
     if (this.ballot < ballot)
       this.ballot = ballot
   }

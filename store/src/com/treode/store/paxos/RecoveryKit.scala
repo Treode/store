@@ -28,7 +28,7 @@ import com.treode.store.tier.TierMedic
 
 import Async.supply
 import Acceptors.{checkpoint, receive}
-import Acceptor.{accept, close, open, promise, reaccept}
+import Acceptor.{accept, close, grant, open, reaccept}
 import JavaConversions._
 
 private class RecoveryKit (implicit
@@ -55,8 +55,8 @@ private class RecoveryKit (implicit
     get (key, time, Some (default)) opened (default)
   }
 
-  promise.replay { case (key, time, ballot) =>
-    get (key, time, None) promised (ballot)
+  grant.replay { case (key, time, ballot) =>
+    get (key, time, None) granted (ballot)
   }
 
   accept.replay { case (key, time, ballot, value) =>

@@ -20,7 +20,7 @@ import com.treode.async.Async
 import com.treode.store.{Bytes, TxClock}
 
 import Async.async
-import Proposer.{accept, chosen, promise, refuse}
+import Proposer.{accept, chosen, grant, refuse}
 
 private class Proposers (kit: PaxosKit) {
   import kit.cluster
@@ -54,8 +54,8 @@ private class Proposers (kit: PaxosKit) {
       get (key, time) refuse (c, ballot)
     }
 
-    promise.listen { case ((key, time, ballot, proposal), c) =>
-      get (key, time) promise (c, ballot, proposal)
+    grant.listen { case ((key, time, ballot, proposal), c) =>
+      get (key, time) grant (c, ballot, proposal)
     }
 
     accept.listen { case ((key, time, ballot), c) =>

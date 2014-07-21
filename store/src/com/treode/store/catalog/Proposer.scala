@@ -36,7 +36,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
     def open (ballot: Long, patch: Patch) = ()
     def learn (k: Learner)
     def refuse (ballot: Long)
-    def promise (from: Peer, ballot: Long, proposal: Proposal)
+    def grant (from: Peer, ballot: Long, proposal: Proposal)
     def accept (from: Peer, ballot: Long)
     def chosen (value: Patch)
     def timeout()
@@ -72,7 +72,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
 
     def refuse (ballot: Long) = ()
 
-    def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
+    def grant (from: Peer, ballot: Long, proposal: Proposal) = ()
 
     def accept (from: Peer, ballot: Long) = ()
 
@@ -91,14 +91,14 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
     var refused = ballot
     var proposed = Option.empty [(BallotNumber, Patch)]
     var atlas = library.atlas
-    var promised = track (atlas)
+    var granted = track (atlas)
     var accepted = track (atlas)
 
     // Ballot number zero was implicitly accepted.
     if (ballot == 0)
-      Acceptor.propose (atlas.version, key, version, ballot, patch) (promised)
+      Acceptor.propose (atlas.version, key, version, ballot, patch) (granted)
     else
-      Acceptor.query (atlas.version, key, version, ballot, patch) (promised)
+      Acceptor.ask (atlas.version, key, version, ballot, patch) (granted)
 
     val backoff = proposingBackoff.iterator
     fiber.delay (backoff.next) (state.timeout())
@@ -108,15 +108,15 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
 
     def refuse (ballot: Long) = {
       refused = math.max (refused, ballot)
-      promised = track (atlas)
+      granted = track (atlas)
       accepted = track (atlas)
     }
 
-    def promise (from: Peer, ballot: Long, proposal: Proposal) {
+    def grant (from: Peer, ballot: Long, proposal: Proposal) {
       if (ballot == this.ballot) {
-        promised += from
+        granted += from
         proposed = max (proposed, proposal)
-        if (promised.quorum) {
+        if (granted.quorum) {
           val v = agreement (proposed, patch)
           Acceptor.propose (atlas.version, key, version, ballot, v) (accepted)
         }}}
@@ -139,11 +139,11 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
     def timeout() {
       if (backoff.hasNext) {
         atlas = library.atlas
-        promised = track (atlas)
+        granted = track (atlas)
         accepted = track (atlas)
         ballot = refused + random.nextInt (17) + 1
         refused = ballot
-        Acceptor.query (atlas.version, key, version, ballot, patch) (promised)
+        Acceptor.ask (atlas.version, key, version, ballot, patch) (granted)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         remove (key, version, Proposer.this)
@@ -164,7 +164,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
       require (v == patch, "Paxos disagreement")
 
     def refuse (ballot: Long) = ()
-    def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
+    def grant (from: Peer, ballot: Long, proposal: Proposal) = ()
     def accept (from: Peer, ballot: Long) = ()
     def timeout() = ()
 
@@ -175,7 +175,7 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
 
     def learn (k: Learner) = ()
     def refuse (ballot: Long) = ()
-    def promise (from: Peer, ballot: Long, proposal: Proposal) = ()
+    def grant (from: Peer, ballot: Long, proposal: Proposal) = ()
     def accept (from: Peer, ballot: Long) = ()
     def chosen (v: Patch) = ()
     def timeout() = ()
@@ -192,8 +192,8 @@ private class Proposer (key: CatalogId, version: Int, kit: CatalogKit) {
   def refuse (ballot: Long) =
     fiber.execute  (state.refuse (ballot))
 
-  def promise (from: Peer, ballot: Long, proposal: Proposal) =
-    fiber.execute  (state.promise (from, ballot, proposal))
+  def grant (from: Peer, ballot: Long, proposal: Proposal) =
+    fiber.execute  (state.grant (from, ballot, proposal))
 
   def accept (from: Peer, ballot: Long) =
     fiber.execute  (state.accept (from, ballot))
@@ -214,7 +214,7 @@ private object Proposer {
     MessageDescriptor (0xFF8562E9071168EAL, tuple (catId, uint, ulong))
   }
 
-  val promise = {
+  val grant = {
     import CatalogPicklers._
     MessageDescriptor (0xFF3F6FFC9993CD75L, tuple (catId, uint, ulong, proposal))
   }

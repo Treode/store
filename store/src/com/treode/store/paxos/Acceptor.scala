@@ -37,7 +37,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
   private var state: State = new Opening
 
   trait State {
-    def query (proposer: Peer, ballot: Long, default: Bytes)
+    def ask (proposer: Peer, ballot: Long, default: Bytes)
     def propose (proposer: Peer, ballot: Long, value: Bytes)
     def choose (chosen: Bytes)
     def checkpoint(): Async [Unit]
@@ -52,10 +52,10 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
   class Opening extends State {
 
-    def query (proposer: Peer, ballot: Long, default: Bytes) {
+    def ask (proposer: Peer, ballot: Long, default: Bytes) {
       val s = new Restoring (default)
       state = s
-      s.query (proposer, ballot, default)
+      s.ask (proposer, ballot, default)
       s.restore()
     }
 
@@ -84,7 +84,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     var proposers = Set.empty [Peer]
     var postable = {_: Deliberating => ()}
 
-    def promise (ballot: BallotNumber, proposal: Proposal, proposer: Peer): Unit =
+    def grant (ballot: BallotNumber, proposal: Proposal, proposer: Peer): Unit =
       postable = (_.open (ballot.number, default, proposer))
 
     def accept (ballot: BallotNumber, value: Bytes, proposer: Peer): Unit =
@@ -110,11 +110,11 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
         case Failure (t) => panic (Restoring.this, t)
       }}
 
-    def query (proposer: Peer, _ballot: Long, default: Bytes) {
+    def ask (proposer: Peer, _ballot: Long, default: Bytes) {
       proposers += proposer
       val ballot = BallotNumber (_ballot, proposer.id)
       if (this.ballot <= ballot) {
-        promise (ballot, proposal, proposer)
+        grant (ballot, proposal, proposer)
         this.ballot = ballot
       }}
 
@@ -184,13 +184,13 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     def open (ballot: Long, default: Bytes, proposer: Peer): Unit =
       post (new Post {
         def record = Acceptor.open.record (key, time, default) .run (posted)
-        def reply() = Proposer.promise (key, time, ballot, None) (proposer)
+        def reply() = Proposer.grant (key, time, ballot, None) (proposer)
       })
 
-    def promise (ballot: BallotNumber, proposal: Proposal, proposer: Peer): Unit =
+    def grant (ballot: BallotNumber, proposal: Proposal, proposer: Peer): Unit =
       post (new Post {
-        def record = Acceptor.promise.record (key, time, ballot) .run (posted)
-        def reply() = Proposer.promise (key, time, ballot.number, proposal) (proposer)
+        def record = Acceptor.grant.record (key, time, ballot) .run (posted)
+        def reply() = Proposer.grant (key, time, ballot.number, proposal) (proposer)
       })
 
     def accept (ballot: BallotNumber, value: Bytes, proposer: Peer): Unit =
@@ -205,13 +205,13 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
         def reply() = Proposer.accept (key, time, ballot.number) (proposer)
       })
 
-    def query (proposer: Peer, _ballot: Long, default: Bytes) {
+    def ask (proposer: Peer, _ballot: Long, default: Bytes) {
       proposers += proposer
       val ballot = BallotNumber (_ballot, proposer.id)
       if (ballot < this.ballot) {
         Proposer.refuse (key, time, this.ballot.number) (proposer)
       } else {
-        promise (ballot, proposal, proposer)
+        grant (ballot, proposal, proposer)
         this.ballot = ballot
       }}
 
@@ -249,7 +249,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     releaser.leave (epoch)
     scheduler.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
 
-    def query (proposer: Peer, ballot: Long, default: Bytes): Unit =
+    def ask (proposer: Peer, ballot: Long, default: Bytes): Unit =
       Proposer.chosen (key, time, chosen) (proposer)
 
     def propose (proposer: Peer, ballot: Long, value: Bytes): Unit =
@@ -269,7 +269,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     releaser.leave (epoch)
     scheduler.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
 
-    def query (proposer: Peer, ballot: Long, default: Bytes): Unit = ()
+    def ask (proposer: Peer, ballot: Long, default: Bytes): Unit = ()
 
     def propose (proposer: Peer, ballot: Long, value: Bytes): Unit = ()
 
@@ -283,8 +283,8 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
   def recover (default: Bytes, ballot: BallotNumber, proposal: Proposal): Unit =
     fiber.execute (state = new Deliberating (default, ballot, proposal, Set.empty))
 
-  def query (proposer: Peer, ballot: Long, default: Bytes): Unit =
-    fiber.execute (state.query (proposer, ballot, default))
+  def ask (proposer: Peer, ballot: Long, default: Bytes): Unit =
+    fiber.execute (state.ask (proposer, ballot, default))
 
   def propose (proposer: Peer, ballot: Long, value: Bytes): Unit =
     fiber.execute (state.propose (proposer, ballot, value))
@@ -303,7 +303,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
 private object Acceptor {
 
-  val query = {
+  val ask = {
     import PaxosPicklers._
     MessageDescriptor (0xFF14D4F00908FB59L, tuple (uint, bytes, txClock, ulong, bytes))
   }
@@ -323,7 +323,7 @@ private object Acceptor {
     RecordDescriptor (0x77784AB1, tuple (bytes, txClock, bytes))
   }
 
-  val promise = {
+  val grant = {
     import PaxosPicklers._
     RecordDescriptor (0x32A1544B, tuple (bytes, txClock, ballotNumber))
   }

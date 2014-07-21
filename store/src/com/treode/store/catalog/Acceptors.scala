@@ -42,11 +42,11 @@ private class Acceptors (kit: CatalogKit) {
     acceptors.remove ((key, version), a)
 
   def attach() {
-    import Acceptor.{choose, propose, query}
+    import Acceptor.{ask, choose, propose}
 
-    query.listen { case ((av, key, cv, ballot, default), c) =>
+    ask.listen { case ((av, key, cv, ballot, default), c) =>
       if (atlas.version - 1 <= av && av <= atlas.version + 1)
-        get (key, cv) query (c, ballot, default)
+        get (key, cv) ask (c, ballot, default)
     }
 
     propose.listen { case ((av, key, cv, ballot, value), c) =>
