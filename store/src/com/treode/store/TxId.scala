@@ -28,8 +28,7 @@ import org.joda.time.Instant
   * consistency mechanism; it exists only so that the database may cleanup old statuses.  When
   * issuing a write, the time of the transaction should be near the actual time of the write for
   * your sake, not for correctness of the transaction mechanism.  When a transaction ages past
-  * `priorValueEpoch` in [[Store.Config]], the database will remove the status record.  Only the
-  * status is removed, not the effects of the associated write.
+  * `retention` in [[Store.Config]], the database will remove the status record.
   */
 case class TxId (id: Bytes, time: Instant) extends Ordered [TxId] {
 

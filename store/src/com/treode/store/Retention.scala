@@ -18,19 +18,19 @@ package com.treode.store
 
 import org.joda.time.DateTime
 
-trait Epoch {
+trait Retention {
 
   def limit: TxClock
 }
 
-object Epoch {
+object Retention {
 
-  object UnixEpoch extends Epoch {
+  object UnixEpoch extends Retention {
 
     def limit: TxClock = TxClock.MinValue
   }
 
-  object StartOfPreviousHour extends Epoch {
+  object StartOfPreviousHour extends Retention {
 
     def limit: TxClock =
       DateTime.now.minusHours (1)
@@ -39,7 +39,7 @@ object Epoch {
         .withMinuteOfHour (0)
   }
 
-  object StartOfPreviousMonth extends Epoch {
+  object StartOfPreviousMonth extends Retention {
 
     def limit: TxClock =
       DateTime.now.minusMonths (1)
@@ -47,7 +47,7 @@ object Epoch {
         .withDayOfMonth (0)
   }
 
-  object StartOfPreviousWeek extends Epoch {
+  object StartOfPreviousWeek extends Retention {
 
     def limit: TxClock =
       DateTime.now.minusWeeks (1)
@@ -55,7 +55,7 @@ object Epoch {
         .withDayOfWeek (0)
   }
 
-  object StartOfYesterday extends Epoch {
+  object StartOfYesterday extends Retention {
 
     def limit: TxClock =
       DateTime.now.minusDays (1)

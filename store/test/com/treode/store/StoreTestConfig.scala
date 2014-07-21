@@ -46,9 +46,9 @@ class StoreTestConfig (
     s ++= s"moveBatchEntries = $moveBatchEntries, "
     s ++= s"prepareBackoff = $prepareBackoff, "
     s ++= s"preparingTimeout = $preparingTimeout, "
-    s ++= s"priorValueEpoch = $priorValueEpoch, "
     s ++= s"proposingBackoff = $proposingBackoff, "
     s ++= s"readBackoff = $readBackoff, "
+    s ++= s"retention = $retention, "
     s ++= s"scanBatchBackoff = $scanBatchBackoff, "
     s ++= s"scanBatchBytes = $scanBatchBytes, "
     s ++= s"scanBatchEntries = $scanBatchEntries, "
@@ -72,9 +72,9 @@ object StoreTestConfig {
       moveBatchEntries: Int = Int.MaxValue,
       prepareBackoff: Backoff = Backoff (100, 100, 1 seconds, 7),
       preparingTimeout: Int = 5 seconds,
-      priorValueEpoch: Epoch = Epoch.UnixEpoch,
       proposingBackoff: Backoff = Backoff (100, 100, 1 seconds, 7),
       readBackoff: Backoff = Backoff (100, 100, 1 seconds, 7),
+      retention: Retention = Retention.UnixEpoch,
       scanBatchBackoff: Backoff = Backoff (700, 300, 10 seconds, 7),
       scanBatchBytes: Int = 1<<16,
       scanBatchEntries: Int = 1000,
@@ -97,9 +97,9 @@ object StoreTestConfig {
             moveBatchEntries = moveBatchEntries,
             prepareBackoff = prepareBackoff,
             preparingTimeout = preparingTimeout,
-            priorValueEpoch = priorValueEpoch,
             proposingBackoff = proposingBackoff,
             readBackoff = readBackoff,
+            retention = retention,
             scanBatchBackoff = scanBatchBackoff,
             scanBatchBytes = scanBatchBytes,
             scanBatchEntries = scanBatchEntries,

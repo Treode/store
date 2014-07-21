@@ -41,8 +41,8 @@ trait Store {
     * `rt` to each read.  The maximum timestamp of the values returned from all reads may be used
     * as a condition time on a subsequent write.
     *
-    * @param rt The time to read as of, often `TxClock.now`.  Must be greater than
-    *   `priorValueEpoch`; see [[Store.Config]].
+    * @param rt The time to read as of, often `TxClock.now`.  Must be within `retention`;
+    *   see [[Store.Config]].
     * @param ops The table and key for each row to read.
     * @return The most recent value on or before `rt` and its timestamp for each row; the values
     *   are in the same order as the ops.  The maximum value of the timestamps may be used as a
@@ -72,7 +72,7 @@ trait Store {
   /** Check the status of a past transaction.  This is useful when the client looses its connection
     * to the storage cell while awaiting response for a write.  The client may reconnect to any
     * peer in the cell and learn the outcome of its write.  The database maintains a record of all
-    * transactions since `priorValueEpoch`; see [[Store.Config]].
+    * transactions within `retention`; see [[Store.Config]].
     *
     * @param xid The transaction identifier.
     * @return The status.
@@ -89,7 +89,7 @@ trait Store {
     * @param window Specify which versions of the row to include in the scan.  A scan can iterate
     *   only the most recent update or all updates over some period.  See [[Window$ Window]] for
     *   details.
-    * @param slice A slice of the rows to scan, where that slice respects replica placement; see 
+    * @param slice A slice of the rows to scan, where that slice respects replica placement; see
     *   [[Slice]] for details.
     * @return An [[com.treode.async.AsyncIterator AsyncIterator]] to iterate the rows.  Multiple
     *   updates for a row will be iterated in reverse chronological order.
@@ -120,9 +120,11 @@ object Store {
       moveBatchEntries: Int,
       prepareBackoff: Backoff,
       preparingTimeout: Int,
-      priorValueEpoch: Epoch,
+      @deprecated ("Use retention", "0.2.0")
+      priorValueEpoch: Retention = null,
       proposingBackoff: Backoff,
       readBackoff: Backoff,
+      retention: Retention,
       scanBatchBackoff: Backoff,
       scanBatchBytes: Int,
       scanBatchEntries: Int,
@@ -172,6 +174,9 @@ object Store {
     require (
         targetPageBytes > 0,
         "The target size of a page must be more than zero bytes.")
+
+    def retentionBridge =
+      if (priorValueEpoch == null) retention else priorValueEpoch
   }
 
   object Config {
@@ -187,9 +192,9 @@ object Store {
         moveBatchEntries = 10000,
         prepareBackoff = Backoff (100, 100, 1.seconds, 7),
         preparingTimeout = 5.seconds,
-        priorValueEpoch = Epoch.StartOfYesterday,
         proposingBackoff = Backoff (100, 100, 1.seconds, 7),
         readBackoff = Backoff (100, 100, 1.seconds, 7),
+        retention = Retention.StartOfYesterday,
         scanBatchBytes = 1<<16,
         scanBatchEntries = 1000,
         scanBatchBackoff = Backoff (700, 300, 10.seconds, 7),

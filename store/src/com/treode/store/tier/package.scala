@@ -38,6 +38,6 @@ package object tier {
     def clean (desc: TierDescriptor, id: TableId, residents: Residents) (
         implicit config: Store.Config): CellIterator =
       iter.dedupe
-          .retire (config.priorValueEpoch.limit)
+          .retire (config.retentionBridge.limit)
           .filter (desc.residency (residents, id, _))
   }}

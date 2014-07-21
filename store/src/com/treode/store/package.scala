@@ -43,6 +43,12 @@ package object store {
 
   type CellIterator = AsyncIterator [Cell]
 
+  @deprecated ("Use Retention", "0.2.0")
+  type PriorValueEpoch = Retention
+
+  @deprecated ("Use Retention", "0.2.0")
+  val PriorValueEpoch = Retention
+
   private [store] implicit class RichCellIterator (iter: CellIterator) {
 
     def dedupe: CellIterator =
