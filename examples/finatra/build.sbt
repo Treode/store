@@ -1,4 +1,3 @@
-
 import AssemblyKeys._
 
 assemblySettings
@@ -7,7 +6,7 @@ name := "finatra-example"
       
 version := "0.1.0"
 
-scalaVersion := "2.11.1"
+scalaVersion := "2.10.4"
 
 jarName in assembly := "server.jar"
 
