@@ -94,10 +94,10 @@ trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
 
     .recover { implicit scheduler =>
       implicit val network = StubNetwork (random)
-      val host = StubAtomicHost.boot (H1, disk, false) .pass
+      val host = StubAtomicHost.boot (H1, disk, false) .expectPass()
       host.setAtlas (settled (host))
       scheduler.run (timers = !host.atomic.writers.deputies.isEmpty)
-      tracker.check (host) .pass
+      tracker.check (host) .expectPass()
     }}
 
   private [atomic] def issueAtomicWrites (

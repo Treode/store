@@ -42,7 +42,7 @@ class SynthTableSpec extends FreeSpec {
     val config = StoreTestConfig (checkpointProbability = 0.0, compactionProbability = 0.0)
     import config._
     implicit val recovery = StubDisk.recover()
-    implicit val launch = recovery.attach (diskDrive) .pass
+    implicit val launch = recovery.attach (diskDrive) .expectPass()
     implicit val disk = launch.disk
     launch.launch()
     SynthTable (tier, 0x62)
@@ -158,7 +158,7 @@ class SynthTableSpec extends FreeSpec {
       implicit val random = new Random (0)
       implicit val scheduler = StubScheduler.random (random)
       val table = setup (random, scheduler)
-      table.checkpoint() .pass
+      table.checkpoint() .expectPass()
       assert (table.primary.isEmpty)
       assert (table.secondary.isEmpty)
       assert (table.tiers.size > 0)
@@ -174,7 +174,7 @@ class SynthTableSpec extends FreeSpec {
       val (disk, table, cb) = setup (random, scheduler)
       disk.last.pass (())
       scheduler.run()
-      cb.passed
+      cb.assertPassed()
       assert (table.secondary.isEmpty)
       assert (table.tiers.size > 0)
       table.check (Kiwi##21::3, Kiwi##14::2, Kiwi##7::1)
@@ -204,7 +204,7 @@ class SynthTableSpec extends FreeSpec {
         implicit val random = new Random (0)
         implicit val scheduler = StubScheduler.random (random)
         val table = setup()
-        table.checkpoint() .pass
+        table.checkpoint() .expectPass()
         assert (table.primary.isEmpty)
         assert (table.secondary.isEmpty)
         assert (table.tiers.size == 0)
@@ -301,7 +301,7 @@ class SynthTableSpec extends FreeSpec {
         val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2, Kiwi##21::3)
-        table.checkpoint() .pass
+        table.checkpoint() .expectPass()
         assert (table.primary.isEmpty)
         assert (table.secondary.isEmpty)
         assert (table.tiers.size > 0)
@@ -319,7 +319,7 @@ class SynthTableSpec extends FreeSpec {
         val disk = new StubDiskDrive
         val table = mkTable (disk)
         table.putCells (Kiwi##7::1, Kiwi##14::2)
-        table.checkpoint() .pass
+        table.checkpoint() .expectPass()
         table.putCells (Kiwi##21::3)
         assert (!table.primary.isEmpty)
         assert (table.secondary.isEmpty)

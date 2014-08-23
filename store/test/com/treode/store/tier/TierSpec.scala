@@ -45,7 +45,7 @@ class TierSpec extends WordSpec {
     implicit val scheduler = StubScheduler.random (random)
     implicit val recovery = StubDisk.recover()
     val diskDrive = new StubDiskDrive
-    val launch = recovery.attach (diskDrive) .pass
+    val launch = recovery.attach (diskDrive) .expectPass()
     launch.launch()
     (scheduler, launch.disk, config.storeConfig)
   }
@@ -62,7 +62,7 @@ class TierSpec extends WordSpec {
   /** Get the depths of ValueBlocks for the tree root at `pos`. */
   private def getDepths (pos: Position, depth: Int) (
       implicit scheduler: StubScheduler, disk: Disk): Set [Int] = {
-    descriptor.pager.read (pos) .pass match {
+    descriptor.pager.read (pos) .expectPass() match {
       case b: IndexPage => getDepths (b.entries, depth+1)
       case b: CellPage => Set (depth)
     }}
@@ -71,7 +71,7 @@ class TierSpec extends WordSpec {
     * the final index entry.
     */
   private def expectBalanced (tier: Tier) (implicit scheduler: StubScheduler, disk: Disk) {
-    descriptor.pager.read (tier.root) .pass match {
+    descriptor.pager.read (tier.root) .expectPass() match {
       case b: IndexPage =>
         val ds1 = getDepths (b.entries.take (b.size-1), 1)
         assertResult (1, "Expected lead ValueBlocks at the same depth.") (ds1.size)
@@ -86,23 +86,23 @@ class TierSpec extends WordSpec {
   private def buildTier () (
       implicit scheduler: StubScheduler, disk: Disk, config: Store.Config): Tier = {
     val builder = newBuilder (AllFruits.length)
-    AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .pass
-    builder.result.pass
+    AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .expectPass()
+    builder.result.expectPass()
   }
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier) (
       implicit scheduler: StubScheduler, disk: Disk): Seq [Cell] =
-    TierIterator (descriptor, tier.root) .toSeq.pass
+    TierIterator (descriptor, tier.root) .toSeq.expectPass()
 
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier, key: Bytes, time: TxClock, inclusive: Boolean) (
       implicit scheduler: StubScheduler, disk: Disk): Seq [Cell] =
-    TierIterator (descriptor, tier.root, Bound (Key (key, time), inclusive)) .toSeq.pass
+    TierIterator (descriptor, tier.root, Bound (Key (key, time), inclusive)) .toSeq.expectPass()
 
   private def toSeq (builder: Builder [Cell, _], pos: Position) (
       implicit scheduler: StubScheduler, disk: Disk) {
-    descriptor.pager.read (pos) .pass match {
+    descriptor.pager.read (pos) .expectPass() match {
       case page: IndexPage =>
         page.entries foreach (e => toSeq (builder, e.pos))
       case page: CellPage =>
@@ -122,45 +122,45 @@ class TierSpec extends WordSpec {
     "require that added entries are not duplicated" in {
       implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (2)
-      builder.add (Cell (Apple, 0, None)) .pass
+      builder.add (Cell (Apple, 0, None)) .expectPass()
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
 
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (2)
-      builder.add (Cell (Orange, 0, None)) .pass
+      builder.add (Cell (Orange, 0, None)) .expectPass()
       builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
     }
 
     "allow properly sorted entries" in {
       implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (3)
-      builder.add (Cell (Apple, 0, None)) .pass
-      builder.add (Cell (Orange, 0, None)) .pass
-      builder.add (Cell (Watermelon, 0, None)) .pass
+      builder.add (Cell (Apple, 0, None)) .expectPass()
+      builder.add (Cell (Orange, 0, None)) .expectPass()
+      builder.add (Cell (Watermelon, 0, None)) .expectPass()
     }
 
     "track the number of entries and keys" in {
       implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (3)
-      builder.add (Cell (Apple, 3, None)) .pass
-      builder.add (Cell (Apple, 1, None)) .pass
-      builder.add (Cell (Orange, 5, None)) .pass
-      builder.add (Cell (Orange, 3, None)) .pass
-      builder.add (Cell (Orange, 1, None)) .pass
-      builder.add (Cell (Watermelon, 3, None)) .pass
-      val tier = builder.result(). pass
+      builder.add (Cell (Apple, 3, None)) .expectPass()
+      builder.add (Cell (Apple, 1, None)) .expectPass()
+      builder.add (Cell (Orange, 5, None)) .expectPass()
+      builder.add (Cell (Orange, 3, None)) .expectPass()
+      builder.add (Cell (Orange, 1, None)) .expectPass()
+      builder.add (Cell (Watermelon, 3, None)) .expectPass()
+      val tier = builder.result(). expectPass()
       assertResult (3) (tier.keys)
     }
 
     "track the bounds on the times" in {
       implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (3)
-      builder.add (Cell (Apple, 3, None)) .pass
-      builder.add (Cell (Orange, 5, None)) .pass
-      builder.add (Cell (Watermelon, 7, None)) .pass
-      val tier = builder.result(). pass
+      builder.add (Cell (Apple, 3, None)) .expectPass()
+      builder.add (Cell (Orange, 5, None)) .expectPass()
+      builder.add (Cell (Watermelon, 7, None)) .expectPass()
+      val tier = builder.result(). expectPass()
       assertResult (3) (tier.earliest.time)
       assertResult (7) (tier.latest.time)
     }
@@ -168,8 +168,8 @@ class TierSpec extends WordSpec {
     "track the number of bytes" in {
       implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (3)
-      builder.add (Cell (Apple, 1, None)) .pass
-      val tier = builder.result(). pass
+      builder.add (Cell (Apple, 1, None)) .expectPass()
+      val tier = builder.result() .expectPass()
       assertResult (128) (tier.diskBytes)
     }
 
@@ -282,7 +282,7 @@ class TierSpec extends WordSpec {
         val tier = buildTier()
 
         def get (key: Bytes): Bytes =
-          tier.get (descriptor, key, TxClock.MaxValue) .pass.get.key
+          tier.get (descriptor, key, TxClock.MaxValue) .expectPass() .get.key
 
         assertResult (Apple) (get (Apple))
         assertResult (Orange) (get (Orange))

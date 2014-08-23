@@ -44,14 +44,14 @@ class SuperBlockSpec extends FlatSpec {
     for (i <- 0 until 1024)
       buf.writeInt (i)
     val file = StubFile (1<<20, geom.blockBits)
-    file.flush (buf, 0) .pass
+    file.flush (buf, 0) .expectPass()
 
     // Check that the write throws an exception.
     SuperBlock.write (superb, file) (config) .fail [SuperblockOverflowException]
 
     // Check that the file has not been overwritten.
     buf.clear()
-    file.fill (buf, 0, 1024) .pass
+    file.fill (buf, 0, 1024) .expectPass()
     for (i <- 0 until 1024)
       assertResult (i) (buf.readInt())
   }}

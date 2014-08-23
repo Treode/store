@@ -54,7 +54,7 @@ class DiskDriveSpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random()
       val file = StubFile (1<<20, 6)
       val kit = new DiskKit (sysid, 0)
-      init (file, kit) .pass
+      init (file, kit) .expectPass()
     }
 
     "issue three writes to the disk" in {
@@ -69,7 +69,7 @@ class DiskDriveSpec extends FreeSpec {
       file.last.pass (())
       file.stop = false
       scheduler.run()
-      cb.passed
+      cb.assertPassed()
     }
 
     "fail when it cannot write the superblock" in {
@@ -84,7 +84,7 @@ class DiskDriveSpec extends FreeSpec {
       file.last.pass (())
       file.stop = false
       scheduler.run()
-      cb.failed [DistinguishedException]
+      cb.assertFailed [DistinguishedException]
     }
 
     "fail when it cannot clear the next superblock" in {
@@ -99,7 +99,7 @@ class DiskDriveSpec extends FreeSpec {
       file.last.fail (new DistinguishedException)
       file.stop = false
       scheduler.run()
-      cb.failed [DistinguishedException]
+      cb.assertFailed [DistinguishedException]
     }
 
     "fail when it cannot write the log tail" in {
@@ -114,5 +114,5 @@ class DiskDriveSpec extends FreeSpec {
       file.last.pass (())
       file.stop = false
       scheduler.run()
-      cb.failed [DistinguishedException]
+      cb.assertFailed [DistinguishedException]
     }}}

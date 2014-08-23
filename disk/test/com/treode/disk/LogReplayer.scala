@@ -62,7 +62,7 @@ class LogReplayer {
   def check (tracker: LogTracker) (implicit scheduler: StubScheduler, disk: Disk) {
     reread match {
       case Some (pos) =>
-        val saved = pagers.table.read (pos) .pass
+        val saved = pagers.table.read (pos) .expectPass()
         tracker.check (saved ++ secondary ++ primary)
       case None =>
         tracker.check (secondary ++ primary)

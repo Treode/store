@@ -60,7 +60,8 @@ class HandlerSpec extends FreeSpec {
     implicit val disk = StubDisk
         .recover()
         .attach (diskDrive)
-        .pass.disk
+        .expectPass()
+        .disk
     val cat = Handler (0)
     for ((v, i) <- values.take (issues) .zipWithIndex)
       cat.patch (cat.diff (i+1, Bytes (Picklers.fixedLong, v)))

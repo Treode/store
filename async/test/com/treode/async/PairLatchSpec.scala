@@ -36,7 +36,7 @@ class PairLatchSpec extends FlatSpec {
     la.pass (1)
     cb.assertNotInvoked()
     lb.pass (2)
-    assertResult ((1, 2)) (cb.passed)
+    assertResult ((1, 2)) (cb.assertPassed())
   }
 
   it should "reject two sets on a" in {
@@ -60,7 +60,7 @@ class PairLatchSpec extends FlatSpec {
     la.fail (new DistinguishedException)
     cb.assertNotInvoked()
     lb.pass (2)
-    cb.failed [DistinguishedException]
+    cb.assertFailed [DistinguishedException]
   }
 
   it should "release after a pass on a and a fail on b" in {
@@ -70,7 +70,7 @@ class PairLatchSpec extends FlatSpec {
     la.pass (1)
     cb.assertNotInvoked()
     lb.fail (new DistinguishedException)
-    cb.failed [DistinguishedException]
+    cb.assertFailed [DistinguishedException]
   }
 
   it should "release after a fail on a and b" in {
@@ -80,5 +80,5 @@ class PairLatchSpec extends FlatSpec {
     la.fail (new DistinguishedException)
     cb.assertNotInvoked()
     lb.fail (new DistinguishedException)
-    cb.failed [MultiException]
+    cb.assertFailed [MultiException]
   }}

@@ -135,7 +135,7 @@ class FiberSpec extends FlatSpec {
     implicit val s = StubScheduler.random()
     val f = new Fiber
     var a = false
-    f.supply (a = true) .pass
+    f.supply (a = true) .expectPass()
     assertResult (true) (a)
   }
 

@@ -58,7 +58,7 @@ trait StoreBehaviors {
     def nextTick = TxClock (new Instant (clock.getAndIncrement))
 
     val creates = Seq.tabulate (naccounts) (Accounts.create (_, opening))
-    store.write (random.nextTxId, 0, creates: _*) .pass
+    store.write (random.nextTxId, 0, creates: _*) .expectPass()
 
     var running = true
 
@@ -140,8 +140,8 @@ trait StoreBehaviors {
         audit()
       }}
 
-    latch (brokers, auditor) .pass
-    check() .pass
+    latch (brokers, auditor) .expectPass()
+    check() .expectPass()
 
     assert (countAuditsPassed.get > 0, "Expected at least one audit to pass.")
     assert (countTransferPassed.get > 0, "Expected at least one transfer to pass.")
@@ -169,7 +169,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val s = newStore (kit)
             import kit.{random, scheduler}
-            val ts = s.write (random.nextTxId, 0, Create (T1, Apple, 1)) .pass
+            val ts = s.write (random.nextTxId, 0, Create (T1, Apple, 1)) .expectPass()
             s.expectCells (T1) (Apple##ts::1)
           }
 
@@ -177,7 +177,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val s = newStore (kit)
             import kit.{random, scheduler}
-            s.write (random.nextTxId, 0, Hold (T1, Apple)) .pass
+            s.write (random.nextTxId, 0, Hold (T1, Apple)) .expectPass()
             s.expectCells (T1) ()
           }
 
@@ -185,7 +185,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val s = newStore (kit)
             import kit.{random, scheduler}
-            val ts = s.write (random.nextTxId, 0, Update (T1, Apple, 1)) .pass
+            val ts = s.write (random.nextTxId, 0, Update (T1, Apple, 1)) .expectPass()
             s.expectCells (T1) (Apple##ts::1)
           }
 
@@ -193,7 +193,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val s = newStore (kit)
             import kit.{random, scheduler}
-            val ts = s.write (random.nextTxId, 0, Delete (T1, Apple)) .pass
+            val ts = s.write (random.nextTxId, 0, Delete (T1, Apple)) .expectPass()
             s.expectCells (T1) (Apple##ts)
           }}}
 
@@ -202,7 +202,7 @@ trait StoreBehaviors {
         def setup() (implicit kit: StoreTestKit) = {
           import kit.{random, scheduler}
           val s = newStore (kit)
-          val ts = s.write (random.nextTxId, 0, Create (T1, Apple, 1)) .pass
+          val ts = s.write (random.nextTxId, 0, Create (T1, Apple, 1)) .expectPass()
           (s, ts)
         }
 
@@ -264,7 +264,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val (s, ts) = setup()
             import kit.{random, scheduler}
-            s.write (random.nextTxId, ts+1, Hold (T1, Apple)) .pass
+            s.write (random.nextTxId, ts+1, Hold (T1, Apple)) .expectPass()
             s.expectCells (T1) (Apple##ts::1)
           }
 
@@ -272,7 +272,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val (s, ts) = setup()
             import kit.{random, scheduler}
-            s.write (random.nextTxId, ts, Hold (T1, Apple)) .pass
+            s.write (random.nextTxId, ts, Hold (T1, Apple)) .expectPass()
             s.expectCells (T1) (Apple##ts::1)
           }
 
@@ -280,7 +280,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val (s, ts1) = setup()
             import kit.{random, scheduler}
-            val ts2 = s.write (random.nextTxId, ts1+1, Update (T1, Apple, 2)) .pass
+            val ts2 = s.write (random.nextTxId, ts1+1, Update (T1, Apple, 2)) .expectPass()
             s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
           }
 
@@ -288,7 +288,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val (s, ts1) = setup()
             import kit.{random, scheduler}
-            val ts2 = s.write (random.nextTxId, ts1, Update (T1, Apple, 2)) .pass
+            val ts2 = s.write (random.nextTxId, ts1, Update (T1, Apple, 2)) .expectPass()
             s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
           }
 
@@ -296,7 +296,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val (s, ts1) = setup()
             import kit.{random, scheduler}
-            val ts2 = s.write (random.nextTxId, ts1+1, Update (T1, Apple, 1)) .pass
+            val ts2 = s.write (random.nextTxId, ts1+1, Update (T1, Apple, 1)) .expectPass()
             s.expectCells (T1) (Apple##ts2::1, Apple##ts1::1)
           }
 
@@ -304,7 +304,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val (s, ts1) = setup()
             import kit.{random, scheduler}
-            val ts2 = s.write (random.nextTxId, ts1, Update (T1, Apple, 1)) .pass
+            val ts2 = s.write (random.nextTxId, ts1, Update (T1, Apple, 1)) .expectPass()
             s.expectCells (T1) (Apple##ts2::1, Apple##ts1::1)
           }
 
@@ -312,7 +312,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val (s, ts1) = setup()
             import kit.{random, scheduler}
-            val ts2 = s.write (random.nextTxId, ts1+1, Delete (T1, Apple)) .pass
+            val ts2 = s.write (random.nextTxId, ts1+1, Delete (T1, Apple)) .expectPass()
             s.expectCells (T1) (Apple##ts2, Apple##ts1::1)
           }
 
@@ -320,7 +320,7 @@ trait StoreBehaviors {
             implicit val kit = StoreTestKit.random()
             val (s, ts1) = setup()
             import kit.{random, scheduler}
-            val ts2 = s.write (random.nextTxId, ts1, Delete (T1, Apple)) .pass
+            val ts2 = s.write (random.nextTxId, ts1, Delete (T1, Apple)) .expectPass()
             s.expectCells (T1) (Apple##ts2, Apple##ts1::1)
           }}}
 
@@ -329,8 +329,8 @@ trait StoreBehaviors {
         def setup() (implicit kit: StoreTestKit) = {
           import kit.{random, scheduler}
           val s = newStore (kit)
-          val ts1 = s.write (random.nextTxId, 0, Create (T1, Apple, 1)) .pass
-          val ts2 = s.write (random.nextTxId, ts1, Update (T1, Apple, 2)) .pass
+          val ts1 = s.write (random.nextTxId, 0, Create (T1, Apple, 1)) .expectPass()
+          val ts2 = s.write (random.nextTxId, ts1, Update (T1, Apple, 2)) .expectPass()
           s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
           (s, ts1, ts2)
         }

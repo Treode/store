@@ -42,7 +42,7 @@ class FileSpec extends FlatSpec {
   "AsyncFile.flush" should "handle an empty buffer" in {
     implicit val (scheduler, _, file) = mkFile
     val buffer = PagedBuffer (5)
-    file.flush (buffer, 0) .pass
+    file.flush (buffer, 0) .expectPass()
   }
 
   it should "flush an int" in {
@@ -54,7 +54,7 @@ class FileSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (4)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "loop to flush an int" in {
@@ -69,7 +69,7 @@ class FileSpec extends FlatSpec {
     async.completeLast (2)
     cb.assertNotInvoked()
     async.completeLast (2)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "handle file close" in {
@@ -81,20 +81,20 @@ class FileSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (-1)
-    cb.failed [Exception]
+    cb.assertFailed [Exception]
   }
 
   "AsyncFile.fill" should "handle a request for 0 bytes" in {
     implicit val (scheduler, _, file) = mkFile
     val input = PagedBuffer (5)
-    file.fill (input, 0, 0) .pass
+    file.fill (input, 0, 0) .expectPass()
   }
 
   it should "handle a request for bytes available at the beginning" in {
     implicit val (scheduler, _, file) = mkFile
     val input = PagedBuffer (5)
     input.writePos = 4
-    file.fill (input, 0, 4) .pass
+    file.fill (input, 0, 4) .expectPass()
   }
 
   it should "fill needed bytes with an empty buffer" in {
@@ -105,7 +105,7 @@ class FileSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (4)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "loop to fill needed bytes within a page" in {
@@ -119,7 +119,7 @@ class FileSpec extends FlatSpec {
     async.completeLast (2)
     cb.assertNotInvoked()
     async.completeLast (2)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "fill needed bytes with some at the beginning" in {
@@ -131,7 +131,7 @@ class FileSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "handle a request for bytes available in the middle" in {
@@ -140,7 +140,7 @@ class FileSpec extends FlatSpec {
     input.writePos = 4
     input.readPos = 0
     async.expectRead (0, 4, 32)
-    file.fill (input, 0, 4) .pass
+    file.fill (input, 0, 4) .expectPass()
   }
 
   it should "fill needed bytes with some in the middle and space after" in {
@@ -153,7 +153,7 @@ class FileSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "repeat to fill needed bytes across pages" in {
@@ -169,7 +169,7 @@ class FileSpec extends FlatSpec {
     async.completeLast (2)
     cb.assertNotInvoked()
     async.completeLast (6)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "handle file close" in {
@@ -180,7 +180,7 @@ class FileSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (-1)
-    cb.failed [Exception]
+    cb.assertFailed [Exception]
   }
 
   "AsyncFile.deframe" should "read from Pickler.frame" in {
@@ -190,9 +190,9 @@ class FileSpec extends FlatSpec {
     val out = Seq.fill (23) (Random.nextInt)
     val buffer = PagedBuffer (12)
     pickler.frame (out, buffer)
-    file.flush (buffer, 0) .pass
+    file.flush (buffer, 0) .expectPass()
     buffer.clear()
-    file.deframe (buffer, 0) .pass
+    file.deframe (buffer, 0) .expectPass()
     val in = pickler.unpickle (buffer)
     assertResult (out) (in)
   }
@@ -204,9 +204,9 @@ class FileSpec extends FlatSpec {
     val out = Seq.fill (23) (Random.nextInt)
     val buffer = PagedBuffer (12)
     pickler.frame (Hashing.crc32, out, buffer)
-    file.flush (buffer, 0) .pass
+    file.flush (buffer, 0) .expectPass()
     buffer.clear()
-    file.deframe (Hashing.crc32, buffer, 0) .pass
+    file.deframe (Hashing.crc32, buffer, 0) .expectPass()
     val in = pickler.unpickle (buffer)
     assertResult (out) (in)
   }
@@ -222,7 +222,7 @@ class FileSpec extends FlatSpec {
     buffer.writePos = 33
     buffer.writeInt (Random.nextInt)
     buffer.writePos = end
-    file.flush (buffer, 0) .pass
+    file.flush (buffer, 0) .expectPass()
     buffer.clear()
     file.deframe (Hashing.crc32, buffer, 0) .fail [HashMismatchException]
   }
@@ -237,9 +237,9 @@ class FileSpec extends FlatSpec {
       for (i <- data)
         buffer.writeVarInt (i)
       val length = buffer.writePos
-      file.flush (buffer, 0) .pass
+      file.flush (buffer, 0) .expectPass()
       buffer.clear()
-      file.fill (buffer, 0, length) .pass
+      file.fill (buffer, 0, length) .expectPass()
       for (i <- data)
         assertResult (i) (buffer.readVarInt())
     }}}

@@ -76,7 +76,7 @@ class LogSpec extends FlatSpec with CrashChecks {
       file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
       implicit val disk = recovery.attachAndLaunch (("a", file, geom))
-      records.str.record ("one") .pass
+      records.str.record ("one") .expectPass()
     }
 
     {
@@ -98,9 +98,9 @@ class LogSpec extends FlatSpec with CrashChecks {
       file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
       implicit val disk = recovery.attachAndLaunch (("a", file, geom))
-      records.str.record ("one") .pass
-      records.str.record ("two") .pass
-      records.str.record ("three") .pass
+      records.str.record ("one") .expectPass()
+      records.str.record ("two") .expectPass()
+      records.str.record ("three") .expectPass()
     }
 
     {
@@ -122,7 +122,7 @@ class LogSpec extends FlatSpec with CrashChecks {
       file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
       implicit val disk = recovery.attachAndLaunch (("a", file, geom))
-      records.str.record ("one") .pass
+      records.str.record ("one") .expectPass()
     }
 
     {
@@ -133,7 +133,7 @@ class LogSpec extends FlatSpec with CrashChecks {
       records.str.replay (replayed += _)
       implicit val disk = recovery.reattachAndLaunch (("a", file))
       assertResult (Seq ("one")) (replayed.result)
-      records.str.record ("two") .pass
+      records.str.record ("two") .expectPass()
     }
 
     {
@@ -155,7 +155,7 @@ class LogSpec extends FlatSpec with CrashChecks {
       file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
       implicit val disk = recovery.attachAndLaunch (("a", file, geom))
-      records.str.record ("one") .pass
+      records.str.record ("one") .expectPass()
     }
 
     {
@@ -174,7 +174,7 @@ class LogSpec extends FlatSpec with CrashChecks {
       file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
       implicit val disk = recovery.attachAndLaunch (("a", file, geom))
-      records.str.record ("one") .pass
+      records.str.record ("one") .expectPass()
     }
 
     {
@@ -202,7 +202,7 @@ class LogSpec extends FlatSpec with CrashChecks {
       implicit val scheduler = StubScheduler.random (random)
       val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
-      val launch = recovery.attachAndWait (("a", file, geom)) .pass
+      val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
       import launch.disk
 
       var checkpointed = false
@@ -222,6 +222,6 @@ class LogSpec extends FlatSpec with CrashChecks {
       latch (
           disk.checkpoint(),
           disk.checkpoint(),
-          disk.checkpoint()) .pass
+          disk.checkpoint()) .expectPass()
       assert (checkpointed, "Expected a checkpoint")
     }}}

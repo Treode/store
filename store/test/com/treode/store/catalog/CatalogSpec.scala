@@ -69,8 +69,8 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       val cb2 = p2.catalogs.propose (cat1.id, patch2) .capture()
       kit.messageFlakiness = mf
       kit.run (timers = true, count = 500)
-      val v = cb1.passed
-      assertResult (v) (cb2.passed)
+      val v = cb1.assertPassed()
+      assertResult (v) (cb2.assertPassed())
 
       for (h <- as)
         assert (
@@ -128,7 +128,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       forAllSeeds { random =>
         val (kit, hs, h1, _) = setup (random)
         import kit.scheduler
-        h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .pass
+        h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
         scheduler.run (timers = true, count = 500)
         for (h <- hs)
           assertResult (0x658C1274DE7CFA8EL) (h.v1)
@@ -138,8 +138,8 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       forAllSeeds { random =>
         val (kit, hs, h1, _) = setup (random)
         import kit.scheduler
-        h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .pass
-        h1.catalogs.issue (cat1) (2, 0x48B944DD188FD6D1L) .pass
+        h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
+        h1.catalogs.issue (cat1) (2, 0x48B944DD188FD6D1L) .expectPass()
         scheduler.run (timers = true, count = 500)
         for (h <- hs)
           assertResult (0x48B944DD188FD6D1L) (h.v1)
@@ -148,7 +148,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
     "reject a new issue when its version number is behind" in {
       val (kit, hs, h1, h2) = setup()
       import kit.scheduler
-      h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .pass
+      h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
       scheduler.run (timers = true, count = 500)
       h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [StaleException]
       scheduler.run (timers = true, count = 500)
@@ -159,7 +159,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
     "reject a new issue when its version number is ahead" in {
       val (kit, hs, h1, h2) = setup()
       import kit.scheduler
-      h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .pass
+      h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
       scheduler.run (timers = true, count = 500)
       h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [StaleException]
       scheduler.run (timers = true, count = 500)

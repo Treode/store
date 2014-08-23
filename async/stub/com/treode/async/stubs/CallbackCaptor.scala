@@ -76,17 +76,28 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
   }
 
   /** Assert the callback was invoked with [[scala.util.Success Success]] and return the result. */
-  def passed: T = synchronized {
+  def assertPassed(): T = synchronized {
     assertInvoked()
     if (_t != null)
       throw _t
     _v
   }
 
+  /** Assert the callback was invoked with [[scala.util.Success Success]] and assert the result was
+    * the expected value. */
+  def assertPassed (expected: T): Unit =
+    assertResult (expected) (assertPassed)
+
+  /** Assert the callback was invoked with [[scala.util.Success Success]] and assert the result was
+    * the expected [[scala.collection.Seq Seq]]. */
+  def assertSeq [S] (xs: S*) (implicit w: T <:< Seq [S]): Unit =
+    assertResult (xs) (assertPassed)
+
+
   /** Assert the callback was invoked with [[scala.util.Failure Failure]] and return the
     * exception.
     */
-  def failed [E] (implicit m: Manifest [E]): E = synchronized {
+  def assertFailed [E] (implicit m: Manifest [E]): E = synchronized {
     assertInvoked()
     if (_v != null)
       fail (
@@ -95,6 +106,47 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
     if (!m.runtimeClass.isInstance (_t))
       fail (s"Expected ${m.runtimeClass.getSimpleName}, found ${_t.getClass.getSimpleName}")
     _t.asInstanceOf [E]
+  }
+
+  /** Run without timers until the there are no more tasks, then assert that the callback was not
+    * invoked.
+    */
+  def expectNotInvoked () (implicit s: StubScheduler) {
+    s.run (timers = false)
+    assertNotInvoked()
+  }
+
+  /** Run until the callback has been invoked, then assert that it yielded
+    * [[scala.util.Success Success]] and return the result.
+    */
+  def expectPass () (implicit scheduler: StubScheduler): T = {
+    scheduler.run (timers = !wasInvoked)
+    assertPassed
+  }
+
+  /** Run until the callback has been invoked, then assert that it yielded
+    * [[scala.util.Success Success]] and check that the result is as expected.
+    */
+  def expectPass (expected: T) (implicit s: StubScheduler) {
+    s.run (timers = !wasInvoked)
+    assertResult (expected) (assertPassed)
+  }
+
+  /** Run until the callback has been invoked, then assert that it yielded
+    * [[scala.util.Success Success]] and assert that the result was the expect
+    * [[scala.collection.Seq Seq]].
+    */
+  def expectSeq [S] (xs: S*) (implicit s: StubScheduler, w: T <:< Seq [S]) {
+    s.run (timers = !wasInvoked)
+    assertResult (xs) (assertPassed)
+  }
+
+  /** Run until the callback has been invoked, then assert that it yielded
+    * [[scala.util.Failure Failure]] and return the exception.
+    */
+  def expectFail [E] (implicit s: StubScheduler, m: Manifest [E]): E = {
+    s.run (timers = !wasInvoked)
+    assertFailed [E]
   }
 
   override def toString: String = synchronized {

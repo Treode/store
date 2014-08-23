@@ -64,15 +64,15 @@ class PageSpec extends FreeSpec {
         implicit val scheduler = StubScheduler.random()
         file = StubFile (1<<20, geom.blockBits)
         implicit val disk = setup (file)
-        pos = pagers.str.write (0, 0, "one") .pass
-        pagers.str.fetch (pos) .expect ("one")
+        pos = pagers.str.write (0, 0, "one") .expectPass()
+        pagers.str.fetch (pos) .expectPass ("one")
       }
 
       {
         implicit val scheduler = StubScheduler.random()
         file = StubFile (file.data, geom.blockBits)
         implicit val disk = recover (file)
-        pagers.str.fetch (pos) .expect ("one")
+        pagers.str.fetch (pos) .expectPass ("one")
       }}
 
     "read from the cache after write" in {
@@ -84,9 +84,9 @@ class PageSpec extends FreeSpec {
         implicit val scheduler = StubScheduler.random()
         file = StubFile (1<<20, geom.blockBits)
         implicit val disk = setup (file)
-        pos = pagers.str.write (0, 0, "one") .pass
+        pos = pagers.str.write (0, 0, "one") .expectPass()
         file.stop = true
-        pagers.str.read (pos) .expect ("one")
+        pagers.str.read (pos) .expectPass ("one")
       }}
 
     "read from the cache after a first read" in {
@@ -98,16 +98,16 @@ class PageSpec extends FreeSpec {
         implicit val scheduler = StubScheduler.random()
         file = StubFile (1<<20, geom.blockBits)
         implicit val disk = setup (file)
-        pos = pagers.str.write (0, 0, "one") .pass
+        pos = pagers.str.write (0, 0, "one") .expectPass()
       }
 
       {
         implicit val scheduler = StubScheduler.random()
         file = StubFile (file.data, geom.blockBits)
         implicit val disk = recover (file)
-        pagers.str.read (pos) .expect ("one")
+        pagers.str.read (pos) .expectPass ("one")
         file.stop = true
-        pagers.str.read (pos) .expect ("one")
+        pagers.str.read (pos) .expectPass ("one")
       }}
 
     "reject a large page" in {
@@ -129,7 +129,7 @@ class PageSpec extends FreeSpec {
       val recovery = Disk.recover()
       implicit val disk = recovery.attachAndLaunch (("a", file, geom))
       for (i <- 0 until 40)
-        pagers.stuff.write (0, 0, Stuff (random.nextLong)) .pass
+        pagers.stuff.write (0, 0, Stuff (random.nextLong)) .expectPass()
       disk.clean()
       intercept [IllegalArgumentException] {
         scheduler.run()
@@ -141,7 +141,7 @@ class PageSpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random (random)
       val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
-      implicit val launch = recovery.attachAndWait (("a", file, geom)) .pass
+      implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
       import launch.disk
       pagers.stuff.handle (new PageHandler [Int] {
         def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
@@ -152,7 +152,7 @@ class PageSpec extends FreeSpec {
       launch.launch()
 
       for (i <- 0 until 40)
-        pagers.stuff.write (0, 0, Stuff (random.nextLong)) .pass
+        pagers.stuff.write (0, 0, Stuff (random.nextLong)) .expectPass()
       disk.clean()
       intercept [DistinguishedException] {
         scheduler.run()
@@ -164,7 +164,7 @@ class PageSpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random (random)
       val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
-      implicit val launch = recovery.attachAndWait (("a", file, geom)) .pass
+      implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
       import launch.disk
       pagers.stuff.handle (new PageHandler [Int] {
         def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
@@ -175,7 +175,7 @@ class PageSpec extends FreeSpec {
       launch.launch()
 
       for (i <- 0 until 40)
-        pagers.stuff.write (0, i, Stuff (random.nextLong)) .pass
+        pagers.stuff.write (0, i, Stuff (random.nextLong)) .expectPass()
       disk.clean()
       intercept [DistinguishedException] {
         scheduler.run()

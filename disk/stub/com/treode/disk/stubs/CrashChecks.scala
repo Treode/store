@@ -85,7 +85,7 @@ trait CrashChecks extends AsyncChecks {
         val cb = runner.setup (scheduler) .capture()
         val actual = scheduler.run (timers = !cb.wasInvoked, count = target)
         if (target == Int.MaxValue) {
-          cb.passed
+          cb.assertPassed()
           runner.asserts foreach (_(()))
         }
         actual

@@ -53,8 +53,8 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
     .setup { implicit scheduler =>
       implicit val recovery = StubDisk.recover()
       val medic = new TestMedic (ID)
-      val launch = recovery.attach (diskDrive) .pass
-      val rawtable = medic.launch (launch) .pass
+      val launch = recovery.attach (diskDrive) .expectPass()
+      val rawtable = medic.launch (launch) .expectPass()
       launch.launch()
       val table = new TrackedTable (rawtable, tracker)
       for (_ <- (0 until nbatches) .async)
@@ -64,8 +64,8 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
     .recover { implicit scheduler =>
       implicit val recovery = StubDisk.recover()
       val medic = new TestMedic (ID)
-      val launch = recovery.reattach (diskDrive) .pass
-      val table = medic.launch (launch) .pass
+      val launch = recovery.reattach (diskDrive) .expectPass()
+      val table = medic.launch (launch) .expectPass()
       launch.launch()
       tracker.check (table.toMap)
     }}
@@ -86,12 +86,12 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
 
     implicit val recovery = StubDisk.recover()
     val medic = new TestMedic (ID)
-    val launch = recovery.attach (diskDrive) .pass
-    val rawtable = medic.launch (launch) .pass
+    val launch = recovery.attach (diskDrive) .expectPass()
+    val rawtable = medic.launch (launch) .expectPass()
     launch.launch()
     val table = new TrackedTable (rawtable, tracker)
     for (_ <- (0 until nbatches))
-      table.putAll (random.nextPut (nkeys, nputs): _*) .pass
+      table.putAll (random.nextPut (nkeys, nputs): _*) .expectPass()
     tracker.check (rawtable.toMap)
   }
 

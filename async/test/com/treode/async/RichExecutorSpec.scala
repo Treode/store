@@ -30,21 +30,21 @@ class RichExecutorSpec extends FlatSpec {
   "Async.whilst" should "handle zero iterations" in {
     implicit val s = StubScheduler.random()
     var count = 0
-    s.whilst (false) (supply (count += 1)) .pass
+    s.whilst (false) (supply (count += 1)) .expectPass()
     assertResult (0) (count)
   }
 
   it should "handle one iteration" in {
     implicit val s = StubScheduler.random()
     var count = 0
-    s.whilst (count < 1) (supply (count += 1)) .pass
+    s.whilst (count < 1) (supply (count += 1)) .expectPass()
     assertResult (1) (count)
   }
 
   it should "handle multiple iterations" in {
     implicit val s = StubScheduler.random()
     var count = 0
-    s.whilst (count < 3) (supply (count += 1)) .pass
+    s.whilst (count < 3) (supply (count += 1)) .expectPass()
     assertResult (3) (count)
   }
 

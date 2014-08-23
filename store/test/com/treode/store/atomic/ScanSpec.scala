@@ -38,7 +38,7 @@ class ScanSpec extends FlatSpec {
     implicit val kit = StoreTestKit.random()
     import kit.{random, scheduler}
 
-    val hs = Seq.fill (3) (StubAtomicHost .install() .pass)
+    val hs = Seq.fill (3) (StubAtomicHost .install() .expectPass())
     val Seq (h1, h2, h3) = hs
     for (h <- hs)
       h.setAtlas (settled (h1, h2, h3))

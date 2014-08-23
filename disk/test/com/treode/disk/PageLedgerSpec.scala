@@ -45,14 +45,14 @@ class PageLedgerSpec extends FlatSpec {
     for (i <- 0 until 1024)
       buf.writeInt (i)
     val file = StubFile (1<<20, 6)
-    file.flush (buf, 0) .pass
+    file.flush (buf, 0) .expectPass()
 
     // Check that the write throws an exception.
     PageLedger.write (ledger, file, geom, 0, 256) .fail [PageLedgerOverflowException]
 
     // Check that the file has not been overwritten.
     buf.clear()
-    file.fill (buf, 0, 1024) .pass
+    file.fill (buf, 0, 1024) .expectPass()
     for (i <- 0 until 1024)
       assertResult (i) (buf.readInt())
   }}

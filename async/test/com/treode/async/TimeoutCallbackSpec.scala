@@ -58,7 +58,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     timer.fail (new DistinguishedException)
     scheduler.run()
     assert (timer.invoked)
-    captor.failed [DistinguishedException]
+    captor.assertFailed [DistinguishedException]
     scheduler.run (timers = true)
     assertResult (1) (count)
   }
@@ -96,7 +96,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     timer.fail (new DistinguishedException)
     scheduler.run()
     assert (timer.invoked)
-    captor.failed [DistinguishedException]
+    captor.assertFailed [DistinguishedException]
     scheduler.run (timers = true)
     assertResult (3) (count)
   }
@@ -112,7 +112,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     scheduler.run (timers = true)
     assertResult (3) (count)
     assert (timer.invoked)
-    captor.failed [TimeoutException]
+    captor.assertFailed [TimeoutException]
   }
 
   it should "work with ensure to close on pass" in {
@@ -137,7 +137,7 @@ class TimeoutCallbackSpec extends FlatSpec {
     timer.fail (new DistinguishedException)
     scheduler.run (timers = true)
     assert (timer.invoked)
-    captor.failed [DistinguishedException]
+    captor.assertFailed [DistinguishedException]
     assert (flag)
   }
 
@@ -148,6 +148,6 @@ class TimeoutCallbackSpec extends FlatSpec {
     timer.rouse()
     scheduler.run (timers = true)
     assert (timer.invoked)
-    captor.failed [TimeoutException]
+    captor.assertFailed [TimeoutException]
     assert (flag)
   }}

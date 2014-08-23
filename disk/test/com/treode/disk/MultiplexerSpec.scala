@@ -92,7 +92,7 @@ class MultiplexerSpec extends FlatSpec {
     val dsp = new Dispatcher [Int] (0)
     val mplx = new Multiplexer (dsp)
     val rcpt = mplx.receptor()
-    mplx.close() .pass
+    mplx.close() .expectPass()
     dsp.send (1)
     rcpt.expectNone()
     dsp.expect (1)
@@ -110,7 +110,7 @@ class MultiplexerSpec extends FlatSpec {
     cb.assertNotInvoked()
     val rcpt = mplx.receptor()
     scheduler.run()
-    cb.passed
+    cb.assertPassed()
     rcpt.expectNone()
     dsp.expect (1)
   }

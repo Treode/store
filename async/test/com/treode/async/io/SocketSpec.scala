@@ -39,7 +39,7 @@ class SocketSpec extends FlatSpec {
 
   "AsyncSocket.flush" should "handle an empty buffer" in {
     implicit val (scheduler, _, socket, buffer) = mkSocket
-    socket.flush (buffer) .pass
+    socket.flush (buffer) .expectPass()
   }
 
   it should "flush an int" in {
@@ -50,7 +50,7 @@ class SocketSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (4)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "loop to flush an int" in {
@@ -64,7 +64,7 @@ class SocketSpec extends FlatSpec {
     async.completeLast (2)
     cb.assertNotInvoked()
     async.completeLast (2)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "handle socket close" in {
@@ -75,18 +75,18 @@ class SocketSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (-1)
-    cb.failed [Exception]
+    cb.assertFailed [Exception]
   }
 
   "AsyncSocket.fill" should "handle a request for 0 bytes" in {
     implicit val (scheduler, _, socket, input) = mkSocket
-    socket.fill (input, 0) .pass
+    socket.fill (input, 0) .expectPass()
   }
 
   it should "handle a request for bytes available at the beginning" in {
     implicit val (scheduler, _, socket, input) = mkSocket
     input.writePos = 4
-    socket.fill (input, 4) .pass
+    socket.fill (input, 4) .expectPass()
   }
 
   it should "fill needed bytes with an empty buffer" in {
@@ -96,7 +96,7 @@ class SocketSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (4)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "loop to fill needed bytes within a page" in {
@@ -109,7 +109,7 @@ class SocketSpec extends FlatSpec {
     async.completeLast (2)
     cb.assertNotInvoked()
     async.completeLast (2)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "fill needed bytes with some at the beginning" in {
@@ -120,7 +120,7 @@ class SocketSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "handle a request for bytes available in the middle" in {
@@ -132,7 +132,7 @@ class SocketSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (4)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "fill needed bytes with some in the middle and space after" in {
@@ -144,7 +144,7 @@ class SocketSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (2)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "repeat to fill needed bytes across pages" in {
@@ -159,7 +159,7 @@ class SocketSpec extends FlatSpec {
     async.completeLast (2)
     cb.assertNotInvoked()
     async.completeLast (6)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "handle socket close" in {
@@ -169,7 +169,7 @@ class SocketSpec extends FlatSpec {
     scheduler.run()
     cb.assertNotInvoked()
     async.completeLast (-1)
-    cb.failed [Exception]
+    cb.assertFailed [Exception]
   }
 
   it should "flush and fill" in {
@@ -182,9 +182,9 @@ class SocketSpec extends FlatSpec {
       for (i <- data)
         buffer.writeVarInt (i)
       val length = buffer.writePos
-      socket.flush (buffer) .pass
+      socket.flush (buffer) .expectPass()
       buffer.clear()
-      socket.fill (buffer, length) .pass
+      socket.fill (buffer, length) .expectPass()
       for (i <- data)
         assertResult (i) (buffer.readVarInt())
     }}}

@@ -67,9 +67,9 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
 
     .recover { implicit scheduler =>
       implicit val network = StubNetwork (random)
-      val host = StubPaxosHost .boot (H1, disk, false) .pass
+      val host = StubPaxosHost .boot (H1, disk, false) .expectPass()
       host.setAtlas (settled (host))
-      tracker.check (host) .pass
+      tracker.check (host) .expectPass()
     }}
 
   private [paxos] def achieveConsensus (nbatches: Int, nputs: Int) (implicit random: Random) = {

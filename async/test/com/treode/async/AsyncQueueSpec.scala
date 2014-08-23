@@ -67,7 +67,7 @@ class AsyncQueueSpec extends FlatSpec {
     val cb = q.start()
     cb.assertNotInvoked()
     q.pass()
-    cb.passed
+    cb.assertPassed
   }
 
   it should "run two queue tasks" in {
@@ -78,10 +78,10 @@ class AsyncQueueSpec extends FlatSpec {
     cb1.assertNotInvoked()
     cb2.assertNotInvoked()
     q.pass()
-    cb1.passed
+    cb1.assertPassed()
     cb2.assertNotInvoked()
     q.pass()
-    cb2.passed
+    cb2.assertPassed()
   }
 
   it should "run two tasks one after the other" in {
@@ -90,11 +90,11 @@ class AsyncQueueSpec extends FlatSpec {
     val cb1 = q.start()
     cb1.assertNotInvoked()
     q.pass()
-    cb1.passed
+    cb1.assertPassed()
     val cb2 = q.start()
     cb2.assertNotInvoked()
     q.pass()
-    cb2.passed
+    cb2.assertPassed()
   }
 
   it should "report an exception through the callback and continue" in {
@@ -105,8 +105,8 @@ class AsyncQueueSpec extends FlatSpec {
     cb1.assertNotInvoked()
     cb2.assertNotInvoked()
     q.fail (new DistinguishedException)
-    cb1.failed [DistinguishedException]
+    cb1.assertFailed [DistinguishedException]
     cb2.assertNotInvoked()
     q.pass()
-    cb2.passed
+    cb2.assertPassed()
   }}

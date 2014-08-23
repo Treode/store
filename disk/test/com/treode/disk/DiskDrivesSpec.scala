@@ -319,13 +319,13 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file1 = StubFile (1<<20, geom.blockBits)
           file2 = StubFile (1<<20, geom.blockBits)
           val recovery = Disk.recover()
-          val launch = recovery.attachAndWait (("a", file1, geom)) .pass
+          val launch = recovery.attachAndWait (("a", file1, geom)) .expectPass()
           val controller = launch.controller
           val cb = controller.attachAndCapture (("b", file2, geom))
           cb.assertNotInvoked()
           controller.assertDisks ("a")
           launch.launchAndPass()
-          cb.passed
+          cb.assertPassed()
           controller.assertDisks ("a", "b")
         }
 
@@ -346,13 +346,13 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           implicit val scheduler = StubScheduler.random()
           file = StubFile (1<<20, geom.blockBits)
           val recovery = Disk.recover()
-          val launch = recovery.attachAndWait (("a", file, geom)) .pass
+          val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
           val controller = launch.controller
           val cb = controller.attachAndCapture()
           cb.assertNotInvoked()
           controller.assertDisks ("a")
           launch.launchAndPass()
-          cb.failed [IllegalArgumentException]
+          cb.assertFailed [IllegalArgumentException]
           controller.assertDisks ("a")
         }
 
@@ -374,13 +374,13 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file1 = StubFile (1<<20, geom.blockBits)
           file2 = StubFile (1<<20, geom.blockBits)
           val recovery = Disk.recover()
-          val launch = recovery.attachAndWait (("a", file1, geom), ("b", file2, geom)) .pass
+          val launch = recovery.attachAndWait (("a", file1, geom), ("b", file2, geom)) .expectPass()
           import launch.{controller, disk}
           val cb = controller.drainAndCapture ("b")
           cb.assertNotInvoked()
           controller.assertDisks ("a", "b")
           launch.launchAndPass (tickle = true)
-          cb.passed
+          cb.assertPassed()
           assert (file2.closed)
           controller.assertDisks ("a")
         }
@@ -402,13 +402,13 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           implicit val scheduler = StubScheduler.random()
           file = StubFile (1<<20, geom.blockBits)
           val recovery = Disk.recover()
-          val launch = recovery.attachAndWait (("a", file, geom)) .pass
+          val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
           import launch.{controller, disk}
           val cb = controller.drainAndCapture()
           cb.assertNotInvoked()
           controller.assertDisks ("a")
           launch.launchAndPass (tickle = true)
-          cb.failed [IllegalArgumentException]
+          cb.assertFailed [IllegalArgumentException]
           controller.assertDisks ("a")
         }
 
@@ -433,7 +433,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file2 = StubFile (1<<20, geom.blockBits)
           val recovery = Disk.recover()
           val controller = recovery.attachAndControl (("a", file1, geom))
-          controller.shutdown() .pass
+          controller.shutdown() .expectPass()
           val cb = controller.attachAndCapture (("b", file2, geom))
           cb.assertNotInvoked()
           controller.assertDisks ("a")
@@ -459,7 +459,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file2 = StubFile (1<<20, geom.blockBits)
           val recovery = Disk.recover()
           val controller = recovery.attachAndControl (("a", file1, geom), ("b", file2, geom))
-          controller.shutdown() .pass
+          controller.shutdown() .expectPass()
           val cb = controller.drainAndCapture ("b")
           cb.assertNotInvoked()
           controller.assertDisks ("a", "b")

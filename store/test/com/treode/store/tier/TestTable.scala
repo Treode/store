@@ -36,7 +36,7 @@ extends PageHandler [Long] {
     table.iterator (Residents.all) .map (new TestCell (_))
 
   def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] =
-    for (c <- iterator.toSeq.pass; if c.value.isDefined)
+    for (c <- iterator.toSeq.expectPass(); if c.value.isDefined)
       yield (c.key, c.value.get)
 
   def toMap (implicit scheduler: StubScheduler): Map [Int, Int] =

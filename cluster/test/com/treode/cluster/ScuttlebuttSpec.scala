@@ -73,7 +73,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
     def listen (f: (Int, Peer) => Any) =
       sb.listen (rumor) (f)
 
-    def status = sb.status.pass
+    def status = sb.status.expectPass()
 
     def spread (v: Int) = {
       sb.spread (rumor) (v)
@@ -81,7 +81,7 @@ object ScuttlebuttBehaviors extends FreeSpec {
     }
 
     def ping (hosts: (HostId, Int)*) =
-      sb.ping (hosts) .pass
+      sb.ping (hosts) .expectPass()
 
     def sync (updates: (HostId, Seq [(RumorId, Value, Int)])*) {
       sb.sync (updates)

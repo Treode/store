@@ -102,7 +102,7 @@ private class StubAtomicHost (
     atomic.hosts (slice)
 
   def putCells (id: TableId, cs: Cell*) (implicit scheduler: StubScheduler): Unit =
-    atomic.tables.receive (id, cs) .pass
+    atomic.tables.receive (id, cs) .expectPass()
 }
 
 private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost] {

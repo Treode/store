@@ -51,7 +51,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         setup { implicit scheduler =>
           file = StubFile (1<<20, geom.blockBits)
           implicit val recovery = Disk.recover()
-          val launch = recovery.attachAndWait (("a", file, geom)) .pass
+          val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
           import launch.{controller, disk}
           launch.checkpoint (fail ("Expected no checkpoints"))
           launch.launch()
@@ -82,7 +82,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         setup { implicit scheduler =>
           file = StubFile (1<<20, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val launch = recovery.attachAndWait (("a", file, geom)) .pass
+          implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
           import launch.{controller, disk}
           tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
@@ -123,7 +123,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val launch = recovery.attachAndWait (
               ("a", file1, geom),
               ("b", file2, geom),
-              ("c", file3, geom)) .pass
+              ("c", file3, geom)) .expectPass()
           import launch.{controller, disk}
           tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
@@ -164,7 +164,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file1 = StubFile (1<<20, geom.blockBits)
           file2 = StubFile (1<<20, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val launch = recovery.attachAndWait (("a", file1, geom)) .pass
+          implicit val launch = recovery.attachAndWait (("a", file1, geom)) .expectPass()
           import launch.{controller, disk}
           tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
@@ -206,7 +206,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file2 = StubFile (1<<20, geom.blockBits)
           implicit val recovery = Disk.recover()
           implicit val launch =
-            recovery.attachAndWait (("a", file1, geom), ("b", file2, geom)) .pass
+            recovery.attachAndWait (("a", file1, geom), ("b", file2, geom)) .expectPass()
           import launch.{controller, disk}
           tracker.attach()
           launch.checkpoint (supply (checkpoint = true))
@@ -229,7 +229,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val recovery = Disk.recover()
           val replayer = new LogReplayer
           replayer.attach (recovery)
-          implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .pass
+          implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .expectPass()
           import launch.disk
           tracker.attach()
           launch.launchAndPass (tickle = true)
@@ -255,12 +255,12 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         implicit val scheduler = StubScheduler.random (random)
         val file = StubFile (1<<20, geom.blockBits)
         implicit val recovery = Disk.recover()
-        implicit val launch = recovery.attachAndWait (("a", file, geom)) .pass
+        implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
         import launch.{controller, disk}
         tracker.attach()
         launch.launchAndPass()
-        tracker.batches (20, 1000, 2) .pass
-        controller.shutdown() .pass
+        tracker.batches (20, 1000, 2) .expectPass()
+        controller.shutdown() .expectPass()
       }}
 
     "when multithreaded" taggedAs (Intensive, Periodic) in {
@@ -301,7 +301,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         setup { implicit scheduler =>
           file = StubFile (1<<20, geom.blockBits)
           implicit val recovery = Disk.recover()
-          val launch = recovery.attachAndWait (("a", file, geom)) .pass
+          val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
           import launch.{controller, disk}
           launch.launch()
           for {
@@ -328,7 +328,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         setup { implicit scheduler =>
           file = StubFile (1<<20, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val launch = recovery.attachAndWait (("a", file, geom)) .pass
+          implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
           import launch.{controller, disk}
           tracker.attach()
           launch.launch()
@@ -365,7 +365,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           implicit val launch = recovery.attachAndWait (
               ("a", file1, geom),
               ("b", file2, geom),
-              ("c", file3, geom)) .pass
+              ("c", file3, geom)) .expectPass()
           import launch.{controller, disk}
           tracker.attach()
           launch.launch()
@@ -402,7 +402,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file1 = StubFile (1<<20, geom.blockBits)
           file2 = StubFile (1<<20, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val launch = recovery.attachAndWait (("a", file1, geom)) .pass
+          implicit val launch = recovery.attachAndWait (("a", file1, geom)) .expectPass()
           import launch.{disk, controller}
           tracker.attach()
           launch.launch()
@@ -441,7 +441,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file2 = StubFile (1<<20, geom.blockBits)
           implicit val recovery = Disk.recover()
           implicit val launch =
-            recovery.attachAndWait (("a", file1, geom), ("b", file2, geom)) .pass
+            recovery.attachAndWait (("a", file1, geom), ("b", file2, geom)) .expectPass()
           import launch.{disk, controller}
           tracker.attach()
           launch.launch()
@@ -462,7 +462,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file1 = StubFile (file1.data, geom.blockBits)
           file2 = StubFile (file2.data, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .pass
+          implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .expectPass()
           import launch.disk
           tracker.attach()
           launch.launchAndPass (tickle = true)
@@ -486,11 +486,11 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         implicit val scheduler = StubScheduler.random (random)
         val file = StubFile (1<<18, geom.blockBits)
         implicit val recovery = Disk.recover()
-        implicit val launch = recovery.attachAndWait (("a", file, geom)) .pass
+        implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
         import launch.{controller, disk}
         tracker.attach()
         launch.launch()
-        tracker.batch (100, 10) .pass
-        controller.shutdown() .pass
+        tracker.batch (100, 10) .expectPass()
+        controller.shutdown() .expectPass()
         assert (tracker.maximum > (1<<17), "Expected growth.")
       }}}}

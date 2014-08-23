@@ -39,7 +39,7 @@ class TripleLatchSpec extends FlatSpec {
     lb.pass (2)
     cb.assertNotInvoked()
     lc.pass (3)
-    assertResult ((1, 2, 3)) (cb.passed)
+    assertResult ((1, 2, 3)) (cb.assertPassed())
   }
 
   it should "reject two sets on a" in {
@@ -72,7 +72,7 @@ class TripleLatchSpec extends FlatSpec {
     lb.pass (2)
     cb.assertNotInvoked()
     lc.pass (3)
-    cb.failed [DistinguishedException]
+    cb.assertFailed [DistinguishedException]
   }
 
   it should "release after two passes but a fail on b" in {
@@ -84,7 +84,7 @@ class TripleLatchSpec extends FlatSpec {
     lb.fail (new DistinguishedException)
     cb.assertNotInvoked()
     lc.pass (3)
-    cb.failed [DistinguishedException]
+    cb.assertFailed [DistinguishedException]
   }
 
   it should "release after two passes but a fail on c" in {
@@ -96,5 +96,5 @@ class TripleLatchSpec extends FlatSpec {
     lb.pass (2)
     cb.assertNotInvoked()
     lc.fail (new DistinguishedException)
-    cb.failed [DistinguishedException]
+    cb.assertFailed [DistinguishedException]
   }}

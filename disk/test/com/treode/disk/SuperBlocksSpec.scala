@@ -61,8 +61,8 @@ class SuperBlocksSpec extends FreeSpec {
     val file = StubFile (1<<20, geom.blockBits)
     val superb0 = superb (0)
     val superb1 = superb (1)
-    SuperBlock.write (superb0, file) (config) .pass
-    SuperBlock.write (superb1, file) (config) .pass
+    SuperBlock.write (superb0, file) (config) .expectPass()
+    SuperBlock.write (superb1, file) (config) .expectPass()
     (scheduler, file, superb0, superb1)
   }
 
@@ -313,7 +313,7 @@ class SuperBlocksSpec extends FreeSpec {
 
     "read what was written" in {
       implicit val (scheduler, file, superb0, superb1) = setup()
-      val superbs = SuperBlocks.read (path, file) (config) .pass
+      val superbs = SuperBlocks.read (path, file) (config) .expectPass()
       assertResult (Some (superb0)) (superbs.sb0)
       assertResult (Some (superb1)) (superbs.sb1)
     }
@@ -323,8 +323,8 @@ class SuperBlocksSpec extends FreeSpec {
       val buf = PagedBuffer (12)
       while (buf.readableBytes < geom.blockBytes)
         buf.writeInt (Random.nextInt)
-      file.flush (buf, 0) .pass
-      val superbs = SuperBlocks.read (path, file) (config) .pass
+      file.flush (buf, 0) .expectPass()
+      val superbs = SuperBlocks.read (path, file) (config) .expectPass()
       assertResult (None) (superbs.sb0)
       assertResult (Some (superb1)) (superbs.sb1)
     }
@@ -334,8 +334,8 @@ class SuperBlocksSpec extends FreeSpec {
       val buf = PagedBuffer (12)
       while (buf.readableBytes < geom.blockBytes)
         buf.writeInt (Random.nextInt)
-      file.flush (buf, config.superBlockBytes) .pass
-      val superbs = SuperBlocks.read (path, file) (config) .pass
+      file.flush (buf, config.superBlockBytes) .expectPass()
+      val superbs = SuperBlocks.read (path, file) (config) .expectPass()
       assertResult (Some (superb0)) (superbs.sb0)
       assertResult (None) (superbs.sb1)
     }}}

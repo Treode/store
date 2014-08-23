@@ -65,7 +65,7 @@ object BrokerBehaviors extends FreeSpec {
     val diskDrive = new StubDiskDrive
 
     implicit val recovery = StubDisk.recover()
-    implicit val launch = recovery.attach (diskDrive) .pass
+    implicit val launch = recovery.attach (diskDrive) .expectPass()
     implicit val disk = launch.disk
     launch.launch()
 
@@ -81,7 +81,7 @@ object BrokerBehaviors extends FreeSpec {
         status <- broker.status
         updates <- other.broker.ping (status)
       } yield broker.sync (updates)
-      task.pass
+      task.expectPass()
     }
 
     def double (other: RichBroker) {
@@ -92,14 +92,14 @@ object BrokerBehaviors extends FreeSpec {
         broker.sync (updates)
         broker.sync (updates)
       }
-      task.pass
+      task.expectPass()
     }
 
     def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any) =
       broker.listen (desc) (f)
 
     def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) = {
-      broker.patch (desc.id, broker.diff (desc) (version, cat) .pass) .pass
+      broker.patch (desc.id, broker.diff (desc) (version, cat) .expectPass()) .expectPass()
     }}
 
   private def newBroker = {

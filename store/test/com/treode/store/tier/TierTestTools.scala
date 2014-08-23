@@ -76,14 +76,14 @@ private object TierTestTools extends StoreTestTools {
         require (c1.key != c2.key || c1.time > c2.time+1, s"Times must have gaps.")
         require (Apple < c1.key && c1.key < Tomato, "Key must be between Apple and Tomato.")
       }
-      assertResult (cells) (table.iterator (Residents.all) .toSeq.pass)
-      table.get (Apple, 0) .expect (Apple##0)
-      table.get (Tomato, 0) .expect (Tomato##0)
+      table.iterator (Residents.all) .toSeq.expectPass (cells)
+      table.get (Apple, 0) .expectPass (Apple##0)
+      table.get (Tomato, 0) .expectPass (Tomato##0)
       for (Seq (c1, c2) <- cells.sliding (2)) {
-        table.get (c1.key, c1.time + 1) .expect (c1)
-        table.get (c1.key, c1.time) .expect (c1)
+        table.get (c1.key, c1.time + 1) .expectPass (c1)
+        table.get (c1.key, c1.time) .expectPass (c1)
         if (c1.key == c2.key)
-          table.get (c1.key, c1.time - 1) .expect (c2)
+          table.get (c1.key, c1.time - 1) .expectPass (c2)
         else
-          table.get (c1.key, c1.time - 1) .expect (Cell (c1.key, 0, None))
+          table.get (c1.key, c1.time - 1) .expectPass (Cell (c1.key, 0, None))
       }}}}

@@ -28,13 +28,13 @@ class CountingLatchSpec extends FlatSpec {
   "The CountingLatch" should "release immediately for count==0" in {
     val cb = CallbackCaptor [Unit]
     Latch.unit (0, cb)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "reject extra releases" in {
     val cb = CallbackCaptor [Unit]
     val ltch = Latch.unit [Int] (0, cb)
-    cb.passed
+    cb.assertPassed()
     intercept [Exception] (ltch.pass (0))
   }
 
@@ -43,7 +43,7 @@ class CountingLatchSpec extends FlatSpec {
     val ltch = Latch.unit [Int] (1, cb)
     cb.assertNotInvoked()
     ltch.pass (0)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "release after one fail for count==1" in {
@@ -51,7 +51,7 @@ class CountingLatchSpec extends FlatSpec {
     val ltch = Latch.unit [Int] (1, cb)
     cb.assertNotInvoked()
     ltch.fail (new DistinguishedException)
-    cb.failed [DistinguishedException]
+    cb.assertFailed [DistinguishedException]
   }
 
   it should "release after two passes for count==2" in {
@@ -61,7 +61,7 @@ class CountingLatchSpec extends FlatSpec {
     ltch.pass (0)
     cb.assertNotInvoked()
     ltch.pass (0)
-    cb.passed
+    cb.assertPassed()
   }
 
   it should "release after a pass and a fail for count==2" in {
@@ -71,7 +71,7 @@ class CountingLatchSpec extends FlatSpec {
     ltch.pass (0)
     cb.assertNotInvoked()
     ltch.fail (new DistinguishedException)
-    cb.failed [DistinguishedException]
+    cb.assertFailed [DistinguishedException]
   }
 
   it should "release after two fails for count==2" in {
@@ -81,5 +81,5 @@ class CountingLatchSpec extends FlatSpec {
     ltch.fail (new Exception)
     cb.assertNotInvoked()
     ltch.fail (new Exception)
-    cb.failed [MultiException]
+    cb.assertFailed [MultiException]
   }}

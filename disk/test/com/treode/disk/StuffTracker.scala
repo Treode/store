@@ -91,5 +91,5 @@ class StuffTracker (implicit random: Random) {
     for ((seed, pos) <- written) {
       if (disk.isInstanceOf [DiskAgent])
         pager.assertInLedger (pos, 0, seed)
-      pager.read (pos) .expect (Stuff (seed))
+      pager.read (pos) .expectPass (Stuff (seed))
     }}}

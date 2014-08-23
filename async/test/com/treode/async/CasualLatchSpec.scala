@@ -27,13 +27,13 @@ class CasualLatchSpec extends FlatSpec {
   "The SeqLatch" should "release immediately for count==0" in {
     val cb = CallbackCaptor [Seq [Int]]
     Latch.casual [Int] (0, cb)
-    assertResult (Seq [Int] ()) (cb.passed)
+    cb.assertSeq [Int] ()
   }
 
   it should "reject extra releases" in {
     val cb = CallbackCaptor [Seq [Int]]
     val ltch = Latch.casual [Int] (0, cb)
-    assertResult (Seq [Int] ()) (cb.passed)
+    cb.assertSeq [Int] ()
     intercept [Exception] (ltch.pass (1))
   }
 
@@ -42,7 +42,7 @@ class CasualLatchSpec extends FlatSpec {
     val ltch = Latch.casual [Int] (1, cb)
     cb.assertNotInvoked()
     ltch.pass (1)
-    assertResult (Seq (1)) (cb.passed)
+    cb.assertSeq (1)
   }
 
   it should "release after one fail for count==1" in {
@@ -50,7 +50,7 @@ class CasualLatchSpec extends FlatSpec {
     val ltch = Latch.casual [Int] (1, cb)
     cb.assertNotInvoked()
     ltch.fail (new DistinguishedException)
-    cb.failed [DistinguishedException]
+    cb.assertFailed [DistinguishedException]
   }
 
   it should "release after two passes for count==2" in {
@@ -60,7 +60,7 @@ class CasualLatchSpec extends FlatSpec {
     ltch.pass (1)
     cb.assertNotInvoked()
     ltch.pass (2)
-    assertResult (Seq (1, 2)) (cb.passed)
+    cb.assertSeq (1, 2)
   }
 
   it should "release after two reversed passes for count==2" in {
@@ -70,7 +70,7 @@ class CasualLatchSpec extends FlatSpec {
     ltch.pass (2)
     cb.assertNotInvoked()
     ltch.pass (1)
-    assertResult (Seq (2, 1)) (cb.passed)
+    cb.assertSeq (2, 1)
   }
 
   it should "release after a pass and a fail for count==2" in {
@@ -80,7 +80,7 @@ class CasualLatchSpec extends FlatSpec {
     ltch.pass (1)
     cb.assertNotInvoked()
     ltch.fail (new DistinguishedException)
-    cb.failed [DistinguishedException]
+    cb.assertFailed [DistinguishedException]
   }
 
   it should "release after two fails for count==2" in {
@@ -90,5 +90,5 @@ class CasualLatchSpec extends FlatSpec {
     ltch.fail (new Exception)
     cb.assertNotInvoked()
     ltch.fail (new Exception)
-    cb.failed [MultiException]
+    cb.assertFailed [MultiException]
   }}

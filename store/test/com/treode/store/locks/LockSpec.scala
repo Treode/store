@@ -166,7 +166,7 @@ class LockSpec extends WordSpec with MockFactory {
       val config = StoreTestConfig (lockSpaceBits = 8)
       import config._
       val locks = new LockSpace
-      val w1 = locks.write (1, Apple, Banana) .pass
+      val w1 = locks.write (1, Apple, Banana) .expectPass()
       val w2 = locks.write (2, Banana, Orange) .capture()
       w2.assertNotInvoked()
       val r3 = locks.read (3, Apple, Orange) .capture()
@@ -174,6 +174,6 @@ class LockSpec extends WordSpec with MockFactory {
       r3.assertNotInvoked()
       w1.release()
       r3.assertNotInvoked()
-      w2.passed.release()
-      r3.passed
+      w2.assertPassed().release()
+      r3.assertPassed()
     }}}

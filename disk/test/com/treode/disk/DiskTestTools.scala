@@ -59,7 +59,7 @@ private object DiskTestTools {
       attachAndWait (items: _*) .capture
 
     def attachAndPass (items: AttachItem*) (implicit scheduler: StubScheduler) {
-      attachAndWait (items: _*) .pass
+      attachAndWait (items: _*) .expectPass()
       disk.assertReady()
     }
 
@@ -70,7 +70,7 @@ private object DiskTestTools {
       drainAndWait (items: _*) .capture()
 
     def drainAndPass (items: Path*) (implicit scheduler: StubScheduler) {
-      drainAndWait (items: _*) .pass
+      drainAndWait (items: _*) .expectPass()
       disk.tickle()
       disk.assertReady()
     }}
@@ -120,7 +120,7 @@ private object DiskTestTools {
       } else {
         assert (!drive.alloc.free.contains (num), "Expected segment to be allocated.")
         val seg = drive.geom.segmentBounds (num)
-        val ledger = PageLedger.read (drive.file, drive.geom, seg.base) .pass
+        val ledger = PageLedger.read (drive.file, drive.geom, seg.base) .expectPass()
         assert (
             ledger.get (typ, obj, grp) > 0,
             s"Expected ($typ, $obj, $grp) in ledger at ${seg.base} on ${drive.id}.")
@@ -209,13 +209,13 @@ private object DiskTestTools {
 
     def attachAndControl (items: AttachItem*)  (
         implicit scheduler: StubScheduler): Disk.Controller = {
-      val launch = attachAndWait (items: _*) .pass
+      val launch = attachAndWait (items: _*) .expectPass()
       launch.launchAndPass()
       launch.controller
     }
 
     def attachAndLaunch (items: AttachItem*) (implicit scheduler: StubScheduler): Disk = {
-      val launch = attachAndWait (items: _*) .pass
+      val launch = attachAndWait (items: _*) .expectPass()
       launch.launchAndPass()
       launch.disk
     }
@@ -224,7 +224,7 @@ private object DiskTestTools {
       agent._reattach (items: _*)
 
     def reattachAndLaunch (items: ReattachItem*) (implicit scheduler: StubScheduler): Disk = {
-      val launch = reattachAndWait (items: _*) .pass
+      val launch = reattachAndWait (items: _*) .expectPass()
       launch.launchAndPass()
       launch.disk
     }
@@ -238,7 +238,7 @@ private object DiskTestTools {
 
     def reopenAndLaunch (paths: Path*) (items: ReattachItem*) (
         implicit scheduler: StubScheduler, config: Disk.Config): Disk = {
-      val launch = reopenAndWait (paths: _*) (items: _*) .pass
+      val launch = reopenAndWait (paths: _*) (items: _*) .expectPass()
       launch.launchAndPass()
       launch.disk
     }}}

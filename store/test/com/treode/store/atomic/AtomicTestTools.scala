@@ -33,7 +33,7 @@ private trait AtomicTestTools extends StoreTestTools {
     import PrepareResult._
 
     def expectPrepared (implicit s: StubScheduler): (TxClock, LockSet) =
-      actual.pass match {
+      actual.expectPass() match {
         case Prepared (vt, locks) =>
           (vt, locks)
         case _ =>
@@ -42,10 +42,10 @@ private trait AtomicTestTools extends StoreTestTools {
       }
 
     def expectCollided (ks: Int*) (implicit s: StubScheduler): Unit =
-      actual.expect (Collided (ks))
+      actual.expectPass (Collided (ks))
 
     def expectStale (implicit s: StubScheduler): Unit =
-      actual.expect (Stale)
+      actual.expectPass (Stale)
 
     def abort() (implicit s: StubScheduler) {
       val (_, locks) = expectPrepared

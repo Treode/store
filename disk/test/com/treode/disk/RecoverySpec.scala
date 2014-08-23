@@ -55,7 +55,7 @@ class RecoverySpec extends FreeSpec {
       implicit val scheduler = StubScheduler.random()
       val file = StubFile (1<<20, geom.blockBits)
       val recovery = Disk.recover()
-      recovery.attachAndWait (("a", file, geom)) .pass
+      recovery.attachAndWait (("a", file, geom)) .expectPass()
       intercept [IllegalArgumentException] {
         recovery.replay (record) (_ => ())
       }}
@@ -114,7 +114,7 @@ class RecoverySpec extends FreeSpec {
       while (file.hasLast)
         file.last.fail (new Exception)
       scheduler.run()
-      cb.failed [Exception]
+      cb.assertFailed [Exception]
     }}
 
   "Recovery.reattach" - {

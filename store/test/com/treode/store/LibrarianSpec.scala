@@ -61,7 +61,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
     scheduler.run()
     while (!captor.wasInvoked)
       Thread.sleep (10)
-    implicit val (disk, catalogs) = captor.passed
+    implicit val (disk, catalogs) = captor.assertPassed()
 
     val rebalancer = AsyncCaptor [Unit]
 
@@ -80,7 +80,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
       val atlas = Atlas (cohorts.toArray, version)
       library.atlas = atlas
       library.residents = atlas.residents (localId)
-      catalogs.issue (Atlas.catalog) (version, atlas) .pass
+      catalogs.issue (Atlas.catalog) (version, atlas) .expectPass()
     }
 
     def expectAtlas (atlas: Atlas) {

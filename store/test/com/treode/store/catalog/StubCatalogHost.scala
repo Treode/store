@@ -63,7 +63,7 @@ extends StubHost {
   scheduler.run()
   while (!captor.wasInvoked)
     Thread.sleep (10)
-  implicit val (disk, catalogs) = captor.passed
+  implicit val (disk, catalogs) = captor.assertPassed()
 
   val acceptors = catalogs.acceptors
 
@@ -77,7 +77,7 @@ extends StubHost {
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C) {
     import catalogs.broker.{diff, patch}
-    patch (desc.id, diff (desc) (version, cat) .pass) .pass
+    patch (desc.id, diff (desc) (version, cat) .expectPass()) .expectPass()
   }}
 
 private object StubCatalogHost {
