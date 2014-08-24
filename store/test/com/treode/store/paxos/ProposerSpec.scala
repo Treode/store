@@ -149,7 +149,7 @@ class ProposerSpec extends FreeSpec {
       q.refuse()
       expectAsk (as, k1, v1)
       as foreach (_.expectNone())
-      assert (!c.wasInvoked)
+      c.assertNotInvoked()
     }
 
     "granted and told no current proposal, it should propose its own value" in {
@@ -162,7 +162,7 @@ class ProposerSpec extends FreeSpec {
       as foreach (_.expectPropose (k1, q1.ballot, v1))
       q3.grant()
       as foreach (_.expectNone())
-      assert (!c.wasInvoked)
+      c.assertNotInvoked()
     }
 
     "granted and told a current proposal, it should propose that itself" in {
@@ -175,7 +175,7 @@ class ProposerSpec extends FreeSpec {
       as foreach (_.expectPropose (k1, q1.ballot, v2))
       q3.grant()
       as foreach (_.expectNone())
-      assert (!c.wasInvoked)
+      c.assertNotInvoked()
     }
 
     "told a value chosen value, it should inform the learner" in {
@@ -186,7 +186,26 @@ class ProposerSpec extends FreeSpec {
       q.chosen (v2)
       c.expectPass (v2)
     }
-  }
+
+    "ignored, it should ask again" in {
+      implicit val (random, scheduler, network) = setupKit()
+      val (p, as) = setupThreeAcceptors()
+      val c = p.propose (k1, v1) .capture()
+      expectAsk (as, k1, v1)
+      expectAsk (as, k1, v1)
+      as foreach (_.expectNone())
+      assert (!c.wasInvoked)
+    }
+
+    "ignored twice, it should ask twice" in {
+      implicit val (random, scheduler, network) = setupKit()
+      val (p, as) = setupThreeAcceptors()
+      val c = p.propose (k1, v1) .capture()
+      expectAsk (as, k1, v1)
+      expectAsk (as, k1, v1)
+      expectAsk (as, k1, v1)
+      assert (!c.wasInvoked)
+    }}
 
   "The proposer should propose, and when" - {
 
@@ -205,7 +224,7 @@ class ProposerSpec extends FreeSpec {
       val (Seq (q, _, _), _) = setup (as, k1, v1)
       q.refuse()
       as foreach (_.expectNone())
-      assert (!c.wasInvoked)
+      c.assertNotInvoked()
     }
 
     "it receives an older grant, it should ignore it" in {
@@ -215,7 +234,7 @@ class ProposerSpec extends FreeSpec {
       val (Seq (q, _, _), _) = setup (as, k1, v1)
       q.grant()
       as foreach (_.expectNone())
-      assert (!c.wasInvoked)
+      c.assertNotInvoked()
     }
 
     "refused, it should restart by asking again" in {
@@ -226,7 +245,7 @@ class ProposerSpec extends FreeSpec {
       q.refuse()
       expectAsk (as, k1, v1)
       as foreach (_.expectNone())
-      assert (!c.wasInvoked)
+      c.assertNotInvoked()
     }
 
     "accepted, it should choose the proposed value" in {
@@ -240,5 +259,73 @@ class ProposerSpec extends FreeSpec {
       as foreach (_.expectChoose (k1, v1))
       q3.accept()
       as foreach (_.expectNone())
+    }
+
+    "ignored, it should restart by asking again" in {
+      implicit val (random, scheduler, network) = setupKit()
+      val (p, as) = setupThreeAcceptors()
+      val c = p.propose (k1, v1) .capture()
+      setup (as, k1, v1)
+      expectAsk (as, k1, v1)
+      as foreach (_.expectNone())
+      c.assertNotInvoked()
+    }
+
+    "ignored twice, it should restart twice" in {
+      implicit val (random, scheduler, network) = setupKit()
+      val (p, as) = setupThreeAcceptors()
+      val c = p.propose (k1, v1) .capture()
+      setup (as, k1, v1)
+      expectAsk (as, k1, v1)
+      expectAsk (as, k1, v1)
+      c.assertNotInvoked()
+    }
+
+    "ignored while asking, and ignored while proposing, it should restart" in {
+      implicit val (random, scheduler, network) = setupKit()
+      val (p, as) = setupThreeAcceptors()
+      val c = p.propose (k1, v1) .capture()
+      expectAsk (as, k1, v1)
+      val Seq (q1, q2, _) = expectAsk (as, k1, v1)
+      q1.grant()
+      q2.grant()
+      as map (_.expectPropose (k1, q1.ballot, v1))
+      expectAsk (as, k1, v1)
+      expectAsk (as, k1, v1)
+      c.assertNotInvoked()
     }}
-}
+
+  "The proposer should lead, and when" - {
+
+    "refused, it should restart by asking" in {
+      implicit val (random, scheduler, network) = setupKit()
+      val (p, as) = setupThreeAcceptors()
+      val c = p.lead (k1, v1) .capture()
+      val Seq (q, _, _) = as map (_.expectPropose (k1, 0, v1))
+      q.refuse()
+      expectAsk (as, k1, v1)
+      as foreach (_.expectNone())
+      c.assertNotInvoked()
+    }
+
+    "accepted, it should choose the proposed value" in {
+      implicit val (random, scheduler, network) = setupKit()
+      val (p, as) = setupThreeAcceptors()
+      val c = p.lead (k1, v1) .capture()
+      val Seq (q1, q2, q3) = as map (_.expectPropose (k1, 0, v1))
+      q1.accept()
+      q2.accept()
+      c.expectPass (v1)
+      as foreach (_.expectChoose (k1, v1))
+      q3.accept()
+      as foreach (_.expectNone())
+    }
+
+    "ignored, it should restart" in {
+      implicit val (random, scheduler, network) = setupKit()
+      val (p, as) = setupThreeAcceptors()
+      val c = p.lead (k1, v1) .capture()
+      as map (_.expectPropose (k1, 0, v1))
+      expectAsk (as, k1, v1)
+      c.assertNotInvoked()
+    }}}

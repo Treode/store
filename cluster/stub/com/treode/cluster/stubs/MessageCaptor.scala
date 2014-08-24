@@ -16,7 +16,7 @@
 
 package com.treode.cluster.stubs
 
-import java.util.ArrayDeque
+import java.util.ArrayList
 import scala.collection.JavaConversions
 import scala.util.Random
 
@@ -37,7 +37,7 @@ class MessageCaptor (
   private val peers: PeerRegistry =
     new PeerRegistry (localId, new StubConnection (_, localId, network))
 
-  private var msgs = new ArrayDeque [(PortId, Any, Array [Byte], HostId)]
+  private var msgs = new ArrayList [(PortId, Any, Array [Byte], HostId)]
 
   private [stubs] def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M): Unit =
     synchronized {
@@ -45,10 +45,11 @@ class MessageCaptor (
     }
 
   def expect [M] (desc: MessageDescriptor [M]) (implicit s: StubScheduler): (M, Peer) = {
-    if (msgs.isEmpty)
-      s.run (timers = msgs.isEmpty)
+    if (!msgs.exists (_._1 == desc.id))
+      s.run (timers = !msgs.exists (_._1 == desc.id))
     val (port, msg, bytes, from) = synchronized {
-      msgs.remove()
+      val i = msgs.indexWhere (_._1 == desc.id)
+      msgs.remove (math.max (0, i))
     }
     if (desc.id != port)
       fail (s"Expected ${desc.id}, found $port ($msg)")
@@ -59,7 +60,7 @@ class MessageCaptor (
     s.run (timers = false)
     synchronized {
       if (!msgs.isEmpty) {
-        val (port, msg, bytes, from) = msgs.remove()
+        val (port, msg, bytes, from) = msgs.remove (0)
         fail (s"Expected none, found $port ($msg)")
       }}}
 

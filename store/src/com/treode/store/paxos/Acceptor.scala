@@ -75,6 +75,8 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
     def checkpoint(): Async [Unit] =
       supply (())
+
+    override def toString = s"Acceptor.Opening($key, $time)"
   }
 
   class Restoring (default: Bytes) extends State {

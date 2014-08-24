@@ -50,7 +50,7 @@ class StubNetwork private (implicit random: Random) {
     val h = peers.get (to)
     require (h != null, s"Host $to does not exist.")
     if (messageTrace)
-      println (s"$from->$to:$port: $msg $h")
+      println (s"$from->$to:$port: $msg")
     h.deliver (p, from, port, msg)
   }
 

@@ -79,6 +79,9 @@ private class StubPaxosHost (
   def audit: AsyncIterator [Cell] =
     paxos.archive.iterator (Residents.all)
 
+  def lead (key: Long, value: Int): Async [Int] =
+    paxos.lead (Bytes (key), 0, Bytes (value)) .map (_.int)
+
   def propose (key: Long, value: Int): Async [Int] =
     paxos.propose (Bytes (key), 0, Bytes (value)) .map (_.int)
 }

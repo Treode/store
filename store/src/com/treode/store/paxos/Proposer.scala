@@ -29,10 +29,9 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   import kit.config.{closedLifetime, proposingBackoff}
   import kit.proposers.remove
 
+  val fiber = new Fiber
   val backoff = proposingBackoff.iterator
   var learners = List.empty [Learner]
-
-  private val fiber = new Fiber
   var state: State = Opening
 
   trait State {
@@ -65,23 +64,25 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   private def closeWithSuccess (v: Bytes) {
     learners foreach (_.pass (v))
     learners = List.empty
-    state = new Closed (v)
+    state = new ClosedWithSuccess (v)
   }
 
   private def closeWithTimeout() {
     remove (key, time, Proposer.this)
     learners foreach (scheduler.fail (_, new TimeoutException))
     learners = List.empty
+    state = new ClosedWithTimeout
   }
 
   object Opening extends State {
 
     override def open (ballot: Long, value: Bytes) {
-      // Ballot number zero was implicitly accepted.
+      // Ballot number zero was implicitly granted.
       if (ballot == 0)
         state = new Proposing (ballot, library.atlas, value)
       else
         state = new Asking (ballot, value)
+      fiber.delay (backoff.next) (state.timeout())
     }
 
     def learn (k: Learner) = throw new IllegalStateException
@@ -102,13 +103,12 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
   class Asking (var ballot: Long, value: Bytes) extends State {
 
-    var atlas = library.atlas
     var refused = ballot
     var proposed = Option.empty [(BallotNumber, Bytes)]
+    var atlas = library.atlas
     var granted = track (atlas, key, time)
 
     Acceptor.ask (atlas.version, key, time, ballot, value) (granted)
-    fiber.delay (backoff.next) (state.timeout())
 
     def learn (k: Learner) =
       learners ::= k
@@ -179,16 +179,17 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
       closeWithSuccess (v)
 
     def timeout() {
-      if (backoff.hasNext)
+      if (backoff.hasNext) {
         state = new Asking (refused + random.nextInt (17) + 1, value)
-      else
+        fiber.delay (backoff.next) (state.timeout())
+      } else {
         closeWithTimeout()
-    }
+      }}
 
     override def toString = "Proposer.Proposing " + (key, ballot, value)
   }
 
-  class Closed (value: Bytes) extends State {
+  class ClosedWithSuccess (value: Bytes) extends State {
 
     fiber.delay (closedLifetime) (remove (key, time, Proposer.this))
 
@@ -196,7 +197,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
       scheduler.pass (k, value)
 
     def chosen (v: Bytes) =
-      require (v == value, "Paxos disagreement")
+      assert (v == value, "Paxos disagreement")
 
     def refuse (from: Peer, ballot: Long) = ()
 
@@ -206,7 +207,28 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
     def timeout() = ()
 
-    override def toString = "Proposer.Closed " + (key, value)
+    override def toString = "Proposer.ClosedWithSuccess " + (key, value)
+  }
+
+  class ClosedWithTimeout extends State {
+
+    fiber.delay (closedLifetime) (remove (key, time, Proposer.this))
+
+    def learn (k: Learner) =
+      scheduler.fail (k, new TimeoutException)
+
+    def chosen (v: Bytes) =
+      assert (false, "Paxos disagreement")
+
+    def refuse (from: Peer, ballot: Long) = ()
+
+    def grant (from: Peer, ballot: Long, proposal: Proposal) = ()
+
+    def accept (from: Peer, ballot: Long) = ()
+
+    def timeout() = ()
+
+    override def toString = s"Proposer.ClosedWithTimeout ($key)"
   }
 
   object Shutdown extends State {
@@ -222,22 +244,40 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   }
 
   def open (ballot: Long, value: Bytes) =
-    fiber.execute (state.open (ballot, value))
+    fiber.execute {
+      //println (s"open $key $ballot $value $state")
+      state.open (ballot, value)
+    }
 
   def learn (k: Learner) =
-    fiber.execute  (state.learn (k))
+    fiber.execute  {
+      //println (s"learn $key $state")
+      state.learn (k)
+    }
 
   def refuse (from: Peer, ballot: Long) =
-    fiber.execute  (state.refuse (from, ballot))
+    fiber.execute  {
+      //println (s"refuse $key $ballot $state")
+      state.refuse (from, ballot)
+    }
 
   def grant (from: Peer, ballot: Long, proposal: Proposal) =
-    fiber.execute  (state.grant (from, ballot, proposal))
+    fiber.execute  {
+      //println (s"grant $key $ballot $proposal $state")
+      state.grant (from, ballot, proposal)
+    }
 
   def accept (from: Peer, ballot: Long) =
-    fiber.execute  (state.accept (from, ballot))
+    fiber.execute {
+      //println (s"accept $key $ballot $state")
+      state.accept (from, ballot)
+    }
 
   def chosen (value: Bytes) =
-    fiber.execute  (state.chosen (value))
+    fiber.execute {
+      //println (s"chosen $key $value $state")
+      state.chosen (value)
+    }
 
   override def toString = state.toString
 }
