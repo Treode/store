@@ -35,8 +35,7 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
   override val timeLimit = 15 minutes
 
-  private val newStore = { implicit kit: StoreTestKit =>
-    import kit.{random, scheduler, network}
+  private def newStore () (implicit r: Random, s: StubScheduler, n: StubNetwork): Store = {
     val hs = Seq.fill (3) (StubAtomicHost.install() .expectPass())
     val Seq (h1, h2, h3) = hs
     for (h <- hs)
@@ -46,16 +45,21 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
 
   "The atomic implementation should" - {
 
-    behave like aStore (newStore)
+    behave like aStore { (r, n, s) =>
+      newStore () (r, n, s)
+    }
 
     "conserve money during account transfers" taggedAs (Intensive, Periodic) in {
       forAllSeeds { random =>
-        implicit val kit = StoreTestKit.random (random)
-        testAccountTransfers (100) (newStore)
+        implicit val (r, s, n) = newKit()
+        implicit val store = newStore()
+        testAccountTransfers (100)
       }}
 
     "conserve money during account transfers (multithreaded)" taggedAs (Intensive, Periodic) in {
-      multithreaded { scheduler =>
-        implicit val kit = StoreTestKit.multithreaded (scheduler)
-        testAccountTransfers (100) (newStore)
+      multithreaded { implicit scheduler =>
+        implicit val random = Random
+        implicit val network = StubNetwork (random)
+        implicit val store = newStore()
+        testAccountTransfers (100)
       }}}}

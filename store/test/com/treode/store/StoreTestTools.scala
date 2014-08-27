@@ -24,7 +24,7 @@ import com.treode.async.{Async, AsyncIterator}
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId
-import com.treode.cluster.stubs.StubPeer
+import com.treode.cluster.stubs.{StubNetwork, StubPeer}
 import com.treode.disk.DriveGeometry
 import org.scalatest.Assertions
 
@@ -45,6 +45,13 @@ private trait StoreTestTools {
 
   def Get (id: TableId, key: Bytes): ReadOp =
     ReadOp (id, key)
+
+  def newKit() = {
+    val random = new Random (0)
+    val scheduler = StubScheduler.random (random)
+    val network = StubNetwork (random)
+    (random, scheduler, network)
+  }
 
   def settled (hosts: StubPeer*): Cohort =
     Cohort.settled (hosts map (_.localId): _*)

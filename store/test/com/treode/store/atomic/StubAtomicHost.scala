@@ -138,8 +138,7 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
       new StubAtomicHost (id) (random, scheduler, cluster, launch.disk, library, catalogs, paxos, atomic)
     }}
 
-  def install () (implicit kit: StoreTestKit): Async [StubAtomicHost] = {
-    import kit._
+  def install () (implicit r: Random, s: StubScheduler, n: StubNetwork): Async [StubAtomicHost] = {
     implicit val config = StoreTestConfig()
-    boot (random.nextLong, new StubDiskDrive, true)
+    boot (r.nextLong, new StubDiskDrive, true)
   }}

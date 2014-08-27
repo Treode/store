@@ -20,7 +20,7 @@ import scala.util.Random
 
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.StubDiskDrive
-import com.treode.store.{Bytes, StoreTestConfig, StoreTestKit}
+import com.treode.store.{Bytes, StoreTestConfig}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 

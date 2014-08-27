@@ -27,16 +27,16 @@ import org.scalatest.FreeSpec
 
 class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
 
-  val newStore = { kit: StoreTestKit =>
-    new StubStore () (kit.scheduler)
-  }
-
   "The StubStore should" - {
 
-    behave like aStore (newStore)
+    behave like aStore {
+      (random, scheduler, network) =>
+        new StubStore () (scheduler)
+    }
 
     "conserve money during account transfers (multithreaded)" taggedAs (Intensive, Periodic) in {
-      multithreaded { scheduler =>
-        implicit val kit = StoreTestKit.multithreaded (scheduler)
-        testAccountTransfers (500) (newStore)
+      multithreaded { implicit scheduler =>
+        implicit val random = Random
+        implicit val store = new StubStore () (scheduler)
+        testAccountTransfers (500)
       }}}}

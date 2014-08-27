@@ -24,7 +24,7 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{AsyncCaptor, AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.cluster.stubs.{StubCluster, StubHost}
+import com.treode.cluster.stubs.{StubCluster, StubHost, StubNetwork}
 import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.store.catalog.Catalogs
 import org.scalatest.FlatSpec
@@ -34,9 +34,13 @@ import StoreTestTools._
 
 class LibrarianSpec extends FlatSpec with AsyncChecks {
 
-  private class StubLibrarianHost (val localId: HostId) (implicit kit: StoreTestKit)
-  extends StubHost {
-    import kit._
+  private class StubLibrarianHost (
+      val localId: HostId
+  ) (implicit
+      random: Random,
+      scheduler: StubScheduler,
+      network: StubNetwork
+  ) extends StubHost {
 
     val config = StoreTestConfig()
     import config._
@@ -97,8 +101,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
 
   "It" should "work" in {
 
-    implicit val kit = StoreTestKit.random()
-    import kit.random
+    implicit val (random, scheduler, network) = newKit()
 
     val hs = Seq.fill (10) (new StubLibrarianHost (random.nextLong))
     val Seq (h0, h1, h2, h3) = hs take 4
@@ -106,12 +109,12 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
     for (h1 <- hs; h2 <- hs)
       h1.hail (h2.localId)
     h0.issue (issuing (h0, h1, h2) (h0, h1, h3))
-    kit.run (count = 2000, timers = true)
+    scheduler.run (count = 2000, timers = true)
     expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)
     h0.rebalancer.pass (())
-    kit.run (count = 2000, timers = true)
+    scheduler.run (count = 2000, timers = true)
     expectAtlas (2, moving (h0, h1, h2) (h0, h1, h3)) (hs)
     h1.rebalancer.pass (())
-    kit.run (count = 2000, timers = true)
+    scheduler.run (count = 2000, timers = true)
     expectAtlas (3, settled (h0, h1, h3)) (hs)
   }}
