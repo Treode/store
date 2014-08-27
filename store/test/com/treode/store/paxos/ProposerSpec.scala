@@ -22,7 +22,7 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.Peer
 import com.treode.cluster.stubs.{MessageCaptor, StubNetwork}
-import com.treode.store.{BallotNumber, Bytes, StoreTestKit}
+import com.treode.store.{BallotNumber, Bytes}
 import org.scalatest.FreeSpec
 
 import PaxosTestTools._

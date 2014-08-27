@@ -18,11 +18,13 @@ package com.treode.store
 
 import java.util.concurrent.{CountDownLatch, Executors}
 import java.util.concurrent.atomic.AtomicInteger
+import scala.util.Random
 
 import com.treode.async._
 import com.treode.async.implicits._
 import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
+import com.treode.cluster.stubs.StubNetwork
 import com.treode.pickle.Picklers
 import com.treode.tags.{Intensive, Periodic}
 import org.joda.time.Instant
@@ -39,16 +41,19 @@ trait StoreBehaviors {
 
   val T1 = TableId (0xA1)
 
-  def testAccountTransfers (ntransfers: Int) (newStore: StoreTestKit => Store) (implicit kit: StoreTestKit) {
-    import kit.{scheduler, random}
+  def testAccountTransfers (
+      ntransfers: Int
+  ) (implicit
+      random: Random,
+      scheduler: StubScheduler,
+      store: Store
+  ) {
     import scheduler.whilst
 
     val naccounts = 100
     val nbrokers = 8
     val opening = 1000
     val supply = naccounts * opening
-
-    implicit val store = newStore (kit)
 
     val clock = new AtomicInteger (1)
     val countAuditsPassed = new AtomicInteger (0)
@@ -148,227 +153,183 @@ trait StoreBehaviors {
     assert (countTransferAdvanced.get > 0, "Expected at least one trasfer to advance.")
   }
 
-  def aStore (newStore: StoreTestKit => Store) {
+  def aStore (newStore: (Random, StubScheduler, StubNetwork) => Store) {
 
     "behave like a Store; when" - {
+
+      def setup() = {
+        implicit val (random, scheduler, network) = newKit()
+        val store = newStore (random, scheduler, network)
+        (random, scheduler, store)
+      }
 
       "the table is empty" - {
 
         "reading shoud" - {
 
           "find 0::None for Apple##1" in {
-            implicit val kit = StoreTestKit.random()
-            val s = newStore (kit)
-            import kit.scheduler
+            implicit val (random, scheduler, s) = setup()
             s.read (1, Get (T1, Apple)) .expectSeq (0::None)
           }}
 
         "writing should" - {
 
           "allow create Apple::1 at ts=0" in {
-            implicit val kit = StoreTestKit.random()
-            val s = newStore (kit)
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s) = setup()
             val ts = s.write (random.nextTxId, 0, Create (T1, Apple, 1)) .expectPass()
             s.expectCells (T1) (Apple##ts::1)
           }
 
           "allow hold Apple at ts=0" in {
-            implicit val kit = StoreTestKit.random()
-            val s = newStore (kit)
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s) = setup()
             s.write (random.nextTxId, 0, Hold (T1, Apple)) .expectPass()
             s.expectCells (T1) ()
           }
 
           "allow update Apple::1 at ts=0" in {
-            implicit val kit = StoreTestKit.random()
-            val s = newStore (kit)
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s) = setup()
             val ts = s.write (random.nextTxId, 0, Update (T1, Apple, 1)) .expectPass()
             s.expectCells (T1) (Apple##ts::1)
           }
 
           "allow delete Apple at ts=0" in {
-            implicit val kit = StoreTestKit.random()
-            val s = newStore (kit)
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s) = setup()
             val ts = s.write (random.nextTxId, 0, Delete (T1, Apple)) .expectPass()
             s.expectCells (T1) (Apple##ts)
           }}}
 
       "the table has Apple##ts::1" - {
 
-        def setup() (implicit kit: StoreTestKit) = {
-          import kit.{random, scheduler}
-          val s = newStore (kit)
+        def setup() = {
+          implicit val (random, scheduler, network) = newKit()
+          val s = newStore (random, scheduler, network)
           val ts = s.write (random.nextTxId, 0, Create (T1, Apple, 1)) .expectPass()
-          (s, ts)
+          (random, scheduler, s, ts)
         }
 
         "reading should" -  {
 
           "find ts::1 for Apple##ts+1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts) = setup()
             s.read (ts+1, Get (T1, Apple)) .expectSeq (ts::1)
           }
 
           "find ts::1 for Apple##ts" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts) = setup()
             s.read (ts, Get (T1, Apple)) .expectSeq (ts::1)
           }
 
           "find 0::None for Apple##ts-1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts) = setup()
             s.read (ts-1, Get (T1, Apple)) .expectSeq (0::None)
           }}
 
         "writing should" - {
 
           "reject create Apple##ts-1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts) = setup()
             val exn = s.write (random.nextTxId, ts-1, Create (T1, Apple, 1)) .fail [CollisionException]
             assertResult (Seq (0)) (exn.indexes)
           }
 
           "reject hold Apple##ts-1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts) = setup()
             s.write (random.nextTxId, ts-1, Hold (T1, Apple)) .fail [StaleException]
           }
 
           "reject update Apple##ts-1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts) = setup()
             s.write (random.nextTxId, ts-1, Update (T1, Apple, 1)) .fail [StaleException]
           }
 
           "reject delete Apple##ts-1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts) = setup()
             s.write (random.nextTxId, ts-1, Delete (T1, Apple)) .fail [StaleException]
           }
 
           "allow hold Apple at ts+1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts) = setup()
             s.write (random.nextTxId, ts+1, Hold (T1, Apple)) .expectPass()
             s.expectCells (T1) (Apple##ts::1)
           }
 
           "allow hold Apple at ts" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts) = setup()
             s.write (random.nextTxId, ts, Hold (T1, Apple)) .expectPass()
             s.expectCells (T1) (Apple##ts::1)
           }
 
           "allow update Apple::2 at ts+1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts1) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts1) = setup()
             val ts2 = s.write (random.nextTxId, ts1+1, Update (T1, Apple, 2)) .expectPass()
             s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
           }
 
           "allow update Apple::2 at ts" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts1) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts1) = setup()
             val ts2 = s.write (random.nextTxId, ts1, Update (T1, Apple, 2)) .expectPass()
             s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
           }
 
           "allow update Apple::1 at ts+1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts1) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts1) = setup()
             val ts2 = s.write (random.nextTxId, ts1+1, Update (T1, Apple, 1)) .expectPass()
             s.expectCells (T1) (Apple##ts2::1, Apple##ts1::1)
           }
 
           "allow update Apple::1 at ts" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts1) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts1) = setup()
             val ts2 = s.write (random.nextTxId, ts1, Update (T1, Apple, 1)) .expectPass()
             s.expectCells (T1) (Apple##ts2::1, Apple##ts1::1)
           }
 
           "allow delete Apple at ts+1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts1) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts1) = setup()
             val ts2 = s.write (random.nextTxId, ts1+1, Delete (T1, Apple)) .expectPass()
             s.expectCells (T1) (Apple##ts2, Apple##ts1::1)
           }
 
           "allow delete Apple at ts" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts1) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts1) = setup()
             val ts2 = s.write (random.nextTxId, ts1, Delete (T1, Apple)) .expectPass()
             s.expectCells (T1) (Apple##ts2, Apple##ts1::1)
           }}}
 
       "the table has Apple##ts2::2 and Apple##ts1::1" -  {
 
-        def setup() (implicit kit: StoreTestKit) = {
-          import kit.{random, scheduler}
-          val s = newStore (kit)
+        def setup() = {
+          implicit val (random, scheduler, network) = newKit()
+          val s = newStore (random, scheduler, network)
           val ts1 = s.write (random.nextTxId, 0, Create (T1, Apple, 1)) .expectPass()
           val ts2 = s.write (random.nextTxId, ts1, Update (T1, Apple, 2)) .expectPass()
           s.expectCells (T1) (Apple##ts2::2, Apple##ts1::1)
-          (s, ts1, ts2)
+          (random, scheduler, s, ts1, ts2)
         }
 
         "a read should" - {
 
           "find ts2::2 for Apple##ts2+1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, _, ts2) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, _, ts2) = setup()
             s.read (ts2+1, Get (T1, Apple)) .expectSeq (ts2::2)
           }
 
           "find ts2::2 for Apple##ts2" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, _, ts2) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, _, ts2) = setup()
             s.read (ts2, Get (T1, Apple)) .expectSeq (ts2::2)
           }
 
           "find ts1::1 for Apple##ts2-1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts1, ts2) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts1, ts2) = setup()
             s.read (ts2-1, Get (T1, Apple)) .expectSeq (ts1::1)
           }
 
           "find ts1::1 for Apple##ts1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts1, _) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts1, _) = setup()
             s.read (ts1, Get (T1, Apple)) .expectSeq (ts1::1)
           }
 
           "find 0::None for Apple##ts1-1" in {
-            implicit val kit = StoreTestKit.random()
-            val (s, ts1, _) = setup()
-            import kit.{random, scheduler}
+            implicit val (random, scheduler, s, ts1, _) = setup()
             s.read (ts1-1, Get (T1, Apple)) .expectSeq (0::None)
           }}}}}}
 

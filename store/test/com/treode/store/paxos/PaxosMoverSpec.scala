@@ -19,12 +19,12 @@ package com.treode.store.paxos
 import com.treode.async.stubs.StubScheduler
 import com.treode.cluster.{Cluster, HostId, Peer}
 import com.treode.cluster.stubs.StubCluster
-import com.treode.store.{Atlas, Bytes, Cohort, StoreTestKit, StoreTestTools, TxClock}
+import com.treode.store.{Atlas, Bytes, Cohort, StoreTestTools, TxClock}
 import org.scalatest.{FreeSpec, ShouldMatchers}
 
 import PaxosMover.{Point, Range, Targets, Tracker}
 import Cohort.{issuing, moving, settled}
-import StoreTestTools.{intToBytes, longToTxClock}
+import StoreTestTools._
 
 class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
 
@@ -80,8 +80,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
   "Deriving targets from cohorts should" - {
 
     def setup() = {
-      implicit val kit = StoreTestKit.random()
-      import kit._
+      implicit val (random, scheduler, network) = newKit()
       implicit val cluster = new StubCluster (1)
       cluster
     }
@@ -126,8 +125,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
       "no work underway and" - {
 
         def setup() = {
-          implicit val kit = StoreTestKit.random()
-          import kit._
+          implicit val (random, scheduler, network) = newKit()
           implicit val cluster = new StubCluster (1)
           val tracker = new RichTracker
           (cluster, tracker)
@@ -159,8 +157,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
       "no work underway and" - {
 
         def setup() = {
-          implicit val kit = StoreTestKit.random()
-          import kit._
+          implicit val (random, scheduler, network) = newKit()
           implicit val cluster = new StubCluster (1)
           val t = new RichTracker
           t.start (moving (1, 2, 3) (1, 2, 4))
@@ -226,8 +223,7 @@ class PaxosMoverSpec extends FreeSpec with ShouldMatchers {
       "no work underway and" - {
 
         def setup() = {
-          implicit val kit = StoreTestKit.random()
-          import kit._
+          implicit val (random, scheduler, network) = newKit()
           implicit val cluster = new StubCluster (1)
           val t = new RichTracker
           t.start (moving (1, 2, 3) (1, 2, 4))

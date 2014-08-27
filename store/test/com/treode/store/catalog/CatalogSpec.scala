@@ -18,7 +18,7 @@ package com.treode.store.catalog
 
 import scala.util.Random
 
-import com.treode.async.stubs.AsyncChecks
+import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.store._
@@ -56,19 +56,22 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
 
   // Propose two patches simultaneously, expect one choice.
   def check (
-      kit: StoreTestKit,
       p1: StubCatalogHost,         // First host that will submit a proposal.
       p2: StubCatalogHost,         // Second host that will submit a proposal.
       as: Seq [StubCatalogHost],   // Hosts that we expect will accept.
       mf: Double,
       summary: Summary
+  ) (implicit
+      random: Random,
+      scheduler: StubScheduler,
+      network: StubNetwork
   ) {
     try {
 
       val cb1 = p1.catalogs.propose (cat1.id, patch1) .capture()
       val cb2 = p2.catalogs.propose (cat1.id, patch2) .capture()
-      kit.messageFlakiness = mf
-      kit.run (timers = true, count = 500)
+      network.messageFlakiness = mf
+      scheduler.run (timers = true, count = 500)
       val v = cb1.assertPassed()
       assertResult (v) (cb2.assertPassed())
 
@@ -90,12 +93,12 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       "stable hosts and a reliable network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
         forAllSeeds { random =>
-          implicit val kit = StoreTestKit.random (random)
+          implicit val (random, scheduler, network) = newKit()
           val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
-          check (kit, h1, h2, hs, 0.0, summary)
+          check (h1, h2, hs, 0.0, summary)
         }
         summary.check (Set (patch1, patch2))
       }
@@ -103,12 +106,12 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
         forAllSeeds { random =>
-          implicit val kit = StoreTestKit.random (random)
+          implicit val (random, scheduler, network) = newKit()
           val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
             h.setAtlas (settled (h1, h2, h3))
-          check (kit, h1, h2, hs, 0.1, summary)
+          check (h1, h2, hs, 0.1, summary)
         }
         summary.check (Set (patch1, patch2))
       }}}
@@ -116,18 +119,17 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
   "The kit should" - {
 
     def setup (random: Random = new Random (0)) = {
-      implicit val kit = StoreTestKit.random (random)
+      implicit val (random, scheduler, network) = newKit()
       val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
-      (kit, hs, h1, h2)
+      (scheduler, hs, h1, h2)
     }
 
     "distribute one issue of a catalog" in {
       forAllSeeds { random =>
-        val (kit, hs, h1, _) = setup (random)
-        import kit.scheduler
+        implicit val (scheduler, hs, h1, _) = setup (random)
         h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
         scheduler.run (timers = true, count = 500)
         for (h <- hs)
@@ -136,8 +138,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
 
     "distribute two issues of a catalog, one after the other" in {
       forAllSeeds { random =>
-        val (kit, hs, h1, _) = setup (random)
-        import kit.scheduler
+        implicit val (scheduler, hs, h1, _) = setup (random)
         h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
         h1.catalogs.issue (cat1) (2, 0x48B944DD188FD6D1L) .expectPass()
         scheduler.run (timers = true, count = 500)
@@ -146,8 +147,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       }}
 
     "reject a new issue when its version number is behind" in {
-      val (kit, hs, h1, h2) = setup()
-      import kit.scheduler
+      implicit val (scheduler, hs, h1, h2) = setup()
       h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
       scheduler.run (timers = true, count = 500)
       h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [StaleException]
@@ -157,8 +157,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
     }
 
     "reject a new issue when its version number is ahead" in {
-      val (kit, hs, h1, h2) = setup()
-      import kit.scheduler
+      implicit val (scheduler, hs, h1, h2) = setup()
       h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
       scheduler.run (timers = true, count = 500)
       h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [StaleException]

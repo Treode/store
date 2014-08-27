@@ -20,9 +20,10 @@ import scala.util.Random
 
 import com.treode.async.{Async, Callback}
 import com.treode.async.io.stubs.StubFile
+import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.cluster.stubs.{StubCluster, StubHost}
+import com.treode.cluster.stubs.{StubCluster, StubHost, StubNetwork}
 import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.store._
 import org.scalatest.Assertions
@@ -31,9 +32,13 @@ import Assertions.assertResult
 import Callback.ignore
 import StubCatalogHost.{cat1, cat2}
 
-private class StubCatalogHost (val localId: HostId) (implicit kit: StoreTestKit)
-extends StubHost {
-  import kit._
+private class StubCatalogHost (
+    val localId: HostId
+) (implicit
+    random: Random,
+    scheduler: StubScheduler,
+    network: StubNetwork
+) extends StubHost {
 
   val config = StoreTestConfig()
   import config._
