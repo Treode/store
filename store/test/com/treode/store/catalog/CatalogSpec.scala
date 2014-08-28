@@ -92,8 +92,9 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
 
       "stable hosts and a reliable network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
-        forAllSeeds { random =>
-          implicit val (random, scheduler, network) = newKit()
+        forAllSeeds { implicit random =>
+          implicit val scheduler = StubScheduler.random (random)
+          implicit val network = StubNetwork (random)
           val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
@@ -105,8 +106,9 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
 
       "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
-        forAllSeeds { random =>
-          implicit val (random, scheduler, network) = newKit()
+        forAllSeeds { implicit random =>
+          implicit val scheduler = StubScheduler.random (random)
+          implicit val network = StubNetwork (random)
           val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
           val Seq (h1, h2, h3) = hs
           for (h <- hs)
@@ -118,8 +120,9 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
 
   "The kit should" - {
 
-    def setup (random: Random = new Random (0)) = {
-      implicit val (random, scheduler, network) = newKit()
+    def setup (implicit random: Random = new Random (0)) = {
+      implicit val scheduler = StubScheduler.random (random)
+      implicit val network = StubNetwork (random)
       val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
       val Seq (h1, h2, h3) = hs
       for (h <- hs)
