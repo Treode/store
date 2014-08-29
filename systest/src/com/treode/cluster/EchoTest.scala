@@ -38,10 +38,7 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
 
   private var _executor: ScheduledExecutorService = null
   private var _scheduler: Scheduler = null
-  private var _ports: PortRegistry = null
-  private var _group: AsynchronousChannelGroup = null
-  private var _peers: PeerRegistry = null
-  private var _listener: Listener = null
+  private var _cluster: Cluster = null
 
   private def _fork (f: => Unit) {
     new Thread() {
@@ -65,19 +62,7 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
     if (!_exiting.compareAndSet (false, true))
       return
 
-    _shutdown ("messenger listener", _listener != null) (_listener.shutdown())
-
-    _shutdown ("messenger connections", _peers != null) {
-      _peers.shutdown()
-    }
-
-    _shutdown ("messenger group", _group != null) {
-      _group.shutdown()
-      _group.awaitTermination (2, TimeUnit.SECONDS)
-    }
-    _shutdown ("messenger group by force", _group != null && !_group.isTerminated) {
-      _group.shutdownNow()
-    }
+    _shutdown ("cluster services", _cluster != null) (_cluster.shutdown())
 
     _shutdown ("executor", _executor != null) {
       _executor.shutdown()
@@ -106,55 +91,16 @@ class EchoTest (localId: HostId, addresses: Seq [InetSocketAddress]) {
     _executor = Executors.newScheduledThreadPool (nt)
     _scheduler = Scheduler (_executor)
 
-    _ports = new PortRegistry
+    val localAddr = addresses (localId.id.toInt)
+    val clusterConfig = Cluster.Config.suggested
+    _cluster =
+      Cluster.live (0xE8, localId, localAddr, localAddr) (Random, _scheduler, clusterConfig)
 
-    _group = AsynchronousChannelGroup.withFixedThreadPool (1, Executors.defaultThreadFactory)
+    Echo.attach (localId) (_random, _scheduler, _cluster)
 
-    _peers = PeerRegistry.live (_cellId, localId, _group, _ports) (_random, _scheduler, _config)
-    for ((a, i) <- addresses.zipWithIndex)
-      _peers.get (i) .address = a
-
-    _listener = new Listener (_cellId, localId, addresses (localId.id.toInt), _group, _peers) (_scheduler)
-    _listener.startup()
-
-    val cluster = new Cluster {
-
-      private val scuttlebutt: Scuttlebutt =
-        new Scuttlebutt (EchoTest.this.localId, _peers) (_scheduler)
-
-      def cellId = CellId (0xE8)
-
-      def localId = EchoTest.this.localId
-
-      def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
-        _ports.listen (desc.pmsg, desc.id) (f)
-
-      def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
-        scuttlebutt.listen (desc) (f)
-
-      def peer (id: HostId): Peer =
-        _peers.get (id)
-
-      def rpeer: Option [Peer] =
-        _peers.rpeer
-
-      def hail (remoteId: HostId, remoteAddr: SocketAddress): Unit =
-        _peers.get (remoteId) .address = remoteAddr
-
-      def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralPort [M] =
-        _ports.open (p) (f)
-
-      def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
-        scuttlebutt.spread (desc) (msg)
-
-      def startup(): Unit =
-        _listener.startup()
-
-      def shutdown(): Async [Unit] =
-        supply (_shutdown())
-    }
-
-    Echo.attach (localId) (_random, _scheduler, cluster)
+    for ((addr, i) <- addresses.zipWithIndex)
+      _cluster.hail (i, addr)
+    _cluster.startup()
 
   } catch {
     case e: Throwable =>
