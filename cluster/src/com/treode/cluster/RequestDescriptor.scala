@@ -23,7 +23,11 @@ import com.treode.pickle.{Pickler, Picklers}
 
 import Async.guard
 
-class RequestDescriptor [Q, A] private (id: PortId, preq: Pickler [Q], prsp: Pickler [A]) {
+class RequestDescriptor [Q, A] private (
+    val id: PortId,
+    val preq: Pickler [Q],
+    val prsp: Pickler [A]
+) {
 
   type Port = EphemeralPort [Option [A]]
 
@@ -37,8 +41,8 @@ class RequestDescriptor [Q, A] private (id: PortId, preq: Pickler [Q], prsp: Pic
     option (prsp)
   }
 
-  def listen (f: (Q, Peer) => Async [A]) (implicit c: Cluster): Unit =
-    c.listen (MessageDescriptor (id, _preq)) { case ((port, req), from) =>
+  private [cluster] def listen (m: PortRegistry) (f: (Q, Peer) => Async [A]): Unit =
+    m.listen (_preq, id) { case ((port, req), from) =>
       guard (f (req, from)) run {
         case Success (rsp) =>
           from.send (_prsp, port, Some (rsp))
@@ -49,13 +53,19 @@ class RequestDescriptor [Q, A] private (id: PortId, preq: Pickler [Q], prsp: Pic
           throw t
       }}
 
-  def apply (req: Q) = RequestSender [Q, A] (id, _preq, req)
-
-  def open (f: (Try [A], Peer) => Any) (implicit c: Cluster): Port =
-    c.open (_prsp) {
+  private [cluster] def open (m: PortRegistry) (f: (Try [A], Peer) => Any): Port =
+    m.open (_prsp) {
       case (Some (v), from) => f (Success (v), from)
       case (None, from) => f (Failure (new RemoteException), from)
     }
+
+  def listen (f: (Q, Peer) => Async [A]) (implicit c: Cluster): Unit =
+    c.listen (this) (f)
+
+  def open (f: (Try [A], Peer) => Any) (implicit c: Cluster): Port =
+    c.open (this) (f)
+
+  def apply (req: Q) = RequestSender [Q, A] (id, _preq, req)
 
   override def toString = s"RequestDescriptor($id)"
 }

@@ -18,6 +18,7 @@ package com.treode.cluster
 
 import java.net.SocketAddress
 import java.nio.channels.AsynchronousChannelGroup
+import scala.util.Try
 
 import com.treode.async.Async
 import com.treode.pickle.Pickler
@@ -35,7 +36,10 @@ private class ClusterLive (
 ) extends Cluster {
 
   def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any): Unit =
-    ports.listen (desc.pmsg, desc.id) (f)
+    desc.listen (ports) (f)
+
+  def listen [Q, A] (desc: RequestDescriptor [Q, A]) (f: (Q, Peer) => Async [A]): Unit =
+    desc.listen (ports) (f)
 
   def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
     scuttlebutt.listen (desc) (f)
@@ -65,6 +69,9 @@ private class ClusterLive (
 
   def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralPort [M] =
     ports.open (p) (f)
+
+  def open [Q, A] (desc: RequestDescriptor [Q, A]) (f: (Try [A], Peer) => Any): EphemeralPort [Option [A]] =
+    desc.open (ports) (f)
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
     scuttlebutt.spread (desc) (msg)

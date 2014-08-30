@@ -19,7 +19,7 @@ package com.treode.cluster
 import java.net.SocketAddress
 import java.nio.channels.AsynchronousChannelGroup
 import java.util.concurrent.Executors
-import scala.util.Random
+import scala.util.{Random, Try}
 
 import com.treode.async.{Async, Backoff, Scheduler}
 import com.treode.async.misc.RichInt
@@ -33,6 +33,8 @@ trait Cluster {
 
   def listen [M] (desc: MessageDescriptor [M]) (f: (M, Peer) => Any)
 
+  def listen [Q, A] (desc: RequestDescriptor [Q, A]) (f: (Q, Peer) => Async [A])
+
   def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any)
 
   def hail (remoteId: HostId, remoteAddr: SocketAddress)
@@ -42,6 +44,8 @@ trait Cluster {
   def rpeer: Option [Peer]
 
   def open [M] (p: Pickler [M]) (f: (M, Peer) => Any): EphemeralPort [M]
+
+  def open [Q, A] (desc: RequestDescriptor [Q, A]) (f: (Try [A], Peer) => Any): EphemeralPort [Option [A]]
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M)
 

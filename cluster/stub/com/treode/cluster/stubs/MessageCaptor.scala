@@ -64,6 +64,9 @@ class MessageCaptor (
         fail (s"Expected none, found $port ($msg)")
       }}}
 
+  def send [M] (desc: MessageDescriptor [M], to: StubPeer) (msg: M): Unit =
+    to.deliver (desc.pmsg, localId, desc.id, msg)
+
   override def toString =
     msgs.map {case (port, msg, _, from) => (from, port, msg)} .mkString ("\n")
 }

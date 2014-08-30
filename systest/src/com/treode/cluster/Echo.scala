@@ -40,7 +40,7 @@ object Echo {
     var start = 0L
     var count = 0
 
-    echo.listen { case (s, from) =>
+    echo.listen { (s, from) =>
       supply (s)
     }
 

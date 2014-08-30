@@ -19,8 +19,9 @@ package com.treode.cluster.stubs
 import java.util.concurrent.{ConcurrentHashMap, Executors}
 import scala.util.Random
 
+import com.treode.async.Async
 import com.treode.async.stubs.StubScheduler
-import com.treode.cluster.{HostId, PortId}
+import com.treode.cluster.{HostId, MessageDescriptor, PortId, RequestDescriptor}
 import com.treode.pickle.Pickler
 
 import StubNetwork.inactive
@@ -28,6 +29,7 @@ import StubNetwork.inactive
 class StubNetwork private (implicit random: Random) {
 
   private val peers = new ConcurrentHashMap [HostId, StubPeer]
+  private val requester = ResponseCaptor.install (random, this)
 
   var messageFlakiness = 0.0
   var messageTrace = false
@@ -57,7 +59,14 @@ class StubNetwork private (implicit random: Random) {
   def active (id: HostId): Boolean = {
     val p = peers.get (id)
     p != null && p != inactive
-  }}
+  }
+
+  def send [M] (desc: MessageDescriptor [M], msg: M, from: MessageCaptor, to: StubPeer): Unit =
+    to.deliver (desc.pmsg, from.localId, desc.id, msg)
+
+  def request [Q, A] (desc: RequestDescriptor [Q, A], req: Q, to: StubPeer): Async [A] =
+    requester.request (desc, req, to)
+}
 
 object StubNetwork {
 
