@@ -59,6 +59,18 @@ class AtomicTracker {
   private def wrote (ops: Seq [WriteOp.Update], wt: TxClock): Unit =
     ops foreach (wrote (_, wt))
 
+  private def aborted (table: Long, key: Long, value: Int): Unit =
+    synchronized {
+      val tk = (table, key)
+      attempted += tk -> (attempted (tk) - value)
+    }
+
+  private def aborted (op: WriteOp.Update): Unit =
+    aborted (op.table.id, op.key.long, op.value.int)
+
+  private def aborted (ops: Seq [WriteOp.Update]): Unit =
+    ops foreach (aborted (_))
+
   private def condition (table: Long, key: Long): TxClock =
     synchronized {
       val vs = accepted ((table, key))
@@ -84,8 +96,8 @@ class AtomicTracker {
         wrote (ops, wt)
       }
     } .recover {
-      case _: StaleException => ()
-      case _: TimeoutException => ()
+      case _: StaleException => aborted (ops)
+      case _: TimeoutException => aborted (ops)
     }
 
   def batch (

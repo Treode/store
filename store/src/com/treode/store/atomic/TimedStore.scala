@@ -66,13 +66,11 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     }
   }
 
-  private def collided (op: WriteOp, cell: Cell): Boolean =
-    op.isInstanceOf [WriteOp.Create] && cell.value.isDefined
-
-  private def prepare (ct: TxClock, op: WriteOp): Async [(Boolean, TxClock)] = {
-    for (cell <- getTable (op.table) .get (op.key, TxClock.MaxValue))
-      yield (collided (op, cell), cell.time)
-  }
+  private def collided (ops: Seq [WriteOp], cells: Seq [Cell]): Seq [Int] =
+    for {
+      ((op, cell), i) <- ops.zip (cells) .zipWithIndex
+      if op.isInstanceOf [WriteOp.Create] && cell.value.isDefined
+    } yield i
 
   def prepare (ct: TxClock, ops: Seq [WriteOp]): Async [PrepareResult] = {
     import PrepareResult._
@@ -80,18 +78,18 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     val ids = ops map (op => (op.table, op.key).hashCode)
     for {
       locks <- space.write (ct, ids)
-      results <-
+      cells <-
         for ((op, i) <- ops.zipWithIndex.latch.seq)
-          prepare (ct, op)
+          getTable (op.table) .get (op.key, TxClock.MaxValue)
     } yield {
-      val collisions = for (((c, t), i) <- results.zipWithIndex; if c) yield i
-      val vt = results.filterNot (_._1) .map (_._2) .fold (TxClock.MinValue) (TxClock.max _)
-      if (ct < vt) {
-        locks.release()
-        Stale
-      } else if (!collisions.isEmpty) {
+      val vt = cells.map (_.time) .fold (TxClock.MinValue) (TxClock.max _)
+      val collisions = collided (ops, cells)
+      if (!collisions.isEmpty) {
         locks.release()
         Collided (collisions)
+      } else if (ct < vt) {
+        locks.release()
+        Stale
       } else {
         Prepared (TxClock.max (vt, locks.ft), locks)
       }}}

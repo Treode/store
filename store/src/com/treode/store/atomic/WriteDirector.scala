@@ -144,7 +144,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
         cb.fail (new TimeoutException)
       }}
 
-    override def toString = "Director.Preparing"
+    override def toString = s"Director.Preparing($xid)"
   }
 
   class Deliberating (wt: TxClock, cb: Callback [TxClock]) extends State {
@@ -178,7 +178,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
         fiber.delay (backoff.next) (state.timeout())
       }}
 
-    override def toString = "Director.Deliberating"
+    override def toString = s"Director.Deliberating($xid)"
   }
 
   class Committing (wt: TxClock) extends State {
@@ -211,7 +211,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
         state = new Closed
       }}
 
-    override def toString = "Director.Committing"
+    override def toString = s"Director.Committing($xid)"
   }
 
   class Aborting extends State {
@@ -246,7 +246,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
         state = new Closed
       }}
 
-    override def toString = "Director.Aborting"
+    override def toString = s"Director.Aborting($xid)"
   }
 
   class Closed extends State {
@@ -258,7 +258,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
     override def aborted (from: Peer) = ()
     override def failed (from: Peer) = ()
 
-    override def toString = "Director.Closed"
+    override def toString = s"Director.Closed($xid)"
   }
 
   def receive (rsp: Try [WriteResponse], from: Peer): Unit = fiber.execute {

@@ -38,7 +38,8 @@ private class ResponseCaptor (
     new PeerRegistry (localId, new StubConnection (_, localId, network))
 
   private [stubs] def deliver [M] (p: Pickler [M], from: HostId, port: PortId, msg: M): Unit =
-    ports.deliver (p, peers.get (from), port, msg)
+    if (!port.isFixed)
+      ports.deliver (p, peers.get (from), port, msg)
 
   def request [Q, A] (desc: RequestDescriptor [Q, A], req: Q, to: StubPeer): Async [A] =
     async { cb =>

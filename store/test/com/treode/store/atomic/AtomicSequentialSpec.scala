@@ -46,19 +46,17 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
             compactionProbability = compaction)
 
         for { (name, (ntables, nkeys)) <- Seq (
-            "few tables"   -> (3, 100),
-            "many tables"  -> (30, 100))
+            "few tables and keys"   -> (3, 10),
+            "many tables and keys"  -> (30, 100))
         } s"$name with" - {
 
           for { (name, (nbatches, nwrites, nops)) <- Seq (
-              "small batches with small writes" -> (7, 5, 3),
-              "small batches with large writes" -> (7, 5, 20),
-              "big batches with small writes"   -> (7, 35, 3))
-              if !(ntables == 30 && nwrites == 35)
-          } name taggedAs (Intensive, Periodic) in {
+              "batches with few ops" -> (3, 3, 3),
+              "batches with many ops" -> (3, 3, 20))
+          } name - {
 
-            forAllCrashes { implicit random =>
-              crashAndRecover (nbatches, ntables, nkeys, nwrites, nops)
+            forAgentWithDeputyBouncing { implicit random =>
+              issueAtomicWrites (nbatches, ntables, nkeys, nwrites, nops)
             }}}}}}
 
     "issue atomic writes with" - {
@@ -66,7 +64,7 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
       implicit val config = StoreTestConfig()
 
       val init = { implicit random: Random =>
-        issueAtomicWrites (7, 3, 100, 5, 3)
+        issueAtomicWrites (3, 3, 100, 3, 3)
       }
 
       for1host (init)
@@ -106,7 +104,7 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
         implicit val config = StoreTestConfig()
 
         val init = { implicit random: Random =>
-            scanWholeDatabase (nslices)
+          scanWholeDatabase (nslices)
         }
 
         for3to8 (init)
