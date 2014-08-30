@@ -350,7 +350,7 @@ trait StoreClusterChecks extends AsyncChecks {
     (end - start) / nseeds
   }
 
-  private def forTargets (count: Long => Int) (test: (Long, Int) => Any): Long = {
+  private def forTargets (count: Long => Int) (test: (Long, Int, Int) => Any): Long = {
     val start = System.currentTimeMillis
     var nruns = 0
     for (_ <- 0 until nseeds / ntargets) {
@@ -359,11 +359,11 @@ trait StoreClusterChecks extends AsyncChecks {
       nruns += 1
       if (max < ntargets) {
         for (i <- 1 to max)
-          test (seed, i)
+          test (seed, Int.MaxValue, i)
         nruns += max
       } else {
         for (i <- 1 to ntargets)
-          test (seed, Random.nextInt (max - 1) + 1)
+          test (seed, max, Random.nextInt (max - 1) + 1)
         nruns += ntargets
       }}
     val end = System.currentTimeMillis()
@@ -373,7 +373,7 @@ trait StoreClusterChecks extends AsyncChecks {
   private def forDoubleTargets (
       count1: Long => Int
   ) (
-      count2: (Long, Int) => Int
+      count2: (Long, Int, Int) => Int
   ) (
       test: (Long, Int, Int) => Any
   ): Long = {
@@ -385,7 +385,7 @@ trait StoreClusterChecks extends AsyncChecks {
       nruns += 1
       if (max1 < ntargets) {
         for (i <- 1 to max1) {
-          val max2 = count2 (seed, i)
+          val max2 = count2 (seed, Int.MaxValue, i)
           if (max2 > 1)
             test (seed, i, Random.nextInt (max2 - 1) + 1)
         }
@@ -393,7 +393,7 @@ trait StoreClusterChecks extends AsyncChecks {
       } else {
         for (i <- 1 to ntargets) {
           val t1 = Random.nextInt (max1 - 1) + 1
-          val max2 = count2 (seed, t1)
+          val max2 = count2 (seed, max1, t1)
           if (max2 > 1)
             test (seed, t1, Random.nextInt (max2 - 1) + 1)
         }
@@ -675,6 +675,7 @@ trait StoreClusterChecks extends AsyncChecks {
 
   def for3with1crashing [H <: Host] (
       seed: Long,
+      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -682,7 +683,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Int =
 
-    s"for3with1crashing (${seed}L, $target, $config)"
+    s"for3with1crashing (${seed}L, $count, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -719,7 +720,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "one of three hosts crashes" taggedAs (Intensive, Periodic) in {
       val average = forTargets (
           for3hosts (_) (init)) (
-              for3with1crashing (_, _) (init))
+              for3with1crashing (_, _, _) (init))
       info (s"Average time with one host crashing: ${average}ms")
     }}
 
@@ -773,6 +774,7 @@ trait StoreClusterChecks extends AsyncChecks {
 
   def for3with1rebooting [H <: Host] (
       seed: Long,
+      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -780,7 +782,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Unit =
 
-    s"for3with1rebooting (${seed}L, $target, $config)"
+    s"for3with1rebooting (${seed}L, $count, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -816,7 +818,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "one of three hosts reboots" taggedAs (Intensive, Periodic) in {
       val average = forTargets (
           for3with1offline (_) (init)) (
-              for3with1rebooting (_, _) (init))
+              for3with1rebooting (_, _, _) (init))
       info (s"Average time with one host rebooting: ${average}ms")
     }}
 
@@ -867,7 +869,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "one of three hosts bounces" taggedAs (Intensive, Periodic) in {
       val average = forDoubleTargets (
           for3hosts (_) (init)) (
-              for3with1crashing (_, _) (init)) (
+              for3with1crashing (_, _, _) (init)) (
                   for3with1bouncing (_, _, _) (init))
       info (s"Average time with one host bouncing: ${average}ms")
     }}
@@ -927,6 +929,7 @@ trait StoreClusterChecks extends AsyncChecks {
 
   def for1to1 [H <: Host] (
       seed: Long,
+      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -934,7 +937,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Unit =
 
-    s"for1to1 (${seed}L, $target, $config)"
+    s"for1to1 (${seed}L, $count, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -963,12 +966,13 @@ trait StoreClusterChecks extends AsyncChecks {
     "one host moving to another" taggedAs (Intensive, Periodic) in {
       val average = forTargets (
           for1host (_) (init)) (
-              for1to1 (_, _) (init))
+              for1to1 (_, _, _) (init))
       info (s"Average time with one host moving: ${average}ms")
     }}
 
   def for1to3 [H <: Host] (
       seed: Long,
+      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -976,7 +980,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Int =
 
-    s"for1to3 (${seed}L, $target, $config)"
+    s"for1to3 (${seed}L, $count, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1008,7 +1012,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "one host growing to three" taggedAs (Intensive, Periodic) in {
       val average = forTargets (
           for1host (_) (init)) (
-              for1to3 (_, _) (init))
+              for1to3 (_, _, _) (init))
       info (s"Average time with one host growing to three: ${average}ms")
     }}
 
@@ -1061,13 +1065,14 @@ trait StoreClusterChecks extends AsyncChecks {
     "one host growing to three, one bounces" taggedAs (Intensive, Periodic) in {
       val average = forDoubleTargets (
           for1host (_) (init)) (
-              for1to3 (_, _) (init)) (
+              for1to3 (_, _, _) (init)) (
                   for1to3with1bouncing (_, _, _) (init))
       info (s"Average time with one host growing to three, one bounces: ${average}ms")
     }}
 
   def for3to1 [H <: Host] (
       seed: Long,
+      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1075,7 +1080,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Int =
 
-    s"for3to1 (${seed}L, $target, $config)"
+    s"for3to1 (${seed}L, $count, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1107,7 +1112,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts shrinking to one" taggedAs (Intensive, Periodic) in {
       val average = forTargets (
           for1host (_) (init)) (
-              for3to1 (_, _) (init))
+              for3to1 (_, _, _) (init))
       info (s"Average time with three hosts shriking to one: ${average}ms")
     }}
 
@@ -1160,13 +1165,14 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts shrinking to one, one bounces" taggedAs (Intensive, Periodic) in {
       val average = forDoubleTargets (
           for3hosts (_) (init)) (
-              for3to1 (_, _) (init)) (
+              for3to1 (_, _, _) (init)) (
                   for3to1with1bouncing (_, _, _) (init))
       info (s"Average time with three hosts shriking to one, one bounces: ${average}ms")
     }}
 
   def for3replacing1 [H <: Host] (
       seed: Long,
+      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1174,7 +1180,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Int =
 
-    s"for3replacing1 (${seed}L, $target, $config)"
+    s"for3replacing1 (${seed}L, $count, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1207,7 +1213,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts replacing one" taggedAs (Intensive, Periodic) in {
       val average = forTargets (
           for3hosts (_) (init)) (
-              for3replacing1 (_, _) (init))
+              for3replacing1 (_, _, _) (init))
       info (s"Average time with three hosts replacing one: ${average}ms")
     }}
 
@@ -1261,7 +1267,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts replacing one, source bounces" taggedAs (Intensive, Periodic) in {
       val average = forDoubleTargets (
           for3hosts (_) (init)) (
-              for3replacing1 (_, _) (init)) (
+              for3replacing1 (_, _, _) (init)) (
                   for3replacing1withSourceBouncing (_, _, _) (init))
       info (s"Average time with three hosts replacing one, a source host bounces: ${average}ms")
     }}
@@ -1316,7 +1322,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts replacing one, target bounces" taggedAs (Intensive, Periodic) in {
       val average = forDoubleTargets (
           for3hosts (_) (init)) (
-              for3replacing1 (_, _) (init)) (
+              for3replacing1 (_, _, _) (init)) (
                   for3replacing1withTargetBouncing (_, _, _) (init))
       info (s"Average time with three hosts replacing one, a target host bounces: ${average}ms")
     }}
@@ -1371,13 +1377,14 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts replacing one, common bounces" taggedAs (Intensive, Periodic) in {
       val average = forDoubleTargets (
           for3hosts (_) (init)) (
-              for3replacing1 (_, _) (init)) (
+              for3replacing1 (_, _, _) (init)) (
                   for3replacing1withCommonBouncing (_, _, _) (init))
       info (s"Average time with three hosts replacing one, a common host bounces: ${average}ms")
     }}
 
   def for3replacing2 [H <: Host] (
       seed: Long,
+      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1385,7 +1392,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Int =
 
-    s"for3replacing2 (${seed}L, $target, $config)"
+    s"for3replacing2 (${seed}L, $count, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1419,7 +1426,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts replacing two" taggedAs (Intensive, Periodic) in {
       val average = forTargets (
           for3hosts (_) (init)) (
-              for3replacing2 (_, _) (init))
+              for3replacing2 (_, _, _) (init))
       info (s"Average time with three hosts replacing two: ${average}ms")
     }}
 
@@ -1474,7 +1481,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts replacing two, source bounces" taggedAs (Intensive, Periodic) in {
       val average = forDoubleTargets (
           for3hosts (_) (init)) (
-              for3replacing2 (_, _) (init)) (
+              for3replacing2 (_, _, _) (init)) (
                   for3replacing2withSourceBouncing (_, _, _) (init))
       info (s"Average time with three hosts replacing two, a source host bounces: ${average}ms")
     }}
@@ -1530,7 +1537,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts replacing two, target bounces" taggedAs (Intensive, Periodic) in {
       val average = forDoubleTargets (
           for3hosts (_) (init)) (
-              for3replacing2 (_, _) (init)) (
+              for3replacing2 (_, _, _) (init)) (
                   for3replacing2withTargetBouncing (_, _, _) (init))
       info (s"Average time with three hosts replacing two, a target host bounces: ${average}ms")
     }}
@@ -1586,13 +1593,14 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts replacing two, common bounces" taggedAs (Intensive, Periodic) in {
       val average = forDoubleTargets (
           for3hosts (_) (init)) (
-              for3replacing2 (_, _) (init)) (
+              for3replacing2 (_, _, _) (init)) (
                   for3replacing2withCommonBouncing (_, _, _) (init))
       info (s"Average time with three hosts replacing two, a common host bounces: ${average}ms")
     }}
 
   def for3to3 [H <: Host] (
       seed: Long,
+      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1600,7 +1608,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Int =
 
-    s"for3to3 (${seed}L, $target, $config)"
+    s"for3to3 (${seed}L, $count, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1635,7 +1643,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts moving to three others" taggedAs (Intensive, Periodic) in {
       val average = forTargets (
           for3hosts (_) (init)) (
-              for3to3 (_, _) (init))
+              for3to3 (_, _, _) (init))
       info (s"Average time with three hosts moving: ${average}ms")
     }}
 
@@ -1691,7 +1699,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts moving to three others, source bounces" taggedAs (Intensive, Periodic) in {
       val average = forDoubleTargets (
           for3hosts (_) (init)) (
-              for3to3 (_, _) (init)) (
+              for3to3 (_, _, _) (init)) (
                   for3to3withSourceBouncing (_, _, _) (init))
       info (s"Average time with three hosts moving, a source host bounces: ${average}ms")
     }}
@@ -1748,13 +1756,14 @@ trait StoreClusterChecks extends AsyncChecks {
     "three hosts moving to three others, target bounces" taggedAs (Intensive, Periodic) in {
       val average = forDoubleTargets (
           for3hosts (_) (init)) (
-              for3to3 (_, _) (init)) (
+              for3to3 (_, _, _) (init)) (
                   for3to3withTargetBouncing (_, _, _) (init))
       info (s"Average time with three hosts moving, a target host bounces: ${average}ms")
     }}
 
   def for3to8 [H <: Host] (
       seed: Long,
+      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1762,7 +1771,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Unit =
 
-    s"for3to8 (${seed}L, $target, $config)"
+    s"for3to8 (${seed}L, $count, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1793,7 +1802,7 @@ trait StoreClusterChecks extends AsyncChecks {
     "for three hosts growing to eight" taggedAs (Intensive, Periodic) in {
       val average = forTargets (
           for3hosts (_) (init)) (
-              for3to8 (_, _) (init))
+              for3to8 (_, _, _) (init))
       info (s"Average time for 3 growing to 8: ${average}ms")
     }}
 
@@ -1844,6 +1853,7 @@ trait StoreClusterChecks extends AsyncChecks {
 
   def for8to3 [H <: Host] (
       seed: Long,
+      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1851,7 +1861,7 @@ trait StoreClusterChecks extends AsyncChecks {
       config: StoreTestConfig
   ): Unit =
 
-    s"for8to3 (${seed}L, $target, $config)"
+    s"for8to3 (${seed}L, $count, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1882,8 +1892,87 @@ trait StoreClusterChecks extends AsyncChecks {
     "for eight hosts shrinking to three" taggedAs (Intensive, Periodic) in {
       val average = forTargets (
           for8hosts (_) (init)) (
-              for8to3 (_, _) (init))
+              for8to3 (_, _, _) (init))
       info (s"Average time for 8 shrinking to 3: ${average}ms")
+    }}
+
+  def forAgentWithDeputy [H <: Host] (
+      seed: Long
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Int =
+
+    s"forAgentWithDeputy (${seed}L, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val agent = runner.install (H1) .expectPass()
+      val deputy = runner.install (H2) .expectPass()
+      val hs = Seq (agent, deputy)
+      for (h <- hs)
+        h.setAtlas (settled (deputy))
+
+      runner.setup (agent) .expectPass()
+      val cb = runner.run (agent, deputy) .capture()
+      val count = scheduler.run (timers = !cb.wasInvoked)
+      cb.passedOrTimedout
+
+      runner.verify (hs) .expectPass()
+
+      count
+    }
+
+  def forAgentWithDeputyBouncing [H <: Host] (
+      seed: Long,
+      count: Int,
+      target1: Int
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ): Unit =
+
+    s"forAgentWithDeputyBouncing (${seed}L, $count, $target1, $config)"
+    .withRandomScheduler (seed, init) { kit =>
+      import kit._
+
+      val target2 = random.nextInt (count - target1)
+      val disk = new StubDiskDrive
+
+      val agent = runner.install (H1) .expectPass()
+      var deputy = runner.install (H2, disk) .expectPass()
+      var hs = Seq (agent, deputy)
+      for (h <- hs)
+        h.setAtlas (settled (deputy))
+
+      runner.setup (agent) .expectPass()
+      val cb = runner.run (agent, deputy) .capture()
+      scheduler.run (count = target1, timers = true)
+      deputy.shutdown() .expectPass()
+      scheduler.run (count = target2, timers = true)
+      val cb2 = runner.reboot (H2, disk) .capture()
+      scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
+      cb.passedOrTimedout
+      deputy = cb2.assertPassed()
+
+      hs = Seq (agent, deputy)
+      for (h <- hs)
+        h.setAtlas (settled (deputy))
+      runner.verify (hs) .expectPass()
+    }
+
+  def forAgentWithDeputyBouncing [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    "agent with deputy bouncing" taggedAs (Intensive, Periodic) in {
+      val average = forTargets (
+          forAgentWithDeputy (_) (init)) (
+              forAgentWithDeputyBouncing (_, _, _) (init))
+      info (s"Average time for agent with deputy bouncing: ${average}ms")
     }}}
 
 object StoreClusterChecks {

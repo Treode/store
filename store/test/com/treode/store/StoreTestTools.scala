@@ -103,8 +103,19 @@ private trait StoreTestTools {
   }
 
   implicit class RichInt (v: Int) {
-    def :: (time: TxClock) = Value (time, Some (Bytes (v)))
-    def :: (cell: Cell) = Cell (cell.key, cell.time, Some (Bytes (v)))
+    def ## (time: Int) = Cell (v, time, None)
+    def ## (time: TxClock) = Cell (v, time, None)
+    def :: (time: Int) = Value (time, Some (v))
+    def :: (time: TxClock) = Value (time, Some (v))
+    def :: (cell: Cell) = Cell (cell.key, cell.time, Some (v))
+  }
+
+  implicit class RichLong (v: Long) {
+    def ## (time: Int) = Cell (v, time, None)
+    def ## (time: TxClock) = Cell (v, time, None)
+    def :: (time: Int) = Value (time, Some (v))
+    def :: (time: TxClock) = Value (time, Some (v))
+    def :: (cell: Cell) = Cell (cell.key, cell.time, Some (v))
   }
 
   implicit class RichOption (v: Option [Bytes]) {

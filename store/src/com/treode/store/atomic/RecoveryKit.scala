@@ -23,14 +23,14 @@ import com.treode.async.{Async, Latch, Scheduler}
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
 import com.treode.disk.Disk
-import com.treode.store.{Cohort, Library, Store, TxId}
+import com.treode.store.{Cohort, Library, Store, TxClock, TxId}
 import com.treode.store.paxos.Paxos
 import com.treode.store.tier.TierMedic
 
 import Async.supply
 import JavaConversions._
 import TimedStore.{receive, checkpoint}
-import WriteDeputy.{aborted, committed, preparing}
+import WriteDeputy.{aborted, committed, preparing, preparingV0}
 
 private class RecoveryKit (implicit
     val random: Random,
@@ -52,8 +52,12 @@ private class RecoveryKit (implicit
     m1
   }
 
-  preparing.replay { case (xid, ops) =>
-    get (xid) .preparing (ops)
+  preparingV0.replay { case (xid, ops) =>
+    get (xid) .preparing (TxClock.MinValue, ops)
+  }
+
+  preparing.replay { case (xid, ct, ops) =>
+    get (xid) .preparing (ct, ops)
   }
 
   committed.replay { case (xid, gens, wt) =>

@@ -23,12 +23,13 @@ import Callback.ignore
 
 private class Medic (val xid: TxId, kit: RecoveryKit)  {
 
-  var _preparing = Option.empty [Seq [WriteOp]]
+  var _preparing = Option.empty [(TxClock, Seq [WriteOp])]
   var _committed = Option.empty [TxClock]
   var _aborted = false
 
-  def preparing (ops: Seq [WriteOp]): Unit = synchronized {
-    _preparing = Some (ops)
+
+  def preparing (ct: TxClock, ops: Seq [WriteOp]): Unit = synchronized {
+    _preparing = Some ((ct, ops))
   }
 
   def committed (gens: Seq [Long], wt: TxClock): Unit = synchronized {
@@ -45,8 +46,8 @@ private class Medic (val xid: TxId, kit: RecoveryKit)  {
       w.commit (_committed.get) .run (ignore)
     if (_aborted)
       w.abort() .run (ignore)
-    if (_preparing.isDefined)
-      w.prepare (TxClock.MinValue, _preparing.get) run (ignore)
+    for ((ct, ops) <- _preparing)
+      w.prepare (ct, ops) run (ignore)
     w
   }
 

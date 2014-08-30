@@ -40,6 +40,7 @@ private class StubAtomicHost (
     val random: Random,
     val scheduler: ChildScheduler,
     val cluster: StubCluster,
+    val drive: StubDiskDrive,
     val disk: Disk,
     val library: Library,
     val catalogs: Catalogs,
@@ -135,7 +136,7 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
       atomic <- _atomic.launch (launch, cluster, paxos) .map (_.asInstanceOf [AtomicKit])
     } yield {
       launch.launch()
-      new StubAtomicHost (id) (random, scheduler, cluster, launch.disk, library, catalogs, paxos, atomic)
+      new StubAtomicHost (id) (random, scheduler, cluster, drive, launch.disk, library, catalogs, paxos, atomic)
     }}
 
   def install () (implicit r: Random, s: StubScheduler, n: StubNetwork): Async [StubAtomicHost] = {
