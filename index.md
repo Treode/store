@@ -54,7 +54,7 @@ or [post a new one][stackoverflow-ask].
 
 [finatra]: //finatra.info/ "Finatra"
 
-[online-forum]: https://groups.google.com/forum/?fromgroups#!forum/treode-users "Online forum for Treode users"
+[online-forum]: https://forum.treode.com "Online forum for Treode Users and Developers"
 
 [rws]: read-write-scan.html "Read,Write, Scan"
 
