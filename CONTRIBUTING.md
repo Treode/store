@@ -2,7 +2,7 @@
 
 ## Sign the CLA
 
-If you wish to contribute to TreodeDB, you must first sign the [Contributor License Agreement (CLA)](CLA.pdf]). If your employer has rights your intellectual property, your employer will need to sign the [Corporate CLA](CCLA.pdf). 
+If you wish to contribute to TreodeDB, you must first sign the [Contributor License Agreement (CLA)][cla-individual]. If your employer has rights your intellectual property, your employer will need to sign the [Corporate CLA][cla-corporate]. 
 
 The Treode team cannot accept contributions from someone who has not submitted the appropriate paperwork first.
 
@@ -60,6 +60,10 @@ You can submit changes the GitHub way: by [submitting a pull request][using-pull
 To formulate a change list, you'll want to know more about building Treode and running tests. You can find that information in the [Contributor category of the online forum][online-forum-contributor]. Of course, the online forum is also a great place to raise design considerations.
 
 
+
+[cla-individual]: https://treode.github.io/store/cla-individual.html
+
+[cla-corporate]: https://treode.github.io/store/cla-corporate.html
 
 [issues]: https://github.com/Treode/store/issues "Issues"
 
