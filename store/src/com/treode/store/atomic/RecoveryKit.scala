@@ -19,7 +19,8 @@ package com.treode.store.atomic
 import scala.collection.JavaConversions
 import scala.util.Random
 
-import com.treode.async.{Async, Latch, Scheduler}
+import com.treode.async.{Async, Callback, Latch, Scheduler}
+import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
 import com.treode.disk.Disk
@@ -27,10 +28,11 @@ import com.treode.store.{Cohort, Library, Store, TxClock, TxId}
 import com.treode.store.paxos.Paxos
 import com.treode.store.tier.TierMedic
 
-import Async.supply
+import Async.{latch, supply}
+import Callback.ignore
 import JavaConversions._
 import TimedStore.{receive, checkpoint}
-import WriteDeputy.{aborted, committed, preparing, preparingV0}
+import WriteDeputy._
 
 private class RecoveryKit (implicit
     val random: Random,
@@ -52,12 +54,16 @@ private class RecoveryKit (implicit
     m1
   }
 
-  preparingV0.replay { case (xid, ops) =>
-    get (xid) .preparing (TxClock.MinValue, ops)
-  }
-
   preparing.replay { case (xid, ct, ops) =>
     get (xid) .preparing (ct, ops)
+  }
+
+  preparedV0.replay { case (xid, ops) =>
+    get (xid) .prepared (TxClock.MinValue, ops)
+  }
+
+  prepared.replay { case (xid, ct, ops) =>
+    get (xid) .prepared (ct, ops)
   }
 
   committed.replay { case (xid, gens, wt) =>
@@ -76,15 +82,17 @@ private class RecoveryKit (implicit
     tables.checkpoint (tab, meta)
   }
 
-  def launch (implicit launch: Disk.Launch, cluster: Cluster, paxos: Paxos): Async [Atomic] =
-    supply {
-      import launch.disk
-
-      val kit = new AtomicKit()
-      kit.tables.recover (tables.close())
-      kit.writers.recover (writers.values)
+  def launch (implicit launch: Disk.Launch, cluster: Cluster, paxos: Paxos): Async [Atomic] = {
+    import launch.disk
+    val kit = new AtomicKit()
+    kit.tables.recover (tables.close())
+    val medics = writers.values
+    for {
+      _ <- medics.filter (_.isCommitted) .async.foreach (_.close (kit))
+    } yield {
+      medics.filter (_.isPrepared) .foreach (_.close (kit) .run (ignore))
       kit.reader.attach()
       kit.writers.attach()
       kit.scanner.attach()
       kit
-    }}
+    }}}

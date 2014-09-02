@@ -19,6 +19,7 @@ package com.treode.store.atomic
 import scala.util.Random
 
 import com.treode.async.Async
+import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{EphemeralPort, Peer, PortId}
@@ -49,6 +50,24 @@ class WriteDeputySpec extends FreeSpec {
 
     def deputy (xid: TxId): WriteDeputy =
       host.atomic.writers.get (xid)
+
+    def isOpen (xid: TxId): Boolean =
+      deputy (xid) .state.isInstanceOf [WriteDeputy#Open]
+
+    def assertOpen (xid: TxId): Unit =
+      assert (isOpen (xid))
+
+    def isPreparing (xid: TxId): Boolean =
+      deputy (xid) .state.isInstanceOf [WriteDeputy#Preparing]
+
+    def assertPreparing (xid: TxId): Unit =
+      assert (isPreparing (xid))
+
+    def isRecording (xid: TxId): Boolean =
+      deputy (xid) .state.isInstanceOf [WriteDeputy#Recording]
+
+    def assertRecording (xid: TxId): Unit =
+      assert (isRecording (xid))
 
     def isPrepared (xid: TxId): Boolean =
       deputy (xid) .state.isInstanceOf [WriteDeputy#Prepared]
@@ -83,6 +102,7 @@ class WriteDeputySpec extends FreeSpec {
 
   val xid1 = TxId (0x5778D6B9EA991FC9L, 0)
   val xid2 = TxId (0x3DBE3E2426306B4AL, 0)
+  val xid3 = TxId (0xE1FFF05DCF0A31EAL, 0)
   val h1 = 0x14181214A2030C7EL
   val t1 = 0xF5D1800B92307763L
   val k1 = 0x46795104EEF340F0L
@@ -101,202 +121,272 @@ class WriteDeputySpec extends FreeSpec {
     StubAtomicHost .boot (h.localId, h.drive, false) .expectPass()
   }
 
-  "The WriteDeputy when" - {
+  "When the WriteDeputy is" - {
 
-    "updating where the condition is met, and" - {
+    "is preparing, it should" - {
 
-      "is open, should" - {
-
-        def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
-          val drive = new StubDiskDrive
-          val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
-          h.setAtlas (settled (h))
-          h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
-          h
-        }
-
-        "prepare" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
-          h.assertPrepared (xid1)
-        }
-
-        "commit" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          val c = h.commit (xid1, 1) .capture()
-          scheduler.run()
-          h.assertTardy (xid1)
-          c.assertNotInvoked()
-        }
-
-        "abort" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          h.abort (xid1) .expectPass (Aborted)
-          h.assertAborted (xid1)
-        }}
-
-      "is prepared, should" - {
-
-        def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
-          val drive = new StubDiskDrive
-          val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
-          h.setAtlas (settled (h))
-          h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
-          h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
-          h.assertPrepared (xid1)
-          h
-        }
-
-        "prepare" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
-          h.assertPrepared (xid1)
-        }
-
-        "commit" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          h.commit (xid1, 2) .expectPass (Committed)
-          h.assertCommitted (xid1)
-        }
-
-        "abort" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          h.abort (xid1) .expectPass (Aborted)
-          h.assertAborted (xid1)
-        }
-
-        "reboot and prepare" in {
-          implicit val (random, scheduler, network, config) = setup()
-          var h = boot()
-          h = reboot (h)
-          h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
-          h.assertPrepared (xid1)
-        }}}
-
-      "is tardy, should" - {
-
-        def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
-          val drive = new StubDiskDrive
-          val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
-          h.setAtlas (settled (h))
-          val captor = h.commit (xid1, 2) .capture()
-          s.run()
-          h.assertTardy (xid1)
-          captor.assertNotInvoked()
-          h
-        }
-
-        "prepare" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          h.prepare (xid1, 1, Update (t1, k1, v1)) .capture()
-          scheduler.run()
-          h.assertCommitted (xid1)
-        }
-
-        "commit" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          val c = h.commit (xid1, 2) .capture()
-          scheduler.run()
-          h.assertTardy (xid1)
-          c.assertNotInvoked()
-        }}
-
-    "updating where the condition is unmet, and" - {
-
-      "is open, should" - {
-
-        def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
-          val drive = new StubDiskDrive
-          val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
-          h.setAtlas (settled (h))
-          h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
-          h
-        }
-
-        "prepare" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance)
-          h.assertDeliberating (xid1)
-        }}
-
-      "is deliberating, should" - {
-
-        def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
-          val drive = new StubDiskDrive
-          val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
-          h.setAtlas (settled (h))
-          h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
-          h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance)
-          h.assertDeliberating (xid1)
-          h
-        }
-
-        "prepare" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance)
-          h.assertDeliberating (xid1)
-        }
-
-        "commit" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          h.commit (xid1, 2) .expectPass (Committed)
-          h.assertCommitted (xid1)
-        }
-
-        "abort" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          h.abort (xid1) .expectPass (Aborted)
-          h.assertAborted (xid1)
-        }
-
-        "reboot and prepare" in {
-          implicit val (random, scheduler, network, config) = setup()
-          var h = boot()
-          h = reboot (h)
-          h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance)
-          h.assertDeliberating (xid1)
-        }
+      // Write a value to create a condition that the write under test must meet (xid3)
+      // Prepare a write to block the write under test (xid2)
+      // Start the write under test; check that it is preparing (xid1)
+      def boot (ct: TxClock) (
+          implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
+        val drive = new StubDiskDrive
+        val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
+        h.setAtlas (settled (h))
+        h.write (xid3, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
+        h.prepare (xid2, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
+        val cb = h.prepare (xid1, ct, Update (t1, k1, v1)) .capture()
+        cb.expectNotInvoked()
+        h.assertPreparing (xid1)
+        (h, cb)
       }
 
-      "is tardy, should" - {
+      "ignore a subsequent prepare" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb1) = boot (1)
+        val cb2 = h.prepare (xid1, 1, Update (t1, k1, v1)) .capture()
+        cb1.expectNotInvoked()
+        cb2.expectNotInvoked()
+        h.assertPreparing (xid1)
+      }
 
-        def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
-          val drive = new StubDiskDrive
-          val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
-          h.setAtlas (settled (h))
-          h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
-          val captor = h.commit (xid1, 2) .capture()
-          s.run()
-          h.assertTardy (xid1)
-          captor.assertNotInvoked()
-          h
-        }
+      "ignore a subsequent prepare on the blocking write" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb) = boot (1)
+        h.prepare (xid2, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
+        cb.expectNotInvoked()
+        h.assertPreparing (xid1)
+      }
 
-        "prepare" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          h.prepare (xid1, 0, Update (t1, k1, v1)) .capture()
-          scheduler.run()
-          h.assertCommitted (xid1)
-        }
+      "prepare after the blocking write aborts" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb) = boot (1)
+        h.abort (xid2) .expectPass (Aborted)
+        cb.expectPass (Prepared (1))
+        h.assertPrepared (xid1)
+      }
 
-        "commit" in {
-          implicit val (random, scheduler, network, config) = setup()
-          val h = boot()
-          val c = h.commit (xid1, 2) .capture()
-          scheduler.run()
-          h.assertTardy (xid1)
-          c.assertNotInvoked()
-        }}}}}
+      "advance after the blocking write aborts" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb) = boot (0)
+        h.abort (xid2) .expectPass (Aborted)
+        cb.expectPass (Advance)
+        h.assertDeliberating (xid1)
+      }
+
+      "prepare after the blocking write commits" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb) = boot (2)
+        h.commit (xid2, 2) .expectPass (Committed)
+        cb.expectPass (Prepared (2))
+        h.assertPrepared (xid1)
+      }
+
+      "advance after the blocking write commits" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb) = boot (1)
+        h.commit (xid2, 2) .expectPass (Committed)
+        cb.expectPass (Advance)
+        h.assertDeliberating (xid1)
+      }
+
+      "commit" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb) = boot (1)
+        h.commit (xid1, 2) .expectPass (Committed)
+        h.assertCommitted (xid1)
+      }
+
+      "abort" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb) = boot (1)
+        h.abort (xid1) .expectPass (Aborted)
+        h.assertAborted (xid1)
+      }
+
+      "recover to open" in {
+        implicit val (random, scheduler, network, config) = setup()
+        var (h, cb) = boot (1)
+        h = reboot (h)
+        h.assertOpen (xid1)
+      }}
+
+    "is recording, it should" - {
+
+      // Write a value to create a condition that the write under test must meet (xid2)
+      // Stop the disk drive to hold the write log
+      // Start the write under test; check that it is recording (xid1)
+      def boot (ct: TxClock) (
+          implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
+        val drive = new StubDiskDrive
+        val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
+        h.setAtlas (settled (h))
+        h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
+        drive.stop = true
+        val cb = h.prepare (xid1, ct, Update (t1, k1, v1)) .capture()
+        cb.expectNotInvoked()
+        h.assertRecording (xid1)
+        drive.stop = false
+        (h, cb)
+      }
+
+      "ignore a subsequent prepare" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb1) = boot (1)
+        val cb2 = h.prepare (xid1, 1, Update (t1, k1, v1)) .capture()
+        cb1.expectNotInvoked()
+        cb2.expectNotInvoked()
+        h.assertRecording (xid1)
+      }
+
+      "prepare after the log entry is recorded" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb) = boot (1)
+        h.drive.last.pass (())
+        cb.expectPass (Prepared (1))
+        h.assertPrepared (xid1)
+      }
+
+      "commit" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, _) = boot (1)
+        val cb = h.commit (xid1, 2) .capture()
+        cb.expectNotInvoked()
+        h.drive.last.pass (())
+        cb.expectPass (Committed)
+        h.assertCommitted (xid1)
+      }
+
+      "abort" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, _) = boot (1)
+        val cb = h.abort (xid1) .capture()
+        cb.expectNotInvoked()
+        h.drive.last.pass (())
+        cb.expectPass (Aborted)
+        h.assertAborted (xid1)
+      }
+
+      "recover to open" in {
+        implicit val (random, scheduler, network, config) = setup()
+        var (h, cb) = boot (1)
+        h = reboot (h)
+        h.assertOpen (xid1)
+      }}
+
+    "is prepared, it should" - {
+
+      // Write a value to create a condition that the write under test must meet (xid2)
+      // Start the write under test; check that it is prepared (xid1)
+      def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
+        val drive = new StubDiskDrive
+        val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
+        h.setAtlas (settled (h))
+        h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
+        h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
+        h.assertPrepared (xid1)
+        h
+      }
+
+      "prepare" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val h = boot()
+        h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
+        h.assertPrepared (xid1)
+      }
+
+      "commit" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val h = boot()
+        h.commit (xid1, 2) .expectPass (Committed)
+        h.assertCommitted (xid1)
+      }
+
+      "abort" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val h = boot()
+        h.abort (xid1) .expectPass (Aborted)
+        h.assertAborted (xid1)
+      }
+
+      "recover to prepared" in {
+        implicit val (random, scheduler, network, config) = setup()
+        var h = boot()
+        h = reboot (h)
+        h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
+        h.assertPrepared (xid1)
+      }}
+
+    "is deliberating, should" - {
+
+      // Write a value to create a condition that the write under test fails to meet (xid2)
+      // Start the write under test; check that it is deliberating (xid1)
+      def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
+        val drive = new StubDiskDrive
+        val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
+        h.setAtlas (settled (h))
+        h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
+        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance)
+        h.assertDeliberating (xid1)
+        h
+      }
+
+      "prepare" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val h = boot()
+        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance)
+        h.assertDeliberating (xid1)
+      }
+
+      "commit" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val h = boot()
+        h.commit (xid1, 2) .expectPass (Committed)
+        h.assertCommitted (xid1)
+      }
+
+      "abort" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val h = boot()
+        h.abort (xid1) .expectPass (Aborted)
+        h.assertAborted (xid1)
+      }
+
+      "reboot to deliberating" in {
+        implicit val (random, scheduler, network, config) = setup()
+        var h = boot()
+        h = reboot (h)
+        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance)
+        h.assertDeliberating (xid1)
+      }}
+
+    "is tardy, should" - {
+
+      // Write a value to create a condition that the write under test must meet (xid2)
+      // Start the write under test; check that it is tardy (xid1)
+      def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
+        val drive = new StubDiskDrive
+        val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
+        h.setAtlas (settled (h))
+        h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
+        val cb = h.commit (xid1, 2) .capture()
+        cb.expectNotInvoked()
+        h.assertTardy (xid1)
+        (h, cb)
+      }
+
+      "prepare" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb) = boot()
+        h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Committed)
+        h.assertCommitted (xid1)
+      }
+
+      "ignore a subsequent commit" in {
+        implicit val (random, scheduler, network, config) = setup()
+        val (h, cb1) = boot()
+        val cb2 = h.commit (xid1, 2) .capture()
+        cb1.expectNotInvoked()
+        cb2.expectNotInvoked()
+        h.assertTardy (xid1)
+      }}}}

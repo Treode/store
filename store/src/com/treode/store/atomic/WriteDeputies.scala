@@ -23,7 +23,7 @@ import com.treode.cluster.IgnoreRequestException
 import com.treode.disk.Disk
 import com.treode.store.TxId
 
-import Async.{guard, supply, when}
+import Async.guard
 
 private class WriteDeputies (kit: AtomicKit) {
   import WriteDeputy._
@@ -38,20 +38,16 @@ private class WriteDeputies (kit: AtomicKit) {
       return d0
     val d1 = new WriteDeputy (xid, kit)
     d0 = deputies.putIfAbsent (xid, d1)
-    if (d0 != null) {
-      d1.dispose()
+    if (d0 != null)
       return d0
-    }
     d1
   }
 
+  def recover (xid: TxId, w: WriteDeputy): Unit =
+    deputies.put (xid, w)
+
   def remove (xid: TxId, w: WriteDeputy): Unit =
     deputies.remove (xid, w)
-
-  def recover (medics: Iterable [Medic]) {
-    for (m <- medics)
-      deputies.put (m.xid, m.close (kit))
-  }
 
   def checkpoint(): Async [Unit] =
     guard {

@@ -104,7 +104,7 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
         implicit val config = StoreTestConfig()
 
         val init = { implicit random: Random =>
-            scanWholeDatabase (nslices)
+          scanWholeDatabase (nslices)
         }
 
         for3to8 (init)

@@ -38,9 +38,13 @@ case class TxId (id: Bytes, time: Instant) extends Ordered [TxId] {
     time.getMillis compare that.time.getMillis
   }
 
-  /** The TxID as `<hex>:<ISO-8601>`. */
+  /** The TxId hashed to two hex digits. */
+  def toShortString: String =
+    f"${hashCode & 0xFF}%02X"
+
+  /** The TxId as `<hex>:<ISO-8601>`. */
   override def toString: String =
-    f"${id.toHexString}:${time.toString}"
+    s"${id.toHexString}:${time.toString}"
 }
 
 object TxId extends Ordering [TxId] {

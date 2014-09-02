@@ -16,14 +16,14 @@
 
 package com.treode.store.atomic
 
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 import com.treode.async.{Async, Callback, Fiber}
 import com.treode.async.implicits._
 import com.treode.cluster.RequestDescriptor
 import com.treode.disk.RecordDescriptor
 import com.treode.store.{Bytes, TimeoutException, TxClock, TxId, TxStatus, WriteOp, log}
-import com.treode.store.atomic.{WriteDeputy => WD}
+import com.treode.store.atomic.{WriteDeputy => WD, WriteResponse => WR}
 import com.treode.store.locks.LockSet
 
 import Async.{guard, supply, when}
@@ -38,7 +38,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   type WriteCallback = Callback [WriteResponse]
 
   val fiber = new Fiber
-  val epoch = releaser.join()
   var state: State = new Open
 
   trait State {
@@ -72,10 +71,10 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   class Open extends State {
 
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
-      state = new Preparing (ct, ops, cb)
+      state = new Preparing (ct, ops, releaser.join(), cb)
 
     def abort (cb: WriteCallback): Unit =
-      state = new Aborting (None, cb)
+      state = new Aborting (None, None, cb)
 
     def commit (wt: TxClock, cb: WriteCallback): Unit =
       state = new Tardy (wt, cb)
@@ -86,76 +85,43 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     override def toString = s"WriteDeputy.Open($xid)"
   }
 
-  class Preparing (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback) extends State {
+  class Preparing (ct: TxClock, ops: Seq [WriteOp], epoch: Int, cb: WriteCallback) extends State {
 
-    tables.prepare (ct, ops) run {
-      case Success (prep) => prepared (prep)
-      case Failure (t) => failed (t)
-    }
-
-    private def _failed (t: Throwable) {
+    private def prepared (result: Try [PrepareResult]): Unit = fiber.execute {
+      import PrepareResult._
       if (state == Preparing.this) {
-        log.exceptionPreparingWrite (t)
-        state = new Deliberating (ct, ops, Some (WriteResponse.Failed))
-        cb.pass (WriteResponse.Failed)
-        throw t
-      }}
-
-    private def failed (t: Throwable): Unit = fiber.execute {
-      _failed (t)
-    }
-
-    private def failed (locks: LockSet, t: Throwable): Unit = fiber.execute {
-      locks.release()
-      _failed (t)
-    }
-
-    private def logged (ft: TxClock, locks: LockSet): Unit = fiber.execute {
-      if (state == Preparing.this) {
-        state = new Prepared (ct, ft, ops, locks)
-        cb.pass (WriteResponse.Prepared (ft))
-      } else {
-        locks.release()
-      }}
-
-    private def prepared (ft: TxClock, locks: LockSet): Unit = fiber.execute {
-      if (state == Preparing.this) {
-        WD.preparing.record (xid, ct, ops) run {
-          case Success (v) => logged (ft, locks)
-          case Failure (t) => failed (locks, t)
+        result match {
+          case Success (Prepared (ft, locks)) =>
+            state = new Recording (ct, ft, ops, epoch, locks, cb)
+          case Success (Collided (ks)) =>
+            val rsp = WR.Collisions (ks.toSet)
+            state = new Deliberating (ct, ops, epoch, Some (rsp))
+            cb.pass (rsp)
+          case Success (Stale) =>
+            state = new Deliberating (ct, ops, epoch, Some (WR.Advance))
+            cb.pass (WR.Advance)
+          case Failure (t) =>
+            state = new Deliberating (ct, ops, epoch, Some (WR.Failed))
+            log.exceptionPreparingWrite (t)
+            cb.pass (WR.Failed)
         }
       } else {
-        locks.release()
-      }}
+        result match {
+          case Success (Prepared (ft, locks)) =>
+            locks.release()
+          case _ =>
+            ()
+        }}}
 
-    private def collided (ks: Seq [Int]): Unit = fiber.execute {
-      if (state == Preparing.this) {
-        val rsp = WriteResponse.Collisions (ks.toSet)
-        state = new Deliberating (ct, ops, Some (rsp))
-        cb.pass (rsp)
-      }}
-
-    private def stale(): Unit = fiber.execute {
-      if (state == Preparing.this) {
-        state = new Deliberating (ct, ops, Some (WriteResponse.Advance))
-        cb.pass (WriteResponse.Advance)
-      }}
-
-    private def prepared (prep: PrepareResult) {
-      import PrepareResult._
-      prep match {
-        case Prepared (ft, locks) => prepared (ft, locks)
-        case Collided (ks) => collided (ks)
-        case Stale => stale()
-      }}
+    tables.prepare (ct, ops) run (prepared)
 
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit = ()
 
     def commit (wt: TxClock, cb: WriteCallback): Unit =
-      state = new Committing (ct, wt, ops, None, cb)
+      state = new Committing (ct, wt, ops, Some (epoch), None, cb)
 
     def abort (cb: WriteCallback): Unit =
-      state = new Aborting (None, cb)
+      state = new Aborting (Some (epoch), None, cb)
 
     def checkpoint(): Async [Unit] =
       WD.preparing.record (xid, ct, ops)
@@ -163,28 +129,76 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     override def toString = s"WriteDeputy.Preparing($xid, $ct)"
   }
 
-  class Prepared (ct: TxClock, ft: TxClock, ops: Seq [WriteOp], locks: LockSet) extends State {
+  class Recording (
+      ct: TxClock,
+      ft: TxClock,
+      ops: Seq [WriteOp],
+      epoch: Int,
+      locks: LockSet,
+      cb: Callback [WriteResponse]
+  ) extends State {
+
+    private def recorded (result: Try [Unit]): Unit = fiber.execute {
+      if (state == Recording.this) {
+        result match {
+          case Success (v) =>
+            state = new Prepared (ct, ft, ops, epoch, locks)
+            cb.pass (WR.Prepared (ft))
+          case Failure (t) =>
+            state = new Deliberating (ct, ops, epoch, Some (WR.Failed))
+            log.exceptionPreparingWrite (t)
+            locks.release()
+            cb.pass (WR.Failed)
+            throw t
+        }}}
+
+    WD.prepared.record (xid, ct, ops) run (recorded _)
+
+    def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit = ()
+
+    def commit (wt: TxClock, cb: WriteCallback): Unit =
+      state = new Committing (ct, wt, ops, Some (epoch), Some (locks), cb)
+
+    def abort (cb: WriteCallback): Unit =
+      state = new Aborting (Some (epoch), Some (locks), cb)
+
+    def checkpoint(): Async [Unit] =
+      WD.prepared.record (xid, ct, ops)
+
+    override def toString = s"WriteDeputy.Recording($xid)"
+  }
+
+  class Prepared (
+      ct: TxClock,
+      ft: TxClock,
+      ops: Seq [WriteOp],
+      epoch: Int,
+      locks: LockSet
+  ) extends State {
 
     timeout (Prepared.this)
 
-    private def rsp = WriteResponse.Prepared (ft)
-
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
-      cb.pass (rsp)
+      cb.pass (WR.Prepared (ft))
 
     def commit (wt: TxClock, cb: WriteCallback): Unit =
-      state = new Committing (ct, wt, ops, Some (locks), cb)
+      state = new Committing (ct, wt, ops, Some (epoch), Some (locks), cb)
 
     def abort (cb: WriteCallback): Unit =
-      state = new Aborting (Some (locks), cb)
+      state = new Aborting (Some (epoch), Some (locks), cb)
 
     def checkpoint(): Async [Unit] =
-      WD.preparing.record (xid, ct, ops)
+      WD.prepared.record (xid, ct, ops)
 
     override def toString = s"WriteDeputy.Prepared($xid)"
   }
 
-  class Deliberating (ct: TxClock, ops: Seq [WriteOp], rsp: Option [WriteResponse]) extends State {
+  class Deliberating (
+      ct: TxClock,
+      ops: Seq [WriteOp],
+      epoch: Int,
+      rsp: Option [WriteResponse]
+  ) extends State {
 
     timeout (Deliberating.this)
 
@@ -192,10 +206,10 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       rsp foreach (cb.pass (_))
 
     def commit (wt: TxClock, cb: WriteCallback): Unit =
-      state = new Committing (ct, wt, ops, None, cb)
+      state = new Committing (ct, wt, ops, Some (epoch), None, cb)
 
     def abort (cb: WriteCallback): Unit =
-      state = new Aborting (None, cb)
+      state = new Aborting (Some (epoch), None, cb)
 
     def checkpoint(): Async [Unit] =
       WD.preparing.record (xid, ct, ops)
@@ -208,7 +222,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     scheduler.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
-      state = new Committing (ct, wt, ops, None, cb)
+      state = new Committing (ct, wt, ops, None, None, cb)
 
     def commit (wt: TxClock, cb: WriteCallback) = ()
 
@@ -225,13 +239,14 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       ct: TxClock,
       wt: TxClock,
       ops: Seq [WriteOp],
+      epoch: Option [Int],
       locks: Option [LockSet],
       cb: WriteCallback) extends State {
 
     val gens = tables.commit (wt, ops)
     guard {
       for {
-        _ <- when (locks.isEmpty) (WD.preparing.record (xid, ct, ops))
+        _ <- when (locks.isEmpty) (WD.prepared.record (xid, ct, ops))
         _ <- WD.committed.record (xid, gens, wt)
       } yield ()
     } run {
@@ -242,15 +257,17 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     private def logged(): Unit = fiber.execute {
       if (state == Committing.this) {
         state = new Committed (gens, wt)
-        cb.pass (WriteResponse.Committed)
+        epoch foreach (releaser.leave (_))
         locks foreach (_.release())
+        cb.pass (WR.Committed)
       }}
 
     private def failed (t: Throwable): Unit = fiber.execute {
       if (state == Committing.this) {
         state = new Panicked (this, t)
+        epoch foreach (releaser.leave (_))
         locks foreach (_.release())
-        cb.pass (WriteResponse.Failed)
+        cb.pass (WR.Failed)
         throw t
       }}
 
@@ -269,14 +286,13 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Committed (gens: Seq [Long], wt: TxClock) extends State {
 
-    releaser.leave (epoch)
     scheduler.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
-      cb.pass (WriteResponse.Committed)
+      cb.pass (WR.Committed)
 
     def commit (wt: TxClock, cb: WriteCallback): Unit =
-      cb.pass (WriteResponse.Committed)
+      cb.pass (WR.Committed)
 
     def abort (cb: WriteCallback): Unit =
       throw new IllegalStateException
@@ -287,10 +303,13 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     override def toString = s"WriteDeputy.Committed($xid, $wt)"
   }
 
-  class Aborting (locks: Option [LockSet], cb: WriteCallback) extends State {
+  class Aborting (
+      epoch: Option [Int],
+      locks: Option [LockSet],
+      cb: WriteCallback
+  ) extends State {
 
     guard {
-      locks foreach (_.release())
       WD.aborted.record (xid)
     } run {
       case Success (v) => logged()
@@ -300,18 +319,21 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     private def logged(): Unit = fiber.execute {
       if (state == Aborting.this) {
         state = new Aborted
-        cb.pass (WriteResponse.Aborted)
+        epoch foreach (releaser.leave (_))
+        locks foreach (_.release())
+        cb.pass (WR.Aborted)
       }}
 
     private def failed (t: Throwable): Unit = fiber.execute {
       if (state == Aborting.this) {
         state = new Panicked (this, t)
-        cb.pass (WriteResponse.Failed)
+        epoch foreach (releaser.leave (_))
+        locks foreach (_.release())
+        cb.pass (WR.Failed)
         throw t
       }}
 
-    def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
-      cb.pass (WriteResponse.Aborted)
+    def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit = ()
 
     def commit (wt: TxClock, cb: WriteCallback): Unit =
       throw new IllegalStateException
@@ -326,19 +348,18 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Aborted extends State {
 
-    releaser.leave (epoch)
     scheduler.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def status = None
 
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit =
-      cb.pass (WriteResponse.Aborted)
+      cb.pass (WR.Aborted)
 
     def commit (wt: TxClock, cb: WriteCallback): Unit =
       throw new IllegalStateException
 
     def abort (cb: WriteCallback): Unit =
-      cb.pass (WriteResponse.Aborted)
+      cb.pass (WR.Aborted)
 
     def checkpoint(): Async [Unit] =
       WD.aborted.record (xid)
@@ -348,7 +369,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
 
   class Panicked (s: State, thrown: Throwable) extends State {
 
-    releaser.leave (epoch)
     scheduler.delay (closedLifetime) (writers.remove (xid, WriteDeputy.this))
 
     def checkpoint(): Async [Unit] =
@@ -373,9 +393,6 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
   def checkpoint(): Async [Unit] =
     fiber.guard (state.checkpoint())
 
-  def dispose(): Unit =
-    releaser.leave (epoch)
-
   override def toString = state.toString
 }
 
@@ -399,12 +416,17 @@ private object WriteDeputy {
     RequestDescriptor (0xFF2D9D46D1F3A7F9L, txId, writeResponse)
   }
 
-  val preparingV0 = {
+  val preparing = {
+    import AtomicPicklers._
+    RecordDescriptor (0x12A4690B2129333DL, tuple (txId, txClock, seq (writeOp)))
+  }
+
+  val preparedV0 = {
     import AtomicPicklers._
     RecordDescriptor (0x875B728C8F37467AL, tuple (txId, seq (writeOp)))
   }
 
-  val preparing = {
+  val prepared = {
     import AtomicPicklers._
     RecordDescriptor (0x9244FD7C53699533L, tuple (txId, txClock, seq (writeOp)))
   }
