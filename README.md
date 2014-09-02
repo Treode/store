@@ -8,7 +8,7 @@ TreodeDB is a distributed key-value store that provides atomic writes, and it do
 
 ## Development Setup
 
-The libraries for TreodeDB are available from our Ivy repository, and they have been built for Scala 2.10.  Treode uses multiple Ivy configurations:  There is the usual default Ivy configuration, and there is a stubs configuration that helps testing, but whose classes need not bloat your assembly jar bound for production.
+The libraries for TreodeDB are available from our Ivy repository, and they have been built for Scala 2.10 and 2.11.  Treode uses multiple Ivy configurations:  There is the usual default Ivy configuration, and there is a stubs configuration that helps testing, but whose classes need not bloat your assembly jar bound for production.
 
 
 ```
@@ -152,7 +152,7 @@ In summary, hashing the key onto an array of cohorts allows read-write operation
 
 [hbase-web]: http://hbase.apache.org "Apache HBase&trade; (Website)"
 
-[online-forum]: https://groups.google.com/forum/?fromgroups#!forum/treode-users "Online forum for Treode users"
+[online-forum]: https://forum.treode.com "Online Forum for Treode Users and Developers"
 
 [riak-web]: http://basho.com/riak/ "Riak (Website)"
 
