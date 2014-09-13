@@ -10,9 +10,8 @@ Scala API for read, write and scan; you add layers for data-modeling, client pro
 ![arch][arch]
 
 These pages walk through building and operating a RESTful service with TreodeDB.  We have built
-an example application using [the Scala Programming Language][scala] and 
-[the Finatra web framework][finatra].  The walk throughs use a single `.jar`, which you can
-download or build yourself.
+an example application using the [Scala Programming Language][scala] and the [Finatra web framework][finatra]. 
+The walk throughs use a single `.jar`, which you can download or build yourself.
 
 ### Downloading `server.jar`
 
@@ -26,7 +25,7 @@ temporary directory and move the downloaded jar there.  Then proceed to the
 
 You will need [SBT][sbt]; [install it][sbt-install] if you haven't already.
 
-Clone the [TreodeDB respository][store-github] and then build the assembly.  The example is in the
+Clone the [TreodeDB repository][store-github] and then build the assembly.  The example is in the
 `examples/finatra` directory, separate from the main code.  It even has its own build file.
 
 <pre>
@@ -52,17 +51,17 @@ or [post a new one][stackoverflow-ask].
 
 [arch]: img/architecture.png "Architecture"
 
-[finatra]: //finatra.info/ "Finatra"
+[finatra]: http://finatra.info/ "Finatra"
 
 [online-forum]: https://forum.treode.com "Online forum for Treode Users and Developers"
 
 [rws]: read-write-scan.html "Read,Write, Scan"
 
-[sbt]: //www.scala-sbt.org/ "Simple Build Tool"
+[sbt]: http://www.scala-sbt.org/ "Simple Build Tool"
 
-[sbt-install]: //www.scala-sbt.org/0.13/tutorial/Setup.html "Install SBT"
+[sbt-install]: http://www.scala-sbt.org/0.13/tutorial/Setup.html "Install SBT"
 
-[scala]: //www.scala-lang.org/ "The Scala Programming Language
+[scala]: http://www.scala-lang.org/ "The Scala Programming Language"
 
 [server-jar]: https://oss.treode.com/jars/com.treode.store/0.1.0/server.jar
 
