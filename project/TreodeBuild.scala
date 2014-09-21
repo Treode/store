@@ -29,9 +29,11 @@ object TreodeBuild extends Build {
   lazy val IntensiveTest = config ("intensive") extend (Test)
   lazy val PeriodicTest = config ("periodic") extend (Test)
 
+  lazy val versionString = "0.2.0-SNAPSHOT"
+
   lazy val versionInfo = Seq (
     organization := "com.treode",
-    version := "0.1.0",
+    version := versionString,
     scalaVersion := "2.11.2",
     crossScalaVersions := Seq ("2.10.4", "2.11.2"))
 
@@ -61,7 +63,10 @@ object TreodeBuild extends Build {
       "joda-time" % "joda-time" % "2.4",
       "org.joda" % "joda-convert" % "1.7",
       "org.slf4j" % "slf4j-api" % "1.7.7",
-      "org.slf4j" % "slf4j-simple" % "1.7.7"))
+      "org.slf4j" % "slf4j-simple" % "1.7.7"),
+
+    publishTo := 
+      Some (Resolver.file ("Staging Repo", file ("stage/ivy")) (Resolver.ivyStylePatterns)))
 
   // A portion of the settings for projects without stubs.  Adds
   // testing libraries to SBT's "test" configuration.
@@ -208,14 +213,18 @@ object TreodeBuild extends Build {
     .settings (standardSettings: _*)
     .settings (assemblySettings: _*)
     .settings (
+
       name := "systest",
+
       test in assembly := {},
-      publishArtifact := false)
+
+      publishLocal := {},
+      publish := {})
 
   lazy val copyDocAssetsTask = taskKey [Unit] ("Copy doc assets")
 
   lazy val root = Project ("root", file ("."))
-    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, systest)
+    .aggregate (buffer, pickle, async, cluster, disk, store, jackson)
     .settings (versionInfo: _*)
     .settings (unidocSettings: _*)
     .settings (
@@ -224,7 +233,7 @@ object TreodeBuild extends Build {
 
       scalacOptions in (ScalaUnidoc, unidoc) ++= Seq (
         "-diagrams",
-        "-doc-title", "TreodeDB 0.1.0", 
+        "-doc-title", "TreodeDB " + versionString, 
         "-doc-root-content", baseDirectory.value + "/doc/rootdoc.html"),
 
       unidocConfigurationFilter in (ScalaUnidoc, unidoc) := 
@@ -239,5 +248,8 @@ object TreodeBuild extends Build {
         IO.copyDirectory (sourceDir, targetDir)
       },
 
-      copyDocAssetsTask <<= copyDocAssetsTask triggeredBy (unidoc in Compile))
+      copyDocAssetsTask <<= copyDocAssetsTask triggeredBy (unidoc in Compile),
+
+      publishLocal := {},
+      publish := {})
 }

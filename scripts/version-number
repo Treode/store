@@ -1,0 +1,25 @@
+#!/usr/bin/perl
+
+%versions = ();
+%files = ();
+
+while (<>) {
+  if (/version\s*:=\s*"(.*)"/) {
+    $versions{$1} = 1;
+    $files{$ARGV} = $1;
+  }
+  if (/versionString\s*=\s*"(.*)"/) {
+    $versions{$1} = 1;
+    $files{$ARGV} = $1;
+  }
+}
+
+@versions = keys (%versions);
+if ($#versions != 0) {
+  print STDERR ("Version conflict\n");
+  print STDERR "$_\t$files{$_}\n" for (sort (keys %files));
+  exit 1;
+}
+
+print ("@versions\n");
+exit 0;

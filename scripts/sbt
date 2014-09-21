@@ -1,0 +1,14 @@
+#!/bin/bash
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+java \
+    -XX:+CMSClassUnloadingEnabled \
+    -XX:MaxPermSize=128M \
+    -Xms128M \
+    -Xmx512M \
+    -Xss1M \
+    -Djava.util.logging.config.file="$DIR/logging.properties" \
+    -Dsbt.log.noformat=true \
+    -jar "${HOME}/.sbt/sbt-launch-0.13.5.jar" \
+     "$@"
