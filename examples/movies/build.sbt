@@ -4,11 +4,11 @@ assemblySettings
 
 name := "movies-example"
       
-version := "0.2.0"
+version := "0.2.0-SNAPSHOT"
 
 scalaVersion := "2.10.4"
 
-jarName in assembly := "movies-server.jar"
+jarName in assembly := "server.jar"
 
 mainClass in assembly := Some ("movies.Main")
 

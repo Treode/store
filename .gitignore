@@ -9,4 +9,7 @@
 .settings
 /**/logs
 /**/target
+/build.log
 /project/project
+/stage
+/stage-*.tgz
