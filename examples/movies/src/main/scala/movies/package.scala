@@ -17,7 +17,10 @@
 import scala.util.Random
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.treode.store.Bytes
+import com.treode.store.util.Froster
 
 package movies {
 
@@ -27,6 +30,9 @@ package movies {
   }}
 
 package object movies {
+
+  private val binaryJson = new ObjectMapper (new SmileFactory)
+  binaryJson.registerModule (new DefaultScalaModule)
 
   private val textJson = new ObjectMapper
   textJson.registerModule (DefaultScalaModule)
@@ -39,6 +45,15 @@ package object movies {
     def toJson: String =
       textJson.writeValueAsString (value)
   }
+
+  implicit class RichFrosterCompanion (obj: Froster.type) {
+
+    def bson [A] (implicit m: Manifest [A]): Froster [A] =
+      new Froster [A] {
+        private val c = m.runtimeClass.asInstanceOf [Class [A]]
+        def freeze (v: A): Bytes = Bytes (binaryJson.writeValueAsBytes (v))
+        def thaw (v: Bytes): A = binaryJson.readValue (v.bytes, c)
+      }}
 
   implicit class RichOption [A] (value: Option [A]) {
 

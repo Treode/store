@@ -17,9 +17,9 @@
 package movies
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.treode.store.util.Transaction
 
 import movies.{PhysicalModel => PM}
-import movies.util.Transaction
 
 /** See README.md. */
 object DisplayModel {

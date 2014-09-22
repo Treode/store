@@ -21,6 +21,7 @@ import com.treode.pickle.Pickler
 
 import WriteOp.{Create, Delete, Hold, Update}
 
+@deprecated ("use util.TableDescriptor", "0.2.0")
 trait Accessor [K, V] {
 
   case class ACell (key: K, time: TxClock, value: Option [V])
@@ -48,6 +49,7 @@ trait Accessor [K, V] {
   def recent (rt: TxClock) (implicit store: Store): AsyncIterator [ACell]
 }
 
+@deprecated ("Use Transaction", "0.2.0")
 object Accessor {
 
   def apply [K, V] (id: TableId, pk: Pickler [K], pv: Pickler [V]): Accessor [K, V] =

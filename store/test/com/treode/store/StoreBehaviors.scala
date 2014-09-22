@@ -26,6 +26,7 @@ import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.pickle.Picklers
+import com.treode.store.util.{Froster, TableDescriptor, Transaction}
 import com.treode.tags.{Intensive, Periodic}
 import org.joda.time.Instant
 import org.scalatest.FreeSpec
@@ -62,8 +63,10 @@ trait StoreBehaviors {
 
     def nextTick = TxClock (new Instant (clock.getAndIncrement))
 
-    val creates = Seq.tabulate (naccounts) (Accounts.create (_, opening))
-    store.write (random.nextTxId, 0, creates: _*) .expectPass()
+    val creates = new Transaction (nextTick)
+    for (n <- 0 until naccounts)
+      creates.create (Accounts) (n, opening)
+    creates.execute (random.nextTxId) .expectPass()
 
     var running = true
 
@@ -80,11 +83,8 @@ trait StoreBehaviors {
 
     def check(): Async [Unit] =
       guard  {
-        val firstTime = Bound (TxClock.MinValue, true)
-        val lastTime = Bound (TxClock.MaxValue, true)
-        val allTimes = Window.Between (lastTime, firstTime)
         for {
-          _history <- Accounts.scan (allTimes, Slice.all) .toSeq
+          _history <- Accounts.scan() .toSeq
         } yield {
           var tracker = Map.empty [Int, Int] .withDefaultValue (opening)
           val supply = naccounts * opening
@@ -106,15 +106,17 @@ trait StoreBehaviors {
         var y = random.nextInt (naccounts)
         while (x == y)
           y = random.nextInt (naccounts)
-        val rops = Seq (Accounts.read (x), Accounts.read (y))
-        val rt = nextTick
+        val tx = new Transaction (nextTick)
         for {
-          vs <- store.read (rt, rops: _*)
-          ct = vs.map (_.time) .max
-          Seq (b1, b2) = vs map (Accounts.value (_) .get)
-          n = random.nextInt (b1)
-          wops = Seq (Accounts.update (x, b1-n), Accounts.update (y, b2+n))
-          wt <- store.write (random.nextTxId, ct, wops: _*)
+          _ <- tx.fetch (Accounts) (x, y)
+          _ = {
+            val b1 = tx.get (Accounts) (x) .get
+            val b2 = tx.get (Accounts) (y) .get
+            val n = random.nextInt (b1)
+            tx.update (Accounts) (x, b1-n)
+            tx.update (Accounts) (y, b2+n)            
+          }
+          wt <- tx.execute (random.nextTxId)
         } yield {
           countTransferPassed.incrementAndGet()
         }
@@ -335,5 +337,5 @@ trait StoreBehaviors {
 
 object StoreBehaviors {
 
-  val Accounts = Accessor (1, Picklers.fixedInt, Picklers.fixedInt)
+  val Accounts = TableDescriptor (1, Froster.int, Froster.int)
 }

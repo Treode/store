@@ -19,7 +19,7 @@ package com.treode.store.atomic
 import com.treode.async.{Async, Callback}
 import com.treode.store.{TxClock, TxId, WriteOp}
 
-import Async.{supply, when}
+import Async.supply
 import Callback.ignore
 import Medic._
 

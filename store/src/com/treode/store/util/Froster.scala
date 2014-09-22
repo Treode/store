@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-package movies.util
+package com.treode.store.util
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.smile.SmileFactory
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.treode.pickle.Pickler
 import com.treode.store.Bytes
 
-/** Frost describes how to serialize an object to and from [[com.treode.store.Bytes Bytes]]. It
+/** A Froster describes how to serialize an object to and from [[com.treode.store.Bytes Bytes]]. It
   * works with [[TableDescriptor]] to make reading and writing the database convenient.
+  *
+  * The companion object can construct Frosters from Treode picklers, however you can create one
+  * using your favorite serialization package (Kryo, Chill, Protobuf, Thrift, Jackson/Smile, etc).
   */
-trait Frost [T] {
+trait Froster [T] {
 
   def freeze (v: T): Bytes
 
@@ -34,26 +35,31 @@ trait Frost [T] {
     b.map (thaw (_))
 }
 
-object Frost {
+object Froster {
 
-  private val mapper = new ObjectMapper (new SmileFactory)
-  mapper.registerModule (new DefaultScalaModule)
+  /** Construct a [[Bytes]] object which sorts identically to the Int. */
+  val int: Froster [Int] =
+    new Froster [Int] {
+      def freeze (v: Int): Bytes = Bytes (v)
+      def thaw (v: Bytes): Int = v.int
+    }
 
-  val long: Frost [Long] =
-    new Frost [Long] {
+  /** Construct a [[Bytes]] object which sorts identically to the Long. */
+  val long: Froster [Long] =
+    new Froster [Long] {
       def freeze (v: Long): Bytes = Bytes (v)
       def thaw (v: Bytes): Long = v.long
     }
 
-  val string: Frost [String] =
-    new Frost [String] {
+  /** Construct a [[Bytes]] object which sorts identically to the String. */
+  val string: Froster [String] =
+    new Froster [String] {
       def freeze (v: String): Bytes = Bytes (v)
       def thaw (v: Bytes): String = v.string
     }
 
-  def bson [A] (implicit m: Manifest [A]): Frost [A] =
-    new Frost [A] {
-      private val c = m.runtimeClass.asInstanceOf [Class [A]]
-      def freeze (v: A): Bytes = Bytes (mapper.writeValueAsBytes (v))
-      def thaw (v: Bytes): A = mapper.readValue (v.bytes, c)
+  def apply [T] (p: Pickler [T]): Froster [T] =
+    new Froster [T] {
+      def freeze (v: T): Bytes = Bytes (p, v)
+      def thaw (v: Bytes): T = v.unpickle (p)
     }}

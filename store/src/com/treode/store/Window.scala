@@ -79,7 +79,7 @@ object Window {
       Between (Bound (later, linc), Bound (earlier, einc))
   }
 
-  /** Choose all changes between `later` and `earlier` and the most recent change as of 
+  /** Choose all changes between `later` and `earlier` and the most recent change as of
     * `earlier`.
     */
   case class Through (later: Bound [TxClock], earlier: TxClock) extends Window {
@@ -102,6 +102,8 @@ object Window {
     def apply (later: TxClock, linc: Boolean, earlier: TxClock): Through =
       Through (Bound (later, linc), earlier)
   }
+
+  val all = Between (TxClock.MaxValue, true, TxClock.MinValue, true)
 
   val pickler = {
     import StorePicklers._

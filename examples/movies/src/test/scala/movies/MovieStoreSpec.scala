@@ -25,11 +25,11 @@ import com.treode.store.stubs.StubStore
 import com.treode.async.Async
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
+import com.treode.store.util.TableDescriptor
 import org.joda.time.Instant
 import org.scalatest.FlatSpec
 
 import movies.{DisplayModel => DM, PhysicalModel => PM}
-import movies.util.TableDescriptor
 
 class MovieStoreSpec extends FlatSpec {
 
@@ -58,7 +58,7 @@ class MovieStoreSpec extends FlatSpec {
   implicit class RichStubStore (store: StubStore) {
 
     private def thaw [K, V] (d: TableDescriptor [K, V], c: Cell): ExpectedCell [K, V] =
-      ExpectedCell (d.k.thaw (c.key), c.time.time, c.value.map (d.v.thaw _))
+      ExpectedCell (d.key.thaw (c.key), c.time.time, c.value.map (d.value.thaw _))
 
     def expectCells [K, V] (d: TableDescriptor [K, V]) (expected: ExpectedCell [K, V]*): Unit =
       expectResult (expected) (store.scan (d.id) .map (thaw (d, _)))

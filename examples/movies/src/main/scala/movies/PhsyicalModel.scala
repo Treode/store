@@ -17,9 +17,9 @@
 package movies
 
 import com.treode.async.Async
+import com.treode.store.util.{Froster, TableDescriptor, Transaction}
 
 import movies.{DisplayModel => DM}
-import movies.util.{Frost, TableDescriptor, Transaction}
 
 /** See README.md. */
 private object PhysicalModel {
@@ -56,7 +56,7 @@ private object PhysicalModel {
       for {
         _ <- tx.fetch ((MovieTable, movieId), (CastTable, movieId))
         cast = tx.get (CastTable) (movieId) .getOrElse (Cast.empty)
-        _ <- tx.fetch (ActorTable) (cast.actorIds)
+        _ <- tx.fetch (ActorTable) (cast.actorIds: _*)
       } yield ()
 
     /** Prefetch all data that's needed to decompose a JSON object and update the movie. */
@@ -64,7 +64,7 @@ private object PhysicalModel {
       for {
         _ <- tx.fetch ((MovieTable, movieId), (CastTable, movieId))
         cast = tx.get (CastTable) (movieId) .getOrElse (Cast.empty)
-        _ <- tx.fetch (RolesTable) (unique (cast.actorIds, actorIds))
+        _ <- tx.fetch (RolesTable) (unique (cast.actorIds, actorIds): _*)
       } yield ()
 
     /** Create a new movie in the database. This also makes the implied changes to the actors'
@@ -212,7 +212,7 @@ private object PhysicalModel {
       for {
         _ <- tx.fetch ((ActorTable, actorId), (RolesTable, actorId))
         roles = tx.get (RolesTable) (actorId) .getOrElse (Roles.empty)
-        _ <- tx.fetch (MovieTable) (roles.movieIds)
+        _ <- tx.fetch (MovieTable) (roles.movieIds: _*)
       } yield ()
 
     /** Prefetch all data that's needed to decompose a JSON object and update the actor. */
@@ -220,7 +220,7 @@ private object PhysicalModel {
       for {
         _ <- tx.fetch ((ActorTable, actorId), (RolesTable, actorId))
         roles = tx.get (RolesTable) (actorId) .getOrElse (Roles.empty)
-        _ <- tx.fetch (CastTable) (unique (roles.movieIds, movieIds))
+        _ <- tx.fetch (CastTable) (unique (roles.movieIds, movieIds): _*)
       } yield ()
 
     /** Create a new actor in the database. This also makes the implied changes to the movies'
@@ -340,20 +340,20 @@ private object PhysicalModel {
   }
 
   val MovieTable =
-    TableDescriptor (0xA57FDF4417D46CBCL, Frost.long, Frost.bson [Movie])
+    TableDescriptor (0xA57FDF4417D46CBCL, Froster.long, Froster.bson [Movie])
 
   val MovieTitleIndex =
-    TableDescriptor (0x5BADD72FF250EFECL, Frost.string, Frost.long)
+    TableDescriptor (0x5BADD72FF250EFECL, Froster.string, Froster.long)
 
   val CastTable =
-    TableDescriptor (0x98343A201B58A827L, Frost.long, Frost.bson [Cast])
+    TableDescriptor (0x98343A201B58A827L, Froster.long, Froster.bson [Cast])
 
   val ActorTable =
-    TableDescriptor (0xDB67009587B57F0DL, Frost.long, Frost.bson [Actor])
+    TableDescriptor (0xDB67009587B57F0DL, Froster.long, Froster.bson [Actor])
 
   val ActorNameIndex =
-    TableDescriptor (0x8BB6A8029399BADEL, Frost.string, Frost.long)
+    TableDescriptor (0x8BB6A8029399BADEL, Froster.string, Froster.long)
 
   val RolesTable =
-    TableDescriptor (0x57F7EA70C4CD4613L, Frost.long, Frost.bson [Roles])
+    TableDescriptor (0x57F7EA70C4CD4613L, Froster.long, Froster.bson [Roles])
 }

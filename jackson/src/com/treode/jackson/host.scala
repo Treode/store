@@ -17,7 +17,7 @@
 package com.treode.jackson
 
 import com.fasterxml.jackson.core.{JsonGenerator, JsonParser, JsonToken}
-import com.fasterxml.jackson.databind.{DeserializationContext, JsonNode, SerializerProvider}
+import com.fasterxml.jackson.databind.{DeserializationContext, SerializerProvider}
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.treode.async.misc.parseUnsignedLong
