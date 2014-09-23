@@ -15,11 +15,9 @@ mainClass in assembly := Some ("movies.Main")
 test in assembly := {}
 
 libraryDependencies ++= Seq (
-  "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.0-rc2",
-  "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.0-rc2",
   "com.treode" %% "store" % "0.2.0-SNAPSHOT" % "compile;test->stub",
-  "com.treode" %% "jackson" % "0.2.0-SNAPSHOT",
-  "com.twitter" %% "finatra" % "1.5.3")
+  "com.treode" %% "finatra" % "0.2.0-SNAPSHOT",
+  "com.treode" %% "jackson" % "0.2.0-SNAPSHOT")
 
 resolvers += "Twitter" at "http://maven.twttr.com"
 

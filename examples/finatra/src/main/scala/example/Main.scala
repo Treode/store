@@ -21,6 +21,7 @@ import java.nio.file.Paths
 
 import com.treode.cluster.{CellId, Cluster, HostId}
 import com.treode.disk.{Disk, DriveGeometry}
+import com.treode.finatra.AsyncFinatraServer
 import com.treode.store.{Cohort, Store}
 import com.twitter.conversions.storage._
 import com.twitter.logging.{ConsoleHandler, Level, LoggerFactory}

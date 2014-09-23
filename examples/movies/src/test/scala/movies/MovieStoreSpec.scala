@@ -19,7 +19,7 @@ package movies
 import scala.util.Random
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.JsonMappingException
+import com.treode.finatra.BadRequestException
 import com.treode.store.{Bytes, Cell, TxClock, TxId}
 import com.treode.store.stubs.StubStore
 import com.treode.async.Async

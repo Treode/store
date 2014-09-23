@@ -21,6 +21,7 @@ import java.nio.file.Path
 import com.fasterxml.jackson.databind.JsonNode
 import com.treode.async.Async
 import com.treode.disk.DriveAttachment
+import com.treode.finatra.AsyncFinatraController
 import com.treode.store.{Cohort, Store}
 import com.twitter.finatra.{Controller => FinatraController}
 

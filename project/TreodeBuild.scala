@@ -194,6 +194,19 @@ object TreodeBuild extends Build {
     .dependsOn (cluster % "compile;stub->stub", disk % "compile;stub->stub")
     .settings (stubSettings: _*)
 
+  // Separated because not everyone wants it and its dependencies.
+  lazy val finatra = Project ("finatra", file ("finatra"))
+    .configs (IntensiveTest, PeriodicTest)
+    .dependsOn (store)
+    .settings (standardSettings: _*)
+    .settings (
+
+        scalaVersion := "2.10.4",
+        crossScalaVersions := Seq.empty,
+
+        libraryDependencies ++= Seq ("com.twitter" %% "finatra" % "1.5.3"))
+
+  // Separated because not everyone wants it and its dependencies.
   lazy val jackson = Project ("jackson", file ("jackson"))
     .configs (IntensiveTest, PeriodicTest)
     .dependsOn (store)
@@ -224,7 +237,7 @@ object TreodeBuild extends Build {
   lazy val copyDocAssetsTask = taskKey [Unit] ("Copy doc assets")
 
   lazy val root = Project ("root", file ("."))
-    .aggregate (buffer, pickle, async, cluster, disk, store, jackson)
+    .aggregate (buffer, pickle, async, cluster, disk, store, finatra, jackson)
     .settings (versionInfo: _*)
     .settings (unidocSettings: _*)
     .settings (

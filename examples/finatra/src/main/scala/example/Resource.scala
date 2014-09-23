@@ -19,6 +19,7 @@ package example
 import com.fasterxml.jackson.databind.JsonNode
 import com.treode.async.Async
 import com.treode.cluster.HostId
+import com.treode.finatra.{AsyncFinatraController, BadRequestException}
 import com.treode.store._
 import com.twitter.finatra.{Request, ResponseBuilder}
 import org.joda.time.Instant
@@ -31,7 +32,6 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
   def read (request: Request, table: TableId, key: String): Async [ResponseBuilder] = {
     val rt = request.getLastModificationBefore
     val ct = request.getIfModifiedSince
-    val table = request.getTableId
     val ops = Seq (ReadOp (table, Bytes (key)))
     for {
       vs <- store.read (rt, ops:_*)
