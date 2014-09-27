@@ -1,0 +1,53 @@
+#!/bin/bash -x
+
+# Copyright 2014 Treode, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Build and test a pull request.
+#
+# This script works with the Jenkins service. Jenkins triggers the build whenever there is a new
+# pull request on GitHub, or a change on an existing pull request. Jenkins runs this script, and
+# then it marks the pull request with success/failure.
+#
+# Specifically, this script
+# 1) Builds and tests the libraries for the Treode store.
+# 2) Publishes those libraries locally.
+# 3) Builds and tests the examples using the locally published libraries.
+
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SBT=$DIR/scripts/sbt
+LOG=$DIR/build.log
+
+. $DIR/scripts/build-functions.sh
+
+# Really clean everything.
+echo-do git clean -dfx
+
+# SBT has had trouble compiling, testing and assembling in one go. So we have broken the steps
+# into separate commands.
+echo-do scripts/sbt +test:compile
+echo-do scripts/sbt +test
+echo-do scripts/sbt +intensive:test
+
+# Publish the Ivy artifacts to the local Ivy directory so that we can build and test the examples.
+echo-do scripts/sbt ++2.10.4 publish-local
+(cd examples/finatra; echo-do $SBT test assembly)
+(cd examples/movies; echo-do $SBT test assembly)
+
+# Sometimes tests fail and yet SBT exits with a good status.
+egrep 'ABORTED|FAILED' build.log
+expect-status 1 "Failures found in build.log"
+
+echo "Build successful"
+exit 0
