@@ -39,6 +39,12 @@ package object movies {
   private val textJson = new ObjectMapper
   textJson.registerModule (DefaultScalaModule)
 
+  implicit val flaggableCellId: Flaggable [CellId] =
+    Flaggable.mandatory (s => CellId (parseUnsignedLong (s) .get))
+
+  implicit val flaggableHostId: Flaggable [HostId] =
+    Flaggable.mandatory (s => HostId (parseUnsignedLong (s) .get))
+
   val ContentType = "Content-Type"
   val ETag = "ETag"
   val IfModifiedSince = "If-Modified-Since"
