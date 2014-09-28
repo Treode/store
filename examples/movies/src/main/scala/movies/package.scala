@@ -19,15 +19,9 @@ import scala.util.Random
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.treode.finatra.BadRequestException
 import com.treode.store.Bytes
 import com.treode.store.util.Froster
-
-package movies {
-
-  class BadRequestException (val message: String) extends Exception {
-
-    override def getMessage(): String = message
-  }}
 
 package object movies {
 

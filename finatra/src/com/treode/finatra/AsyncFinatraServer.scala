@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package example
+package com.treode.finatra
 
 import com.twitter.finatra.FinatraServer
 

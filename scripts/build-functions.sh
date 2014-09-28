@@ -22,10 +22,11 @@
 # Usage:
 #     expect-status [expected] [message]
 expect-status() {
+  local status=$?
   local log=${LOG:-"build.log"}
   local expected=${1:-0}
   local message=${2:-"Failed"}
-  if [ $? -ne 0 ] ; then
+  if [ $status -ne $expected ] ; then
     echo $message
     echo $message >> $log
     exit 1

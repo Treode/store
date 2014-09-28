@@ -26,6 +26,7 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.Async
 import com.treode.async.misc.{RichOption, parseInt, parseUnsignedLong}
 import com.treode.cluster.{CellId, HostId}
+import com.treode.finatra.BadRequestException
 import com.treode.jackson.DefaultTreodeModule
 import com.treode.store.{Bytes, Slice, TableId, TxClock, TxId, Value}
 import com.twitter.app.Flaggable
@@ -35,11 +36,6 @@ import com.twitter.util.{Future, Promise, Return, Throw, Try}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 import Async.async
-
-package example {
-
-  class BadRequestException (val message: String) extends Exception
-}
 
 package object example {
 
@@ -68,17 +64,6 @@ package object example {
   val NotModified = HttpResponseStatus.NOT_MODIFIED.getCode
   val Ok = HttpResponseStatus.OK.getCode
   val PreconditionFailed = HttpResponseStatus.PRECONDITION_FAILED.getCode
-
-  implicit class RichAsync [A] (async: Async [A]) {
-
-    def toTwitterFuture: Future [A] = {
-      val promise = new Promise [A]
-      async run {
-        case Success (v) => promise.setValue (v)
-        case Failure (t) => promise.setException (t)
-      }
-      promise
-    }}
 
   implicit class RichBytes (bytes: Bytes) {
 
@@ -197,18 +182,4 @@ package object example {
       response.contentType (MediaType.Json)
       response.body (textJson.writeValueAsBytes (v))
       response
-    }}
-
-  implicit class RichTry [A] (v: Try [A]) {
-
-    def toAsync: Async [A] =
-      async (_ (toScalaTry))
-
-    def toTwitterFuture: Future [A] =
-      Future.const (v)
-
-    def toScalaTry: ScalaTry [A] =
-      v match {
-        case Return (v) => Success (v)
-        case Throw (t) => Failure (t)
-      }}}
+    }}}

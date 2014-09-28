@@ -17,6 +17,7 @@
 package movies
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import com.treode.finatra.BadRequestException
 import com.treode.store.util.Transaction
 
 import movies.{PhysicalModel => PM}
