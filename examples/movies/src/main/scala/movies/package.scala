@@ -33,6 +33,9 @@ package object movies {
 
   implicit class RichAny [A] (value: A) {
 
+    def orBadRequest (message: String): Unit =
+      if (value == null) throw new BadRequestException (message)
+
     def orDefault (default: A): A =
       if (value == null) default else value
 

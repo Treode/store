@@ -131,13 +131,30 @@ class MovieStoreSpec extends FlatSpec {
     } """)
   }
 
+  it should "reject a movie with no title" in {
+    implicit val (random, scheduler, store, movies) = setup()
+
+    val e = movies.create (random.nextXid, t0, """ {
+        "cast": []
+    } """ .fromJson [DM.Movie]) .fail [BadRequestException]
+    expect ("Movie must have a title.") (e.message)
+
+    store.expectCells (PM.MovieTable) ()
+    store.expectCells (PM.MovieTitleIndex) ()
+    store.expectCells (PM.CastTable) ()
+    store.expectCells (PM.ActorTable) ()
+    store.expectCells (PM.ActorNameIndex) ()
+    store.expectCells (PM.RolesTable) ()
+  }
+
   it should "reject a cast member with no actorId" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    movies.create (random.nextXid, t0, """ {
+    val e = movies.create (random.nextXid, t0, """ {
         "title": "Star Wars",
         "cast": [ { "actor": "Mark Hamill" } ]
     } """ .fromJson [DM.Movie]) .fail [BadRequestException]
+    expect ("All cast members must have an actorId.") (e.message)
 
     store.expectCells (PM.MovieTable) ()
     store.expectCells (PM.MovieTitleIndex) ()
@@ -150,10 +167,11 @@ class MovieStoreSpec extends FlatSpec {
   it should "reject a cast member for an actor that does not exist" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    movies.create (random.nextXid, t0, """ {
+    val e = movies.create (random.nextXid, t0, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": 1 } ]
     } """ .fromJson [DM.Movie]) .fail [BadRequestException]
+    expect ("No such actor 1.") (e.message)
 
     store.expectCells (PM.MovieTable) ()
     store.expectCells (PM.MovieTitleIndex) ()
@@ -766,13 +784,30 @@ class MovieStoreSpec extends FlatSpec {
     } """)
   }
 
+  it should "reject an actor with no name" in {
+    implicit val (random, scheduler, store, movies) = setup()
+
+    val e = movies.create (random.nextXid, t0, """ {
+        "roles": []
+    } """ .fromJson [DM.Actor]) .fail [BadRequestException]
+    expect ("Actor must have a name.") (e.message)
+
+    store.expectCells (PM.MovieTable) ()
+    store.expectCells (PM.MovieTitleIndex) ()
+    store.expectCells (PM.CastTable) ()
+    store.expectCells (PM.ActorTable) ()
+    store.expectCells (PM.ActorNameIndex) ()
+    store.expectCells (PM.RolesTable) ()
+  }
+
   it should "reject a role with no movieId" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    movies.create (random.nextXid, t0, """ {
+    val e = movies.create (random.nextXid, t0, """ {
         "name": "Mark Hamill",
         "roles": [ { "title": "Star Wars" } ]
     } """ .fromJson [DM.Actor]) .fail [BadRequestException]
+    expect ("All roles must have a movieId.") (e.message)
 
     store.expectCells (PM.MovieTable) ()
     store.expectCells (PM.MovieTitleIndex) ()
@@ -785,10 +820,11 @@ class MovieStoreSpec extends FlatSpec {
   it should "reject a role for a movie that does not exist" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    movies.create (random.nextXid, t0, """ {
+    val e = movies.create (random.nextXid, t0, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": 1 } ]
     } """ .fromJson [DM.Actor]) .fail [BadRequestException]
+    expect ("No such movie 1.") (e.message)
 
     store.expectCells (PM.MovieTable) ()
     store.expectCells (PM.MovieTitleIndex) ()

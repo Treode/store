@@ -29,13 +29,7 @@ object DisplayModel {
 
     @JsonIgnore
     lazy val actorIds = cast orDefault (Seq.empty) map (_.actorId)
-
-    def validate() {
-      if (actorIds exists (_ == 0))
-        throw new BadRequestException ("All cast members must have an actorId.")
-      if (actorIds.toSet.size < actorIds.size)
-        throw new BadRequestException ("An actor may have only one role in a movie.")
-    }}
+  }
 
   object Movie {
 
@@ -62,13 +56,7 @@ object DisplayModel {
 
     @JsonIgnore
     lazy val movieIds = roles orDefault (Seq.empty) map (_.movieId)
-
-    def validate() {
-      if (movieIds exists (_ == 0))
-        throw new BadRequestException ("All roles must have a movieId.")
-      if (movieIds.toSet.size < movieIds.size)
-        throw new BadRequestException ("An actor may have only one role in a movie.")
-    }}
+  }
 
   object Actor {
 
