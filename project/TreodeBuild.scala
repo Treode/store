@@ -37,9 +37,9 @@ object TreodeBuild extends Build {
     scalaVersion := "2.11.2",
     crossScalaVersions := Seq ("2.10.4", "2.11.2"))
 
-  // Settings common to both projects with stubs and without stubs.
-  // Adds production libraries to the "main" configuration.  Squashes
-  // the source directory structure.
+  // Settings common to both projects with stubs and without stubs. Squashes
+  // the source directory structure. Adds production libraries to the "main"
+  // configuration. Removes docs from Ivy artifacts in favor of unidoc.
   lazy val commonPortion = Seq (
 
     unmanagedSourceDirectories in Compile <<=
@@ -64,6 +64,8 @@ object TreodeBuild extends Build {
       "org.joda" % "joda-convert" % "1.7",
       "org.slf4j" % "slf4j-api" % "1.7.7",
       "org.slf4j" % "slf4j-simple" % "1.7.7"),
+
+    publishArtifact in (Compile, packageDoc) := false,
 
     publishTo := 
       Some (Resolver.file ("Staging Repo", file ("stage/ivy")) (Resolver.ivyStylePatterns)))
@@ -236,13 +238,14 @@ object TreodeBuild extends Build {
 
   lazy val copyDocAssetsTask = taskKey [Unit] ("Copy doc assets")
 
-  lazy val root = Project ("root", file ("."))
+  // The doc project includes everything for unidoc.
+  lazy val doc = Project ("doc", file ("doc"))
     .aggregate (buffer, pickle, async, cluster, disk, store, finatra, jackson)
     .settings (versionInfo: _*)
     .settings (unidocSettings: _*)
     .settings (
 
-      name := "root",
+      name := "doc",
 
       scalacOptions in (ScalaUnidoc, unidoc) ++= Seq (
         "-diagrams",
@@ -262,6 +265,18 @@ object TreodeBuild extends Build {
       },
 
       copyDocAssetsTask <<= copyDocAssetsTask triggeredBy (unidoc in Compile),
+
+      publishLocal := {},
+      publish := {})
+
+  // The root project includes everything that can be built across Scala
+  // versions; that is everything except Finatra.
+  lazy val root = Project ("root", file ("."))
+    .aggregate (buffer, pickle, async, cluster, disk, store, jackson)
+    .settings (versionInfo: _*)
+    .settings (
+
+      name := "root",
 
       publishLocal := {},
       publish := {})

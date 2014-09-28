@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 
 # Copyright 2014 Treode, Inc.
 #
@@ -67,19 +67,23 @@ echo-do scripts/sbt +test:compile
 echo-do scripts/sbt +test
 echo-do scripts/sbt +intensive:test
 
-# Publish the Ivy artifacts to the local Ivy directory so that we can build and test the examples.
-echo-do scripts/sbt ++2.10.4 publish-local
-(cd examples/finatra; echo-do $SBT test assembly)
-(cd examples/movies; echo-do $SBT test assembly)
+# Finatra is available for Scala 2.10.4 only; it can be compiled and tested in one go.
+echo-do scripts/sbt ++2.10.4 finatra/test
 
-echo-do scripts/sbt unidoc
+# Publish the Ivy artifacts to the local Ivy directory so that we can build and test the examples.
+echo-do scripts/sbt ++2.10.4 publish-local finatra/publish-local
+(cd examples/finatra; echo-do $SBT test assembly); expect-status 0
+(cd examples/movies; echo-do $SBT test assembly); expect-status 0
+
+echo-do scripts/sbt ++2.10.4 doc/unidoc
 
 # Publish the Ivy artifacts to the staging area.
 echo-do scripts/sbt +publish
+echo-do scripts/sbt ++2.10.4 finatra/publish
 
 # Copy the documentation and assembly jars to the staging area.
 echo-do mkdir -p stage/docs/scala/store
-echo-do mv target/scala-2.11/unidoc stage/docs/scala/store/$version
+echo-do mv doc/target/scala-2.10/unidoc stage/docs/scala/store/$version
 echo-do mkdir -p stage/jars/examples/finatra/$version
 echo-do cp examples/finatra/target/scala-2.10/server.jar stage/jars/examples/finatra/$version
 echo-do mkdir -p stage/jars/examples/movies/$version
