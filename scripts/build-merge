@@ -1,5 +1,19 @@
 #!/bin/bash -x
 
+# Copyright 2014 Treode, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 # Build, test and package before merging into the master branch.
 #
 # This script works with the Jenkins service. Jenkins triggers the build whenever there is a push
@@ -10,27 +24,28 @@
 # Specifically, this script
 # 1) Builds and tests the libraries for the Treode store.
 # 2) Publishes those libraries locally.
-# 3) Builds and test sthe examples using the locally published libraries.
+# 3) Builds and tests the examples using the locally published libraries.
 # 4) Builds the Scala docs.
 # 5) Stages everything for the .tgz file, and then packages it.
 #
 # Actually putting the files on oss.treode.com requires a password, so that has been left for a
 # person.
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-SBT=$DIR/sbt
+DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SBT=$DIR/scripts/sbt
+LOG=$DIR/build.log
+
+. $DIR/scripts/build-functions.sh
 
 # Really clean everything.
-git clean -dfx
+echo-do git clean -dfx
 
-# Check that every version number is in sync.
+# Check that every version number is in sync across all build files.
 version=`scripts/version-number \
   project/TreodeBuild.scala \
   examples/finatra/build.sbt \
   examples/movies/build.sbt`
-if [ $? -ne 0 ] ; then
-  exit 1
-fi
+expect-status 0
 
 # If not a snapshot, check that this release is new.
 case $version in
@@ -44,68 +59,37 @@ case $version in
   ;;
 esac
 
+log "Building $version"
+
 # SBT has had trouble compiling, testing and assembling in one go. So we have broken the steps
 # into separate commands.
+echo-do scripts/sbt +test:compile
+echo-do scripts/sbt +test
+echo-do scripts/sbt +intensive:test
 
-scripts/sbt +test:compile >> build.log
-if [ $? -ne 0 ] ; then
-  exit 1
-fi
+# Publish the Ivy artifacts to the local Ivy directory so that we can build and test the examples.
+echo-do scripts/sbt ++2.10.4 publish-local
+(cd examples/finatra; echo-do $SBT test assembly)
+(cd examples/movies; echo-do $SBT test assembly)
 
-scripts/sbt +test >> build.log
-if [ $? -ne 0 ] ; then
-  exit 1
-fi
+echo-do scripts/sbt unidoc
 
-scripts/sbt +intensive:test >> build.log
-if [ $? -ne 0 ] ; then
-  exit 1
-fi
-
-# Publish the artifacts to the local ivy cache so that we can build and test the examples.
-scripts/sbt ++2.10.4 publish-local >> build.log
-if [ $? -ne 0 ] ; then
-  exit 1
-fi
-
-(cd examples/finatra; $SBT test assembly) >> build.log
-if [ $? -ne 0 ] ; then
-  exit 1
-fi
-
-(cd examples/movies; $SBT test assembly) >> build.log
-if [ $? -ne 0 ] ; then
-  exit 1
-fi
-
-scripts/sbt unidoc >> build.log
-if [ $? -ne 0 ] ; then
-  exit 1
-fi
-
-# Publish the IVY artifacts to the staging area.
-scripts/sbt +publish >> build.log
-if [ $? -ne 0 ] ; then
-  exit 1
-fi
+# Publish the Ivy artifacts to the staging area.
+echo-do scripts/sbt +publish
 
 # Copy the documentation and assembly jars to the staging area.
-mkdir -p stage/docs/scala/store
-mv target/scala-2.11/unidoc stage/docs/scala/store/$version
-mkdir -p stage/jars/examples/finatra/$version
-cp examples/finatra/target/scala-2.10/server.jar stage/jars/examples/finatra/$version
-mkdir -p stage/jars/examples/movies/$version
-cp examples/movies/target/scala-2.10/server.jar stage/jars/examples/movies/$version
+echo-do mkdir -p stage/docs/scala/store
+echo-do mv target/scala-2.11/unidoc stage/docs/scala/store/$version
+echo-do mkdir -p stage/jars/examples/finatra/$version
+echo-do cp examples/finatra/target/scala-2.10/server.jar stage/jars/examples/finatra/$version
+echo-do mkdir -p stage/jars/examples/movies/$version
+echo-do cp examples/movies/target/scala-2.10/server.jar stage/jars/examples/movies/$version
 
-tar cz -f stage-$version.tgz -C stage .
-if [ $? -ne 0 ] ; then
-  exit 1
-fi
+echo-do tar cz -f stage-$version.tgz -C stage .
 
 # Sometimes tests fail and yet SBT exits with a good status.
 egrep 'ABORTED|FAILED' build.log
-if [ $? -ne 1 ] ; then
-  exit 1
-fi
+expect-status 1 "Failures found in build.log"
 
+echo "Build successful"
 exit 0
