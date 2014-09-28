@@ -14,14 +14,22 @@
  * limitations under the License.
  */
 
+import scala.collection.mutable
 import scala.util.Random
 
+import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.treode.finatra.BadRequestException
-import com.treode.store.Bytes
+import com.treode.async.misc.parseUnsignedLong
+import com.treode.cluster.{CellId, HostId}
+import com.treode.store.{Bytes, Slice, TxClock, TxId}
 import com.treode.store.util.Froster
+import com.twitter.app.Flaggable
+import com.twitter.finagle.http.MediaType
+import com.twitter.finatra.{Request, ResponseBuilder}
+import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 package object movies {
 
@@ -30,6 +38,21 @@ package object movies {
 
   private val textJson = new ObjectMapper
   textJson.registerModule (DefaultScalaModule)
+
+  val ContentType = "Content-Type"
+  val ETag = "ETag"
+  val IfModifiedSince = "If-Modified-Since"
+  val IfUnmodifiedSince = "If-Unmodified-Since"
+  val Location = "Location"
+  val LastModificationBefore = "Last-Modification-Before"
+  val TransactionId = "Transaction-ID"
+
+  val BadRequest = HttpResponseStatus.BAD_REQUEST.getCode
+  val NotFound = HttpResponseStatus.NOT_FOUND.getCode
+  val NotImplemented = HttpResponseStatus.NOT_IMPLEMENTED.getCode
+  val NotModified = HttpResponseStatus.NOT_MODIFIED.getCode
+  val Ok = HttpResponseStatus.OK.getCode
+  val PreconditionFailed = HttpResponseStatus.PRECONDITION_FAILED.getCode
 
   implicit class RichAny [A] (value: A) {
 
@@ -52,6 +75,12 @@ package object movies {
         def thaw (v: Bytes): A = binaryJson.readValue (v.bytes, c)
       }}
 
+  implicit class RichMutableMap [K, V] (map: mutable.Map [K, V]) {
+
+    def getOrBadRequest (key: K, message: String): V =
+      map.get (key) getOrBadRequest (message)
+  }
+
   implicit class RichOption [A] (value: Option [A]) {
 
     def getOrBadRequest (message: String): A =
@@ -65,6 +94,80 @@ package object movies {
     def nextPositiveLong(): Long =
       random.nextLong & Long.MaxValue
   }
+
+  implicit class RichRequest (request: Request) {
+
+    def getIfModifiedSince: TxClock =
+      request.headerMap.get (IfModifiedSince) match {
+        case Some (ct) =>
+          TxClock
+            .parse (ct)
+            .getOrElse (throw new BadRequestException (s"Bad If-Modified-Since value: $ct"))
+        case None =>
+          TxClock.MinValue
+      }
+
+    def getIfUnmodifiedSince: TxClock =
+      request.headerMap.get (IfUnmodifiedSince) match {
+        case Some (ct) =>
+          TxClock
+            .parse (ct)
+            .getOrElse (throw new BadRequestException (s"Bad If-Unmodified-Since value: $ct"))
+        case None =>
+          TxClock.now
+      }
+
+    def getId: Option [Long] =
+      for (id <- request.routeParams.get ("id"))
+        yield parseUnsignedLong (id) .getOrBadRequest (s"Bad ID $id")
+
+    def getLastModificationBefore: TxClock =
+      request.headerMap.get (LastModificationBefore) match {
+        case Some (rt) =>
+          TxClock
+            .parse (rt)
+            .getOrElse (throw new BadRequestException (s"Bad Last-Modification-Before value: $rt"))
+        case None =>
+          TxClock.now
+      }
+
+    def getSlice: Slice = {
+      val slice = request.params.getInt ("slice")
+      val nslices = request.params.getInt ("nslices")
+      if (slice.isDefined && nslices.isDefined)
+        Slice (slice.get, nslices.get)
+      else if (slice.isDefined || nslices.isDefined)
+        throw new BadRequestException ("Both slice and nslices are needed together")
+      else
+        Slice.all
+    }
+
+    def getTransactionId (host: HostId): TxId =
+      request.headerMap.get (TransactionId) match {
+        case Some (tx) =>
+          TxId
+            .parse (tx)
+            .getOrElse (throw new BadRequestException (s"Bad Transaction-ID value: $tx"))
+        case None =>
+          TxId.random (host)
+      }
+
+    def readJsonAs [A] () (implicit m: Manifest [A]): A =
+      try {
+        request.withReader (textJson.readValue (_, m.runtimeClass.asInstanceOf [Class [A]]))
+      } catch {
+        case e: JsonProcessingException =>
+          throw new BadRequestException (e.getMessage)
+      }}
+
+  implicit class RichResponseBuilder (response: ResponseBuilder) {
+
+    // It would be handy if we could add our modules to the mapper Finatra's using.
+    def appjson (v: Any): ResponseBuilder = {
+      response.contentType (MediaType.Json)
+      response.body (textJson.writeValueAsBytes (v))
+      response
+    }}
 
   implicit class RichSeq [A] (vs: Seq [A]) {
 
