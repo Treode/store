@@ -25,7 +25,7 @@ import com.treode.finatra.BadRequestException
 import com.treode.async.misc.parseUnsignedLong
 import com.treode.cluster.{CellId, HostId}
 import com.treode.store.{Bytes, Slice, TxClock, TxId}
-import com.treode.store.util.Froster
+import com.treode.store.alt.Froster
 import com.twitter.app.Flaggable
 import com.twitter.finagle.http.MediaType
 import com.twitter.finatra.{Request, ResponseBuilder}

@@ -26,7 +26,7 @@ import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.pickle.Picklers
-import com.treode.store.util.{Froster, TableDescriptor, Transaction}
+import com.treode.store.alt.{Froster, TableDescriptor, Transaction}
 import com.treode.tags.{Intensive, Periodic}
 import org.joda.time.Instant
 import org.scalatest.FreeSpec
@@ -114,7 +114,7 @@ trait StoreBehaviors {
             val b2 = tx.get (Accounts) (y) .get
             val n = random.nextInt (b1)
             tx.update (Accounts) (x, b1-n)
-            tx.update (Accounts) (y, b2+n)            
+            tx.update (Accounts) (y, b2+n)
           }
           wt <- tx.execute (random.nextTxId)
         } yield {

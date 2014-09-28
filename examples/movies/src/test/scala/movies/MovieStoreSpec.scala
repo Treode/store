@@ -25,7 +25,6 @@ import com.treode.store.stubs.StubStore
 import com.treode.async.Async
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.store.util.TableDescriptor
 import org.joda.time.Instant
 import org.scalatest.FlatSpec
 

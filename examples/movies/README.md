@@ -257,15 +257,6 @@ The `RolesTable` reflects both mistakes, each in a different row.  This misspell
         RolesTable, 4: { "roles": [ ] }
 
 
-# Utilties
-
-TreodeDB simply stores byte keys and byte values. You to decide how to serialize the information. You can choose whether to use JSON, BSON, Protobuf, Thrift, Avro or something else. Once you have decided, you might find it convenient to wrap the TreodeDB classes with facades that are tailored to your choices.
-
-For this example, we have chosen to use [Jackson's Smile dataformat][jackson-smile] to serialize the objects in the database. We added a number of clases in the `util` package that facilitate interacting with the key-value store in this way. These classes are not suitable for every user of TreodeDB, and that's why they are here only.  These classes are not specific to movies and actors, and that's why they are separated into their own package.
-
-You may find these classes instructive or inspiring when it comes time for you to make a facade appropriate for your favorite marshaling tools.
-
-
 
 [display-model]: //github.com/Treode/store/blob/examples/movies/src/main/scala/movies/DisplayModel.scala "DisplayModel"
 

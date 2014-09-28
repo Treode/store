@@ -20,7 +20,7 @@ import scala.util.Random
 
 import com.treode.async.Async
 import com.treode.store.{Store, TxClock, TxId}
-import com.treode.store.util._
+import com.treode.store.alt.Transaction
 
 import movies.{DisplayModel => DM, PhysicalModel => PM}
 

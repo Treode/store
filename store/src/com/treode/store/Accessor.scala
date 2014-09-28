@@ -21,7 +21,7 @@ import com.treode.pickle.Pickler
 
 import WriteOp.{Create, Delete, Hold, Update}
 
-@deprecated ("use util.TableDescriptor", "0.2.0")
+@deprecated ("use alt.TableDescriptor", "0.2.0")
 trait Accessor [K, V] {
 
   case class ACell (key: K, time: TxClock, value: Option [V])

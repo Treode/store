@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.treode.store.util
+package com.treode.store.alt
 
 import com.treode.pickle.Pickler
 import com.treode.store.Bytes

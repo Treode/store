@@ -21,7 +21,7 @@ import scala.util.Random
 
 import com.treode.store.{Bytes, Cell, TxClock, TxId}
 import com.treode.store.stubs.StubStore
-import com.treode.store.util.TableDescriptor
+import com.treode.store.alt.TableDescriptor
 import org.joda.time.Instant
 import org.scalatest.Assertions
 

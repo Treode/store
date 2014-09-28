@@ -18,7 +18,7 @@ package movies
 
 import com.treode.async.Async
 import com.treode.finatra.BadRequestException
-import com.treode.store.util.{Froster, TableDescriptor, Transaction}
+import com.treode.store.alt.{Froster, TableDescriptor, Transaction}
 
 import movies.{DisplayModel => DM}
 
