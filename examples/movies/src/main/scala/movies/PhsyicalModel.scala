@@ -26,9 +26,6 @@ import movies.{DisplayModel => DM}
 /** See README.md. */
 private object PhysicalModel {
 
-  private def unique [A] (s1: Seq [A], s2: Seq [A]): Seq [A] =
-    Set (s1 ++ s2: _*) .toSeq
-
   case class Movie (title: String, released: DateTime) {
 
     private def merge (that: DM.Movie): Movie =
@@ -73,7 +70,10 @@ private object PhysicalModel {
     /** Prefetch all data that's needed to compose a JSON object for the movie. */
     def fetchForDisplay (tx: Transaction, movieId: Long): Async [Unit] =
       for {
-        _ <- tx.fetch ((MovieTable, movieId), (CastTable, movieId))
+        _ <- tx.fetcher
+            .fetch (MovieTable) (movieId)
+            .fetch (CastTable) (movieId)
+            .async()
         cast = tx.get (CastTable) (movieId) .getOrElse (Cast.empty)
         _ <- tx.fetch (ActorTable) (cast.actorIds: _*)
       } yield ()
@@ -81,9 +81,15 @@ private object PhysicalModel {
     /** Prefetch all data that's needed to decompose a JSON object and update the movie. */
     def fetchForSave (tx: Transaction, movieId: Long, actorIds: Seq [Long]): Async [Unit] =
       for {
-        _ <- tx.fetch ((MovieTable, movieId), (CastTable, movieId))
+        _ <- tx.fetcher
+            .fetch (MovieTable) (movieId)
+            .fetch (CastTable) (movieId)
+            .async()
         cast = tx.get (CastTable) (movieId) .getOrElse (Cast.empty)
-        _ <- tx.fetch (RolesTable) (unique (cast.actorIds, actorIds): _*)
+        _ <- tx.fetcher
+            .fetch (RolesTable) (cast.actorIds: _*)
+            .fetch (RolesTable) (actorIds: _*)
+            .async()
       } yield ()
 
     /** Create a new movie in the database. This also makes the implied changes to the actors'
@@ -253,7 +259,10 @@ private object PhysicalModel {
     /** Prefetch all data that's needed to compose a JSON object for the actor. */
     def fetchForDisplay (tx: Transaction, actorId: Long): Async [Unit] =
       for {
-        _ <- tx.fetch ((ActorTable, actorId), (RolesTable, actorId))
+        _ <- tx.fetcher
+            .fetch (ActorTable) (actorId)
+            .fetch (RolesTable) (actorId)
+            .async()
         roles = tx.get (RolesTable) (actorId) .getOrElse (Roles.empty)
         _ <- tx.fetch (MovieTable) (roles.movieIds: _*)
       } yield ()
@@ -261,9 +270,15 @@ private object PhysicalModel {
     /** Prefetch all data that's needed to decompose a JSON object and update the actor. */
     def fetchForSave (tx: Transaction, actorId: Long, movieIds: Seq [Long]): Async [Unit] =
       for {
-        _ <- tx.fetch ((ActorTable, actorId), (RolesTable, actorId))
+        _ <- tx.fetcher
+            .fetch (ActorTable) (actorId)
+            .fetch (RolesTable) (actorId)
+            .async()
         roles = tx.get (RolesTable) (actorId) .getOrElse (Roles.empty)
-        _ <- tx.fetch (CastTable) (unique (roles.movieIds, movieIds): _*)
+        _ <- tx.fetcher
+            .fetch (CastTable) (roles.movieIds: _*)
+            .fetch (CastTable) (movieIds: _*)
+            .async()
       } yield ()
 
     /** Create a new actor in the database. This also makes the implied changes to the movies'

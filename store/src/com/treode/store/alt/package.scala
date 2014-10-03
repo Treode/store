@@ -16,8 +16,6 @@
 
 package com.treode.store
 
-import scala.language.implicitConversions
-
 /** The `alt` package contains classes that make reading and writing the database more convenient.
   * The primary API for a [[Store]] is to read and write keys and values of [[Bytes]], and to
   * manipulate timestamps directly.  The `alt` package includes [[TableDescriptor]] to read and
@@ -25,7 +23,4 @@ import scala.language.implicitConversions
   */
 package object alt {
 
-  implicit def pairToReadOp [K, V] (pair: (TableDescriptor [K, V], K)): ReadOp = {
-    val (d, k) = pair
-    ReadOp (d.id, d.key.freeze (k))
-  }}
+}

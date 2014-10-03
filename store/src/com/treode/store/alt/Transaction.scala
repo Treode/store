@@ -22,16 +22,17 @@ import com.treode.store._
 import Async.when
 import WriteOp._
 
-/** A Transaction mediates interaction with the database. This class support optimistic
-  * transactions. To begin, just create a new Transaction object; there is no need to `begin` one
-  * on some database connection, no database resources are opened, and no locks are held.
+/** A Transaction mediates interaction with the database. This class supports optimistic 
+  * transactions. It maintains its own view of the database plus its changes. To begin a
+  * transaction, simply create a new Transaction object; there is no need to `begin` one on some
+  * database connection, no database resources are opened, and no locks are held.
   *
-  * As you read, this object caches the items. As you write, this object tracks those items
-  * so that a latter read will see the effect; only your reads through this object will see it.
-  * When you complete the work and wish to commit the writes, call `execute`. This will succeed
-  * only if none of the items have been updated since they were read. You will need to check the
-  * write result for a [[com.treode.store.StaleException StaleException]]; in that case you will
-  * need to restart the work.
+  * As you read, the transaction caches the items. As you write, it tracks them so that later reads
+  * will see the effects. Only your reads through this transaction will see the writes through this
+  * transaction. When you complete the work, call `execute` to commit the changes. This will
+  * succeed only if none of the items have been updated since they were read. You will need to
+  * check the write result for a [[StaleException]]; in that case you will need to restart the
+  * work.
   *
   * If you encounter a failure while processing, just throw an exception. There's no need to
   * `rollback` the transaction.
@@ -64,30 +65,29 @@ class Transaction (rt: TxClock) (implicit store: Store) {
 
   def vt = _vt
 
-  private def _fetch (need: Seq [ReadOp]): Async [Unit] =
-    for {
-      vs <- store.read (rt, need: _*)
-    } yield {
-      for ((op, v0) <- need zip vs) {
-        if (_vt < v0.time) _vt = v0.time
-        val v1 = if (v0.value.isEmpty) NotFound else Found (v0.value.get)
-        _cache += Key (op) -> v1
-      }
-    }
-
-  def fetch (ops: ReadOp*): Async [Unit] = {
+  /** Prefetch rows from the database into this transaction's cache. */
+  def fetch (ops: Seq [ReadOp]): Async [Unit] = {
     val need = ops filter (op => !(_cache contains (Key (op))))
-    when (!need.isEmpty) (_fetch (need))
-  }
+    when (!need.isEmpty) {
+      for {
+        vs <- store.read (rt, need: _*)
+      } yield {
+        for ((op, v0) <- need zip vs) {
+          if (_vt < v0.time) _vt = v0.time
+          val v1 = if (v0.value.isEmpty) NotFound else Found (v0.value.get)
+          _cache += Key (op) -> v1
+        }}}}
 
-  def fetch [K] (desc: TableDescriptor [K, _]) (keys: K*): Async [Unit] = {
-    val ops = keys map (k => ReadOp (desc.id, desc.key.freeze (k)))
-    fetch (ops: _*)
-  }
+  /** Prefetch rows from the database into this transaction's cache. */
+  def fetch [K] (desc: TableDescriptor [K, _]) (keys: K*): Async [Unit] =
+    fetch (keys map (k => ReadOp (desc.id, desc.key.freeze (k))))
 
-  def get [K, V] (d: TableDescriptor [K, V]) (k: K): Option [V] =
-    get (d.id, d.key.freeze (k)) .map (d.value.thaw (_))
+  /** Create a fetcher to prefetch different kinds of rows. */
+  def fetcher: Fetcher = new Fetcher (this)
 
+  /** Get a row from this transaction's cache. Call `fetch` to prefetch rows from the database 
+    * into the cache before calling `get`.
+    */
   def get (id: TableId, key: Bytes): Option [Bytes] =
     _cache (Key (id, key)) match {
       case NotFound        => None
@@ -96,6 +96,12 @@ class Transaction (rt: TxClock) (implicit store: Store) {
       case Updated (value) => Some (value)
       case Deleted         => None
     }
+
+  /** Get a row from this transaction's cache. Call `fetch` to prefetch rows from the database 
+    * into the cache before calling `get`.
+    */
+  def get [K, V] (d: TableDescriptor [K, V]) (k: K): Option [V] =
+    get (d.id, d.key.freeze (k)) .map (d.value.thaw (_))
 
   def create (id: TableId, key: Bytes, value: Bytes): Unit = {
     val _key = Key (id, key)
