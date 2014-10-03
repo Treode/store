@@ -19,13 +19,14 @@ package movies
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.treode.finatra.BadRequestException
 import com.treode.store.alt.Transaction
+import org.joda.time.DateTime
 
 import movies.{PhysicalModel => PM}
 
 /** See README.md. */
 object DisplayModel {
 
-  case class Movie (id: Long, title: String, cast: Seq [CastMember]) {
+  case class Movie (id: Long, title: String, released: DateTime, cast: Seq [CastMember]) {
 
     @JsonIgnore
     lazy val actorIds = cast orDefault (Seq.empty) map (_.actorId)
@@ -35,7 +36,7 @@ object DisplayModel {
 
     def apply (tx: Transaction, movieId: Long, movie: PM.Movie): Movie = {
       val cast = tx.get (PM.CastTable) (movieId) .getOrElse (PM.Cast.empty)
-      new Movie (movieId, movie.title, CastMember.convert (tx, cast))
+      new Movie (movieId, movie.title, movie.released, CastMember.convert (tx, cast))
     }}
 
   case class CastMember (actorId: Long, actor: String, role: String)
@@ -52,7 +53,7 @@ object DisplayModel {
         yield CastMember (tx, member)
   }
 
-  case class Actor (val id: Long, val name: String, val roles: Seq [Role]) {
+  case class Actor (id: Long, name: String, born: DateTime, roles: Seq [Role]) {
 
     @JsonIgnore
     lazy val movieIds = roles orDefault (Seq.empty) map (_.movieId)
@@ -62,7 +63,7 @@ object DisplayModel {
 
     def apply (tx: Transaction, actorId: Long, actor: PM.Actor): Actor = {
       val roles = tx.get (PM.RolesTable) (actorId) .getOrElse (PM.Roles.empty)
-      new Actor (actorId, actor.name, Role.convert (tx, roles))
+      new Actor (actorId, actor.name, actor.born, Role.convert (tx, roles))
     }}
 
   case class Role (movieId: Long, title: String, role: String)

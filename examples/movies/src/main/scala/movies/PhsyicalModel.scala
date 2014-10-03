@@ -19,6 +19,7 @@ package movies
 import com.treode.async.Async
 import com.treode.finatra.BadRequestException
 import com.treode.store.alt.{Froster, TableDescriptor, Transaction}
+import org.joda.time.DateTime
 
 import movies.{DisplayModel => DM}
 
@@ -28,10 +29,12 @@ private object PhysicalModel {
   private def unique [A] (s1: Seq [A], s2: Seq [A]): Seq [A] =
     Set (s1 ++ s2: _*) .toSeq
 
-  case class Movie (title: String) {
+  case class Movie (title: String, released: DateTime) {
 
     private def merge (that: DM.Movie): Movie =
-      Movie (title = that.title orDefault (title))
+      Movie (
+        title = that.title orDefault (title),
+        released = that.released orDefault (released))
 
     private def validate() {
       title orBadRequest ("Movie must have a title.")
@@ -62,10 +65,10 @@ private object PhysicalModel {
   object Movie {
 
     private val empty: Movie =
-      new Movie (null)
+      new Movie (null, null)
 
     private def apply (movie: DM.Movie): Movie =
-      new Movie (movie.title)
+      new Movie (movie.title, movie.released)
 
     /** Prefetch all data that's needed to compose a JSON object for the movie. */
     def fetchForDisplay (tx: Transaction, movieId: Long): Async [Unit] =
@@ -207,10 +210,12 @@ private object PhysicalModel {
       new CastMember (actorId, role.role)
   }
 
-  case class Actor (name: String) {
+  case class Actor (name: String, born: DateTime) {
 
     private def merge (that: DM.Actor): Actor =
-      Actor (name = that.name orDefault (name))
+      Actor (
+        name = that.name orDefault (name),
+        born = that.born orDefault (born))
 
     private def validate() {
       name orBadRequest ("Actor must have a name.")
@@ -240,10 +245,10 @@ private object PhysicalModel {
 
   object Actor {
 
-    private val empty = new Actor (null)
+    private val empty = new Actor (null, null)
 
     private def apply (actor: DM.Actor): Actor =
-      new Actor (actor.name)
+      new Actor (actor.name, actor.born)
 
     /** Prefetch all data that's needed to compose a JSON object for the actor. */
     def fetchForDisplay (tx: Transaction, actorId: Long): Async [Unit] =

@@ -15,6 +15,7 @@ mainClass in assembly := Some ("movies.Main")
 test in assembly := {}
 
 libraryDependencies ++= Seq (
+  "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.4.0",
   "com.treode" %% "store" % "0.2.0-SNAPSHOT" % "compile;test->stub",
   "com.treode" %% "finatra" % "0.2.0-SNAPSHOT",
   "com.treode" %% "jackson" % "0.2.0-SNAPSHOT")

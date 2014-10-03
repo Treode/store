@@ -28,8 +28,8 @@ import movies.{PhysicalModel => PM}
 
 class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
-  val markHamill = """{"id":1,"name":"Mark Hamill","roles":[]}"""
-  val harkMamill = """{"id":1,"name":"Hark Mamill","roles":[]}"""
+  val markHamill = """{"id":1,"name":"Mark Hamill","born":null,"roles":[]}"""
+  val markHammer = """{"id":1,"name":"Mark Hammer","born":null,"roles":[]}"""
 
   def setup() = {
     implicit val random = new Random (0)
@@ -67,7 +67,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
-          (1L, t1, PM.Actor ("Mark Hamill")))
+          (1L, t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
           ("Mark Hamill", t1, 1L))
       store.expectCells (PM.RolesTable) (
@@ -87,7 +87,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val id = uri.substring ("/actor/".length)
       val r2 = mock.get (uri)
       r2.etag should be (r1.etag)
-      r2.body should be (s"""{"id":$id,"name":"Mark Hamill","roles":[]}""")
+      r2.body should be (s"""{"id":$id,"name":"Mark Hamill","born":null,"roles":[]}""")
     }
 
     "PUT /actor/1 without a title should respond Bad Requst" in {
@@ -164,7 +164,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val r2 = mock.put (
           "/actor/1",
           headers = Map (ContentType -> MediaType.Json),
-          body = harkMamill)
+          body = markHammer)
       r2.code should equal (Ok)
       val etag = r2.etag
 
@@ -173,12 +173,12 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
-          (1L, t2, PM.Actor ("Hark Mamill")),
-          (1L, t1, PM.Actor ("Mark Hamill")))
+          (1L, t2, PO.markHammer),
+          (1L, t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
-          ("Hark Mamill", t2, 1L),
           ("Mark Hamill", t2, None),
-          ("Mark Hamill", t1, 1L))
+          ("Mark Hamill", t1, 1L),
+          ("Mark Hammer", t2, 1L))
       store.expectCells (PM.RolesTable) (
           (1L, t1, PM.Roles.empty))
     }
@@ -189,7 +189,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val r2 = mock.put (
           "/actor/1",
           headers = Map (ContentType -> MediaType.Json, IfUnmodifiedSince -> r1.etag.toString),
-          body = harkMamill)
+          body = markHammer)
       r2.code should equal (Ok)
 
       val (t1, t2) = (r1.etag, r2.etag)
@@ -197,12 +197,12 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
-          (1L, t2, PM.Actor ("Hark Mamill")),
-          (1L, t1, PM.Actor ("Mark Hamill")))
+          (1L, t2, PO.markHammer),
+          (1L, t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
-          ("Hark Mamill", t2, 1L),
           ("Mark Hamill", t2, None),
-          ("Mark Hamill", t1, 1L))
+          ("Mark Hamill", t1, 1L),
+          ("Mark Hammer", t2, 1L))
       store.expectCells (PM.RolesTable) (
           (1L, t1, PM.Roles.empty))
     }
@@ -213,7 +213,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val r2 = mock.put (
           "/actor/1",
           headers = Map (ContentType -> MediaType.Json, IfUnmodifiedSince -> "0"),
-          body = harkMamill)
+          body = markHammer)
       r2.code should equal (PreconditionFailed)
 
       val t1 = r1.etag
@@ -221,7 +221,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
-          (1L, t1, PM.Actor ("Mark Hamill")))
+          (1L, t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
           ("Mark Hamill", t1, 1L))
       store.expectCells (PM.RolesTable) (

@@ -17,9 +17,12 @@
 import scala.collection.mutable
 import scala.util.Random
 
-import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.core.{JsonGenerator, JsonProcessingException}
+import com.fasterxml.jackson.databind.{ObjectMapper, SerializerProvider}
+import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
+import com.fasterxml.jackson.datatype.joda.JodaModule
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.treode.finatra.BadRequestException
 import com.treode.async.misc.parseUnsignedLong
@@ -29,15 +32,30 @@ import com.treode.store.alt.Froster
 import com.twitter.app.Flaggable
 import com.twitter.finagle.http.MediaType
 import com.twitter.finatra.{Request, ResponseBuilder}
+import org.joda.time.DateTime
+import org.joda.time.format.ISODateTimeFormat
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 package object movies {
 
   private val binaryJson = new ObjectMapper (new SmileFactory)
   binaryJson.registerModule (new DefaultScalaModule)
+  binaryJson.registerModule (new JodaModule)
 
   private val textJson = new ObjectMapper
   textJson.registerModule (DefaultScalaModule)
+  textJson.registerModule (new JodaModule)
+
+  // See http://www.lorrin.org/blog/2013/06/28/custom-joda-time-dateformatter-in-jackson/
+  textJson.registerModule (new SimpleModule {
+
+    addSerializer (classOf [DateTime], new StdSerializer [DateTime] (classOf [DateTime]) {
+
+      def serialize (value: DateTime, 
+        gen: JsonGenerator, provider: SerializerProvider): Unit =
+        gen.writeString (ISODateTimeFormat.date().print(value))
+    })
+  })
 
   implicit val flaggableCellId: Flaggable [CellId] =
     Flaggable.mandatory (s => CellId (parseUnsignedLong (s) .get))

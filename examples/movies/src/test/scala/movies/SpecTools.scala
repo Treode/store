@@ -22,11 +22,46 @@ import scala.util.Random
 import com.treode.store.{Bytes, Cell, TxClock, TxId}
 import com.treode.store.stubs.StubStore
 import com.treode.store.alt.TableDescriptor
-import org.joda.time.Instant
+import org.joda.time.{DateTime, DateTimeZone, Instant}
 import org.scalatest.Assertions
+
+import movies.{DisplayModel => DM, PhysicalModel => PM}
+import DateTimeZone.UTC
 
 trait SpecTools {
   this: Assertions =>
+
+  val t0 = TxClock.MinValue
+
+  val sep_25_1951 = new DateTime (1951, 9, 25, 0, 0, 0, UTC)
+  val may_25_1977 = new DateTime (1977, 5, 25, 0, 0, 0, UTC)
+  val jun_20_1980 = new DateTime (1980, 6, 20, 0, 0, 0, UTC)
+
+  /** Display Objects */
+  private [movies] object DO {
+    
+    val starWars = DM.Movie (1, "Star Wars", null, Seq.empty)
+    val empireStrikesBack = DM.Movie (2, "Star Wars: The Empire Strikes Back", null, Seq.empty)
+    val returnOfTheJedi = DM.Movie (3, "Star Wars: Return of the Jedi", null, Seq.empty)
+
+    val markHamill = DM.Actor (1, "Mark Hamill", null, Seq.empty)
+    val harrisonFord = DM.Actor (2, "Harrison Ford", null, Seq.empty)
+    val carrieFisher = DM.Actor (3, "Carrie Fisher", null, Seq.empty)
+  }
+
+  /** Physical Objects */
+  private [movies] object PO {
+
+    val starWars = PM.Movie ("Star Wars", null)
+    val aNewHope = PM.Movie ("Star Wars: A New Hope", null)
+    val empireStrikesBack = PM.Movie ("Star Wars: The Empire Strikes Back", null)
+    val returnOfTheJedi = PM.Movie ("Star Wars: Return of the Jedi", null)
+
+    val markHamill = PM.Actor ("Mark Hamill", null)
+    val markHammer = PM.Actor ("Mark Hammer", null)
+    val harrisonFord = PM.Actor ("Harrison Ford", null)
+    val carrieFisher = PM.Actor ("Carrie Fisher", null)
+  }
 
   case class ExpectedCell [K, V] (key: K, time: Long, value: Option [V]) {
 
