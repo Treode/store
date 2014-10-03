@@ -56,9 +56,9 @@ object TreodeBuild extends Build {
 
     libraryDependencies ++= Seq (
       "com.codahale.metrics" % "metrics-core" % "3.0.2",
-      "com.google.code.findbugs" % "jsr305" % "2.0.3",
-      "com.google.guava" % "guava" % "17.0",
-      "com.googlecode.javaewah" % "JavaEWAH" % "0.8.11",
+      "com.google.code.findbugs" % "jsr305" % "3.0.0",
+      "com.google.guava" % "guava" % "18.0",
+      "com.googlecode.javaewah" % "JavaEWAH" % "0.9.0",
       "com.nothome" % "javaxdelta" % "2.0.1",
       "joda-time" % "joda-time" % "2.4",
       "org.joda" % "joda-convert" % "1.7",
@@ -90,14 +90,10 @@ object TreodeBuild extends Build {
     unmanagedSourceDirectories in Test <<=
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
-    libraryDependencies <+= scalaVersion {
-      case "2.10.4" => "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "test"
-      case "2.11.2" => "org.scalamock" %% "scalamock-scalatest-support" % "3.1.2" % "test"
-    },
-
     libraryDependencies ++= Seq (
-      "org.scalatest" %% "scalatest" % "2.2.1" % "test",
-      "org.scalacheck" %% "scalacheck" % "1.11.5" % "test"))
+      "org.scalacheck" %% "scalacheck" % "1.11.5" % "test",
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.4" % "test",
+      "org.scalatest" %% "scalatest" % "2.2.2" % "test"))
 
   // Settings for projects without stubs.
   lazy val standardSettings =
@@ -139,14 +135,10 @@ object TreodeBuild extends Build {
     unmanagedSourceDirectories in TestWithStub <<=
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
-    libraryDependencies <+= scalaVersion {
-      case "2.10.4" => "org.scalamock" %% "scalamock-scalatest-support" % "3.1.RC1" % "stub->default"
-      case "2.11.2" => "org.scalamock" %% "scalamock-scalatest-support" % "3.1.2" % "stub->default"
-    },
-
     libraryDependencies ++= Seq (
-      "org.scalatest" %% "scalatest" % "2.2.1" % "stub->default",
-      "org.scalacheck" %% "scalacheck" % "1.11.5" % "stub->default"))
+      "org.scalacheck" %% "scalacheck" % "1.11.5" % "stub->default",
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.4" % "stub->default",
+      "org.scalatest" %% "scalatest" % "2.2.2" % "stub->default"))
 
   // Settings for projects with stubs.
   lazy val stubSettings =
@@ -206,7 +198,9 @@ object TreodeBuild extends Build {
         scalaVersion := "2.10.4",
         crossScalaVersions := Seq.empty,
 
-        libraryDependencies ++= Seq ("com.twitter" %% "finatra" % "1.5.3"))
+        resolvers += "Twitter" at "http://maven.twttr.com",
+
+        libraryDependencies ++= Seq ("com.twitter" %% "finatra" % "1.5.4"))
 
   // Separated because not everyone wants it and its dependencies.
   lazy val jackson = Project ("jackson", file ("jackson"))
@@ -217,7 +211,7 @@ object TreodeBuild extends Build {
 
         libraryDependencies ++= Seq (
           "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.2",
-          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.1"))
+          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.2"))
 
   // A standalone server for system tests.  Separated to keep system
   // testing components out of production code (these components are
