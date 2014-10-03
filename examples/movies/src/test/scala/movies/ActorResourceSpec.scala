@@ -69,7 +69,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.ActorTable) (
           (1L, t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
-          ("Mark Hamill", t1, 1L))
+          ("Mark Hamill", t1, Set (1L)))
       store.expectCells (PM.RolesTable) (
           (1L, t1, PM.Roles.empty))
     }
@@ -177,8 +177,8 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
           (1L, t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
           ("Mark Hamill", t2, None),
-          ("Mark Hamill", t1, 1L),
-          ("Mark Hammer", t2, 1L))
+          ("Mark Hamill", t1, Set (1L)),
+          ("Mark Hammer", t2, Set (1L)))
       store.expectCells (PM.RolesTable) (
           (1L, t1, PM.Roles.empty))
     }
@@ -201,8 +201,8 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
           (1L, t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
           ("Mark Hamill", t2, None),
-          ("Mark Hamill", t1, 1L),
-          ("Mark Hammer", t2, 1L))
+          ("Mark Hamill", t1, Set (1L)),
+          ("Mark Hammer", t2, Set (1L)))
       store.expectCells (PM.RolesTable) (
           (1L, t1, PM.Roles.empty))
     }
@@ -223,7 +223,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.ActorTable) (
           (1L, t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
-          ("Mark Hamill", t1, 1L))
+          ("Mark Hamill", t1, Set (1L)))
       store.expectCells (PM.RolesTable) (
           (1L, t1, PM.Roles.empty))
     }}}

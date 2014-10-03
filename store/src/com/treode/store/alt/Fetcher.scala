@@ -16,6 +16,12 @@ class Fetcher private [alt] (tx: Transaction) {
     this
   }
 
+  def when [K] (cond: Boolean) (desc: TableDescriptor [K, _]) (keys: K*): Fetcher = {
+    if (cond)
+      ops ++= keys map (k => ReadOp (desc.id, desc.key.freeze (k)))
+    this
+  }
+
   def async(): Async [Unit] =
     tx.fetch (ops.result.toSeq)
   

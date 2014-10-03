@@ -66,7 +66,7 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.MovieTable) (
           (1L, t1, PO.starWars))
       store.expectCells (PM.MovieTitleIndex) (
-          ("Star Wars", t1, 1L))
+          ("Star Wars", t1, Set (1L)))
       store.expectCells (PM.CastTable) (
           (1L, t1, PM.Cast.empty))
       store.expectCells (PM.ActorTable) ()
@@ -174,8 +174,8 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
           (1L, t1, PO.starWars))
       store.expectCells (PM.MovieTitleIndex) (
           ("Star Wars", t2, None),
-          ("Star Wars", t1, 1L),
-          ("Star Wars: A New Hope", t2, 1L))
+          ("Star Wars", t1, Set (1L)),
+          ("Star Wars: A New Hope", t2, Set (1L)))
       store.expectCells (PM.CastTable) (
           (1L, t1, PM.Cast.empty))
       store.expectCells (PM.ActorTable) ()
@@ -198,8 +198,8 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
           (1L, t1, PO.starWars))
       store.expectCells (PM.MovieTitleIndex) (
           ("Star Wars", t2, None),
-          ("Star Wars", t1, 1L),
-          ("Star Wars: A New Hope", t2, 1L))
+          ("Star Wars", t1, Set (1L)),
+          ("Star Wars: A New Hope", t2, Set (1L)))
       store.expectCells (PM.CastTable) (
           (1L, t1, PM.Cast.empty))
       store.expectCells (PM.ActorTable) ()
@@ -220,7 +220,7 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.MovieTable) (
           (1L, t1, PO.starWars))
       store.expectCells (PM.MovieTitleIndex) (
-          ("Star Wars", t1, 1L))
+          ("Star Wars", t1, Set (1L)))
       store.expectCells (PM.CastTable) (
           (1L, t1, PM.Cast.empty))
       store.expectCells (PM.ActorTable) ()

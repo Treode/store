@@ -61,6 +61,8 @@ trait SpecTools {
     val markHammer = PM.Actor ("Mark Hammer", null)
     val harrisonFord = PM.Actor ("Harrison Ford", null)
     val carrieFisher = PM.Actor ("Carrie Fisher", null)
+
+    val thePiano = PM.Movie ("The Piano", null)
   }
 
   case class ExpectedCell [K, V] (key: K, time: Long, value: Option [V]) {

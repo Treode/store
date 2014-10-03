@@ -44,7 +44,7 @@ class MovieStore (implicit random: Random, store: Store) {
     val tx = new Transaction (ct)
     val movieId = random.nextPositiveLong()
     for {
-      _ <- PM.Movie.fetchForSave (tx, movieId, movie.actorIds)
+      _ <- PM.Movie.fetchForSave (tx, movieId, movie)
       _ = PM.Movie.create (tx, movieId, movie)
       wt <- tx.execute (xid)
     } yield {
@@ -54,7 +54,7 @@ class MovieStore (implicit random: Random, store: Store) {
   def update (xid: TxId, ct: TxClock, movieId: Long, movie: DM.Movie): Async [TxClock] = guard {
     val tx = new Transaction (ct)
     for {
-      _ <- PM.Movie.fetchForSave (tx, movieId, movie.actorIds)
+      _ <- PM.Movie.fetchForSave (tx, movieId, movie)
       _ = PM.Movie.save (tx, movieId, movie)
       wt <- tx.execute (xid)
     } yield {
@@ -76,7 +76,7 @@ class MovieStore (implicit random: Random, store: Store) {
     val tx = new Transaction (ct)
     val actorId = random.nextPositiveLong()
     for {
-      _ <- PM.Actor.fetchForSave (tx, actorId, actor.movieIds)
+      _ <- PM.Actor.fetchForSave (tx, actorId, actor)
       _ = PM.Actor.create (tx, actorId, actor)
       wt <- tx.execute (xid)
     } yield {
@@ -86,7 +86,7 @@ class MovieStore (implicit random: Random, store: Store) {
   def update (xid: TxId, ct: TxClock, actorId: Long, actor: DM.Actor): Async [TxClock] = guard {
     val tx = new Transaction (ct)
     for {
-      _ <- PM.Actor.fetchForSave (tx, actorId, actor.movieIds)
+      _ <- PM.Actor.fetchForSave (tx, actorId, actor)
       _ = PM.Actor.save (tx, actorId, actor)
       wt <- tx.execute (xid)
     } yield {

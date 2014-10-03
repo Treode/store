@@ -18,6 +18,7 @@ package movies
 
 import com.treode.async.Async
 import com.treode.finatra.BadRequestException
+import com.treode.pickle.Picklers
 import com.treode.store.alt.{Froster, TableDescriptor, Transaction}
 import org.joda.time.DateTime
 
@@ -37,10 +38,25 @@ private object PhysicalModel {
       title orBadRequest ("Movie must have a title.")
     }
 
+    private def addToTitleIndex (tx: Transaction, movieId: Long, title: String): Unit =
+      if (title != null)
+        tx.get (MovieTitleIndex) (title) match {
+          case Some (ids) => tx.update (MovieTitleIndex) (title, ids + movieId)
+          case None => tx.update (MovieTitleIndex) (title, Set (movieId))
+        }
+
+    private def removeFromTitleIndex (tx: Transaction, movieId: Long, title: String): Unit =
+      if (title != null)
+        tx.get (MovieTitleIndex) (title) match {
+          case Some (ids) if ids.size == 1 => tx.delete (MovieTitleIndex) (title)
+          case Some (ids) => tx.update (MovieTitleIndex) (title, ids - movieId)
+          case None => ()
+        }
+
     private def create (tx: Transaction, movieId: Long) {
       validate()
       tx.create (MovieTable) (movieId, this)
-      tx.create (MovieTitleIndex) (title, movieId)
+      addToTitleIndex (tx, movieId, this.title)
     }
 
     private def save (tx: Transaction, movieId: Long, that: Movie) {
@@ -48,9 +64,8 @@ private object PhysicalModel {
       if (this != that)
         tx.update (MovieTable) (movieId, that)
       if (this.title != that.title) {
-        if (this.title != null)
-          tx.delete (MovieTitleIndex) (this.title)
-        tx.create (MovieTitleIndex) (that.title, movieId)
+        removeFromTitleIndex (tx, movieId, this.title)
+        addToTitleIndex (tx, movieId, that.title)
       }}
 
     private def save (tx: Transaction, movieId: Long, that: DM.Movie) {
@@ -78,17 +93,22 @@ private object PhysicalModel {
         _ <- tx.fetch (ActorTable) (cast.actorIds: _*)
       } yield ()
 
-    /** Prefetch all data that's needed to decompose a JSON object and update the movie. */
-    def fetchForSave (tx: Transaction, movieId: Long, actorIds: Seq [Long]): Async [Unit] =
+    /** Prefetch all data that's needed to decompose the JSON object and create or update the 
+      * movie.
+      */
+    def fetchForSave (tx: Transaction, movieId: Long, update: DM.Movie): Async [Unit] =
       for {
         _ <- tx.fetcher
             .fetch (MovieTable) (movieId)
             .fetch (CastTable) (movieId)
+            .when (update.title != null) (MovieTitleIndex) (update.title)
             .async()
+        movie = tx.get (MovieTable) (movieId) .getOrElse (Movie.empty)
         cast = tx.get (CastTable) (movieId) .getOrElse (Cast.empty)
         _ <- tx.fetcher
             .fetch (RolesTable) (cast.actorIds: _*)
-            .fetch (RolesTable) (actorIds: _*)
+            .fetch (RolesTable) (update.actorIds: _*)
+            .when (movie.title != null) (MovieTitleIndex) (movie.title)
             .async()
       } yield ()
 
@@ -227,10 +247,25 @@ private object PhysicalModel {
       name orBadRequest ("Actor must have a name.")
     }
 
+    private def addToNameIndex (tx: Transaction, actorId: Long, name: String): Unit =
+      if (name != null)
+        tx.get (ActorNameIndex) (name) match {
+          case Some (ids) => tx.update (ActorNameIndex) (name, ids + actorId)
+          case None => tx.update (ActorNameIndex) (name, Set (actorId))
+        }
+
+    private def removeFromNameIndex (tx: Transaction, actorId: Long, name: String): Unit =
+      if (name != null)
+        tx.get (ActorNameIndex) (name) match {
+          case Some (ids) if ids.size == 1 => tx.delete (ActorNameIndex) (name)
+          case Some (ids) => tx.update (ActorNameIndex) (name, ids - actorId)
+          case None => ()
+        }
+
     private def create (tx: Transaction, actorId: Long) {
       validate()
       tx.create (ActorTable) (actorId, this)
-      tx.create (ActorNameIndex) (name, actorId)
+      addToNameIndex (tx, actorId, name)
     }
 
     private def save (tx: Transaction, actorId: Long, that: Actor) {
@@ -238,9 +273,8 @@ private object PhysicalModel {
       if (this != that)
         tx.update (ActorTable) (actorId, that)
       if (this.name != that.name) {
-        if (this.name != null)
-          tx.delete (ActorNameIndex) (this.name)
-        tx.create (ActorNameIndex) (that.name, actorId)
+        removeFromNameIndex (tx, actorId, this.name)
+        addToNameIndex (tx, actorId, that.name)
       }}
 
     private def save (tx: Transaction, actorId: Long, that: DM.Actor) {
@@ -267,17 +301,21 @@ private object PhysicalModel {
         _ <- tx.fetch (MovieTable) (roles.movieIds: _*)
       } yield ()
 
-    /** Prefetch all data that's needed to decompose a JSON object and update the actor. */
-    def fetchForSave (tx: Transaction, actorId: Long, movieIds: Seq [Long]): Async [Unit] =
+    /** Prefetch all data that's needed to decompose a JSON object and create or update the 
+      * actor. */
+    def fetchForSave (tx: Transaction, actorId: Long, update: DM.Actor): Async [Unit] =
       for {
         _ <- tx.fetcher
             .fetch (ActorTable) (actorId)
             .fetch (RolesTable) (actorId)
+            .when (update.name != null) (ActorNameIndex) (update.name)
             .async()
+        actor = tx.get (ActorTable) (actorId) .getOrElse (Actor.empty)
         roles = tx.get (RolesTable) (actorId) .getOrElse (Roles.empty)
         _ <- tx.fetcher
             .fetch (CastTable) (roles.movieIds: _*)
-            .fetch (CastTable) (movieIds: _*)
+            .fetch (CastTable) (update.movieIds: _*)
+            .when (actor.name != null) (ActorNameIndex) (actor.name)
             .async()
       } yield ()
 
@@ -408,8 +446,10 @@ private object PhysicalModel {
   val MovieTable =
     TableDescriptor (0xA57FDF4417D46CBCL, Froster.long, Froster.bson [Movie])
 
-  val MovieTitleIndex =
-    TableDescriptor (0x5BADD72FF250EFECL, Froster.string, Froster.long)
+  val MovieTitleIndex = {
+    import Picklers._
+    TableDescriptor (0x5BADD72FF250EFECL, Froster.string, Froster (set (long)))
+  }
 
   val CastTable =
     TableDescriptor (0x98343A201B58A827L, Froster.long, Froster.bson [Cast])
@@ -417,8 +457,10 @@ private object PhysicalModel {
   val ActorTable =
     TableDescriptor (0xDB67009587B57F0DL, Froster.long, Froster.bson [Actor])
 
-  val ActorNameIndex =
-    TableDescriptor (0x8BB6A8029399BADEL, Froster.string, Froster.long)
+  val ActorNameIndex = {
+    import Picklers._
+    TableDescriptor (0x8BB6A8029399BADEL, Froster.string, Froster (set (long)))
+  }
 
   val RolesTable =
     TableDescriptor (0x57F7EA70C4CD4613L, Froster.long, Froster.bson [Roles])
