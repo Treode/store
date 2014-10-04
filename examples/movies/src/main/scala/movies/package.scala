@@ -78,6 +78,9 @@ package object movies {
   val Ok = HttpResponseStatus.OK.getCode
   val PreconditionFailed = HttpResponseStatus.PRECONDITION_FAILED.getCode
 
+  def toBase36 (v: Long): String =
+    java.lang.Long.toString (v, 36)
+
   implicit class RichAny [A] (value: A) {
 
     def orBadRequest (message: String): Unit =
@@ -115,8 +118,8 @@ package object movies {
 
   implicit class RichRandom (random: Random) {
 
-    def nextPositiveLong(): Long =
-      random.nextLong & Long.MaxValue
+    def nextId(): String =
+      toBase36 (random.nextLong & 0xFFFFFFFFFFL)
   }
 
   implicit class RichRequest (request: Request) {
@@ -141,9 +144,8 @@ package object movies {
           TxClock.now
       }
 
-    def getId: Option [Long] =
-      for (id <- request.routeParams.get ("id"))
-        yield parseUnsignedLong (id) .getOrBadRequest (s"Bad ID $id")
+    def getId: Option [String] =
+      request.routeParams.get ("id")
 
     def getLastModificationBefore: TxClock =
       request.headerMap.get (LastModificationBefore) match {

@@ -27,7 +27,7 @@ import Async.supply
 
 class ActorResource (host: HostId, movies: MovieStore) extends AsyncFinatraController {
 
-  def read (request: Request, id: Long): Async [ResponseBuilder] = {
+  def read (request: Request, id: String): Async [ResponseBuilder] = {
     val rt = request.getLastModificationBefore
     val ct = request.getIfModifiedSince
     for {

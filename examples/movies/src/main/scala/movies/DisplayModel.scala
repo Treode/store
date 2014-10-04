@@ -26,20 +26,20 @@ import movies.{PhysicalModel => PM}
 /** See README.md. */
 object DisplayModel {
 
-  case class Movie (id: Long, title: String, released: DateTime, cast: Seq [CastMember]) {
+  case class Movie (id: String, title: String, released: DateTime, cast: Seq [CastMember]) {
 
     @JsonIgnore
-    lazy val actorIds = cast orDefault (Seq.empty) map (_.actorId)
+    lazy val actorIds = cast orDefault (Seq.empty) filter (_.actorId != null) map (_.actorId)
   }
 
   object Movie {
 
-    def apply (tx: Transaction, movieId: Long, movie: PM.Movie): Movie = {
+    def apply (tx: Transaction, movieId: String, movie: PM.Movie): Movie = {
       val cast = tx.get (PM.CastTable) (movieId) .getOrElse (PM.Cast.empty)
       new Movie (movieId, movie.title, movie.released, CastMember.convert (tx, cast))
     }}
 
-  case class CastMember (actorId: Long, actor: String, role: String)
+  case class CastMember (actorId: String, actor: String, role: String)
 
   object CastMember {
 
@@ -53,20 +53,20 @@ object DisplayModel {
         yield CastMember (tx, member)
   }
 
-  case class Actor (id: Long, name: String, born: DateTime, roles: Seq [Role]) {
+  case class Actor (id: String, name: String, born: DateTime, roles: Seq [Role]) {
 
     @JsonIgnore
-    lazy val movieIds = roles orDefault (Seq.empty) map (_.movieId)
+    lazy val movieIds = roles orDefault (Seq.empty) filter (_.movieId != null) map (_.movieId)
   }
 
   object Actor {
 
-    def apply (tx: Transaction, actorId: Long, actor: PM.Actor): Actor = {
+    def apply (tx: Transaction, actorId: String, actor: PM.Actor): Actor = {
       val roles = tx.get (PM.RolesTable) (actorId) .getOrElse (PM.Roles.empty)
       new Actor (actorId, actor.name, actor.born, Role.convert (tx, roles))
     }}
 
-  case class Role (movieId: Long, title: String, role: String)
+  case class Role (movieId: String, title: String, role: String)
 
   object Role {
 

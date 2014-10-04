@@ -115,7 +115,7 @@ package object misc {
   /** Doesn't mind large values that flip the sign.  It accepts positive values too large for 63
     * bits, but it still rejects values too large for 64 bits.
     */
-  private def parseUnsigendLong (string: String, radix: Int): Option [Long] = {
+  def parseUnsignedLong (string: String, radix: Int): Option [Long] = {
     val big = BigInt (new BigInteger (string, radix))
     if (big > new BigInteger ("FFFFFFFFFFFFFFFF", 16))
       return None
@@ -131,13 +131,13 @@ package object misc {
       if (s.length == 0 || s.head == '-')
         return None
       if (s.startsWith ("0x") || s.startsWith ("0X"))
-        parseUnsigendLong (s.substring (2), 16)
+        parseUnsignedLong (s.substring (2), 16)
       else if (s.head == '#')
-        parseUnsigendLong (s.substring (1), 16)
+        parseUnsignedLong (s.substring (1), 16)
       else if (s.head == '0')
-        parseUnsigendLong (s, 8)
+        parseUnsignedLong (s, 8)
       else
-        parseUnsigendLong (s, 10)
+        parseUnsignedLong (s, 10)
     } catch {
       case _: NumberFormatException => None
     }}

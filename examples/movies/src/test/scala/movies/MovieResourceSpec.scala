@@ -28,8 +28,8 @@ import movies.{PhysicalModel => PM}
 
 class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
-  val starWars = """{"id":1,"title":"Star Wars","released":null,"cast":[]}"""
-  val aNewHope = """{"id":1,"title":"Star Wars: A New Hope","released":null,"cast":[]}"""
+  val starWars = """{"id":"1","title":"Star Wars","released":null,"cast":[]}"""
+  val aNewHope = """{"id":"1","title":"Star Wars: A New Hope","released":null,"cast":[]}"""
 
   def setup() = {
     implicit val random = new Random (0)
@@ -64,11 +64,11 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
       val t1 = r1.etag
       store.expectCells (PM.MovieTable) (
-          (1L, t1, PO.starWars))
+          ("1", t1, PO.starWars))
       store.expectCells (PM.MovieTitleIndex) (
-          ("Star Wars", t1, Set (1L)))
+          ("Star Wars", t1, Set ("1")))
       store.expectCells (PM.CastTable) (
-          (1L, t1, PM.Cast.empty))
+          ("1", t1, PM.Cast.empty))
       store.expectCells (PM.ActorTable) ()
       store.expectCells (PM.ActorNameIndex) ()
       store.expectCells (PM.RolesTable) ()
@@ -87,7 +87,7 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val id = uri.substring ("/movie/".length)
       val r2 = mock.get (uri)
       r2.etag should be (r1.etag)
-      r2.body should be (s"""{"id":$id,"title":"Star Wars","released":null,"cast":[]}""")
+      r2.body should be (s"""{"id":"$id","title":"Star Wars","released":null,"cast":[]}""")
     }
 
     "PUT /movie/1 without a title should respond Bad Requst" in {
@@ -170,14 +170,14 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
       val (t1, t2) = (r1.etag, r2.etag)
       store.expectCells (PM.MovieTable) (
-          (1L, t2, PO.aNewHope),
-          (1L, t1, PO.starWars))
+          ("1", t2, PO.aNewHope),
+          ("1", t1, PO.starWars))
       store.expectCells (PM.MovieTitleIndex) (
           ("Star Wars", t2, None),
-          ("Star Wars", t1, Set (1L)),
-          ("Star Wars: A New Hope", t2, Set (1L)))
+          ("Star Wars", t1, Set ("1")),
+          ("Star Wars: A New Hope", t2, Set ("1")))
       store.expectCells (PM.CastTable) (
-          (1L, t1, PM.Cast.empty))
+          ("1", t1, PM.Cast.empty))
       store.expectCells (PM.ActorTable) ()
       store.expectCells (PM.ActorNameIndex) ()
       store.expectCells (PM.RolesTable) ()
@@ -194,14 +194,14 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
       val (t1, t2) = (r1.etag, r2.etag)
       store.expectCells (PM.MovieTable) (
-          (1L, t2, PO.aNewHope),
-          (1L, t1, PO.starWars))
+          ("1", t2, PO.aNewHope),
+          ("1", t1, PO.starWars))
       store.expectCells (PM.MovieTitleIndex) (
           ("Star Wars", t2, None),
-          ("Star Wars", t1, Set (1L)),
-          ("Star Wars: A New Hope", t2, Set (1L)))
+          ("Star Wars", t1, Set ("1")),
+          ("Star Wars: A New Hope", t2, Set ("1")))
       store.expectCells (PM.CastTable) (
-          (1L, t1, PM.Cast.empty))
+          ("1", t1, PM.Cast.empty))
       store.expectCells (PM.ActorTable) ()
       store.expectCells (PM.ActorNameIndex) ()
       store.expectCells (PM.RolesTable) ()
@@ -218,11 +218,11 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
       val t1 = r1.etag
       store.expectCells (PM.MovieTable) (
-          (1L, t1, PO.starWars))
+          ("1", t1, PO.starWars))
       store.expectCells (PM.MovieTitleIndex) (
-          ("Star Wars", t1, Set (1L)))
+          ("Star Wars", t1, Set ("1")))
       store.expectCells (PM.CastTable) (
-          (1L, t1, PM.Cast.empty))
+          ("1", t1, PM.Cast.empty))
       store.expectCells (PM.ActorTable) ()
       store.expectCells (PM.ActorNameIndex) ()
       store.expectCells (PM.RolesTable) ()

@@ -38,14 +38,14 @@ private object PhysicalModel {
       title orBadRequest ("Movie must have a title.")
     }
 
-    private def addToTitleIndex (tx: Transaction, movieId: Long, title: String): Unit =
+    private def addToTitleIndex (tx: Transaction, movieId: String, title: String): Unit =
       if (title != null)
         tx.get (MovieTitleIndex) (title) match {
           case Some (ids) => tx.update (MovieTitleIndex) (title, ids + movieId)
           case None => tx.update (MovieTitleIndex) (title, Set (movieId))
         }
 
-    private def removeFromTitleIndex (tx: Transaction, movieId: Long, title: String): Unit =
+    private def removeFromTitleIndex (tx: Transaction, movieId: String, title: String): Unit =
       if (title != null)
         tx.get (MovieTitleIndex) (title) match {
           case Some (ids) if ids.size == 1 => tx.delete (MovieTitleIndex) (title)
@@ -53,13 +53,13 @@ private object PhysicalModel {
           case None => ()
         }
 
-    private def create (tx: Transaction, movieId: Long) {
+    private def create (tx: Transaction, movieId: String) {
       validate()
       tx.create (MovieTable) (movieId, this)
       addToTitleIndex (tx, movieId, this.title)
     }
 
-    private def save (tx: Transaction, movieId: Long, that: Movie) {
+    private def save (tx: Transaction, movieId: String, that: Movie) {
       that.validate()
       if (this != that)
         tx.update (MovieTable) (movieId, that)
@@ -68,7 +68,7 @@ private object PhysicalModel {
         addToTitleIndex (tx, movieId, that.title)
       }}
 
-    private def save (tx: Transaction, movieId: Long, that: DM.Movie) {
+    private def save (tx: Transaction, movieId: String, that: DM.Movie) {
       save (tx, movieId, merge (that))
       if (that.cast != null)
         Cast.save (tx, movieId, that.cast)
@@ -83,7 +83,7 @@ private object PhysicalModel {
       new Movie (movie.title, movie.released)
 
     /** Prefetch all data that's needed to compose a JSON object for the movie. */
-    def fetchForDisplay (tx: Transaction, movieId: Long): Async [Unit] =
+    def fetchForDisplay (tx: Transaction, movieId: String): Async [Unit] =
       for {
         _ <- tx.fetcher
             .fetch (MovieTable) (movieId)
@@ -96,7 +96,7 @@ private object PhysicalModel {
     /** Prefetch all data that's needed to decompose the JSON object and create or update the 
       * movie.
       */
-    def fetchForSave (tx: Transaction, movieId: Long, update: DM.Movie): Async [Unit] =
+    def fetchForSave (tx: Transaction, movieId: String, update: DM.Movie): Async [Unit] =
       for {
         _ <- tx.fetcher
             .fetch (MovieTable) (movieId)
@@ -115,7 +115,7 @@ private object PhysicalModel {
     /** Create a new movie in the database. This also makes the implied changes to the actors'
       * roles.
       */
-    def create (tx: Transaction, movieId: Long, movie: DM.Movie) {
+    def create (tx: Transaction, movieId: String, movie: DM.Movie) {
       Movie (movie) .create (tx, movieId)
       Cast.convert (movie.cast.orDefault (Seq.empty)) .create (tx, movieId)
     }
@@ -125,7 +125,7 @@ private object PhysicalModel {
       * changes the movie's cast in the database, and it also makes the implied changes to the
       * actors' roles.
       */
-    def save (tx: Transaction, movieId: Long, movie: DM.Movie) {
+    def save (tx: Transaction, movieId: String, movie: DM.Movie) {
       tx.get (MovieTable) (movieId) match {
         case Some (m) => m.save (tx, movieId, movie)
         case None => empty.save (tx, movieId, movie)
@@ -148,25 +148,25 @@ private object PhysicalModel {
       )
 
     def validate() {
-      if (actorIds exists (_ == 0))
+      if (actorIds exists (_ == null))
         throw new BadRequestException ("All cast members must have an actorId.")
       if (actorIds.toSet.size < actorIds.size)
         throw new BadRequestException ("An actor may have only one role in a movie.")
     }
 
-    def remove (tx: Transaction, movieId: Long, actorId: Long) {
+    def remove (tx: Transaction, movieId: String, actorId: String) {
       if (members forall (_.actorId != actorId))
         return
       val newMembers = members filter (_.actorId != actorId)
       tx.update (CastTable) (movieId, Cast (newMembers))
     }
 
-    def save (tx: Transaction, actorId: Long, that: Role) {
+    def save (tx: Transaction, actorId: String, that: Role) {
       val newMembers = CastMember (actorId, that.role) +: members.filter (_.actorId != actorId)
       tx.update (CastTable) (that.movieId, Cast (newMembers))
     }
 
-    def create (tx: Transaction, movieId: Long) {
+    def create (tx: Transaction, movieId: String) {
       validate()
       tx.create (CastTable) (movieId, this)
       for (m <- members) {
@@ -176,7 +176,7 @@ private object PhysicalModel {
         roles.save (tx, movieId, m)
       }}
 
-    private def save (tx: Transaction, movieId: Long, that: Cast) {
+    private def save (tx: Transaction, movieId: String, that: Cast) {
 
       validate()
 
@@ -202,7 +202,7 @@ private object PhysicalModel {
         roles.save (tx, movieId, newm)
       }}
 
-    def save (tx: Transaction, movieId: Long, that: Seq [DM.CastMember]): Unit =
+    def save (tx: Transaction, movieId: String, that: Seq [DM.CastMember]): Unit =
       save (tx, movieId, merge (Cast.convert (that)))
   }
 
@@ -213,13 +213,13 @@ private object PhysicalModel {
     def convert (members: Seq [DM.CastMember]): Cast =
       new Cast (members map (CastMember (_)))
 
-    def save (tx: Transaction, movieId: Long, cast: Seq [DM.CastMember]): Unit =
+    def save (tx: Transaction, movieId: String, cast: Seq [DM.CastMember]): Unit =
       tx.get (CastTable) (movieId) match {
         case Some (_cast) => _cast.save (tx, movieId, cast)
         case None => convert (cast) .create (tx, movieId)
       }}
 
-  case class CastMember (actorId: Long, role: String) {
+  case class CastMember (actorId: String, role: String) {
 
     def merge (that: CastMember): CastMember =
       CastMember (
@@ -232,7 +232,7 @@ private object PhysicalModel {
     def apply (member: DM.CastMember): CastMember =
       new CastMember (member.actorId, member.role)
 
-    def apply (actorId: Long, role: DM.Role): CastMember =
+    def apply (actorId: String, role: DM.Role): CastMember =
       new CastMember (actorId, role.role)
   }
 
@@ -247,14 +247,14 @@ private object PhysicalModel {
       name orBadRequest ("Actor must have a name.")
     }
 
-    private def addToNameIndex (tx: Transaction, actorId: Long, name: String): Unit =
+    private def addToNameIndex (tx: Transaction, actorId: String, name: String): Unit =
       if (name != null)
         tx.get (ActorNameIndex) (name) match {
           case Some (ids) => tx.update (ActorNameIndex) (name, ids + actorId)
           case None => tx.update (ActorNameIndex) (name, Set (actorId))
         }
 
-    private def removeFromNameIndex (tx: Transaction, actorId: Long, name: String): Unit =
+    private def removeFromNameIndex (tx: Transaction, actorId: String, name: String): Unit =
       if (name != null)
         tx.get (ActorNameIndex) (name) match {
           case Some (ids) if ids.size == 1 => tx.delete (ActorNameIndex) (name)
@@ -262,13 +262,13 @@ private object PhysicalModel {
           case None => ()
         }
 
-    private def create (tx: Transaction, actorId: Long) {
+    private def create (tx: Transaction, actorId: String) {
       validate()
       tx.create (ActorTable) (actorId, this)
       addToNameIndex (tx, actorId, name)
     }
 
-    private def save (tx: Transaction, actorId: Long, that: Actor) {
+    private def save (tx: Transaction, actorId: String, that: Actor) {
       that.validate()
       if (this != that)
         tx.update (ActorTable) (actorId, that)
@@ -277,7 +277,7 @@ private object PhysicalModel {
         addToNameIndex (tx, actorId, that.name)
       }}
 
-    private def save (tx: Transaction, actorId: Long, that: DM.Actor) {
+    private def save (tx: Transaction, actorId: String, that: DM.Actor) {
       save (tx, actorId, merge (that))
       if (that.roles != null)
         Roles.save (tx, actorId, that.roles)
@@ -291,7 +291,7 @@ private object PhysicalModel {
       new Actor (actor.name, actor.born)
 
     /** Prefetch all data that's needed to compose a JSON object for the actor. */
-    def fetchForDisplay (tx: Transaction, actorId: Long): Async [Unit] =
+    def fetchForDisplay (tx: Transaction, actorId: String): Async [Unit] =
       for {
         _ <- tx.fetcher
             .fetch (ActorTable) (actorId)
@@ -303,7 +303,7 @@ private object PhysicalModel {
 
     /** Prefetch all data that's needed to decompose a JSON object and create or update the 
       * actor. */
-    def fetchForSave (tx: Transaction, actorId: Long, update: DM.Actor): Async [Unit] =
+    def fetchForSave (tx: Transaction, actorId: String, update: DM.Actor): Async [Unit] =
       for {
         _ <- tx.fetcher
             .fetch (ActorTable) (actorId)
@@ -322,7 +322,7 @@ private object PhysicalModel {
     /** Create a new actor in the database. This also makes the implied changes to the movies'
       * cast.
       */
-    def create (tx: Transaction, actorId: Long, actor: DM.Actor) {
+    def create (tx: Transaction, actorId: String, actor: DM.Actor) {
       Actor (actor) .create (tx, actorId)
       Roles.convert (actor.roles.orDefault (Seq.empty)) .create (tx, actorId)
     }
@@ -332,7 +332,7 @@ private object PhysicalModel {
       * changes the actor's roles in the database, and it also makes the implied changes to the
       * movies' cast.
       */
-    def save (tx: Transaction, actorId: Long, actor: DM.Actor) {
+    def save (tx: Transaction, actorId: String, actor: DM.Actor) {
       tx.get (ActorTable) (actorId) match {
         case Some (a) => a.save (tx, actorId, actor)
         case None => empty.save (tx, actorId, actor)
@@ -355,25 +355,25 @@ private object PhysicalModel {
       )
 
     def validate() {
-      if (movieIds exists (_ == 0))
+      if (movieIds exists (_ == null))
         throw new BadRequestException ("All roles must have a movieId.")
       if (movieIds.toSet.size < movieIds.size)
         throw new BadRequestException ("An actor may have only one role in a movie.")
     }
 
-    def remove (tx: Transaction, actorId: Long, movieId: Long) {
+    def remove (tx: Transaction, actorId: String, movieId: String) {
       if (roles forall (_.movieId != movieId))
         return
       val newRoles = roles filter (_.movieId != movieId)
       tx.update (RolesTable) (actorId, Roles (newRoles))
     }
 
-    def save (tx: Transaction, movieId: Long, that: CastMember) {
+    def save (tx: Transaction, movieId: String, that: CastMember) {
       val newRoles = Role (movieId, that.role) +: roles.filter (_.movieId != movieId)
       tx.update (RolesTable) (that.actorId, Roles (newRoles))
     }
 
-    def create (tx: Transaction, actorId: Long) {
+    def create (tx: Transaction, actorId: String) {
       validate()
       tx.create (RolesTable) (actorId, this)
       for (r <- roles) {
@@ -383,7 +383,7 @@ private object PhysicalModel {
         cast.save (tx, actorId, r)
       }}
 
-    private def save (tx: Transaction, actorId: Long, that: Roles) {
+    private def save (tx: Transaction, actorId: String, that: Roles) {
 
       validate()
 
@@ -409,7 +409,7 @@ private object PhysicalModel {
         cast.save (tx, actorId, newr)
       }}
 
-    def save (tx: Transaction, movieId: Long, that: Seq [DM.Role]): Unit =
+    def save (tx: Transaction, movieId: String, that: Seq [DM.Role]): Unit =
       save (tx, movieId, merge (Roles.convert (that)))
   }
 
@@ -420,13 +420,13 @@ private object PhysicalModel {
     def convert (roles: Seq [DM.Role]): Roles =
       new Roles (roles map (Role.apply (_)))
 
-    def save (tx: Transaction, actorId: Long, roles: Seq [DM.Role]): Unit =
+    def save (tx: Transaction, actorId: String, roles: Seq [DM.Role]): Unit =
       tx.get (RolesTable) (actorId) match {
         case Some (_roles) => _roles.save (tx, actorId, roles)
         case None => convert (roles) .create (tx, actorId)
       }}
 
-  case class Role (movieId: Long, role: String) {
+  case class Role (movieId: String, role: String) {
 
     def merge (that: Role): Role =
       Role (
@@ -439,29 +439,29 @@ private object PhysicalModel {
     def apply (role: DM.Role): Role =
       new Role (role.movieId, role.role)
 
-    def apply  (movieId: Long, member: DM.CastMember): Role =
+    def apply  (movieId: String, member: DM.CastMember): Role =
       new Role (movieId, member.role)
   }
 
   val MovieTable =
-    TableDescriptor (0xA57FDF4417D46CBCL, Froster.long, Froster.bson [Movie])
+    TableDescriptor (0xA57FDF4417D46CBCL, Froster.string, Froster.bson [Movie])
 
   val MovieTitleIndex = {
     import Picklers._
-    TableDescriptor (0x5BADD72FF250EFECL, Froster.string, Froster (set (long)))
+    TableDescriptor (0x5BADD72FF250EFECL, Froster.string, Froster (set (string)))
   }
 
   val CastTable =
-    TableDescriptor (0x98343A201B58A827L, Froster.long, Froster.bson [Cast])
+    TableDescriptor (0x98343A201B58A827L, Froster.string, Froster.bson [Cast])
 
   val ActorTable =
-    TableDescriptor (0xDB67009587B57F0DL, Froster.long, Froster.bson [Actor])
+    TableDescriptor (0xDB67009587B57F0DL, Froster.string, Froster.bson [Actor])
 
   val ActorNameIndex = {
     import Picklers._
-    TableDescriptor (0x8BB6A8029399BADEL, Froster.string, Froster (set (long)))
+    TableDescriptor (0x8BB6A8029399BADEL, Froster.string, Froster (set (string)))
   }
 
   val RolesTable =
-    TableDescriptor (0x57F7EA70C4CD4613L, Froster.long, Froster.bson [Roles])
+    TableDescriptor (0x57F7EA70C4CD4613L, Froster.string, Froster.bson [Roles])
 }

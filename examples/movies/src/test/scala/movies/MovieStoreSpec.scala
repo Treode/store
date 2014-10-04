@@ -1,11 +1,11 @@
 /*
  * Copyright 2014 Treode, Inc.
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
+ * Licensed under the Apache License, Version "2".0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
+ *     http://www.apache.org/licenses/LICENSE-"2".0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -70,7 +70,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) ()
 
     expectReadResult (movies.readMovie (t1, id)) (t1, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "cast": []
     } """)
@@ -95,7 +95,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) ()
 
     expectReadResult (movies.readMovie (t1, id)) (t1, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "cast": []
     } """)
@@ -138,7 +138,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
 
     movies.create (random.nextXid, t0, """ {
         "title": "Star Wars",
-        "cast": [ { "actorId": 1 } ]
+        "cast": [ { "actorId": "1" } ]
     } """ .fromJson [DM.Movie]) .fail [BadRequestException]
 
     store.expectCells (PM.MovieTable) ()
@@ -152,11 +152,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "create a movie with one cast member" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
@@ -164,35 +164,35 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.MovieTitleIndex) (
         ("Star Wars", t2, Set (id)))
     store.expectCells (PM.CastTable) (
-        (id, t2, PM.Cast (Seq (PM.CastMember (1, "Luke Skywalker")))))
+        (id, t2, PM.Cast (Seq (PM.CastMember ("1", "Luke Skywalker")))))
     store.expectCells (PM.ActorTable) (
-        (1L, t1, PO.markHamill))
+        ("1", t1, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
-        ("Mark Hamill", t1, Set (1L)))
+        ("Mark Hamill", t1, Set ("1")))
     store.expectCells (PM.RolesTable) (
-        (1L, t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
-        (1L, t1, PM.Roles.empty))
+        ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
+        ("1", t1, PM.Roles.empty))
 
     expectReadResult (movies.readMovie (t2, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "create a movie with three cast members" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.markHamill) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, 2, DO.harrisonFord) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, 3, DO.carrieFisher) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, "2", DO.harrisonFord) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, "3", DO.carrieFisher) .expectPass()
 
     val (id, t4) = movies.create (random.nextXid, t3, """ {
         "title": "Star Wars",
         "cast": [
-            { "actorId": 1, "role": "Luke Skywalker" },
-            { "actorId": 2, "role": "Han Solo" },
-            { "actorId": 3, "role": "Princess Leia Organa" }
+            { "actorId": "1", "role": "Luke Skywalker" },
+            { "actorId": "2", "role": "Han Solo" },
+            { "actorId": "3", "role": "Princess Leia Organa" }
         ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
@@ -202,32 +202,32 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("Star Wars", t4, Set (id)))
     store.expectCells (PM.CastTable) (
         (id, t4, PM.Cast (Seq (
-            PM.CastMember (1, "Luke Skywalker"),
-            PM.CastMember (2, "Han Solo"),
-            PM.CastMember (3, "Princess Leia Organa")))))
+            PM.CastMember ("1", "Luke Skywalker"),
+            PM.CastMember ("2", "Han Solo"),
+            PM.CastMember ("3", "Princess Leia Organa")))))
     store.expectCells (PM.ActorTable) (
-        (1L, t1, PO.markHamill),
-        (2L, t2, PO.harrisonFord),
-        (3L, t3, PO.carrieFisher))
+        ("1", t1, PO.markHamill),
+        ("2", t2, PO.harrisonFord),
+        ("3", t3, PO.carrieFisher))
     store.expectCells (PM.ActorNameIndex) (
-        ("Carrie Fisher", t3, Set (3L)),
-        ("Harrison Ford", t2, Set (2L)),
-        ("Mark Hamill", t1, Set (1L)))
+        ("Carrie Fisher", t3, Set ("3")),
+        ("Harrison Ford", t2, Set ("2")),
+        ("Mark Hamill", t1, Set ("1")))
     store.expectCells (PM.RolesTable) (
-        (1L, t4, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
-        (1L, t1, PM.Roles.empty),
-        (2L, t4, PM.Roles (Seq (PM.Role (id, "Han Solo")))),
-        (2L, t2, PM.Roles.empty),
-        (3L, t4, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
-        (3L, t3, PM.Roles.empty))
+        ("1", t4, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
+        ("1", t1, PM.Roles.empty),
+        ("2", t4, PM.Roles (Seq (PM.Role (id, "Han Solo")))),
+        ("2", t2, PM.Roles.empty),
+        ("3", t4, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
+        ("3", t3, PM.Roles.empty))
 
     expectReadResult (movies.readMovie (t4, id)) (t4, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "cast": [
-            { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" },
-            { "actorId": 2, "actor": "Harrison Ford", "role": "Han Solo" },
-            { "actorId": 3, "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
+            { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" },
+            { "actorId": "2", "actor": "Harrison Ford", "role": "Han Solo" },
+            { "actorId": "3", "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
         ]
     } """)
   }
@@ -257,13 +257,13 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) ()
 
     expectReadResult (movies.readMovie (t2, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars: A New Hope",
         "cast": []
     } """)
 
     expectReadResult (movies.readMovie (t1, id)) (t1, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "cast": []
     } """)
@@ -293,14 +293,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) ()
 
     expectReadResult (movies.readMovie (t2, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "released": "1977-05-25",
         "cast": []
     } """)
 
     expectReadResult (movies.readMovie (t1, id)) (t1, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "released": "1980-06-20",
         "cast": []
@@ -310,16 +310,16 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update a cast member" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "role": "Luke Skywriter" } ]
+        "cast": [ { "actorId": "1", "role": "Luke Skywriter" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     val t3 = movies.update (random.nextXid, t2, id, """ {
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
@@ -327,51 +327,51 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.MovieTitleIndex) (
         ("Star Wars", t2, Set (id)))
     store.expectCells (PM.CastTable) (
-        (id, t3, PM.Cast (Seq (PM.CastMember (1, "Luke Skywalker")))),
-        (id, t2, PM.Cast (Seq (PM.CastMember (1, "Luke Skywriter")))))
+        (id, t3, PM.Cast (Seq (PM.CastMember ("1", "Luke Skywalker")))),
+        (id, t2, PM.Cast (Seq (PM.CastMember ("1", "Luke Skywriter")))))
     store.expectCells (PM.ActorTable) (
-        (1L, t1, PO.markHamill))
+        ("1", t1, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
-        ("Mark Hamill", t1, Set (1L)))
+        ("Mark Hamill", t1, Set ("1")))
     store.expectCells (PM.RolesTable) (
-        (1L, t3, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
-        (1L, t2, PM.Roles (Seq (PM.Role (id, "Luke Skywriter")))),
-        (1L, t1, PM.Roles.empty))
+        ("1", t3, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
+        ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywriter")))),
+        ("1", t1, PM.Roles.empty))
 
     expectReadResult (movies.readMovie (t2, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywriter" } ]
+        "cast": [ { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywriter" } ]
     } """)
 
     expectReadResult (movies.readMovie (t3, id)) (t3, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "add a cast member" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.markHamill) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, 2, DO.harrisonFord) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, 3, DO.carrieFisher) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, "2", DO.harrisonFord) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, "3", DO.carrieFisher) .expectPass()
 
     val (id, t4) = movies.create (random.nextXid, t3, """ {
         "title": "Star Wars",
         "cast": [
-            { "actorId": 1, "role": "Luke Skywalker" },
-            { "actorId": 3, "role": "Princess Leia Organa" }
+            { "actorId": "1", "role": "Luke Skywalker" },
+            { "actorId": "3", "role": "Princess Leia Organa" }
         ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     val t5 = movies.update (random.nextXid, t4, id, """ {
         "title": "Star Wars",
         "cast": [
-            { "actorId": 1, "role": "Luke Skywalker" },
-            { "actorId": 2, "role": "Han Solo" },
-            { "actorId": 3, "role": "Princess Leia Organa" }
+            { "actorId": "1", "role": "Luke Skywalker" },
+            { "actorId": "2", "role": "Han Solo" },
+            { "actorId": "3", "role": "Princess Leia Organa" }
         ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
@@ -381,44 +381,44 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("Star Wars", t4, Set (id)))
     store.expectCells (PM.CastTable) (
         (id, t5, PM.Cast (Seq (
-            PM.CastMember (1, "Luke Skywalker"),
-            PM.CastMember (2, "Han Solo"),
-            PM.CastMember (3, "Princess Leia Organa")))),
+            PM.CastMember ("1", "Luke Skywalker"),
+            PM.CastMember ("2", "Han Solo"),
+            PM.CastMember ("3", "Princess Leia Organa")))),
         (id, t4, PM.Cast (Seq (
-            PM.CastMember (1, "Luke Skywalker"),
-            PM.CastMember (3, "Princess Leia Organa")))))
+            PM.CastMember ("1", "Luke Skywalker"),
+            PM.CastMember ("3", "Princess Leia Organa")))))
     store.expectCells (PM.ActorTable) (
-        (1L, t1, PO.markHamill),
-        (2L, t2, PO.harrisonFord),
-        (3L, t3, PO.carrieFisher))
+        ("1", t1, PO.markHamill),
+        ("2", t2, PO.harrisonFord),
+        ("3", t3, PO.carrieFisher))
     store.expectCells (PM.ActorNameIndex) (
-        ("Carrie Fisher", t3, Set (3L)),
-        ("Harrison Ford", t2, Set (2L)),
-        ("Mark Hamill", t1, Set (1L)))
+        ("Carrie Fisher", t3, Set ("3")),
+        ("Harrison Ford", t2, Set ("2")),
+        ("Mark Hamill", t1, Set ("1")))
     store.expectCells (PM.RolesTable) (
-        (1L, t4, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
-        (1L, t1, PM.Roles.empty),
-        (2L, t5, PM.Roles (Seq (PM.Role (id, "Han Solo")))),
-        (2L, t2, PM.Roles.empty),
-        (3L, t4, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
-        (3L, t3, PM.Roles.empty))
+        ("1", t4, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
+        ("1", t1, PM.Roles.empty),
+        ("2", t5, PM.Roles (Seq (PM.Role (id, "Han Solo")))),
+        ("2", t2, PM.Roles.empty),
+        ("3", t4, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
+        ("3", t3, PM.Roles.empty))
 
     expectReadResult (movies.readMovie (t4, id)) (t4, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "cast": [
-            { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" },
-            { "actorId": 3, "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
+            { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" },
+            { "actorId": "3", "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
         ]
     } """)
 
     expectReadResult (movies.readMovie (t5, id)) (t5, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "cast": [
-            { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" },
-            { "actorId": 2, "actor": "Harrison Ford", "role": "Han Solo" },
-            { "actorId": 3, "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
+            { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" },
+            { "actorId": "2", "actor": "Harrison Ford", "role": "Han Solo" },
+            { "actorId": "3", "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
         ]
     } """)
   }
@@ -426,24 +426,24 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "remove a cast member" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.markHamill) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, 2, DO.harrisonFord) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, 3, DO.carrieFisher) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, "2", DO.harrisonFord) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, "3", DO.carrieFisher) .expectPass()
 
     val (id, t4) = movies.create (random.nextXid, t3, """ {
         "title": "Star Wars",
         "cast": [
-            { "actorId": 1, "role": "Luke Skywalker" },
-            { "actorId": 2, "role": "Han Solo" },
-            { "actorId": 3, "role": "Princess Leia Organa" }
+            { "actorId": "1", "role": "Luke Skywalker" },
+            { "actorId": "2", "role": "Han Solo" },
+            { "actorId": "3", "role": "Princess Leia Organa" }
         ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     val t5 = movies.update (random.nextXid, t4, id, """ {
         "title": "Star Wars",
         "cast": [
-            { "actorId": 1, "role": "Luke Skywalker"},
-            { "actorId": 3, "role": "Princess Leia Organa"}
+            { "actorId": "1", "role": "Luke Skywalker"},
+            { "actorId": "3", "role": "Princess Leia Organa"}
         ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
@@ -453,45 +453,45 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("Star Wars", t4, Set (id)))
     store.expectCells (PM.CastTable) (
         (id, t5, PM.Cast (Seq (
-            PM.CastMember (1, "Luke Skywalker"),
-            PM.CastMember (3, "Princess Leia Organa")))),
+            PM.CastMember ("1", "Luke Skywalker"),
+            PM.CastMember ("3", "Princess Leia Organa")))),
         (id, t4, PM.Cast (Seq (
-            PM.CastMember (1, "Luke Skywalker"),
-            PM.CastMember (2, "Han Solo"),
-            PM.CastMember (3, "Princess Leia Organa")))))
+            PM.CastMember ("1", "Luke Skywalker"),
+            PM.CastMember ("2", "Han Solo"),
+            PM.CastMember ("3", "Princess Leia Organa")))))
     store.expectCells (PM.ActorTable) (
-        (1L, t1, PO.markHamill),
-        (2L, t2, PO.harrisonFord),
-        (3L, t3, PO.carrieFisher))
+        ("1", t1, PO.markHamill),
+        ("2", t2, PO.harrisonFord),
+        ("3", t3, PO.carrieFisher))
     store.expectCells (PM.ActorNameIndex) (
-        ("Carrie Fisher", t3, Set (3L)),
-        ("Harrison Ford", t2, Set (2L)),
-        ("Mark Hamill", t1, Set (1L)))
+        ("Carrie Fisher", t3, Set ("3")),
+        ("Harrison Ford", t2, Set ("2")),
+        ("Mark Hamill", t1, Set ("1")))
     store.expectCells (PM.RolesTable) (
-        (1L, t4, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
-        (1L, t1, PM.Roles.empty),
-        (2L, t5, PM.Roles.empty),
-        (2L, t4, PM.Roles (Seq (PM.Role (id, "Han Solo")))),
-        (2L, t2, PM.Roles.empty),
-        (3L, t4, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
-        (3L, t3, PM.Roles.empty))
+        ("1", t4, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
+        ("1", t1, PM.Roles.empty),
+        ("2", t5, PM.Roles.empty),
+        ("2", t4, PM.Roles (Seq (PM.Role (id, "Han Solo")))),
+        ("2", t2, PM.Roles.empty),
+        ("3", t4, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
+        ("3", t3, PM.Roles.empty))
 
     expectReadResult (movies.readMovie (t4, id)) (t4, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "cast":  [
-            { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" },
-            { "actorId": 2, "actor": "Harrison Ford", "role": "Han Solo" },
-            { "actorId": 3, "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
+            { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" },
+            { "actorId": "2", "actor": "Harrison Ford", "role": "Han Solo" },
+            { "actorId": "3", "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
         ]
     } """)
 
     expectReadResult (movies.readMovie (t5, id)) (t5, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "cast":  [
-            { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" },
-            { "actorId": 3, "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
+            { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" },
+            { "actorId": "3", "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
         ]
     } """)
   }
@@ -499,23 +499,23 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "replace a cast member" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.markHamill) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, 2, DO.harrisonFord) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, 3, DO.carrieFisher) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, "2", DO.harrisonFord) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, "3", DO.carrieFisher) .expectPass()
 
     val (id, t4) = movies.create (random.nextXid, t3, """ {
         "title": "Star Wars",
         "cast": [
-            { "actorId": 1, "role": "Luke Skywalker" },
-            { "actorId": 2, "role": "Han Solo" }
+            { "actorId": "1", "role": "Luke Skywalker" },
+            { "actorId": "2", "role": "Han Solo" }
         ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     val t5 = movies.update (random.nextXid, t4, id, """ {
         "title": "Star Wars",
         "cast": [
-            { "actorId": 1, "role": "Luke Skywalker" },
-            { "actorId": 3, "role": "Princess Leia Organa" }
+            { "actorId": "1", "role": "Luke Skywalker" },
+            { "actorId": "3", "role": "Princess Leia Organa" }
         ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
@@ -525,43 +525,43 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("Star Wars", t4, Set (id)))
     store.expectCells (PM.CastTable) (
         (id, t5, PM.Cast (Seq (
-            PM.CastMember (1, "Luke Skywalker"),
-            PM.CastMember (3, "Princess Leia Organa")))),
+            PM.CastMember ("1", "Luke Skywalker"),
+            PM.CastMember ("3", "Princess Leia Organa")))),
         (id, t4, PM.Cast (Seq (
-            PM.CastMember (1, "Luke Skywalker"),
-            PM.CastMember (2, "Han Solo")))))
+            PM.CastMember ("1", "Luke Skywalker"),
+            PM.CastMember ("2", "Han Solo")))))
     store.expectCells (PM.ActorTable) (
-        (1L, t1, PO.markHamill),
-        (2L, t2, PO.harrisonFord),
-        (3L, t3, PO.carrieFisher))
+        ("1", t1, PO.markHamill),
+        ("2", t2, PO.harrisonFord),
+        ("3", t3, PO.carrieFisher))
     store.expectCells (PM.ActorNameIndex) (
-        ("Carrie Fisher", t3, Set (3L)),
-        ("Harrison Ford", t2, Set (2L)),
-        ("Mark Hamill", t1, Set (1L)))
+        ("Carrie Fisher", t3, Set ("3")),
+        ("Harrison Ford", t2, Set ("2")),
+        ("Mark Hamill", t1, Set ("1")))
     store.expectCells (PM.RolesTable) (
-        (1L, t4, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
-        (1L, t1, PM.Roles.empty),
-        (2L, t5, PM.Roles.empty),
-        (2L, t4, PM.Roles (Seq (PM.Role (id, "Han Solo")))),
-        (2L, t2, PM.Roles.empty),
-        (3L, t5, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
-        (3L, t3, PM.Roles.empty))
+        ("1", t4, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
+        ("1", t1, PM.Roles.empty),
+        ("2", t5, PM.Roles.empty),
+        ("2", t4, PM.Roles (Seq (PM.Role (id, "Han Solo")))),
+        ("2", t2, PM.Roles.empty),
+        ("3", t5, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
+        ("3", t3, PM.Roles.empty))
 
     expectReadResult (movies.readMovie (t4, id)) (t4, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "cast":  [
-            { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" },
-            { "actorId": 2, "actor": "Harrison Ford", "role": "Han Solo" }
+            { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" },
+            { "actorId": "2", "actor": "Harrison Ford", "role": "Han Solo" }
         ]
     } """)
 
     expectReadResult (movies.readMovie (t5, id)) (t5, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
         "cast":  [
-            { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" },
-            { "actorId": 3, "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
+            { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" },
+            { "actorId": "3", "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
         ]
     } """)
   }
@@ -569,16 +569,16 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "ignore a movie update with no effect" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     val t3 = movies.update (random.nextXid, t2, id, """ {
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
@@ -586,40 +586,40 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.MovieTitleIndex) (
         ("Star Wars", t2, Set (id)))
     store.expectCells (PM.CastTable) (
-        (id, t2, PM.Cast (Seq (PM.CastMember (1, "Luke Skywalker")))))
+        (id, t2, PM.Cast (Seq (PM.CastMember ("1", "Luke Skywalker")))))
     store.expectCells (PM.ActorTable) (
-        (1L, t1, PO.markHamill))
+        ("1", t1, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
-        ("Mark Hamill", t1, Set (1L)))
+        ("Mark Hamill", t1, Set ("1")))
     store.expectCells (PM.RolesTable) (
-        (1L, t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
-        (1L, t1, PM.Roles.empty))
+        ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
+        ("1", t1, PM.Roles.empty))
 
     expectReadResult (movies.readMovie (t2, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
-        "cast":  [ { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
+        "cast":  [ { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
     } """)
 
     expectReadResult (movies.readMovie (t3, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
-        "cast":  [ { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
+        "cast":  [ { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "leave the title unchanged when a movie update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     val t3 = movies.update (random.nextXid, t2, id, """ {
-        "cast": [ { "actorId": 1, "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
@@ -627,30 +627,30 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.MovieTitleIndex) (
         ("Star Wars", t2, Set (id)))
     store.expectCells (PM.CastTable) (
-        (id, t2, PM.Cast (Seq (PM.CastMember (1, "Luke Skywalker")))))
+        (id, t2, PM.Cast (Seq (PM.CastMember ("1", "Luke Skywalker")))))
     store.expectCells (PM.ActorTable) (
-        (1L, t1, PO.markHamill))
+        ("1", t1, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
-        ("Mark Hamill", t1, Set (1L)))
+        ("Mark Hamill", t1, Set ("1")))
     store.expectCells (PM.RolesTable) (
-        (1L, t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
-        (1L, t1, PM.Roles.empty))
+        ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
+        ("1", t1, PM.Roles.empty))
 
     expectReadResult (movies.readMovie (t3, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "leave the cast unchanged when a movie update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     val t3 = movies.update (random.nextXid, t2, id, """ {
@@ -662,35 +662,35 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.MovieTitleIndex) (
         ("Star Wars", t2, Set (id)))
     store.expectCells (PM.CastTable) (
-        (id, t2, PM.Cast (Seq (PM.CastMember (1, "Luke Skywalker")))))
+        (id, t2, PM.Cast (Seq (PM.CastMember ("1", "Luke Skywalker")))))
     store.expectCells (PM.ActorTable) (
-        (1L, t1, PO.markHamill))
+        ("1", t1, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
-        ("Mark Hamill", t1, Set (1L)))
+        ("Mark Hamill", t1, Set ("1")))
     store.expectCells (PM.RolesTable) (
-        (1L, t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
-        (1L, t1, PM.Roles.empty))
+        ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
+        ("1", t1, PM.Roles.empty))
 
     expectReadResult (movies.readMovie (t3, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "leave the role name unchanged when a movie update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     val t3 = movies.update (random.nextXid, t2, id, """ {
         "title": "Star Wars",
-        "cast": [ { "actorId": 1 } ]
+        "cast": [ { "actorId": "1" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
@@ -698,40 +698,40 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.MovieTitleIndex) (
         ("Star Wars", t2, Set (id)))
     store.expectCells (PM.CastTable) (
-        (id, t2, PM.Cast (Seq (PM.CastMember (1, "Luke Skywalker")))))
+        (id, t2, PM.Cast (Seq (PM.CastMember ("1", "Luke Skywalker")))))
     store.expectCells (PM.ActorTable) (
-        (1L, t1, PO.markHamill))
+        ("1", t1, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
-        ("Mark Hamill", t1, Set (1L)))
+        ("Mark Hamill", t1, Set ("1")))
     store.expectCells (PM.RolesTable) (
-        (1L, t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
-        (1L, t1, PM.Roles.empty))
+        ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
+        ("1", t1, PM.Roles.empty))
 
     expectReadResult (movies.readMovie (t3, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "title": "Star Wars",
-        "cast": [ { "actorId": 1, "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
+        "cast": [ { "actorId": "1", "actor": "Mark Hamill", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "create two movies with the same title" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, """ {
+    val t1 = movies.update (random.nextXid, t0, "1", """ {
         "title": "The Piano"
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t2 = movies.update (random.nextXid, t1, 2, """ {
+    val t2 = movies.update (random.nextXid, t1, "2", """ {
         "title": "The Piano"
     } """ .fromJson [DM.Movie]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
-        (1L, t1, PO.thePiano),
-        (2L, t2, PO.thePiano))
+        ("1", t1, PO.thePiano),
+        ("2", t2, PO.thePiano))
     store.expectCells (PM.MovieTitleIndex) (
-        ("The Piano", t2, Set (1L, 2L)),
-        ("The Piano", t1, Set (1L)))
-    store.expectCells (PM.CastTable) ()    
+        ("The Piano", t2, Set ("1", "2")),
+        ("The Piano", t1, Set ("1")))
+    store.expectCells (PM.CastTable) ()
     store.expectCells (PM.ActorTable) ()
     store.expectCells (PM.ActorNameIndex) ()
     store.expectCells (PM.RolesTable) ()
@@ -755,7 +755,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         (id, t1, PM.Roles.empty))
 
     expectReadResult (movies.readActor (t1, id)) (t1, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "roles":  []
     } """)
@@ -780,7 +780,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         (id, t1, PM.Roles.empty))
 
     expectReadResult (movies.readActor (t1, id)) (t1, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "roles":  []
     } """)
@@ -807,7 +807,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
 
     movies.create (random.nextXid, t0, """ {
         "name": "Mark Hamill",
-        "roles": [ { "movieId": 1 } ]
+        "roles": [ { "movieId": "1" } ]
     } """ .fromJson [DM.Actor]) .fail [BadRequestException]
 
     store.expectCells (PM.MovieTable) ()
@@ -821,82 +821,82 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "create an actor with one role" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "name": "Mark Hamill",
-        "roles": [ { "movieId": 1, "role": "Luke Skywalker" } ]
+        "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
-        (1L, t1, PO.starWars))
+        ("1", t1, PO.starWars))
     store.expectCells (PM.MovieTitleIndex) (
-        ("Star Wars", t1, Set (1L)))
+        ("Star Wars", t1, Set ("1")))
     store.expectCells (PM.CastTable) (
-        (1L, t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (1L, t1, PM.Cast.empty))
+        ("1", t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("1", t1, PM.Cast.empty))
     store.expectCells (PM.ActorTable) (
         (id, t2, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
         ("Mark Hamill", t2, Set (id)))
     store.expectCells (PM.RolesTable) (
-        (id, t2, PM.Roles (Seq (PM.Role (1, "Luke Skywalker")))))
+        (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))))
 
     expectReadResult (movies.readActor (t2, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
-        "roles":  [ { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" } ]
+        "roles":  [ { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "create an actor with three roles" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.starWars) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, 2, DO.empireStrikesBack) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, 3, DO.returnOfTheJedi) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, "2", DO.empireStrikesBack) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, "3", DO.returnOfTheJedi) .expectPass()
 
     val (id, t4) = movies.create (random.nextXid, t3, """ {
         "name": "Mark Hamill",
         "roles": [
-            { "movieId": 1, "role": "Luke Skywalker" },
-            { "movieId": 2, "role": "Luke Skywalker" },
-            { "movieId": 3, "role": "Luke Skywalker" }
+            { "movieId": "1", "role": "Luke Skywalker" },
+            { "movieId": "2", "role": "Luke Skywalker" },
+            { "movieId": "3", "role": "Luke Skywalker" }
         ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
-        (1L, t1, PO.starWars),
-        (2L, t2, PO.empireStrikesBack),
-        (3L, t3, PO.returnOfTheJedi))
+        ("1", t1, PO.starWars),
+        ("2", t2, PO.empireStrikesBack),
+        ("3", t3, PO.returnOfTheJedi))
     store.expectCells (PM.MovieTitleIndex) (
-        ("Star Wars", t1, Set (1L)),
-        ("Star Wars: Return of the Jedi", t3, Set (3L)),
-        ("Star Wars: The Empire Strikes Back", t2, Set (2L)))
+        ("Star Wars", t1, Set ("1")),
+        ("Star Wars: Return of the Jedi", t3, Set ("3")),
+        ("Star Wars: The Empire Strikes Back", t2, Set ("2")))
     store.expectCells (PM.CastTable) (
-        (1L, t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (1L, t1, PM.Cast.empty),
-        (2L, t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (2L, t2, PM.Cast.empty),
-        (3L, t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (3L, t3, PM.Cast.empty))
+        ("1", t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("1", t1, PM.Cast.empty),
+        ("2", t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("2", t2, PM.Cast.empty),
+        ("3", t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("3", t3, PM.Cast.empty))
     store.expectCells (PM.ActorTable) (
         (id, t4, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
         ("Mark Hamill", t4, Set (id)))
     store.expectCells (PM.RolesTable) (
         (id, t4, PM.Roles (Seq (
-            PM.Role (1, "Luke Skywalker"),
-            PM.Role (2, "Luke Skywalker"),
-            PM.Role (3, "Luke Skywalker")))))
+            PM.Role ("1", "Luke Skywalker"),
+            PM.Role ("2", "Luke Skywalker"),
+            PM.Role ("3", "Luke Skywalker")))))
 
     expectReadResult (movies.readActor (t4, id)) (t4, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "roles":  [
-            { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" },
-            { "movieId": 2, "title": "Star Wars: The Empire Strikes Back", "role": "Luke Skywalker" },
-            { "movieId": 3, "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
+            { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" },
+            { "movieId": "2", "title": "Star Wars: The Empire Strikes Back", "role": "Luke Skywalker" },
+            { "movieId": "3", "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
         ]
     } """)
   }
@@ -926,13 +926,13 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         (id, t1, PM.Roles.empty))
 
     expectReadResult (movies.readActor (t1, id)) (t1, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hammer",
         "roles":  []
     } """)
 
     expectReadResult (movies.readActor (t2, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "roles":  []
     } """)
@@ -962,14 +962,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         (id, t1, PM.Roles.empty))
 
     expectReadResult (movies.readActor (t2, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "born": "1951-09-25",
         "roles":  []
     } """)
 
     expectReadResult (movies.readActor (t1, id)) (t1, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "born": "1977-05-25",
         "roles":  []
@@ -979,115 +979,115 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update a role" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "name": "Mark Hamill",
-        "roles": [ { "movieId": 1, "role": "Luke Skywriter" } ]
+        "roles": [ { "movieId": "1", "role": "Luke Skywriter" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     val t3 = movies.update (random.nextXid, t2, id, """ {
         "name": "Mark Hamill",
-        "roles": [ { "movieId": 1, "role": "Luke Skywalker" } ]
+        "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
-        (1L, t1, PO.starWars))
+        ("1", t1, PO.starWars))
     store.expectCells (PM.MovieTitleIndex) (
-        ("Star Wars", t1, Set (1L)))
+        ("Star Wars", t1, Set ("1")))
     store.expectCells (PM.CastTable) (
-        (1L, t3, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (1L, t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywriter")))),
-        (1L, t1, PM.Cast.empty))
+        ("1", t3, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("1", t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywriter")))),
+        ("1", t1, PM.Cast.empty))
     store.expectCells (PM.ActorTable) (
         (id, t2, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
         ("Mark Hamill", t2, Set (id)))
     store.expectCells (PM.RolesTable) (
-        (id, t3, PM.Roles (Seq (PM.Role (1, "Luke Skywalker")))),
-        (id, t2, PM.Roles (Seq (PM.Role (1, "Luke Skywriter")))))
+        (id, t3, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))),
+        (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywriter")))))
 
     expectReadResult (movies.readActor (t2, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
-        "roles":  [ { "movieId": 1, "title": "Star Wars", "role": "Luke Skywriter" } ]
+        "roles":  [ { "movieId": "1", "title": "Star Wars", "role": "Luke Skywriter" } ]
     } """)
 
     expectReadResult (movies.readActor (t3, id)) (t3, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
-        "roles":  [ { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" } ]
+        "roles":  [ { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "add a role" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.starWars) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, 2, DO.empireStrikesBack) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, 3, DO.returnOfTheJedi) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, "2", DO.empireStrikesBack) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, "3", DO.returnOfTheJedi) .expectPass()
 
     val (id, t4) = movies.create (random.nextXid, t3, """ {
         "name": "Mark Hamill",
         "roles": [
-            { "movieId": 1, "role": "Luke Skywalker" },
-            { "movieId": 3, "role": "Luke Skywalker" }
+            { "movieId": "1", "role": "Luke Skywalker" },
+            { "movieId": "3", "role": "Luke Skywalker" }
         ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     val t5 = movies.update (random.nextXid, t4, id, """ {
         "name": "Mark Hamill",
         "roles": [
-            { "movieId": 1, "role": "Luke Skywalker" },
-            { "movieId": 2, "role": "Luke Skywalker" },
-            { "movieId": 3, "role": "Luke Skywalker" }
+            { "movieId": "1", "role": "Luke Skywalker" },
+            { "movieId": "2", "role": "Luke Skywalker" },
+            { "movieId": "3", "role": "Luke Skywalker" }
         ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
-        (1L, t1, PO.starWars),
-        (2L, t2, PO.empireStrikesBack),
-        (3L, t3, PO.returnOfTheJedi))
+        ("1", t1, PO.starWars),
+        ("2", t2, PO.empireStrikesBack),
+        ("3", t3, PO.returnOfTheJedi))
     store.expectCells (PM.MovieTitleIndex) (
-        ("Star Wars", t1, Set (1L)),
-        ("Star Wars: Return of the Jedi", t3, Set (3L)),
-        ("Star Wars: The Empire Strikes Back", t2, Set (2L)))
+        ("Star Wars", t1, Set ("1")),
+        ("Star Wars: Return of the Jedi", t3, Set ("3")),
+        ("Star Wars: The Empire Strikes Back", t2, Set ("2")))
     store.expectCells (PM.CastTable) (
-        (1L, t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (1L, t1, PM.Cast.empty),
-        (2L, t5, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (2L, t2, PM.Cast.empty),
-        (3L, t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (3L, t3, PM.Cast.empty))
+        ("1", t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("1", t1, PM.Cast.empty),
+        ("2", t5, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("2", t2, PM.Cast.empty),
+        ("3", t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("3", t3, PM.Cast.empty))
     store.expectCells (PM.ActorTable) (
         (id, t4, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
         ("Mark Hamill", t4, Set (id)))
     store.expectCells (PM.RolesTable) (
         (id, t5, PM.Roles (Seq (
-            PM.Role (1, "Luke Skywalker"),
-            PM.Role (2, "Luke Skywalker"),
-            PM.Role (3, "Luke Skywalker")))),
+            PM.Role ("1", "Luke Skywalker"),
+            PM.Role ("2", "Luke Skywalker"),
+            PM.Role ("3", "Luke Skywalker")))),
         (id, t4, PM.Roles (Seq (
-            PM.Role (1, "Luke Skywalker"),
-            PM.Role (3, "Luke Skywalker")))))
+            PM.Role ("1", "Luke Skywalker"),
+            PM.Role ("3", "Luke Skywalker")))))
 
     expectReadResult (movies.readActor (t4, id)) (t4, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "roles":  [
-            { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" },
-            { "movieId": 3, "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
+            { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" },
+            { "movieId": "3", "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
         ]
     } """)
 
     expectReadResult (movies.readActor (t5, id)) (t5, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "roles":  [
-            { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" },
-            { "movieId": 2, "title": "Star Wars: The Empire Strikes Back", "role": "Luke Skywalker" },
-            { "movieId": 3, "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
+            { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" },
+            { "movieId": "2", "title": "Star Wars: The Empire Strikes Back", "role": "Luke Skywalker" },
+            { "movieId": "3", "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
         ]
     } """)
   }
@@ -1095,72 +1095,72 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "remove a role" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.starWars) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, 2, DO.empireStrikesBack) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, 3, DO.returnOfTheJedi) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, "2", DO.empireStrikesBack) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, "3", DO.returnOfTheJedi) .expectPass()
 
     val (id, t4) = movies.create (random.nextXid, t3, """ {
         "name": "Mark Hamill",
         "roles": [
-            { "movieId": 1, "role": "Luke Skywalker" },
-            { "movieId": 2, "role": "Luke Skywalker" },
-            { "movieId": 3, "role": "Luke Skywalker" }
+            { "movieId": "1", "role": "Luke Skywalker" },
+            { "movieId": "2", "role": "Luke Skywalker" },
+            { "movieId": "3", "role": "Luke Skywalker" }
         ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     val t5 = movies.update (random.nextXid, t4, id, """ {
         "name": "Mark Hamill",
         "roles": [
-            { "movieId": 1, "role": "Luke Skywalker" },
-            { "movieId": 3, "role": "Luke Skywalker" }
+            { "movieId": "1", "role": "Luke Skywalker" },
+            { "movieId": "3", "role": "Luke Skywalker" }
         ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
-        (1L, t1, PO.starWars),
-        (2L, t2, PO.empireStrikesBack),
-        (3L, t3, PO.returnOfTheJedi))
+        ("1", t1, PO.starWars),
+        ("2", t2, PO.empireStrikesBack),
+        ("3", t3, PO.returnOfTheJedi))
     store.expectCells (PM.MovieTitleIndex) (
-        ("Star Wars", t1, Set (1L)),
-        ("Star Wars: Return of the Jedi", t3, Set (3L)),
-        ("Star Wars: The Empire Strikes Back", t2, Set (2L)))
+        ("Star Wars", t1, Set ("1")),
+        ("Star Wars: Return of the Jedi", t3, Set ("3")),
+        ("Star Wars: The Empire Strikes Back", t2, Set ("2")))
     store.expectCells (PM.CastTable) (
-        (1L, t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (1L, t1, PM.Cast.empty),
-        (2L, t5, PM.Cast.empty),
-        (2L, t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (2L, t2, PM.Cast.empty),
-        (3L, t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (3L, t3, PM.Cast.empty))
+        ("1", t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("1", t1, PM.Cast.empty),
+        ("2", t5, PM.Cast.empty),
+        ("2", t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("2", t2, PM.Cast.empty),
+        ("3", t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("3", t3, PM.Cast.empty))
     store.expectCells (PM.ActorTable) (
         (id, t4, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
         ("Mark Hamill", t4, Set (id)))
     store.expectCells (PM.RolesTable) (
         (id, t5, PM.Roles (Seq (
-            PM.Role (1, "Luke Skywalker"),
-            PM.Role (3, "Luke Skywalker")))),
+            PM.Role ("1", "Luke Skywalker"),
+            PM.Role ("3", "Luke Skywalker")))),
         (id, t4, PM.Roles (Seq (
-            PM.Role (1, "Luke Skywalker"),
-            PM.Role (2, "Luke Skywalker"),
-            PM.Role (3, "Luke Skywalker")))))
+            PM.Role ("1", "Luke Skywalker"),
+            PM.Role ("2", "Luke Skywalker"),
+            PM.Role ("3", "Luke Skywalker")))))
 
     expectReadResult (movies.readActor (t4, id)) (t4, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "roles":  [
-            { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" },
-            { "movieId": 2, "title": "Star Wars: The Empire Strikes Back", "role": "Luke Skywalker" },
-            { "movieId": 3, "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
+            { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" },
+            { "movieId": "2", "title": "Star Wars: The Empire Strikes Back", "role": "Luke Skywalker" },
+            { "movieId": "3", "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
         ]
     } """)
 
     expectReadResult (movies.readActor (t5, id)) (t5, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "roles":  [
-            { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" },
-            { "movieId": 3, "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
+            { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" },
+            { "movieId": "3", "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
         ]
     } """)
   }
@@ -1168,69 +1168,69 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "replace a role" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.starWars) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, 2, DO.empireStrikesBack) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, 3, DO.returnOfTheJedi) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, "2", DO.empireStrikesBack) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, "3", DO.returnOfTheJedi) .expectPass()
 
     val (id, t4) = movies.create (random.nextXid, t3, """ {
         "name": "Mark Hamill",
         "roles": [
-            { "movieId": 1, "role": "Luke Skywalker" },
-            { "movieId": 2, "role": "Luke Skywalker" }
+            { "movieId": "1", "role": "Luke Skywalker" },
+            { "movieId": "2", "role": "Luke Skywalker" }
         ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     val t5 = movies.update (random.nextXid, t4, id, """ {
         "name": "Mark Hamill",
         "roles": [
-            { "movieId": 1, "role": "Luke Skywalker" },
-            { "movieId": 3, "role": "Luke Skywalker" }
+            { "movieId": "1", "role": "Luke Skywalker" },
+            { "movieId": "3", "role": "Luke Skywalker" }
         ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
-        (1L, t1, PO.starWars),
-        (2L, t2, PO.empireStrikesBack),
-        (3L, t3, PO.returnOfTheJedi))
+        ("1", t1, PO.starWars),
+        ("2", t2, PO.empireStrikesBack),
+        ("3", t3, PO.returnOfTheJedi))
     store.expectCells (PM.MovieTitleIndex) (
-        ("Star Wars", t1, Set (1L)),
-        ("Star Wars: Return of the Jedi", t3, Set (3L)),
-        ("Star Wars: The Empire Strikes Back", t2, Set (2L)))
+        ("Star Wars", t1, Set ("1")),
+        ("Star Wars: Return of the Jedi", t3, Set ("3")),
+        ("Star Wars: The Empire Strikes Back", t2, Set ("2")))
     store.expectCells (PM.CastTable) (
-        (1L, t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (1L, t1, PM.Cast.empty),
-        (2L, t5, PM.Cast.empty),
-        (2L, t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (2L, t2, PM.Cast.empty),
-        (3L, t5, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (3L, t3, PM.Cast.empty))
+        ("1", t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("1", t1, PM.Cast.empty),
+        ("2", t5, PM.Cast.empty),
+        ("2", t4, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("2", t2, PM.Cast.empty),
+        ("3", t5, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("3", t3, PM.Cast.empty))
     store.expectCells (PM.ActorTable) (
         (id, t4, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
         ("Mark Hamill", t4, Set (id)))
     store.expectCells (PM.RolesTable) (
         (id, t5, PM.Roles (Seq (
-            PM.Role (1, "Luke Skywalker"),
-            PM.Role (3, "Luke Skywalker")))),
+            PM.Role ("1", "Luke Skywalker"),
+            PM.Role ("3", "Luke Skywalker")))),
         (id, t4, PM.Roles (Seq (
-            PM.Role (1, "Luke Skywalker"),
-            PM.Role (2, "Luke Skywalker")))))
+            PM.Role ("1", "Luke Skywalker"),
+            PM.Role ("2", "Luke Skywalker")))))
 
     expectReadResult (movies.readActor (t4, id)) (t4, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "roles":  [
-            { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" },
-            { "movieId": 2, "title": "Star Wars: The Empire Strikes Back", "role": "Luke Skywalker" }
+            { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" },
+            { "movieId": "2", "title": "Star Wars: The Empire Strikes Back", "role": "Luke Skywalker" }
         ]
     } """)
 
     expectReadResult (movies.readActor (t5, id)) (t5, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
         "roles":  [
-            { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" },
-            { "movieId": 3, "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
+            { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" },
+            { "movieId": "3", "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
         ]
     } """)
   }
@@ -1238,88 +1238,88 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "ignore an actor update with no effect" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "name": "Mark Hamill",
-        "roles": [ { "movieId": 1, "role": "Luke Skywalker" } ]
+        "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     val t3 = movies.update (random.nextXid, t2, id, """ {
         "name": "Mark Hamill",
-        "roles": [ { "movieId": 1, "role": "Luke Skywalker" } ]
+        "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
-        (1L, t1, PO.starWars))
+        ("1", t1, PO.starWars))
     store.expectCells (PM.MovieTitleIndex) (
-        ("Star Wars", t1, Set (1L)))
+        ("Star Wars", t1, Set ("1")))
     store.expectCells (PM.CastTable) (
-        (1L, t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (1L, t1, PM.Cast.empty))
+        ("1", t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("1", t1, PM.Cast.empty))
     store.expectCells (PM.ActorTable) (
         (id, t2, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
         ("Mark Hamill", t2, Set (id)))
     store.expectCells (PM.RolesTable) (
-        (id, t2, PM.Roles (Seq (PM.Role (1, "Luke Skywalker")))))
+        (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))))
 
     expectReadResult (movies.readActor (t2, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
-        "roles":  [ { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" } ]
+        "roles":  [ { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" } ]
     } """)
 
     expectReadResult (movies.readActor (t3, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
-        "roles":  [ { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" } ]
+        "roles":  [ { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "leave the name unchanged when an actor update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "name": "Mark Hamill",
-        "roles": [ { "movieId": 1, "role": "Luke Skywalker" } ]
+        "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     val t3 = movies.update (random.nextXid, t2, id, """ {
-        "roles": [ { "movieId": 1, "role": "Luke Skywalker" } ]
+        "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
-        (1L, t1, PO.starWars))
+        ("1", t1, PO.starWars))
     store.expectCells (PM.MovieTitleIndex) (
-        ("Star Wars", t1, Set (1L)))
+        ("Star Wars", t1, Set ("1")))
     store.expectCells (PM.CastTable) (
-        (1L, t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (1L, t1, PM.Cast.empty))
+        ("1", t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("1", t1, PM.Cast.empty))
     store.expectCells (PM.ActorTable) (
         (id, t2, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
         ("Mark Hamill", t2, Set (id)))
     store.expectCells (PM.RolesTable) (
-        (id, t2, PM.Roles (Seq (PM.Role (1, "Luke Skywalker")))))
+        (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))))
 
     expectReadResult (movies.readActor (t3, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
-        "roles":  [ { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" } ]
+        "roles":  [ { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "leave the roles unchanged when an actor update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "name": "Mark Hamill",
-        "roles": [ { "movieId": 1, "role": "Luke Skywalker" } ]
+        "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     val t3 = movies.update (random.nextXid, t2, id, """ {
@@ -1327,70 +1327,70 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     } """ .fromJson [DM.Actor]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
-        (1L, t1, PO.starWars))
+        ("1", t1, PO.starWars))
     store.expectCells (PM.MovieTitleIndex) (
-        ("Star Wars", t1, Set (1L)))
+        ("Star Wars", t1, Set ("1")))
     store.expectCells (PM.CastTable) (
-        (1L, t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (1L, t1, PM.Cast.empty))
+        ("1", t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("1", t1, PM.Cast.empty))
     store.expectCells (PM.ActorTable) (
         (id, t2, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
         ("Mark Hamill", t2, Set (id)))
     store.expectCells (PM.RolesTable) (
-        (id, t2, PM.Roles (Seq (PM.Role (1, "Luke Skywalker")))))
+        (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))))
 
     expectReadResult (movies.readActor (t3, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
-        "roles":  [ { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" } ]
+        "roles":  [ { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "leave the role name unchanged when an actor update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
 
     val (id, t2) = movies.create (random.nextXid, t1, """ {
         "name": "Mark Hamill",
-        "roles": [ { "movieId": 1, "role": "Luke Skywalker" } ]
+        "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     val t3 = movies.update (random.nextXid, t2, id, """ {
         "name": "Mark Hamill",
-        "roles": [ { "movieId": 1 } ]
+        "roles": [ { "movieId": "1" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
     store.expectCells (PM.MovieTable) (
-        (1L, t1, PO.starWars))
+        ("1", t1, PO.starWars))
     store.expectCells (PM.MovieTitleIndex) (
-        ("Star Wars", t1, Set (1L)))
+        ("Star Wars", t1, Set ("1")))
     store.expectCells (PM.CastTable) (
-        (1L, t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
-        (1L, t1, PM.Cast.empty))
+        ("1", t2, PM.Cast (Seq (PM.CastMember (id, "Luke Skywalker")))),
+        ("1", t1, PM.Cast.empty))
     store.expectCells (PM.ActorTable) (
         (id, t2, PO.markHamill))
     store.expectCells (PM.ActorNameIndex) (
         ("Mark Hamill", t2, Set (id)))
     store.expectCells (PM.RolesTable) (
-        (id, t2, PM.Roles (Seq (PM.Role (1, "Luke Skywalker")))))
+        (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))))
 
     expectReadResult (movies.readActor (t3, id)) (t2, s""" {
-        "id": $id,
+        "id": "$id",
         "name": "Mark Hamill",
-        "roles":  [ { "movieId": 1, "title": "Star Wars", "role": "Luke Skywalker" } ]
+        "roles":  [ { "movieId": "1", "title": "Star Wars", "role": "Luke Skywalker" } ]
     } """)
   }
 
   it should "create two actors with the same name" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, 1, """ {
+    val t1 = movies.update (random.nextXid, t0, "1", """ {
         "name": "Harrison Ford"
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t2 = movies.update (random.nextXid, t1, 2, """ {
+    val t2 = movies.update (random.nextXid, t1, "2", """ {
         "name": "Harrison Ford"
     } """ .fromJson [DM.Actor]) .expectPass()
 
@@ -1398,10 +1398,10 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.MovieTitleIndex) ()
     store.expectCells (PM.CastTable) ()
     store.expectCells (PM.ActorTable) (
-        (1L, t1, PO.harrisonFord),
-        (2L, t2, PO.harrisonFord))
+        ("1", t1, PO.harrisonFord),
+        ("2", t2, PO.harrisonFord))
     store.expectCells (PM.ActorNameIndex) (
-        ("Harrison Ford", t2, Set (1L, 2L)),
-        ("Harrison Ford", t1, Set (1L)))
+        ("Harrison Ford", t2, Set ("1", "2")),
+        ("Harrison Ford", t1, Set ("1")))
     store.expectCells (PM.RolesTable) ()
   }}

@@ -29,7 +29,7 @@ import Async.{guard, supply}
 /** See README.md. */
 class MovieStore (implicit random: Random, store: Store) {
 
-  def readMovie (rt: TxClock, movieId: Long): Async [(TxClock, Option [DM.Movie])] = {
+  def readMovie (rt: TxClock, movieId: String): Async [(TxClock, Option [DM.Movie])] = {
     val tx = new Transaction (rt)
     for {
       _ <- PM.Movie.fetchForDisplay (tx, movieId)
@@ -40,9 +40,9 @@ class MovieStore (implicit random: Random, store: Store) {
       (tx.vt, movie)
     }}
 
-  def create (xid: TxId, ct: TxClock, movie: DM.Movie): Async [(Long, TxClock)] = guard {
+  def create (xid: TxId, ct: TxClock, movie: DM.Movie): Async [(String, TxClock)] = guard {
     val tx = new Transaction (ct)
-    val movieId = random.nextPositiveLong()
+    val movieId = random.nextId()
     for {
       _ <- PM.Movie.fetchForSave (tx, movieId, movie)
       _ = PM.Movie.create (tx, movieId, movie)
@@ -51,7 +51,7 @@ class MovieStore (implicit random: Random, store: Store) {
       (movieId, wt)
     }}
 
-  def update (xid: TxId, ct: TxClock, movieId: Long, movie: DM.Movie): Async [TxClock] = guard {
+  def update (xid: TxId, ct: TxClock, movieId: String, movie: DM.Movie): Async [TxClock] = guard {
     val tx = new Transaction (ct)
     for {
       _ <- PM.Movie.fetchForSave (tx, movieId, movie)
@@ -61,7 +61,7 @@ class MovieStore (implicit random: Random, store: Store) {
       wt
     }}
 
-  def readActor (rt: TxClock, actorId: Long): Async [(TxClock, Option [DM.Actor])] = {
+  def readActor (rt: TxClock, actorId: String): Async [(TxClock, Option [DM.Actor])] = {
     val tx = new Transaction (rt)
     for {
       _ <- PM.Actor.fetchForDisplay (tx, actorId)
@@ -72,9 +72,9 @@ class MovieStore (implicit random: Random, store: Store) {
       (tx.vt, actor)
     }}
 
-  def create (xid: TxId, ct: TxClock, actor: DM.Actor): Async [(Long, TxClock)] = guard {
+  def create (xid: TxId, ct: TxClock, actor: DM.Actor): Async [(String, TxClock)] = guard {
     val tx = new Transaction (ct)
-    val actorId = random.nextPositiveLong()
+    val actorId = random.nextId()
     for {
       _ <- PM.Actor.fetchForSave (tx, actorId, actor)
       _ = PM.Actor.create (tx, actorId, actor)
@@ -83,7 +83,7 @@ class MovieStore (implicit random: Random, store: Store) {
       (actorId, wt)
     }}
 
-  def update (xid: TxId, ct: TxClock, actorId: Long, actor: DM.Actor): Async [TxClock] = guard {
+  def update (xid: TxId, ct: TxClock, actorId: String, actor: DM.Actor): Async [TxClock] = guard {
     val tx = new Transaction (ct)
     for {
       _ <- PM.Actor.fetchForSave (tx, actorId, actor)

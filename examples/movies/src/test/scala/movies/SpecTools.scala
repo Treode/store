@@ -40,13 +40,13 @@ trait SpecTools {
   /** Display Objects */
   private [movies] object DO {
     
-    val starWars = DM.Movie (1, "Star Wars", null, Seq.empty)
-    val empireStrikesBack = DM.Movie (2, "Star Wars: The Empire Strikes Back", null, Seq.empty)
-    val returnOfTheJedi = DM.Movie (3, "Star Wars: Return of the Jedi", null, Seq.empty)
+    val starWars = DM.Movie ("1", "Star Wars", null, Seq.empty)
+    val empireStrikesBack = DM.Movie ("2", "Star Wars: The Empire Strikes Back", null, Seq.empty)
+    val returnOfTheJedi = DM.Movie ("3", "Star Wars: Return of the Jedi", null, Seq.empty)
 
-    val markHamill = DM.Actor (1, "Mark Hamill", null, Seq.empty)
-    val harrisonFord = DM.Actor (2, "Harrison Ford", null, Seq.empty)
-    val carrieFisher = DM.Actor (3, "Carrie Fisher", null, Seq.empty)
+    val markHamill = DM.Actor ("1", "Mark Hamill", null, Seq.empty)
+    val harrisonFord = DM.Actor ("2", "Harrison Ford", null, Seq.empty)
+    val carrieFisher = DM.Actor ("3", "Carrie Fisher", null, Seq.empty)
   }
 
   /** Physical Objects */

@@ -28,8 +28,8 @@ import movies.{PhysicalModel => PM}
 
 class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
-  val markHamill = """{"id":1,"name":"Mark Hamill","born":null,"roles":[]}"""
-  val markHammer = """{"id":1,"name":"Mark Hammer","born":null,"roles":[]}"""
+  val markHamill = """{"id":"1","name":"Mark Hamill","born":null,"roles":[]}"""
+  val markHammer = """{"id":"1","name":"Mark Hammer","born":null,"roles":[]}"""
 
   def setup() = {
     implicit val random = new Random (0)
@@ -67,11 +67,11 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
-          (1L, t1, PO.markHamill))
+          ("1", t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
-          ("Mark Hamill", t1, Set (1L)))
+          ("Mark Hamill", t1, Set ("1")))
       store.expectCells (PM.RolesTable) (
-          (1L, t1, PM.Roles.empty))
+          ("1", t1, PM.Roles.empty))
     }
 
     "POST /actor should respond Ok with an etag" in {
@@ -87,7 +87,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val id = uri.substring ("/actor/".length)
       val r2 = mock.get (uri)
       r2.etag should be (r1.etag)
-      r2.body should be (s"""{"id":$id,"name":"Mark Hamill","born":null,"roles":[]}""")
+      r2.body should be (s"""{"id":"$id","name":"Mark Hamill","born":null,"roles":[]}""")
     }
 
     "PUT /actor/1 without a title should respond Bad Requst" in {
@@ -173,14 +173,14 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
-          (1L, t2, PO.markHammer),
-          (1L, t1, PO.markHamill))
+          ("1", t2, PO.markHammer),
+          ("1", t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
           ("Mark Hamill", t2, None),
-          ("Mark Hamill", t1, Set (1L)),
-          ("Mark Hammer", t2, Set (1L)))
+          ("Mark Hamill", t1, Set ("1")),
+          ("Mark Hammer", t2, Set ("1")))
       store.expectCells (PM.RolesTable) (
-          (1L, t1, PM.Roles.empty))
+          ("1", t1, PM.Roles.empty))
     }
 
     "PUT /actor/1 with a If-Unmodified-Since:1 should respond Ok with an etag" in {
@@ -197,14 +197,14 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
-          (1L, t2, PO.markHammer),
-          (1L, t1, PO.markHamill))
+          ("1", t2, PO.markHammer),
+          ("1", t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
           ("Mark Hamill", t2, None),
-          ("Mark Hamill", t1, Set (1L)),
-          ("Mark Hammer", t2, Set (1L)))
+          ("Mark Hamill", t1, Set ("1")),
+          ("Mark Hammer", t2, Set ("1")))
       store.expectCells (PM.RolesTable) (
-          (1L, t1, PM.Roles.empty))
+          ("1", t1, PM.Roles.empty))
     }
 
     "PUT /actor/1 with a If-Unmodified-Since:0 should respond Precondition Failed" in {
@@ -221,9 +221,9 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
-          (1L, t1, PO.markHamill))
+          ("1", t1, PO.markHamill))
       store.expectCells (PM.ActorNameIndex) (
-          ("Mark Hamill", t1, Set (1L)))
+          ("Mark Hamill", t1, Set ("1")))
       store.expectCells (PM.RolesTable) (
-          (1L, t1, PM.Roles.empty))
+          ("1", t1, PM.Roles.empty))
     }}}
