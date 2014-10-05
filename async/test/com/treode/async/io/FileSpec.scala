@@ -39,7 +39,7 @@ class FileSpec extends FlatSpec {
     (scheduler, async, file)
   }
 
-  "AsyncFile.flush" should "handle an empty buffer" in {
+  "File.flush" should "handle an empty buffer" in {
     implicit val (scheduler, _, file) = mkFile
     val buffer = PagedBuffer (5)
     file.flush (buffer, 0) .expectPass()
@@ -84,7 +84,7 @@ class FileSpec extends FlatSpec {
     cb.assertFailed [Exception]
   }
 
-  "AsyncFile.fill" should "handle a request for 0 bytes" in {
+  "File.fill" should "handle a request for 0 bytes" in {
     implicit val (scheduler, _, file) = mkFile
     val input = PagedBuffer (5)
     file.fill (input, 0, 0) .expectPass()
@@ -126,7 +126,7 @@ class FileSpec extends FlatSpec {
     implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
     input.writePos = 2
-    async.expectRead (0, 2, 32)
+    async.expectRead (2, 2, 32)
     val cb = file.fill (input, 0, 4) .capture()
     scheduler.run()
     cb.assertNotInvoked()
@@ -148,7 +148,7 @@ class FileSpec extends FlatSpec {
     val input = PagedBuffer (5)
     input.writePos = 6
     input.readPos = 4
-    async.expectRead (0, 6, 32)
+    async.expectRead (2, 6, 32)
     val cb = file.fill (input, 0, 4) .capture()
     scheduler.run()
     cb.assertNotInvoked()
@@ -161,8 +161,8 @@ class FileSpec extends FlatSpec {
     val input = PagedBuffer (5)
     input.writePos = 30
     input.readPos = 26
-    async.expectRead (0, 30, 32)
-    async.expectRead (2, 0, 32)
+    async.expectRead (4, 30, 32)
+    async.expectRead (6, 0, 32)
     val cb = file.fill (input, 0, 8) .capture()
     scheduler.run()
     cb.assertNotInvoked()
@@ -183,9 +183,61 @@ class FileSpec extends FlatSpec {
     cb.assertFailed [Exception]
   }
 
-  "AsyncFile.deframe" should "read from Pickler.frame" in {
+  it should "align and fill needed bytes with an empty buffer" in {
+    implicit val (scheduler, async, file) = mkFile
+    val input = PagedBuffer (5)
+    async.expectRead (0, 0, 32)
+    val cb = file.fill (input, 0, 4, 5) .capture()
+    scheduler.run()
+    cb.assertNotInvoked()
+    async.completeLast (32)
+    cb.assertPassed()
+  }
+
+  it should "align and fill needed bytes within a page" in {
+    implicit val (scheduler, async, file) = mkFile
+    val input = PagedBuffer (12)
+    input.writePos = 32
+    input.readPos = 30
+    async.expectRead (32, 32, 4096)
+    val cb = file.fill (input, 30, 4, 5) .capture()
+    scheduler.run()
+    cb.assertNotInvoked()
+    async.completeLast (32)
+    cb.assertPassed()
+  }
+
+  it should "align and fill needed bytes across pages" in {
+    implicit val (scheduler, async, file) = mkFile
+    val input = PagedBuffer (5)
+    input.writePos = 32
+    input.readPos = 30
+    async.expectRead (32, 0, 32)
+    val cb = file.fill (input, 30, 4, 5) .capture()
+    scheduler.run()
+    cb.assertNotInvoked()
+    async.completeLast (32)
+    cb.assertPassed()
+  }
+
+  it should "reject a misaligned buffer" in {
+    implicit val (scheduler, async, file) = mkFile
+    val input = PagedBuffer (5)
+    input.writeInt (0)
+    val e = file.fill (input, 0, 8, 5) .fail [IllegalArgumentException]
+    assertResult ("requirement failed: Buffer writePos must be aligned.") (e.getMessage)
+  }
+
+  it should "reject an undersized buffer" in {
+    implicit val (scheduler, async, file) = mkFile
+    val input = PagedBuffer (5)
+    val e = file.fill (input, 0, 4, 12) .fail [IllegalArgumentException]
+    assertResult ("requirement failed: Buffer page size must accomodate alignment.") (e.getMessage)
+  }
+
+  "File.deframe" should "read from Pickler.frame" in {
     implicit val scheduler = StubScheduler.random()
-    val file = StubFile (1<<12, 1)
+    val file = StubFile (1 << 12, 1)
     val pickler = Picklers.seq (Picklers.int)
     val out = Seq.fill (23) (Random.nextInt)
     val buffer = PagedBuffer (12)
@@ -199,7 +251,7 @@ class FileSpec extends FlatSpec {
 
   it should "read from Pickler.frame with hashing" in {
     implicit val scheduler = StubScheduler.random()
-    val file = StubFile (1<<12, 1)
+    val file = StubFile (1 << 12, 1)
     val pickler = Picklers.seq (Picklers.int)
     val out = Seq.fill (23) (Random.nextInt)
     val buffer = PagedBuffer (12)
@@ -213,7 +265,7 @@ class FileSpec extends FlatSpec {
 
   it should "raise an error when the hash check fails" in {
     implicit val scheduler = StubScheduler.random()
-    val file = StubFile (1<<12, 1)
+    val file = StubFile (1 << 12, 1)
     val pickler = Picklers.seq (Picklers.int)
     val out = Seq.fill (23) (Random.nextInt)
     val buffer = PagedBuffer (12)

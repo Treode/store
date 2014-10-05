@@ -70,9 +70,7 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
   /** Throw a testing error if the callback was invoked. */
   def assertNotInvoked(): Unit = synchronized {
     if (_invokation != null)
-      fail (
-          "Expected callback to not have been invoked, but it was:\n" +
-          (_invokation take (10) mkString "\n"))
+      fail (s"Expected callback to not have been invoked, but it was: $this")
   }
 
   /** Assert the callback was invoked with [[scala.util.Success Success]] and return the result. */
@@ -100,9 +98,7 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
   def assertFailed [E] (implicit m: Manifest [E]): E = synchronized {
     assertInvoked()
     if (_v != null)
-      fail (
-          "Expected operation to fail, but it passed:\n" +
-          (_invokation take (10) mkString "\n"))
+      fail (s"Expected operation to fail, but it passed: $this")
     if (!m.runtimeClass.isInstance (_t))
       fail (s"Expected ${m.runtimeClass.getSimpleName}, found ${_t.getClass.getSimpleName}")
     _t.asInstanceOf [E]

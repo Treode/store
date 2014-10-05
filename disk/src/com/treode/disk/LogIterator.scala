@@ -177,7 +177,7 @@ private object LogIterator {
     val logSeg = alloc.alloc (num, geom, config)
     val logSegs = new ArrayDeque [Int]
     logSegs.add (logSeg.num)
-    val buf = PagedBuffer (12)
+    val buf = PagedBuffer (geom.blockBits)
 
     val logBase = geom.blockAlignDown (superb.logHead)
     for {

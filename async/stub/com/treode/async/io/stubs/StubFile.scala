@@ -75,10 +75,10 @@ class StubFile private (
       }}}
 
   override protected def _fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] = {
-    require (pos >= 0, "Fill position must be non-negative")
+    val _pos = pos.toInt + input.readableBytes
     require (pos + len < Int.MaxValue)
-    require ((pos & mask) == 0, "Fill position must be aligned")
-    require ((len & mask) == 0, "Fill length must be aligned")
+    require (_pos >= 0, "Fill position must be non-negative")
+    require ((_pos & mask) == 0, "Fill position must be aligned")
     _stop { cb =>
       try {
         if (len <= input.readableBytes) {
@@ -87,9 +87,9 @@ class StubFile private (
           scheduler.fail (cb, new EOFException)
         } else  {
           input.capacity (input.readPos + len)
-          val p = pos.toInt + input.readableBytes
-          val n = math.min (data.length - p, input.writeableBytes)
-          input.writeBytes (data, pos.toInt + input.readableBytes, n)
+          val _len = math.min (data.length - _pos, input.writeableBytes)
+          require ((_len & mask) == 0, "Fill length must be aligned")
+          input.writeBytes (data, _pos, _len)
           if (data.length < pos + len) {
             scheduler.fail (cb, new EOFException)
           } else {

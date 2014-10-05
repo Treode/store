@@ -46,7 +46,7 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
   protected def _fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
     guard {
       input.capacity (input.readPos + len)
-      var _pos = pos
+      var _pos = pos + input.readableBytes
       var _buf = input.buffer (input.writePos, input.writeableBytes)
       whilst (input.readableBytes < len) {
         for (result <- read (_buf, _pos)) yield {
@@ -58,12 +58,26 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
             _buf = input.buffer (input.writePos, input.writeableBytes)
         }}}
 
-
   /** Read from the file until `input` has at least `len` readable bytes.  If `input` already has
-    * that many readable bytes, this will invoke the callback promptly.
+    * that many readable bytes, this will immediately queue the callback on the scheduler.
     */
   def fill (input: PagedBuffer, pos: Long, len: Int): Async [Unit] =
     when (input.readableBytes < len) (_fill (input, pos, len))
+
+  /** Read from the file until `input` has at least `len` readable bytes, respecting alignment. If
+    * `input` already has that many readable bytes, this will immediately queue the callback on the
+    * scheduler. If `input` does not have `len` bytes, then this will align the end point of the
+    * file read to a boundary of `2^align` bytes; it requires that `input.writePos` is already
+    * aligned for the start point of the file read.
+    */
+  def fill (input: PagedBuffer, pos: Long, len: Int, align: Int): Async [Unit] =
+    when (input.readableBytes < len) {
+      require (align <= input.pageBits, "Buffer page size must accomodate alignment.")
+      val bytes = 1 << align
+      val mask = bytes-1
+      require ((input.writePos & mask) == 0, "Buffer writePos must be aligned.")
+      _fill (input, pos, len)
+    }
 
   /** Read a frame with its own length from the file; return the length.
     *
@@ -82,18 +96,26 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
     } yield len
   }
 
-  private def _fill (input: PagedBuffer, pos: Long, len: Int, bytes: Int, mask: Int): Async [Unit] =
-    when (input.readableBytes < len) (_fill (input, pos, (len + bytes - 1) & mask))
-
+  /** Read a frame with its own length from the file, respecting alignment; return the length.
+    *
+    * Ensure `input` has at least four readable bytes, reading from the file if necessary.
+    * Interpret those as the length of bytes needed.  Read from the file again if necessary,
+    * until `input` has at least that many additional readable bytes.
+    *
+    * This keeps the file reads aligned, though the frame need not be aligned. For example, if
+    * `align` is 12, then this aligns the file read to a 4K (2^12) boundary. This method aligns
+    * the ending boundary of the read; it requires that `writePos` be aligned to align the
+    * starting boundary.
+    *
+    * The write counter-part to this method can be found in the
+    * [[com.treode.pickle.Pickler Pickler]].
+    */
   def deframe (input: PagedBuffer, pos: Long, align: Int): Async [Int] =
     guard {
-      val bytes = 1 << align
-      val mask = ~(bytes-1)
-      if ((input.writePos & ~mask) != 0) println ("Buffer writePos must be aligned.")
       for {
-        _ <- _fill (input, pos, 4, bytes, mask)
+        _ <- fill (input, pos, 4, align)
         len = input.readInt()
-        _ <- _fill (input, pos + 4, len, bytes, mask)
+        _ <- fill (input, pos+4, len, align)
       } yield len
     }
 
@@ -129,16 +151,27 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
       len
     }}
 
+  /** Read a frame with its own length from the file, respecting alignment; return the length.
+    *
+    * Ensure `input` has at least four readable bytes, reading from the file if necessary.
+    * Interpret those as the length of bytes needed.  Read from the file again if necessary,
+    * until `input` has at least that many additional readable bytes.
+    *
+    * This keeps the file reads aligned, though the frame need not be aligned. For example, if
+    * `align` is 12, then this aligns the file read to a 4K (2^12) boundary. This method aligns
+    * the ending boundary of the read; it requires that `writePos` be aligned to align the
+    * starting boundary.
+    *
+    * The write counter-part to this method can be found in the
+    * [[com.treode.pickle.Pickler Pickler]].
+    */
   def deframe (hashf: HashFunction, input: PagedBuffer, pos: Long, align: Int): Async [Int] =
     guard {
-      val bytes = 1 << align
-      val mask = ~(bytes-1)
-      if ((input.writePos & ~mask) != 0) println ("Buffer writePos must be aligned.")
       val head = 4 + (hashf.bits >> 3)
       for {
-        _ <- _fill (input, pos, head, bytes, mask)
+        _ <- fill (input, pos, head, align)
         len = input.readInt()
-        _ <- _fill (input, pos + head, len, bytes, mask)
+        _ <- fill (input, pos + head, len, align)
       } yield {
         verify (hashf, input, len)
         len

@@ -226,7 +226,7 @@ private class DiskDrive (
 
   private def reallocRecords(): Async [Unit] = {
 
-    val newBuf = PagedBuffer (12)
+    val newBuf = PagedBuffer (geom.blockBits)
     val newSeg = alloc.alloc (geom, config)
     logSegs.add (newSeg.num)
     RecordHeader.pickler.frame (LogEnd, newBuf)
@@ -304,7 +304,7 @@ private class DiskDrive (
   }
 
   private def writePages (pages: UnrolledBuffer [PickledPage]) = {
-    val buffer = PagedBuffer (12)
+    val buffer = PagedBuffer (geom.blockBits)
     val callbacks = new UnrolledBuffer [Callback [Long]]
     val ledger = new PageLedger
     for (page <- pages) {
@@ -371,9 +371,9 @@ private object DiskDrive {
   def offset (id: Int, offset: Long, length: Int, cb: Callback [Position]): Callback [Long] =
     cb.continue (base => Some (Position (id, base + offset, length)))
 
-  def read [P] (file: File, desc: PageDescriptor [_, P], pos: Position): Async [P] =
+  def read [P] (file: File, geom: DriveGeometry, desc: PageDescriptor [_, P], pos: Position): Async [P] =
     guard {
-      val buf = PagedBuffer (12)
+      val buf = PagedBuffer (geom.blockBits)
       for (_ <- file.fill (buf, pos.offset, pos.length))
         yield desc.ppag.unpickle (buf)
     }
@@ -391,6 +391,7 @@ private object DiskDrive {
       import kit.config
 
       val alloc = Allocator (geom, config)
+      val logBuf = PagedBuffer (geom.blockBits)
       val logSeg = alloc.alloc (geom, config)
       val logSegs = new ArrayDeque [Int]
       logSegs.add (logSeg.num)
@@ -404,8 +405,8 @@ private object DiskDrive {
             SuperBlock.clear (boot.gen + 1, file),
             RecordHeader.init (file, geom, logSeg.base))
       } yield {
-        new DiskDrive (id, path, file, geom, alloc, kit, PagedBuffer (12), false, logSegs,
-            logSeg.base, logSeg.base, logSeg.limit, pageSeg, pageSeg.limit, new PageLedger, true)
+        new DiskDrive (id, path, file, geom, alloc, kit, logBuf, false, logSegs, logSeg.base, 
+            logSeg.base, logSeg.limit, pageSeg, pageSeg.limit, new PageLedger, true)
        }}
 
   def init (

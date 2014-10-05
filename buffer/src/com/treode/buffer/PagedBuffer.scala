@@ -21,13 +21,14 @@ import java.util.Arrays
 
 import com.google.common.hash.{HashCode, HashFunction}
 
-class PagedBuffer private (pageBits: Int) extends Buffer {
+class PagedBuffer private (val pageBits: Int) extends Buffer {
 
   private [this] val InitPages = 8
-  private [this] val pageSize = 1 << pageBits
-  private [this] val pageMask = pageSize - 1
 
-  var pages = new Array [Array [Byte]] (InitPages)
+  val pageSize = 1 << pageBits
+  val pageMask = pageSize - 1
+
+  private [buffer] var pages = new Array [Array [Byte]] (InitPages)
   pages (0) = new Array [Byte] (pageSize)
 
   private [this] var limit = 1
