@@ -35,7 +35,7 @@ class ActorResource (host: HostId, movies: MovieStore) extends AsyncFinatraContr
     } yield {
       movie match {
         case Some (v) if ct < vt =>
-          render.header (ETag, vt.toString) .appjson (v)
+          render.header (ETag, vt.toString) .appjson (request, v)
         case Some (v) =>
           render.status (NotModified) .nothing
         case None =>
