@@ -28,8 +28,8 @@ import movies.{PhysicalModel => PM}
 
 class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
-  val starWars = """{"id":"1","title":"Star Wars","released":null,"cast":[]}"""
-  val aNewHope = """{"id":"1","title":"Star Wars: A New Hope","released":null,"cast":[]}"""
+  val starWars = """{"id": "1", "title": "Star Wars", "released": null, "cast": []}"""
+  val aNewHope = """{"id": "1", "title": "Star Wars: A New Hope", "released": null, "cast": []}"""
 
   def setup() = {
     implicit val random = new Random (0)
@@ -87,7 +87,7 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val id = uri.substring ("/movie/".length)
       val r2 = mock.get (uri)
       r2.etag should be (r1.etag)
-      r2.body should be (s"""{"id":"$id","title":"Star Wars","released":null,"cast":[]}""")
+      r2.body should matchJson (s"""{"id":"$id","title":"Star Wars","released":null,"cast":[]}""")
     }
 
     "PUT /movie/1 without a title should respond Bad Requst" in {
@@ -114,7 +114,7 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val r2 = mock.get ("/movie/1")
       r2.code should equal (Ok)
       r2.etag should be (r1.etag)
-      r2.body should be (starWars)
+      r2.body should matchJson (starWars)
     }
 
     "GET /movie/1 with If-Modified-Since:0 should respond Ok" in {
@@ -125,7 +125,7 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
           headers = Map (IfModifiedSince -> "0"))
       r2.code should equal (Ok)
       r2.etag should be (r1.etag)
-      r2.body should be (starWars)
+      r2.body should matchJson (starWars)
     }
 
     "GET /movie/1 with If-Modified-Since:(r1.etag) should respond Not Modified" in {
@@ -155,7 +155,7 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
           headers = Map (LastModificationBefore -> r1.etag.toString))
       r2.code should equal (Ok)
       r2.etag should be (r1.etag)
-      r2.body should be (starWars)
+      r2.body should matchJson (starWars)
     }
 
     "PUT /movie/1 with should respond Ok with an etag" in {

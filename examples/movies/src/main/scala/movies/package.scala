@@ -59,12 +59,15 @@ package object movies {
     })
   })
 
+  private val prettyJson = textJson.writerWithDefaultPrettyPrinter
+
   implicit val flaggableCellId: Flaggable [CellId] =
     Flaggable.mandatory (s => CellId (parseUnsignedLong (s) .get))
 
   implicit val flaggableHostId: Flaggable [HostId] =
     Flaggable.mandatory (s => HostId (parseUnsignedLong (s) .get))
 
+  val Accept = "Accept"
   val ContentType = "Content-Type"
   val ETag = "ETag"
   val IfModifiedSince = "If-Modified-Since"
@@ -159,6 +162,13 @@ package object movies {
           TxClock.now
       }
 
+    def getPretty: Boolean =
+      // If the accept header lacks "application/json", then pretty print the response.
+      request.headerMap.get ("Accept") match {
+        case Some (accept) => !(accept contains MediaType.Json)
+        case None => true
+      }
+
     def getSlice: Slice = {
       val slice = request.params.getInt ("slice")
       val nslices = request.params.getInt ("nslices")
@@ -191,9 +201,12 @@ package object movies {
   implicit class RichResponseBuilder (response: ResponseBuilder) {
 
     // It would be handy if we could add our modules to the mapper Finatra's using.
-    def appjson (v: Any): ResponseBuilder = {
+    def appjson (request: Request, value: Any): ResponseBuilder = {
       response.contentType (MediaType.Json)
-      response.body (textJson.writeValueAsBytes (v))
+      if (request.getPretty) 
+        response.body (prettyJson.writeValueAsBytes (value))
+      else
+        response.body (textJson.writeValueAsBytes (value))
       response
     }}
 

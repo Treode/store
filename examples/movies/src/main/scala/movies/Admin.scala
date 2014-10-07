@@ -31,7 +31,7 @@ import Store.Controller
 class Admin (controller: Controller) extends AsyncFinatraController {
 
   get ("/atlas") { request =>
-    supply (render.appjson (controller.cohorts))
+    supply (render.appjson (request, controller.cohorts))
   }
 
   put ("/atlas") { request =>
@@ -43,7 +43,7 @@ class Admin (controller: Controller) extends AsyncFinatraController {
     for {
       drives <- controller.drives
     } yield {
-      render.appjson (drives)
+      render.appjson (request, drives)
     }}
 
   post ("/drives/attach") { request =>
@@ -66,5 +66,5 @@ class Admin (controller: Controller) extends AsyncFinatraController {
     for {
       tables <- controller.tables
     } yield {
-      render.appjson (tables)
+      render.appjson (request, tables)
     }}}

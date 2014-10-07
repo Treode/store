@@ -71,7 +71,7 @@ class Peers (controller: Store.Controller) extends FinatraController {
   }
 
   get ("/hosts") { request =>
-    render.appjson (hosts (request.getSlice)) .toFuture
+    render.appjson (request, hosts (request.getSlice)) .toFuture
   }}
 
 object Peers {

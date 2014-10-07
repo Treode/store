@@ -28,8 +28,9 @@ import movies.{PhysicalModel => PM}
 
 class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
-  val markHamill = """{"id":"1","name":"Mark Hamill","born":null,"roles":[]}"""
-  val markHammer = """{"id":"1","name":"Mark Hammer","born":null,"roles":[]}"""
+  val markHamill = """{"id": "1", "name": "Mark Hamill", "born": null, "roles": []}"""
+  
+  val markHammer = """{"id": "1", "name": "Mark Hammer", "born": null, "roles": []}"""
 
   def setup() = {
     implicit val random = new Random (0)
@@ -46,7 +47,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
           "/actor/1",
           headers = Map (ContentType -> MediaType.Json),
           body = markHamill)
-    response.code should equal (Ok)
+    response.code should be (Ok)
     response
   }
 
@@ -55,7 +56,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
     "GET /actor/1 should respond Not Found" in {
       implicit val (scheduler, store, mock) = setup()
       val response = mock.get ("/actor/1")
-      response.code should equal (NotFound)
+      response.code should be (NotFound)
     }
 
     "PUT /actor/1 should respond Ok with an etag" in {
@@ -81,13 +82,13 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
           "/actor",
           headers = Map (ContentType -> MediaType.Json),
           body = markHamill)
-      r1.code should equal (Ok)
+      r1.code should be (Ok)
 
       val uri = r1.getHeader (Location)
       val id = uri.substring ("/actor/".length)
       val r2 = mock.get (uri)
       r2.etag should be (r1.etag)
-      r2.body should be (s"""{"id":"$id","name":"Mark Hamill","born":null,"roles":[]}""")
+      r2.body should matchJson (s"""{"id": "$id", "name": "Mark Hamill", "born": null, "roles": []}""")
     }
 
     "PUT /actor/1 without a title should respond Bad Requst" in {
@@ -96,7 +97,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
             "/actor/1",
             headers = Map (ContentType -> MediaType.Json),
             body = "{}")
-      r1.code should equal (BadRequest)
+      r1.code should be (BadRequest)
 
       store.expectCells (PM.MovieTable) ()
       store.expectCells (PM.MovieTitleIndex) ()
@@ -112,9 +113,9 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val (scheduler, store, mock) = setup()
       val r1 = addMarkHamill (mock)
       val r2 = mock.get ("/actor/1")
-      r2.code should equal (Ok)
+      r2.code should be (Ok)
       r2.etag should be (r1.etag)
-      r2.body should be (markHamill)
+      r2.body should matchJson (markHamill)
     }
 
     "GET /actor/1 with If-Modified-Since:0 should respond Ok" in {
@@ -123,9 +124,9 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val r2 = mock.get (
           "/actor/1",
           headers = Map (IfModifiedSince -> "0"))
-      r2.code should equal (Ok)
+      r2.code should be (Ok)
       r2.etag should be (r1.etag)
-      r2.body should be (markHamill)
+      r2.body should matchJson (markHamill)
     }
 
     "GET /actor/1 with If-Modified-Since:(r1.etag) should respond Not Modified" in {
@@ -134,7 +135,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val response = mock.get (
           "/actor/1",
           headers = Map (IfModifiedSince -> r1.etag.toString))
-      response.code should equal (NotModified)
+      response.code should be (NotModified)
       response.body should be ("")
     }
 
@@ -144,7 +145,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val response = mock.get (
           "/actor/1",
           headers = Map (LastModificationBefore -> (r1.etag-1).toString))
-      response.code should equal (NotFound)
+      response.code should be (NotFound)
     }
 
     "GET /actor/1 with Last-Modification-Before:(r1.etag) should respond Ok" in {
@@ -153,9 +154,9 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val r2 = mock.get (
           "/actor/1",
           headers = Map (LastModificationBefore -> r1.etag.toString))
-      r2.code should equal (Ok)
+      r2.code should be (Ok)
       r2.etag should be (r1.etag)
-      r2.body should be (markHamill)
+      r2.body should matchJson (markHamill)
     }
 
     "PUT /actor/1 with should respond Ok with an etag" in {
@@ -165,7 +166,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
           "/actor/1",
           headers = Map (ContentType -> MediaType.Json),
           body = markHammer)
-      r2.code should equal (Ok)
+      r2.code should be (Ok)
       val etag = r2.etag
 
       val (t1, t2) = (r1.etag, r2.etag)
@@ -190,7 +191,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
           "/actor/1",
           headers = Map (ContentType -> MediaType.Json, IfUnmodifiedSince -> r1.etag.toString),
           body = markHammer)
-      r2.code should equal (Ok)
+      r2.code should be (Ok)
 
       val (t1, t2) = (r1.etag, r2.etag)
       store.expectCells (PM.MovieTable) ()
@@ -214,7 +215,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
           "/actor/1",
           headers = Map (ContentType -> MediaType.Json, IfUnmodifiedSince -> "0"),
           body = markHammer)
-      r2.code should equal (PreconditionFailed)
+      r2.code should be (PreconditionFailed)
 
       val t1 = r1.etag
       store.expectCells (PM.MovieTable) ()
