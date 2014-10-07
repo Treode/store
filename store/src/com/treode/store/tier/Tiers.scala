@@ -17,7 +17,7 @@
 package com.treode.store.tier
 
 import com.treode.disk.Position
-import com.treode.store.{Residents, Store, StorePicklers}
+import com.treode.store.{Residents, Store, StorePicklers, TableDigest}
 
  private case class Tiers (tiers: Seq [Tier]) {
 
@@ -85,6 +85,9 @@ import com.treode.store.{Residents, Store, StorePicklers}
     else
       0
   }
+
+  def digest: Seq [TableDigest.Tier] =
+    tiers map (_.digest)
 
   override def toString: String =
     s"Tiers(\n   ${tiers mkString ",\n   "})"

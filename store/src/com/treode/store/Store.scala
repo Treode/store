@@ -229,6 +229,8 @@ object Store {
 
     def spread [M] (desc: RumorDescriptor [M]) (msg: M)
 
+    def tables: Async [Seq [TableDigest]]
+
     def shutdown(): Async [Unit]
   }
 

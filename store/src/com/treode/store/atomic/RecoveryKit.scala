@@ -42,7 +42,7 @@ private class RecoveryKit (implicit
     val config: Store.Config
 ) extends Atomic.Recovery {
 
-  val tables = new TimedMedic (this)
+  val tstore = new TimedMedic (this)
   val writers = newWriterMedicsMap
 
   def get (xid: TxId): Medic = {
@@ -75,17 +75,17 @@ private class RecoveryKit (implicit
   }
 
   receive.replay { case (tab, gen, novel) =>
-    tables.receive (tab, gen, novel)
+    tstore.receive (tab, gen, novel)
   }
 
   checkpoint.replay { case (tab, meta) =>
-    tables.checkpoint (tab, meta)
+    tstore.checkpoint (tab, meta)
   }
 
   def launch (implicit launch: Disk.Launch, cluster: Cluster, paxos: Paxos): Async [Atomic] = {
     import launch.disk
     val kit = new AtomicKit()
-    kit.tables.recover (tables.close())
+    kit.tstore.recover (tstore.close())
     val medics = writers.values
     for {
       _ <- medics.filter (_.isCommitted) .async.foreach (_.close (kit))

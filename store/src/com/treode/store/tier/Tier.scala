@@ -21,7 +21,7 @@ import scala.util.{Failure, Success}
 import com.treode.async.{Async, Callback}
 import com.treode.async.implicits._
 import com.treode.disk.{Disk, Position}
-import com.treode.store.{Bytes, Bound, Cell, Key, Residents, StorePicklers, TxClock}
+import com.treode.store._
 
 import Async.async
 
@@ -86,6 +86,9 @@ private case class Tier (
 
   def estimate (other: Residents): Long =
     (keys.toDouble * residents.stability (other) * 1.1).toLong
+
+  def digest: TableDigest.Tier =
+    TableDigest.Tier (keys, entries, earliest, latest, diskBytes)
 
   override def toString: String =
     s"Tier($gen,$root,$bloom)"

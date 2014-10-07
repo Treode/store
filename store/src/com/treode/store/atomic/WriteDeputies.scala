@@ -27,7 +27,7 @@ import Async.guard
 
 private class WriteDeputies (kit: AtomicKit) {
   import WriteDeputy._
-  import kit.{cluster, tables}
+  import kit.{cluster, tstore}
   import kit.library.atlas
 
   val deputies = newWritersMap
@@ -53,7 +53,7 @@ private class WriteDeputies (kit: AtomicKit) {
     guard {
       for {
         _ <- materialize (deputies.values) .latch.unit foreach (_.checkpoint())
-        _ <- tables.checkpoint()
+        _ <- tstore.checkpoint()
       } yield ()
     }
 
@@ -61,7 +61,7 @@ private class WriteDeputies (kit: AtomicKit) {
 
     launch.checkpoint (checkpoint())
 
-    TimedStore.table.handle (tables)
+    TimedStore.table.handle (tstore)
 
     prepare.listen { case ((version, xid, ct, ops), from) =>
       if (atlas.version - 1 <= version && version <= atlas.version + 1)

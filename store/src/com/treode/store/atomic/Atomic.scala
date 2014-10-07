@@ -21,12 +21,14 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.Disk
-import com.treode.store.{Atlas, Library, Store}
+import com.treode.store.{Atlas, Library, Store, TableDigest}
 import com.treode.store.paxos.Paxos
 
 private [store] trait Atomic extends Store {
 
   def rebalance (atlas: Atlas): Async [Unit]
+
+  def tables: Async [Seq [TableDigest]]
 }
 
 private [store] object Atomic {

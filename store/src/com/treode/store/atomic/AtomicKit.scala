@@ -41,7 +41,7 @@ private class AtomicKit (implicit
 
   import library.{atlas, releaser}
 
-  val tables = new TimedStore (this)
+  val tstore = new TimedStore (this)
   val reader = new ReadDeputy (this)
   val writers = new WriteDeputies (this)
   val scanner = new ScanDeputy (this)
@@ -71,5 +71,9 @@ private class AtomicKit (implicit
       _ <- mover.rebalance (targets)
     } yield {
       if (targets.isEmpty)
-        tables.compact()
-    }}}
+        tstore.compact()
+    }}
+
+  def tables: Async [Seq [TableDigest]] =
+    supply (tstore.digest)
+}

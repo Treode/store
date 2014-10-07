@@ -46,6 +46,8 @@ class TreodeModule extends SimpleModule (
          IssuingSerializer,
          MovingSerializer,
          PathSerializer,
-         SettledSerializer))
+         SettledSerializer,
+         TableDigestSerializer,
+         TierDigestSerializer))
 
 object DefaultTreodeModule extends TreodeModule

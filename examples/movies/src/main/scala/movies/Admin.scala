@@ -60,4 +60,11 @@ class Admin (controller: Controller) extends AsyncFinatraController {
       _ <- controller.drain (paths: _*)
     } yield {
       render.ok
+    }}
+
+  get ("/tables") { request =>
+    for {
+      tables <- controller.tables
+    } yield {
+      render.appjson (tables)
     }}}

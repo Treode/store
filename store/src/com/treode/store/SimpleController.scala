@@ -23,6 +23,7 @@ import java.util.concurrent.ExecutorService
 import com.treode.async.Async
 import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
 import com.treode.disk.{Disk, DriveAttachment, DriveDigest, DriveGeometry}
+import com.treode.store.atomic.Atomic
 import com.treode.store.catalog.Catalogs
 
 import Async.supply
@@ -33,8 +34,11 @@ private class SimpleController (
     library: Library,
     librarian: Librarian,
     catalogs: Catalogs,
-    val store: Store
+    atomic: Atomic
 ) extends Store.Controller {
+
+  def store: Store = 
+    atomic
 
   def cohorts: Seq [Cohort] =
     library.atlas.cohorts.toSeq
@@ -71,6 +75,9 @@ private class SimpleController (
 
   def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
     cluster.spread (desc) (msg)
+
+  def tables: Async [Seq [TableDigest]] =
+    atomic.tables
 
   def shutdown(): Async [Unit] =
     supply (())

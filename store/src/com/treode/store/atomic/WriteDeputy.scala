@@ -31,7 +31,7 @@ import Callback.ignore
 import WriteDirector.deliberate
 
 private class WriteDeputy (xid: TxId, kit: AtomicKit) {
-  import kit.{disk, paxos, scheduler, tables, writers}
+  import kit.{disk, paxos, scheduler, tstore, writers}
   import kit.config.{closedLifetime, preparingTimeout}
   import kit.library.releaser
 
@@ -113,7 +113,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
             ()
         }}}
 
-    tables.prepare (ct, ops) run (prepared)
+    tstore.prepare (ct, ops) run (prepared)
 
     def prepare (ct: TxClock, ops: Seq [WriteOp], cb: WriteCallback): Unit = ()
 
@@ -243,7 +243,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
       locks: Option [LockSet],
       cb: WriteCallback) extends State {
 
-    val gens = tables.commit (wt, ops)
+    val gens = tstore.commit (wt, ops)
     guard {
       for {
         _ <- when (locks.isEmpty) (WD.prepared.record (xid, ct, ops))

@@ -26,7 +26,7 @@ import Async.supply
 import ScanDeputy._
 
 private class ScanDeputy (kit: AtomicKit) {
-  import kit.{cluster, disk, tables}
+  import kit.{cluster, disk, tstore}
   import kit.config.{scanBatchBytes, scanBatchEntries}
 
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): Async [(Cells, Point)] =
@@ -36,7 +36,7 @@ private class ScanDeputy (kit: AtomicKit) {
       var entries = 0
       var bytes = 0
 
-      tables.scan (table, start, window, slice) .whilst { cell =>
+      tstore.scan (table, start, window, slice) .whilst { cell =>
         entries < scanBatchEntries &&
         bytes < scanBatchBytes
       } { cell =>

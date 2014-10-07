@@ -48,6 +48,8 @@ private [store] trait TierTable {
   def compact (groups: Set [Long], residents: Residents): Async [Meta]
 
   def checkpoint (residents: Residents): Async [Meta]
+
+  def digest: TableDigest
 }
 
 private [store] object TierTable {

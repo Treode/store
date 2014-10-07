@@ -158,7 +158,11 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
   def recover (ts: Seq [(TableId, TierTable)]) {
     for ((id, t) <- ts)
       tables.put (id, t)
-  }}
+  }
+
+  def digest: Seq [TableDigest] =
+    tables.values.map (_.digest) .toSeq
+}
 
 private object TimedStore {
 

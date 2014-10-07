@@ -23,13 +23,13 @@ import com.treode.cluster.{IgnoreRequestException, RequestDescriptor}
 import com.treode.store.{ReadOp, TxClock, Value}
 
 private class ReadDeputy (kit: AtomicKit) {
-  import kit.{cluster, tables}
+  import kit.{cluster, tstore}
   import kit.library.atlas
 
   def attach() {
     ReadDeputy.read.listen { case ((version, rt, ops), from) =>
       if (atlas.version - 1 <= version && version <= atlas.version + 1)
-        tables.read (rt, ops)
+        tstore.read (rt, ops)
       else
         throw new IgnoreRequestException
     }}}

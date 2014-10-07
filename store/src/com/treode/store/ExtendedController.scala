@@ -71,6 +71,9 @@ private class ExtendedController (
   def spread [M] (desc: RumorDescriptor [M]) (msg: M): Unit =
     cluster.spread (desc) (msg)
 
+  def tables: Async [Seq [TableDigest]] =
+    controller.tables
+
   def shutdown(): Async [Unit] =
     guard [Unit] {
       for {

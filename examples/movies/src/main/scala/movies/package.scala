@@ -27,6 +27,7 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.treode.finatra.BadRequestException
 import com.treode.async.misc.parseUnsignedLong
 import com.treode.cluster.{CellId, HostId}
+import com.treode.jackson.DefaultTreodeModule
 import com.treode.store.{Bytes, Slice, TxClock, TxId}
 import com.treode.store.alt.Froster
 import com.twitter.app.Flaggable
@@ -44,6 +45,7 @@ package object movies {
 
   private val textJson = new ObjectMapper
   textJson.registerModule (DefaultScalaModule)
+  textJson.registerModule (DefaultTreodeModule)
   textJson.registerModule (new JodaModule)
 
   // See http://www.lorrin.org/blog/2013/06/28/custom-joda-time-dateformatter-in-jackson/

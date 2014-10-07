@@ -18,10 +18,10 @@ package com.treode.jackson
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.scalatest.FreeSpec
+import org.scalatest.Assertions
 
 trait ModuleSpec {
-  this: FreeSpec =>
+  this: Assertions =>
 
   val mapper = new ObjectMapper()
   mapper.registerModule (DefaultTreodeModule)

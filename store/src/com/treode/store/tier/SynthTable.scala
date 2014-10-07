@@ -272,12 +272,16 @@ private class SynthTable (
       supply (new Meta (tiers.gen, tiers))
     } else {
       checkpoint (gen, primary, residents)
-    }}}
+    }}
+
+  def digest: TableDigest =
+    new TableDigest (id, tiers.digest)
+}
 
 private object SynthTable {
 
-  val genStepBits = 4
-  val genStepSize = (1<<7).toLong
+  val genStepBits = 7
+  val genStepSize = (1 << genStepBits).toLong
   val genStepMask = genStepSize - 1
 
   def apply (desc: TierDescriptor, id: TableId) (

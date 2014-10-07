@@ -81,7 +81,7 @@ private class StubAtomicHost (
 
   def audit: AsyncIterator [(TableId, Cell)] =
     for {
-      e <- atomic.tables.tables.entrySet.async
+      e <- atomic.tstore.tables.entrySet.async
       cell <- e.getValue.iterator (Residents.all)
     } yield {
       (e.getKey, cell)
@@ -103,7 +103,7 @@ private class StubAtomicHost (
     atomic.hosts (slice)
 
   def putCells (id: TableId, cs: Cell*) (implicit scheduler: StubScheduler): Unit =
-    atomic.tables.receive (id, cs) .expectPass()
+    atomic.tstore.receive (id, cs) .expectPass()
 }
 
 private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost] {

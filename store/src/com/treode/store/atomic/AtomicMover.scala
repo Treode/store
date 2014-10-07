@@ -32,7 +32,7 @@ import Cohort.Moving
 import AtomicMover.{Batch, Point, Range, Targets, Tracker, move}
 
 private class AtomicMover (kit: AtomicKit) {
-  import kit.{cluster, disk, library, random, scheduler, tables}
+  import kit.{cluster, disk, library, random, scheduler, tstore}
   import kit.config.{moveBatchBackoff, moveBatchBytes, moveBatchEntries}
   import kit.library.{atlas, releaser}
 
@@ -54,7 +54,7 @@ private class AtomicMover (kit: AtomicKit) {
       val residents = library.residents
 
       val (table, iter, next) =
-        tables.ceiling (start.table) match {
+        tstore.ceiling (start.table) match {
           case Some (table) if table.id == start.table =>
             (table.id, table.iterator (start.start, residents), Point.Middle (table.id.id + 1))
           case Some (table) if Point.Middle (table.id) < limit =>
@@ -89,7 +89,7 @@ private class AtomicMover (kit: AtomicKit) {
     if (version < atlas.version - 1 || atlas.version + 1 < version)
       throw new IgnoreRequestException
     for {
-      _ <- tables.receive (table, cells)
+      _ <- tstore.receive (table, cells)
       _ <- releaser.release()
     } yield ()
   }
