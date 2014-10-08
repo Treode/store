@@ -39,19 +39,16 @@ private object PhysicalModel {
     }
 
     private def addToTitleIndex (tx: Transaction, movieId: String, title: String): Unit =
-      if (title != null)
-        tx.get (MovieTitleIndex) (title) match {
-          case Some (ids) => tx.update (MovieTitleIndex) (title, ids + movieId)
-          case None => tx.update (MovieTitleIndex) (title, Set (movieId))
-        }
+      if (title != null) {
+        val entry = tx.get (Index) (title) getOrElse (IndexEntry.empty)
+        entry.copy (movies = entry.movies + movieId) .save (tx, title)
+      }
 
     private def removeFromTitleIndex (tx: Transaction, movieId: String, title: String): Unit =
-      if (title != null)
-        tx.get (MovieTitleIndex) (title) match {
-          case Some (ids) if ids.size == 1 => tx.delete (MovieTitleIndex) (title)
-          case Some (ids) => tx.update (MovieTitleIndex) (title, ids - movieId)
-          case None => ()
-        }
+      if (title != null) {
+        val entry = tx.get (Index) (title) getOrElse (IndexEntry.empty)
+        entry.copy (movies = entry.movies - movieId) .save (tx, title)
+      }
 
     private def create (tx: Transaction, movieId: String) {
       validate()
@@ -101,14 +98,14 @@ private object PhysicalModel {
         _ <- tx.fetcher
             .fetch (MovieTable) (movieId)
             .fetch (CastTable) (movieId)
-            .when (update.title != null) (MovieTitleIndex) (update.title)
+            .when (update.title != null) (Index) (update.title)
             .async()
         movie = tx.get (MovieTable) (movieId) .getOrElse (Movie.empty)
         cast = tx.get (CastTable) (movieId) .getOrElse (Cast.empty)
         _ <- tx.fetcher
             .fetch (RolesTable) (cast.actorIds: _*)
             .fetch (RolesTable) (update.actorIds: _*)
-            .when (movie.title != null) (MovieTitleIndex) (movie.title)
+            .when (movie.title != null) (Index) (movie.title)
             .async()
       } yield ()
 
@@ -248,19 +245,16 @@ private object PhysicalModel {
     }
 
     private def addToNameIndex (tx: Transaction, actorId: String, name: String): Unit =
-      if (name != null)
-        tx.get (ActorNameIndex) (name) match {
-          case Some (ids) => tx.update (ActorNameIndex) (name, ids + actorId)
-          case None => tx.update (ActorNameIndex) (name, Set (actorId))
-        }
+      if (name != null) {
+        val entry = tx.get (Index) (name) getOrElse (IndexEntry.empty)
+        entry.copy (actors = entry.actors + actorId) .save (tx, name)
+      }
 
     private def removeFromNameIndex (tx: Transaction, actorId: String, name: String): Unit =
-      if (name != null)
-        tx.get (ActorNameIndex) (name) match {
-          case Some (ids) if ids.size == 1 => tx.delete (ActorNameIndex) (name)
-          case Some (ids) => tx.update (ActorNameIndex) (name, ids - actorId)
-          case None => ()
-        }
+      if (name != null) {
+        val entry = tx.get (Index) (name) getOrElse (IndexEntry.empty)
+        entry.copy (actors = entry.actors - actorId) .save (tx, name)
+      }
 
     private def create (tx: Transaction, actorId: String) {
       validate()
@@ -308,14 +302,14 @@ private object PhysicalModel {
         _ <- tx.fetcher
             .fetch (ActorTable) (actorId)
             .fetch (RolesTable) (actorId)
-            .when (update.name != null) (ActorNameIndex) (update.name)
+            .when (update.name != null) (Index) (update.name)
             .async()
         actor = tx.get (ActorTable) (actorId) .getOrElse (Actor.empty)
         roles = tx.get (RolesTable) (actorId) .getOrElse (Roles.empty)
         _ <- tx.fetcher
             .fetch (CastTable) (roles.movieIds: _*)
             .fetch (CastTable) (update.movieIds: _*)
-            .when (actor.name != null) (ActorNameIndex) (actor.name)
+            .when (actor.name != null) (Index) (actor.name)
             .async()
       } yield ()
 
@@ -443,13 +437,33 @@ private object PhysicalModel {
       new Role (movieId, member.role)
   }
 
+  case class IndexEntry (movies: Set [String], actors: Set [String]) {
+
+    def isEmpty = movies.isEmpty && actors.isEmpty
+
+    def save (tx: Transaction, key: String): Unit =
+      if (isEmpty)
+        tx.delete (Index) (key)
+      else
+        tx.update (Index) (key, this)
+  }
+
+  object IndexEntry {
+
+    val empty = IndexEntry (Set.empty, Set.empty)
+
+    val pickler = {
+      import Picklers._
+      wrap (tuple (set (string), set (string)))
+      .build (v => new IndexEntry (v._1, v._2))
+      .inspect (v => (v.movies, v.actors))
+    }
+
+    val froster = Froster (pickler)
+  }
+
   val MovieTable =
     TableDescriptor (0xA57FDF4417D46CBCL, Froster.string, Froster.bson [Movie])
-
-  val MovieTitleIndex = {
-    import Picklers._
-    TableDescriptor (0x5BADD72FF250EFECL, Froster.string, Froster (set (string)))
-  }
 
   val CastTable =
     TableDescriptor (0x98343A201B58A827L, Froster.string, Froster.bson [Cast])
@@ -457,11 +471,9 @@ private object PhysicalModel {
   val ActorTable =
     TableDescriptor (0xDB67009587B57F0DL, Froster.string, Froster.bson [Actor])
 
-  val ActorNameIndex = {
-    import Picklers._
-    TableDescriptor (0x8BB6A8029399BADEL, Froster.string, Froster (set (string)))
-  }
-
   val RolesTable =
     TableDescriptor (0x57F7EA70C4CD4613L, Froster.string, Froster.bson [Roles])
+
+  val Index =
+    TableDescriptor (0x5368785B1A81BF4EL, Froster.string, IndexEntry.froster)
 }

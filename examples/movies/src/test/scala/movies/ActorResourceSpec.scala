@@ -65,14 +65,13 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
       val t1 = r1.etag
       store.expectCells (PM.MovieTable) ()
-      store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
           ("1", t1, PO.markHamill))
-      store.expectCells (PM.ActorNameIndex) (
-          ("Mark Hamill", t1, Set ("1")))
       store.expectCells (PM.RolesTable) (
           ("1", t1, PM.Roles.empty))
+      store.expectCells (PM.Index) (
+          ("Mark Hamill", t1, PO.actors ("1")))
     }
 
     "POST /actor should respond Ok with an etag" in {
@@ -100,11 +99,10 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       r1.code should be (BadRequest)
 
       store.expectCells (PM.MovieTable) ()
-      store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) ()
-      store.expectCells (PM.ActorNameIndex) ()
       store.expectCells (PM.RolesTable) ()
+      store.expectCells (PM.Index) ()
     }}
 
   "When the database has a movie" - {
@@ -171,17 +169,16 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
       val (t1, t2) = (r1.etag, r2.etag)
       store.expectCells (PM.MovieTable) ()
-      store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
           ("1", t2, PO.markHammer),
           ("1", t1, PO.markHamill))
-      store.expectCells (PM.ActorNameIndex) (
-          ("Mark Hamill", t2, None),
-          ("Mark Hamill", t1, Set ("1")),
-          ("Mark Hammer", t2, Set ("1")))
       store.expectCells (PM.RolesTable) (
           ("1", t1, PM.Roles.empty))
+      store.expectCells (PM.Index) (
+          ("Mark Hamill", t2, None),
+          ("Mark Hamill", t1, PO.actors ("1")),
+          ("Mark Hammer", t2, PO.actors ("1")))
     }
 
     "PUT /actor/1 with a If-Unmodified-Since:1 should respond Ok with an etag" in {
@@ -195,17 +192,16 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
       val (t1, t2) = (r1.etag, r2.etag)
       store.expectCells (PM.MovieTable) ()
-      store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
           ("1", t2, PO.markHammer),
           ("1", t1, PO.markHamill))
-      store.expectCells (PM.ActorNameIndex) (
-          ("Mark Hamill", t2, None),
-          ("Mark Hamill", t1, Set ("1")),
-          ("Mark Hammer", t2, Set ("1")))
       store.expectCells (PM.RolesTable) (
           ("1", t1, PM.Roles.empty))
+      store.expectCells (PM.Index) (
+          ("Mark Hamill", t2, None),
+          ("Mark Hamill", t1, PO.actors ("1")),
+          ("Mark Hammer", t2, PO.actors ("1")))
     }
 
     "PUT /actor/1 with a If-Unmodified-Since:0 should respond Precondition Failed" in {
@@ -219,12 +215,11 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
       val t1 = r1.etag
       store.expectCells (PM.MovieTable) ()
-      store.expectCells (PM.MovieTitleIndex) ()
       store.expectCells (PM.CastTable) ()
       store.expectCells (PM.ActorTable) (
           ("1", t1, PO.markHamill))
-      store.expectCells (PM.ActorNameIndex) (
-          ("Mark Hamill", t1, Set ("1")))
       store.expectCells (PM.RolesTable) (
           ("1", t1, PM.Roles.empty))
+      store.expectCells (PM.Index) (
+          ("Mark Hamill", t1, PO.actors ("1")))
     }}}

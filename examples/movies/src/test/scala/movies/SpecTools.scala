@@ -63,6 +63,12 @@ trait SpecTools {
     val carrieFisher = PM.Actor ("Carrie Fisher", null)
 
     val thePiano = PM.Movie ("The Piano", null)
+
+    def movies (ids: String*): PM.IndexEntry =
+      PM.IndexEntry (ids.toSet, Set.empty)
+
+    def actors (ids: String*): PM.IndexEntry =
+      PM.IndexEntry (Set.empty, ids.toSet)
   }
 
   case class ExpectedCell [K, V] (key: K, time: Long, value: Option [V]) {
