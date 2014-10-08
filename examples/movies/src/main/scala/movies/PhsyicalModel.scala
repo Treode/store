@@ -69,6 +69,8 @@ private object PhysicalModel {
       save (tx, movieId, merge (that))
       if (that.cast != null)
         Cast.save (tx, movieId, that.cast)
+      else if (tx.get (CastTable) (movieId) .isEmpty)
+        Cast.save (tx, movieId, Seq.empty)
     }}
 
   object Movie {
@@ -275,6 +277,8 @@ private object PhysicalModel {
       save (tx, actorId, merge (that))
       if (that.roles != null)
         Roles.save (tx, actorId, that.roles)
+      else if (tx.get (RolesTable) (actorId) .isEmpty)
+        Roles.save (tx, actorId, Seq.empty)
     }}
 
   object Actor {

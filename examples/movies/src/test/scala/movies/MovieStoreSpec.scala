@@ -75,6 +75,29 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     } """)
   }
 
+  it should "update a non-existent movie with no cast" in {
+    implicit val (random, scheduler, store, movies) = setup()
+
+    val t1 = movies.update (random.nextXid, t0, "1", """ {
+        "title": "Star Wars"
+    } """ .fromJson [DM.Movie]) .expectPass()
+
+    store.expectCells (PM.MovieTable) (
+        ("1", t1, PO.starWars))
+    store.expectCells (PM.CastTable) (
+        ("1", t1, PM.Cast.empty))
+    store.expectCells (PM.ActorTable) ()
+    store.expectCells (PM.RolesTable) ()
+    store.expectCells (PM.Index) (
+        ("Star Wars", t1, PO.movies ("1")))
+
+    expectReadResult (movies.readMovie (t1, "1")) (t1, s""" {
+        "id": "1",
+        "title": "Star Wars",
+        "cast": []
+    } """)
+  }
+
   it should "create a movie with an empty cast" in {
     implicit val (random, scheduler, store, movies) = setup()
 
@@ -94,6 +117,30 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
 
     expectReadResult (movies.readMovie (t1, id)) (t1, s""" {
         "id": "$id",
+        "title": "Star Wars",
+        "cast": []
+    } """)
+  }
+
+  it should "update a non-existent movie with an empty cast" in {
+    implicit val (random, scheduler, store, movies) = setup()
+
+    val t1 = movies.update (random.nextXid, t0, "1", """ {
+        "title": "Star Wars",
+        "cast": []
+    } """ .fromJson [DM.Movie]) .expectPass()
+
+    store.expectCells (PM.MovieTable) (
+        ("1", t1, PO.starWars))
+    store.expectCells (PM.CastTable) (
+        ("1", t1, PM.Cast.empty))
+    store.expectCells (PM.ActorTable) ()
+    store.expectCells (PM.RolesTable) ()
+    store.expectCells (PM.Index) (
+        ("Star Wars", t1, PO.movies ("1")))
+
+    expectReadResult (movies.readMovie (t1, "1")) (t1, s""" {
+        "id": "1",
         "title": "Star Wars",
         "cast": []
     } """)
@@ -712,7 +759,9 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.MovieTable) (
         ("1", t1, PO.thePiano),
         ("2", t2, PO.thePiano))
-    store.expectCells (PM.CastTable) ()
+    store.expectCells (PM.CastTable) (
+        ("1", t1, PM.Cast.empty),
+        ("2", t2, PM.Cast.empty))
     store.expectCells (PM.ActorTable) ()
     store.expectCells (PM.RolesTable) ()
     store.expectCells (PM.Index) (
@@ -743,6 +792,29 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     } """)
   }
 
+  it should "update a non-existent actor with no roles" in {
+    implicit val (random, scheduler, store, movies) = setup()
+
+    val t1 = movies.update (random.nextXid, t0, "1", """ {
+        "name": "Mark Hamill"
+    } """ .fromJson [DM.Actor]) .expectPass()
+
+    store.expectCells (PM.MovieTable) ()
+    store.expectCells (PM.CastTable) ()
+    store.expectCells (PM.ActorTable) (
+        ("1", t1, PO.markHamill))
+    store.expectCells (PM.RolesTable) (
+        ("1", t1, PM.Roles.empty))
+    store.expectCells (PM.Index) (
+        ("Mark Hamill", t1, PO.actors ("1")))
+
+    expectReadResult (movies.readActor (t1, "1")) (t1, s""" {
+        "id": "1",
+        "name": "Mark Hamill",
+        "roles":  []
+    } """)
+  }
+
   it should "create an actor with empty roles" in {
     implicit val (random, scheduler, store, movies) = setup()
 
@@ -762,6 +834,30 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
 
     expectReadResult (movies.readActor (t1, id)) (t1, s""" {
         "id": "$id",
+        "name": "Mark Hamill",
+        "roles":  []
+    } """)
+  }
+
+  it should "update a non-existent actor with empty roles" in {
+    implicit val (random, scheduler, store, movies) = setup()
+
+    val t1 = movies.update (random.nextXid, t0, "1", """ {
+        "name": "Mark Hamill",
+        "roles": []
+    } """ .fromJson [DM.Actor]) .expectPass()
+
+    store.expectCells (PM.MovieTable) ()
+    store.expectCells (PM.CastTable) ()
+    store.expectCells (PM.ActorTable) (
+        ("1", t1, PO.markHamill))
+    store.expectCells (PM.RolesTable) (
+        ("1", t1, PM.Roles.empty))
+    store.expectCells (PM.Index) (
+        ("Mark Hamill", t1, PO.actors ("1")))
+
+    expectReadResult (movies.readActor (t1, "1")) (t1, s""" {
+        "id": "1",
         "name": "Mark Hamill",
         "roles":  []
     } """)
@@ -1366,7 +1462,9 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.ActorTable) (
         ("1", t1, PO.harrisonFord),
         ("2", t2, PO.harrisonFord))
-    store.expectCells (PM.RolesTable) ()
+    store.expectCells (PM.RolesTable) (
+        ("1", t1, PM.Roles.empty),
+        ("2", t2, PM.Roles.empty))
     store.expectCells (PM.Index) (
         ("Harrison Ford", t2, PO.actors ("1", "2")),
         ("Harrison Ford", t1, PO.actors ("1")))
