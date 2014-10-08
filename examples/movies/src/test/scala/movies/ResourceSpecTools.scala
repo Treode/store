@@ -16,12 +16,26 @@
 
 package movies
 
+import com.fasterxml.jackson.databind.JsonNode
 import com.treode.store.TxClock
 import com.twitter.finatra.test.MockResult
 import org.scalatest.Assertions
+import org.scalatest.matchers.{Matcher, MatchResult}
 
 trait ResourceSpecTools extends SpecTools {
   this: Assertions =>
+
+
+  class JsonMatcher (expected: String) extends Matcher [String] {
+
+    def apply (actual: String): MatchResult =
+      MatchResult (
+        expected.fromJson [JsonNode] == expected.fromJson [JsonNode],
+        s"Was not $expected",
+        s"Was $expected")
+  }
+
+  def matchJson (expected: String) = new JsonMatcher (expected)
 
   implicit class RichMockResult (result: MockResult) {
 
