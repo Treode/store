@@ -73,7 +73,7 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         store.expectCells (PM.RolesTable) (
             ("1", t1, PM.Roles.empty))
         store.expectCells (PM.Index) (
-            ("Mark Hamill", t1, PO.actors ("1")))
+            ("mark hamill", t1, PO.actors ("1")))
       }
 
     "POST /actor should respond Ok with an etag" in
@@ -186,9 +186,9 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         store.expectCells (PM.RolesTable) (
             ("1", t1, PM.Roles.empty))
         store.expectCells (PM.Index) (
-            ("Mark Hamill", t2, None),
-            ("Mark Hamill", t1, PO.actors ("1")),
-            ("Mark Hammer", t2, PO.actors ("1")))
+            ("mark hamill", t2, None),
+            ("mark hamill", t1, PO.actors ("1")),
+            ("mark hammer", t2, PO.actors ("1")))
       }
 
     "PUT /actor/1 with a If-Unmodified-Since:1 should respond Ok with an etag" in
@@ -210,9 +210,9 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         store.expectCells (PM.RolesTable) (
             ("1", t1, PM.Roles.empty))
         store.expectCells (PM.Index) (
-            ("Mark Hamill", t2, None),
-            ("Mark Hamill", t1, PO.actors ("1")),
-            ("Mark Hammer", t2, PO.actors ("1")))
+            ("mark hamill", t2, None),
+            ("mark hamill", t1, PO.actors ("1")),
+            ("mark hammer", t2, PO.actors ("1")))
       }
 
     "PUT /actor/1 with a If-Unmodified-Since:0 should respond Precondition Failed" in
@@ -233,5 +233,5 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         store.expectCells (PM.RolesTable) (
             ("1", t1, PM.Roles.empty))
         store.expectCells (PM.Index) (
-            ("Mark Hamill", t1, PO.actors ("1")))
+            ("mark hamill", t1, PO.actors ("1")))
       }}}

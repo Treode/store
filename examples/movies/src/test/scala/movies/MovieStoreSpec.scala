@@ -66,7 +66,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.ActorTable) ()
     store.expectCells (PM.RolesTable) ()
     store.expectCells (PM.Index) (
-        ("Star Wars", t1, PO.movies (id)))
+        ("star wars", t1, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t1, id)) (t1, s""" {
         "id": "$id",
@@ -89,7 +89,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.ActorTable) ()
     store.expectCells (PM.RolesTable) ()
     store.expectCells (PM.Index) (
-        ("Star Wars", t1, PO.movies ("1")))
+        ("star wars", t1, PO.movies ("1")))
 
     expectReadResult (movies.readMovie (t1, "1")) (t1, s""" {
         "id": "1",
@@ -113,7 +113,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.ActorTable) ()
     store.expectCells (PM.RolesTable) ()
     store.expectCells (PM.Index) (
-        ("Star Wars", t1, PO.movies (id)))
+        ("star wars", t1, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t1, id)) (t1, s""" {
         "id": "$id",
@@ -137,7 +137,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.ActorTable) ()
     store.expectCells (PM.RolesTable) ()
     store.expectCells (PM.Index) (
-        ("Star Wars", t1, PO.movies ("1")))
+        ("star wars", t1, PO.movies ("1")))
 
     expectReadResult (movies.readMovie (t1, "1")) (t1, s""" {
         "id": "1",
@@ -211,8 +211,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
         ("1", t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t1, PO.actors ("1")),
-        ("Star Wars", t2, PO.movies (id)))
+        ("mark hamill", t1, PO.actors ("1")),
+        ("star wars", t2, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t2, id)) (t2, s""" {
         "id": "$id",
@@ -256,10 +256,10 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("3", t4, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
         ("3", t3, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Carrie Fisher", t3, PO.actors ("3")),
-        ("Harrison Ford", t2, PO.actors ("2")),
-        ("Mark Hamill", t1, PO.actors ("1")),
-        ("Star Wars", t4, PO.movies (id)))
+        ("carrie fisher", t3, PO.actors ("3")),
+        ("harrison ford", t2, PO.actors ("2")),
+        ("mark hamill", t1, PO.actors ("1")),
+        ("star wars", t4, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t4, id)) (t4, s""" {
         "id": "$id",
@@ -291,9 +291,9 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.ActorTable) ()
     store.expectCells (PM.RolesTable) ()
     store.expectCells (PM.Index) (
-        ("Star Wars", t2, None),
-        ("Star Wars", t1, PO.movies (id)),
-        ("Star Wars: A New Hope", t2, PO.movies (id)))
+        ("star wars", t2, None),
+        ("star wars", t1, PO.movies (id)),
+        ("star wars: a new hope", t2, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t2, id)) (t2, s""" {
         "id": "$id",
@@ -328,7 +328,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.ActorTable) ()
     store.expectCells (PM.RolesTable) ()
     store.expectCells (PM.Index) (
-        ("Star Wars", t1, PO.movies (id)))
+        ("star wars", t1, PO.movies (id)))
 
 
     expectReadResult (movies.readMovie (t2, id)) (t2, s""" {
@@ -373,8 +373,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywriter")))),
         ("1", t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t1, PO.actors ("1")),
-        ("Star Wars", t2, PO.movies (id)))
+        ("mark hamill", t1, PO.actors ("1")),
+        ("star wars", t2, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t2, id)) (t2, s""" {
         "id": "$id",
@@ -435,10 +435,10 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("3", t4, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
         ("3", t3, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Carrie Fisher", t3, PO.actors ("3")),
-        ("Harrison Ford", t2, PO.actors ("2")),
-        ("Mark Hamill", t1, PO.actors ("1")),
-        ("Star Wars", t4, PO.movies (id)))
+        ("carrie fisher", t3, PO.actors ("3")),
+        ("harrison ford", t2, PO.actors ("2")),
+        ("mark hamill", t1, PO.actors ("1")),
+        ("star wars", t4, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t4, id)) (t4, s""" {
         "id": "$id",
@@ -507,10 +507,10 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("3", t4, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
         ("3", t3, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Carrie Fisher", t3, PO.actors ("3")),
-        ("Harrison Ford", t2, PO.actors ("2")),
-        ("Mark Hamill", t1, PO.actors ("1")),
-        ("Star Wars", t4, PO.movies (id)))
+        ("carrie fisher", t3, PO.actors ("3")),
+        ("harrison ford", t2, PO.actors ("2")),
+        ("mark hamill", t1, PO.actors ("1")),
+        ("star wars", t4, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t4, id)) (t4, s""" {
         "id": "$id",
@@ -577,10 +577,10 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("3", t5, PM.Roles (Seq (PM.Role (id, "Princess Leia Organa")))),
         ("3", t3, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Carrie Fisher", t3, PO.actors ("3")),
-        ("Harrison Ford", t2, PO.actors ("2")),
-        ("Mark Hamill", t1, PO.actors ("1")),
-        ("Star Wars", t4, PO.movies (id)))
+        ("carrie fisher", t3, PO.actors ("3")),
+        ("harrison ford", t2, PO.actors ("2")),
+        ("mark hamill", t1, PO.actors ("1")),
+        ("star wars", t4, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t4, id)) (t4, s""" {
         "id": "$id",
@@ -626,8 +626,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
         ("1", t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t1, PO.actors ("1")),
-        ("Star Wars", t2, PO.movies (id)))
+        ("mark hamill", t1, PO.actors ("1")),
+        ("star wars", t2, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t2, id)) (t2, s""" {
         "id": "$id",
@@ -666,8 +666,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
         ("1", t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t1, PO.actors ("1")),
-        ("Star Wars", t2, PO.movies (id)))
+        ("mark hamill", t1, PO.actors ("1")),
+        ("star wars", t2, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t3, id)) (t2, s""" {
         "id": "$id",
@@ -700,8 +700,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
         ("1", t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t1, PO.actors ("1")),
-        ("Star Wars", t2, PO.movies (id)))
+        ("mark hamill", t1, PO.actors ("1")),
+        ("star wars", t2, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t3, id)) (t2, s""" {
         "id": "$id",
@@ -735,8 +735,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("1", t2, PM.Roles (Seq (PM.Role (id, "Luke Skywalker")))),
         ("1", t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t1, PO.actors ("1")),
-        ("Star Wars", t2, PO.movies (id)))
+        ("mark hamill", t1, PO.actors ("1")),
+        ("star wars", t2, PO.movies (id)))
 
     expectReadResult (movies.readMovie (t3, id)) (t2, s""" {
         "id": "$id",
@@ -765,8 +765,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.ActorTable) ()
     store.expectCells (PM.RolesTable) ()
     store.expectCells (PM.Index) (
-        ("The Piano", t2, PO.movies ("1", "2")),
-        ("The Piano", t1, PO.movies ("1")))
+        ("the piano", t2, PO.movies ("1", "2")),
+        ("the piano", t1, PO.movies ("1")))
   }
 
   it should "create an actor with no roles" in {
@@ -783,7 +783,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) (
         (id, t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t1, PO.actors (id)))
+        ("mark hamill", t1, PO.actors (id)))
 
     expectReadResult (movies.readActor (t1, id)) (t1, s""" {
         "id": "$id",
@@ -806,7 +806,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) (
         ("1", t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t1, PO.actors ("1")))
+        ("mark hamill", t1, PO.actors ("1")))
 
     expectReadResult (movies.readActor (t1, "1")) (t1, s""" {
         "id": "1",
@@ -830,7 +830,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) (
         (id, t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t1, PO.actors (id)))
+        ("mark hamill", t1, PO.actors (id)))
 
     expectReadResult (movies.readActor (t1, id)) (t1, s""" {
         "id": "$id",
@@ -854,7 +854,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) (
         ("1", t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t1, PO.actors ("1")))
+        ("mark hamill", t1, PO.actors ("1")))
 
     expectReadResult (movies.readActor (t1, "1")) (t1, s""" {
         "id": "1",
@@ -913,8 +913,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) (
         (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t2, PO.actors (id)),
-        ("Star Wars", t1, PO.movies ("1")))
+        ("mark hamill", t2, PO.actors (id)),
+        ("star wars", t1, PO.movies ("1")))
 
     expectReadResult (movies.readActor (t2, id)) (t2, s""" {
         "id": "$id",
@@ -958,10 +958,10 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
             PM.Role ("2", "Luke Skywalker"),
             PM.Role ("3", "Luke Skywalker")))))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t4, PO.actors (id)),
-        ("Star Wars", t1, PO.movies ("1")),
-        ("Star Wars: Return of the Jedi", t3, PO.movies ("3")),
-        ("Star Wars: The Empire Strikes Back", t2, PO.movies ("2")))
+        ("mark hamill", t4, PO.actors (id)),
+        ("star wars", t1, PO.movies ("1")),
+        ("star wars: return of the jedi", t3, PO.movies ("3")),
+        ("star wars: the empire strikes back", t2, PO.movies ("2")))
 
     expectReadResult (movies.readActor (t4, id)) (t4, s""" {
         "id": "$id",
@@ -993,9 +993,9 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) (
         (id, t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t2, PO.actors (id)),
-        ("Mark Hammer", t2, None),
-        ("Mark Hammer", t1, PO.actors (id)))
+        ("mark hamill", t2, PO.actors (id)),
+        ("mark hammer", t2, None),
+        ("mark hammer", t1, PO.actors (id)))
 
     expectReadResult (movies.readActor (t1, id)) (t1, s""" {
         "id": "$id",
@@ -1030,7 +1030,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) (
         (id, t1, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t1, PO.actors (id)))
+        ("mark hamill", t1, PO.actors (id)))
 
     expectReadResult (movies.readActor (t2, id)) (t2, s""" {
         "id": "$id",
@@ -1074,8 +1074,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         (id, t3, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))),
         (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywriter")))))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t2, PO.actors (id)),
-        ("Star Wars", t1, PO.movies ("1")))
+        ("mark hamill", t2, PO.actors (id)),
+        ("star wars", t1, PO.movies ("1")))
 
     expectReadResult (movies.readActor (t2, id)) (t2, s""" {
         "id": "$id",
@@ -1136,10 +1136,10 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
             PM.Role ("1", "Luke Skywalker"),
             PM.Role ("3", "Luke Skywalker")))))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t4, PO.actors (id)),
-        ("Star Wars", t1, PO.movies ("1")),
-        ("Star Wars: Return of the Jedi", t3, PO.movies ("3")),
-        ("Star Wars: The Empire Strikes Back", t2, PO.movies ("2")))
+        ("mark hamill", t4, PO.actors (id)),
+        ("star wars", t1, PO.movies ("1")),
+        ("star wars: return of the jedi", t3, PO.movies ("3")),
+        ("star wars: the empire strikes back", t2, PO.movies ("2")))
 
     expectReadResult (movies.readActor (t4, id)) (t4, s""" {
         "id": "$id",
@@ -1208,10 +1208,10 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
             PM.Role ("2", "Luke Skywalker"),
             PM.Role ("3", "Luke Skywalker")))))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t4, PO.actors (id)),
-        ("Star Wars", t1, PO.movies ("1")),
-        ("Star Wars: Return of the Jedi", t3, PO.movies ("3")),
-        ("Star Wars: The Empire Strikes Back", t2, PO.movies ("2")))
+        ("mark hamill", t4, PO.actors (id)),
+        ("star wars", t1, PO.movies ("1")),
+        ("star wars: return of the jedi", t3, PO.movies ("3")),
+        ("star wars: the empire strikes back", t2, PO.movies ("2")))
 
     expectReadResult (movies.readActor (t4, id)) (t4, s""" {
         "id": "$id",
@@ -1278,10 +1278,10 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
             PM.Role ("1", "Luke Skywalker"),
             PM.Role ("2", "Luke Skywalker")))))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t4, PO.actors (id)),
-        ("Star Wars", t1, PO.movies ("1")),
-        ("Star Wars: Return of the Jedi", t3, PO.movies ("3")),
-        ("Star Wars: The Empire Strikes Back", t2, PO.movies ("2")))
+        ("mark hamill", t4, PO.actors (id)),
+        ("star wars", t1, PO.movies ("1")),
+        ("star wars: return of the jedi", t3, PO.movies ("3")),
+        ("star wars: the empire strikes back", t2, PO.movies ("2")))
 
     expectReadResult (movies.readActor (t4, id)) (t4, s""" {
         "id": "$id",
@@ -1327,8 +1327,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) (
         (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t2, PO.actors (id)),
-        ("Star Wars", t1, PO.movies ("1")))
+        ("mark hamill", t2, PO.actors (id)),
+        ("star wars", t1, PO.movies ("1")))
 
     expectReadResult (movies.readActor (t2, id)) (t2, s""" {
         "id": "$id",
@@ -1367,8 +1367,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) (
         (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t2, PO.actors (id)),
-        ("Star Wars", t1, PO.movies ("1")))
+        ("mark hamill", t2, PO.actors (id)),
+        ("star wars", t1, PO.movies ("1")))
 
     expectReadResult (movies.readActor (t3, id)) (t2, s""" {
         "id": "$id",
@@ -1401,8 +1401,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) (
         (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t2, PO.actors (id)),
-        ("Star Wars", t1, PO.movies ("1")))
+        ("mark hamill", t2, PO.actors (id)),
+        ("star wars", t1, PO.movies ("1")))
 
     expectReadResult (movies.readActor (t3, id)) (t2, s""" {
         "id": "$id",
@@ -1436,8 +1436,8 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.RolesTable) (
         (id, t2, PM.Roles (Seq (PM.Role ("1", "Luke Skywalker")))))
     store.expectCells (PM.Index) (
-        ("Mark Hamill", t2, PO.actors (id)),
-        ("Star Wars", t1, PO.movies ("1")))
+        ("mark hamill", t2, PO.actors (id)),
+        ("star wars", t1, PO.movies ("1")))
 
     expectReadResult (movies.readActor (t3, id)) (t2, s""" {
         "id": "$id",
@@ -1466,6 +1466,6 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ("1", t1, PM.Roles.empty),
         ("2", t2, PM.Roles.empty))
     store.expectCells (PM.Index) (
-        ("Harrison Ford", t2, PO.actors ("1", "2")),
-        ("Harrison Ford", t1, PO.actors ("1")))
+        ("harrison ford", t2, PO.actors ("1", "2")),
+        ("harrison ford", t1, PO.actors ("1")))
   }}

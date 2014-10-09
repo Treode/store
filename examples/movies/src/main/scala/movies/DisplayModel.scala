@@ -29,7 +29,12 @@ object DisplayModel {
   case class Movie (id: String, title: String, released: DateTime, cast: Seq [CastMember]) {
 
     @JsonIgnore
-    lazy val actorIds = cast orDefault (Seq.empty) filter (_.actorId != null) map (_.actorId)
+    lazy val actorIds =
+      cast orDefault (Seq.empty) filter (_.actorId != null) map (_.actorId)
+
+    @JsonIgnore
+    lazy val titleLowerCase =
+      if (title == null) null else title.toLowerCase
   }
 
   object Movie {
@@ -56,7 +61,12 @@ object DisplayModel {
   case class Actor (id: String, name: String, born: DateTime, roles: Seq [Role]) {
 
     @JsonIgnore
-    lazy val movieIds = roles orDefault (Seq.empty) filter (_.movieId != null) map (_.movieId)
+    lazy val movieIds =
+      roles orDefault (Seq.empty) filter (_.movieId != null) map (_.movieId)
+
+    @JsonIgnore
+    lazy val nameLowerCase =
+      if (name == null) null else name.toLowerCase
   }
 
   object Actor {

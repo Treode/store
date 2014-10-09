@@ -29,6 +29,9 @@ private object PhysicalModel {
 
   case class Movie (title: String, released: DateTime) {
 
+    lazy val titleLowerCase =
+      if (title == null) null else title.toLowerCase
+
     private def merge (that: DM.Movie): Movie =
       Movie (
         title = that.title orDefault (title),
@@ -53,16 +56,16 @@ private object PhysicalModel {
     private def create (tx: Transaction, movieId: String) {
       validate()
       tx.create (MovieTable) (movieId, this)
-      addToTitleIndex (tx, movieId, this.title)
+      addToTitleIndex (tx, movieId, titleLowerCase)
     }
 
     private def save (tx: Transaction, movieId: String, that: Movie) {
       that.validate()
       if (this != that)
         tx.update (MovieTable) (movieId, that)
-      if (this.title != that.title) {
-        removeFromTitleIndex (tx, movieId, this.title)
-        addToTitleIndex (tx, movieId, that.title)
+      if (this.titleLowerCase != that.titleLowerCase) {
+        removeFromTitleIndex (tx, movieId, this.titleLowerCase)
+        addToTitleIndex (tx, movieId, that.titleLowerCase)
       }}
 
     private def save (tx: Transaction, movieId: String, that: DM.Movie) {
@@ -100,14 +103,14 @@ private object PhysicalModel {
         _ <- tx.fetcher
             .fetch (MovieTable) (movieId)
             .fetch (CastTable) (movieId)
-            .fetch (Index) .when (update.title != null) (update.title)
+            .fetch (Index) .when (update.title != null) (update.titleLowerCase)
             .async()
         movie = tx.get (MovieTable) (movieId) .getOrElse (Movie.empty)
         cast = tx.get (CastTable) (movieId) .getOrElse (Cast.empty)
         _ <- tx.fetcher
             .fetch (RolesTable) (cast.actorIds)
             .fetch (RolesTable) (update.actorIds)
-            .fetch (Index) .when (movie.title != null) (movie.title)
+            .fetch (Index) .when (movie.title != null) (movie.titleLowerCase)
             .async()
       } yield ()
 
@@ -237,6 +240,9 @@ private object PhysicalModel {
 
   case class Actor (name: String, born: DateTime) {
 
+    lazy val nameLowerCase =
+      if (name == null) null else name.toLowerCase
+
     private def merge (that: DM.Actor): Actor =
       Actor (
         name = that.name orDefault (name),
@@ -261,7 +267,7 @@ private object PhysicalModel {
     private def create (tx: Transaction, actorId: String) {
       validate()
       tx.create (ActorTable) (actorId, this)
-      addToNameIndex (tx, actorId, name)
+      addToNameIndex (tx, actorId, nameLowerCase)
     }
 
     private def save (tx: Transaction, actorId: String, that: Actor) {
@@ -269,8 +275,8 @@ private object PhysicalModel {
       if (this != that)
         tx.update (ActorTable) (actorId, that)
       if (this.name != that.name) {
-        removeFromNameIndex (tx, actorId, this.name)
-        addToNameIndex (tx, actorId, that.name)
+        removeFromNameIndex (tx, actorId, this.nameLowerCase)
+        addToNameIndex (tx, actorId, that.nameLowerCase)
       }}
 
     private def save (tx: Transaction, actorId: String, that: DM.Actor) {
@@ -306,14 +312,14 @@ private object PhysicalModel {
         _ <- tx.fetcher
             .fetch (ActorTable) (actorId)
             .fetch (RolesTable) (actorId)
-            .fetch (Index) .when (update.name != null) (update.name)
+            .fetch (Index) .when (update.name != null) (update.nameLowerCase)
             .async()
         actor = tx.get (ActorTable) (actorId) .getOrElse (Actor.empty)
         roles = tx.get (RolesTable) (actorId) .getOrElse (Roles.empty)
         _ <- tx.fetcher
             .fetch (CastTable) (roles.movieIds)
             .fetch (CastTable) (update.movieIds)
-            .fetch (Index) .when (actor.name != null) (actor.name)
+            .fetch (Index) .when (actor.name != null) (actor.nameLowerCase)
             .async()
       } yield ()
 

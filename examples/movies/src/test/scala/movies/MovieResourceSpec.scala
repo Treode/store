@@ -72,7 +72,7 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         store.expectCells (PM.ActorTable) ()
         store.expectCells (PM.RolesTable) ()
         store.expectCells (PM.Index) (
-            ("Star Wars", t1, PO.movies ("1")))
+            ("star wars", t1, PO.movies ("1")))
       }
 
     "POST /movie should respond Ok with an etag" in
@@ -185,9 +185,9 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         store.expectCells (PM.ActorTable) ()
         store.expectCells (PM.RolesTable) ()
         store.expectCells (PM.Index) (
-            ("Star Wars", t2, None),
-            ("Star Wars", t1, PO.movies ("1")),
-            ("Star Wars: A New Hope", t2, PO.movies ("1")))
+            ("star wars", t2, None),
+            ("star wars", t1, PO.movies ("1")),
+            ("star wars: a new hope", t2, PO.movies ("1")))
       }
 
     "PUT /movie/1 with a If-Unmodified-Since:1 should respond Ok with an etag" in
@@ -209,9 +209,9 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         store.expectCells (PM.ActorTable) ()
         store.expectCells (PM.RolesTable) ()
         store.expectCells (PM.Index) (
-            ("Star Wars", t2, None),
-            ("Star Wars", t1, PO.movies ("1")),
-            ("Star Wars: A New Hope", t2, PO.movies ("1")))
+            ("star wars", t2, None),
+            ("star wars", t1, PO.movies ("1")),
+            ("star wars: a new hope", t2, PO.movies ("1")))
       }
 
     "PUT /movie/1 with a If-Unmodified-Since:0 should respond Precondition Failed" in
@@ -232,5 +232,5 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         store.expectCells (PM.ActorTable) ()
         store.expectCells (PM.RolesTable) ()
         store.expectCells (PM.Index) (
-            ("Star Wars", t1, PO.movies ("1")))
+            ("star wars", t1, PO.movies ("1")))
       }}}
