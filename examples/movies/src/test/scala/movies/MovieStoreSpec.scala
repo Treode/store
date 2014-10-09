@@ -27,7 +27,7 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import org.scalatest.FlatSpec
 
-import movies.{DisplayModel => DM, PhysicalModel => PM}
+import movies.{DisplayModel => DM, PhysicalModel => PM, SearchResult => SR}
 
 class MovieStoreSpec extends FlatSpec with SpecTools {
 
@@ -1468,4 +1468,46 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     store.expectCells (PM.Index) (
         ("harrison ford", t2, PO.actors ("1", "2")),
         ("harrison ford", t1, PO.actors ("1")))
+  }
+
+  it should "search" in {
+    implicit val (random, scheduler, store, movies) = setup()
+
+    val (id1, t1) = addTitle (t0, "Johnny Bravo")
+    val (id2, t2) = addTitle (t0, "Johnny English")
+    val (id3, t3) = addTitle (t0, "Johnny Mnemonic")
+    val (id4, t4) = addTitle (t0, "Star Wars")
+    val (id5, t5) = addName (t0, "Johnny Depp")
+    val (id6, t6) = addName (t0, "Johnny Knoxville")
+    val (id7, t7) = addName (t0, "Mark Hamill")
+    val t = Seq (t1, t2, t3, t4, t5, t6, t7) .max
+
+    val johnnyMovies = Seq (
+        SR.Movie (id1, "Johnny Bravo", null),
+        SR.Movie (id2, "Johnny English", null),
+        SR.Movie (id3, "Johnny Mnemonic", null))
+
+    val johnnyActors = Seq (
+        SR.Actor (id5, "Johnny Depp", null),
+        SR.Actor (id6, "Johnny Knoxville", null))
+
+    movies
+      .query (t, "johnny", true, true)
+      .expectPass (SearchResult (johnnyMovies, johnnyActors))
+    movies
+      .query (t, "johnny", false, true)
+      .expectPass (SearchResult (Seq.empty, johnnyActors))
+    movies
+      .query (t, "johnny", true, false)
+      .expectPass (SearchResult (johnnyMovies, Seq.empty))
+
+    movies
+      .query (t, "Johnny", true, true)
+      .expectPass (SearchResult (johnnyMovies, johnnyActors))
+    movies
+      .query (t, "JOHNNY", false, true)
+      .expectPass (SearchResult (Seq.empty, johnnyActors))
+    movies
+      .query (t, "jOhNnY", true, false)
+      .expectPass (SearchResult (johnnyMovies, Seq.empty))
   }}

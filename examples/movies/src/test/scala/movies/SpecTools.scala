@@ -19,6 +19,8 @@ package movies
 import scala.language.implicitConversions
 import scala.util.Random
 
+import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import com.treode.store.{Bytes, Cell, TxClock, TxId}
 import com.treode.store.stubs.StubStore
 import com.treode.store.alt.TableDescriptor
@@ -37,9 +39,21 @@ trait SpecTools {
   val may_25_1977 = new DateTime (1977, 5, 25, 0, 0, 0, UTC)
   val jun_20_1980 = new DateTime (1980, 6, 20, 0, 0, 0, UTC)
 
+  def addTitle (ct: TxClock, title: String) (
+      implicit random: Random, scheduler: StubScheduler, movies: MovieStore): (String, TxClock) =
+    movies
+      .create (random.nextXid, t0, DM.Movie ("", title, null, null))
+      .expectPass()
+
+  def addName (ct: TxClock, name: String) (
+      implicit random: Random, scheduler: StubScheduler, movies: MovieStore): (String, TxClock) =
+    movies
+      .create (random.nextXid, t0, DM.Actor ("", name, null, null))
+      .expectPass()
+
   /** Display Objects */
   private [movies] object DO {
-    
+
     val starWars = DM.Movie ("1", "Star Wars", null, Seq.empty)
     val empireStrikesBack = DM.Movie ("2", "Star Wars: The Empire Strikes Back", null, Seq.empty)
     val returnOfTheJedi = DM.Movie ("3", "Star Wars: Return of the Jedi", null, Seq.empty)

@@ -106,6 +106,15 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         store.expectCells (PM.ActorTable) ()
         store.expectCells (PM.RolesTable) ()
         store.expectCells (PM.Index) ()
+      }
+
+    "GET /movie?q=star should respond Okay" in
+      singlethreaded { implicit scheduler =>
+        val (store, mock) = setup()
+        val r1 = addStarWars (mock)
+        val response = mock.get ("/movie?q=star")
+        response.code should equal (Ok)
+        response.body should matchJson (s"""{"movies": [], "actors": []}""")
       }}
 
   "When the database has a movie" - {
@@ -233,4 +242,16 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         store.expectCells (PM.RolesTable) ()
         store.expectCells (PM.Index) (
             ("star wars", t1, PO.movies ("1")))
+      }
+
+    "GET /movie?q=star should respond Okay" in
+      singlethreaded { implicit scheduler =>
+        val (store, mock) = setup()
+        val r1 = addStarWars (mock)
+        val response = mock.get ("/movie?q=star")
+        response.code should equal (Ok)
+        response.body should matchJson (s"""{
+          "movies": [{"movieId": "1", "title": "Star Wars"}],
+          "actors": []
+        }""")
       }}}

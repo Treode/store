@@ -169,6 +169,11 @@ package object movies {
         case None => true
       }
 
+    def getQuery: String =
+      request.params
+        .get ("q") 
+        .getOrElse (throw new BadRequestException ("Query parameter q is required."))
+
     def getSlice: Slice = {
       val slice = request.params.getInt ("slice")
       val nslices = request.params.getInt ("nslices")

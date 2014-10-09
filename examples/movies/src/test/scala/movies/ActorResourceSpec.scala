@@ -107,9 +107,17 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         store.expectCells (PM.ActorTable) ()
         store.expectCells (PM.RolesTable) ()
         store.expectCells (PM.Index) ()
+      }
+
+    "GET /actor?q=mark should respond Okay" in
+      singlethreaded { implicit scheduler =>
+        val (store, mock) = setup()
+        val response = mock.get ("/actor?q=mark")
+        response.code should equal (Ok)
+        response.body should matchJson (s"""{"movies": [], "actors": []}""")
       }}
 
-  "When the database has a movie" - {
+  "When the database has an actor" - {
 
     "GET /actor/1 should respond Ok" in
       singlethreaded { implicit scheduler =>
@@ -234,4 +242,16 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
             ("1", t1, PM.Roles.empty))
         store.expectCells (PM.Index) (
             ("mark hamill", t1, PO.actors ("1")))
+      }
+
+    "GET /actor?q=mark should respond Okay" in
+      singlethreaded { implicit scheduler =>
+        val (store, mock) = setup()
+        val r1 = addMarkHamill (mock)
+        val response = mock.get ("/actor?q=mark")
+        response.code should equal (Ok)
+        response.body should matchJson (s"""{
+          "movies": [],
+          "actors": [{"id": "1", "name": "Mark Hamill"}]
+        }""")
       }}}

@@ -456,6 +456,9 @@ private object PhysicalModel {
         tx.delete (Index) (key)
       else
         tx.update (Index) (key, this)
+
+    def ++ (that: IndexEntry): IndexEntry =
+      new IndexEntry (movies ++ that.movies, actors ++ that.actors)
   }
 
   object IndexEntry {
@@ -470,7 +473,33 @@ private object PhysicalModel {
     }
 
     val froster = Froster (pickler)
-  }
+
+    /** Get the entries from the index. Choose entries such that
+      * - The prefix of the entry's key matches the given key
+      * - The entry counts only if it has movies or actors as selected
+      * - Listing at most 10 entries
+      */
+    def prefix (tx: Transaction, key: String, movies: Boolean, actors: Boolean): Async [IndexEntry] = {
+      var count = 10
+      tx.recent (Index, key)
+        .filter (_.value.isDefined)
+        .filter { cell =>
+          val entry = cell.value.get
+          (movies && !entry.movies.isEmpty) || (actors && !entry.actors.isEmpty)
+        }
+        .toSeqWhile { cell =>
+          count -= 1
+          count > 0 && cell.key.startsWith (key)
+        }
+        .map { case (cells, next) =>
+          cells
+            .map { cell =>
+              IndexEntry (
+                if (movies) cell.value.get.movies else Set.empty,
+                if (actors) cell.value.get.actors else Set.empty)
+            }
+            .fold (empty) (_ ++ _)
+        }}}
 
   val MovieTable =
     TableDescriptor (0xA57FDF4417D46CBCL, Froster.string, Froster.bson [Movie])

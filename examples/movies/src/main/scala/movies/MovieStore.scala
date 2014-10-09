@@ -19,17 +19,30 @@ package movies
 import scala.util.Random
 
 import com.treode.async.Async
-import com.treode.store.{Store, TxClock, TxId}
-import com.treode.store.alt.Transaction
+import com.treode.store.{Bound, Key, Slice, Store, TxClock, TxId, Window}
+import com.treode.store.alt.{TableDescriptor, Transaction}
 
-import movies.{DisplayModel => DM, PhysicalModel => PM}
+import movies.{DisplayModel => DM, PhysicalModel => PM, SearchResult => SR}
 
 import Async.{guard, supply}
 
 /** See README.md. */
 class MovieStore (implicit random: Random, store: Store) {
 
-  def readMovie (rt: TxClock, movieId: String): Async [(TxClock, Option [DM.Movie])] = {
+
+  def query (rt: TxClock, query: String, movies: Boolean, actors: Boolean): Async [SearchResult] = guard {
+    val tx = new Transaction (rt)
+    for {
+      entry <- PM.IndexEntry.prefix (tx, query.toLowerCase, movies, actors)
+      _ <- tx.fetcher
+          .fetch (PM.MovieTable) (entry.movies)
+          .fetch (PM.ActorTable) (entry.actors)
+          .async()
+    } yield {
+      SearchResult.lookup (tx, entry)
+    }}
+
+  def readMovie (rt: TxClock, movieId: String): Async [(TxClock, Option [DM.Movie])] = guard {
     val tx = new Transaction (rt)
     for {
       _ <- PM.Movie.fetchForDisplay (tx, movieId)
@@ -61,7 +74,7 @@ class MovieStore (implicit random: Random, store: Store) {
       wt
     }}
 
-  def readActor (rt: TxClock, actorId: String): Async [(TxClock, Option [DM.Actor])] = {
+  def readActor (rt: TxClock, actorId: String): Async [(TxClock, Option [DM.Actor])] = guard {
     val tx = new Transaction (rt)
     for {
       _ <- PM.Actor.fetchForDisplay (tx, actorId)

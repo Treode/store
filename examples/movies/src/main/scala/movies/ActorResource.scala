@@ -23,7 +23,6 @@ import com.treode.store._
 import com.twitter.finatra.{Request, ResponseBuilder}
 
 import movies.{DisplayModel => DM}
-import Async.supply
 
 class ActorResource (host: HostId, movies: MovieStore) extends AsyncFinatraController {
 
@@ -42,9 +41,14 @@ class ActorResource (host: HostId, movies: MovieStore) extends AsyncFinatraContr
           render.notFound.nothing
       }}}
 
-  def query (request: Request): Async [ResponseBuilder] = supply {
-    render.status (NotImplemented) .nothing
-  }
+  def query (request: Request): Async [ResponseBuilder] = {
+    val rt = request.getLastModificationBefore
+    val q = request.getQuery
+    for {
+      result <- movies.query (rt, q, false, true)
+    } yield {
+      render.ok.appjson (request, result)
+    }}
 
   get ("/actor/:id") { request =>
     request.getId match {

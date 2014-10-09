@@ -45,12 +45,33 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
     store.scan (id, _start, window, slice) .map (Cell.apply (_))
   }
 
-  def scan () (implicit store: Store): AsyncIterator [Cell] = {
-    store.scan (id, Bound.firstKey, Window.all, Slice.all) .map (Cell.apply (_))
+  def scan (
+      start: K,
+      window: Window,
+      slice: Slice
+  ) (implicit
+      store: Store
+  ): AsyncIterator [Cell] = {
+    val _start = Bound (Key (this.key.freeze (start), TxClock.MaxValue) , true)
+    store.scan (id, _start, window, slice) .map (Cell.apply (_))
   }
 
+  def scan (
+      window: Window,
+      slice: Slice
+  ) (implicit
+      store: Store
+  ): AsyncIterator [Cell] =
+    store.scan (id, Bound.firstKey, window, slice) .map (Cell.apply (_))
+
+  def scan () (implicit store: Store): AsyncIterator [Cell] =
+    scan (Window.all, Slice.all)
+
+  def recent (rt: TxClock, start: K) (implicit store: Store): AsyncIterator [Cell] =
+    scan (start, Window.Recent (rt, true), Slice.all)
+
   def recent (rt: TxClock) (implicit store: Store): AsyncIterator [Cell] =
-    store.scan (id, Bound.firstKey, Window.Recent (rt, true), Slice.all) .map (Cell.apply (_))
+    scan (Window.Recent (rt, true), Slice.all)
 }
 
 object TableDescriptor {
