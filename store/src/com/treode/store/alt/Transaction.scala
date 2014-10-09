@@ -19,10 +19,9 @@ package com.treode.store.alt
 import com.treode.async.Async
 import com.treode.store._
 
-import Async.when
 import WriteOp._
 
-/** A Transaction mediates interaction with the database. This class supports optimistic 
+/** A Transaction mediates interaction with the database. This class supports optimistic
   * transactions. It maintains its own view of the database plus its changes. To begin a
   * transaction, simply create a new Transaction object; there is no need to `begin` one on some
   * database connection, no database resources are opened, and no locks are held.
@@ -68,7 +67,7 @@ class Transaction (rt: TxClock) (implicit store: Store) {
   /** Prefetch rows from the database into this transaction's cache. */
   def fetch (ops: Seq [ReadOp]): Async [Unit] = {
     val need = ops filter (op => !(_cache contains (Key (op))))
-    when (!need.isEmpty) {
+    Async.when (!need.isEmpty) {
       for {
         vs <- store.read (rt, need: _*)
       } yield {
@@ -78,14 +77,17 @@ class Transaction (rt: TxClock) (implicit store: Store) {
           _cache += Key (op) -> v1
         }}}}
 
+  def when (cond: Boolean) (op: => ReadOp): Async [Unit] =
+    Async.when (cond) (fetch (Seq (op)))
+
   /** Prefetch rows from the database into this transaction's cache. */
-  def fetch [K] (desc: TableDescriptor [K, _]) (keys: K*): Async [Unit] =
-    fetch (keys map (k => ReadOp (desc.id, desc.key.freeze (k))))
+  def fetch [K] (desc: TableDescriptor [K, _]): Transaction.Keys [K] =
+    new Transaction.Keys (this, desc)
 
   /** Create a fetcher to prefetch different kinds of rows. */
   def fetcher: Fetcher = new Fetcher (this)
 
-  /** Get a row from this transaction's cache. Call `fetch` to prefetch rows from the database 
+  /** Get a row from this transaction's cache. Call `fetch` to prefetch rows from the database
     * into the cache before calling `get`.
     */
   def get (id: TableId, key: Bytes): Option [Bytes] =
@@ -97,7 +99,7 @@ class Transaction (rt: TxClock) (implicit store: Store) {
       case Deleted         => None
     }
 
-  /** Get a row from this transaction's cache. Call `fetch` to prefetch rows from the database 
+  /** Get a row from this transaction's cache. Call `fetch` to prefetch rows from the database
     * into the cache before calling `get`.
     */
   def get [K, V] (d: TableDescriptor [K, V]) (k: K): Option [V] =
@@ -136,4 +138,18 @@ class Transaction (rt: TxClock) (implicit store: Store) {
       case (k, Deleted)     => Delete (k.table, k.key)
     }
     store.write (xid, rt, ops: _*)
+  }}
+
+object Transaction {
+
+  class Keys [K] private [Transaction] (tx: Transaction, desc: TableDescriptor [K, _]) {
+
+    def apply (keys: K*): Async [Unit] =
+      tx.fetch (keys map (k => ReadOp (desc.id, desc.key.freeze (k))))
+
+    def apply (keys: Iterable [K]): Async [Unit] =
+      tx.fetch (keys.map (k => ReadOp (desc.id, desc.key.freeze (k))) .toSeq)
+
+    def when (cond: Boolean) (key: => K): Async [Unit] =
+      tx.when (cond) (ReadOp (desc.id, desc.key.freeze (key)))
   }}

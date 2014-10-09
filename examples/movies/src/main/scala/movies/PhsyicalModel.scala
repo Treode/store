@@ -92,7 +92,7 @@ private object PhysicalModel {
         _ <- tx.fetch (ActorTable) (cast.actorIds: _*)
       } yield ()
 
-    /** Prefetch all data that's needed to decompose the JSON object and create or update the 
+    /** Prefetch all data that's needed to decompose the JSON object and create or update the
       * movie.
       */
     def fetchForSave (tx: Transaction, movieId: String, update: DM.Movie): Async [Unit] =
@@ -100,14 +100,14 @@ private object PhysicalModel {
         _ <- tx.fetcher
             .fetch (MovieTable) (movieId)
             .fetch (CastTable) (movieId)
-            .when (update.title != null) (Index) (update.title)
+            .fetch (Index) .when (update.title != null) (update.title)
             .async()
         movie = tx.get (MovieTable) (movieId) .getOrElse (Movie.empty)
         cast = tx.get (CastTable) (movieId) .getOrElse (Cast.empty)
         _ <- tx.fetcher
-            .fetch (RolesTable) (cast.actorIds: _*)
-            .fetch (RolesTable) (update.actorIds: _*)
-            .when (movie.title != null) (Index) (movie.title)
+            .fetch (RolesTable) (cast.actorIds)
+            .fetch (RolesTable) (update.actorIds)
+            .fetch (Index) .when (movie.title != null) (movie.title)
             .async()
       } yield ()
 
@@ -299,21 +299,21 @@ private object PhysicalModel {
         _ <- tx.fetch (MovieTable) (roles.movieIds: _*)
       } yield ()
 
-    /** Prefetch all data that's needed to decompose a JSON object and create or update the 
+    /** Prefetch all data that's needed to decompose a JSON object and create or update the
       * actor. */
     def fetchForSave (tx: Transaction, actorId: String, update: DM.Actor): Async [Unit] =
       for {
         _ <- tx.fetcher
             .fetch (ActorTable) (actorId)
             .fetch (RolesTable) (actorId)
-            .when (update.name != null) (Index) (update.name)
+            .fetch (Index) .when (update.name != null) (update.name)
             .async()
         actor = tx.get (ActorTable) (actorId) .getOrElse (Actor.empty)
         roles = tx.get (RolesTable) (actorId) .getOrElse (Roles.empty)
         _ <- tx.fetcher
-            .fetch (CastTable) (roles.movieIds: _*)
-            .fetch (CastTable) (update.movieIds: _*)
-            .when (actor.name != null) (Index) (actor.name)
+            .fetch (CastTable) (roles.movieIds)
+            .fetch (CastTable) (update.movieIds)
+            .fetch (Index) .when (actor.name != null) (actor.name)
             .async()
       } yield ()
 

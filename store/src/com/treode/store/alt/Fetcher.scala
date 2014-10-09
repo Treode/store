@@ -11,20 +11,37 @@ class Fetcher private [alt] (tx: Transaction) {
 
   private val ops = Set.newBuilder [ReadOp]
 
-  def fetch [K] (desc: TableDescriptor [K, _]) (keys: K*): Fetcher = {
-    ops ++= keys map (k => ReadOp (desc.id, desc.key.freeze (k)))
+  def fetch (ops: Iterable [ReadOp]): Fetcher = {
+    this.ops ++= ops
     this
   }
 
-  def when [K] (cond: Boolean) (desc: TableDescriptor [K, _]) (keys: K*): Fetcher = {
+  def when (cond: Boolean) (op: => ReadOp): Fetcher = {
     if (cond)
-      ops ++= keys map (k => ReadOp (desc.id, desc.key.freeze (k)))
+      this.ops += op
     this
   }
+
+  def fetch [K] (desc: TableDescriptor [K, _]): Fetcher.Keys [K] =
+    new Fetcher.Keys (this, desc)
 
   def async(): Async [Unit] =
     tx.fetch (ops.result.toSeq)
-  
+
   def await(): Unit =
     async().await()
 }
+
+object Fetcher {
+
+  class Keys [K] private [Fetcher] (fetcher: Fetcher, desc: TableDescriptor [K, _]) {
+
+    def apply (keys: K*): Fetcher =
+      fetcher.fetch (keys map (k => ReadOp (desc.id, desc.key.freeze (k))))
+
+    def apply (keys: Iterable [K]): Fetcher =
+      fetcher.fetch (keys map (k => ReadOp (desc.id, desc.key.freeze (k))))
+
+    def when (cond: Boolean) (key: => K) : Fetcher =
+      fetcher.when (cond) (ReadOp (desc.id, desc.key.freeze (key)))
+  }}
