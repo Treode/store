@@ -25,6 +25,8 @@ import com.treode.tags.{Intensive, Periodic}
 import com.treode.store._
 import org.scalatest.FreeSpec
 
+import StubScheduler.multithreaded
+
 class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
 
   "The StubStore should" - {

@@ -31,6 +31,7 @@ import org.scalatest.time.SpanSugar
 import Async.{latch, supply}
 import DiskTestTools._
 import SpanSugar._
+import StubScheduler.multithreaded
 
 class DiskSystemSpec extends FreeSpec with CrashChecks {
 

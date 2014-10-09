@@ -47,13 +47,15 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
       Value (TxClock.MinValue, None)
   }
 
-  def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] = {
-    val ids = ops map (op => (op.table, op.key).hashCode)
-    for {
-      _ <- space.read (rt, ids)
-    } yield {
-      ops.map (op => get (op.table, op.key, rt))
-    }}
+  def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
+    guard {
+      val ids = ops map (op => (op.table, op.key).hashCode)
+      for {
+        _ <- space.read (rt, ids)
+      } yield {
+        ops.map (op => get (op.table, op.key, rt))
+      }
+    } .on (scheduler)
 
   private def put (table: TableId, key: Bytes, time: TxClock, value: Bytes): Unit =
     data.put (StubKey (table, key, time), Some (value))
@@ -100,16 +102,17 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
           wt
         } finally {
           locks.release()
-        }}}
+        }}
+    } .on (scheduler)
 
   def status (xid: TxId): Async [TxStatus] =
-    async { cb =>
+    async [TxStatus] { cb =>
       val st = xacts.putIfAbsent (xid, TxStatus.Aborted)
       if (st == null)
         cb.pass (TxStatus.Aborted)
       else
         cb.pass (st)
-    }
+    } .on (scheduler)
 
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): AsyncIterator [Cell] =
     AsyncIterator.make {

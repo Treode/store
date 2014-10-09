@@ -27,6 +27,7 @@ import com.treode.cluster.stubs.{StubHost, StubNetwork}
 import com.treode.disk.stubs.StubDiskDrive
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
+import org.scalatest.concurrent.TimeLimitedTests
 import org.scalatest.time.SpanSugar
 
 import Async.{async, supply}
@@ -35,12 +36,12 @@ import SpanSugar._
 import StoreClusterChecks.{Host, Package}
 import StoreTestTools._
 
-trait StoreClusterChecks extends AsyncChecks {
+trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
   this: FreeSpec =>
 
   private val ntargets =
     intensity match {
-      case "development" => 1
+      case "dev" => 1
       case _ => 10
     }
 
@@ -330,7 +331,7 @@ trait StoreClusterChecks extends AsyncChecks {
       val executor = Executors.newScheduledThreadPool (nthreads)
       val runner = init (random)
       try {
-        implicit val scheduler = StubScheduler.multithreaded (executor)
+        implicit val scheduler = StubScheduler.wrapped (executor)
         implicit val network = StubNetwork (random)
         test (new StubSchedulerKit (runner))
       } catch {

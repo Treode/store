@@ -29,8 +29,9 @@ import org.scalatest.FlatSpec
 
 import Async.{async, supply}
 import Callback.{ignore => disregard}
+import StubScheduler.multithreaded
 
-class ClusterLiveSpec extends FlatSpec with AsyncChecks {
+class ClusterLiveSpec extends FlatSpec {
 
   implicit val random = Random
   implicit val config = Cluster.Config.suggested

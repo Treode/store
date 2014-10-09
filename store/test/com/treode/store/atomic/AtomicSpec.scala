@@ -30,8 +30,9 @@ import org.scalatest.time.SpanSugar
 
 import AtomicTestTools._
 import SpanSugar._
+import StubScheduler.multithreaded
 
-class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks {
+class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks with TimeLimitedTests {
 
   override val timeLimit = 15 minutes
 

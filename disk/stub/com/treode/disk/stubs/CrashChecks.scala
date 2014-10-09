@@ -22,13 +22,19 @@ import com.treode.async.Async
 import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
 import org.scalatest.{Assertions, Informing, Suite}
+import org.scalatest.concurrent.TimeLimitedTests
+import org.scalatest.time.SpanSugar
 
-trait CrashChecks extends AsyncChecks {
+import SpanSugar._
+
+trait CrashChecks extends AsyncChecks with TimeLimitedTests {
   this: Suite with Informing =>
+
+  override val timeLimit = 5 minutes
 
   private val ncrashes =
     intensity match {
-      case "development" => 1
+      case "dev" => 1
       case _ => 10
     }
 
