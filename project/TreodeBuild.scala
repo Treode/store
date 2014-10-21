@@ -26,8 +26,14 @@ import UnidocKeys._
 
 object TreodeBuild extends Build {
 
+  // The intensive config runs only tests tagged intenstive.
   lazy val IntensiveTest = config ("intensive") extend (Test)
+
+  // The periodic config runs only tests tagged periodic.
   lazy val PeriodicTest = config ("periodic") extend (Test)
+
+  // The perf config runs only Scalameter tests.
+  lazy val Perf = config ("perf") extend (Test)
 
   lazy val versionString = "0.2.0-SNAPSHOT"
 
@@ -37,9 +43,9 @@ object TreodeBuild extends Build {
     scalaVersion := "2.11.2",
     crossScalaVersions := Seq ("2.10.4", "2.11.2"))
 
-  // Settings common to both projects with stubs and without stubs. Squashes
-  // the source directory structure. Adds production libraries to the "main"
-  // configuration. Removes docs from Ivy artifacts in favor of unidoc.
+  // Settings common to both projects with stubs and without stubs. Squashes the source directory
+  // structure. Adds production libraries to the default config. Removes docs from Ivy artifacts in
+  // favor of unidoc.
   lazy val commonPortion = Seq (
 
     unmanagedSourceDirectories in Compile <<=
@@ -47,7 +53,7 @@ object TreodeBuild extends Build {
 
     scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked"),
 
-    scalacOptions <++= scalaVersion map { 
+    scalacOptions <++= scalaVersion map {
       case "2.10.4" => Seq.empty
       case "2.11.2" => Seq ("-Ywarn-unused-import")
     },
@@ -67,16 +73,18 @@ object TreodeBuild extends Build {
 
     publishArtifact in (Compile, packageDoc) := false,
 
-    publishTo := 
+    publishTo :=
       Some (Resolver.file ("Staging Repo", file ("stage/ivy")) (Resolver.ivyStylePatterns)))
 
-  // A portion of the settings for projects without stubs.  Adds
-  // testing libraries to SBT's "test" configuration.
+  // A portion of the settings for projects without stubs.  Adds testing libraries to SBT's
+  // test config.
   lazy val standardPortion = Seq (
 
-    ivyConfigurations := overrideConfigs (Compile, Test) (ivyConfigurations.value),
+    ivyConfigurations :=
+      overrideConfigs (Compile, Test, Perf) (ivyConfigurations.value),
 
-    EclipseKeys.configurations := Set (Compile, Test),
+    EclipseKeys.configurations :=
+      Set (Compile, Test, Perf),
 
     testOptions in Test := Seq (
       Tests.Argument ("-l", "com.treode.tags.Intensive", "-oDF")),
@@ -87,36 +95,51 @@ object TreodeBuild extends Build {
     testOptions in PeriodicTest := Seq (
       Tests.Argument ("-n", "com.treode.tags.Periodic", "-oDF")),
 
+    testFrameworks in Perf := Seq (
+      new TestFramework ("org.scalameter.ScalaMeterFramework")),
+
+    parallelExecution in Perf := false,
+
+    testOptions in Perf := Seq.empty,
+
     unmanagedSourceDirectories in Test <<=
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
       "org.scalacheck" %% "scalacheck" % "1.11.5" % "test",
+      "com.storm-enroute" %% "scalameter" % "0.6" % "perf",
       "org.scalamock" %% "scalamock-scalatest-support" % "3.1.4" % "test",
       "org.scalatest" %% "scalatest" % "2.2.2" % "test"))
 
   // Settings for projects without stubs.
   lazy val standardSettings =
-    inConfig (IntensiveTest) (Defaults.testTasks) ++ 
-    inConfig (PeriodicTest) (Defaults.testTasks) ++ 
+    inConfig (IntensiveTest) (Defaults.testTasks) ++
+    inConfig (PeriodicTest) (Defaults.testTasks) ++
+    inConfig (Perf) (Defaults.testTasks) ++
     versionInfo ++
     commonPortion ++
     standardPortion
 
+  // The stub config introduces classes for testing. These are not classes for testing within the
+  // project, for those can reside in the test config. They are classes for dependents of the
+  // project, but they do not belong in the production jar, otherwise they could reside in the
+  // default config.
   lazy val Stub = config ("stub") extend (Compile)
   lazy val TestWithStub = config ("test") extend (Stub)
   lazy val IntensiveTestWithStub = config ("intensive") extend (TestWithStub)
   lazy val PeriodicTestWithStub = config ("periodic") extend (TestWithStub)
+  lazy val PerfWithStub = config ("perf") extend (TestWithStub)
 
-  // A portion of the settings for projects with stubs.  Adds the
-  // "stub" configuration and creates a replaces the SBT "test"
-  // configuration with a new one that depends on the stubs.  Then
-  // adds the testing libraries to the new "test" configuration.
+  // A portion of the settings for projects with stubs.  Adds the "stub" config and creates
+  // a replaces the SBT "test" config with a new one that depends on the stubs.  Then
+  // adds the testing libraries to the new "test" config.
   lazy val stubPortion = Seq (
 
-    ivyConfigurations := overrideConfigs (Compile, Stub, TestWithStub) (ivyConfigurations.value),
+    ivyConfigurations :=
+      overrideConfigs (Compile, Stub, TestWithStub, PerfWithStub) (ivyConfigurations.value),
 
-    EclipseKeys.configurations := Set (Compile, Stub, TestWithStub),
+    EclipseKeys.configurations :=
+      Set (Compile, Stub, TestWithStub, PerfWithStub),
 
     testOptions in TestWithStub := Seq (
       Tests.Argument ("-l", "com.treode.tags.Intensive", "-oDF")),
@@ -126,6 +149,13 @@ object TreodeBuild extends Build {
 
     testOptions in PeriodicTestWithStub := Seq (
       Tests.Argument ("-n", "com.treode.tags.Periodic", "-oDF")),
+
+    testFrameworks in PerfWithStub := Seq (
+      new TestFramework ("org.scalameter.ScalaMeterFramework")),
+
+    parallelExecution in PerfWithStub := false,
+
+    testOptions in PerfWithStub := Seq.empty,
 
     publishArtifact in Stub := true,
 
@@ -137,6 +167,7 @@ object TreodeBuild extends Build {
 
     libraryDependencies ++= Seq (
       "org.scalacheck" %% "scalacheck" % "1.11.5" % "stub->default",
+      "com.storm-enroute" %% "scalameter" % "0.6" % "stub->default",
       "org.scalamock" %% "scalamock-scalatest-support" % "3.1.4" % "stub->default",
       "org.scalatest" %% "scalatest" % "2.2.2" % "stub->default"))
 
@@ -147,50 +178,51 @@ object TreodeBuild extends Build {
     inConfig (TestWithStub) (Defaults.testTasks) ++
     inConfig (IntensiveTestWithStub) (Defaults.testTasks) ++
     inConfig (PeriodicTestWithStub) (Defaults.testTasks) ++
+    inConfig (PerfWithStub) (Defaults.testTasks) ++
     versionInfo ++
     commonPortion ++
     stubPortion
 
-  // Both the async and pickle projects depend on buffers, but someday
-  // someone may want the async package without the picklers or vice
-  // versa, so we have isolated the buffers into their own project.
+  // Both the async and pickle projects depend on buffers, but someday someone may want the async
+  // package without the picklers or vice  versa, so we have isolated the buffers into their own
+  // project.
   lazy val buffer = Project ("buffer", file ("buffer"))
-    .configs (IntensiveTest, PeriodicTest)
+    .configs (IntensiveTest, PeriodicTest, Perf)
     .settings (standardSettings: _*)
 
   // Separated because this may be useful on its own.
   lazy val pickle = Project ("pickle", file ("pickle"))
-    .configs (IntensiveTest, PeriodicTest)
+    .configs (IntensiveTest, PeriodicTest, Perf)
     .dependsOn (buffer)
     .settings (standardSettings: _*)
 
   // Separated because this may be useful on its own.
   lazy val async = Project ("async", file ("async"))
-    .configs (IntensiveTestWithStub, PeriodicTestWithStub)
+    .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
     .dependsOn (buffer, pickle % "test")
     .settings (stubSettings: _*)
 
   // Separated because it helped development.
   lazy val cluster = Project ("cluster", file ("cluster"))
-    .configs (IntensiveTestWithStub, PeriodicTestWithStub)
+    .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
     .dependsOn (async % "compile;stub->stub", pickle)
     .settings (stubSettings: _*)
 
   // Separated because it helped development.
   lazy val disk = Project ("disk", file ("disk"))
-    .configs (IntensiveTestWithStub, PeriodicTestWithStub)
+    .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
     .dependsOn (async % "compile;stub->stub", pickle)
     .settings (stubSettings: _*)
 
-  // The main component that this repository and build provides.
+  // The main component that this build provides.
   lazy val store = Project ("store", file ("store"))
-    .configs (IntensiveTestWithStub, PeriodicTestWithStub)
+    .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
     .dependsOn (cluster % "compile;stub->stub", disk % "compile;stub->stub")
     .settings (stubSettings: _*)
 
   // Separated because not everyone wants it and its dependencies.
   lazy val finatra = Project ("finatra", file ("finatra"))
-    .configs (IntensiveTest, PeriodicTest)
+    .configs (IntensiveTest, PeriodicTest, Perf)
     .dependsOn (store)
     .settings (standardSettings: _*)
     .settings (
@@ -204,7 +236,7 @@ object TreodeBuild extends Build {
 
   // Separated because not everyone wants it and its dependencies.
   lazy val jackson = Project ("jackson", file ("jackson"))
-    .configs (IntensiveTest, PeriodicTest)
+    .configs (IntensiveTest, PeriodicTest, Perf)
     .dependsOn (store)
     .settings (standardSettings: _*)
     .settings (
@@ -213,11 +245,10 @@ object TreodeBuild extends Build {
           "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.2",
           "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.2"))
 
-  // A standalone server for system tests.  Separated to keep system
-  // testing components out of production code (these components are
-  // in the "default" Ivy configuration in this project).
+  // A standalone server for system tests.  Separated to keep system testing components out of
+  // production code (these components are in the default config in this project).
   lazy val systest = Project ("systest", file ("systest"))
-    .configs (IntensiveTest, PeriodicTest)
+    .configs (IntensiveTest, PeriodicTest, Perf)
     .dependsOn (store)
     .settings (standardSettings: _*)
     .settings (assemblySettings: _*)
@@ -243,13 +274,13 @@ object TreodeBuild extends Build {
 
       scalacOptions in (ScalaUnidoc, unidoc) ++= Seq (
         "-diagrams",
-        "-doc-title", "TreodeDB " + versionString, 
+        "-doc-title", "TreodeDB " + versionString,
         "-doc-root-content", baseDirectory.value + "/doc/rootdoc.html"),
 
-      unidocConfigurationFilter in (ScalaUnidoc, unidoc) := 
+      unidocConfigurationFilter in (ScalaUnidoc, unidoc) :=
         inConfigurations (Compile, Stub),
 
-      unidocProjectFilter in (ScalaUnidoc, unidoc) := 
+      unidocProjectFilter in (ScalaUnidoc, unidoc) :=
         inAnyProject -- inProjects (systest),
 
       copyDocAssetsTask := {
@@ -263,8 +294,8 @@ object TreodeBuild extends Build {
       publishLocal := {},
       publish := {})
 
-  // The root project includes everything that can be built across Scala
-  // versions; that is everything except Finatra.
+  // The root project includes everything that can be built across Scala versions; that is
+  // everything except Finatra, which can be built in 2.10 only.
   lazy val root = Project ("root", file ("."))
     .aggregate (buffer, pickle, async, cluster, disk, store, jackson)
     .settings (versionInfo: _*)
