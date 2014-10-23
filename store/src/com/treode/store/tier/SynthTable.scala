@@ -29,7 +29,7 @@ import Callback.ignore
 import JavaConversions._
 import Scheduler.toRunnable
 import SynthTable.{genStepMask, genStepSize}
-import TierTable.Meta
+import TierTable.{Checkpoint, Compaction}
 
 private class SynthTable (
 
@@ -177,7 +177,7 @@ private class SynthTable (
       if (!secondary.isEmpty)
         queue ::= toRunnable (probe (groups), cb)
       else
-        cb.pass (tiers.active)
+        cb.on (scheduler) .pass (tiers.active)
     } finally {
       writeLock.unlock()
     }}
@@ -195,21 +195,24 @@ private class SynthTable (
     count
   }
 
-  def compact (gen: Long, chosen: Tiers, residents: Residents): Async [Meta] = guard {
+  def compact (gen: Long, chosen: Tiers, residents: Residents): Async [Option [Compaction]] = guard {
     val iter = TierIterator .merge (desc, chosen) .clean (desc, id, residents)
     val est = countKeys (primary) + chosen.estimate (residents)
     for {
       tier <- TierBuilder.build (desc, id, gen, est, residents, iter)
     } yield {
       writeLock.lock()
-      try {
-        tiers = tiers.compacted (tier, chosen)
-        new Meta (math.max (gen, tiers.gen), tiers)
+      val meta = try {
+        val g = chosen.minGen
+        tiers = tiers.compact (g, tier)
+        new Some (new Compaction (g, tier))
       } finally {
         writeLock.unlock()
-      }}}
+      }
+      meta
+    }}
 
-  def compact (groups: Set [Long], residents: Residents): Async [Meta] = async { cb =>
+  def compact (groups: Set [Long], residents: Residents): Async [Option [Compaction]] = async { cb =>
     writeLock.lock()
     try {
       if (!secondary.isEmpty) {
@@ -217,13 +220,13 @@ private class SynthTable (
       } else {
         val chosen = tiers.choose (groups, residents)
         if (chosen.isEmpty) {
-          cb.pass (new Meta (tiers.gen, tiers))
+          cb.on (scheduler) .pass (None)
         } else if (primary.isEmpty) {
           val gen = this.gen
           this.gen += genStepSize
           compact (gen, chosen, residents) run (cb)
         } else {
-          val gen = tiers.gen + 1
+          val gen = tiers.maxGen + 1
           assert ((gen & genStepMask) != 0, "Tier compacted too many times")
           compact (gen, chosen, residents) run (cb)
         }}
@@ -231,47 +234,48 @@ private class SynthTable (
       writeLock.unlock()
     }}
 
-  def checkpoint (gen: Long, primary: MemTier, residents: Residents): Async [Meta] = guard {
-    val iter = TierIterator .adapt (primary) .clean (desc, id, residents)
-    val est = countKeys (primary)
+  def checkpoint (gen: Long, secondary: MemTier, residents: Residents): Async [Checkpoint] = guard {
+    val iter = TierIterator .adapt (secondary) .clean (desc, id, residents)
+    val est = countKeys (secondary)
     for {
       tier <- TierBuilder.build (desc, id, gen, est, residents, iter)
     } yield {
       writeLock.lock()
       val (meta, queue) = try {
-        val q = this.queue
+        val _queue = this.queue
         this.queue = List.empty
-        secondary = newMemTier
-        tiers = tiers.compacted (tier, Tiers.empty)
-        (new Meta (gen, tiers), q)
+        this.secondary = newMemTier
+        tiers = tiers.checkpoint (tier)
+        (new Checkpoint (gen, tiers), _queue)
       } finally {
         writeLock.unlock()
       }
       queue foreach (_.run)
+      compact()
       meta
     }}
 
-  def checkpoint (residents: Residents): Async [Meta] = guard {
+  def checkpoint (residents: Residents): Async [Checkpoint] = guard {
 
     writeLock.lock()
-    val (gen, primary, tiers) = try {
-      assert (secondary.isEmpty, "Checkpoint already in progress.")
-      val g = this.gen
-      val p = this.primary
+    val (gen, secondary, tiers) = try {
+      assert (this.secondary.isEmpty, "Checkpoint already in progress.")
+      val _gen = this.gen
+      val _secondary = this.primary
       if (!this.primary.isEmpty) {
         this.gen += genStepSize
-        this.primary = secondary
-        secondary = p
+        this.primary = this.secondary
+        this.secondary = _secondary
       }
-      (g, p, this.tiers)
+      (_gen, _secondary, this.tiers)
     } finally {
       writeLock.unlock()
     }
 
-    if (primary.isEmpty) {
-      supply (new Meta (tiers.gen, tiers))
+    if (secondary.isEmpty) {
+      supply (new Checkpoint (gen, tiers))
     } else {
-      checkpoint (gen, primary, residents)
+      checkpoint (gen, secondary, residents)
     }}
 
   def digest: TableDigest =

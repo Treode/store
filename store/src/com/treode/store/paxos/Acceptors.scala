@@ -23,7 +23,7 @@ import com.treode.disk.{Disk, ObjectId, PageDescriptor, PageHandler, Position, R
 import com.treode.store.{Bytes, Cell, Residents, TxClock}
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
-import Async.{guard, latch, supply}
+import Async.{guard, latch, supply, when}
 
 private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   import kit.{archive, cluster, disk, library}
@@ -59,7 +59,7 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
     guard {
       for {
         meta <- archive.compact (groups, library.residents)
-        _ <- Acceptors.checkpoint.record (meta)
+        _ <- when (meta.isDefined) (Acceptors.compact.record (meta.get))
       } yield ()
     }
 
@@ -69,7 +69,6 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
         _ <- materialize (acceptors.values) .latch.unit foreach (_.checkpoint())
         meta <- archive.checkpoint (library.residents)
         _ <- Acceptors.checkpoint.record (meta)
-
       } yield ()
     }
 
@@ -101,9 +100,19 @@ private object Acceptors {
     RecordDescriptor (0x4DCE11AA, tuple (ulong, seq (cell)))
   }
 
-  val checkpoint = {
+  val compact = {
+    import PaxosPicklers._
+    RecordDescriptor (0x26A32F6C3BB8E697L, tierCompaction)
+  }
+
+  val checkpointV0 = {
     import PaxosPicklers._
     RecordDescriptor (0x42A17DC354412E17L, tierMeta)
+  }
+
+  val checkpoint = {
+    import PaxosPicklers._
+    RecordDescriptor (0x6D77917031E5416CL, tierCheckpoint)
   }
 
   val archive = TierDescriptor (0x9F59C4262C8190E8L) { (residents, _, cell) =>

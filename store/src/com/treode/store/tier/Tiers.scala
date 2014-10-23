@@ -30,8 +30,11 @@ import com.treode.store.{Residents, Store, StorePicklers, TableDigest}
   def isEmpty: Boolean =
     tiers.isEmpty
 
-  def gen: Long =
+  def maxGen: Long =
     if (tiers.isEmpty) 0 else tiers.head.gen
+
+  def minGen: Long =
+    if (tiers.isEmpty) Long.MaxValue else tiers.last.gen
 
   def gens: Seq [Long] =
     tiers map (_.gen)
@@ -60,8 +63,7 @@ import com.treode.store.{Residents, Store, StorePicklers, TableDigest}
     new Tiers (tiers take (selected + 1))
   }
 
-  def compacted (tier: Tier, replace: Tiers): Tiers = {
-    val keep = if (replace.tiers.isEmpty) Long.MaxValue else replace.tiers.map (_.gen) .min
+  def compact (keep: Long, tier: Tier): Tiers = {
     val bldr = Seq.newBuilder [Tier]
     bldr ++= tiers takeWhile (_.gen > tier.gen)
     if (tier.keys > 0)
@@ -70,6 +72,11 @@ import com.treode.store.{Residents, Store, StorePicklers, TableDigest}
     new Tiers (bldr.result)
   }
 
+  def checkpoint (tier: Tier): Tiers =
+    new Tiers (tier +: tiers)
+
+  // TODO: Remove after release of 0.2.0.
+  // This method remains to support replay of TierTable.Meta.
   def compare (that: Tiers): Int = {
     val _this = this.gens
     val _that = that.gens
