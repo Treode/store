@@ -30,7 +30,7 @@ import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
 import Fruits.{Grape, Kiwi, Orange}
-import TierTable.Meta
+import TierTable.Checkpoint
 import TierTestTools._
 
 class SynthTableSpec extends FreeSpec {
@@ -166,7 +166,7 @@ class SynthTableSpec extends FreeSpec {
     }}
 
   private def aCheckpointingTable (
-      setup: (Random, StubScheduler) => (StubDiskDrive, SynthTable, CallbackCaptor [Meta])) {
+      setup: (Random, StubScheduler) => (StubDiskDrive, SynthTable, CallbackCaptor [Checkpoint])) {
 
     "finish the checkpoint" in {
       implicit val random = new Random (0)

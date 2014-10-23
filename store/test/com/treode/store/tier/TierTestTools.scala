@@ -27,7 +27,7 @@ import org.scalatest.Assertions
 import Assertions.assertResult
 import Async.async
 import Fruits.{Apple, Tomato}
-import TierTable.Meta
+import TierTable.Checkpoint
 
 private object TierTestTools extends StoreTestTools {
 
@@ -62,7 +62,7 @@ private object TierTestTools extends StoreTestTools {
       scheduler.run()
     }
 
-    def checkpoint(): Async [Meta] =
+    def checkpoint(): Async [Checkpoint] =
       table.checkpoint (Residents.all)
 
     /** Requires that

@@ -28,7 +28,11 @@ private [store] trait TierMedic {
 
   def receive (gen: Long, novel: Seq [Cell])
 
+  def compact (meta: TierTable.Compaction)
+
   def checkpoint (meta: TierTable.Meta)
+
+  def checkpoint (meta: TierTable.Checkpoint)
 
   def close () (implicit launch: Disk.Launch): TierTable
 }

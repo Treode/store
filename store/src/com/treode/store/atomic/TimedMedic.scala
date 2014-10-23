@@ -50,7 +50,13 @@ private class TimedMedic (kit: RecoveryKit) {
   def receive (id: TableId, gen: Long, novel: Seq [Cell]): Unit =
     get (id) .receive (gen, novel)
 
+  def compact (id: TableId, meta: TierTable.Compaction): Unit =
+    get (id) .compact (meta)
+
   def checkpoint (id: TableId, meta: TierTable.Meta): Unit =
+    get (id) .checkpoint (meta)
+
+  def checkpoint (id: TableId, meta: TierTable.Checkpoint): Unit =
     get (id) .checkpoint (meta)
 
   def close() (implicit launch: Disk.Launch): Seq [(TableId, TierTable)] = {

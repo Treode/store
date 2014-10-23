@@ -21,7 +21,7 @@ import com.treode.disk.{Disk, TypeId}
 import com.treode.store._
 
 import Async.async
-import TierTable.Meta
+import TierTable.{Checkpoint, Compaction}
 
 private [store] trait TierTable {
 
@@ -45,18 +45,59 @@ private [store] trait TierTable {
 
   def compact()
 
-  def compact (groups: Set [Long], residents: Residents): Async [Meta]
+  def compact (groups: Set [Long], residents: Residents): Async [Option [Compaction]]
 
-  def checkpoint (residents: Residents): Async [Meta]
+  def checkpoint (residents: Residents): Async [Checkpoint]
 
   def digest: TableDigest
 }
 
 private [store] object TierTable {
 
+  class Compaction (
+    private [tier] val keep: Long,
+    private [tier] val tier: Tier
+  ) {
+
+    override def toString: String =
+      s"TierTable.Compaction($keep, $tier)"
+  }
+
+  object Compaction {
+
+    val pickler = {
+      import StorePicklers._
+      wrap (long, Tier.pickler)
+      .build (v => new Compaction (v._1, v._2))
+      .inspect (v => (v.keep, v.tier))
+    }}
+
+  class Checkpoint (
+    private [tier] val gen: Long,
+    private [tier] val tiers: Tiers
+  ) {
+
+    override def toString: String =
+      s"TierTable.Checkpoint($gen, $tiers)"
+  }
+
+  object Checkpoint {
+
+    val empty = new Checkpoint (0, Tiers.empty)
+
+    val pickler = {
+      import StorePicklers._
+      wrap (long, Tiers.pickler)
+      .build (v => new Checkpoint (v._1, v._2))
+      .inspect (v => (v.gen, v.tiers))
+    }}
+
+  // TODO: Remove after release of 0.2.0.
+  // Meta remains to replay logs from a pre 0.2.0 database.
   class Meta (
-      private [tier] val gen: Long,
-      private [tier] val tiers: Tiers) {
+    private [tier] val gen: Long,
+    private [tier] val tiers: Tiers
+  ) {
 
     override def toString: String =
       s"TierTable.Meta($gen, $tiers)"

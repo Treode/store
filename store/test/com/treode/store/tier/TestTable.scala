@@ -22,7 +22,7 @@ import com.treode.async.stubs.implicits._
 import com.treode.disk.{Disk, ObjectId, PageHandler, RecordDescriptor}
 import com.treode.store.{Bytes, Residents, StorePicklers, TxClock}
 
-import Async.guard
+import Async.{guard, when}
 
 private class TestTable (table: TierTable) (implicit disk: Disk)
 extends PageHandler [Long] {
@@ -59,7 +59,7 @@ extends PageHandler [Long] {
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] = guard {
     for {
       meta <- table.compact (groups, Residents.all)
-      _ <- TestTable.checkpoint.record (meta)
+      _ <- when (meta.isDefined) (TestTable.compact.record (meta.get))
     } yield ()
   }
 
@@ -89,7 +89,12 @@ private object TestTable {
     RecordDescriptor (0x37, tuple (ulong, int))
   }
 
+  val compact = {
+    import StorePicklers._
+    RecordDescriptor (0x7D, tierCompaction)
+  }
+
   val checkpoint = {
     import StorePicklers._
-    RecordDescriptor (0xD1, tierMeta)
+    RecordDescriptor (0xAD, tierCheckpoint)
   }}

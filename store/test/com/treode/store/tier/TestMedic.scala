@@ -22,7 +22,7 @@ import com.treode.disk.Disk
 import com.treode.store.{Bytes, Store, TableId, TxClock}
 
 import Async.supply
-import TestTable.{checkpoint, delete, descriptor, put}
+import TestTable.{checkpoint, compact, delete, descriptor, put}
 
 private class TestMedic (
     id: TableId
@@ -34,16 +34,20 @@ private class TestMedic (
 
   val medic = TierMedic (descriptor, id.id)
 
-  checkpoint.replay { meta =>
-    medic.checkpoint (meta)
-  }
-
   put.replay { case (gen, key, value) =>
     medic.put (gen, Bytes (key), TxClock.MinValue, Bytes (value))
   }
 
   delete.replay { case (gen, key) =>
     medic.delete (gen, Bytes (key), TxClock.MinValue)
+  }
+
+  compact.replay { meta =>
+    medic.compact (meta)
+  }
+
+  checkpoint.replay { meta =>
+    medic.checkpoint (meta)
   }
 
   def launch (implicit launch: Disk.Launch): Async [TestTable] = supply {

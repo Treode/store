@@ -45,6 +45,8 @@ private trait StorePicklers extends Picklers {
   def residents = Residents.pickler
   def slice = Slice.pickler
   def tableId = TableId.pickler
+  def tierCheckpoint = TierTable.Checkpoint.pickler
+  def tierCompaction = TierTable.Compaction.pickler
   def tierMeta = TierTable.Meta.pickler
   def txClock = TxClock.pickler
   def txId = TxId.pickler

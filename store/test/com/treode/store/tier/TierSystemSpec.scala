@@ -48,7 +48,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
     val tracker = new TableTracker
     val diskDrive = new StubDiskDrive
 
-    crash.info (s"check ($nkeys, $nputs, $nbatches, $config)")
+    crash.info (s"crashAndRecover ($nkeys, $nputs, $nbatches, $config)")
 
     .setup { implicit scheduler =>
       implicit val recovery = StubDisk.recover()
@@ -70,31 +70,6 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
       tracker.check (table.toMap)
     }}
 
-  def writeManyTimes (
-      nkeys: Int,
-      nputs: Int,
-      nbatches: Int
-  ) (implicit
-      random: Random,
-      scheduler: StubScheduler,
-      config: StoreTestConfig
-  ) {
-    import config._
-
-    val tracker = new TableTracker
-    val diskDrive = new StubDiskDrive
-
-    implicit val recovery = StubDisk.recover()
-    val medic = new TestMedic (ID)
-    val launch = recovery.attach (diskDrive) .expectPass()
-    val rawtable = medic.launch (launch) .expectPass()
-    launch.launch()
-    val table = new TrackedTable (rawtable, tracker)
-    for (_ <- (0 until nbatches))
-      table.putAll (random.nextPut (nkeys, nputs): _*) .expectPass()
-    tracker.check (rawtable.toMap)
-  }
-
   "The TierTable when" - {
 
     for { (name, checkpoint) <- Seq (
@@ -114,20 +89,10 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
           compactionProbability = compaction)
 
       for { (name, (nkeys, nputs, nbatches)) <- Seq (
-          "recover from a crash"             -> (100, 10, 10),
-          "recover with lots of overwrites"  -> (30, 10, 10),
-          "recover with very few overwrites" -> (10000, 10, 10))
+          "recover with lots of writes"     -> (10000, 3, 100),
+          "recover with lots of overwrites" -> (30, 3, 100))
       } name taggedAs (Intensive, Periodic) in {
 
         forAllCrashes { implicit random =>
           crashAndRecover (nkeys, nputs, nbatches)
-        }}
-
-      for { (name, (nkeys, nputs, nbatches)) <- Seq (
-          "write a lot" -> (100, 2, 2500))
-      } name taggedAs (Intensive, Periodic) in { pending // too long
-
-        forAllSeeds { implicit random =>
-          implicit val scheduler = StubScheduler.random (random)
-          writeManyTimes (nkeys, nputs, nbatches)
         }}}}}}

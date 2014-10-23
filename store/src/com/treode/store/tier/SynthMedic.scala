@@ -23,6 +23,7 @@ import com.treode.disk.{Disk, Position}
 import com.treode.store.{Bytes, Cell, Key, Store, TableId, TxClock}
 
 import SynthTable.{genStepBits, genStepMask, genStepSize}
+import TierTable.{Checkpoint, Compaction, Meta}
 
 private class SynthMedic (
     desc: TierDescriptor,
@@ -46,6 +47,8 @@ private class SynthMedic (
 
   // The position of each tier on disk.
   private var tiers = Tiers.empty
+
+  private var compactions = List.empty [Compaction]
 
   private def replay (gen: Long, key: Bytes, time: TxClock, value: Option [Bytes]) {
 
@@ -113,7 +116,15 @@ private class SynthMedic (
       writeLock.unlock()
     }}
 
-  def checkpoint (meta: TierTable.Meta) {
+  def compact (meta: Compaction) {
+    writeLock.lock()
+    try {
+      compactions ::= meta
+    } finally {
+      writeLock.unlock()
+    }}
+
+  def checkpoint (meta: Meta) {
     writeLock.lock()
     val mg = meta.gen >> genStepBits
     val tg = this.gen >> genStepBits
@@ -125,7 +136,25 @@ private class SynthMedic (
         primary = newMemTier
         secondary = newMemTier
       }
-      if (meta.gen > tiers.gen || meta.tiers > tiers)
+      if (meta.gen > tiers.maxGen || meta.tiers > tiers)
+        tiers = meta.tiers
+    } finally {
+      writeLock.unlock()
+    }}
+
+  def checkpoint (meta: Checkpoint) {
+    writeLock.lock()
+    val mg = meta.gen >> genStepBits
+    val tg = this.gen >> genStepBits
+    try {
+      if (mg == tg - 1) {
+        secondary = newMemTier
+      } else if (mg > tg) {
+        gen = (mg+1) << genStepBits
+        primary = newMemTier
+        secondary = newMemTier
+      }
+      if (meta.tiers > tiers)
         tiers = meta.tiers
     } finally {
       writeLock.unlock()
@@ -135,16 +164,20 @@ private class SynthMedic (
     import launch.disk
 
     writeLock.lock()
-    val (gen, primary, tiers) = try {
-      this.secondary.putAll (this.primary)
-      val result = (this.gen, this.secondary, this.tiers)
+    val (gen, primary, secondary, _tiers, compactions) = try {
+      val result = (this.gen, this.primary, this.secondary, this.tiers, this.compactions)
       this.primary = null
       this.secondary = null
       this.tiers = null
+      this.compactions = null
       result
     } finally {
       writeLock.unlock()
     }
 
-    new SynthTable (desc, id, lock, gen, primary, newMemTier, tiers)
+    var tiers = _tiers
+    secondary.putAll (primary)
+    for (meta <- compactions.reverse)
+      tiers = tiers.compact (meta.keep, meta.tier)
+    new SynthTable (desc, id, lock, gen, secondary, newMemTier, tiers)
   }}
