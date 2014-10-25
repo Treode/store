@@ -19,16 +19,19 @@ package com.treode.store.tier
 import java.nio.file.Paths
 import scala.util.Random
 
+import com.treode.async.Async
 import com.treode.async.implicits._
 import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
+import com.treode.disk.{ObjectId, PageHandler}
 import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
-import com.treode.store.{Fruits, StoreTestConfig}
+import com.treode.store.{Fruits, Residents, StoreTestConfig}
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
 
+import Async.guard
 import Fruits.{Grape, Kiwi, Orange}
 import TierTable.Checkpoint
 import TierTestTools._
@@ -37,15 +40,35 @@ class SynthTableSpec extends FreeSpec {
 
   val tier = TierDescriptor (0x56) ((_, _, _) => true)
 
+  class TierHandler (table: SynthTable) extends PageHandler [Long] {
+
+    def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] = guard {
+      table.probe (groups)
+    }
+
+    def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] = guard {
+      for {
+        _ <- table.compact (groups, Residents.all)
+      } yield ()
+    }
+
+    def checkpoint(): Async [Unit] = guard {
+      for {
+        _ <- table.checkpoint (Residents.all)
+      } yield ()
+    }}
+
   private def mkTable (diskDrive: StubDiskDrive) (
       implicit random: Random, scheduler: StubScheduler): SynthTable = {
     val config = StoreTestConfig (checkpointProbability = 0.0, compactionProbability = 0.0)
     import config._
     implicit val recovery = StubDisk.recover()
     implicit val launch = recovery.attach (diskDrive) .expectPass()
-    implicit val disk = launch.disk
+    import launch.disk
+    val table = SynthTable (tier, 0x62)
+    tier.handle (new TierHandler (table))
     launch.launch()
-    SynthTable (tier, 0x62)
+    table
   }
 
   private def aNonEmptyTable (setup: (Random, StubScheduler) => SynthTable) {
