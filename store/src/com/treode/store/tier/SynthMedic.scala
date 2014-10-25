@@ -126,9 +126,9 @@ private class SynthMedic (
 
   def checkpoint (meta: Meta) {
     writeLock.lock()
-    val mg = meta.gen >> genStepBits
-    val tg = this.gen >> genStepBits
     try {
+      val mg = meta.gen >> genStepBits
+      val tg = this.gen >> genStepBits
       if (mg == tg - 1) {
         secondary = newMemTier
       } else if (mg >= tg) {
@@ -144,9 +144,9 @@ private class SynthMedic (
 
   def checkpoint (meta: Checkpoint) {
     writeLock.lock()
-    val mg = meta.gen >> genStepBits
-    val tg = this.gen >> genStepBits
     try {
+      val mg = meta.gen >> genStepBits
+      val tg = this.gen >> genStepBits
       if (mg == tg - 1) {
         secondary = newMemTier
       } else if (mg > tg) {
@@ -154,8 +154,7 @@ private class SynthMedic (
         primary = newMemTier
         secondary = newMemTier
       }
-      if (meta.tiers > tiers)
-        tiers = meta.tiers
+      tiers = meta.tiers
     } finally {
       writeLock.unlock()
     }}
@@ -164,7 +163,7 @@ private class SynthMedic (
     import launch.disk
 
     writeLock.lock()
-    val (gen, primary, secondary, _tiers, compactions) = try {
+    val (_gen, primary, secondary, _tiers, compactions) = try {
       val result = (this.gen, this.primary, this.secondary, this.tiers, this.compactions)
       this.primary = null
       this.secondary = null
@@ -175,9 +174,12 @@ private class SynthMedic (
       writeLock.unlock()
     }
 
+    var gen = _gen
     var tiers = _tiers
     secondary.putAll (primary)
     for (meta <- compactions.reverse)
       tiers = tiers.compact (meta.keep, meta.tier)
+    if (gen < tiers.maxGen)
+      gen = (tiers.maxGen + genStepMask) & ~genStepMask
     new SynthTable (desc, id, lock, gen, secondary, newMemTier, tiers)
   }}
