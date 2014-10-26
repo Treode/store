@@ -55,14 +55,14 @@ The [PhysicalModel][physical-model] contains Scala case-classes that describe wh
 We maintain 5 key-value tables:
 
 <table>
-  <head>
+  <thead>
     <tr>
       <th>Table</th>
       <th>Key Type</th>
       <th>Value Type</th>
     </tr>
-  </head>
-  <body>
+  </thead>
+  <tbody>
     <tr style="font-family: monospace">
       <td>MovieTable</td>
       <td>String (MovieID)</td>
@@ -102,7 +102,7 @@ We maintain 5 key-value tables:
         &nbsp;&nbsp;actors: Set [String])
       </td>
     </tr>
-  </body>
+  </tbody>
 </table>
 
 The information about a movie is split across two tables: the `MovieTable` and the `CastTable`. The information about and actor is split in a similar way. The `CastTable` and `RolesTable` capture the many-to-many relationship between movies and actors, and they do so in a redundant way. This is to facilitate reads, which we believe will be more frequent than writes, but it complicate writes because they must maintain the duplicated information.
@@ -112,6 +112,65 @@ The index maps movie titles and actor names to matching IDs.
 
 
 ## RESTful API
+
+The server will provide the following API:
+
+<table>
+  <thead>
+    <tr>
+      <th>Method</th>
+      <th>Path</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>GET
+      <td>/actor?q=<i>search</i></td>
+      <td>Search for actors by name prefix.</td>
+    </tr>
+    <tr>
+      <td>POST
+      <td>/actor</i></td>
+      <td>Create a new actor, server chooses ID.</td>
+    </tr>
+    <tr>
+      <td>GET
+      <td>/actor/<i>id</i></td>
+      <td>Get the actor by ID.</td>
+    </tr>
+    <tr>
+      <td>PUT
+      <td>/actor/<i>id</i></td>
+      <td>Set or create the actor by ID.</td>
+    </tr>
+    <tr>
+      <td>GET
+      <td>/movie?q=<i>search</i></td>
+      <td>Search for movies by title prefix.</td>
+    </tr>
+    <tr>
+      <td>POST
+      <td>/movie</i></td>
+      <td>Create a new movie, server chooses ID.</td>
+    </tr>
+    <tr>
+      <td>GET
+      <td>/movie/<i>id</i></td>
+      <td>Get the movie by ID.</td>
+    </tr>
+    <tr>
+      <td>PUT
+      <td>/movie/<i>id</i></td>
+      <td>Set or create the movie by ID.</td>
+    </tr>
+    <tr>
+      <td>GET
+      <td>/search?q=<i>search</i></td>
+      <td>Search for actors or movies by prefix.</td>
+    </tr>
+  </tbody>
+</table>
 
 ### Composing JSON for GET
 
@@ -167,17 +226,20 @@ For example, suppose we are getting the movie _Star Wars_:
 
 When we want to `PUT` a JSON object for a movie, we must be sure to update the role information that appears both in the `CastTable` and the `RolesTable`.
 
-1. Get the old information from the `MovieTable` and the `CastTable`.
+1. Get the old information from the `MovieTable`, the `CastTable` and the `Index`.
 
-1. We get the information from the `RolesTable` for both the actors in the old cast and the actors in the new cast.
+1. Get the information from the `RolesTable` for both the actors in the old cast and the actors in the new cast.
 
-1. We update the information in the `MovieTable`, the `CastTable` and the `RolesTable`.
+
+1. Update the information in the `MovieTable`, the `CastTable`, the `RolesTable` and the `Index`.
 
     - Some fields in the JSON object may be missing, and we fill those in from the prior values.
 
     - We can update the one row in the `CastTable` directly.
     
     - However we must merge information into multiple rows of the `RolesTable`.
+    
+    - We may need to move remove the ID from one `IndexEntry` and add them to another.
     
 The code to decompose an object and make an update appears across a few places.
     
@@ -284,14 +346,37 @@ To begin, you'll want a machine running Linux. Grab a server from a provider lik
 
     sudo apt-get update
     sudo apt-get install iptables-persistent nginx-full openjdk-7-jdk
+    
+Build the UI and copy it to the host machine.
 
-Copy `config/nginx` from the git repository to `/etc/nginx/sites-available/movies` on your machine, and then
+    cd examples/movies/webui
+    npm install
+    grunt dev
+    scp -r dev <yourhost>:.
+
+Build the server and copy it to the host machine.
+
+    cd examples/movies/server
+    sbt assembly
+    scp target/scala-2.10/server.jar <yourhost>:.
+    
+Run that server
+
+    java -jar server.jar -solo -serve store.db
+    
+You may need to adjust that command depending on your setup with disks and peers. See the [tutorial][tutorial] for help.
+
+Copy `config/nginx` from the git repository to `/etc/nginx/sites-available/movies` on your machine.
+Update the `path-to-root` in that file so that it points to where you place the UI, and then
 
     rm /etc/nginx/sites-enabled/default
     ln -s /etc/nginx/sites-available/movies /etc/nginx/sites-enabled/movies
     service nginx restart
 
-Build the UI
+You should be good to go. Check what NGINX is serving on that host.
+
+
+
 
 [digital-ocean]: //www.digitalocean.com "DigitalOcean cloud hosting"
 
@@ -308,5 +393,7 @@ Build the UI
 [movie-store]: //github.com/Treode/store/blob/examples/movies/src/main/scala/movies/MovieStore.scala "MovieStore"
 
 [physical-model]: //github.com/Treode/store/blob/examples/movies/src/main/scala/movies/PhysicalModel.scala "PhysicalModel"
+
+[tutorial]: //treode.github.io/store "TreodeDB Tutorial"
 
 [virtual-box]: //www.virtualbox.org "Oracle VM VirtualBox"
