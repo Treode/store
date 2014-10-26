@@ -119,6 +119,8 @@ object Main extends AsyncFinatraServer {
     val movies = new MovieStore () (Random, controller.store)
 
     register (new MovieResource (controller.hostId, movies))
+    register (new ActorResource (controller.hostId, movies))
+    register (new SearchResource (controller.hostId, movies))
     register (new Peers (controller))
     register (new Admin (controller))
 
