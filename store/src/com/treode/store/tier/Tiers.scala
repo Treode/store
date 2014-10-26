@@ -72,8 +72,10 @@ import com.treode.store.{Residents, Store, StorePicklers, TableDigest}
     new Tiers (bldr.result)
   }
 
-  def checkpoint (tier: Tier): Tiers =
+  def checkpoint (tier: Tier): Tiers = {
+    assert (tier.gen > maxGen, s"$tier $this")
     new Tiers (tier +: tiers)
+  }
 
   // TODO: Remove after release of 0.2.0.
   // This method remains to support replay of TierTable.Meta.

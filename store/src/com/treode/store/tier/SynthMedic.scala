@@ -179,7 +179,7 @@ private class SynthMedic (
     secondary.putAll (primary)
     for (meta <- compactions.reverse)
       tiers = tiers.compact (meta.keep, meta.tier)
-    if (gen < tiers.maxGen)
-      gen = (tiers.maxGen + genStepMask) & ~genStepMask
+    if (gen <= tiers.maxGen)
+      gen = (tiers.maxGen + genStepSize) & ~genStepMask
     new SynthTable (desc, id, lock, gen, secondary, newMemTier, tiers)
   }}
