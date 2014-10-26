@@ -1,0 +1,7 @@
+name := "finatra"
+      
+version := "0.2.0-SNAPSHOT"
+
+scalaVersion := "2.10.4"
+
+organization := "com.treode"

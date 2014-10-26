@@ -40,7 +40,7 @@ object TreodeBuild extends Build {
   lazy val versionInfo = Seq (
     organization := "com.treode",
     version := versionString,
-    scalaVersion := "2.11.2",
+    scalaVersion := "2.10.4",
     crossScalaVersions := Seq ("2.10.4", "2.11.2"))
 
   // Settings common to both projects with stubs and without stubs. Squashes the source directory
