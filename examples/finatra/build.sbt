@@ -21,6 +21,3 @@ libraryDependencies ++= Seq (
 
 resolvers += "Twitter" at "http://maven.twttr.com"
 
-resolvers += Resolver.url (
-  "treode-oss",
-  new URL ("https://oss.treode.com/ivy")) (Resolver.ivyStylePatterns)
