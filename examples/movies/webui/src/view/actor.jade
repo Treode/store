@@ -1,0 +1,65 @@
+//-
+  Copyright 2014 Treode, Inc.
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+
+div
+  .row-fluid
+    .span12
+      form.form-horizontal
+        .control-group
+          label.control-label Name
+          .controls
+            input.span4(type="text", ng-model="actor.name", ng-disabled="!editing")
+  .row-fluid(ng-show="editing || actor.roles.length > 0")
+    .span1
+    .span10
+      table.table.role-table
+        thead
+          tr
+            th.span12 Movie
+            th.span12 Role
+            th &nbsp;
+        tbody
+          tr(ng-repeat="r in actor.roles")
+            td(ng-switch="editing")
+              div(ng-switch-when="true")
+                input.span12(type="hidden", ui-select2="suggestMovie($index)", value="{{r.movieId}}")
+              div(ng-switch-when="false")
+                a.uneditable-link.span12(href="#/movie/{{r.movieId}}") {{r.title}}
+            td
+              input.span12(type="text", ng-model="r.role", ng-disabled="!editing")
+            td
+              button.btn.pull-right(ng-show="editing", ng-click="removeRole($index)")
+                i.icon-remove-sign
+          tr(ng-show="editing")
+            td
+              input.span12(type="hidden", ui-select2="suggestMovie(-1)", ng-model="newRoleMovieId")
+            td
+              input.span12(type="text", ng-model="newRole.role")
+            td
+              button.btn.pull-right(ng-disabled="!(newRole.movieId && newRole.role)", ng-click="addRole()")
+                i.icon-ok-sign
+  .row-fluid(ng-hide="editing || actor.roles.length > 0")
+    .span2
+    .span8
+      i No roles
+  .row-fluid
+    .span12
+      form.form-horizontal
+        .form-actions(ng-show="editing")
+          button#save.btn.btn-primary(type="button", ng-click="save()") Save
+          button#cancel.btn(type="button", ng-click="cancel()") Cancel
+        .form-actions(ng-hide="editing")
+          button#edit.btn(type="edit", ng-click="edit()") Edit
+          button#remove.btn(type="button", ng-click="remove()") Remove

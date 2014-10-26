@@ -8,7 +8,10 @@
 .project
 .settings
 /**/logs
+/**/node_modules
 /**/target
+/**/webui/dev
+/**/webui/dist
 /build.log
 /project/project
 /stage
