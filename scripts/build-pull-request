@@ -46,7 +46,7 @@ echo-do scripts/sbt ++2.10.4 finatra/test
 # Publish the Ivy artifacts to the local Ivy directory so that we can build and test the examples.
 echo-do scripts/sbt ++2.10.4 publish-local finatra/publish-local
 (cd examples/finatra; echo-do $SBT test assembly); expect-status 0
-(cd examples/movies; echo-do $SBT test assembly); expect-status 0
+(cd examples/movies/server; echo-do $SBT test assembly); expect-status 0
 
 # Sometimes tests fail and yet SBT exits with a good status.
 egrep 'ABORTED|FAILED' build.log

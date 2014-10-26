@@ -52,7 +52,7 @@ case $version in
 *-SNAPSHOT)
   ;;
 *)
-  if [ -n "`git tag -l release/$version`" ] ; then 
+  if [ -n "`git tag -l release/$version`" ] ; then
     echo "Tag release/$version already exists"
     exit 1
   fi
@@ -73,7 +73,7 @@ echo-do scripts/sbt ++2.10.4 finatra/test
 # Publish the Ivy artifacts to the local Ivy directory so that we can build and test the examples.
 echo-do scripts/sbt ++2.10.4 publish-local finatra/publish-local
 (cd examples/finatra; echo-do $SBT test assembly); expect-status 0
-(cd examples/movies; echo-do $SBT test assembly); expect-status 0
+(cd examples/movies/server; echo-do $SBT test assembly); expect-status 0
 
 echo-do scripts/sbt ++2.10.4 doc/unidoc
 
@@ -87,7 +87,7 @@ echo-do mv doc/target/scala-2.10/unidoc stage/docs/scala/store/$version
 echo-do mkdir -p stage/jars/examples/finatra/$version
 echo-do cp examples/finatra/target/scala-2.10/server.jar stage/jars/examples/finatra/$version
 echo-do mkdir -p stage/jars/examples/movies/$version
-echo-do cp examples/movies/target/scala-2.10/server.jar stage/jars/examples/movies/$version
+echo-do cp examples/movies/server/target/scala-2.10/server.jar stage/jars/examples/movies/$version
 
 echo-do tar cz -f stage-$version.tgz -C stage .
 
