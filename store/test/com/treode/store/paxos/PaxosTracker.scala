@@ -102,7 +102,7 @@ class PaxosTracker {
           s"Expected ${key.long} to be $value, found $found.")
     }
     for ((key, found) <- all; if !(accepted contains key)) {
-      val values = attempted (key)
+      val values = attempted (key) + -1
       assert (
           values contains found,
           s"Expected $key to be one of $values, found $found")
