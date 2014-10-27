@@ -85,9 +85,9 @@ echo-do scripts/sbt ++2.10.4 finatra/publish
 echo-do mkdir -p stage/docs/scala/store
 echo-do mv doc/target/scala-2.10/unidoc stage/docs/scala/store/$version
 echo-do mkdir -p stage/jars/examples/finatra/$version
-echo-do cp examples/finatra/target/scala-2.10/server.jar stage/jars/examples/finatra/$version
+echo-do cp examples/finatra/target/scala-2.10/finitra-server.jar stage/jars/examples/finatra/$version
 echo-do mkdir -p stage/jars/examples/movies/$version
-echo-do cp examples/movies/server/target/scala-2.10/server.jar stage/jars/examples/movies/$version
+echo-do cp examples/movies/server/target/scala-2.10/movies-server.jar stage/jars/examples/movies/$version
 
 echo-do tar cz -f stage-$version.tgz -C stage .
 

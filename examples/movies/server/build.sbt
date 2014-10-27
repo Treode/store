@@ -27,7 +27,7 @@ resolvers += Resolver.url (
   "treode-oss",
   new URL ("https://oss.treode.com/ivy")) (Resolver.ivyStylePatterns)
 
-jarName in assembly := "server.jar"
+jarName in assembly := "movies-server.jar"
 
 mainClass in assembly := Some ("movies.Main")
 
