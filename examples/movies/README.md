@@ -358,11 +358,11 @@ Build the server and copy it to the host machine.
 
     cd examples/movies/server
     sbt assembly
-    scp target/scala-2.10/server.jar <yourhost>:.
+    scp target/scala-2.10/movies-server.jar <yourhost>:.
     
 Run that server
 
-    java -jar server.jar -solo -serve store.db
+    java -jar movies-server.jar -solo -serve store.db
     
 You may need to adjust that command depending on your setup with disks and peers. See the [tutorial][tutorial] for help.
 
