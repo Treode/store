@@ -27,18 +27,14 @@ The Treode team cannot accept contributions from someone who has not submitted t
 
 ## Reporting Bugs
 
-A bug should be straighforward and not discursive.  For anything that might require discussion, use the [online forum][online-forum].
-
 1. Update to the latest release; the bug may be resolved.
 
-2. Search the [online forum][online-forum] and [issue database][issues]; there may already be hints or workarounds.
+2. Search the [online forum][online-forum]; there may already be hints or workarounds.
 
 3. Report the bug. We are flexible about where you report it.
 
-    a. Raise the issue in the [online fourm][online-forum]. This is the most informal and flexible method.
-    
-    b. [File an issue][new-issue]. Please state clearly what you did, what actually happened, and what you had expected to happen. If you suspect the problem warrants discussion, consider using the [online forum][online-forum] rather than the issue database.
-    
+    a. Raise the issue in the [online fourm][online-forum]. This is the most informal and flexible method. You can expedite the discussion if you state clearly what you did, what actually happened, and what you had expected to happen.
+
     c. Submit a [pull request](#pull-request) with a failing test case; you do not need to create an issue first.
     
     d. Submit a [pull request](#pull-request) with a test case and fix; you do not need to create an issue first.
@@ -52,20 +48,27 @@ Request new features through the [online fourm][online-forum]. Feature requests 
 The online forum provides everyone a chance to discuss the a request until we clearly understand the functionality, its relevance to general users, and possible implementations.
 
 
+## Building, Testing and Debugging
+
+Checkout the [Contributor category][online-forum-contributor] of the [online forum][online-forum].
+
+
 ## Submitting a Pull Request
 <a name="pull-request"></a>
 
-You can submit changes the GitHub way: by [submitting a pull request][using-pull-requests]. We deviate from the usual GitHub workflow at the end: we may [cleanup the pull request][merge-harmful] before merging it.
+You can submit changes the GitHub way: by [submitting a pull request][using-pull-requests]. We mostly follow the GitHub code review process.
 
-To formulate a change list, you'll want to know more about building Treode and running tests. You can find that information in the [Contributor category of the online forum][online-forum-contributor]. Of course, the online forum is also a great place to raise design considerations.
+We use the GitHub code review tool until it comes time to merge. Then, we do not push the big green "Merge pull request" button; see ["Merge Pull Request" Considered Harmful][merge-harmful]. Instead, we cleanup the pull request, and move it to a `merge/` branch. The [CI machine][build-status] tests the change, produces build artifacts, and merges it into the master branch.
+
+Also, we do not nit-pick in our reviews. We provide material feedback. When your change reaches some reasonable state, we take ownership of it, and we fix our nits at that time.
 
 
+
+[build-status]: https://build.treode.com
 
 [cla-individual]: https://treode.github.io/store/cla-individual.html
 
 [cla-corporate]: https://treode.github.io/store/cla-corporate.html
-
-[issues]: https://github.com/Treode/store/issues "Issues"
 
 [online-forum]: https://forum.treode.com "Online Forum for Users and Developers of Treode"
 
