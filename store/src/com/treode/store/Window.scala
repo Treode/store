@@ -42,8 +42,8 @@ sealed abstract class Window {
   */
 object Window {
 
-  /** Choose only the most recent value as of `later` so long as that was set after `earlier`. */
-  case class Recent (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
+  /** Choose only the latest value as of `later` so long as that was set after `earlier`. */
+  case class Latest (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
 
     def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell] = {
       var key = Option.empty [Bytes]
@@ -55,9 +55,27 @@ object Window {
           false
         }}}}
 
+  object Latest {
+
+    def now = Latest (TxClock.now, true)
+
+    def apply (later: TxClock, linc: Boolean, earlier: TxClock, einc: Boolean): Latest =
+      Latest (Bound (later, linc), Bound (earlier, einc))
+
+    def apply (later: TxClock, inclusive: Boolean): Latest =
+      Latest (Bound (later, inclusive), Bound (TxClock.MinValue, true))
+  }
+
+  @deprecated ("Use Latest", "0.2.0")
+  class Recent (later: Bound [TxClock], earlier: Bound [TxClock]) extends Latest (later, earlier)
+
+  @deprecated ("Use Latest", "0.2.0")
   object Recent {
 
     def now = Recent (TxClock.now, true)
+
+    def apply (later: Bound [TxClock], earlier: Bound [TxClock]): Recent =
+      new Recent (later, earlier)
 
     def apply (later: TxClock, linc: Boolean, earlier: TxClock, einc: Boolean): Recent =
       Recent (Bound (later, linc), Bound (earlier, einc))
@@ -109,7 +127,7 @@ object Window {
     import StorePicklers._
     tagged [Window] (
       0x1 -> wrap (tuple (bound (txClock), bound (txClock)))
-          .build (v => new Recent (v._1, v._2))
+          .build (v => new Latest (v._1, v._2))
           .inspect (v => (v.later, v.earlier)),
       0x2 -> wrap (tuple (bound (txClock), bound (txClock)))
           .build (v => (new Between (v._1, v._2)))

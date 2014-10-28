@@ -87,11 +87,11 @@ class Transaction (rt: TxClock) (implicit store: Store) {
   /** Create a fetcher to prefetch different kinds of rows. */
   def fetcher: Fetcher = new Fetcher (this)
 
-  def recent [K] (desc: TableDescriptor [K, _], start: K): AsyncIterator [desc.Cell] =
-    desc.recent (rt, start)
+  def latest [K] (desc: TableDescriptor [K, _], start: K): AsyncIterator [desc.Cell] =
+    desc.latest (rt, start)
 
-  def recent [K] (desc: TableDescriptor [K, _]): AsyncIterator [desc.Cell] =
-    desc.recent (rt)
+  def latest [K] (desc: TableDescriptor [K, _]): AsyncIterator [desc.Cell] =
+    desc.latest (rt)
 
   /** Get a row from this transaction's cache. Call `fetch` to prefetch rows from the database
     * into the cache before calling `get`.

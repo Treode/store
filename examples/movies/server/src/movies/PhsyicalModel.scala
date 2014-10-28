@@ -481,7 +481,7 @@ private object PhysicalModel {
       */
     def prefix (tx: Transaction, key: String, movies: Boolean, actors: Boolean): Async [IndexEntry] = {
       var count = 10
-      tx.recent (Index, key)
+      tx.latest (Index, key)
         .filter (_.value.isDefined)
         .filter { cell =>
           val entry = cell.value.get

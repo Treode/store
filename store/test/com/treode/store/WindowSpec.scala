@@ -22,16 +22,16 @@ import org.scalatest.FreeSpec
 
 import Fruits.{Apple, Banana}
 import StoreTestTools._
-import Window.{Recent, Between, Through}
+import Window.{Between, Latest, Through}
 
 class WindowSpec extends FreeSpec {
 
   def concat [A, B] (x: (Seq [A], Seq [B]), y: (Seq [A], Seq [B])): (Seq [A], Seq [B]) =
     (x._1 ++ y._1, x._2 ++ y._2)
 
-  "Window.Recent should" - {
+  "Window.Latest should" - {
 
-    val filter = Recent (3, true, 2, true)
+    val filter = Latest (3, true, 2, true)
 
     def test (items: (Seq [Cell], Seq [Cell])*) {
       val in = items .map (_._1) .flatten
