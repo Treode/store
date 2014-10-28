@@ -45,10 +45,14 @@ echo-do ${SBT} +intensive:test
 echo-do ${SBT} ++2.10.4 finatra/test
 
 # Publish the Ivy artifacts to the local Ivy directory so that we can build and test the examples.
+echo-do ${SBT} publish-local
 echo-do ${SBT} ++2.10.4 publish-local finatra/publish-local
 
 # Build the Finatra example, which includes only a server.
 (cd examples/finatra; echo-do ${SBT} test assembly); expect-status 0
+
+# Build the Unfiltered example, which includes only a server.
+(cd examples/unfiltered; echo-do ${SBT} test assembly); expect-status 0
 
 # Build the Movies example, which includes a server and web UI.
 (cd examples/movies/server; echo-do ${SBT} test assembly); expect-status 0
