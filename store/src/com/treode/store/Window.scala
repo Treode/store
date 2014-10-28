@@ -66,14 +66,16 @@ object Window {
       Latest (Bound (later, inclusive), Bound (TxClock.MinValue, true))
   }
 
-  /*
   @deprecated ("Use Latest", "0.2.0")
-  case class Recent (later: Bound [TxClock], earlier: Bound [TxClock])
-  extends Latest (later, earlier)
+  class Recent (later: Bound [TxClock], earlier: Bound [TxClock]) extends Latest (later, earlier)
 
+  @deprecated ("Use Latest", "0.2.0")
   object Recent {
 
     def now = Recent (TxClock.now, true)
+
+    def apply (later: Bound [TxClock], earlier: Bound [TxClock]): Recent =
+      new Recent (later, earlier)
 
     def apply (later: TxClock, linc: Boolean, earlier: TxClock, einc: Boolean): Recent =
       Recent (Bound (later, linc), Bound (earlier, einc))
@@ -81,7 +83,6 @@ object Window {
     def apply (later: TxClock, inclusive: Boolean): Recent =
       Recent (Bound (later, inclusive), Bound (TxClock.MinValue, true))
   }
-  */
 
   /** Choose all changes between `later` and `earlier`. */
   case class Between (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
