@@ -49,7 +49,7 @@ class Resource (host: HostId, store: Store) extends AsyncFinatraController {
   def scan (request: Request, table: TableId): Async [ResponseBuilder] = {
     val rt = request.getLastModificationBefore
     val ct = request.getIfModifiedSince
-    val window = Window.Recent (rt, true, ct, false)
+    val window = Window.Latest (rt, true, ct, false)
     val slice = request.getSlice
     val iter = store
         .scan (table, Bound.firstKey, window, slice)

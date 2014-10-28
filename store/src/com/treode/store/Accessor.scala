@@ -81,5 +81,5 @@ object Accessor {
         store.scan (id, Bound.firstKey, window, slice) .map (cell _)
 
       def recent (rt: TxClock) (implicit store: Store): AsyncIterator [ACell] =
-        scan (Window.Recent (rt, true), Slice.all)
+        scan (Window.Latest (rt, true), Slice.all)
     }}

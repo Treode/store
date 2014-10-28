@@ -74,7 +74,7 @@ trait StoreBehaviors {
     def audit(): Async [Unit] =
       guard [Unit] {
         for {
-          cells <- Accounts.recent (nextTick) .toSeq
+          cells <- Accounts.latest (nextTick) .toSeq
         } yield {
           val total = cells.map (_.value.get) .sum
           assert (supply == total)

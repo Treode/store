@@ -26,7 +26,7 @@ import org.scalatest.FlatSpec
 import AtomicTestTools._
 import Bound.{Exclusive, Inclusive}
 import Fruits._
-import Window.{Between, Recent, Through}
+import Window.{Between, Latest, Through}
 
 class ScanSpec extends FlatSpec {
 
@@ -81,13 +81,13 @@ class ScanSpec extends FlatSpec {
   it should "handle a filter" in {
     implicit val (random, scheduler, network, host) = setup (false)
     assertCells (Apple##1::1, Grape##1::1) {
-      host.scan (LONG, MinStart, Recent (1, true), AllSlices)
+      host.scan (LONG, MinStart, Latest (1, true), AllSlices)
     }
     assertCells (Apple##2::2, Grape##2::2) {
-      host.scan (LONG, MinStart, Recent (2, true), AllSlices)
+      host.scan (LONG, MinStart, Latest (2, true), AllSlices)
     }
     assertCells (Apple##3::3, Grape##3::3) {
-      host.scan (LONG, MinStart, Recent (3, true), AllSlices)
+      host.scan (LONG, MinStart, Latest (3, true), AllSlices)
     }}
 
   it should "return only a slice" in {

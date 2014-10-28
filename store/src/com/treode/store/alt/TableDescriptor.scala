@@ -19,7 +19,7 @@ package com.treode.store.alt
 import com.treode.async.AsyncIterator
 import com.treode.store.{Cell => SCell, _}
 
-/** A TableDescriptor ties together a [[com.treode.store.TableId TableId]], a [[Froster]] for the 
+/** A TableDescriptor ties together a [[com.treode.store.TableId TableId]], a [[Froster]] for the
   * key, and a Froster for the value. It works with a [[Transaction]] to make reading and writing
   * the database convenient.
   */
@@ -67,11 +67,11 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
   def scan () (implicit store: Store): AsyncIterator [Cell] =
     scan (Window.all, Slice.all)
 
-  def recent (rt: TxClock, start: K) (implicit store: Store): AsyncIterator [Cell] =
-    scan (start, Window.Recent (rt, true), Slice.all)
+  def latest (rt: TxClock, start: K) (implicit store: Store): AsyncIterator [Cell] =
+    scan (start, Window.Latest (rt, true), Slice.all)
 
-  def recent (rt: TxClock) (implicit store: Store): AsyncIterator [Cell] =
-    scan (Window.Recent (rt, true), Slice.all)
+  def latest (rt: TxClock) (implicit store: Store): AsyncIterator [Cell] =
+    scan (Window.Latest (rt, true), Slice.all)
 }
 
 object TableDescriptor {
