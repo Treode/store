@@ -16,19 +16,23 @@
 
 package movies
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.treode.async.Async
 import com.treode.finatra.BadRequestException
 import com.treode.pickle.Picklers
+import com.treode.store.{Store, TxClock}
 import com.treode.store.alt.{Froster, TableDescriptor, Transaction}
 import org.joda.time.DateTime
 
-import movies.{DisplayModel => DM}
+import Async.supply
+import movies.{AnalyticsModel => AM, DisplayModel => DM}
 
 /** See README.md. */
 private object PhysicalModel {
 
   case class Movie (title: String, released: DateTime) {
 
+    @JsonIgnore
     lazy val titleLowerCase =
       if (title == null) null else title.toLowerCase
 
@@ -113,6 +117,17 @@ private object PhysicalModel {
             .fetch (Index) .when (movie.title != null) (movie.titleLowerCase)
             .async()
       } yield ()
+
+    def list (rt: TxClock) (implicit store: Store): Async [Seq [AM.Movie]] = {
+      MovieTable.latest (rt)
+      .filter (_.value.isDefined)
+      .map { cell =>
+        val movie = cell.value.get
+        new AM.Movie (cell.key, movie.title, movie.released)
+      }
+      .toSeqWhile (_ => true)
+      .map (_._1)
+    }
 
     /** Create a new movie in the database. This also makes the implied changes to the actors'
       * roles.
@@ -240,6 +255,7 @@ private object PhysicalModel {
 
   case class Actor (name: String, born: DateTime) {
 
+    @JsonIgnore
     lazy val nameLowerCase =
       if (name == null) null else name.toLowerCase
 
@@ -322,6 +338,17 @@ private object PhysicalModel {
             .fetch (Index) .when (actor.name != null) (actor.nameLowerCase)
             .async()
       } yield ()
+
+    def list (rt: TxClock) (implicit store: Store): Async [Seq [AM.Actor]] = {
+      ActorTable.latest (rt)
+      .filter (_.value.isDefined)
+      .map { cell =>
+        val actor = cell.value.get
+        new AM.Actor (cell.key, actor.name, actor.born)
+      }
+      .toSeqWhile (_ => true)
+      .map (_._1)
+    }
 
     /** Create a new actor in the database. This also makes the implied changes to the movies'
       * cast.
@@ -420,6 +447,20 @@ private object PhysicalModel {
   object Roles {
 
     val empty = Roles (Seq.empty)
+
+    def list (rt: TxClock) (implicit store: Store): Async [Seq [AM.Role]] = {
+      val roles = Seq.newBuilder [AM.Role]
+      RolesTable.latest (rt)
+      .filter (_.value.isDefined)
+      .foreach { cell =>
+        supply {
+          val actorId = cell.key
+          for (role <- cell.value.get.roles)
+            roles += AM.Role (actorId, role.movieId, role.role)
+        }}
+      .map { _ =>
+        roles.result
+      }}
 
     def convert (roles: Seq [DM.Role]): Roles =
       new Roles (roles map (Role.apply (_)))

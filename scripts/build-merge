@@ -85,9 +85,9 @@ echo-do ${SBT} ++2.10.4 publish-local finatra/publish-local
 # Build the Unfiltered example, which includes only a server.
 (cd examples/unfiltered; echo-do ${SBT} test assembly); expect-status 0
 
-# Build the Movies example, which includes a server and web UI.
+# Build the Movies example, which includes a server, Spark connector, and web UI.
 # Package the web UI files into a tgz for the docker container.
-(cd examples/movies/server; echo-do ${SBT} test assembly); expect-status 0
+(cd examples/movies; echo-do ${SBT} test assembly); expect-status 0
 (cd examples/movies/webui; echo-do npm install --save); expect-status 0
 (cd examples/movies/webui; echo-do ${GRUNT} dist); expect-status 0
 
@@ -116,6 +116,7 @@ STAGE_MOVIES=stage/examples/movies/${version}
 echo-do mkdir -p ${STAGE_MOVIES}
 echo-do tar cz -f ${STAGE_MOVIES}/movies-ui-${version}.tgz -C examples/movies/webui/dist/ .
 echo-do cp examples/movies/server/target/scala-2.10/movies-server.jar ${STAGE_MOVIES}/movies-server-${version}.jar
+echo-do cp examples/movies/spark/target/scala-2.10/movies-spark.jar ${STAGE_MOVIES}/movies-spark-${version}.jar
 
 # Unfiltered example.
 STAGE_UNFILTERED=stage/examples/unfiltered/${version}

@@ -54,8 +54,8 @@ echo-do ${SBT} ++2.10.4 publish-local finatra/publish-local
 # Build the Unfiltered example, which includes only a server.
 (cd examples/unfiltered; echo-do ${SBT} test assembly); expect-status 0
 
-# Build the Movies example, which includes a server and web UI.
-(cd examples/movies/server; echo-do ${SBT} test assembly); expect-status 0
+# Build the Movies example, which includes a server, Spark connector, and web UI.
+(cd examples/movies; echo-do ${SBT} test assembly); expect-status 0
 (cd examples/movies/webui; echo-do npm install --save); expect-status 0
 (cd examples/movies/webui; echo-do ${GRUNT} dist); expect-status 0
 

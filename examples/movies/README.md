@@ -25,7 +25,7 @@ The conceptual model is not manifest in this code anywhere. Nonetheless, it is u
 
 ### Display Model
 
-The [DisplayModel][display-model] contains Scala case-classes that describe the JSON which the server provides and accepts. We use the [Jackson ScalaModule][jackson-scala-module] to transparently marshall data between JSON text and the case-classes. 
+The [DisplayModel][display-model] contains Scala case-classes that describe the JSON which the server provides and accepts. We use the [Jackson ScalaModule][jackson-scala-module] to transparently marshall data between JSON text and the case-classes.
 
 For movies, the server can GET, PUT and POST objects like this:
 
@@ -36,9 +36,9 @@ For movies, the server can GET, PUT and POST objects like this:
             { "actorId": 2, "actor": "Harrison Ford", "role": "Han Solo" },
             { "actorId": 3, "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
         ] }
-        
+
 For actors, the server can handle JSON objects like this:
-        
+
      {  "id": 1,
         "name": "Mark Hamill",
         "roles":  [
@@ -47,7 +47,7 @@ For actors, the server can handle JSON objects like this:
             { "movieId": 3, "title": "Star Wars: Return of the Jedi", "role": "Luke Skywalker" }
         ]}
 
-        
+
 ### Physical Model
 
 The [PhysicalModel][physical-model] contains Scala case-classes that describe what we store and retrieve from the database. We use the [Jackson ScalaModule][jackson-scala-module] together with the [Smile dataformat][jackson-smile] to transparently marshall data between binary JSON and the case-classes.
@@ -110,6 +110,30 @@ The information about a movie is split across two tables: the `MovieTable` and t
 The index maps movie titles and actor names to matching IDs.
 
 
+### Analytics Model
+
+The [AnalyticsModel][analytics-model] contains Scala case-classes that describe what we retrieve from the database for a Spark RDD. This model resembles the conceptual model, and one Spark to join and aggregate roles with movies or actors.
+
+For movies, the Spark RDD can GET and array of objects like this:
+
+    {   "id": 1,
+        "title": "Star Wars"
+    }
+
+For actors:
+
+     {  "id": 1,
+        "name": "Mark Hamill"
+     }
+
+And for the relationship between them:
+
+    {
+        "movieId": 1,
+        "actorId": 1,
+        "role": "Luke Skywalker"
+    }
+
 
 ## RESTful API
 
@@ -169,6 +193,21 @@ The server will provide the following API:
       <td>/search?q=<i>search</i></td>
       <td>Search for actors or movies by prefix.</td>
     </tr>
+    <tr>
+      <td>GET
+      <td>/rdd/movies</td>
+      <td>List all movies.</td>
+    </tr>
+    <tr>
+      <td>GET
+      <td>/rdd/actors</td>
+      <td>List all actors.</td>
+    </tr>
+    <tr>
+      <td>GET
+      <td>/rdd/roles</td>
+      <td>List all roles.</td>
+    </tr>
   </tbody>
 </table>
 
@@ -197,21 +236,21 @@ For example, suppose we are getting the movie _Star Wars_:
 1.  We find that the `MovieTable` and the `CastTable` contain:
 
         MovieTable, 1: { "title": "Star Wars" }
-        
-        CastTable, 1: { "cast": [ 
+
+        CastTable, 1: { "cast": [
             { "actorId": 1, "role": "Luke Skywalker" },
             { "actorId": 2, "role": "Han Solo" },
             { "actorId": 3, "role": "Princess Leia Organa" }
         ] }
-        
+
 2.  We find that the `ActorTable` contains:
 
         ActorTable, 1: { "name": "Mark Hamill" }
-        
+
         ActorTable, 2: { "name": "Harrison Ford" }
-        
+
         ActorTable, 3: { "name": "Carrie Fisher" }
-        
+
 3. We join these pieces of information to create:
 
         {   "id": 1,
@@ -236,13 +275,13 @@ When we want to `PUT` a JSON object for a movie, we must be sure to update the r
     - Some fields in the JSON object may be missing, and we fill those in from the prior values.
 
     - We can update the one row in the `CastTable` directly.
-    
+
     - However we must merge information into multiple rows of the `RolesTable`.
-    
+
     - We may need to move remove the ID from one `IndexEntry` and add them to another.
-    
+
 The code to decompose an object and make an update appears across a few places.
-    
+
 - The [PhysicalModel][physical-model] contains code to fetch the required rows from the database. Look for methods called `fetchForSave`.
 
 - The [PhysicalModel][physical-model] contains code to compare information from the [DisplayModel][display-model] with that in the database, merge the changes if any, and save only the modified rows. This process starts with the methods `Movie.create` and `Movie.save` for movies, and it is similar for actors.
@@ -258,7 +297,7 @@ For example, suppose the user had created the movie _Star Wars_ with some typos 
             { "actorId": 2, "actor": "Harrison Ford", "role": "Han Solo" },
             { "actorId": 4, "actor": "Carry Fisher", "role": "Princess Leia Organa"}
         ] }
-        
+
 Now the user is going to update _Star Wars_ with the two corrections:
 
     {   "id": 1,
@@ -268,64 +307,64 @@ Now the user is going to update _Star Wars_ with the two corrections:
             { "actorId": 2, "actor": "Harrison Ford", "role": "Han Solo" },
             { "actorId": 3, "actor": "Carrie Fisher", "role": "Princess Leia Organa" }
         ] }
-            
+
 1.  We find that the `MovieTable` and the `CastTable` contain:
 
         MovieTable, 1: { "title": "Star Wars" }
-        
-        CastTable, 1: { "cast": [ 
+
+        CastTable, 1: { "cast": [
             { "actorId": 1, "role": "Luke Skywriter" },
             { "actorId": 2, "role": "Han Solo" }
             { "actorId": 4, "role": "Princess Leia Organa" }
         ] }
-        
+
 The `CastTable` reflects both mistakes in the one row. It has the misspelling of _Luke Skywalker_, and it has the wrong `actorId` for _Princess Leia Organa_.
-        
+
 1.  For the actors in the old cast (1, 2, 4) and the actors in the new cast (1, 2, 3) find the the `RolesTable` contains:
 
-        RolesTable, 1: { "roles": [ 
+        RolesTable, 1: { "roles": [
             { "movieId": 1, "role": "Luke Skywriter" },
             { "movieId": 2, "role": "Luke Skywalker" }
-            { "movieId": 3, "role": "Luke Skywalker" }            
+            { "movieId": 3, "role": "Luke Skywalker" }
         ] }
-        
-        RolesTable, 2: { "roles": [ 
+
+        RolesTable, 2: { "roles": [
             { "movieId": 1, "role": "Han Solo" },
             { "movieId": 2, "role": "Han Solo" },
             { "movieId": 3, "role": "Han Solo" }
         ] }
-        
-        RolesTable, 3: { "roles": [ 
+
+        RolesTable, 3: { "roles": [
             { "movieId": 2, "role": "Princess Leia Organa" },
             { "movieId": 3, "role": "Princess Leia Organa" }
         ] }
-        
-        RolesTable, 4: { "roles": [ 
+
+        RolesTable, 4: { "roles": [
             { "movieId": 1, "role": "Princess Leia Organa" }
         ] }
-        
+
 The `RolesTable` reflects both mistakes, each in a different row.  This misspelling of _Luke Skywalker_ appears in row 1, and the incorrect actor for _Princess Leia Organa_ appears in both rows 3 and 4.
 
 1.  We must update the `CastTable` for the movie, and we must update the `RolesTable` for two actors. When we update the roles table, we change only the one role that pertains to this movie.
 
-        CastTable, 1: { "cast": [ 
+        CastTable, 1: { "cast": [
             { "actorId": 1, "role": "Luke Skywalker" },
             { "actorId": 2, "role": "Han Solo" }
             { "actorId": 3, "role": "Princess Leia Organa" }
         ] }
-        
-        RolesTable, 1: { "roles": [ 
+
+        RolesTable, 1: { "roles": [
             { "movieId": 1, "role": "Luke Skywalker" },
             { "movieId": 2, "role": "Luke Skywalker" }
             { "movieId": 3, "role": "Luke Skywalker" }
         ] }
-        
-        RolesTable, 3: { "roles": [ 
+
+        RolesTable, 3: { "roles": [
             { "movieId": 1, "role": "Princess Leia Organa" },
             { "movieId": 2, "role": "Princess Leia Organa" },
             { "movieId": 3, "role": "Princess Leia Organa" }
         ] }
-        
+
         RolesTable, 4: { "roles": [ ] }
 
 
@@ -346,7 +385,7 @@ To begin, you'll want a machine running Linux. Grab a server from a provider lik
 
     sudo apt-get update
     sudo apt-get install iptables-persistent nginx-full openjdk-7-jdk
-    
+
 Build the UI and copy it to the host machine.
 
     cd examples/movies/webui
@@ -356,14 +395,14 @@ Build the UI and copy it to the host machine.
 
 Build the server and copy it to the host machine.
 
-    cd examples/movies/server
-    sbt assembly
-    scp target/scala-2.10/movies-server.jar <yourhost>:.
-    
+    cd examples/movies
+    sbt server/assembly
+    scp server/target/scala-2.10/movies-server.jar <yourhost>:.
+
 Run that server
 
     java -jar movies-server.jar -solo -serve store.db
-    
+
 You may need to adjust that command depending on your setup with disks and peers. See the [tutorial][tutorial] for help.
 
 Copy `config/nginx` from the git repository to `/etc/nginx/sites-available/movies` on your machine.
@@ -373,10 +412,32 @@ Update the `path-to-root` in that file so that it points to where you place the 
     ln -s /etc/nginx/sites-available/movies /etc/nginx/sites-enabled/movies
     service nginx restart
 
-You should be good to go. Check what NGINX is serving on that host.
+You should now have a working UI. Check what NGINX is serving on that host.
 
 
 
+## Analytics
+
+
+You'll need to [install Apache Spark][spark]&trade;
+
+Build the Spark connector.
+
+    cd examples/movies
+    sbt spark/assembly
+
+Run the Spark shell.
+
+    spark-shell --jars spark/target/scala-2.10/movies-spark.jar
+
+Finally, run your queries.
+
+    scala> val ms = movies.MoviesRDD.movies (sc, "http://<your-host>/db/", 1)
+    scala> ms.count()
+
+
+
+[analytics-model]: //github.com/Treode/store/blob/examples/movies/src/main/scala/movies/AnalyticsModel.scala "AnalyticsModel"
 
 [digital-ocean]: //www.digitalocean.com "DigitalOcean cloud hosting"
 
@@ -384,15 +445,17 @@ You should be good to go. Check what NGINX is serving on that host.
 
 [hibernate-orm]: http://hibernate.org/orm/ "Hibernate ORM"
 
-[jackson-scala-module]: https://github.com/FasterXML/jackson-module-scala "FasterXML/jackson-module-scala on GitHub"
+[jackson-scala-module]: //github.com/FasterXML/jackson-module-scala "FasterXML/jackson-module-scala on GitHub"
 
-[jackson-smile]: https://github.com/FasterXML/jackson-dataformat-smile "FasterXML/jackson-dataformat-smile on GitHub"
+[jackson-smile]: //github.com/FasterXML/jackson-dataformat-smile "FasterXML/jackson-dataformat-smile on GitHub"
 
-[jpa-v-jdo]: https://db.apache.org/jdo/jdo_v_jpa.html "JDO .v. JPA"
+[jpa-v-jdo]: //db.apache.org/jdo/jdo_v_jpa.html "JDO .v. JPA"
 
 [movie-store]: //github.com/Treode/store/blob/examples/movies/src/main/scala/movies/MovieStore.scala "MovieStore"
 
 [physical-model]: //github.com/Treode/store/blob/examples/movies/src/main/scala/movies/PhysicalModel.scala "PhysicalModel"
+
+[spark]: //spark.apache.org/downloads.html "Apache Spark Downloads"
 
 [tutorial]: //treode.github.io/store "TreodeDB Tutorial"
 
