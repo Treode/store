@@ -17,14 +17,14 @@
 package movies
 
 import com.fasterxml.jackson.databind.JsonNode
+import com.treode.async.stubs.ProvidedSingleThreadScheduler
 import com.treode.store.TxClock
 import com.twitter.finatra.test.MockResult
-import org.scalatest.Assertions
+import org.scalatest.Suite
 import org.scalatest.matchers.{Matcher, MatchResult}
 
-trait ResourceSpecTools extends SpecTools {
-  this: Assertions =>
-
+trait ResourceSpecTools extends SpecTools with ProvidedSingleThreadScheduler {
+  this: Suite =>
 
   class JsonMatcher (expected: String) extends Matcher [String] {
 

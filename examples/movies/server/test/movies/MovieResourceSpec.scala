@@ -18,21 +18,19 @@ package movies
 
 import scala.util.Random
 
-import com.treode.async.stubs.StubScheduler
 import com.treode.store.stubs.StubStore
 import com.twitter.finagle.http.MediaType
 import com.twitter.finatra.test.MockApp
 import org.scalatest.{FreeSpec, Matchers}
 
 import movies.{PhysicalModel => PM}
-import StubScheduler.singlethreaded
 
 class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
   val starWars = """{"id": "1", "title": "Star Wars", "released": null, "cast": []}"""
   val aNewHope = """{"id": "1", "title": "Star Wars: A New Hope", "released": null, "cast": []}"""
 
-  def setup () (implicit scheduler: StubScheduler) = {
+  def setup () = {
     implicit val random = Random
     implicit val store = StubStore()
     val movies = new MovieStore
@@ -52,206 +50,192 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
   "When the database is empty" - {
 
-    "GET /movie/1 should respond Not Found" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val response = mock.get ("/movie/1")
-        response.code should equal (NotFound)
-      }
+    "GET /movie/1 should respond Not Found" in {
+      val (store, mock) = setup()
+      val response = mock.get ("/movie/1")
+      response.code should equal (NotFound)
+    }
 
-    "PUT /movie/1 should respond Ok with an etag" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val r1 = addStarWars (mock)
+    "PUT /movie/1 should respond Ok with an etag" in {
+      val (store, mock) = setup()
+      val r1 = addStarWars (mock)
 
-        val t1 = r1.etag
-        store.expectCells (PM.MovieTable) (
-            ("1", t1, PO.starWars))
-        store.expectCells (PM.CastTable) (
-            ("1", t1, PM.Cast.empty))
-        store.expectCells (PM.ActorTable) ()
-        store.expectCells (PM.RolesTable) ()
-        store.expectCells (PM.Index) (
-            ("star wars", t1, PO.movies ("1")))
-      }
+      val t1 = r1.etag
+      store.expectCells (PM.MovieTable) (
+          ("1", t1, PO.starWars))
+      store.expectCells (PM.CastTable) (
+          ("1", t1, PM.Cast.empty))
+      store.expectCells (PM.ActorTable) ()
+      store.expectCells (PM.RolesTable) ()
+      store.expectCells (PM.Index) (
+          ("star wars", t1, PO.movies ("1")))
+    }
 
-    "POST /movie should respond Ok with an etag" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
+    "POST /movie should respond Ok with an etag" in {
+      val (store, mock) = setup()
 
-        val r1 = mock.post (
-            "/movie",
+      val r1 = mock.post (
+          "/movie",
+          headers = Map (ContentType -> MediaType.Json),
+          body = starWars)
+      r1.code should equal (Ok)
+
+      val uri = r1.getHeader (Location)
+      val id = uri.substring ("/movie/".length)
+      val r2 = mock.get (uri)
+      r2.etag should be (r1.etag)
+      r2.body should matchJson (s"""{"id":"$id","title":"Star Wars","released":null,"cast":[]}""")
+    }
+
+    "PUT /movie/1 without a title should respond Bad Requst" in {
+      val (store, mock) = setup()
+      val r1 = mock.put (
+            "/movie/1",
             headers = Map (ContentType -> MediaType.Json),
-            body = starWars)
-        r1.code should equal (Ok)
+            body = "{}")
+      r1.code should equal (BadRequest)
 
-        val uri = r1.getHeader (Location)
-        val id = uri.substring ("/movie/".length)
-        val r2 = mock.get (uri)
-        r2.etag should be (r1.etag)
-        r2.body should matchJson (s"""{"id":"$id","title":"Star Wars","released":null,"cast":[]}""")
-      }
+      store.expectCells (PM.MovieTable) ()
+      store.expectCells (PM.CastTable) ()
+      store.expectCells (PM.ActorTable) ()
+      store.expectCells (PM.RolesTable) ()
+      store.expectCells (PM.Index) ()
+    }
 
-    "PUT /movie/1 without a title should respond Bad Requst" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val r1 = mock.put (
-              "/movie/1",
-              headers = Map (ContentType -> MediaType.Json),
-              body = "{}")
-        r1.code should equal (BadRequest)
-
-        store.expectCells (PM.MovieTable) ()
-        store.expectCells (PM.CastTable) ()
-        store.expectCells (PM.ActorTable) ()
-        store.expectCells (PM.RolesTable) ()
-        store.expectCells (PM.Index) ()
-      }
-
-    "GET /movie?q=star should respond Okay" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val r1 = addStarWars (mock)
-        val response = mock.get ("/movie?q=star")
-        response.code should equal (Ok)
-        response.body should matchJson (s"""{"movies": [], "actors": []}""")
-      }}
+    "GET /movie?q=star should respond Okay" in {
+      val (store, mock) = setup()
+      val r1 = addStarWars (mock)
+      val response = mock.get ("/movie?q=star")
+      response.code should equal (Ok)
+      response.body should matchJson (s"""{"movies": [], "actors": []}""")
+    }}
 
   "When the database has a movie" - {
 
-    "GET /movie/1 should respond Ok" in
-      singlethreaded { implicit scheduler =>
+    "GET /movie/1 should respond Ok" in {
+      val (store, mock) = setup()
+      val r1 = addStarWars (mock)
+      val r2 = mock.get ("/movie/1")
+      r2.code should equal (Ok)
+      r2.etag should be (r1.etag)
+      r2.body should matchJson (starWars)
+    }
+
+    "GET /movie/1 with If-Modified-Since:0 should respond Ok" in {
+      val (store, mock) = setup()
+      val r1 = addStarWars (mock)
+      val r2 = mock.get (
+          "/movie/1",
+          headers = Map (IfModifiedSince -> "0"))
+      r2.code should equal (Ok)
+      r2.etag should be (r1.etag)
+      r2.body should matchJson (starWars)
+    }
+
+    "GET /movie/1 with If-Modified-Since:(r1.etag) should respond Not Modified" in {
+      val (store, mock) = setup()
+      val r1 = addStarWars (mock)
+      val response = mock.get (
+          "/movie/1",
+          headers = Map (IfModifiedSince -> r1.etag.toString))
+      response.code should equal (NotModified)
+      response.body should be ("")
+    }
+
+    "GET /movie/1 with Last-Modification-Before:(r1.etag-1) should respond Not Found" in {
+      val (store, mock) = setup()
+      val r1 = addStarWars (mock)
+      val response = mock.get (
+          "/movie/1",
+          headers = Map (LastModificationBefore -> (r1.etag-1).toString))
+      response.code should equal (NotFound)
+    }
+
+    "GET /movie/1 with Last-Modification-Before:(r1.etag) should respond Ok" in {
         val (store, mock) = setup()
-        val r1 = addStarWars (mock)
-        val r2 = mock.get ("/movie/1")
-        r2.code should equal (Ok)
-        r2.etag should be (r1.etag)
-        r2.body should matchJson (starWars)
-      }
+      val r1 = addStarWars (mock)
+      val r2 = mock.get (
+          "/movie/1",
+          headers = Map (LastModificationBefore -> r1.etag.toString))
+      r2.code should equal (Ok)
+      r2.etag should be (r1.etag)
+      r2.body should matchJson (starWars)
+    }
 
-    "GET /movie/1 with If-Modified-Since:0 should respond Ok" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val r1 = addStarWars (mock)
-        val r2 = mock.get (
-            "/movie/1",
-            headers = Map (IfModifiedSince -> "0"))
-        r2.code should equal (Ok)
-        r2.etag should be (r1.etag)
-        r2.body should matchJson (starWars)
-      }
+    "PUT /movie/1 with should respond Ok with an etag" in {
+      val (store, mock) = setup()
+      val r1 = addStarWars (mock)
+      val r2 = mock.put (
+          "/movie/1",
+          headers = Map (ContentType -> MediaType.Json),
+          body = aNewHope)
+      r2.code should equal (Ok)
+      val etag = r2.etag
 
-    "GET /movie/1 with If-Modified-Since:(r1.etag) should respond Not Modified" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val r1 = addStarWars (mock)
-        val response = mock.get (
-            "/movie/1",
-            headers = Map (IfModifiedSince -> r1.etag.toString))
-        response.code should equal (NotModified)
-        response.body should be ("")
-      }
+      val (t1, t2) = (r1.etag, r2.etag)
+      store.expectCells (PM.MovieTable) (
+          ("1", t2, PO.aNewHope),
+          ("1", t1, PO.starWars))
+      store.expectCells (PM.CastTable) (
+          ("1", t1, PM.Cast.empty))
+      store.expectCells (PM.ActorTable) ()
+      store.expectCells (PM.RolesTable) ()
+      store.expectCells (PM.Index) (
+          ("star wars", t2, None),
+          ("star wars", t1, PO.movies ("1")),
+          ("star wars: a new hope", t2, PO.movies ("1")))
+    }
 
-    "GET /movie/1 with Last-Modification-Before:(r1.etag-1) should respond Not Found" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val r1 = addStarWars (mock)
-        val response = mock.get (
-            "/movie/1",
-            headers = Map (LastModificationBefore -> (r1.etag-1).toString))
-        response.code should equal (NotFound)
-      }
+    "PUT /movie/1 with a If-Unmodified-Since:1 should respond Ok with an etag" in {
+      val (store, mock) = setup()
+      val r1 = addStarWars (mock)
+      val r2 = mock.put (
+          "/movie/1",
+          headers = Map (ContentType -> MediaType.Json, IfUnmodifiedSince -> r1.etag.toString),
+          body = aNewHope)
+      r2.code should equal (Ok)
 
-    "GET /movie/1 with Last-Modification-Before:(r1.etag) should respond Ok" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val r1 = addStarWars (mock)
-        val r2 = mock.get (
-            "/movie/1",
-            headers = Map (LastModificationBefore -> r1.etag.toString))
-        r2.code should equal (Ok)
-        r2.etag should be (r1.etag)
-        r2.body should matchJson (starWars)
-      }
+      val (t1, t2) = (r1.etag, r2.etag)
+      store.expectCells (PM.MovieTable) (
+          ("1", t2, PO.aNewHope),
+          ("1", t1, PO.starWars))
+      store.expectCells (PM.CastTable) (
+          ("1", t1, PM.Cast.empty))
+      store.expectCells (PM.ActorTable) ()
+      store.expectCells (PM.RolesTable) ()
+      store.expectCells (PM.Index) (
+          ("star wars", t2, None),
+          ("star wars", t1, PO.movies ("1")),
+          ("star wars: a new hope", t2, PO.movies ("1")))
+    }
 
-    "PUT /movie/1 with should respond Ok with an etag" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val r1 = addStarWars (mock)
-        val r2 = mock.put (
-            "/movie/1",
-            headers = Map (ContentType -> MediaType.Json),
-            body = aNewHope)
-        r2.code should equal (Ok)
-        val etag = r2.etag
+    "PUT /movie/1 with a If-Unmodified-Since:0 should respond Precondition Failed" in {
+      val (store, mock) = setup()
+      val r1 = addStarWars (mock)
+      val r2 = mock.put (
+          "/movie/1",
+          headers = Map (ContentType -> MediaType.Json, IfUnmodifiedSince -> "0"),
+          body = aNewHope)
+      r2.code should equal (PreconditionFailed)
 
-        val (t1, t2) = (r1.etag, r2.etag)
-        store.expectCells (PM.MovieTable) (
-            ("1", t2, PO.aNewHope),
-            ("1", t1, PO.starWars))
-        store.expectCells (PM.CastTable) (
-            ("1", t1, PM.Cast.empty))
-        store.expectCells (PM.ActorTable) ()
-        store.expectCells (PM.RolesTable) ()
-        store.expectCells (PM.Index) (
-            ("star wars", t2, None),
-            ("star wars", t1, PO.movies ("1")),
-            ("star wars: a new hope", t2, PO.movies ("1")))
-      }
+      val t1 = r1.etag
+      store.expectCells (PM.MovieTable) (
+          ("1", t1, PO.starWars))
+      store.expectCells (PM.CastTable) (
+          ("1", t1, PM.Cast.empty))
+      store.expectCells (PM.ActorTable) ()
+      store.expectCells (PM.RolesTable) ()
+      store.expectCells (PM.Index) (
+          ("star wars", t1, PO.movies ("1")))
+    }
 
-    "PUT /movie/1 with a If-Unmodified-Since:1 should respond Ok with an etag" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val r1 = addStarWars (mock)
-        val r2 = mock.put (
-            "/movie/1",
-            headers = Map (ContentType -> MediaType.Json, IfUnmodifiedSince -> r1.etag.toString),
-            body = aNewHope)
-        r2.code should equal (Ok)
-
-        val (t1, t2) = (r1.etag, r2.etag)
-        store.expectCells (PM.MovieTable) (
-            ("1", t2, PO.aNewHope),
-            ("1", t1, PO.starWars))
-        store.expectCells (PM.CastTable) (
-            ("1", t1, PM.Cast.empty))
-        store.expectCells (PM.ActorTable) ()
-        store.expectCells (PM.RolesTable) ()
-        store.expectCells (PM.Index) (
-            ("star wars", t2, None),
-            ("star wars", t1, PO.movies ("1")),
-            ("star wars: a new hope", t2, PO.movies ("1")))
-      }
-
-    "PUT /movie/1 with a If-Unmodified-Since:0 should respond Precondition Failed" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val r1 = addStarWars (mock)
-        val r2 = mock.put (
-            "/movie/1",
-            headers = Map (ContentType -> MediaType.Json, IfUnmodifiedSince -> "0"),
-            body = aNewHope)
-        r2.code should equal (PreconditionFailed)
-
-        val t1 = r1.etag
-        store.expectCells (PM.MovieTable) (
-            ("1", t1, PO.starWars))
-        store.expectCells (PM.CastTable) (
-            ("1", t1, PM.Cast.empty))
-        store.expectCells (PM.ActorTable) ()
-        store.expectCells (PM.RolesTable) ()
-        store.expectCells (PM.Index) (
-            ("star wars", t1, PO.movies ("1")))
-      }
-
-    "GET /movie?q=star should respond Okay" in
-      singlethreaded { implicit scheduler =>
-        val (store, mock) = setup()
-        val r1 = addStarWars (mock)
-        val response = mock.get ("/movie?q=star")
-        response.code should equal (Ok)
-        response.body should matchJson (s"""{
-          "movies": [{"movieId": "1", "title": "Star Wars"}],
-          "actors": []
-        }""")
-      }}}
+    "GET /movie?q=star should respond Okay" in {
+      val (store, mock) = setup()
+      val r1 = addStarWars (mock)
+      val response = mock.get ("/movie?q=star")
+      response.code should equal (Ok)
+      response.body should matchJson (s"""{
+        "movies": [{"movieId": "1", "title": "Star Wars"}],
+        "actors": []
+      }""")
+    }}}
