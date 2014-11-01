@@ -1,0 +1,138 @@
+#!/opt/local/bin/perl
+
+%name = ();
+
+%actor_film = ();
+
+%film_directed_by = ();
+%film_starring = ();
+
+%performance_actor = ();
+%performance_character = ();
+%performance_film = ();
+
+# Convert the base 37 (with underscores) id to base 36.
+sub reid {
+  my ($str) = @_;
+  my ($num, $digit, $place) = (0, 0);
+  for (reverse split //, $str) {
+    $digit = ($_ =~ /[0-9]/ ? $_ : ($_ =~ /_/ ? 36 : ord(uc) - 55));
+    $num += $digit * 37**$place++;
+  }
+  my $result = '';
+  my @_digits = (0..9, 'a' .. 'z');
+  while ($num >= 1) {
+    substr ($result,0,0) = $_digits[$num % 36];
+    $num /= 36;
+  }
+  return $result;
+}
+
+sub push_to_key {
+  my ($hash, $key, $value) = @_;
+  $$hash{$key} = [] if (!$$hash{$key});
+  push $$hash{$key}, $value;
+}
+
+sub print_names {
+  print "\n--- name ---\n";
+  for my $key (keys %name) {
+    my $names = $name{$key};
+    my @names = ();
+    for my $lang (keys %$names) {
+      my $name = $$names{$lang};
+      push @names, "\"$name\"\@$lang";
+    }
+    print "$key: ", join (", ", @names), "\n";
+  }  
+}
+
+sub print_key_values {
+  my ($name, $hash) = @_;
+  print "\n--- $name ---\n";
+  for my $key (keys %$hash) {
+    my $values = $$hash{$key};
+    print "$key: ", join (", ", @$values), "\n";
+  }
+}
+
+sub get_name {
+  my ($key) = @_;
+  my $names = $name{$key} || {};
+  my $name_en = $$names{"en"} || $key;
+  return $name_en;  
+}
+
+while (<>) {
+  chomp;
+
+  if (/^<ns\/m\.([^>]*)>\s+<ns\/type.object.name>\s+\"([^"]+)\"\@(\w+)\s+\./) {
+    $id = reid ($1);
+    $name = $2;
+    $lang = $3;
+    $name{$id} = {} if (!$name{$id});
+    $names = $name{$id};
+    $name =~ s/'/\'"'"'/g;
+    $$names{$lang} = $name;
+  }
+
+  push_to_key (\%actor_film, reid ($1), reid ($2))
+    if (/^<ns\/m\.([^>]*)>\s+<ns\/film.actor.film>\s+<ns\/m\.([^>]*)>/);
+
+  push_to_key (\%film_directed_by, reid ($1), reid ($2))
+    if (/^<ns\/m\.([^>]*)>\s+<ns\/film.film.directed_by>\s+<ns\/m\.([^>]*)>/);
+
+  push_to_key (\%film_starring, reid ($1), reid ($2))
+    if (/^<ns\/m\.([^>]*)>\s+<ns\/film.film.starring>\s+<ns\/m\.([^>]*)>/);
+
+  push_to_key (\%performance_actor, reid ($1), reid ($2))
+    if (/^<ns\/m\.([^>]*)>\s+<ns\/film.performance.actor>\s+<ns\/m\.([^>]*)>/);
+
+  push_to_key (\%performance_character, reid ($1), reid ($2))
+    if (/^<ns\/m\.([^>]*)>\s+<ns\/film.performance.character>\s+<ns\/m\.([^>]*)>/);
+
+  push_to_key (\%performance_film, reid ($1), reid ($2))
+    if (/^<ns\/m\.([^>]*)>\s+<ns\/film.performance.film>\s+<ns\/m\.([^>]*)>/);
+}
+
+# print_key_values ("actor_film", \%actor_film);
+# etc
+
+$host = "http://192.168.1.8:7070";
+%movies = ();
+
+for $actor (keys %actor_film) {
+  $performances = $actor_film{$actor};
+  %roles = ();
+  for $performance (@$performances) {
+    $films = $performance_film{$performance} || [];
+    if ($$films[0]) {
+      print ("error: multiple films for $performance: ", join (", ", @$films), "\n") 
+        if (@$films > 1);
+      $film = $$films[0];
+      $characters = $performance_character{$performance} || [];
+      print ("error: multiple characters for $performance: ", join (", ", @$characters), "\n") 
+        if (@$films > 1);
+      $character = $$characters[0] || "?";
+      if (!$movies{$film}) {
+        $title = get_name ($film);
+        $movies{$film} = true;
+        $data = "{\"id\": \"$film\", \"title\": \"$title\"}";
+        print "curl -XPUT -H'Content-Type: appliation/json' -d '$data' $host/movie/$film\n";
+      }
+      $role = get_name ($character);
+      $roles{$film} = [] if (!$roles{$film});
+      $roles = $roles{$film};
+      push @$roles, $role;
+    }
+  }
+  $name = get_name ($actor);
+  @roles = ();
+  for $film (keys %roles) {
+    $roles = $roles{$film};
+    $role = join (", ", @$roles);
+    push @roles, "{\"movieId\": \"$film\", \"role\": \"$role\"}";
+  }
+  $data = "{\"id\": \"$actor\", \"name\": \"$name\", \"roles\": [" . join (", ", @roles) . "]}";
+  print "curl -XPUT -H'Content-Type: appliation/json' -d '$data' $host/actor/$actor\n";
+}

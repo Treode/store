@@ -377,10 +377,26 @@ You should be good to go. Check what NGINX is serving on that host.
 
 
 
+## Loading Data
+
+1. Obtain a recent copy of the [Freebase triples][freebase-dumps].
+
+2. Transform that into a script to load movies and actors.
+
+       gunzip -c freebase.gz | scripts/process-freebase > movies-loads
+    
+3. Fire up your server. Then run the script to load the data.
+
+       bash -xe movies-loads
+
+
+
 
 [digital-ocean]: //www.digitalocean.com "DigitalOcean cloud hosting"
 
 [display-model]: //github.com/Treode/store/blob/examples/movies/src/main/scala/movies/DisplayModel.scala "DisplayModel"
+
+[freebase-dumps]: https://developers.google.com/freebase/data "Freebase Data Dumps"
 
 [hibernate-orm]: http://hibernate.org/orm/ "Hibernate ORM"
 
