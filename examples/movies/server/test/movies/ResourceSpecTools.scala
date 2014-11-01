@@ -30,9 +30,9 @@ trait ResourceSpecTools extends SpecTools with ProvidedSingleThreadScheduler {
 
     def apply (actual: String): MatchResult =
       MatchResult (
-        expected.fromJson [JsonNode] == expected.fromJson [JsonNode],
-        s"Was not $expected",
-        s"Was $expected")
+        expected.fromJson [JsonNode] == actual.fromJson [JsonNode],
+        s"$actual was not $expected",
+        s"$actual was $expected")
   }
 
   def matchJson (expected: String) = new JsonMatcher (expected)

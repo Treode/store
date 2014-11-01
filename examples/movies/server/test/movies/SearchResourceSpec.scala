@@ -78,7 +78,15 @@ class SearchResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
         val response = mock.get ("/search?q=johnny")
         response.code should equal (Ok)
         response.body should matchJson (s"""{
-          "movies": [{"id": "$id1", "title": "Johnny Bravo"}],
-          "actors": [{"id": "$id3", "name": "Johnny Depp"}]
+          "movies": [{
+            "id": "$id1",
+            "title": "Johnny Bravo",
+            "released": null
+          }],
+          "actors": [{
+            "id": "$id3",
+            "name": "Johnny Depp",
+            "born": null
+          }]
         }""")
       }}}

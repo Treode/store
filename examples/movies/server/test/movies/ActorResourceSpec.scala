@@ -27,9 +27,19 @@ import movies.{PhysicalModel => PM}
 
 class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
-  val markHamill = """{"id": "1", "name": "Mark Hamill", "born": null, "roles": []}"""
+  val markHamill = """{
+    "id": "1",
+    "name": "Mark Hamill",
+    "born": null,
+    "roles": []
+  }"""
 
-  val markHammer = """{"id": "1", "name": "Mark Hammer", "born": null, "roles": []}"""
+  val markHammer = """{
+    "id": "1",
+    "name": "Mark Hammer",
+    "born": null,
+    "roles": []
+  }"""
 
   def setup () = {
     implicit val random = Random
@@ -85,7 +95,12 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val id = uri.substring ("/actor/".length)
       val r2 = mock.get (uri)
       r2.etag should be (r1.etag)
-      r2.body should matchJson (s"""{"id": "$id", "name": "Mark Hamill", "born": null, "roles": []}""")
+      r2.body should matchJson (s"""{
+        "id": "$id",
+        "name": "Mark Hamill",
+        "born": null,
+        "roles": []
+      }""")
     }
 
     "PUT /actor/1 without a title should respond Bad Requst" in {
@@ -236,6 +251,10 @@ class ActorResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       response.code should equal (Ok)
       response.body should matchJson (s"""{
         "movies": [],
-        "actors": [{"id": "1", "name": "Mark Hamill"}]
+        "actors": [{
+          "id": "1",
+          "name": "Mark Hamill",
+          "born": null
+        }]
       }""")
     }}}

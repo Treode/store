@@ -27,8 +27,19 @@ import movies.{PhysicalModel => PM}
 
 class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
-  val starWars = """{"id": "1", "title": "Star Wars", "released": null, "cast": []}"""
-  val aNewHope = """{"id": "1", "title": "Star Wars: A New Hope", "released": null, "cast": []}"""
+  val starWars = """{
+    "id": "1",
+    "title": "Star Wars",
+    "released": null,
+    "cast": []
+  }"""
+
+  val aNewHope = """{
+    "id": "1",
+    "title": "Star Wars: A New Hope",
+    "released": null,
+    "cast": []
+  }"""
 
   def setup () = {
     implicit val random = Random
@@ -84,7 +95,12 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val id = uri.substring ("/movie/".length)
       val r2 = mock.get (uri)
       r2.etag should be (r1.etag)
-      r2.body should matchJson (s"""{"id":"$id","title":"Star Wars","released":null,"cast":[]}""")
+      r2.body should matchJson (s"""{
+        "id": "$id",
+        "title": "Star Wars",
+        "released" :null,
+        "cast": []
+      }""")
     }
 
     "PUT /movie/1 without a title should respond Bad Requst" in {
@@ -104,7 +120,6 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
     "GET /movie?q=star should respond Okay" in {
       val (store, mock) = setup()
-      val r1 = addStarWars (mock)
       val response = mock.get ("/movie?q=star")
       response.code should equal (Ok)
       response.body should matchJson (s"""{"movies": [], "actors": []}""")
@@ -235,7 +250,11 @@ class MovieResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
       val response = mock.get ("/movie?q=star")
       response.code should equal (Ok)
       response.body should matchJson (s"""{
-        "movies": [{"movieId": "1", "title": "Star Wars"}],
+        "movies": [{
+          "id": "1",
+          "title": "Star Wars",
+          "released": null
+        }],
         "actors": []
       }""")
     }}}
