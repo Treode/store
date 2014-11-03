@@ -53,10 +53,8 @@ module.exports = function (grunt) {
     jade: {
       dev: {
         options: {
-          pretty: true,
-          data: {
-            store: 'http://192.168.1.X/db'
-          }},
+          pretty: true
+          },
         files: [{
           expand: true,
           cwd: 'src/',
@@ -68,8 +66,7 @@ module.exports = function (grunt) {
       dist: {
         options: {
           data: {
-            prod: true,
-            store: 'http://movies.treode.com/db'
+            prod: true
           }},
         files: [{
           expand: true,
