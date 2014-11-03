@@ -62,6 +62,10 @@ esac
 
 log "Building $version"
 
+#
+# Build and test.
+#
+
 # SBT has had trouble compiling, testing and assembling in one go. So we have broken the steps
 # into separate commands.
 echo-do ${SBT} +test:compile
@@ -81,30 +85,49 @@ echo-do ${SBT} ++2.10.4 publish-local finatra/publish-local
 # Build the Unfiltered example, which includes only a server.
 (cd examples/unfiltered; echo-do ${SBT} test assembly); expect-status 0
 
-# Build the Movies example, which includes a server and web UI. Package the web UI files into a
-# tgz for the docker container.
+# Build the Movies example, which includes a server and web UI.
+# Package the web UI files into a tgz for the docker container.
 (cd examples/movies/server; echo-do ${SBT} test assembly); expect-status 0
 (cd examples/movies/webui; echo-do npm install --save); expect-status 0
 (cd examples/movies/webui; echo-do ${GRUNT} dist); expect-status 0
-echo-do tar cz -f treode-movies-ui-${version}.tgz -C examples/movies/webui/dist/ .
-
-# Publish the Ivy artifacts to the staging area.
-echo-do ${SBT} +publish
-echo-do ${SBT} ++2.10.4 finatra/publish
 
 # Build the documentation.
 echo-do ${SBT} ++2.10.4 doc/unidoc
 
-# Copy the documentation and assembly jars to the staging area.
+#
+# Stage release.
+#
+
+# Ivy artifacts.
+echo-do ${SBT} publish
+echo-do ${SBT} ++2.10.4 publish finatra/publish
+
+# Documentation.
 echo-do mkdir -p stage/docs/scala/store
 echo-do mv doc/target/scala-2.10/unidoc stage/docs/scala/store/${version}
-echo-do mkdir -p stage/jars/examples/finatra/${version}
-echo-do cp examples/finatra/target/scala-2.10/finatra-server.jar stage/jars/examples/finatra/${version}
-echo-do mkdir -p stage/jars/examples/movies/${version}
-echo-do cp examples/movies/server/target/scala-2.10/movies-server.jar stage/jars/examples/movies/${version}
+
+# Finatra example.
+STAGE_FINATRA=stage/examples/finatra/${version}
+echo-do mkdir -p ${STAGE_FINATRA}
+echo-do cp examples/finatra/target/scala-2.10/finatra-server.jar ${STAGE_FINATRA}/finatra-server-${version}.jar
+
+# Movies example.
+STAGE_MOVIES=stage/examples/movies/${version}
+echo-do mkdir -p ${STAGE_MOVIES}
+echo-do tar cz -f ${STAGE_MOVIES}/movies-ui-${version}.tgz -C examples/movies/webui/dist/ .
+echo-do cp examples/movies/server/target/scala-2.10/movies-server.jar ${STAGE_MOVIES}/movies-server-${version}.jar
+
+# Unfiltered example.
+STAGE_UNFILTERED=stage/examples/unfiltered/${version}
+echo-do mkdir -p ${STAGE_UNFILTERED}
+echo-do cp examples/unfiltered/target/scala-2.11/unfiltered-server.jar ${STAGE_FINATRA}/unfiltered-server-${version}.jar
 
 # Package the staging area into a tgz for easy distribution.
 echo-do tar cz -f stage-${version}.tgz -C stage .
+
+#
+# Wrapup.
+#
 
 # Sometimes tests fail and yet SBT exits with a good status.
 egrep 'ABORTED|FAILED' build.log
