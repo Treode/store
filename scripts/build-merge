@@ -79,8 +79,8 @@ echo-do ${SBT} ++2.10.4 publish-local finatra/publish-local
 # movies
 # build movies server
 (cd examples/movies/server; echo-do ${SBT} test assembly); expect-status 0
-# install grunt auto-dependency management
-echo-do npm install grunt-install-dependencies --save-dev
+# install grunt dependencies
+(cd examples/movies/webui; echo-do npm install --save); expect-status 0
 # build movies ui
 (cd examples/movies/webui; echo-do ${GRUNT} dist); expect-status 0
 # package movies ui

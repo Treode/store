@@ -26,7 +26,8 @@
 # 3) Builds and tests the examples using the locally published libraries.
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SBT=$DIR/scripts/sbt
+: ${SBT:='scripts/sbt'}
+: ${GRUNT:='grunt'}
 LOG=$DIR/build.log
 
 . $DIR/scripts/build-functions.sh
@@ -36,17 +37,21 @@ echo-do git clean -dfx
 
 # SBT has had trouble compiling, testing and assembling in one go. So we have broken the steps
 # into separate commands.
-echo-do scripts/sbt +test:compile
-echo-do scripts/sbt +test
-echo-do scripts/sbt +intensive:test
+echo-do ${SBT} +test:compile
+echo-do ${SBT} +test
+echo-do ${SBT} +intensive:test
 
 # Finatra is available for Scala 2.10.4 only; it can be compiled and tested in one go.
-echo-do scripts/sbt ++2.10.4 finatra/test
+echo-do ${SBT} ++2.10.4 finatra/test
 
 # Publish the Ivy artifacts to the local Ivy directory so that we can build and test the examples.
-echo-do scripts/sbt ++2.10.4 publish-local finatra/publish-local
-(cd examples/finatra; echo-do $SBT test assembly); expect-status 0
-(cd examples/movies/server; echo-do $SBT test assembly); expect-status 0
+echo-do ${SBT} ++2.10.4 publish-local finatra/publish-local
+(cd examples/finatra; echo-do ${SBT} test assembly); expect-status 0
+(cd examples/movies/server; echo-do ${SBT} test assembly); expect-status 0
+
+# install grunt dependencies and build movies ui
+(cd examples/movies/webui; echo-do npm install --save ); expect-status 0
+(cd examples/movies/webui; echo-do ${GRUNT} dist); expect-status 0
 
 # Sometimes tests fail and yet SBT exits with a good status.
 egrep 'ABORTED|FAILED' build.log
