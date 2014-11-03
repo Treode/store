@@ -32,7 +32,7 @@
 # person.
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-: ${SBT:='scripts/sbt'}
+: ${SBT:=${DIR}'/scripts/sbt'}
 : ${GRUNT:='grunt'}
 LOG=$DIR/build.log
 

@@ -26,7 +26,7 @@
 # 3) Builds and tests the examples using the locally published libraries.
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-: ${SBT:='scripts/sbt'}
+: ${SBT:=${DIR}'/scripts/sbt'}
 : ${GRUNT:='grunt'}
 LOG=$DIR/build.log
 
