@@ -130,7 +130,7 @@ trait StoreKit {
 
     implicit val diskConfig = Disk.Config.suggested.copy (superBlockBits = superBlockBits())
     implicit val clusterConfig = Cluster.Config.suggested
-    implicit val storeConfig = Store.Config.suggested
+    implicit val storeConfig = Store.Config.xdcr
 
     val controller = Store.recover (peerAddr, sharePeerAddr, paths: _*  ) .await()
 

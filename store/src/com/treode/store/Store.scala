@@ -177,6 +177,7 @@ object Store {
 
   object Config {
 
+    /** Suggested for intra-datacenter replication; we chose timeouts supposing a RTT of 1ms. */
     val suggested = Config (
         closedLifetime = 2.seconds,
         deliberatingTimeout = 2.seconds,
@@ -192,6 +193,24 @@ object Store {
         readBackoff = Backoff (100, 100, 1.seconds, 7),
         retention = Retention.StartOfYesterday,
         scanBatchBackoff = Backoff (2.seconds, 3.seconds, 1.minutes, 7),
+        targetPageBytes = 1 << 20)
+
+    /** Suggested for cross-datacenter replication; we chose timeouts supposing a RTT of 300ms. */
+    val xdcr = Config (
+        closedLifetime = 10.seconds,
+        deliberatingTimeout = 10.seconds,
+        exodusThreshold = 0.2D,
+        falsePositiveProbability = 0.01,
+        lockSpaceBits = 10,
+        moveBatchBackoff = Backoff (10.seconds, 20.seconds, 1.minutes, 7),
+        moveBatchBytes = 1 << 20,
+        moveBatchEntries = 10000,
+        prepareBackoff = Backoff (3.seconds, 4.seconds, 20.seconds, 7),
+        preparingTimeout = 10.seconds,
+        proposingBackoff = Backoff (3.seconds, 4.seconds, 20.seconds, 7),
+        readBackoff = Backoff (3.seconds, 4.seconds, 20.seconds, 7),
+        retention = Retention.StartOfYesterday,
+        scanBatchBackoff = Backoff (10.seconds, 20.seconds, 1.minutes, 7),
         targetPageBytes = 1 << 20)
   }
 
