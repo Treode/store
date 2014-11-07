@@ -24,11 +24,10 @@ import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.{Async, AsyncIterator}, Async.async
 import com.treode.async.implicits._
-import com.treode.async.misc.{RichOption, parseInt, parseUnsignedLong}
-import com.treode.cluster.{CellId, HostId}
+import com.treode.async.misc.{RichOption, parseInt}
+import com.treode.cluster.HostId
 import com.treode.jackson.DefaultTreodeModule
 import com.treode.store.{Bytes, Slice, TableId, TxClock, TxId}
-import com.twitter.app.Flaggable
 import com.twitter.finagle.{Filter, Service, SimpleFilter}
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
 import com.twitter.finagle.netty3.ChannelBufferBuf
@@ -38,12 +37,6 @@ import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.handler.codec.http.{HttpRequest, HttpResponse, HttpResponseStatus}
 
 package object example {
-
-  implicit val flaggableCellId: Flaggable [CellId] =
-    Flaggable.mandatory (s => CellId (parseUnsignedLong (s) .get))
-
-  implicit val flaggableHostId: Flaggable [HostId] =
-    Flaggable.mandatory (s => HostId (parseUnsignedLong (s) .get))
 
   val textJson = new ObjectMapper with ScalaObjectMapper
   textJson.registerModule (DefaultScalaModule)
@@ -261,9 +254,7 @@ package object example {
   implicit class RichString (s: String) {
 
     def getTableId: TableId =
-      TableId (
-        parseUnsignedLong (s)
-        .getOrThrow (new BadRequestException (s"Bad table ID: $s")))
+      TableId.parse (s) .getOrThrow (new BadRequestException (s"Bad table ID: $s"))
 
     def fromJson [A: Manifest]: A =
       textJson.readValue [A] (s)

@@ -68,6 +68,7 @@ object MoviesBuild extends Build {
         "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.4.2",
         "com.treode" %% "store" % versionString % "compile;test->stub",
         "com.treode" %% "finatra" % versionString,
+        "com.treode" %% "twitter-app" % versionString,
         "com.treode" %% "jackson" % versionString),
 
       jarName in assembly := "movies-server.jar",

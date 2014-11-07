@@ -112,8 +112,12 @@ package object misc {
       case _: NumberFormatException => None
     }}
 
-  /** Doesn't mind large values that flip the sign.  It accepts positive values too large for 63
-    * bits, but it still rejects values too large for 64 bits.
+  /** Parse a string as an unsigned long. Doesn't mind large values that flip the sign. Accepts
+    * positive values too large for 63 bits, but still rejects values too large for 64 bits.
+    *
+    * @param string The string to parse.
+    * @radix The base to interpret the string.
+    * @return `Some` if the parse succeeded, `None` otherwise.
     */
   def parseUnsignedLong (string: String, radix: Int): Option [Long] = {
     val big = BigInt (new BigInteger (string, radix))
@@ -122,9 +126,12 @@ package object misc {
     Some (big.longValue())
   }
 
-  /** Parses decimal (no leading zero), octal (leading zero) or hexadecimal (leading `0x` or `#`).
-    * Doesn't mind large values that flip the sign.  It accepts positive values too large for 63
-    * bits, but it still rejects values too large for 64 bits.
+  /** Parse a string as an unsigned long. Handles decimal (no leading zero), octal (leading zero)
+    * or hexadecimal (leading `0x` or `#`). Doesn't mind large values that flip the sign. Accepts
+    * positive values too large for 63 bits, but still rejects values too large for 64 bits.
+    *
+    * @param string The string to parse.
+    * @return `Some` if the parse succeeded, `None` otherwise.
     */
   def parseUnsignedLong (s: String): Option [Long] = {
     try {
