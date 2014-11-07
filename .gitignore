@@ -1,4 +1,4 @@
-*.db
+*.3kv
 *.jar
 .cache
 .classpath

@@ -15,6 +15,7 @@ libraryDependencies ++= Seq (
   "com.jayway.restassured" % "rest-assured" % "2.3.4" % "test",
   "com.treode" %% "jackson" % "0.2.0-SNAPSHOT",
   "com.treode" %% "store" % "0.2.0-SNAPSHOT" % "compile;test->stub",
+  "com.treode" %% "twitter-app" % "0.2.0-SNAPSHOT",
   "com.twitter" %% "util-app" % "6.22.1",
   "com.twitter" %% "util-logging" % "6.22.1",
   "net.databinder" %% "unfiltered-netty-server" % "0.8.2",

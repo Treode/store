@@ -19,6 +19,7 @@ package com.treode.store
 import scala.language.implicitConversions
 
 import com.google.common.primitives.UnsignedLongs
+import com.treode.async.misc.parseUnsignedLong
 import com.treode.pickle.Picklers
 
 /** The identifier for a table.
@@ -47,6 +48,16 @@ object TableId extends Ordering [TableId] {
 
   implicit def apply (id: Long): TableId =
     new TableId (id)
+
+  /** Parse a string as a TableId. Handles decimal (no leading zero), octal (leading zero) or
+    * hexadecimal (leading `0x` or `#`). Doesn't mind large values that flip the sign. Accepts
+    * positive values too large for 63 bits, but still rejects values too large for 64 bits.
+    *
+    * @param s The string to parse.
+    * @return `Some` if the parse succeeded, `None` otherwise.
+    */
+  def parse (s: String): Option [TableId] =
+    parseUnsignedLong (s) map (TableId (_))
 
   def compare (x: TableId, y: TableId): Int =
     x compare y

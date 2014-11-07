@@ -45,7 +45,7 @@ echo-do git clean -dfx
 version=`scripts/version-number \
   project/TreodeBuild.scala \
   examples/finatra/build.sbt \
-  examples/movies/server/build.sbt`
+  examples/movies/project/MoviesBuild.scala`
 expect-status 0
 
 # If not a snapshot, check that this release is new.

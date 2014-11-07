@@ -19,9 +19,11 @@ package com.treode.cluster
 import scala.language.implicitConversions
 
 import com.google.common.primitives.UnsignedLongs
+import com.treode.async.misc.parseUnsignedLong
 import com.treode.pickle.Picklers
 
-class CellId private (val id: Long) extends AnyVal with Ordered [CellId] {
+// TODO: Constructor should be private, but that makes Scala 2.10.4 crash.
+class CellId (val id: Long) extends AnyVal with Ordered [CellId] {
 
   def compare (that: CellId): Int =
     UnsignedLongs.compare (this.id, that.id)
@@ -38,6 +40,16 @@ object CellId extends Ordering [CellId] {
 
   implicit def apply (id: Long): CellId =
     new CellId (id)
+
+  /** Parse a string as a CellId. Handles decimal (no leading zero), octal (leading zero) or
+    * hexadecimal (leading `0x` or `#`). Doesn't mind large values that flip the sign. Accepts
+    * positive values too large for 63 bits, but still rejects values too large for 64 bits.
+    *
+    * @param s The string to parse.
+    * @return `Some` if the parse succeeded, `None` otherwise.
+    */
+  def parse (s: String): Option [CellId] =
+    parseUnsignedLong (s) map (CellId (_))
 
   def compare (x: CellId, y: CellId): Int =
     x compare y
