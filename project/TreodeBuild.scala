@@ -227,14 +227,11 @@ object TreodeBuild extends Build {
     .settings (standardSettings: _*)
     .settings (
 
-        scalaVersion := "2.10.4",
-        crossScalaVersions := Seq.empty,
-
         resolvers += "Twitter" at "http://maven.twttr.com",
 
         libraryDependencies ++= Seq (
-          "com.twitter" %% "util-app" % "6.22.0",
-          "com.twitter" %% "util-logging" % "6.22.0"))
+          "com.twitter" %% "util-app" % "6.22.1",
+          "com.twitter" %% "util-logging" % "6.22.1"))
 
   // Separated because not everyone wants it and its dependencies.
   lazy val finatra = Project ("finatra", file ("finatra"))
