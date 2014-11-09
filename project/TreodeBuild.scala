@@ -297,7 +297,7 @@ object TreodeBuild extends Build {
         inAnyProject -- inProjects (systest),
 
       copyDocAssetsTask := {
-        val sourceDir = file ("doc")
+        val sourceDir = file ("doc/assets")
         val targetDir = (target in (ScalaUnidoc, unidoc)).value
         IO.copyDirectory (sourceDir, targetDir)
       },
