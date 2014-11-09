@@ -16,6 +16,9 @@
 
 package com.treode.async
 
+import java.util.concurrent.ExecutionException
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success, Try}
 import org.scalatest.FlatSpec
 
@@ -238,9 +241,43 @@ class AsyncSpec extends FlatSpec {
     assertResult (1) (supply (1) .await())
   }
 
-  it should "thrown an exception from the body to the caller" in {
+  it should "throw an exception from the body to the caller" in {
     intercept [DistinguishedException] {
       supply (throw new DistinguishedException) .await()
+    }}
+
+  "Async.toGuavaFuture" should "propagate success" in {
+    assertResult (0) {
+      supply [Int] (0) .toGuavaFuture.get
+    }}
+
+  it should "propagate failure" in {
+    val t = intercept [ExecutionException] {
+      supply [Int] (throw new DistinguishedException) .toGuavaFuture.get
+    }
+    assert (t.getCause.isInstanceOf [DistinguishedException])
+  }
+
+  "Async.toJavaFuture" should "propagate success" in {
+    assertResult (0) {
+      supply [Int] (0) .toJavaFuture.get
+    }}
+
+  it should "propagate failure" in {
+    val t = intercept [ExecutionException] {
+      supply [Int] (throw new DistinguishedException) .toJavaFuture.get
+    }
+    assert (t.getCause.isInstanceOf [DistinguishedException])
+  }
+
+  "Async.toScalaFuture" should "propagate success" in {
+    assertResult (0) {
+      Await.result (supply [Int] (0) .toScalaFuture, Duration.Inf)
+    }}
+
+  it should "propagate failure" in {
+    intercept [DistinguishedException] {
+      Await.result (supply [Int] (throw new DistinguishedException) .toScalaFuture, Duration.Inf)
     }}
 
   "Async.async" should "inovke the body" in {

@@ -14,11 +14,23 @@
  * limitations under the License.
  */
 
-package com.treode
+package com.treode.async.implicits
 
-package finatra {
+import scala.concurrent.Future
 
-  class BadRequestException (val message: String) extends Exception {
+import com.treode.async.stubs.StubScheduler, StubScheduler.executionContext
+import org.scalatest.FlatSpec
 
-    override def getMessage(): String = message
-  }}
+class RichScalaFutureSpec extends FlatSpec {
+
+  class DistinguishedException extends Exception
+
+  "toAsync" should "propagate success" in {
+    assertResult (0) {
+      Future.successful (0) .toAsync.await
+    }}
+
+  it should "propagate failure" in {
+    intercept [DistinguishedException] {
+      Future.failed (new DistinguishedException) .toAsync.await
+    }}}

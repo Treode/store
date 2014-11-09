@@ -16,10 +16,12 @@
 
 package com.treode.async
 
-import java.util.concurrent.{Future => JFuture, Callable, Executor, FutureTask, SynchronousQueue}
+import java.util.concurrent.{Future => JavaFuture, Callable, FutureTask}
+import scala.concurrent.{Future => ScalaFuture, Promise}
 import scala.runtime.NonLocalReturnControl
 import scala.util.{Failure, Success, Try}
 
+import com.google.common.util.concurrent.{ListenableFuture => GuavaFuture, SettableFuture}
 import com.treode.async.implicits._
 
 import Async.{_async, async}
@@ -163,14 +165,38 @@ trait Async [A] {
     f
   }
 
+  /** Run the asynchronous operation and immediately return a Guava
+    * [[com.google.common.util.concurrent.ListenableFuture ListenableFuture]] to capture its
+    * result.
+    */
+  def toGuavaFuture: GuavaFuture [A] = {
+    val f = SettableFuture.create [A]
+    run {
+      case Success (v) => f.set (v)
+      case Failure (t) => f.setException (t)
+    }
+    f
+  }
+
   /** Run the asynchronous operation and immediately return a Java
     * [[java.util.concurrent.Future Future]] to capture its result.
     */
-  def toJavaFuture: JFuture [A] =
-    new FutureTask (new Callable [A] {
+  def toJavaFuture: JavaFuture [A] = {
+    val f = new FutureTask (new Callable [A] {
       def call(): A = await()
     })
-}
+    f.run()
+    f
+  }
+
+  /** Run the asynchronous operation and immediately return a Scala
+    * [[scala.concurrent.Future Future]] to capture its result.
+    */
+  def toScalaFuture: ScalaFuture [A] = {
+    val p = Promise [A] ()
+    run (p.complete _)
+    p.future
+  }}
 
 object Async {
 

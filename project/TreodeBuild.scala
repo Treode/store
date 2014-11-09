@@ -234,9 +234,21 @@ object TreodeBuild extends Build {
           "com.twitter" %% "util-logging" % "6.22.1"))
 
   // Separated because not everyone wants it and its dependencies.
-  lazy val finatra = Project ("finatra", file ("finatra"))
+  lazy val twitterCore = Project ("twitter-core", file ("twitter-core"))
     .configs (IntensiveTest, PeriodicTest, Perf)
     .dependsOn (store)
+    .settings (standardSettings: _*)
+    .settings (
+
+        resolvers += "Twitter" at "http://maven.twttr.com",
+
+        libraryDependencies ++= Seq (
+          "com.twitter" %% "util-core" % "6.22.1"))
+
+  // Separated because not everyone wants it and its dependencies.
+  lazy val finatra = Project ("finatra", file ("finatra"))
+    .configs (IntensiveTest, PeriodicTest, Perf)
+    .dependsOn (store, twitterCore)
     .settings (standardSettings: _*)
     .settings (
 
@@ -310,7 +322,7 @@ object TreodeBuild extends Build {
   // The root project includes everything that can be built across Scala versions; that is
   // everything except Finatra, which can be built in 2.10 only.
   lazy val root = Project ("root", file ("."))
-    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterApp)
+    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterApp, twitterCore)
     .settings (versionInfo: _*)
     .settings (
 

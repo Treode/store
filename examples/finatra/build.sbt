@@ -11,7 +11,8 @@ scalaVersion := "2.10.4"
 libraryDependencies ++= Seq (
   "com.treode" %% "store" % "0.2.0-SNAPSHOT" % "compile;test->stub",
   "com.treode" %% "finatra" % "0.2.0-SNAPSHOT",
-  "com.treode" %% "jackson" % "0.2.0-SNAPSHOT")
+  "com.treode" %% "jackson" % "0.2.0-SNAPSHOT",
+  "com.treode" %% "twitter-core" % "0.2.0-SNAPSHOT")
 
 resolvers += "Twitter" at "http://maven.twttr.com"
 

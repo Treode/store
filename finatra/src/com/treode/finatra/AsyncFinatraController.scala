@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.treode.async.Async
 import com.treode.disk.ControllerException
 import com.treode.store.TimeoutException
+import com.treode.twitter.util._
 import com.twitter.finatra.{Controller => FinatraController, Request, ResponseBuilder}
 import com.twitter.util.Future
 
