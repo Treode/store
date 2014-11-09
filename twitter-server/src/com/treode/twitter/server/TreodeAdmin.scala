@@ -14,36 +14,31 @@
  * limitations under the License.
  */
 
-package example
+package com.treode.twitter.server
 
 import com.treode.twitter.app.StoreKit
 import com.treode.twitter.finagle.http.filter._
-import com.treode.twitter.server.TreodeAdmin
-import com.twitter.finagle.Http
+import com.treode.twitter.server.handler._
+import com.twitter.app.App
+import com.twitter.finagle.Service
+import com.twitter.finagle.http.{HttpMuxer, Request, Response}
 import com.twitter.finagle.http.filter.ExceptionFilter
-import com.twitter.server.TwitterServer
-import com.twitter.util.Await
 
-class Serve extends TwitterServer with StoreKit with TreodeAdmin {
+trait TreodeAdmin {
+  this: App with StoreKit =>
 
-  def main() {
-
-    val resource = new Resource (controller.hostId, controller.store)
-
-    val server = Http.serve (
-      ":8080",
+  private def add (pattern: String, service: Service [Request, Response]): Unit =
+    HttpMuxer.addHandler (
+      pattern,
       NettyToFinagle andThen
       ExceptionFilter andThen
-      BadRequestFilter andThen
       JsonExceptionFilter andThen
-      resource)
+      service)
 
-    onExit {
-      server.close()
-      controller.shutdown().await()
-    }
-
-    Await.ready (server)
+  premain {
+    add ("/admin/treode/atlas",         new AtlasHandler (controller))
+    add ("/admin/treode/drives",        new DrivesHandler (controller))
+    add ("/admin/treode/drives/attach", new DrivesAttachHandler (controller))
+    add ("/admin/treode/drives/drain",  new DrivesDrainHandler (controller))
+    add ("/admin/treode/tables",        new TablesHandler (controller))
   }}
-
-object Main extends StoreKit.Main [Serve]

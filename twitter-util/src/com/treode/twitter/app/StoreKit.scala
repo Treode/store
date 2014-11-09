@@ -102,18 +102,11 @@ trait StoreKit {
   private var paths: Array [String] = null
 
   premain {
-
     if (args.length == 0) {
       println ("At least one path is required.")
       System.exit (1)
     }
     paths = args
-
-    LoggerFactory (
-        node = "com.treode",
-        level = Some (Level.INFO),
-        handlers = ConsoleHandler() :: Nil
-    ) .apply()
   }
 
   lazy val controller = {
