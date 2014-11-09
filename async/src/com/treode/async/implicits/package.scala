@@ -16,9 +16,10 @@
 
 package com.treode.async
 
-import java.lang.{Iterable => JIterable}
-import java.util.{Iterator => JIterator}
+import java.lang.{Iterable => JavaIterable}
+import java.util.{Iterator => JavaIterator}
 import scala.collection.JavaConversions._
+import scala.concurrent.{Future => ScalaFuture, ExecutionContext}
 import scala.util.{Failure, Random, Success, Try}
 
 package object implicits {
@@ -109,16 +110,22 @@ package object implicits {
     object latch extends IterableLatch (iter, iter.size)
   }
 
-  implicit class RichJavaIterator [A] (iter: JIterator [A]) {
+  implicit class RichJavaIterator [A] (iter: JavaIterator [A]) {
 
     def async (implicit scheduler: Scheduler): AsyncIterator [A] =
       AsyncIterator.adapt (iter)
   }
 
-  implicit class RichJavaIterable [A] (iter: JIterable [A]) {
+  implicit class RichJavaIterable [A] (iter: JavaIterable [A]) {
 
     def async (implicit scheduler: Scheduler): AsyncIterator [A] =
       AsyncIterator.adapt (iter.iterator)
 
     object latch extends IterableLatch (iter, iter.size)
+  }
+
+  implicit class RichScalaFuture [A] (fut: ScalaFuture [A]) {
+
+    def toAsync (implicit ctx: ExecutionContext): Async [A] =
+      Async.async (fut.onComplete _)
   }}
