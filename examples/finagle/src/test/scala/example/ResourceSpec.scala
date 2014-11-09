@@ -25,6 +25,7 @@ import com.jayway.restassured.specification.ResponseSpecification
 import com.treode.async.stubs.StubScheduler, StubScheduler.scheduler
 import com.treode.store.{Bytes, Cell, TxClock, TxId, WriteOp}, WriteOp._
 import com.treode.store.stubs.StubStore
+import com.treode.twitter.finagle.http.filter._
 import com.twitter.finagle.Http
 import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}, Matchers._
 import org.scalatest.FreeSpec
@@ -38,6 +39,7 @@ class ResourceSpec extends FreeSpec {
       s":$port",
       NettyToFinagle andThen
       BadRequestFilter andThen
+      JsonExceptionFilter andThen
       new Resource (0, store))
     try {
       test (port, store)

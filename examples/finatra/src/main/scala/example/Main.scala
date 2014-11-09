@@ -19,12 +19,24 @@ package example
 import com.treode.finatra.AsyncFinatraServer
 import com.treode.twitter.app.StoreKit
 
+// TODO: Mixin TreodeAdmin.
+//
+// Finatra 1.5.4 uses Twitter Server 1.7, which uses Finagle 6.17.0.
+// Treode's Twitter Server utils use 1.8, which uses Finagle 6.22.0.
+// This causes a problem:
+//   https://github.com/twitter/finatra/issues/172
+// The problem has been fixed:
+//   https://github.com/twitter/finatra/commit/0b9fce0c1525a1aa88a80c586df8abed486017f0
+// However, the fix has not been pushed to the maven repository.
+//
+// This server is pretty much useless without a way to set the atlas. We keep this code around so
+// that it's in the build and doesn't get too stale, in the hopes that a new version of Finatra
+// arrives soon.
 class Serve extends AsyncFinatraServer with StoreKit {
 
   premain {
     register (new Resource (controller.hostId, controller.store))
     register (new Peers (controller))
-    register (new Admin (controller))
   }}
 
 object Main extends StoreKit.Main [Serve]

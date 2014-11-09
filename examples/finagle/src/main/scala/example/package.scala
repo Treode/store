@@ -35,12 +35,13 @@ import com.twitter.finagle.netty3.ChannelBufferBuf
 import com.twitter.logging.Logger
 import com.twitter.util.{Future, Promise, Return, Throw}
 import org.jboss.netty.buffer.ChannelBuffers
-import org.jboss.netty.handler.codec.http.{HttpRequest, HttpResponse, HttpResponseStatus}
+import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 package object example {
 
   val textJson = new ObjectMapper with ScalaObjectMapper
   textJson.registerModule (DefaultScalaModule)
+  textJson.registerModule (DefaultTreodeModule)
   textJson.registerModule (AppModule)
 
   val binaryJson = new ObjectMapper (new SmileFactory)
@@ -135,12 +136,6 @@ package object example {
   class BadRequestException (val message: String) extends Exception {
 
     override def getMessage(): String = message
-  }
-
-  object NettyToFinagle extends Filter [HttpRequest, HttpResponse, Request, Response] {
-
-    def apply (req: HttpRequest, service: Service [Request, Response]): Future [HttpResponse] =
-      service (req.asInstanceOf [Request])
   }
 
   implicit class RichAny (v: Any) {

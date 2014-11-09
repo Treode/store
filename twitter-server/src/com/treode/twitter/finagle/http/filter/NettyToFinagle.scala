@@ -14,18 +14,15 @@
  * limitations under the License.
  */
 
- package example
+package com.treode.twitter.finagle.http.filter
 
-import com.treode.twitter.app.StoreKit
-import com.treode.twitter.server.TreodeAdmin
-import com.twitter.server.TwitterServer
-import unfiltered.netty.Server
+import com.twitter.finagle.{Filter, Service}
+import com.twitter.finagle.http.{Request, Response}
+import com.twitter.util.Future
+import org.jboss.netty.handler.codec.http.{HttpRequest, HttpResponse}
 
-class Serve extends TwitterServer with StoreKit with TreodeAdmin {
+object NettyToFinagle extends Filter [HttpRequest, HttpResponse, Request, Response] {
 
-  def main() {
-    val resource = new Resource (controller.hostId, controller.store)
-    Server.http (8080) .plan (resource) .run()
-  }}
-
-object Main extends StoreKit.Main [Serve]
+  def apply (req: HttpRequest, service: Service [Request, Response]): Future [HttpResponse] =
+    service (req.asInstanceOf [Request])
+}

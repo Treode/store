@@ -221,6 +221,17 @@ object TreodeBuild extends Build {
     .settings (stubSettings: _*)
 
   // Separated because not everyone wants it and its dependencies.
+  lazy val jackson = Project ("jackson", file ("jackson"))
+    .configs (IntensiveTest, PeriodicTest, Perf)
+    .dependsOn (store)
+    .settings (standardSettings: _*)
+    .settings (
+
+        libraryDependencies ++= Seq (
+          "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.2",
+          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.2"))
+
+  // Separated because not everyone wants it and its dependencies.
   lazy val twitterUtil = Project ("twitter-util", file ("twitter-util"))
     .configs (IntensiveTest, PeriodicTest, Perf)
     .dependsOn (store)
@@ -235,6 +246,22 @@ object TreodeBuild extends Build {
           "com.twitter" %% "util-logging" % "6.22.1"))
 
   // Separated because not everyone wants it and its dependencies.
+  lazy val twitterServer = Project ("twitter-server", file ("twitter-server"))
+    .configs (IntensiveTest, PeriodicTest, Perf)
+    .dependsOn (store, jackson, twitterUtil)
+    .settings (standardSettings: _*)
+    .settings (
+
+        scalaVersion := "2.10.4",
+        crossScalaVersions := Seq.empty,
+
+        resolvers += "Twitter" at "http://maven.twttr.com",
+
+        libraryDependencies ++= Seq (
+          "com.jayway.restassured" % "rest-assured" % "2.3.4" % "test",
+          "com.twitter" %% "twitter-server" % "1.8.0"))
+
+  // Separated because not everyone wants it and its dependencies.
   lazy val finatra = Project ("finatra", file ("finatra"))
     .configs (IntensiveTest, PeriodicTest, Perf)
     .dependsOn (store, twitterUtil)
@@ -247,17 +274,6 @@ object TreodeBuild extends Build {
         resolvers += "Twitter" at "http://maven.twttr.com",
 
         libraryDependencies ++= Seq ("com.twitter" %% "finatra" % "1.5.4"))
-
-  // Separated because not everyone wants it and its dependencies.
-  lazy val jackson = Project ("jackson", file ("jackson"))
-    .configs (IntensiveTest, PeriodicTest, Perf)
-    .dependsOn (store)
-    .settings (standardSettings: _*)
-    .settings (
-
-        libraryDependencies ++= Seq (
-          "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.2",
-          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.2"))
 
   // A standalone server for system tests.  Separated to keep system testing components out of
   // production code (these components are in the default config in this project).
@@ -279,7 +295,7 @@ object TreodeBuild extends Build {
 
   // The doc project includes everything for unidoc.
   lazy val doc = Project ("doc", file ("doc"))
-    .aggregate (buffer, pickle, async, cluster, disk, store, finatra, jackson, twitterUtil)
+    .aggregate (buffer, pickle, async, cluster, disk, store, finatra, jackson, twitterUtil, twitterServer)
     .settings (versionInfo: _*)
     .settings (unidocSettings: _*)
     .settings (
@@ -309,7 +325,7 @@ object TreodeBuild extends Build {
       publish := {})
 
   // The root project includes everything that can be built across Scala versions; that is
-  // everything except Finatra, which can be built in 2.10 only.
+  // everything except Finatra and Twitter Server, which can be built in 2.10 only.
   lazy val root = Project ("root", file ("."))
     .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterUtil)
     .settings (versionInfo: _*)

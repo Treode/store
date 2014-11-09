@@ -99,11 +99,6 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
         respond (req, Status.PreconditionFailed)
     }}
 
-  import com.twitter.finagle.netty3.ChannelBufferBuf
-  import org.jboss.netty.buffer.ChannelBuffers
-  def buf (msg: String): ChannelBufferBuf =
-    ChannelBufferBuf (ChannelBuffers.wrappedBuffer (msg.getBytes("UTF-8")))
-
   def apply (req: Request): Future [Response] = {
     Path (req.path) :? req.params match {
 

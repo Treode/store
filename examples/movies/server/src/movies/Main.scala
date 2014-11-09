@@ -21,6 +21,9 @@ import scala.util.Random
 import com.treode.finatra.AsyncFinatraServer
 import com.treode.twitter.app.StoreKit
 
+// TODO: Switch from Finatra to Finagle, and then mixin TreodeAdmin.
+// See the note in the Finatra example. We'll be moving the movies example off Finatra soon anyway,
+// because Finatra doesn't support streaming responses.
 class Serve extends AsyncFinatraServer with StoreKit {
 
   lazy val movies = new MovieStore () (Random, controller.store)
@@ -31,7 +34,6 @@ class Serve extends AsyncFinatraServer with StoreKit {
     register (new MovieResource (controller.hostId, movies))
     register (new SearchResource (controller.hostId, movies))
     register (new Peers (controller))
-    register (new Admin (controller))
   }}
 
 object Main extends StoreKit.Main [Serve]
