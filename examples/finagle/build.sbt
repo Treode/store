@@ -13,6 +13,7 @@ libraryDependencies ++= Seq (
   "com.treode" %% "store" % "0.2.0-SNAPSHOT" % "compile;test->stub",
   "com.treode" %% "jackson" % "0.2.0-SNAPSHOT",
   "com.treode" %% "twitter-app" % "0.2.0-SNAPSHOT",
+  "com.treode" %% "twitter-core" % "0.2.0-SNAPSHOT",
   "com.twitter" %% "finagle-http" % "6.22.0")
 
 resolvers += "Twitter" at "http://maven.twttr.com"

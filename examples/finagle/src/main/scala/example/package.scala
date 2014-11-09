@@ -28,6 +28,7 @@ import com.treode.async.misc.{RichOption, parseInt}
 import com.treode.cluster.HostId
 import com.treode.jackson.DefaultTreodeModule
 import com.treode.store.{Bytes, Slice, TableId, TxClock, TxId}
+import com.treode.twitter.util._
 import com.twitter.finagle.{Filter, Service, SimpleFilter}
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
 import com.twitter.finagle.netty3.ChannelBufferBuf
@@ -142,17 +143,6 @@ package object example {
       service (req.asInstanceOf [Request])
   }
 
-  implicit class RichAsync [A] (async: Async [A]) {
-
-    def toTwitterFuture: Future [A] = {
-      val promise = new Promise [A]
-      async run {
-        case Success (v) => promise.setValue (v)
-        case Failure (t) => promise.setException (t)
-      }
-      promise
-    }}
-
   implicit class RichAny (v: Any) {
 
     def toJsonText: String =
@@ -240,16 +230,6 @@ package object example {
         case e: JsonProcessingException =>
           throw new BadRequestException (e.getMessage)
       }}
-
-  implicit class RichTwitterFuture [A] (fut: Future [A]) {
-
-    def toAsync: Async [A] =
-      async { cb =>
-        fut.respond {
-          case Return (v) => cb.pass (v)
-          case Throw (t) => cb.fail (t)
-        }}
-  }
 
   implicit class RichString (s: String) {
 

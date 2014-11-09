@@ -14,11 +14,22 @@
  * limitations under the License.
  */
 
-package com.treode
+package com.treode.twitter.util
 
-package finatra {
+import com.treode.async.Async, Async.supply
+import com.twitter.util.Await, Await.result
+import org.scalatest.FlatSpec
 
-  class BadRequestException (val message: String) extends Exception {
+class TwitterRichAsyncSpec extends FlatSpec {
 
-    override def getMessage(): String = message
-  }}
+  class DistinguishedException extends Exception
+
+  "toTwitterFuture" should "propagate success" in {
+    assertResult (0) {
+      result (supply [Int] (0) .toTwitterFuture)
+    }}
+
+  it should "propagate failure" in {
+    intercept [DistinguishedException] {
+      result (supply [Int] (throw new DistinguishedException) .toTwitterFuture)
+    }}}
