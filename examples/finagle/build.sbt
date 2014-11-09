@@ -10,11 +10,11 @@ scalaVersion := "2.10.4"
 
 libraryDependencies ++= Seq (
   "com.jayway.restassured" % "rest-assured" % "2.3.4" % "test",
-  "com.treode" %% "store" % "0.2.0-SNAPSHOT" % "compile;test->stub",
   "com.treode" %% "jackson" % "0.2.0-SNAPSHOT",
-  "com.treode" %% "twitter-app" % "0.2.0-SNAPSHOT",
-  "com.treode" %% "twitter-core" % "0.2.0-SNAPSHOT",
-  "com.twitter" %% "finagle-http" % "6.22.0")
+  "com.treode" %% "store" % "0.2.0-SNAPSHOT" % "compile;test->stub",
+  "com.treode" %% "twitter-util" % "0.2.0-SNAPSHOT",
+  "com.twitter" %% "finagle-http" % "6.22.0",
+  "org.scalatest" %% "scalatest" % "2.2.2" % "test")
 
 resolvers += "Twitter" at "http://maven.twttr.com"
 
