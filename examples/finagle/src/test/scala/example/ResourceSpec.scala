@@ -22,13 +22,12 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.jayway.restassured.RestAssured.given
 import com.jayway.restassured.response.{Response => RestAssuredResponse}
 import com.jayway.restassured.specification.ResponseSpecification
+import com.treode.async.stubs.StubScheduler, StubScheduler.scheduler
 import com.treode.store.{Bytes, Cell, TxClock, TxId, WriteOp}, WriteOp._
 import com.treode.store.stubs.StubStore
 import com.twitter.finagle.Http
 import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}, Matchers._
 import org.scalatest.FreeSpec
-
-import Globals.scheduler
 
 class ResourceSpec extends FreeSpec {
 

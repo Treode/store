@@ -25,8 +25,6 @@ import com.treode.tags.{Intensive, Periodic}
 import com.treode.store._
 import org.scalatest.FreeSpec
 
-import StubScheduler.multithreaded
-
 class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
 
   "The StubStore should" - {
@@ -37,8 +35,8 @@ class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
     }
 
     "conserve money during account transfers (multithreaded)" taggedAs (Intensive, Periodic) in {
-      multithreaded { implicit scheduler =>
-        implicit val random = Random
-        implicit val store = new StubStore () (scheduler)
-        testAccountTransfers (500)
-      }}}}
+      import StubScheduler.scheduler
+      implicit val random = Random
+      implicit val store = new StubStore () (scheduler)
+      testAccountTransfers (500)
+    }}}

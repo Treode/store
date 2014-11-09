@@ -31,7 +31,6 @@ import org.scalatest.time.SpanSugar
 import Async.{latch, supply}
 import DiskTestTools._
 import SpanSugar._
-import StubScheduler.multithreaded
 
 class DiskSystemSpec extends FreeSpec with CrashChecks {
 
@@ -265,29 +264,29 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       }}
 
     "when multithreaded" taggedAs (Intensive, Periodic) in {
-      multithreaded { implicit scheduler =>
+      import StubScheduler.scheduler
 
-        implicit val config = DiskTestConfig (
-            maximumRecordBytes = 1<<9,
-            maximumPageBytes = 1<<9,
-            checkpointEntries = 1000,
-            cleaningFrequency = 3)
-        val geom = DriveGeometry.test (
-            segmentBits = 10,
-            blockBits = 6,
-            diskBytes = 1<<16)
-        val tracker = new LogTracker
+      implicit val config = DiskTestConfig (
+          maximumRecordBytes = 1<<9,
+          maximumPageBytes = 1<<9,
+          checkpointEntries = 1000,
+          cleaningFrequency = 3)
+      val geom = DriveGeometry.test (
+          segmentBits = 10,
+          blockBits = 6,
+          diskBytes = 1<<16)
+      val tracker = new LogTracker
 
-        implicit val random = Random
-        val file = StubFile (1<<20, geom.blockBits)
-        implicit val recovery = Disk.recover()
-        implicit val launch = recovery.attachAndWait (("a", file, geom)) .await()
-        import launch.{controller, disk}
-        tracker.attach()
-        launch.launch()
-        tracker.batches (20, 1000, 2) .await()
-        controller.shutdown() .await()
-      }}}
+      implicit val random = Random
+      val file = StubFile (1<<20, geom.blockBits)
+      implicit val recovery = Disk.recover()
+      implicit val launch = recovery.attachAndWait (("a", file, geom)) .await()
+      import launch.{controller, disk}
+      tracker.attach()
+      launch.launch()
+      tracker.batches (20, 1000, 2) .await()
+      controller.shutdown() .await()
+    }}
 
   "The pager should read and write" - {
 

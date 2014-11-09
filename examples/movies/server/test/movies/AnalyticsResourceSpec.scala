@@ -18,14 +18,13 @@ package movies
 
 import scala.util.Random
 
-import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.StubScheduler, StubScheduler.scheduler
 import com.treode.store.stubs.StubStore
 import com.twitter.finagle.http.MediaType
 import com.twitter.finatra.test.MockApp
 import org.scalatest.{FreeSpec, Matchers}
 
 import movies.{DisplayModel => DM, PhysicalModel => PM}
-import StubScheduler.singlethreaded
 
 class AnalyticsResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 

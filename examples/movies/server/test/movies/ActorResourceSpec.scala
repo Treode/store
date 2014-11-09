@@ -18,6 +18,7 @@ package movies
 
 import scala.util.Random
 
+import com.treode.async.stubs.StubScheduler, StubScheduler.scheduler
 import com.treode.store.stubs.StubStore
 import com.twitter.finagle.http.MediaType
 import com.twitter.finatra.test.MockApp

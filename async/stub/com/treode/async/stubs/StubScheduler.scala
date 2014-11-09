@@ -17,6 +17,7 @@
 package com.treode.async.stubs
 
 import java.util.concurrent.{Executors, ScheduledExecutorService}
+import scala.concurrent.ExecutionContext
 import scala.util.Random
 
 import com.treode.async.Scheduler
@@ -58,24 +59,15 @@ object StubScheduler {
   def wrapped (executor: ScheduledExecutorService): StubScheduler =
     new StubExecutorAdaptor (executor)
 
-  /** Loan a scheduler that wraps Java's single threaded executor, and shutdown the underlying
-    * executor after the test completes.
-    */
-  def singlethreaded (test: StubScheduler => Any) {
-    val executor = Executors.newSingleThreadScheduledExecutor
-    try
-      test (wrapped (executor))
-    finally
-      executor.shutdown()
-  }
+  /** A default ScheduledExecutorService. */
+  val executor: ScheduledExecutorService =
+    Executors.newScheduledThreadPool (Runtime.getRuntime.availableProcessors)
 
-  /** Loan a scheduler that wraps Java's pooled threads executor, and shutdown the underlying
-    * executor after the test completes.
-    */
-  def multithreaded (test: StubScheduler => Any) {
-    val executor = Executors.newScheduledThreadPool (4)
-    try
-      test (wrapped (executor))
-    finally
-      executor.shutdown()
-  }}
+  /** A default StubScheduler that uses the default executor. */
+  implicit val scheduler =
+    StubScheduler.wrapped (executor)
+
+  /** A default ExecutionContext that uses the default executor. */
+  implicit val executionContext: ExecutionContext =
+    ExecutionContext.fromExecutorService (executor)
+}

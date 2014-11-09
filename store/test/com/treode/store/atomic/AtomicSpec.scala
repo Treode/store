@@ -30,7 +30,6 @@ import org.scalatest.time.SpanSugar
 
 import AtomicTestTools._
 import SpanSugar._
-import StubScheduler.multithreaded
 
 class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks with TimeLimitedTests {
 
@@ -58,9 +57,9 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks with Time
       }}
 
     "conserve money during account transfers (multithreaded)" taggedAs (Intensive, Periodic) in {
-      multithreaded { implicit scheduler =>
-        implicit val random = Random
-        implicit val network = StubNetwork (random)
-        implicit val store = newStore()
-        testAccountTransfers (100)
-      }}}}
+      import StubScheduler.scheduler
+      implicit val random = Random
+      implicit val network = StubNetwork (random)
+      implicit val store = newStore()
+      testAccountTransfers (100)
+    }}}

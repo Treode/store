@@ -18,14 +18,13 @@ package movies
 
 import scala.util.Random
 
-import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.StubScheduler, StubScheduler.scheduler
 import com.treode.store.stubs.StubStore
 import com.twitter.finagle.http.MediaType
 import com.twitter.finatra.test.MockApp
 import org.scalatest.{FreeSpec, Matchers}
 
 import movies.{PhysicalModel => PM}
-import StubScheduler.singlethreaded
 
 class SearchResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
@@ -40,53 +39,49 @@ class SearchResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
 
   "When the database is empty" - {
 
-    "GET /search?q=johnny should respond Okay" in
-      singlethreaded { implicit scheduler =>
-        implicit val (random, store, movies, mock) = setup()
-        val response = mock.get ("/search?q=johnny")
-        response.code should equal (Ok)
-        response.body should matchJson (s"""{"movies": [], "actors": []}""")
-      }
+    "GET /search?q=johnny should respond Okay" in {
+      implicit val (random, store, movies, mock) = setup()
+      val response = mock.get ("/search?q=johnny")
+      response.code should equal (Ok)
+      response.body should matchJson (s"""{"movies": [], "actors": []}""")
+    }
 
-    "GET /search/?q=johnny should respond Okay" in
-      singlethreaded { implicit scheduler =>
-        implicit val (random, store, movies, mock) = setup()
-        val response = mock.get ("/search/?q=johnny")
-        response.code should equal (Ok)
-        response.body should matchJson (s"""{"movies": [], "actors": []}""")
-      }
+    "GET /search/?q=johnny should respond Okay" in {
+      implicit val (random, store, movies, mock) = setup()
+      val response = mock.get ("/search/?q=johnny")
+      response.code should equal (Ok)
+      response.body should matchJson (s"""{"movies": [], "actors": []}""")
+    }
 
-    "GET /search/foo?q=johnny should respond Not Found" in
-      singlethreaded { implicit scheduler =>
-        implicit val (random, store, movies, mock) = setup()
-        val response = mock.get ("/search/foo?q=johnny")
-        response.code should equal (NotFound)
-      }}
+    "GET /search/foo?q=johnny should respond Not Found" in {
+      implicit val (random, store, movies, mock) = setup()
+      val response = mock.get ("/search/foo?q=johnny")
+      response.code should equal (NotFound)
+    }}
 
   "When the database has a movie and and actor" - {
 
-    "GET /search?q=johnny should respond Okay" in
-      singlethreaded { implicit scheduler =>
-        implicit val (random, store, movies, mock) = setup()
+    "GET /search?q=johnny should respond Okay" in {
+      implicit val (random, store, movies, mock) = setup()
 
-        val (id1, t1) = addTitle (t0, "Johnny Bravo")
-        val (id2, t2) = addTitle (t0, "Star Wars")
-        val (id3, t3) = addName (t0, "Johnny Depp")
-        val (id4, t4) = addName (t0, "Mark Hamill")
-        val t = Seq (t1, t2, t3, t4) .max
+      val (id1, t1) = addTitle (t0, "Johnny Bravo")
+      val (id2, t2) = addTitle (t0, "Star Wars")
+      val (id3, t3) = addName (t0, "Johnny Depp")
+      val (id4, t4) = addName (t0, "Mark Hamill")
+      val t = Seq (t1, t2, t3, t4) .max
 
-        val response = mock.get ("/search?q=johnny")
-        response.code should equal (Ok)
-        response.body should matchJson (s"""{
-          "movies": [{
-            "id": "$id1",
-            "title": "Johnny Bravo",
-            "released": null
-          }],
-          "actors": [{
-            "id": "$id3",
-            "name": "Johnny Depp",
-            "born": null
-          }]
-        }""")
-      }}}
+      val response = mock.get ("/search?q=johnny")
+      response.code should equal (Ok)
+      response.body should matchJson (s"""{
+        "movies": [{
+          "id": "$id1",
+          "title": "Johnny Bravo",
+          "released": null
+        }],
+        "actors": [{
+          "id": "$id3",
+          "name": "Johnny Depp",
+          "born": null
+        }]
+      }""")
+    }}}

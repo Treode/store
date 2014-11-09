@@ -29,7 +29,7 @@ import org.scalatest.FlatSpec
 
 import Async.{async, supply}
 import Callback.{ignore => disregard}
-import StubScheduler.multithreaded
+import StubScheduler.scheduler
 
 class ClusterLiveSpec extends FlatSpec {
 
@@ -111,34 +111,31 @@ class ClusterLiveSpec extends FlatSpec {
   }
 
   "The live cluster" should "handle simultaneous mutual connections" in {
-    multithreaded { implicit scheduler =>
-      val h1 = new Host (Cell1, Host1, 6193)
-      val h2 = new Host (Cell1, Host2, 6194)
-      h1.hail (h2)
-      h2.hail (h1)
-      converse (h1, h2)
-      h1.shutdown() .await()
-      h2.shutdown() .await()
-    }}
+    val h1 = new Host (Cell1, Host1, 6193)
+    val h2 = new Host (Cell1, Host2, 6194)
+    h1.hail (h2)
+    h2.hail (h1)
+    converse (h1, h2)
+    h1.shutdown() .await()
+    h2.shutdown() .await()
+  }
 
   it should "broadcast its listening address" in {
-    multithreaded { implicit scheduler =>
-      val h1 = new Host (Cell1, Host1, 7432)
-      val h2 = new Host (Cell1, Host2, 7433)
-      h1.hail (h2)
-      scheduler.run (h2.address (Host1) == null)
-      h1.shutdown() .await()
-      h2.shutdown() .await()
-    }}
+    val h1 = new Host (Cell1, Host1, 7432)
+    val h2 = new Host (Cell1, Host2, 7433)
+    h1.hail (h2)
+    scheduler.run (h2.address (Host1) == null)
+    h1.shutdown() .await()
+    h2.shutdown() .await()
+  }
 
   it should "reject foreign cells" in {
-    multithreaded { implicit scheduler =>
-      val h1 = new Host (Cell1, Host1, 3023)
-      val h2 = new Host (Cell2, Host2, 3024)
-      h1.hail (h2)
-      intercept [TimeoutException] {
-        h1.send (0, h2) .await()
-      }
-      h1.shutdown() .await()
-      h2.shutdown() .await()
-    }}}
+    val h1 = new Host (Cell1, Host1, 3023)
+    val h2 = new Host (Cell2, Host2, 3024)
+    h1.hail (h2)
+    intercept [TimeoutException] {
+      h1.send (0, h2) .await()
+    }
+    h1.shutdown() .await()
+    h2.shutdown() .await()
+  }}
