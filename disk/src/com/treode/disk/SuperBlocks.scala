@@ -34,6 +34,7 @@ private class SuperBlocks (
     if (useGen0) sb0.get else sb1.get
 
   override def toString = s"SuperBlocks($path, $sb0, $sb1)"
+  log.superBlock(this)
 }
 
 private object SuperBlocks {

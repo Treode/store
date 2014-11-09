@@ -16,23 +16,33 @@
 
 package com.treode.disk
 
-import java.nio.file.Paths
+import scala.language.implicitConversions
+
+import com.google.common.primitives.UnsignedLongs
 import com.treode.pickle.Picklers
 
-private trait DiskPicklers extends Picklers {
+class CellId private (val id: Long) extends AnyVal with Ordered [CellId] {
 
-  def path = wrap (string) build (Paths.get (_)) inspect (_.toString)
-  lazy val sysid = tuple (hostId, cellId)
-  def cellId = CellId.pickler
-  def hostId = HostId.pickler
-  def boot = BootBlock.pickler
-  def intSet = IntSet.pickler
-  def geometry = DriveGeometry.pickler
-  def objectId = ObjectId.pickler
-  def pageGroup = PageGroup.pickler
-  def pageLedger = PageLedger.Zipped.pickler
-  def pos = Position.pickler
-  def typeId = TypeId.pickler
+  def compare (that: CellId): Int =
+    UnsignedLongs.compare (this.id, that.id)
+
+  override def toString =
+    if (id < 256) f"Cell:$id%02X" else f"Cell:$id%016X"
 }
 
-private object DiskPicklers extends DiskPicklers
+object CellId extends Ordering [CellId] {
+
+  val MinValue = CellId (0)
+
+  val MaxValue = CellId (-1)
+
+  implicit def apply (id: Long): CellId =
+    new CellId (id)
+
+  def compare (x: CellId, y: CellId): Int =
+    x compare y
+
+  val pickler = {
+    import Picklers._
+    wrap (fixedLong) build (apply _) inspect (_.id)
+  }}

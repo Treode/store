@@ -37,7 +37,12 @@ private case class BootBlock (
         number == that.number &&
         drives == that.drives
       case _ => false
-    }}
+    }
+
+  val (hostId,cellId) = DiskPicklers.sysid.fromByteArray (sysid)
+  log.superBootBlockSysid(hostId,cellId,drives)
+
+}
 
 private object BootBlock {
 
