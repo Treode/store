@@ -40,8 +40,8 @@ package object cluster {
 
     val logger = Logger.getLogger ("com.treode.cluster")
 
-    def acceptingConnections (localId: HostId, localAddr: SocketAddress): Unit =
-      logger.log (INFO, s"Accepting peer connections to $localId on $localAddr")
+    def acceptingConnections (cellid: CellId, localId: HostId, localAddr: SocketAddress): Unit =
+      logger.log (INFO, s"Accepting peer connections to $localId for $cellid on $localAddr")
 
     def connected (remoteId: HostId, localAddr: SocketAddress, remoteAddr: SocketAddress): Unit =
       logger.log (INFO, s"Connected to $remoteId at $localAddr : $remoteAddr")

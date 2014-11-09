@@ -84,7 +84,7 @@ private class Listener (
   def startup() {
     server = ServerSocket.open (group)
     server.bind (localAddr)
-    log.acceptingConnections (localId, localAddr)
+    log.acceptingConnections (cellId, localId, localAddr)
     loop()
   }
 
