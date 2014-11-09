@@ -22,9 +22,7 @@ import com.treode.pickle.Picklers
 private trait DiskPicklers extends Picklers {
 
   def path = wrap (string) build (Paths.get (_)) inspect (_.toString)
-  lazy val sysid = tuple (hostId, cellId)
-  def cellId = CellId.pickler
-  def hostId = HostId.pickler
+
   def boot = BootBlock.pickler
   def intSet = IntSet.pickler
   def geometry = DriveGeometry.pickler

@@ -126,12 +126,4 @@ package object disk {
 
     def openedDrives (paths: Set [Path]): Unit =
       logger.log (INFO, s"Opened drives ${paths mkString ", "}")
-
-    def superBlock ( superb: SuperBlocks ): Unit =
-      logger.log (INFO, s"Read Superblock - $superb")
-
-    def superBootBlockSysid (hostid:HostId,cellid:CellId,paths:Set[Path]): Unit =
-      logger.log (INFO, s"Read BootBlock - $hostid,$cellid - ${paths mkString ", "}")
-
-
   }}
