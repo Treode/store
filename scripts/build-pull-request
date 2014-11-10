@@ -41,12 +41,13 @@ echo-do ${SBT} +test:compile
 echo-do ${SBT} +test
 echo-do ${SBT} +intensive:test
 
-# Finatra is available for Scala 2.10.4 only; it can be compiled and tested in one go.
-echo-do ${SBT} ++2.10.4 finatra/test
+# Finatra and Twitter Server are available for Scala 2.10.4 only. The can be compiled and tested
+# in one go.
+echo-do ${SBT} ++2.10.4 finatra/test twitter-server/test
 
 # Publish the Ivy artifacts to the local Ivy directory so that we can build and test the examples.
 echo-do ${SBT} publish-local
-echo-do ${SBT} ++2.10.4 publish-local finatra/publish-local
+echo-do ${SBT} ++2.10.4 publish-local finatra/publish-local twitter-server/publish-local
 
 # Build the Finatra example, which includes only a server.
 (cd examples/finatra; echo-do ${SBT} test assembly); expect-status 0
