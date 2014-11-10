@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.treode.async.{Async, AsyncIterator}, Async.supply
 import com.treode.cluster.HostId
 import com.treode.store._
+import com.treode.twitter.finagle.http.BadRequestException
 import io.netty.channel.ChannelHandler.Sharable
 import io.netty.handler.codec.http.HttpResponse
 import unfiltered.netty.ReceivedMessage

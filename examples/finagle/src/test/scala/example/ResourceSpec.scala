@@ -465,7 +465,7 @@ class ResourceSpec extends FreeSpec {
           .get ("/history/123")
       }}}
 
-  "When the user is contankerous" - {
+  "When the user is cantankerous" - {
 
     "and gives bad URIs" - {
 
@@ -518,7 +518,7 @@ class ResourceSpec extends FreeSpec {
             .header ("Last-Modification-Before", "abc")
           .expect
             .statusCode (400)
-            .body (equalTo ("Bad Last-Modification-Before value: abc"))
+            .body (equalTo ("Bad time for Last-Modification-Before: abc"))
           .when
             .get ("/table/123")
         }}
@@ -530,7 +530,7 @@ class ResourceSpec extends FreeSpec {
             .header ("If-Modified-Since", "abc")
           .expect
             .statusCode (400)
-            .body (equalTo ("Bad If-Modified-Since value: abc"))
+            .body (equalTo ("Bad time for If-Modified-Since: abc"))
           .when
             .get ("/table/123")
         }}
@@ -543,7 +543,7 @@ class ResourceSpec extends FreeSpec {
             .header ("If-Unmodified-Since", "abc")
           .expect
             .statusCode (400)
-            .body (equalTo ("Bad If-Unmodified-Since value: abc"))
+            .body (equalTo ("Bad time for If-Unmodified-Since: abc"))
           .when
             .delete ("/table/123")
         }}}
@@ -558,7 +558,7 @@ class ResourceSpec extends FreeSpec {
             .param ("nslices", "2")
           .expect
             .statusCode (400)
-            .body (equalTo ("Bad value for slice: abc"))
+            .body (equalTo ("Bad integer for slice: abc"))
           .when
             .get ("/table/123")
         }}
@@ -571,7 +571,7 @@ class ResourceSpec extends FreeSpec {
             .param ("nslices", "abc")
           .expect
             .statusCode (400)
-            .body (equalTo ("Bad value for nslices: abc"))
+            .body (equalTo ("Bad integer for nslices: abc"))
           .when
             .get ("/table/123")
         }}

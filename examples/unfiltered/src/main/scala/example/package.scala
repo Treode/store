@@ -18,14 +18,14 @@ import java.lang.Integer.highestOneBit
 import scala.reflect.ClassTag
 
 import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.{JavaType, JsonNode, ObjectMapper}
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.misc.{RichOption, parseInt, parseUnsignedLong}
-import com.treode.cluster.{CellId, HostId}
-import com.treode.store.{Bytes, Slice, TableId, TxClock, TxId}
-import com.twitter.app.Flaggable
+import com.treode.cluster.HostId
+import com.treode.store.{Bytes, TableId, TxClock, TxId, Slice}
+import com.treode.twitter.finagle.http.BadRequestException
 import io.netty.handler.codec.http.HttpResponse
 import unfiltered.netty.ReceivedMessage
 import unfiltered.request.{Body, HttpRequest}
@@ -42,11 +42,6 @@ package object example {
   type Request = HttpRequest [ReceivedMessage]
 
   type Response = ResponseFunction [HttpResponse]
-
-  class BadRequestException (val message: String) extends Exception {
-
-    override def getMessage(): String = message
-  }
 
   implicit class RichAny (v: Any) {
 
@@ -77,38 +72,22 @@ package object example {
       request.parameterValues (name)
       .headOption
       .map { value =>
-        parseInt (value) .getOrThrow (new BadRequestException (s"Bad value for $name: $value"))
+        parseInt (value) .getOrThrow (new BadRequestException (s"Bad integer for $name: $value"))
+      }
+
+    def optTxClockHeader (name: String): Option [TxClock] =
+      header (name) .map { value =>
+        TxClock.parse (value) .getOrThrow (new BadRequestException (s"Bad time for $name: $value"))
       }
 
     def getIfModifiedSince: TxClock =
-      header ("If-Modified-Since") match {
-        case Some (ct) =>
-          TxClock
-            .parse (ct)
-            .getOrElse (throw new BadRequestException (s"Bad If-Modified-Since value: $ct"))
-        case None =>
-          TxClock.MinValue
-      }
+      optTxClockHeader ("If-Modified-Since") getOrElse (TxClock.MinValue)
 
     def getIfUnmodifiedSince: TxClock =
-      header ("If-Unmodified-Since") match {
-        case Some (ct) =>
-          TxClock
-            .parse (ct)
-            .getOrElse (throw new BadRequestException (s"Bad If-Unmodified-Since value: $ct"))
-        case None =>
-          TxClock.now
-      }
+      optTxClockHeader ("If-Unmodified-Since") getOrElse (TxClock.now)
 
     def getLastModificationBefore: TxClock =
-      request.header ("Last-Modification-Before") match {
-        case Some (rt) =>
-          TxClock
-            .parse (rt)
-            .getOrElse (throw new BadRequestException (s"Bad Last-Modification-Before value: $rt"))
-        case None =>
-          TxClock.now
-      }
+      optTxClockHeader ("Last-Modification-Before") getOrElse (TxClock.now)
 
     def getSlice: Slice = {
       val slice = optIntParam ("slice")

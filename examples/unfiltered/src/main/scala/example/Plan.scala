@@ -19,6 +19,7 @@ package example
 import scala.util.{Failure, Success}
 
 import com.treode.async.Async, Async.guard
+import com.treode.twitter.finagle.http.BadRequestException
 import io.netty.handler.codec.http.HttpResponse
 import unfiltered.Async.Responder
 import unfiltered.netty.{ReceivedMessage, ServerErrorResponse}

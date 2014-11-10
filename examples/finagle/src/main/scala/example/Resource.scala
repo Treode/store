@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.treode.async.Async, Async.supply
 import com.treode.cluster.HostId
 import com.treode.store._
+import com.treode.twitter.finagle.http._
 import com.treode.twitter.util._
 import com.twitter.finagle.Service
 import com.twitter.finagle.http._

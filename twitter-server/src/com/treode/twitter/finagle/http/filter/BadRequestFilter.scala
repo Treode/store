@@ -17,25 +17,22 @@
 package com.treode.twitter.finagle.http.filter
 
 import com.fasterxml.jackson.core.JsonProcessingException
+import com.treode.twitter.finagle.http.BadRequestException
 import com.twitter.finagle.{Service, SimpleFilter}
 import com.twitter.finagle.http.{Request, Response, Status}
 import com.twitter.util.Future
 
-object JsonExceptionFilter extends SimpleFilter [Request, Response] {
-
-  private def respond (req: Request, exc: Exception): Future [Response] = {
-    val rsp = req.response
-    rsp.status = Status.BadRequest
-    rsp.mediaType = "text/plain"
-    rsp.write (exc.getMessage)
-    rsp.close()
-    Future.value (rsp)
-  }
+object BadRequestFilter extends SimpleFilter [Request, Response] {
 
   def apply (req: Request, service: Service [Request, Response]): Future [Response] =
     Future.monitored {
-        service (req.asInstanceOf [Request])
-    } rescue {
-    case e: JsonProcessingException =>
-      respond (req, e)
+      service (req)
+    } .rescue {
+      case e: BadRequestException =>
+        val rsp = req.response
+        rsp.status = Status.BadRequest
+        rsp.mediaType = "text/plain"
+        rsp.write (e.getMessage)
+        rsp.close()
+        Future.value (rsp)
     }}

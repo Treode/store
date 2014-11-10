@@ -18,22 +18,17 @@ import java.lang.Integer.highestOneBit
 import scala.util.{Failure, Success}
 
 import com.fasterxml.jackson.core.JsonProcessingException
-import com.fasterxml.jackson.databind.{JavaType, JsonNode, ObjectMapper}
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.{Async, AsyncIterator}, Async.async
-import com.treode.async.implicits._
-import com.treode.async.misc.{RichOption, parseInt}
-import com.treode.cluster.HostId
-import com.treode.jackson.DefaultTreodeModule
-import com.treode.store.{Bytes, Slice, TableId, TxClock, TxId}
+import com.treode.async.misc.RichOption
+import com.treode.store.{Bytes, TableId, TxClock}
+import com.treode.twitter.finagle.http.BadRequestException
 import com.treode.twitter.util._
-import com.twitter.finagle.{Filter, Service, SimpleFilter}
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
 import com.twitter.finagle.netty3.ChannelBufferBuf
-import com.twitter.logging.Logger
-import com.twitter.util.{Future, Promise, Return, Throw}
 import org.jboss.netty.buffer.ChannelBuffers
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
@@ -41,7 +36,6 @@ package object example {
 
   val textJson = new ObjectMapper with ScalaObjectMapper
   textJson.registerModule (DefaultScalaModule)
-  textJson.registerModule (DefaultTreodeModule)
   textJson.registerModule (AppModule)
 
   val binaryJson = new ObjectMapper (new SmileFactory)
@@ -123,20 +117,15 @@ package object example {
       rsp
     }}
 
-  object BadRequestFilter extends SimpleFilter [Request, Response] {
+  implicit class ExtraRichRequest (request: Request) {
 
-    def apply (req: Request, service: Service [Request, Response]): Future [Response] =
-      Future.monitored {
-        service (req)
-      } .rescue {
-        case e: BadRequestException =>
-          Future.value (respond.plain (req, Status.BadRequest, e.getMessage))
+    def readJson [A: Manifest]: A =
+      try {
+        request.withReader (textJson.readValue [A] (_))
+      } catch {
+        case e: JsonProcessingException =>
+          throw new BadRequestException (e.getMessage)
       }}
-
-  class BadRequestException (val message: String) extends Exception {
-
-    override def getMessage(): String = message
-  }
 
   implicit class RichAny (v: Any) {
 
@@ -155,76 +144,6 @@ package object example {
     def toBytes: Bytes =
       Bytes (binaryJson.writeValueAsBytes (node))
   }
-
-  implicit class RichRequest (request: Request) {
-
-    def optIntParam (name: String): Option [Int] =
-      request.params.get (name) .map { value =>
-        parseInt (value) .getOrThrow (new BadRequestException (s"Bad value for $name: $value"))
-      }
-
-    def getIfModifiedSince: TxClock =
-      request.headerMap.get (IfModifiedSince) match {
-        case Some (ct) =>
-          TxClock
-            .parse (ct)
-            .getOrElse (throw new BadRequestException (s"Bad If-Modified-Since value: $ct"))
-        case None =>
-          TxClock.MinValue
-      }
-
-    def getIfUnmodifiedSince: TxClock =
-      request.headerMap.get (IfUnmodifiedSince) match {
-        case Some (ct) =>
-          TxClock
-            .parse (ct)
-            .getOrElse (throw new BadRequestException (s"Bad If-Unmodified-Since value: $ct"))
-        case None =>
-          TxClock.now
-      }
-
-    def getLastModificationBefore: TxClock =
-      request.headerMap.get (LastModificationBefore) match {
-        case Some (rt) =>
-          TxClock
-            .parse (rt)
-            .getOrElse (throw new BadRequestException (s"Bad Last-Modification-Before value: $rt"))
-        case None =>
-          TxClock.now
-      }
-
-    def getSlice: Slice = {
-      val slice = optIntParam ("slice")
-      val nslices = optIntParam ("nslices")
-      if (slice.isDefined && nslices.isDefined) {
-        if (nslices.get < 1 || highestOneBit (nslices.get) != nslices.get)
-          throw new BadRequestException ("Number of slices must be a power of two and at least one.")
-        if (slice.get < 0 || nslices.get <= slice.get)
-          throw new BadRequestException ("The slice must be between 0 (inclusive) and the number of slices (exclusive).")
-        Slice (slice.get, nslices.get)
-      } else if (slice.isDefined || nslices.isDefined) {
-        throw new BadRequestException ("Both slice and nslices are needed together")
-      } else {
-        Slice.all
-      }}
-
-    def getTransactionId (host: HostId): TxId =
-      request.headerMap.get (TransactionId) match {
-        case Some (tx) =>
-          TxId
-            .parse (tx)
-            .getOrElse (throw new BadRequestException (s"Bad Transaction-ID value: $tx"))
-        case None =>
-          TxId.random (host)
-      }
-
-    def readJson [A: Manifest]: A =
-      try {
-        request.withReader (textJson.readValue [A] (_))
-      } catch {
-        case e: JsonProcessingException =>
-          throw new BadRequestException (e.getMessage)
-      }}
 
   implicit class RichString (s: String) {
 
