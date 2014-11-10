@@ -122,7 +122,7 @@ echo-do cp examples/movies/spark/target/scala-2.10/movies-spark.jar ${STAGE_MOVI
 # Unfiltered example.
 STAGE_UNFILTERED=stage/examples/unfiltered/${version}
 echo-do mkdir -p ${STAGE_UNFILTERED}
-echo-do cp examples/unfiltered/target/scala-2.11/unfiltered-server.jar ${STAGE_FINATRA}/unfiltered-server-${version}.jar
+echo-do cp examples/unfiltered/target/scala-2.10/unfiltered-server.jar ${STAGE_FINATRA}/unfiltered-server-${version}.jar
 
 # Package the staging area into a tgz for easy distribution.
 echo-do tar cz -f stage-${version}.tgz -C stage .

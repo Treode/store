@@ -45,7 +45,7 @@ echo-do() {
   local log=${LOG:-"build.log"}
   echo $*
   echo $* >> $log
-  $* >> $log
+  $* >> $log 2>&1
   expect-status 0 "$1 failed"
 }
 
