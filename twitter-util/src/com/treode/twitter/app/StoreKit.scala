@@ -86,7 +86,7 @@ trait StoreKit {
   private val superBlockBits =
     flag [Int] ("superBlockBits",  14, "Size of the super block (log base 2)")
 
-  private val port =
+  private val peerPort =
     flag [Int] ("peerPort", 6278, "Port on which peers should connect")
 
   private val solo =
@@ -119,8 +119,8 @@ trait StoreKit {
 
     val controller =
       Store.recover (
-        bindAddr = new InetSocketAddress (port()),
-        shareAddr = new InetSocketAddress (InetAddress.getLocalHost, port()),
+        bindAddr = new InetSocketAddress (peerPort()),
+        shareAddr = new InetSocketAddress (InetAddress.getLocalHost, peerPort()),
         paths = args map (Paths.get (_)): _*)
       .await()
 
