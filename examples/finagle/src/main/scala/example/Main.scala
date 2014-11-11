@@ -16,26 +16,48 @@
 
 package example
 
+import java.net.InetSocketAddress
+
 import com.treode.twitter.app.StoreKit
 import com.treode.twitter.finagle.http.filter._
 import com.treode.twitter.server.TreodeAdmin
 import com.twitter.finagle.Http
 import com.twitter.finagle.http.filter.ExceptionFilter
+import com.twitter.finagle.util.InetSocketAddressUtil.{parseHosts, toPublic}
 import com.twitter.server.TwitterServer
 import com.twitter.util.Await
 
 class Serve extends TwitterServer with StoreKit with TreodeAdmin {
 
+  val httpAddrFlag =
+    flag [String] ("httpAddr", ":7070", "Address for listening (example, 0.0.0.0:7070).")
+
+  val shareHttpAddrFlag =
+    flag [String] ("shareHttpAddr", "Address for connecting (example, 192.168.1.1:7070).")
+
   def main() {
 
-    val resource = new Resource (controller.hostId, controller.store)
+    val httpAddr =
+      parseHosts (httpAddrFlag()) .head
+
+    val shareHttpAddr =
+      if (shareHttpAddrFlag.isDefined)
+        parseHosts (shareHttpAddrFlag()) .head
+      else
+        toPublic (httpAddr)
+
+    controller.announce (Some (shareHttpAddr), None)
+
+    val resource =
+      new Resource (controller.hostId, controller.store)
 
     val server = Http.serve (
-      ":8080",
+      httpAddr,
       NettyToFinagle andThen
       ExceptionFilter andThen
       BadRequestFilter andThen
       JsonExceptionFilter andThen
+      PeersFilter ("/peers", controller) andThen
       resource)
 
     onExit {
