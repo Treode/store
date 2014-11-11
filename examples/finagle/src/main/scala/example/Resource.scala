@@ -20,10 +20,10 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.treode.async.Async, Async.supply
 import com.treode.cluster.HostId
 import com.treode.store._
-import com.treode.twitter.finagle.http._
+import com.treode.twitter.finagle.http.RichRequest
 import com.treode.twitter.util._
 import com.twitter.finagle.Service
-import com.twitter.finagle.http._
+import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.finagle.http.path._
 import com.twitter.util.Future
 
@@ -32,14 +32,14 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
   object KeyParam extends ParamMatcher ("key")
 
   def read (req: Request, tab: TableId, key: String): Async [Response] = {
-    val rt = req.getLastModificationBefore
-    val ct = req.getIfModifiedSince
+    val rt = req.lastModificationBefore
+    val ct = req.ifModifiedSince
     val ops = Seq (ReadOp (tab, Bytes (key)))
     store.read (rt, ops:_*) .map { vs =>
       val v = vs.head
       v.value match {
         case Some (value) if ct < v.time =>
-          respond.json (req, Status.Ok, v.time, value)
+          respond.json (req, v.time, value)
         case Some (_) =>
           respond (req, Status.NotModified)
         case None =>
@@ -47,29 +47,29 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
       }}}
 
   def scan (req: Request, table: TableId): Async [Response] = {
-    val rt = req.getLastModificationBefore
-    val ct = req.getIfModifiedSince
+    val rt = req.lastModificationBefore
+    val ct = req.ifModifiedSince
     val window = Window.Latest (rt, true, ct, false)
-    val slice = req.getSlice
+    val slice = req.slice
     val iter = store
         .scan (table, Bound.firstKey, window, slice)
         .filter (_.value.isDefined)
-    supply (respond.json (req, Status.Ok, iter))
+    supply (respond.json (req, iter))
   }
 
   def history (req: Request, table: TableId): Async [Response] = {
     val start = Bound.Inclusive (Key.MinValue)
-    val rt = req.getLastModificationBefore
-    val ct = req.getIfModifiedSince
+    val rt = req.lastModificationBefore
+    val ct = req.ifModifiedSince
     val window = Window.Between (rt, true, ct, false)
-    val slice = req.getSlice
+    val slice = req.slice
     val iter = store.scan (table, Bound.firstKey, window, slice)
-    supply (respond.json (req, Status.Ok, iter))
+    supply (respond.json (req, iter))
   }
 
   def put (req: Request, table: TableId, key: String): Async [Response] = {
-    val tx = req.getTransactionId (host)
-    val ct = req.getIfUnmodifiedSince
+    val tx = req.transactionId (host)
+    val ct = req.ifUnmodifiedSince
     val value = req.readJson [JsonNode]
     val ops = Seq (WriteOp.Update (table, Bytes (key), value.toBytes))
     store.write (tx, ct, ops:_*)
@@ -85,8 +85,8 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     }}
 
   def delete (req: Request, table: TableId, key: String): Async [Response] = {
-    val tx = req.getTransactionId (host)
-    val ct = req.getIfUnmodifiedSince
+    val tx = req.transactionId (host)
+    val ct = req.ifUnmodifiedSince
     val ops = Seq (WriteOp.Delete (table, Bytes (key)))
     store.write (tx, ct, ops:_*)
     .map [Response] { vt =>

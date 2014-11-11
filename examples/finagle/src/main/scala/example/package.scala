@@ -14,46 +14,37 @@
  * limitations under the License.
  */
 
-import java.lang.Integer.highestOneBit
-import scala.util.{Failure, Success}
-
-import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.treode.async.{Async, AsyncIterator}, Async.async
+import com.treode.async.AsyncIterator
 import com.treode.async.misc.RichOption
+import com.treode.jackson.DefaultTreodeModule
 import com.treode.store.{Bytes, TableId, TxClock}
-import com.treode.twitter.finagle.http.BadRequestException
-import com.treode.twitter.util._
-import com.twitter.finagle.http.{MediaType, Request, Response, Status}
-import com.twitter.finagle.netty3.ChannelBufferBuf
-import org.jboss.netty.buffer.ChannelBuffers
+import com.treode.twitter.finagle.http.{RichResponse, BadRequestException}
+import com.twitter.finagle.http.{Request, Response, Status}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 package object example {
 
-  val textJson = new ObjectMapper with ScalaObjectMapper
+  implicit val textJson = new ObjectMapper with ScalaObjectMapper
   textJson.registerModule (DefaultScalaModule)
+  textJson.registerModule (DefaultTreodeModule)
   textJson.registerModule (AppModule)
 
-  val binaryJson = new ObjectMapper (new SmileFactory)
-
-  val IfModifiedSince = "If-Modified-Since"
-  val IfUnmodifiedSince = "If-Unmodified-Since"
-  val LastModificationBefore = "Last-Modification-Before"
-  val TransactionId = "Transaction-ID"
+  val binaryJson = new ObjectMapper (new SmileFactory) with ScalaObjectMapper
+  binaryJson.registerModule (DefaultScalaModule)
 
   object respond {
 
-    def apply (req: Request, status: HttpResponseStatus) = {
+    def apply (req: Request, status: HttpResponseStatus = Status.Ok): Response = {
       val rsp = req.response
       rsp.status = status
       rsp
     }
 
-    def clear (req: Request, status: HttpResponseStatus) = {
+    def clear (req: Request, status: HttpResponseStatus = Status.Ok): Response  = {
       val rsp = req.response
       rsp.status = status
       rsp.clearContent()
@@ -61,71 +52,27 @@ package object example {
       rsp
     }
 
-    def json (req: Request, status: HttpResponseStatus, value: Any) = {
+    def json (req: Request, value: Any): Response  = {
       val rsp = req.response
-      rsp.status = status
-      rsp.mediaType = MediaType.Json
-      rsp.write (value.toJsonText)
-      rsp.close()
+      rsp.status = Status.Ok
+      rsp.json = value
       rsp
     }
 
-    def json (req: Request, status: HttpResponseStatus, time: TxClock, value: Any) = {
+    def json (req: Request, time: TxClock, value: Any): Response  = {
       val rsp = req.response
-      rsp.status = status
-      rsp.mediaType = MediaType.Json
-      rsp.headerMap.add ("ETag", time.toString)
-      rsp.write (value.toJsonText)
-      rsp.close()
+      rsp.status = Status.Ok
+      rsp.etag = time
+      rsp.json = value
       rsp
     }
 
-    private def buf (msg: String): ChannelBufferBuf =
-      ChannelBufferBuf (ChannelBuffers.wrappedBuffer (msg.getBytes ("UTF-8")))
-
-    def json [A] (req: Request, status: HttpResponseStatus, iter: AsyncIterator [A]) = {
+    def json [A] (req: Request, iter: AsyncIterator [A]): Response  = {
       val rsp = req.response
-      rsp.status = status
-      rsp.mediaType = MediaType.Json
-      rsp.setChunked (true)
-      var first = true
-      iter.foreach { v =>
-        if (first) {
-          first = false
-          rsp.writer.write (buf ("[" + v.toJsonText)) .toAsync
-        } else {
-          rsp.writer.write (buf ("," + v.toJsonText)) .toAsync
-        }
-      } .flatMap { _ =>
-        rsp.writer.write (buf ("]")) .toAsync
-      } .run {
-        case Success (_) =>
-          rsp.close()
-        case Failure (t) =>
-          rsp.close()
-          throw t
-      }
-      rsp
-    }
-
-    def plain (req: Request, status: HttpResponseStatus, msg: String) = {
-      val rsp = req.response
-      rsp.status = status
-      rsp.mediaType = "text/plain"
-      rsp.write (msg)
-      rsp.close()
+      rsp.status = Status.Ok
+      rsp.json = iter
       rsp
     }}
-
-  implicit class ExtraRichRequest (request: Request) {
-
-    def readJson [A: Manifest]: A =
-      try {
-        request.withReader (textJson.readValue [A] (_))
-      } catch {
-        case e: JsonProcessingException =>
-          throw new BadRequestException (e.getMessage)
-      }}
 
   implicit class RichAny (v: Any) {
 

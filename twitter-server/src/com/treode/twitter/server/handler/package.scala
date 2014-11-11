@@ -16,39 +16,23 @@
 
 package com.treode.twitter.server
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.treode.jackson.DefaultTreodeModule
-import com.twitter.finagle.http.{MediaType, Request, Response}
+import com.treode.twitter.finagle.http.{RichResponse, mapper}
+import com.twitter.finagle.http.{Request, Response, Status}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 package object handler {
 
-  private [handler] val mapper = new ObjectMapper with ScalaObjectMapper
-  mapper.registerModule (DefaultScalaModule)
-  mapper.registerModule (DefaultTreodeModule)
-
   private [handler] object respond {
 
-    def apply (req: Request, status: HttpResponseStatus): Response = {
+    def apply (req: Request, status: HttpResponseStatus = Status.Ok): Response = {
       val rsp = req.response
       rsp.status = status
       rsp
     }
 
-    def json (req: Request, status: HttpResponseStatus, value: Any): Response = {
+    def json (req: Request, value: Any): Response = {
       val rsp = req.response
-      rsp.status = status
-      rsp.mediaType = MediaType.Json
-      rsp.write (mapper.writeValueAsString (value))
-      rsp.close()
+      rsp.status = Status.Ok
+      rsp.json = value
       rsp
-    }
-  }
-
-  private [handler] implicit class RichRequest (request: Request) {
-
-    def readJson [A: Manifest]: A =
-      request.withReader (mapper.readValue [A] (_))
-  }}
+    }}}

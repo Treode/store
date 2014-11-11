@@ -17,13 +17,81 @@
 package com.treode.twitter.finagle
 
 import java.lang.Long.highestOneBit
+import scala.util.{Failure, Success}
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.treode.async.AsyncIterator
 import com.treode.async.misc.{RichOption, parseInt}
 import com.treode.cluster.HostId
+import com.treode.jackson.DefaultTreodeModule
 import com.treode.store.{Slice, TxClock, TxId}
-import com.twitter.finagle.http.Request
+import com.treode.twitter.finagle.http.{BadRequestException, RichRequest}
+import com.treode.twitter.util.RichTwitterFuture
+import com.twitter.finagle.http.{MediaType, Request, Response, Status}
+import com.twitter.finagle.netty3.ChannelBufferBuf
+import org.jboss.netty.buffer.ChannelBuffers
+import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 package object http {
+
+  /** A [[com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper ScalaObjectMapper]]
+    * with the [[com.fasterxml.jackson.module.scala.DefaultScalaModule DefaultScalaModule]]
+    * and the [[com.treode.jackson.DefaultTreodeModule DefaultTreodeModule]].
+    */
+  implicit val mapper = new ObjectMapper with ScalaObjectMapper
+  mapper.registerModule (DefaultScalaModule)
+  mapper.registerModule (DefaultTreodeModule)
+
+  implicit class RichResponse (rsp: Response) {
+
+    /** Do not use; necessary for Scala style setter. */
+    def etag: TxClock =
+      throw new UnsupportedOperationException
+
+    def etag_= (time: TxClock): Unit =
+      rsp.headerMap.add ("ETag", time.toString)
+
+    /** Do not use; necessary for Scala style setter. */
+    def json: Any =
+      throw new UnsupportedOperationException
+
+    def json_= [A] (value: A) (implicit mapper: ObjectMapper) {
+      rsp.mediaType = MediaType.Json
+      rsp.write (mapper.writeValueAsString (value))
+      rsp.close()
+    }
+
+    private def buf (msg: String): ChannelBufferBuf =
+      ChannelBufferBuf (ChannelBuffers.wrappedBuffer (msg.getBytes ("UTF-8")))
+
+    def json_= [A] (iter: AsyncIterator [A]) (implicit mapper: ObjectMapper) {
+      rsp.mediaType = MediaType.Json
+      rsp.setChunked (true)
+      var first = true
+      iter.foreach { v =>
+        if (first) {
+          first = false
+          rsp.writer.write (buf ("[" + mapper.writeValueAsString (v))) .toAsync
+        } else {
+          rsp.writer.write (buf ("," + mapper.writeValueAsString (v))) .toAsync
+        }
+      } .flatMap { _ =>
+        rsp.writer.write (buf ("]")) .toAsync
+      } .run {
+        case Success (_) =>
+          rsp.close()
+        case Failure (t) =>
+          rsp.close()
+          throw t
+      }}
+
+    def plain_= (value: String) {
+      rsp.mediaType = "text/plain"
+      rsp.write (value)
+      rsp.close()
+    }}
 
   class BadRequestException (val message: String) extends Exception {
 
@@ -42,16 +110,16 @@ package object http {
         TxClock.parse (value) .getOrThrow (new BadRequestException (s"Bad time for $name: $value"))
       }
 
-    def getIfModifiedSince: TxClock =
+    def ifModifiedSince: TxClock =
       optTxClockHeader ("If-Modified-Since") getOrElse (TxClock.MinValue)
 
-    def getIfUnmodifiedSince: TxClock =
+    def ifUnmodifiedSince: TxClock =
       optTxClockHeader ("If-Unmodified-Since") getOrElse (TxClock.now)
 
-    def getLastModificationBefore: TxClock =
+    def lastModificationBefore: TxClock =
       optTxClockHeader ("Last-Modification-Before") getOrElse (TxClock.now)
 
-    def getSlice: Slice = {
+    def slice: Slice = {
       val slice = optIntParam ("slice")
       val nslices = optIntParam ("nslices")
       if (slice.isDefined && nslices.isDefined) {
@@ -66,13 +134,16 @@ package object http {
         Slice.all
       }}
 
-    def getTransactionId (host: HostId): TxId =
+    def transactionId (host: HostId): TxId =
       request.headerMap.get ("Transaction-ID") match {
         case Some (tx) =>
           TxId
             .parse (tx)
-            .getOrElse (throw new BadRequestException (s"Bad Transaction-ID value: $tx"))
+            .getOrElse (throw new BadRequestException (s"Bad Transaction-ID: $tx"))
         case None =>
           TxId.random (host)
-      }}
-}
+      }
+
+    def readJson [A: Manifest] (implicit mapper: ScalaObjectMapper): A =
+      request.withReader (mapper.readValue [A] (_))
+  }}

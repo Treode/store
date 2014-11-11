@@ -20,6 +20,7 @@ import java.nio.file.Path
 
 import com.treode.disk.DriveAttachment
 import com.treode.store.{Cohort, Store}, Store.Controller
+import com.treode.twitter.finagle.http.{RichRequest, mapper}
 import com.treode.twitter.util._
 import com.twitter.finagle.Service
 import com.twitter.finagle.http.{Method, Request, Response, Status}
@@ -31,7 +32,7 @@ class AtlasHandler (controller: Controller) extends Service [Request, Response] 
     req.method match {
 
       case Method.Get =>
-        Future.value (respond.json (req, Status.Ok, controller.cohorts))
+        Future.value (respond.json (req, controller.cohorts))
 
       case Method.Put =>
         controller.cohorts = req.readJson [Array [Cohort]]
@@ -48,7 +49,7 @@ class DrivesHandler (controller: Controller) extends Service [Request, Response]
 
       case Method.Get =>
         controller.drives
-          .map (drives => respond.json (req, Status.Ok, drives))
+          .map (drives => respond.json (req, drives))
           .toTwitterFuture
 
       case _ =>
@@ -92,7 +93,7 @@ class TablesHandler (controller: Controller) extends Service [Request, Response]
 
       case Method.Get =>
         controller.tables
-          .map (tables => respond.json (req, Status.Ok, tables))
+          .map (tables => respond.json (req, tables))
           .toTwitterFuture
 
       case _ =>

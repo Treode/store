@@ -20,6 +20,7 @@ import scala.util.Random
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.treode.store.Store, Store.Controller
+import com.treode.twitter.finagle.http.mapper
 import com.treode.twitter.finagle.http.filter._
 import com.twitter.finagle.{Http, Service}
 import com.twitter.finagle.http.{Request, Response}
