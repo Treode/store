@@ -46,7 +46,4 @@ private class TestableCluster (
 
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
     randomHost.scan (table, start, window, slice)
-
-  def hosts (slice: Slice): Seq [(HostId, Int)] =
-    randomHost.hosts (slice)
 }

@@ -41,6 +41,12 @@ private class ExtendedController (
   def cohorts_= (v: Seq [Cohort]): Unit =
     controller.cohorts = v
 
+  def hosts (slice: Slice): Seq [Preference] =
+    controller.hosts (slice)
+
+  def announce (addr: Option [SocketAddress], sslAddr: Option [SocketAddress]): Unit =
+    controller.announce (addr, sslAddr)
+
   def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =
     controller.listen (desc) (f)
 

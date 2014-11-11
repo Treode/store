@@ -14,13 +14,17 @@
  * limitations under the License.
  */
 
-package example
+package com.treode.jackson
 
-import com.treode.store.Store
-import com.twitter.finatra.{Controller => FinatraController}
+import java.net.InetSocketAddress
 
-class Peers (controller: Store.Controller) extends FinatraController {
+import com.treode.store.Preference
+import org.scalatest.FlatSpec
 
-  get ("/peers") { request =>
-    render.appjson (controller.hosts (request.getSlice)) .toFuture
-  }}
+class PreferenceSpec extends FlatSpec with ModuleSpec {
+
+  "Serializing a preference" should "work" in {
+    assertString ("""{"weight":1,"hostId":"0x8BB6E8637E8E0356","addr":"localhost:80","sslAddr":null}""") {
+      Preference (1, 0x8BB6E8637E8E0356L, Some (new InetSocketAddress ("localhost", 80)), None)
+    }}
+}

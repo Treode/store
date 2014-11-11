@@ -46,6 +46,7 @@ class TreodeModule extends SimpleModule (
          IssuingSerializer,
          MovingSerializer,
          PathSerializer,
+         PreferenceSerializer,
          SettledSerializer,
          TableDigestSerializer,
          TierDigestSerializer))

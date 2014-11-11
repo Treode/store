@@ -99,9 +99,6 @@ private class StubAtomicHost (
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
     atomic.scan (table, start, window, slice)
 
-  def hosts (slice: Slice): Seq [(HostId, Int)] =
-    atomic.hosts (slice)
-
   def putCells (id: TableId, cs: Cell*) (implicit scheduler: StubScheduler): Unit =
     atomic.tstore.receive (id, cs) .expectPass()
 }
