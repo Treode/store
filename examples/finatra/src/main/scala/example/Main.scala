@@ -16,8 +16,12 @@
 
 package example
 
+import java.net.SocketAddress
+
 import com.treode.finatra.AsyncFinatraServer
 import com.treode.twitter.app.StoreKit
+import com.twitter.finagle.util.InetSocketAddressUtil.{parseHosts, toPublic}
+import com.twitter.finatra.config.{port => httpPort, _}
 
 // TODO: Mixin TreodeAdmin.
 //
@@ -34,7 +38,32 @@ import com.treode.twitter.app.StoreKit
 // arrives soon.
 class Serve extends AsyncFinatraServer with StoreKit {
 
+  val shareAddrFlag =
+    flag [String] ("shareAddr", "Address for connecting (example, 192.168.1.1:7070).")
+
+  val shareSslAddrFlag =
+    flag [String] ("shareSslAddr", "Address for connecting (example, 192.168.1.1:7443).")
+
   premain {
+
+    val shareAddr: Option [SocketAddress] =
+      if (shareAddrFlag.isDefined)
+        parseHosts (shareAddrFlag()) .headOption
+      else if (!httpPort().isEmpty)
+        parseHosts (httpPort()) .headOption.map (toPublic _)
+      else
+        None
+
+    val sslAddr: Option [SocketAddress] =
+      if (shareSslAddrFlag.isDefined)
+        parseHosts (shareSslAddrFlag()) .headOption
+      else if (!certificatePath().isEmpty && !keyPath().isEmpty && !sslPort().isEmpty)
+        parseHosts (sslPort()) .headOption.map (toPublic _)
+      else
+        None
+
+    controller.announce (shareAddr, sslAddr)
+
     register (new Resource (controller.hostId, controller.store))
     register (new Peers (controller))
   }}

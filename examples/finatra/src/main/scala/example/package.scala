@@ -39,12 +39,6 @@ import Async.async
 
 package object example {
 
-  implicit val flaggableCellId: Flaggable [CellId] =
-    Flaggable.mandatory (s => CellId (parseUnsignedLong (s) .get))
-
-  implicit val flaggableHostId: Flaggable [HostId] =
-    Flaggable.mandatory (s => HostId (parseUnsignedLong (s) .get))
-
   val textJson = new ObjectMapper with ScalaObjectMapper
   textJson.registerModule (DefaultScalaModule)
   textJson.registerModule (DefaultTreodeModule)

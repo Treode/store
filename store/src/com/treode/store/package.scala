@@ -16,13 +16,12 @@
 
 package com.treode
 
+import java.net.SocketAddress
 import java.util.concurrent.{TimeoutException => JTimeoutException}
-import java.util.logging.{Level, Logger}
+import java.util.logging.{Level, Logger}, Level.WARNING
 
 import com.treode.async.AsyncIterator
-import com.treode.cluster.{RemoteException => CRemoteException, PortId}
-
-import Level.WARNING
+import com.treode.cluster.{RemoteException => CRemoteException, HostId, PortId}
 
 package store {
 
@@ -37,7 +36,29 @@ package store {
   trait Op {
     def table: TableId
     def key: Bytes
-  }}
+  }
+
+  /** The weighted preference of a peer for scanning a slice.
+    *
+    * Each peer hosts some shards of data, and it creates less network traffic when scanning the
+    * shards it hosts. For a [[Slice]] of data, you can find out which peers host the most shards
+    * of that slice, then contact one of those peers to perform the scan. You may perform the scan
+    * on any peer, but you will induce less load on the network by choosen a highly weighted peer.
+    */
+  case class Preference (
+    /** The weight of this peer; the number of shards of the slice it holds. */
+    weight: Int,
+
+    /** The host ID of this peer. */
+    hostId: HostId,
+
+    /** The address this peer advertised for client connections. */
+    addr: Option [SocketAddress],
+
+    /** The address this peer advertised for SSL client connections. */
+    sslAddr: Option [SocketAddress]
+  )
+}
 
 package object store {
 

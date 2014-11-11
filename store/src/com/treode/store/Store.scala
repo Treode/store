@@ -97,14 +97,6 @@ trait Store {
     *   cohort.  This may mean hosts are unreachable.
     */
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): AsyncIterator [Cell]
-
-  /** The preferred hosts for a slice.  See [[Slice]] for details.
-    *
-    * @param slice The slice to query.
-    * @return The hosts which hold data for the slice, and the number of replica cohorts each one
-    *   holds.
-    */
-  def hosts (slice: Slice): Seq [(HostId, Int)]
 }
 
 object Store {
@@ -188,17 +180,17 @@ object Store {
         falsePositiveProbability = 0.01,
         lockSpaceBits = 10,
         moveBatchBackoff = Backoff (2.seconds, 1.seconds, 1.minutes, 7),
-        moveBatchBytes = 1<<20,
+        moveBatchBytes = 1 << 20,
         moveBatchEntries = 10000,
         prepareBackoff = Backoff (100, 100, 1.seconds, 7),
         preparingTimeout = 5.seconds,
         proposingBackoff = Backoff (100, 100, 1.seconds, 7),
         readBackoff = Backoff (100, 100, 1.seconds, 7),
         retention = Retention.StartOfYesterday,
-        scanBatchBytes = 1<<16,
+        scanBatchBytes = 1 << 16,
         scanBatchEntries = 1000,
         scanBatchBackoff = Backoff (700, 300, 10.seconds, 7),
-        targetPageBytes = 1<<20)
+        targetPageBytes = 1 << 20)
   }
 
   trait Controller {
@@ -208,6 +200,22 @@ object Store {
     def cohorts: Seq [Cohort]
 
     def cohorts_= (cohorts: Seq [Cohort])
+
+    /** The preferred hosts for a slice. See [[Slice]] and [[Preference]] for details. The
+      * addresses provided in the preferences are the ones the peer announced when starting up.
+      *
+      * @param slice The slice to query.
+      * @return The weighted preferences for this slice.
+      */
+    def hosts (slice: Slice): Seq [Preference]
+
+    /** Announce the client addresses for this peer to all other peers. The addresses announced
+      * here will be provided in preferences obtained from the `hosts` method.
+      *
+      * @param addr An address for clients to connect to this peer.
+      * @param sslAddr An address for clients to connect to this peer.
+      */
+    def announce (addr: Option [SocketAddress], sslAddr: Option [SocketAddress])
 
     def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any)
 

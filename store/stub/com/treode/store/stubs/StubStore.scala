@@ -129,9 +129,6 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
             .window (window)
       }}
 
-  def hosts (slice: Slice): Seq [(HostId, Int)] =
-    Seq.empty
-
   def scan (table: TableId): Seq [Cell] =
     for ((key, value) <- data.toSeq; if key.table == table)
       yield Cell (key.key, key.time, value)

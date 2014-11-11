@@ -61,11 +61,12 @@ class Atlas private (
   def moving: Boolean =
     cohorts exists (_.moving)
 
-  def residents (host: HostId): Residents = {
+  private [store] def residents (host: HostId): Residents = {
     val nums = for ((c, i) <- cohorts.zipWithIndex; if c.hosts contains host) yield i
     new Residents (nums.toSet, cohorts.size - 1)
   }
 
+  /** Given a slice, determine how many shards of the slice each peer hosts. */
   def hosts (slice: Slice): Seq [(HostId, Int)] = {
     Stream
         .iterate (slice.slice & mask) (_ + slice.nslices)

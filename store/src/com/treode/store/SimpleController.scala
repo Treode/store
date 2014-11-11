@@ -37,7 +37,10 @@ private class SimpleController (
     atomic: Atomic
 ) extends Store.Controller {
 
-  def store: Store = 
+  private val peers =
+    new PeersScuttlebutt (cluster, library.atlas)
+
+  def store: Store =
     atomic
 
   def cohorts: Seq [Cohort] =
@@ -45,6 +48,12 @@ private class SimpleController (
 
   def cohorts_= (v: Seq [Cohort]): Unit =
     librarian.issueAtlas (v.toArray)
+
+  def hosts (slice: Slice): Seq [Preference] =
+    peers.hosts (slice)
+
+  def announce (addr: Option [SocketAddress], sslAddr: Option [SocketAddress]): Unit =
+    peers.spread (addr, sslAddr)
 
   def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =
     catalogs.listen (desc) (f)

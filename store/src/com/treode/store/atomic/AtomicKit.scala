@@ -62,9 +62,6 @@ private class AtomicKit (implicit
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
     ScanDirector.scan (table, start, window, slice, this)
 
-  def hosts (slice: Slice): Seq [(HostId, Int)] =
-    atlas.hosts (slice)
-
   def rebalance (atlas: Atlas): Async [Unit] = {
     val targets = Targets (atlas)
     for {
