@@ -19,12 +19,12 @@ package movies
 import scala.util.Random
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.treode.finatra.BadRequestException
 import com.treode.store.{Bytes, Cell, TxClock, TxId}
 import com.treode.store.stubs.StubStore
 import com.treode.async.Async
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
+import com.treode.twitter.finagle.http.BadRequestException
 import org.scalatest.FlatSpec
 
 import movies.{DisplayModel => DM, PhysicalModel => PM, SearchResult => SR}
@@ -38,6 +38,18 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     val movies = new MovieStore
     (random, scheduler, store, movies)
   }
+
+  def addTitle (ct: TxClock, title: String) (
+      implicit random: Random, scheduler: StubScheduler, movies: MovieStore): (String, TxClock) =
+    movies
+      .create (random.nextXid, t0, DM.Movie ("", title, null, null))
+      .expectPass()
+
+  def addName (ct: TxClock, name: String) (
+      implicit random: Random, scheduler: StubScheduler, movies: MovieStore): (String, TxClock) =
+    movies
+      .create (random.nextXid, t0, DM.Actor ("", name, null, null))
+      .expectPass()
 
   def expectReadResult [A] (
       actual: Async [(TxClock, Option [A])]

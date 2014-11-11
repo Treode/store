@@ -16,8 +16,6 @@
 
 package example
 
-import java.net.InetSocketAddress
-
 import com.treode.twitter.app.StoreKit
 import com.treode.twitter.finagle.http.filter._
 import com.treode.twitter.server.TreodeAdmin

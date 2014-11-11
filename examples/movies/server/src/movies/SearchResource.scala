@@ -16,26 +16,28 @@
 
 package movies
 
-import com.treode.async.Async
+import com.treode.async.Async, Async.supply
 import com.treode.cluster.HostId
-import com.treode.finatra.AsyncFinatraController
-import com.twitter.finatra.{Request, ResponseBuilder}
+import com.treode.store.StaleException
+import com.twitter.finagle.http.{Method, Request, Response, Status}
 
-class SearchResource (host: HostId, movies: MovieStore) extends AsyncFinatraController {
+object SearchResource {
 
-  def query (request: Request): Async [ResponseBuilder] = {
-    val rt = request.getLastModificationBefore
-    val q = request.getQuery
-    for {
-      result <- movies.query (rt, q, true, true)
-    } yield {
-      render.ok.appjson (request, result)
-    }}
+  def apply (movies: MovieStore, router: Router) {
 
-  get ("/search/") { request =>
-    query (request)
-  }
+    def query (request: Request): Async [Response] = {
+      val rt = request.lastModificationBefore
+      val q = request.query
+      for {
+        result <- movies.query (rt, q, true, true)
+      } yield {
+        respond.json (request, result)
+      }}
 
-  get ("/search") { request =>
-    query (request)
-  }}
+    router.register ("/search") { request =>
+      request.method match {
+        case Method.Get =>
+          query (request)
+        case _ =>
+          supply (respond (request, Status.MethodNotAllowed))
+      }}}}

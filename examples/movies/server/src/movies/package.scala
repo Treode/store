@@ -24,24 +24,22 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.datatype.joda.JodaModule
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.treode.async.AsyncIterator
+import com.treode.async.misc
 import com.treode.cluster.HostId
-import com.treode.finatra.BadRequestException
 import com.treode.jackson.DefaultTreodeModule
-import com.treode.store.{Bytes, Slice, TxClock, TxId}
+import com.treode.store.{Bytes, TxClock}
 import com.treode.store.alt.Froster
-import com.twitter.finagle.http.MediaType
-import com.twitter.finatra.{Request, ResponseBuilder}
+import com.treode.twitter.finagle.http, http.{BadRequestException, RichResponse}
+import com.twitter.finagle.http.{MediaType, Request, Response, Status}
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 package object movies {
 
-  private val binaryJson = new ObjectMapper (new SmileFactory)
-  binaryJson.registerModule (new DefaultScalaModule)
-  binaryJson.registerModule (new JodaModule)
-
-  private val textJson = new ObjectMapper
+  implicit val textJson = new ObjectMapper with ScalaObjectMapper
   textJson.registerModule (DefaultScalaModule)
   textJson.registerModule (DefaultTreodeModule)
   textJson.registerModule (new JodaModule)
@@ -57,23 +55,59 @@ package object movies {
     })
   })
 
-  private val prettyJson = textJson.writerWithDefaultPrettyPrinter
+  val binaryJson = new ObjectMapper (new SmileFactory) with ScalaObjectMapper
+  binaryJson.registerModule (new DefaultScalaModule)
+  binaryJson.registerModule (new JodaModule)
 
-  val Accept = "Accept"
-  val ContentType = "Content-Type"
-  val ETag = "ETag"
-  val IfModifiedSince = "If-Modified-Since"
-  val IfUnmodifiedSince = "If-Unmodified-Since"
-  val Location = "Location"
-  val LastModificationBefore = "Last-Modification-Before"
-  val TransactionId = "Transaction-ID"
+  val prettyJson = textJson.writerWithDefaultPrettyPrinter
 
-  val BadRequest = HttpResponseStatus.BAD_REQUEST.getCode
-  val NotFound = HttpResponseStatus.NOT_FOUND.getCode
-  val NotImplemented = HttpResponseStatus.NOT_IMPLEMENTED.getCode
-  val NotModified = HttpResponseStatus.NOT_MODIFIED.getCode
-  val Ok = HttpResponseStatus.OK.getCode
-  val PreconditionFailed = HttpResponseStatus.PRECONDITION_FAILED.getCode
+  object respond {
+
+    def apply (req: Request, status: HttpResponseStatus = Status.Ok): Response = {
+      val rsp = req.response
+      rsp.status = status
+      rsp
+    }
+
+    def ok (req: Request, time: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.etag = time
+      rsp
+    }
+
+    def created (req: Request, time: TxClock, location: String): Response = {
+      val rsp = req.response
+      rsp.status = Status.Created
+      rsp.etag = time
+      rsp.location = location
+      rsp
+    }
+
+    def json (req: Request, value: Any): Response  = {
+      implicit val mapper = if (req.pretty) prettyJson else textJson
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.json = value
+      rsp
+    }
+
+    def json (req: Request, time: TxClock, value: Any): Response  = {
+      implicit val mapper = if (req.pretty) prettyJson else textJson
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.etag = time
+      rsp.json = value
+      rsp
+    }
+
+    def json [A] (req: Request, iter: AsyncIterator [A]): Response  = {
+      implicit val mapper = if (req.pretty) prettyJson else textJson
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.json = iter
+      rsp
+    }}
 
   def toBase36 (v: Long): String =
     java.lang.Long.toString (v, 36)
@@ -85,9 +119,18 @@ package object movies {
 
     def orDefault (default: A): A =
       if (value == null) default else value
+  }
 
-    def toJson: String =
-      textJson.writeValueAsString (value)
+  implicit class RichBoolean (value: Boolean) extends misc.RichBoolean (value) {
+
+    def orBadRequest (message: String): Unit =
+      orThrow (new BadRequestException (message))
+  }
+
+  implicit class RichOption [A] (value: Option [A]) extends misc.RichOption (value) {
+
+    def getOrBadRequest (message: String): A =
+      getOrThrow (new BadRequestException (message))
   }
 
   implicit class RichFrosterCompanion (obj: Froster.type) {
@@ -99,113 +142,31 @@ package object movies {
         def thaw (v: Bytes): A = binaryJson.readValue (v.bytes, c)
       }}
 
-  implicit class RichMutableMap [K, V] (map: mutable.Map [K, V]) {
-
-    def getOrBadRequest (key: K, message: String): V =
-      map.get (key) getOrBadRequest (message)
-  }
-
-  implicit class RichOption [A] (value: Option [A]) {
-
-    def getOrBadRequest (message: String): A =
-      value match {
-        case Some (v) => v
-        case None => throw new BadRequestException (message)
-      }}
-
   implicit class RichRandom (random: Random) {
 
     def nextId(): String =
       toBase36 (random.nextLong & 0xFFFFFFFFFFL)
   }
 
-  implicit class RichRequest (request: Request) {
+  implicit class RichRequest (request: Request) extends http.RichRequest (request) {
 
-    def getIfModifiedSince: TxClock =
-      request.headerMap.get (IfModifiedSince) match {
-        case Some (ct) =>
-          TxClock
-            .parse (ct)
-            .getOrElse (throw new BadRequestException (s"Bad If-Modified-Since value: $ct"))
-        case None =>
-          TxClock.MinValue
-      }
+    def id (prefix: String): String = {
+      request.path.substring (prefix.length)
 
-    def getIfUnmodifiedSince: TxClock =
-      request.headerMap.get (IfUnmodifiedSince) match {
-        case Some (ct) =>
-          TxClock
-            .parse (ct)
-            .getOrElse (throw new BadRequestException (s"Bad If-Unmodified-Since value: $ct"))
-        case None =>
-          TxClock.now
-      }
+    }
 
-    def getId: Option [String] =
-      request.routeParams.get ("id")
-
-    def getLastModificationBefore: TxClock =
-      request.headerMap.get (LastModificationBefore) match {
-        case Some (rt) =>
-          TxClock
-            .parse (rt)
-            .getOrElse (throw new BadRequestException (s"Bad Last-Modification-Before value: $rt"))
-        case None =>
-          TxClock.now
-      }
-
-    def getPretty: Boolean =
+    def pretty: Boolean =
       // If the accept header lacks "application/json", then pretty print the response.
       request.headerMap.get ("Accept") match {
         case Some (accept) => !(accept contains MediaType.Json)
         case None => true
       }
 
-    def getQuery: String =
+    def query: String =
       request.params
         .get ("q")
-        .getOrElse (throw new BadRequestException ("Query parameter q is required."))
-
-    def getSlice: Slice = {
-      val slice = request.params.getInt ("slice")
-      val nslices = request.params.getInt ("nslices")
-      if (slice.isDefined && nslices.isDefined)
-        Slice (slice.get, nslices.get)
-      else if (slice.isDefined || nslices.isDefined)
-        throw new BadRequestException ("Both slice and nslices are needed together")
-      else
-        Slice.all
-    }
-
-    def getTransactionId (host: HostId): TxId =
-      request.headerMap.get (TransactionId) match {
-        case Some (tx) =>
-          TxId
-            .parse (tx)
-            .getOrElse (throw new BadRequestException (s"Bad Transaction-ID value: $tx"))
-        case None =>
-          TxId.random (host)
-      }
-
-    def readJsonAs [A] () (implicit m: Manifest [A]): A =
-      try {
-        request.withReader (textJson.readValue (_, m.runtimeClass.asInstanceOf [Class [A]]))
-      } catch {
-        case e: JsonProcessingException =>
-          throw new BadRequestException (e.getMessage)
-      }}
-
-  implicit class RichResponseBuilder (response: ResponseBuilder) {
-
-    // It would be handy if we could add our modules to the mapper Finatra's using.
-    def appjson (request: Request, value: Any): ResponseBuilder = {
-      response.contentType (MediaType.Json)
-      if (request.getPretty)
-        response.body (prettyJson.writeValueAsBytes (value))
-      else
-        response.body (textJson.writeValueAsBytes (value))
-      response
-    }}
+        .getOrThrow (new BadRequestException ("Query parameter q is required."))
+  }
 
   implicit class RichSeq [A] (vs: Seq [A]) {
 

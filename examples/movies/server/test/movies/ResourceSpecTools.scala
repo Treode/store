@@ -18,7 +18,6 @@ package movies
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.treode.store.TxClock
-import com.twitter.finatra.test.MockResult
 import org.scalatest.Suite
 import org.scalatest.matchers.{Matcher, MatchResult}
 
@@ -35,13 +34,4 @@ trait ResourceSpecTools extends SpecTools {
   }
 
   def matchJson (expected: String) = new JsonMatcher (expected)
-
-  implicit class RichMockResult (result: MockResult) {
-
-    def etag: TxClock = {
-      val string = result.getHeaders.get (ETag)
-      assert (string.isDefined, "Expected response to have an ETag.")
-      val parse = TxClock.parse (string.get)
-      assert (parse.isDefined, s"""Could not parse ETag "${string.get}" as a TxClock""")
-      parse.get
-    }}}
+}

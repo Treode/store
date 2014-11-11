@@ -19,11 +19,18 @@ package movies
 import scala.language.implicitConversions
 import scala.util.Random
 
-import com.treode.async.stubs.StubScheduler
+import com.fasterxml.jackson.databind.JsonNode
+import com.jayway.restassured.response.{Response => RestAssuredResponse}
+import com.jayway.restassured.specification.ResponseSpecification
+import com.treode.async.stubs.StubScheduler, StubScheduler.scheduler
 import com.treode.async.stubs.implicits._
 import com.treode.store.{Bytes, Cell, TxClock, TxId}
 import com.treode.store.stubs.StubStore
 import com.treode.store.alt.TableDescriptor
+import com.treode.twitter.finagle.http.filter._
+import com.twitter.finagle.Http
+import com.twitter.finagle.http.filter.ExceptionFilter
+import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}
 import org.joda.time.{DateTime, DateTimeZone, Instant}
 import org.scalatest.Assertions
 
@@ -38,18 +45,6 @@ trait SpecTools {
   val sep_25_1951 = new DateTime (1951, 9, 25, 0, 0, 0, UTC)
   val may_25_1977 = new DateTime (1977, 5, 25, 0, 0, 0, UTC)
   val jun_20_1980 = new DateTime (1980, 6, 20, 0, 0, 0, UTC)
-
-  def addTitle (ct: TxClock, title: String) (
-      implicit random: Random, scheduler: StubScheduler, movies: MovieStore): (String, TxClock) =
-    movies
-      .create (random.nextXid, t0, DM.Movie ("", title, null, null))
-      .expectPass()
-
-  def addName (ct: TxClock, name: String) (
-      implicit random: Random, scheduler: StubScheduler, movies: MovieStore): (String, TxClock) =
-    movies
-      .create (random.nextXid, t0, DM.Actor ("", name, null, null))
-      .expectPass()
 
   /** Display Objects */
   private [movies] object DO {
@@ -99,10 +94,26 @@ trait SpecTools {
   implicit def valueToExpectedCell [K, V] (v: (K, TxClock, V)): ExpectedCell [K, V] =
     ExpectedCell [K, V] (v._1, v._2.time, Some (v._3))
 
+  implicit class RichResposne (rsp: RestAssuredResponse) {
+
+    def etag: TxClock = {
+      val string = rsp.getHeader ("ETag")
+      assert (string != null, "Expected response to have an ETag.")
+      val parse = TxClock.parse (string)
+      assert (parse.isDefined, s"""Could not parse ETag "$string" as a TxClock""")
+      parse.get
+    }}
+
   implicit class RichRandom (r: Random) {
 
     def nextXid: TxId =
-      new TxId (Bytes (r.nextLong), new Instant (0))
+      new TxId (Bytes (Random.nextLong), new Instant (0))
+  }
+
+  implicit class RichResponseSpecification (rsp: ResponseSpecification) {
+
+    def etag (ts: TxClock): ResponseSpecification =
+      rsp.header ("ETag", ts.toString)
   }
 
   implicit class RichStubStore (store: StubStore) {
@@ -115,4 +126,43 @@ trait SpecTools {
 
     def printCells [K, V] (d: TableDescriptor [K, V]): Unit =
       println (store.scan (d.id) .map (thaw (d, _)) .mkString ("[\n  ", "\n  ", "\n]"))
-  }}
+  }
+
+  class JsonMatcher (expected: String) extends TypeSafeMatcher [String] {
+
+    def matchesSafely (actual: String): Boolean =
+      expected.fromJson [JsonNode] == actual.fromJson [JsonNode]
+
+    def describeTo (desc: Description): Unit =
+      desc.appendText (expected);
+  }
+
+  def matchesJson (expected: String): Matcher [String] =
+    new JsonMatcher (expected)
+
+  def served (test: (Int, StubStore) => MovieStore => Any) {
+
+    val store = StubStore()
+    val movies = new MovieStore () (Random, store)
+    val router = new Router
+    ActorResource (0, movies, router)
+    AnalyticsResource (router) (store)
+    MovieResource (0, movies, router)
+    SearchResource (movies, router)
+
+    val port = Random.nextInt (65535 - 49152) + 49152
+    val server = Http.serve (
+      s":$port",
+      NettyToFinagle andThen
+      ExceptionFilter andThen
+      BadRequestFilter andThen
+      JsonExceptionFilter andThen
+      router.result)
+
+    try {
+      test (port, store) (movies)
+    } finally {
+      server.close()
+    }}
+
+}

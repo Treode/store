@@ -16,84 +16,85 @@
 
 package movies
 
-import com.treode.async.Async
+import com.treode.async.Async, Async.supply
 import com.treode.cluster.HostId
-import com.treode.finatra.AsyncFinatraController
-import com.treode.store._
-import com.twitter.finatra.{Request, ResponseBuilder}
+import com.treode.store.StaleException
+import com.twitter.finagle.http.{Method, Request, Response, Status}
 
 import movies.{DisplayModel => DM}
 
-class ActorResource (host: HostId, movies: MovieStore) extends AsyncFinatraController {
+object ActorResource {
 
-  def read (request: Request, id: String): Async [ResponseBuilder] = {
-    val rt = request.getLastModificationBefore
-    val ct = request.getIfModifiedSince
-    for {
-      (vt, movie) <- movies.readActor (rt, id)
-    } yield {
-      movie match {
-        case Some (v) if ct < vt =>
-          render.header (ETag, vt.toString) .appjson (request, v)
-        case Some (v) =>
-          render.status (NotModified) .nothing
-        case None =>
-          render.notFound.nothing
-      }}}
+  def apply (host: HostId, movies: MovieStore, router: Router) {
 
-  def query (request: Request): Async [ResponseBuilder] = {
-    val rt = request.getLastModificationBefore
-    val q = request.getQuery
-    for {
-      result <- movies.query (rt, q, false, true)
-    } yield {
-      render.ok.appjson (request, result)
-    }}
+    def get (request: Request, id: String): Async [Response] = {
+      val rt = request.lastModificationBefore
+      val ct = request.ifModifiedSince
+      for {
+        (vt, movie) <- movies.readActor (rt, id)
+      } yield {
+        movie match {
+          case Some (v) if ct < vt =>
+            respond.json (request, vt, v)
+          case Some (v) =>
+            respond (request, Status.NotModified)
+          case None =>
+            respond (request, Status.NotFound)
+        }}}
 
-  get ("/actor/:id") { request =>
-    request.getId match {
-      case Some (id) => read (request, id)
-      case None => query (request)
-    }}
+    def query (request: Request): Async [Response] = {
+      val rt = request.lastModificationBefore
+      val q = request.query
+      for {
+        result <- movies.query (rt, q, false, true)
+      } yield {
+        respond.json (request, result)
+      }}
 
-  get ("/actor") { request =>
-    query (request)
-  }
+    def post (request: Request): Async [Response] = {
+      val xid = request.transactionId (host)
+      val ct = request.ifUnmodifiedSince
+      val actor = request.readJson [DM.Actor]
+      (for {
+        (id, vt) <- movies.create (xid, ct, actor)
+      } yield {
+        respond.created (request, vt, s"/actor/$id")
+      }) .recover {
+        case _: StaleException =>
+          respond (request, Status.PreconditionFailed)
+      }}
 
-  def post (request: Request): Async [ResponseBuilder] = {
-    val xid = request.getTransactionId (host)
-    val ct = request.getIfUnmodifiedSince
-    val actor = request.readJsonAs [DM.Actor] ()
-    (for {
-      (id, vt) <- movies.create (xid, ct, actor)
-    } yield {
-      render.ok
-        .header (ETag, vt.toString)
-        .header (Location, s"/actor/$id")
-        .nothing
-    }) .recover {
-      case _: StaleException =>
-        render.status (PreconditionFailed) .nothing
-    }}
+    def put (request: Request, id: String): Async [Response] = {
+      val xid = request.transactionId (host)
+      val ct = request.ifUnmodifiedSince
+      val actor = request.readJson [DM.Actor]
+      (for {
+        vt <- movies.update (xid, ct, id, actor)
+      } yield {
+        respond.ok (request, vt)
+      }) .recover {
+        case _: StaleException =>
+          respond (request, Status.PreconditionFailed)
+      }}
 
-  post ("/actor/") { request =>
-    post (request)
-  }
+    router.register ("/actor/") { request =>
+      val id = request.id ("/actor/")
+      request.method match {
+        case Method.Get =>
+          get (request, id)
+        case Method.Put =>
+          (id matches "[a-zA-Z0-9_-]+") orBadRequest (s"Invalid ID: $id")
+          put (request, id)
+        case _ =>
+          supply (respond (request, Status.MethodNotAllowed))
+      }}
 
-  post ("/actor") { request =>
-    post (request)
-  }
-
-  put ("/actor/:id") { request =>
-    val xid = request.getTransactionId (host)
-    val ct = request.getIfUnmodifiedSince
-    val id = request.getId.getOrBadRequest ("ID required")
-    val actor = request.readJsonAs [DM.Actor] ()
-    (for {
-      vt <- movies.update (xid, ct, id, actor)
-    } yield {
-      render.ok.header (ETag, vt.toString) .nothing
-    }) .recover {
-      case _: StaleException =>
-        render.status (PreconditionFailed) .nothing
-    }}}
+    router.register ("/actor") { request =>
+      request.method match {
+        case Method.Get =>
+          query (request)
+        case Method.Post =>
+          post (request)
+        case _ =>
+          supply (respond (request, Status.MethodNotAllowed))
+      }}}}

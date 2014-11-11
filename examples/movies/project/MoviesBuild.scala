@@ -65,11 +65,11 @@ object MoviesBuild extends Build {
       name := "movies-server",
 
       libraryDependencies ++= Seq (
+        "com.jayway.restassured" % "rest-assured" % "2.3.4" % "test",
         "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.4.2",
-        "com.treode" %% "finatra" % versionString,
         "com.treode" %% "jackson" % versionString,
         "com.treode" %% "store" % versionString % "compile;test->stub",
-        "com.treode" %% "twitter-util" % versionString,
+        "com.treode" %% "twitter-server" % versionString,
         "org.scalatest" %% "scalatest" % "2.2.2" % "test"),
 
       jarName in assembly := "movies-server.jar",

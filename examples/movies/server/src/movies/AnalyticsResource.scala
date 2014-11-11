@@ -16,41 +16,33 @@
 
 package movies
 
-import com.treode.async.Async
-import com.treode.cluster.HostId
-import com.treode.finatra.AsyncFinatraController
+import com.treode.async.Async, Async.supply
 import com.treode.store.Store
-import com.twitter.finatra.{Request, ResponseBuilder}
+import com.twitter.finagle.http.{Method, Request, Response}
 
 import movies.{PhysicalModel => PM}
 
-class AnalyticsResource (implicit store: Store) extends AsyncFinatraController {
+object AnalyticsResource {
 
-  // TODO: Stream these potentially long responses.
-  // These scan the full table an build the entire JSON array before sending any of it. Finatra
-  // does not make it easy to stream a response. We are exploring options.
+  def apply (router: Router) (implicit store: Store) {
 
-  get ("/rdd/movies") { request =>
-    val rt = request.getLastModificationBefore
-    for {
-      result <- PM.Movie.list (rt)
-    } yield {
-      render.ok.appjson (request, result)
-    }}
+    router.register ("/rdd/actors") { request =>
+      request.method match {
+        case Method.Get =>
+          val rt = request.lastModificationBefore
+          PM.Actor.list (rt) .map (respond.json (request, _))
+        }}
 
-  get ("/rdd/actors") { request =>
-    val rt = request.getLastModificationBefore
-    for {
-      result <- PM.Actor.list (rt)
-    } yield {
-      render.ok.appjson (request, result)
-    }}
+    router.register ("/rdd/movies") { request =>
+      request.method match {
+        case Method.Get =>
+          val rt = request.lastModificationBefore
+          PM.Movie.list (rt) .map (respond.json (request, _))
+        }}
 
-  get ("/rdd/roles") { request =>
-    val rt = request.getLastModificationBefore
-    for {
-      result <- PM.Roles.list (rt)
-    } yield {
-      render.ok.appjson (request, result)
-    }}
-}
+    router.register ("/rdd/roles") { request =>
+      request.method match {
+        case Method.Get =>
+          val rt = request.lastModificationBefore
+          PM.Roles.list (rt) .map (respond.json (request, _))
+        }}}}

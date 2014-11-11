@@ -17,7 +17,6 @@
 package movies
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.treode.finatra.BadRequestException
 import com.treode.store.alt.Transaction
 import org.joda.time.DateTime
 

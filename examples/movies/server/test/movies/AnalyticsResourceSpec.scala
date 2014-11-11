@@ -18,24 +18,12 @@ package movies
 
 import scala.util.Random
 
-import com.treode.async.stubs.StubScheduler, StubScheduler.scheduler
-import com.treode.store.stubs.StubStore
-import com.twitter.finagle.http.MediaType
-import com.twitter.finatra.test.MockApp
-import org.scalatest.{FreeSpec, Matchers}
+import com.jayway.restassured.RestAssured.given
+import org.scalatest.FreeSpec
 
-import movies.{DisplayModel => DM, PhysicalModel => PM}
+import movies.{DisplayModel => DM}
 
-class AnalyticsResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
-
-  def setup () = {
-    implicit val random = Random
-    implicit val store = StubStore()
-    val movies = new MovieStore
-    val resource = new AnalyticsResource
-    val mock = MockApp (resource.delegate)
-    (movies, mock)
-  }
+class AnalyticsResourceSpec extends FreeSpec with SpecTools {
 
   def addMovieAndActor (movies: MovieStore) = {
 
@@ -58,61 +46,79 @@ class AnalyticsResourceSpec extends FreeSpec with Matchers with ResourceSpecTool
 
   "When the database is empty" - {
 
-    "GET /rdd/movies should respond Ok with no items" in {
-      val (movies, mock) = setup()
-      val response = mock.get ("/rdd/movies")
-      response.code should be (Ok)
-      response.body should matchJson ("[]")
-    }
+    "GET /rdd/movies should respond Ok with no items" in
+      served { (port, store) => implicit movies =>
+        given
+          .port (port)
+        .expect
+          .body (matchesJson ("[]"))
+        .when
+          .get ("/rdd/movies")
+      }
 
-    "GET /rdd/actors should respond Ok with no items" in {
-      val (movies, mock) = setup()
-      val response = mock.get ("/rdd/actors")
-      response.code should be (Ok)
-      response.body should matchJson ("[]")
-    }
+    "GET /rdd/actors should respond Ok with no items" in
+      served { (port, store) => implicit movies =>
+        given
+          .port (port)
+        .expect
+          .body (matchesJson ("[]"))
+        .when
+          .get ("/rdd/actors")
+      }
 
-    "GET /rdd/roles should respond Ok with no items" in {
-      val (movies, mock) = setup()
-      val response = mock.get ("/rdd/roles")
-      response.code should be (Ok)
-      response.body should matchJson ("[]")
-    }}
+    "GET /rdd/roles should respond Ok with no items" in
+      served { (port, store) => implicit movies =>
+        given
+          .port (port)
+        .expect
+          .body (matchesJson ("[]"))
+        .when
+          .get ("/rdd/roles")
+      }}
 
   "When the database has a movie and actor" - {
 
-    "GET /rdd/movies should respond Ok with no items" in {
-      val (movies, mock) = setup()
-      addMovieAndActor (movies)
-      val response = mock.get ("/rdd/movies")
-      response.code should be (Ok)
-      response.body should matchJson ("""[ {
-        "id" : "1",
-        "title" : "Star Wars",
-        "released" : null
-      }]""")
-    }
+    "GET /rdd/movies should respond Ok with items" in
+      served { (port, store) => implicit movies =>
+        addMovieAndActor (movies)
+        given
+          .port (port)
+        .expect
+          .body (matchesJson ("""[ {
+            "id" : "1",
+            "title" : "Star Wars",
+            "released" : null
+          }]"""))
+        .when
+          .get ("/rdd/movies")
+      }
 
-    "GET /rdd/actors should respond Ok with no items" in {
-      val (movies, mock) = setup()
-      addMovieAndActor (movies)
-      val response = mock.get ("/rdd/actors")
-      response.code should be (Ok)
-      response.body should matchJson ("""[{
-        "id" : "1",
-        "name" : "Mark Hamill",
-        "born" : null
-      }]""")
-    }
+    "GET /rdd/actors should respond Ok with items" in
+      served { (port, store) => implicit movies =>
+        addMovieAndActor (movies)
+        given
+          .port (port)
+        .expect
+          .body (matchesJson ("""[{
+            "id" : "1",
+            "name" : "Mark Hamill",
+            "born" : null
+          }]"""))
+        .when
+          .get ("/rdd/actors")
+      }
 
-    "GET /rdd/roles should respond Ok with no items" in {
-      val (movies, mock) = setup()
-      addMovieAndActor (movies)
-      val response = mock.get ("/rdd/roles")
-      response.code should be (Ok)
-      response.body should matchJson ("""[{
-        "movieId" : "1",
-        "actorId" : "1",
-        "role" : "Luke Skywalker"
-      }]""")
-    }}}
+    "GET /rdd/roles should respond Ok with items" in
+      served { (port, store) => implicit movies =>
+        addMovieAndActor (movies)
+        given
+          .port (port)
+        .expect
+          .body (matchesJson ("""[{
+            "movieId" : "1",
+            "actorId" : "1",
+            "role" : "Luke Skywalker"
+          }]"""))
+        .when
+          .get ("/rdd/roles")
+      }}}

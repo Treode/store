@@ -18,70 +18,78 @@ package movies
 
 import scala.util.Random
 
-import com.treode.async.stubs.StubScheduler, StubScheduler.scheduler
-import com.treode.store.stubs.StubStore
-import com.twitter.finagle.http.MediaType
-import com.twitter.finatra.test.MockApp
-import org.scalatest.{FreeSpec, Matchers}
+import com.jayway.restassured.RestAssured.given
+import com.treode.store.TxClock
+import org.hamcrest.Matchers._
+import org.scalatest.FreeSpec
 
-import movies.{PhysicalModel => PM}
+import movies.{DisplayModel => DM}
 
-class SearchResourceSpec extends FreeSpec with Matchers with ResourceSpecTools {
+class SearchResourceSpec extends FreeSpec with SpecTools {
 
-  def setup () (implicit scheduler: StubScheduler) = {
-    implicit val random = Random
-    implicit val store = StubStore()
-    val movies = new MovieStore
-    val resource = new SearchResource (0x6F, movies)
-    val mock = MockApp (resource.delegate)
-    (random, store, movies, mock)
-  }
+  def addTitle (ct: TxClock, title: String) (implicit movies: MovieStore): (String, TxClock) =
+    movies
+      .create (Random.nextXid, t0, DM.Movie ("", title, null, null))
+      .await()
+
+  def addName (ct: TxClock, name: String) (implicit movies: MovieStore): (String, TxClock) =
+    movies
+      .create (Random.nextXid, t0, DM.Actor ("", name, null, null))
+      .await()
 
   "When the database is empty" - {
 
-    "GET /search?q=johnny should respond Okay" in {
-      implicit val (random, store, movies, mock) = setup()
-      val response = mock.get ("/search?q=johnny")
-      response.code should equal (Ok)
-      response.body should matchJson (s"""{"movies": [], "actors": []}""")
-    }
-
-    "GET /search/?q=johnny should respond Okay" in {
-      implicit val (random, store, movies, mock) = setup()
-      val response = mock.get ("/search/?q=johnny")
-      response.code should equal (Ok)
-      response.body should matchJson (s"""{"movies": [], "actors": []}""")
-    }
-
-    "GET /search/foo?q=johnny should respond Not Found" in {
-      implicit val (random, store, movies, mock) = setup()
-      val response = mock.get ("/search/foo?q=johnny")
-      response.code should equal (NotFound)
-    }}
+    "GET /search?q=johnny should respond Okay" in
+      served { (port, store) => implicit movies =>
+        given
+          .port (port)
+          .param ("q", "johnny")
+        .expect
+          .body (matchesJson (s"""{"movies": [], "actors": []}"""))
+        .when
+          .get ("/search")
+      }}
 
   "When the database has a movie and and actor" - {
 
-    "GET /search?q=johnny should respond Okay" in {
-      implicit val (random, store, movies, mock) = setup()
+    "GET /search?q=johnny should respond Okay" in
+      served { (port, store) => implicit movies =>
 
-      val (id1, t1) = addTitle (t0, "Johnny Bravo")
-      val (id2, t2) = addTitle (t0, "Star Wars")
-      val (id3, t3) = addName (t0, "Johnny Depp")
-      val (id4, t4) = addName (t0, "Mark Hamill")
-      val t = Seq (t1, t2, t3, t4) .max
+        val (id1, t1) = addTitle (t0, "Johnny Bravo")
+        val (id2, t2) = addTitle (t0, "Star Wars")
+        val (id3, t3) = addName (t0, "Johnny Depp")
+        val (id4, t4) = addName (t0, "Mark Hamill")
+        val t = Seq (t1, t2, t3, t4) .max
 
-      val response = mock.get ("/search?q=johnny")
-      response.code should equal (Ok)
-      response.body should matchJson (s"""{
-        "movies": [{
-          "id": "$id1",
-          "title": "Johnny Bravo",
-          "released": null
-        }],
-        "actors": [{
-          "id": "$id3",
-          "name": "Johnny Depp",
-          "born": null
-        }]
-      }""")
-    }}}
+        given
+          .port (port)
+          .param ("q", "johnny")
+        .expect
+          .body (matchesJson (s"""{
+            "movies": [{
+              "id": "$id1",
+              "title": "Johnny Bravo",
+              "released": null
+            }],
+            "actors": [{
+              "id": "$id3",
+              "name": "Johnny Depp",
+              "born": null
+            }]
+          }"""))
+        .when
+          .get ("/search")
+      }}
+
+  "When the user is cantankerous" - {
+
+    "GET /search should respond BadRequest" in
+      served { (port, store) => implicit movies =>
+        given
+          .port (port)
+        .expect
+          .statusCode (400)
+          .body (equalTo ("Query parameter q is required."))
+        .when
+          .get ("/search")
+      }}}

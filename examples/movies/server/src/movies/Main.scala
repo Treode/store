@@ -16,52 +16,60 @@
 
 package movies
 
-import java.net.SocketAddress
 import scala.util.Random
 
-import com.treode.finatra.AsyncFinatraServer
 import com.treode.twitter.app.StoreKit
+import com.treode.twitter.finagle.http.filter._
+import com.treode.twitter.server.TreodeAdmin
+import com.twitter.finagle.Http
+import com.twitter.finagle.http.filter.ExceptionFilter
 import com.twitter.finagle.util.InetSocketAddressUtil.{parseHosts, toPublic}
-import com.twitter.finatra.config.{port => httpPort, _}
+import com.twitter.server.TwitterServer
+import com.twitter.util.Await
 
-// TODO: Switch from Finatra to Finagle, and then mixin TreodeAdmin.
-// See the note in the Finatra example. We'll be moving the movies example off Finatra soon anyway,
-// because Finatra doesn't support streaming responses.
-class Serve extends AsyncFinatraServer with StoreKit {
+class Serve extends TwitterServer with StoreKit with TreodeAdmin {
 
-  val shareAddrFlag =
-    flag [String] ("shareAddr", "Address for connecting (example, 192.168.1.1:7070).")
+  val httpAddrFlag =
+    flag [String] ("httpAddr", ":7070", "Address for listening (example, 0.0.0.0:7070).")
 
-  val shareSslAddrFlag =
-    flag [String] ("shareSslAddr", "Address for connecting (example, 192.168.1.1:7443).")
+  val shareHttpAddrFlag =
+    flag [String] ("shareHttpAddr", "Address for connecting (example, 192.168.1.1:7070).")
 
-  premain {
+  def main() {
 
-    val shareAddr: Option [SocketAddress] =
-      if (shareAddrFlag.isDefined)
-        parseHosts (shareAddrFlag()) .headOption
-      else if (!httpPort().isEmpty)
-        parseHosts (httpPort()) .headOption.map (toPublic _)
+    val httpAddr =
+      parseHosts (httpAddrFlag()) .head
+
+    val shareHttpAddr =
+      if (shareHttpAddrFlag.isDefined)
+        parseHosts (shareHttpAddrFlag()) .head
       else
-        None
+        toPublic (httpAddr)
 
-    val sslAddr: Option [SocketAddress] =
-      if (shareSslAddrFlag.isDefined)
-        parseHosts (shareSslAddrFlag()) .headOption
-      else if (!certificatePath().isEmpty && !keyPath().isEmpty && !sslPort().isEmpty)
-        parseHosts (sslPort()) .headOption.map (toPublic _)
-      else
-        None
-
-    controller.announce (shareAddr, sslAddr)
+    controller.announce (Some (shareHttpAddr), None)
 
     val movies = new MovieStore () (Random, controller.store)
+    val router = new Router
+    ActorResource (controller.hostId, movies, router)
+    AnalyticsResource (router) (controller.store)
+    MovieResource (controller.hostId, movies, router)
+    SearchResource (movies, router)
 
-    register (new AnalyticsResource () (controller.store))
-    register (new ActorResource (controller.hostId, movies))
-    register (new MovieResource (controller.hostId, movies))
-    register (new SearchResource (controller.hostId, movies))
-    register (new Peers (controller))
+    val server = Http.serve (
+      httpAddr,
+      NettyToFinagle andThen
+      ExceptionFilter andThen
+      BadRequestFilter andThen
+      JsonExceptionFilter andThen
+      PeersFilter ("/peers", controller) andThen
+      router.result)
+
+    onExit {
+      server.close()
+      controller.shutdown().await()
+    }
+
+    Await.ready (server)
   }}
 
 object Main extends StoreKit.Main [Serve]

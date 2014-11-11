@@ -18,10 +18,10 @@ package movies
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.treode.async.Async
-import com.treode.finatra.BadRequestException
 import com.treode.pickle.Picklers
 import com.treode.store.{Store, TxClock}
 import com.treode.store.alt.{Froster, TableDescriptor, Transaction}
+import com.treode.twitter.finagle.http.BadRequestException
 import org.joda.time.DateTime
 
 import Async.supply
