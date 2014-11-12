@@ -55,8 +55,7 @@ class PeersFilterSpec extends FlatSpec with MockFactory {
 
   "The PeersFilter" should "handle GET" in
     served { case (port, controller) =>
-      val store = controller.store
-      (store.hosts _) .expects (*) .returning (Seq.empty)
+      (controller.hosts _) .expects (*) .returning (Seq.empty)
       given
         .port (port)
       .expect
