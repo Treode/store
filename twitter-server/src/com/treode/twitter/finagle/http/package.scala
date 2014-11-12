@@ -78,7 +78,10 @@ package object http {
           rsp.writer.write (buf ("," + mapper.writeValueAsString (v))) .toAsync
         }
       } .flatMap { _ =>
-        rsp.writer.write (buf ("]")) .toAsync
+        if (first)
+          rsp.writer.write (buf ("[]")) .toAsync
+        else
+          rsp.writer.write (buf ("]")) .toAsync
       } .run {
         case Success (_) =>
           rsp.close()

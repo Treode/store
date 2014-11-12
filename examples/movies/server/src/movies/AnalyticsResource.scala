@@ -16,33 +16,39 @@
 
 package movies
 
-import com.treode.async.Async, Async.supply
+import com.treode.async.{Async, Scheduler}, Async.supply
 import com.treode.store.Store
-import com.twitter.finagle.http.{Method, Request, Response}
+import com.twitter.finagle.http.{Method, Request, Response, Status}
 
 import movies.{PhysicalModel => PM}
 
 object AnalyticsResource {
 
-  def apply (router: Router) (implicit store: Store) {
+  def apply (router: Router) (implicit scheduler: Scheduler, store: Store) {
 
     router.register ("/rdd/actors") { request =>
       request.method match {
         case Method.Get =>
           val rt = request.lastModificationBefore
-          PM.Actor.list (rt) .map (respond.json (request, _))
-        }}
+          supply (respond.json (request, PM.Actor.list (rt)))
+        case _ =>
+          supply (respond (request, Status.MethodNotAllowed))
+      }}
 
     router.register ("/rdd/movies") { request =>
       request.method match {
         case Method.Get =>
           val rt = request.lastModificationBefore
-          PM.Movie.list (rt) .map (respond.json (request, _))
-        }}
+          supply (respond.json (request, PM.Movie.list (rt)))
+        case _ =>
+          supply (respond (request, Status.MethodNotAllowed))
+      }}
 
     router.register ("/rdd/roles") { request =>
       request.method match {
         case Method.Get =>
           val rt = request.lastModificationBefore
-          PM.Roles.list (rt) .map (respond.json (request, _))
-        }}}}
+          supply (respond.json (request, PM.Roles.list (rt)))
+        case _ =>
+          supply (respond (request, Status.MethodNotAllowed))
+      }}}}

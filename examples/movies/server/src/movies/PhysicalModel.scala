@@ -17,7 +17,8 @@
 package movies
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.treode.async.Async
+import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.implicits._
 import com.treode.pickle.Picklers
 import com.treode.store.{Store, TxClock}
 import com.treode.store.alt.{Froster, TableDescriptor, Transaction}
@@ -118,16 +119,14 @@ private object PhysicalModel {
             .async()
       } yield ()
 
-    def list (rt: TxClock) (implicit store: Store): Async [Seq [AM.Movie]] = {
-      MovieTable.latest (rt)
-      .filter (_.value.isDefined)
-      .map { cell =>
+    def list (rt: TxClock) (implicit store: Store): AsyncIterator [AM.Movie] =
+      for {
+        cell <- MovieTable.latest (rt)
+        if cell.value.isDefined
+      } yield {
         val movie = cell.value.get
         new AM.Movie (cell.key, movie.title, movie.released)
       }
-      .toSeqWhile (_ => true)
-      .map (_._1)
-    }
 
     /** Create a new movie in the database. This also makes the implied changes to the actors'
       * roles.
@@ -339,16 +338,14 @@ private object PhysicalModel {
             .async()
       } yield ()
 
-    def list (rt: TxClock) (implicit store: Store): Async [Seq [AM.Actor]] = {
-      ActorTable.latest (rt)
-      .filter (_.value.isDefined)
-      .map { cell =>
+    def list (rt: TxClock) (implicit store: Store): AsyncIterator [AM.Actor] =
+      for {
+        cell <- ActorTable.latest (rt)
+        if cell.value.isDefined
+      } yield {
         val actor = cell.value.get
         new AM.Actor (cell.key, actor.name, actor.born)
       }
-      .toSeqWhile (_ => true)
-      .map (_._1)
-    }
 
     /** Create a new actor in the database. This also makes the implied changes to the movies'
       * cast.
@@ -448,19 +445,15 @@ private object PhysicalModel {
 
     val empty = Roles (Seq.empty)
 
-    def list (rt: TxClock) (implicit store: Store): Async [Seq [AM.Role]] = {
-      val roles = Seq.newBuilder [AM.Role]
-      RolesTable.latest (rt)
-      .filter (_.value.isDefined)
-      .foreach { cell =>
-        supply {
-          val actorId = cell.key
-          for (role <- cell.value.get.roles)
-            roles += AM.Role (actorId, role.movieId, role.role)
-        }}
-      .map { _ =>
-        roles.result
-      }}
+    def list (rt: TxClock) (implicit scheduler: Scheduler, store: Store): AsyncIterator [AM.Role] =
+      for {
+        cell <- RolesTable.latest (rt)
+        if cell.value.isDefined
+        val actorId = cell.key
+        role <- cell.value.get.roles.async
+      } yield {
+        AM.Role (actorId, role.movieId, role.role)
+      }
 
     def convert (roles: Seq [DM.Role]): Roles =
       new Roles (roles map (Role.apply (_)))
