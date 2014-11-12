@@ -51,7 +51,7 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
     val movies = new MovieStore () (Random, controller.store)
     val router = new Router
     ActorResource (controller.hostId, movies, router)
-    AnalyticsResource (router) (controller.store)
+    AnalyticsResource (router) (scheduler, controller.store)
     MovieResource (controller.hostId, movies, router)
     SearchResource (movies, router)
 

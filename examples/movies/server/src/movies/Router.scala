@@ -40,5 +40,7 @@ class Router {
     new Service [Request, Response] {
       val muxer = new HttpMuxer (services.result)
       def apply (request: Request): Future [Response] =
-        muxer (request) .map (_.asInstanceOf [Response])
-    }}
+        muxer (request) .map {
+          case response: Response => response
+          case response => Response (response)
+        }}}
