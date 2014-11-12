@@ -275,13 +275,11 @@ object Store {
   ) (implicit
       diskConfig: Disk.Config,
       clusterConfig: Cluster.Config,
-      storeConfig: Store.Config
+      storeConfig: Store.Config,
+      scheduler: Scheduler
   ): Async [Controller] = {
-    val nthreads = Runtime.getRuntime.availableProcessors
-    val executor = Executors.newScheduledThreadPool (nthreads)
     guard {
       implicit val random = Random
-      implicit val scheduler = Scheduler (executor)
       implicit val _disk = Disk.recover()
       val _store = Store.recover()
       for {
@@ -292,10 +290,6 @@ object Store {
       } yield {
         launch.launch()
         cluster.startup()
-        (new ExtendedController (executor, launch.controller, cluster, store)): Controller
+        (new ExtendedController (launch.controller, cluster, store)): Controller
       }
-    } .rescue {
-      case t: Throwable =>
-        executor.shutdown()
-        Failure (t)
     }}}

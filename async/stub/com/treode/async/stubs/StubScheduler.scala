@@ -64,7 +64,7 @@ object StubScheduler {
     Executors.newScheduledThreadPool (Runtime.getRuntime.availableProcessors)
 
   /** A default StubScheduler that uses the default executor. */
-  implicit val scheduler =
+  implicit val scheduler: StubScheduler =
     StubScheduler.wrapped (executor)
 
   /** A default ExecutionContext that uses the default executor. */

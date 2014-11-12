@@ -20,6 +20,7 @@ import java.net.{InetAddress, InetSocketAddress}
 import java.nio.file.Paths
 import scala.reflect.ClassTag
 
+import com.treode.async.{Globals, Scheduler}
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.disk.Disk
 import com.treode.store.{Cohort, Store}
@@ -108,6 +109,8 @@ trait StoreKit {
     }
     paths = args
   }
+
+  implicit val scheduler: Scheduler = Globals.scheduler
 
   lazy val controller = {
 

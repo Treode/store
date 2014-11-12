@@ -18,7 +18,6 @@ package com.treode.store
 
 import java.net.SocketAddress
 import java.nio.file.Path
-import java.util.concurrent.ExecutorService
 
 import com.treode.async.Async
 import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
@@ -27,7 +26,6 @@ import com.treode.disk.{Disk, DriveAttachment, DriveDigest}
 import Async.guard
 
 private class ExtendedController (
-    executor: ExecutorService,
     disk: Disk.Controller,
     cluster: Cluster,
     controller: Store.Controller
@@ -86,6 +84,4 @@ private class ExtendedController (
         _ <- cluster.shutdown()
         _ <- disk.shutdown()
       } yield ()
-    } .ensure {
-      executor.shutdownNow()
     }}
