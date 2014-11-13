@@ -35,7 +35,7 @@ import TierTestTools._
 
 class TierSpec extends WordSpec {
 
-  private def setup (targetPageBytes: Int = 1<<20): (StubScheduler, Disk, Store.Config) = {
+  private def setup (targetPageBytes: Int = 1 << 20): (StubScheduler, Disk, Store.Config) = {
     val config = StoreTestConfig (
         checkpointProbability = 0.0,
         compactionProbability = 0.0,
@@ -82,11 +82,16 @@ class TierSpec extends WordSpec {
         ()
     }}
 
+  private def buildEmptyTier () (
+      implicit scheduler: StubScheduler, disk: Disk, config: Store.Config): Tier = {
+    newBuilder (10) .result.expectPass()
+  }
+
   /** Build a tier from fruit. */
   private def buildTier () (
       implicit scheduler: StubScheduler, disk: Disk, config: Store.Config): Tier = {
     val builder = newBuilder (AllFruits.length)
-    AllFruits.async.foreach (v => builder.add (Cell (v, 0, Some (1)))) .expectPass()
+    AllFruits.async.foreach (v => builder.add (Cell (v, 1, Some (1)))) .expectPass()
     builder.result.expectPass()
   }
 
@@ -209,6 +214,12 @@ class TierSpec extends WordSpec {
           assertResult (AllFruits.toSeq) (iterateTier (tier) map (_.key))
         }
 
+        "the tier is empty" in {
+          implicit val (scheduler, disk, config) = setup (1)
+          val tier = buildEmptyTier()
+          assertResult (Seq.empty) (iterateTier (tier) map (_.key))
+        }
+
         "the pages are limited to one byte" in {
           checkIterator (1)
         }
@@ -230,9 +241,15 @@ class TierSpec extends WordSpec {
           val tier = buildTier()
           for (start <- AllFruits) {
             val expected = AllFruits.dropWhile (_ < start) .toSeq
-            val actual = iterateTier (tier, start, 0, true) map (_.key)
+            val actual = iterateTier (tier, start, TxClock.MaxValue, true) map (_.key)
             assertResult (expected) (actual)
           }}
+
+        "the tier is empty" in {
+          implicit val (scheduler, disk, config) = setup (1)
+          val tier = buildEmptyTier()
+          assertResult (Seq.empty) (iterateTier (tier, Apple, 1, true) map (_.key))
+        }
 
         "the pages are limited to one byte" in {
           checkIterator (1)
@@ -255,9 +272,15 @@ class TierSpec extends WordSpec {
           val tier = buildTier()
           for (start <- AllFruits) {
             val expected = AllFruits.dropWhile (_ <= start) .toSeq
-            val actual = iterateTier (tier, start, 0, false) map (_.key)
+            val actual = iterateTier (tier, start, 1, false) map (_.key)
             assertResult (expected) (actual)
           }}
+
+        "the tier is empty" in {
+          implicit val (scheduler, disk, config) = setup (1)
+          val tier = buildEmptyTier()
+          assertResult (Seq.empty) (iterateTier (tier, Apple, TxClock.MaxValue, false) map (_.key))
+        }
 
         "the pages are limited to one byte" in {
           checkIterator (1)
@@ -287,7 +310,17 @@ class TierSpec extends WordSpec {
         assertResult (Apple) (get (Apple))
         assertResult (Orange) (get (Orange))
         assertResult (Watermelon) (get (Watermelon))
+        assertResult (None) {
+          tier.get (descriptor, Watermelon, TxClock.MinValue) .expectPass()
+        }
       }
+
+      "the tier is empty" in {
+        implicit val (scheduler, disk, config) = setup (1)
+        val tier = buildEmptyTier()
+        assertResult (None) {
+          tier.get (descriptor, Apple, TxClock.MinValue) .expectPass()
+        }}
 
       "the pages are limited to one byte" in {
         checkFind (1)

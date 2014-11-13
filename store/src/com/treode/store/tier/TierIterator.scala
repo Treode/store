@@ -22,7 +22,7 @@ import scala.util.{Failure, Success}
 import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.disk.{Disk, Position}
-import com.treode.store.{Bytes, Bound, Cell, CellIterator, Key, TxClock}
+import com.treode.store.{Bytes, Bound, Cell, CellIterator, CellIterator2, Key, TxClock}
 
 import Async.async
 
@@ -31,15 +31,14 @@ private abstract class TierIterator (
     root: Position
 ) (implicit
     disk: Disk
-) extends CellIterator {
+) extends CellIterator2 {
 
-  class Foreach (f: Cell => Async [Unit], cb: Callback [Unit]) {
+  class Foreach (f: Iterator [Cell] => Async [Unit], cb: Callback [Unit]) {
 
     import desc.pager
 
+    // A stack of the index pages descended into, and the current entry for each page.
     private var stack = List.empty [(IndexPage, Int)]
-    private var page: CellPage = null
-    private var index = 0
 
     val _push = cb.continue { p: TierPage =>
       push (p)
@@ -49,19 +48,19 @@ private abstract class TierIterator (
       next()
     }
 
+    // Descend to the first leaf page by following the first entry of each index page.
     def start() {
 
       val loop = Callback.fix [TierPage] { loop => {
 
         case Success (p: IndexPage) =>
+          // Push this index page onto the stack, and descend into the next page.
           val e = p.get (0)
           stack ::= (p, 0)
           pager.read (e.pos) .run (loop)
 
         case Success (p: CellPage) =>
-          page = p
-          index = 0
-          cb.callback (next())
+          cb.callback (body (p, 0))
 
         case Success (p) =>
           cb.fail (new MatchError (p))
@@ -73,6 +72,7 @@ private abstract class TierIterator (
       pager.read (root) .run (loop)
     }
 
+    // Descend to the leaf which holds the start key by looking up the key at each index page.
     def start (start: Bound [Key]) {
 
       val loop = Callback.fix [TierPage] { loop => {
@@ -80,8 +80,10 @@ private abstract class TierIterator (
         case Success (p: IndexPage) =>
           val i = p.ceiling (start)
           if (i == p.size) {
+            // The start key is beyond the last entry of this tier.
             cb.pass (None)
           } else {
+            // Push this index page onto the stack, and descend into the next page.
             val e = p.get (i)
             stack ::= (p, i)
             pager.read (e.pos) .run (loop)
@@ -89,13 +91,10 @@ private abstract class TierIterator (
 
         case Success (p: CellPage) =>
           val i = p.ceiling (start)
-          if (i == p.size) {
+          if (i == p.size)
             cb.pass (None)
-          } else {
-            page = p
-            index = i
-            cb.callback (next())
-          }
+          else
+            cb.callback (body (p, i))
 
         case Success (p) =>
           cb.fail (new MatchError (p))
@@ -115,26 +114,28 @@ private abstract class TierIterator (
           pager.read (e.pos) .run (_push)
           None
         case p: CellPage =>
-          page = p
-          index = 0
-          next()
+          body (p, 0)
       }}
 
+    def body (page: CellPage, index: Int): Option [Unit] = {
+      f (page.iterator.drop (index)) run (_next)
+      None
+    }
+
     def next(): Option [Unit] = {
-      if (index < page.size) {
-        val entry = page.get (index)
-        index += 1
-        f (entry) run (_next)
-        None
-      } else if (!stack.isEmpty) {
+      if (!stack.isEmpty) {
+        // Pop the recent index page off the stack.
         var b = stack.head._1
         var i = stack.head._2 + 1
         stack = stack.tail
+        // Continue popping spent index pages off the stack.
         while (i == b.size && !stack.isEmpty) {
           b = stack.head._1
           i = stack.head._2 + 1
           stack = stack.tail
         }
+        // Advance to the next entry in the unspent index page, push it onto the stack and descend
+        // into the next page.
         if (i < b.size) {
           stack ::= (b, i)
           pager.read (b.get (i) .pos) .run (_push)
@@ -155,7 +156,7 @@ private object TierIterator {
       disk: Disk
   ) extends TierIterator (desc, root) {
 
-    def foreach (f: Cell => Async [Unit]): Async [Unit] =
+    def foreach (f: Iterator [Cell] => Async [Unit]): Async [Unit] =
       async (new Foreach (f, _) .start())
   }
 
@@ -167,7 +168,7 @@ private object TierIterator {
       disk: Disk
   ) extends TierIterator (desc, root) {
 
-    def foreach (f: Cell => Async [Unit]): Async [Unit] =
+    def foreach (f: Iterator [Cell] => Async [Unit]): Async [Unit] =
       async (new Foreach (f, _) .start (start))
   }
 
@@ -175,18 +176,20 @@ private object TierIterator {
       desc: TierDescriptor,
       root: Position
   ) (implicit
-      disk: Disk
+      disk: Disk,
+      scheduler: Scheduler
   ): CellIterator =
-    new FromBeginning (desc, root)
+    (new FromBeginning (desc, root)) .flatten
 
   def apply (
       desc: TierDescriptor,
       root: Position,
       start: Bound [Key]
   ) (implicit
-      disk: Disk
+      disk: Disk,
+      scheduler: Scheduler
   ): CellIterator =
-    new FromKey (desc, root, start)
+    (new FromKey (desc, root, start)) .flatten
 
   def adapt (tier: MemTier) (implicit scheduler: Scheduler): CellIterator =
     tier.entrySet.iterator.map (memTierEntryToCell _) .async

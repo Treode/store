@@ -20,7 +20,7 @@ import java.net.SocketAddress
 import java.util.concurrent.{TimeoutException => JTimeoutException}
 import java.util.logging.{Level, Logger}, Level.WARNING
 
-import com.treode.async.AsyncIterator
+import com.treode.async.{AsyncIterator, BatchIterator}
 import com.treode.cluster.{RemoteException => CRemoteException, HostId, PortId}
 
 package store {
@@ -63,6 +63,8 @@ package store {
 package object store {
 
   type CellIterator = AsyncIterator [Cell]
+
+  type CellIterator2 = BatchIterator [Cell]
 
   @deprecated ("Use Retention", "0.2.0")
   type PriorValueEpoch = Retention
