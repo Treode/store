@@ -45,9 +45,10 @@ private class SynthMedic (
   // This tier resides in memory and is being compacted and written to disk.
   private var secondary = newMemTier
 
-  // The position of each tier on disk.
+  // The position of each tier on disk as of the last checkpoint.
   private var tiers = Tiers.empty
 
+  // The compactions that we've seen; we save them and apply them to the last checkpoint.
   private var compactions = List.empty [Compaction]
 
   private def replay (gen: Long, key: Bytes, time: TxClock, value: Option [Bytes]) {

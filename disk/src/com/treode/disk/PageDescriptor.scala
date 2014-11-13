@@ -20,21 +20,53 @@ import scala.reflect.ClassTag
 import com.treode.async.Async
 import com.treode.pickle.Pickler
 
+/** Describes a page of data. */
 class PageDescriptor [G, P] private (
-    val id: TypeId,
-    val pgrp: Pickler [G],
-    val ppag: Pickler [P]) (
-        implicit val tpag: ClassTag [P]) {
 
+    /** The ID to tag pages in the segment map; see [[PageHandler]]. */
+    val id: TypeId,
+
+    /** The picklers to serialize the group ID; see [[PageHandler]]. */
+    val pgrp: Pickler [G],
+
+    /** The pickler to serialize the page data. */
+    val ppag: Pickler [P]
+) (
+    implicit val tpag: ClassTag [P]
+) {
+
+  /** Register a handler to work with the cleaner.
+    *
+    * A handler must be registered with the launch builder. The disk system will panic if it
+    * discovers a page of data that it cannot identify.
+    */
   def handle (handler: PageHandler [G]) (implicit launch: Disk.Launch): Unit =
     launch.handle (this, handler)
 
+  /** Read a page.
+    *
+    * @param pos The position to read from.
+    */
   def read (pos: Position) (implicit disk: Disk): Async [P] =
     disk.read (this, pos)
 
+  /** Write a page.
+    *
+    * @param obj The ID of the object; see [[PageHandler]].
+    * @param grp The ID of the group; see [[PageHandler]].
+    * @param page The data.
+    */
   def write (obj: ObjectId, group: G, page: P) (implicit disk: Disk): Async [Position] =
     disk.write (this, obj, group, page)
 
+  /** Schedule the object for compaction.
+    *
+    * An object on disk should never spontaneously compact itself. If the object on disk desires
+    * to be compacted, it should invoke this method. The disk system will eventually invoke the
+    * compact method of the [[PageHandler]]. This achieves two things: the disk system can control
+    * the number of compactions that are in flight at one time, and the disk system can double up
+    * compaction desired by the object itself with compaction desired by the cleaner.
+    */
   def compact (obj: ObjectId) (implicit disk: Disk): Async [Unit] =
     disk.compact (this, obj)
 

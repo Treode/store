@@ -28,6 +28,9 @@ import com.treode.disk.{Disk, DriveAttachment, DriveDigest, DriveGeometry}
 
 import Async.guard
 
+/** The distributed key-value store that's replicated, sharded and transactional.
+  *
+  */
 trait Store {
 
   /** Read from the database as of a given point in time.

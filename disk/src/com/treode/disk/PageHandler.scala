@@ -18,10 +18,24 @@ package com.treode.disk
 
 import com.treode.async.Async
 
+/** Determines which pages are live, and compacts pages. */
 trait PageHandler [G] {
 
-  /** Returns those groups which are still referenced. */
+  /** Returns those groups which are still live.
+    *
+    * The disk system will provide a set of group IDs. These are the IDs from the time the pages
+    * were written. They can be anything, as long as they allow the handler to positiviley
+    * identify which groups are still live.
+    */
   def probe (obj: ObjectId, groups: Set [G]): Async [Set [G]]
 
+  /** Compact the object.
+    *
+    * The disk system will provide a set of group IDs that '''MUST''' be compacted; pages for those
+    * groups will be reclaimed and overwritten after compaction completes. The handler may copy
+    * other groups as well. These are the IDs from the time the pages were written. They can be
+    * anything, as long as they allow the object to positiviley identify which groups must be
+    * copied.
+    */
   def compact (obj: ObjectId, groups: Set [G]): Async [Unit]
 }

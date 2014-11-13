@@ -37,11 +37,12 @@ private class SynthTable (
 
     val id: TableId,
 
-    // To lock the generation and references to the primary and secondary; this locks the references
-    // only, while the skip list manages concurrent readers and writers of entries.  Writing to the
-    // table requires only a read lock on the references to ensure that the compactor does not change
-    // them. The compactor uses a write lock to move the primary to secondary, allocate a new
-    // primary, and increment the generation.
+    // To lock the generation and references to the primary and secondary; this locks the
+    // references only, while the skip list manages concurrent readers and writers of entries.
+    // Writing to the table requires only a read lock on the references to ensure that the
+    // checkpointer and compactor do not change them. The checkpointer uses a write lock to move
+    // the primary to secondary, allocate a new primary, and increment the generation. The
+    // compactor uses the write lock to replace multiple tiers with a compacted one.
     lock: ReentrantReadWriteLock,
 
     var gen: Long,
@@ -82,13 +83,17 @@ private class SynthTable (
 
     var candidate: Cell = null
 
+    // Check the primary memtable for an entry.
     var entry = primary.ceilingEntry (mkey)
     if (entry != null) {
       val Key (k, t) = entry.getKey
+      // Use this entry if we do not have a candidate, or if this entry is newer than the
+      // candidate. Note, the skip list already ensured that this entry is older than `time`.
       if (key == k && (candidate == null || candidate.time < t)) {
         candidate = memTierEntryToCell (entry)
       }}
 
+    // Check the secondary memtable for an entry.
     entry = secondary.ceilingEntry (mkey)
     if (entry != null) {
       val Key (k, t) = entry.getKey
@@ -96,10 +101,13 @@ private class SynthTable (
         candidate = memTierEntryToCell (entry)
       }}
 
+    // Check the disk tiers for entries.
     var i = 0
     whilst (i < tiers.size) {
       val tier = tiers (i)
       i += 1
+      // Check this tier only if it we have no candidate, or if the tier has entries newer than
+      // the candidate.
       when (tier.earliest <= time && (candidate == null || candidate.time < tier.latest)) {
         tier.get (desc, key, time) .map {
          case Some (c @ Cell (k, t, v)) if key == k && (candidate == null || candidate.time < t) =>
@@ -196,6 +204,8 @@ private class SynthTable (
   }
 
   def compact (gen: Long, chosen: Tiers, residents: Residents): Async [Option [Compaction]] = guard {
+
+    // Write the new tier. When the write has completed, update the tiers and return the new tier.
     val iter = TierIterator .merge (desc, chosen) .clean (desc, id, residents)
     val est = countKeys (primary) + chosen.estimate (residents)
     for {
@@ -213,6 +223,9 @@ private class SynthTable (
     }}
 
   def compact (groups: Set [Long], residents: Residents): Async [Option [Compaction]] = async { cb =>
+
+    // Choose which tiers to compact, accounting for which groups the disk cleaner needs moved,
+    // and accounting for tier sizes. There may be no work to do.
     writeLock.lock()
     try {
       if (!secondary.isEmpty) {
@@ -235,6 +248,8 @@ private class SynthTable (
     }}
 
   def checkpoint (gen: Long, secondary: MemTier, residents: Residents): Async [Checkpoint] = guard {
+
+    // Write the new tier. When the write has completed, update the set of tiers and return them.
     val iter = TierIterator .adapt (secondary) .clean (desc, id, residents)
     val est = countKeys (secondary)
     for {
@@ -257,6 +272,10 @@ private class SynthTable (
 
   def checkpoint (residents: Residents): Async [Checkpoint] = guard {
 
+    // Move the primary memtable to the secondary and clear the primary. New entries on this table
+    // will be written to the primary, while the TierBuilder iterates the secondary. Increase the
+    // generation. This identifies tiers for probe and compact, and it tags log entries so that the
+    // medic can skip old ones during replay.
     writeLock.lock()
     val (gen, secondary, tiers) = try {
       assert (this.secondary.isEmpty, "Checkpoint already in progress.")
@@ -272,6 +291,9 @@ private class SynthTable (
       writeLock.unlock()
     }
 
+    // If the secondary is empty, it means nothing new was written to this table since the last
+    // checkpoint. We can immediately return the current set of tiers. Otherwise, we need to
+    // write a new tier, and return the new set of tiers later.
     if (secondary.isEmpty) {
       supply (new Checkpoint (gen, tiers))
     } else {

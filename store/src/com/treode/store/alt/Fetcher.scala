@@ -3,7 +3,7 @@ package com.treode.store.alt
 import com.treode.async.Async
 import com.treode.store.ReadOp
 
-/** Builds a collection of rows to prefetch. This works with [[Transaciton]] to prefetch rows from
+/** Builds a collection of rows to prefetch. This works with [[Transaction]] to prefetch rows from
   * the database into the transaction's cache. This class makes it easy to fetch many rows from
   * different tables in a single call.
   */
