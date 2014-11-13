@@ -146,7 +146,7 @@ trait SpecTools {
     val movies = new MovieStore () (Random, store)
     val router = new Router
     ActorResource (0, movies, router)
-    AnalyticsResource (router) (store)
+    AnalyticsResource (router) (scheduler, store)
     MovieResource (0, movies, router)
     SearchResource (movies, router)
 
