@@ -18,7 +18,7 @@ package com.treode.store.atomic
 
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
@@ -79,10 +79,10 @@ private class StubAtomicHost (
   def deputiesOpen: Boolean =
     !atomic.writers.deputies.isEmpty
 
-  def audit: AsyncIterator [(TableId, Cell)] =
+  def audit: BatchIterator [(TableId, Cell)] =
     for {
-      e <- atomic.tstore.tables.entrySet.async
-      cell <- e.getValue.iterator (Residents.all)
+      e <- atomic.tstore.tables.entrySet.batch
+      cell <- e.getValue.iterator (Residents.all) .batch
     } yield {
       (e.getKey, cell)
     }

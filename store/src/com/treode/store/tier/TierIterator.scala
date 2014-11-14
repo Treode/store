@@ -19,7 +19,7 @@ package com.treode.store.tier
 import scala.collection.JavaConversions._
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
+import com.treode.async.{Async, BatchIterator, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.disk.{Disk, Position}
 import com.treode.store.{Bytes, Bound, Cell, CellIterator, CellIterator2, Key, TxClock}
@@ -178,8 +178,8 @@ private object TierIterator {
   ) (implicit
       disk: Disk,
       scheduler: Scheduler
-  ): CellIterator =
-    (new FromBeginning (desc, root)) .flatten
+  ): CellIterator2 =
+    (new FromBeginning (desc, root))
 
   def apply (
       desc: TierDescriptor,
@@ -188,13 +188,13 @@ private object TierIterator {
   ) (implicit
       disk: Disk,
       scheduler: Scheduler
-  ): CellIterator =
-    (new FromKey (desc, root, start)) .flatten
+  ): CellIterator2 =
+    (new FromKey (desc, root, start))
 
-  def adapt (tier: MemTier) (implicit scheduler: Scheduler): CellIterator =
-    tier.entrySet.iterator.map (memTierEntryToCell _) .async
+  def adapt (tier: MemTier) (implicit scheduler: Scheduler): CellIterator2 =
+    tier.entrySet.iterator.map (memTierEntryToCell _) .batch
 
-  def adapt (tier: MemTier, start: Bound [Key]) (implicit scheduler: Scheduler): CellIterator =
+  def adapt (tier: MemTier, start: Bound [Key]) (implicit scheduler: Scheduler): CellIterator2 =
     adapt (tier.tailMap (start.bound, start.inclusive))
 
   def merge (
@@ -205,11 +205,11 @@ private object TierIterator {
       disk: Disk
   ): CellIterator = {
 
-    val allTiers = new Array [CellIterator] (tiers.size)
+    val allTiers = new Array [CellIterator2] (tiers.size)
     for (i <- 0 until tiers.size)
       allTiers (i) = TierIterator (desc, tiers (i) .root)
 
-    AsyncIterator.merge (allTiers)
+    BatchIterator.merge (allTiers) .flatten
   }
 
   def merge (
@@ -222,13 +222,13 @@ private object TierIterator {
       disk: Disk
   ): CellIterator = {
 
-    val allTiers = new Array [CellIterator] (tiers.size + 2)
+    val allTiers = new Array [CellIterator2] (tiers.size + 2)
     allTiers (0) = adapt (primary)
     allTiers (1) = adapt (secondary)
     for (i <- 0 until tiers.size)
       allTiers (i + 2) = TierIterator (desc, tiers (i) .root)
 
-    AsyncIterator.merge (allTiers)
+    BatchIterator.merge (allTiers) .flatten
   }
 
   def merge (
@@ -242,11 +242,11 @@ private object TierIterator {
       disk: Disk
   ): CellIterator = {
 
-    val allTiers = new Array [CellIterator] (tiers.size + 2)
+    val allTiers = new Array [CellIterator2] (tiers.size + 2)
     allTiers (0) = adapt (primary, start)
     allTiers (1) = adapt (secondary, start)
     for (i <- 0 until tiers.size; tier = tiers (i))
       allTiers (i + 2) = TierIterator (desc, tier.root, start)
 
-    AsyncIterator.merge (allTiers)
+    BatchIterator.merge (allTiers) .flatten
   }}

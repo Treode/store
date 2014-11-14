@@ -35,7 +35,9 @@ object MultiException {
 
   /** Create a MultiException unless the sequence has one exception. */
   def fit (ts: Seq [Throwable]): Throwable = {
-    if (ts.size == 1)
+    if (ts.size == 0)
+      new NoSuchElementException
+    else if (ts.size == 1)
       ts.head
     else if (ts forall (_.isInstanceOf [TimeoutException]))
       ts.head

@@ -175,4 +175,18 @@ object BatchIterator {
     new BatchIterator [A] {
       def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
         guard (f (iter))
-  }}
+  }
+
+  /** Given asynchronous iterators of sorted items, merge them into a single asynchronous iterator
+    * that maintains the sort.  Keep duplicate elements, and when two or more input iterators
+    * duplicate an element, first list the element from the earlier iterator, that is by position
+    * in `iters`.
+    */
+  def merge [A] (
+      iters: Seq [BatchIterator [A]]
+  ) (implicit
+      ordering: Ordering [A],
+      scheduler: Scheduler
+  ): BatchIterator [A] =
+    new MergeIterator (iters)
+}

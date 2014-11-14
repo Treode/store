@@ -16,253 +16,104 @@
 
 package com.treode.async
 
-import com.treode.async.implicits._
-import com.treode.async.stubs.StubScheduler
+import scala.collection.mutable.PriorityQueue
+import scala.math.Ordering
+
+import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.stubs.implicits._
-import org.scalatest.FlatSpec
+import com.treode.tags.Periodic
+import org.scalatest.FreeSpec
 
 import Async.supply
 import AsyncIteratorTestTools._
 
-class MergeIteratorSpec extends FlatSpec {
+class MergeIteratorSpec extends FreeSpec with AsyncChecks {
 
-  private def merge [A] (xss: Seq [A] *) (implicit s: StubScheduler, ord: Ordering [A]) =
-    AsyncIterator.merge (xss map (_.async))
+  // The merge iterator composes multiple input interators, those inputs being provided in a
+  // particular order. When two input iterators yield an equal element, the merge iterator should
+  // take both elements, listing the one from the first input interator then the one from the
+  // second. We use the ones digit of integers to track which input iterator an element came from.
+  // We give the merge iterator an ordering that ignores the ones digit. If the iterator works,
+  // the output will be sorted by the normal integer ordering.
 
-  "The MergeIterator" should "yield nothing for []" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge [Int] ()
-    assertSeq () (iter)
+  // Order that ignores the ones digit, for example 11 == 12.
+  val ordering = new Ordering [Int] {
+
+    def compare (x: Int, y: Int): Int =
+      Ordering.Int.compare (x / 10, y / 10)
   }
 
-  it should "yield nothing for [[]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge [Int] (Seq.empty)
-    assertSeq () (iter)
-  }
+  // The batches. The merge iterator assumes the inputs are sorted, and these lists ensure that.
+  // The ones digit will be filled in later.
+  val firsts = Seq (Seq.empty, Seq (10), Seq (10, 20), Seq (10, 20, 30))
+  val seconds = Seq (Seq.empty, Seq (60), Seq (60, 70), Seq (60, 70, 80))
 
-  it should "yield one thing for [[1]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1))
-    assertSeq (1) (iter)
-  }
+  // Batches for iterators of one batch.
+  val ones =
+    for (first <- firsts)
+      yield Seq (first)
 
-  it should "yield one thing for [[][1]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq.empty, Seq (1))
-    assertSeq (1) (iter)
-  }
+  // Batches for iterators of two batches.
+  val twos =
+    for (first <- firsts; second <- seconds)
+      yield Seq (first, second)
 
-  it should "yield one thing for [[1][]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1), Seq.empty)
-    assertSeq (1) (iter)
-  }
+  // Batches for iterators of varying numbers of batches.
+  val varying = ones ++ twos
 
-  it should "yield two things for [[1, 2]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1, 2))
-    assertSeq (1, 2) (iter)
-  }
+  def number (n: Int, xss: Seq [Seq [Int]]): Seq [Seq [Int]] =
+    xss.map (_.map (_ + n))
 
-  it should "yield two things for [[1][2]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1), Seq (2))
-    assertSeq (1, 2) (iter)
-  }
+  // Simple merge, without all the asynchronous batch complexity. This reveals the benefit of
+  // using the ones digit to track which batch, and using
+  // - The outer sequences are all the batch iterators.
+  // - The second level sequences are the batches of one batch iterator.
+  // - The third level (inner most) sequences are the elements of a batch.
+  def merge (xsss: Seq [Seq [Seq [Int]]]): Seq [Int] =
+    xsss.flatten.flatten.sorted
 
-  it should "yield two things for [[][1][2]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq.empty, Seq (1), Seq (2))
-    assertSeq (1, 2) (iter)
-  }
+  def merge (xs: Seq [BatchIterator [Int]]) (implicit scheduler: StubScheduler) =
+    BatchIterator.merge (xs) (ordering, scheduler) .flatten.toSeq.expectPass()
 
-  it should "yield two things for [[1][][2]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1), Seq.empty, Seq (2))
-    assertSeq (1, 2) (iter)
-  }
+  def testStringOf [A] (xsss: Seq [Seq [Seq [A]]]): String =
+    xsss.map (_.map (_.mkString ("[", ", ", "]")) .mkString ("[", ", ", "]")) .mkString ("; ")
 
-  it should "yield two things for [[1][2][]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1), Seq (2), Seq.empty)
-    assertSeq (1, 2) (iter)
-  }
+  "The MergeIterator should" - {
 
-  it should "yield two things sorted for [[2][1]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (2), Seq (1))
-    assertSeq (1, 2) (iter)
-  }
-
-  it should "yield things sorted for [[1][2][3]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1), Seq (2), Seq (3))
-    assertSeq (1, 2, 3) (iter)
-  }
-
-  it should "yield things sorted for [[1][3][2]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1), Seq (3), Seq (2))
-    assertSeq (1, 2, 3) (iter)
-  }
-
-  it should "yield things sorted for [[2][1][3]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1), Seq (2), Seq (3))
-    assertSeq (1, 2, 3) (iter)
-  }
-
-  it should "yield things sorted for [[2][3][1]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (2), Seq (3), Seq (1))
-    assertSeq (1, 2, 3) (iter)
-  }
-
-  it should "yield things sorted for [[3][1][2]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (3), Seq (1), Seq (2))
-    assertSeq (1, 2, 3) (iter)
-  }
-
-  it should "yield things sorted for [[3][2][1]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (3), Seq (2), Seq (1))
-    assertSeq (1, 2, 3) (iter)
-  }
-
-  it should "yield things sorted for [[1, 2][3]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1, 2), Seq (3))
-    assertSeq (1, 2, 3) (iter)
-  }
-
-  it should "yield things sorted for [[1][2, 3]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1), Seq (2, 3))
-    assertSeq (1, 2, 3) (iter)
-  }
-
-  it should "yield things sorted for [[1, 3][2]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1, 3), Seq (2))
-    assertSeq (1, 2, 3) (iter)
-  }
-
-  it should "preserve duplicates in tier order with [[1][1][2]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1 -> "a"), Seq (1 -> "b"), Seq (2 -> "c"))
-    assertSeq (1 -> "a", 1 -> "b", 2 -> "c") (iter)
-  }
-
-  it should "preserve duplicates in tier order with [[1][2][1]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (1 -> "a"), Seq (2 -> "b"), Seq (1 -> "c"))
-    assertSeq (1 -> "a", 1 -> "c", 2 -> "b") (iter)
-  }
-
-  it should "preserve duplicates in tier order with [[2][1][1]]" in {
-    implicit val scheduler = StubScheduler.random()
-    val iter = merge (Seq (2 -> "a"), Seq (1 -> "b"), Seq (1 -> "c"))
-    assertSeq (1 -> "b", 1 -> "c", 2 -> "a") (iter)
-  }
-
-  it should "report an exception from the first iterator" in {
-    implicit val scheduler = StubScheduler.random()
-    var c1 = Set.empty [Int]
-    var c2 = Set.empty [Int]
-    var provided = Set.empty [Int]
-    assertFail [DistinguishedException] {
-      val i1 = track (adapt (1, 3, 5, 7)) (c1 += _)
-      val i2 = failWhen (i1) (_ == 5)
-      val j1 = track (adapt (2, 4, 6, 8)) (c2 += _)
-      track (AsyncIterator.merge (Seq (i2, j1))) (provided += _)
+    def test (_xsss:  Seq [Seq [Int]] *) {
+      val xsss = for ((xss, n) <- _xsss.zipWithIndex) yield number (n+1, xss)
+      implicit val scheduler = StubScheduler.random()
+      val batches = for (xss <- xsss) yield batch (xss)
+      assertResult (merge (xsss)) (merge (batches))
     }
-    assertResult (Set (1, 3, 5)) (c1)
-    assertResult (Set (2, 4)) (c2)
-    assertResult (Set (1, 2, 3)) (provided)
-  }
 
-  it should "report an exception while opening the first iterator" in {
-    implicit val scheduler = StubScheduler.random()
-    var c2 = Set.empty [Int]
-    var provided = Set.empty [Int]
-    assertFail [DistinguishedException] {
-      val i1 = failNow [Int]
-      val j1 = track (adapt (2, 4, 6, 8)) (c2 += _)
-      track (AsyncIterator.merge (Seq (i1, j1))) (provided += _)
+    "work with no inputs" in {
+      test ()
     }
-    assertResult (Set (2)) (c2)
-    assertResult (Set.empty) (provided)
-  }
 
-  it should "report an exception from the second iterator" in {
-    implicit val scheduler = StubScheduler.random()
-    var c1 = Set.empty [Int]
-    var c2 = Set.empty [Int]
-    var provided = Set.empty [Int]
-    assertFail [DistinguishedException] {
-      val i1 = track (adapt (1, 3, 5, 7)) (c1 += _)
-      val j1 = track (adapt (2, 4, 6, 8)) (c2 += _)
-      val j2 = failWhen (j1) (_ == 6)
-      track (AsyncIterator.merge (Seq (i1, j2))) (provided += _)
+    "work with one input" in {
+      for (xss <- varying)
+        test (xss)
     }
-    assertResult (Set (1, 3, 5)) (c1)
-    assertResult (Set (2, 4, 6)) (c2)
-    assertResult (Set (1, 2, 3, 4)) (provided)
-  }
 
-  it should "report an exception while opening the second iterator" in {
-    implicit val scheduler = StubScheduler.random()
-    var c1 = Set.empty [Int]
-    var provided = Set.empty [Int]
-    assertFail [DistinguishedException] {
-      val i1 = track (adapt (1, 3, 5, 7)) (c1 += _)
-      val j1 = failNow [Int]
-      track (AsyncIterator.merge (Seq (i1, j1))) (provided += _)
+    "work with two inputs" in {
+      for (first <- varying; second <- varying)
+        test (first, second)
     }
-    assertResult (Set (1)) (c1)
-    assertResult (Set.empty) (provided)
-  }
 
-  it should "report exceptions from both iterators" in {
-    implicit val scheduler = StubScheduler.random()
-    var c1 = Set.empty [Int]
-    var c2 = Set.empty [Int]
-    var provided = Set.empty [Int]
-    assertFail [MultiException] {
-      val i1 = track (adapt (1, 3, 5, 7)) (c1 += _)
-      val i2 = failWhen (i1) (_ => true)
-      val j1 = track (adapt (2, 4, 6, 8)) (c2 += _)
-      val j2 = failWhen (j1) (_ => true)
-      track (AsyncIterator.merge (Seq (i2, j2))) (provided += _)
-    }
-    assertResult (Set (1)) (c1)
-    assertResult (Set (2)) (c2)
-    assertResult (Set.empty) (provided)
-  }
-
-  it should "report exceptions while opening both iterators" in {
-    implicit val scheduler = StubScheduler.random()
-    var provided = Set.empty [Int]
-    assertFail [MultiException] {
-      val i1 = failNow [Int]
-      val j1 = failNow [Int]
-      track (AsyncIterator.merge (Seq (i1, j1))) (provided += _)
-    }
-    assertResult (Set.empty) (provided)
-  }
-
-  it should "report a failure returned from the body" in {
-    implicit val scheduler = StubScheduler.random()
-    val i1 = merge [Int] (Seq (1))
-    val i2 = i1.foreach (_ => supply (throw new DistinguishedException))
-    i2.fail [DistinguishedException]
-  }
-
-  it should "report an exception thrown from the body" in {
-    implicit val scheduler = StubScheduler.random()
-    val i1 = merge [Int] (Seq (1), Seq (2))
-    val i2 = i1.foreach (x => supply (if (x == 2) throw new DistinguishedException))
-    i2.fail [DistinguishedException]
-  }}
+    "work with varying inputs" taggedAs (Periodic) in {
+      forAllSeeds { implicit random =>
+        val inputs =
+          // upto 7 inputs
+          for (_ <- 0 until random.nextInt (8)) yield {
+            // merge requires inputs are sorted, n is grown
+            var n = 0
+            // upto 7 batches per input
+            for (_ <- 0 until random.nextInt (8)) yield {
+              // upto 7 elements per batch
+              Seq.fill (random.nextInt (8)) {
+                n += random.nextInt (6)
+                n * 10
+              }}}
+        test (inputs: _*)
+      }}}}

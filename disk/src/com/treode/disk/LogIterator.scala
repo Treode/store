@@ -210,8 +210,8 @@ private object LogIterator {
 
     for {
       logs <- reads.latch.map foreach (apply (useGen0, _, records))
-      iter = AsyncIterator.merge (logs.values.map (_.flatten) .toSeq) (ordering, scheduler)
-      _ <- iter.foreach (entry => supply (replay (entry)))
+      iter = BatchIterator.merge (logs.values.toSeq) (ordering, scheduler)
+      _ <- iter.foreach (replay _)
       kit = new DiskKit (boot.sysid, logBatch)
       drives =
         for (read <- reads) yield {

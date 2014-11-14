@@ -250,7 +250,7 @@ private class SynthTable (
   def checkpoint (gen: Long, secondary: MemTier, residents: Residents): Async [Checkpoint] = guard {
 
     // Write the new tier. When the write has completed, update the set of tiers and return them.
-    val iter = TierIterator .adapt (secondary) .clean (desc, id, residents)
+    val iter = TierIterator .adapt (secondary) .flatten.clean (desc, id, residents)
     val est = countKeys (secondary)
     for {
       tier <- TierBuilder.build (desc, id, gen, est, residents, iter)

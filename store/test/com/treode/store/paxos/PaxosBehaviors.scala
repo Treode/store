@@ -18,7 +18,7 @@ package com.treode.store.paxos
 
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
@@ -32,14 +32,8 @@ import PaxosTestTools._
 trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
   this: FreeSpec =>
 
-  private def scan (hosts: Seq [StubPaxosHost]) (implicit scheduler: Scheduler): Async [Seq [Cell]] = {
-    val iter = AsyncIterator.merge (hosts map (_.audit))
-    val cells = Seq.newBuilder [Cell]
-    for {
-      _ <- iter.dedupe.foreach (c => supply (cells += c))
-    } yield {
-      cells.result
-    }}
+  private def scan (hosts: Seq [StubPaxosHost]) (implicit scheduler: Scheduler): Async [Seq [Cell]] =
+    BatchIterator.merge (hosts map (_.audit)) .toSeq
 
   private [paxos] def crashAndRecover (
       nbatch: Int,

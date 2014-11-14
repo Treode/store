@@ -19,7 +19,7 @@ package com.treode.store.atomic
 import scala.collection.SortedMap
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.disk.stubs.{CrashChecks, StubDiskDrive}
@@ -51,7 +51,7 @@ trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
 
   private def audit (hosts: Seq [StubAtomicHost]) (implicit scheduler: Scheduler) = {
     val ordering = Ordering.Tuple2 [TableId, Cell]
-    val iter = AsyncIterator.merge (hosts map (_.audit)) (ordering, scheduler)
+    val iter = BatchIterator.merge (hosts map (_.audit)) (ordering, scheduler)
     var cells = newTrackedCells
     for {
       _ <-

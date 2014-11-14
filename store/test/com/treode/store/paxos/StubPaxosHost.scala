@@ -18,7 +18,7 @@ package com.treode.store.paxos
 
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.io.stubs.StubFile
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubCluster, StubNetwork}
@@ -76,8 +76,8 @@ private class StubPaxosHost (
   def proposersOpen: Boolean =
     !paxos.proposers.proposers.isEmpty
 
-  def audit: AsyncIterator [Cell] =
-    paxos.archive.iterator (Residents.all)
+  def audit: BatchIterator [Cell] =
+    paxos.archive.iterator (Residents.all) .batch
 
   def lead (key: Long, value: Int): Async [Int] =
     paxos.lead (Bytes (key), 0, Bytes (value)) .map (_.int)

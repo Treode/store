@@ -17,82 +17,121 @@
 package com.treode.async
 
 import scala.collection.mutable.PriorityQueue
-import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Try, Success}
 
 import Async.{guard, async}
 
 private class MergeIterator [A] (
-    iters: Seq [AsyncIterator [A]]
-) (implicit 
+    iters: Seq [BatchIterator [A]]
+) (implicit
     order: Ordering [A],
     scheduler: Scheduler
-) extends AsyncIterator [A] {
+) extends BatchIterator [A] {
 
-  private case class Element (x: A, tier: Int, cb: Callback [Unit])
+  private case class Element (x: A, n: Int, xs: Iterator [A], cb: Callback [Unit])
   extends Ordered [Element] {
 
     // Reverse the sort for the PriorityQueue.
     def compare (that: Element): Int = {
       val r = order.compare (that.x, x)
-      if (r != 0) r else that.tier compare tier
+      if (r != 0) r else that.n compare n
     }}
 
-  private object Element extends Ordering [Element] {
+  private class Batch (f: Iterator [A] => Async [Unit], cb: Callback [Unit]) {
 
-    def compare (x: Element, y: Element): Int =
-      x compare y
-  }
-
-  def foreach (f: A => Async [Unit]): Async [Unit] = async { cb =>
-
+    val fiber = new Fiber
     val pq = new PriorityQueue [Element]
+    var ready = true
     var count = iters.size
-    var thrown = List.empty [Throwable]
+    var thrown = Option.empty [Throwable]
 
-    def _next(): Unit =
-      scheduler.execute {
-        guard {
-          f (pq.head.x)
-        } run { v =>
-          pq.synchronized {
-            pq.dequeue().cb (v)
-          }}}
-
-    def _close() {
-      assert (count > 0, "MergeIterator was already closed.")
-      count -= 1
-      if (count == pq.size && count > 0 && thrown.isEmpty)
-        _next()
-      else if (count == pq.size && !thrown.isEmpty)
-        scheduler.fail (cb, MultiException.fit (thrown))
-      else if (count == 0 && thrown.isEmpty)
-        scheduler.pass (cb, ())
+    // Merge the next batch from the prioirty queue; must run inside fiber.
+    private def _merge(): Iterator [A] = {
+      val b = Seq.newBuilder [A]
+      while (pq.size == count) {
+        val e = pq.dequeue()
+        b += e.x
+        if (e.xs.hasNext)
+          pq.enqueue (e.copy (x = e.xs.next))
+        else
+          scheduler.pass (e.cb, ())
+      }
+      b.result.iterator
     }
 
-    val close: Callback [Unit] = {
-      case Success (v) =>
-        pq.synchronized {
-          _close()
-        }
-      case Failure (t) =>
-        pq.synchronized {
-          thrown ::= t
-          _close()
+    // Give the next batch to the body; must be run inside fiber.
+    private def _give() {
+      val xs = _merge()
+      if (!xs.isEmpty) {
+        ready = false
+        scheduler.execute (guard (f (xs)) run (took _))
+      }}
+
+    // All input iterators finished.
+    private def _finish() {
+      ready = false
+      scheduler.pass (cb, ())
+    }
+
+    // Close body with a failure.
+    private def _fail() {
+      ready = false
+      scheduler.fail (cb, thrown.get)
+    }
+
+    // Maybe give the next batch to the body; must run inside fiber.
+    private def _next() {
+      if (!ready || pq.size < count)
+        ()
+      else if (!thrown.isEmpty)
+        _fail()
+      else if (count == 0)
+        _finish()
+      else
+        _give()
+    }
+
+    // The body took the batch; it's ready for more.
+    def took (x: Try [Unit]): Unit =
+      fiber.execute {
+        ready = true
+        x match {
+          case Success (_) =>
+            _next()
+          case Failure (t) =>
+            thrown = Some (t)
+            _next()
         }}
 
-    def loop (n: Int) (x: A): Async [Unit] = async { cbi => 
-      pq.synchronized {
-        pq.enqueue (Element (x, n, cbi))
-        if (count == pq.size)
-          if (thrown.isEmpty)
+    // We got values from an input iterator.
+    def got (n: Int, xs: Iterator [A], cbi: Callback [Unit]): Unit =
+      if (xs.hasNext)
+        fiber.execute {
+          pq.enqueue (Element (xs.next, n, xs, cbi))
+          _next()
+        }
+      else
+        scheduler.pass (cbi, ())
+
+    // An input iterator finished.
+    def close (x: Try [Unit]): Unit =
+      fiber.execute {
+        assert (count > 0, "MergeIterator was already closed.")
+        count -= 1
+        x match {
+          case Success (_) =>
             _next()
-          else
-            scheduler.fail (cb, MultiException.fit (thrown))
-      }}
+          case Failure (t) =>
+            thrown = Some (t)
+            _next()
+        }}
 
     if (count == 0)
       scheduler.pass (cb, ())
-    for ((iter, n) <- iters zipWithIndex)
-      iter.foreach (loop (n)) run (close)
-  }}
+    for ((iter, n) <- iters.zipWithIndex)
+      iter.batch (xs => async (cb => got (n, xs, cb))) run (close (_))
+  }
+
+  def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
+    async (new Batch (f, _))
+}
