@@ -20,7 +20,7 @@ import java.nio.file.Path
 import java.util.ArrayDeque
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
+import com.treode.async.{Async, AsyncIterator, BatchIterator, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
@@ -41,7 +41,7 @@ private class LogIterator private (
 ) (implicit
     scheduler: Scheduler,
     config: Disk.Config
-) extends AsyncIterator [(Long, Unit => Any)] {
+) extends BatchIterator [(Long, Unit => Any)] {
 
   import superb.{geometry => geom, id}
   import superb.geometry.{blockAlignDown, blockBits, segmentNum}
@@ -51,7 +51,7 @@ private class LogIterator private (
   private var pagePos = Option.empty [Long]
   private var pageLedger = new PageLedger
 
-  class Foreach (f: ((Long, Unit => Any)) => Async [Unit], cb: Callback [Unit]) {
+  class Batch (f: Iterator [(Long, Unit => Any)] => Async [Unit], cb: Callback [Unit]) {
 
     val _read: Callback [Int] = {
       case Success (v) => cb.defer (read (v))
@@ -123,15 +123,15 @@ private class LogIterator private (
           val end = logBuf.readPos
           val entry = records.read (id.id, logBuf, len - end + start)
           logPos += len + 4
-          f ((batch, entry)) run (_next)
+          f (Iterator ((batch, entry))) run (_next)
       }}
 
     def next() {
       file.deframe (logBuf, logPos, blockBits) run (_read)
     }}
 
-  def foreach (f: ((Long, Unit => Any)) => Async [Unit]): Async [Unit] =
-    async (new Foreach (f, _) .next())
+  def batch (f: Iterator [(Long, Unit => Any)] => Async [Unit]): Async [Unit] =
+    async (new Batch (f, _) .next())
 
   def pages(): (SegmentBounds, Long, PageLedger, Boolean) =
     pagePos match {
@@ -210,7 +210,7 @@ private object LogIterator {
 
     for {
       logs <- reads.latch.map foreach (apply (useGen0, _, records))
-      iter = AsyncIterator.merge (logs.values.toSeq) (ordering, scheduler)
+      iter = AsyncIterator.merge (logs.values.map (_.flatten) .toSeq) (ordering, scheduler)
       _ <- iter.foreach (entry => supply (replay (entry)))
       kit = new DiskKit (boot.sysid, logBatch)
       drives =
