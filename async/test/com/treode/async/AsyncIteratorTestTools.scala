@@ -30,6 +30,13 @@ object AsyncIteratorTestTools {
   def adapt [A] (xs: A*) (implicit scheduler: StubScheduler): AsyncIterator [A] =
     AsyncIterator.adapt (xs.iterator)
 
+  def batch (xs: Seq [Seq [Int]]) (implicit scheduler: StubScheduler): BatchIterator [Int] =
+    new BatchIterator [Int] {
+      val iter = xs.iterator
+      def foreach (f: Iterator [Int] => Async [Unit]): Async [Unit] =
+        scheduler.whilst (iter.hasNext) (f (iter.next.iterator))
+    }
+
   def track [A] (iter: AsyncIterator [A]) (f: A => Any): AsyncIterator [A] =
     new AsyncIterator [A] {
       def foreach (g: A => Async [Unit]): Async [Unit] = {

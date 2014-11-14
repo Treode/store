@@ -100,12 +100,18 @@ package object implicits {
 
     def async (implicit scheduler: Scheduler): AsyncIterator [A] =
       AsyncIterator.adapt (iter)
+
+    def batch (implicit scheduler: Scheduler): BatchIterator [A] =
+      BatchIterator.adapt (iter)
   }
 
   implicit class RichIterable [A] (iter: Iterable [A]) {
 
     def async (implicit scheduler: Scheduler): AsyncIterator [A] =
       AsyncIterator.adapt (iter.iterator)
+
+    def batch (implicit scheduler: Scheduler): BatchIterator [A] =
+      BatchIterator.adapt (iter.iterator)
 
     object latch extends IterableLatch (iter, iter.size)
   }
@@ -114,12 +120,18 @@ package object implicits {
 
     def async (implicit scheduler: Scheduler): AsyncIterator [A] =
       AsyncIterator.adapt (iter)
+
+    def batch (implicit scheduler: Scheduler): BatchIterator [A] =
+      BatchIterator.adapt (iter)
   }
 
   implicit class RichJavaIterable [A] (iter: JavaIterable [A]) {
 
     def async (implicit scheduler: Scheduler): AsyncIterator [A] =
       AsyncIterator.adapt (iter.iterator)
+
+    def batch (implicit scheduler: Scheduler): BatchIterator [A] =
+      BatchIterator.adapt (iter.iterator)
 
     object latch extends IterableLatch (iter, iter.size)
   }

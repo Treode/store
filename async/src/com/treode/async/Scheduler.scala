@@ -66,16 +66,16 @@ trait Scheduler extends Executor {
     async { cb =>
       val loop = Callback.fix [Unit] { loop => {
         case Success (v) =>
-           execute {
-             try {
-               if (p)
-                 f run loop
-               else
-                 pass (cb, ())
-             } catch {
-               case t: Throwable => fail (cb, t)
-             }
-           }
+          execute {
+            try {
+              if (p)
+                f run loop
+             else
+                pass (cb, ())
+            } catch {
+              case t: Throwable => fail (cb, t)
+            }
+          }
         case Failure (t) => fail (cb, t)
       }}
       loop.pass (())
