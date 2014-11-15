@@ -27,16 +27,19 @@ object AsyncIteratorTestTools {
 
   class DistinguishedException extends Exception
 
+  /** An async iterator over each given value. */
   def adapt [A] (xs: A*) (implicit scheduler: StubScheduler): AsyncIterator [A] =
     AsyncIterator.adapt (xs.iterator)
 
-  def batch (xs: Seq [Seq [Int]]) (implicit scheduler: StubScheduler): BatchIterator [Int] =
-    new BatchIterator [Int] {
+  /** A batch iterator over each given batch. */
+  def batch [A] (xs: Seq [Seq [A]]) (implicit scheduler: StubScheduler): BatchIterator [A] =
+    new BatchIterator [A] {
       val iter = xs.iterator
-      def foreach (f: Iterator [Int] => Async [Unit]): Async [Unit] =
+      def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
         scheduler.whilst (iter.hasNext) (f (iter.next.iterator))
     }
 
+  /** Invoke f each time an element is consumed from the iterator. */
   def track [A] (iter: AsyncIterator [A]) (f: A => Any): AsyncIterator [A] =
     new AsyncIterator [A] {
       def foreach (g: A => Async [Unit]): Async [Unit] = {
@@ -45,6 +48,7 @@ object AsyncIteratorTestTools {
           g (x)
         }}}
 
+  /** Adapt the foreach body to thrown an exception on the element where p is true. */
   def failWhen [A] (iter: AsyncIterator [A]) (p: A => Boolean): AsyncIterator [A] =
     new AsyncIterator [A] {
       def foreach (g: A => Async [Unit]): Async [Unit] = {
@@ -53,14 +57,24 @@ object AsyncIteratorTestTools {
           g (x)
         }}}
 
+  /** Yield an exeption from foreach before consuming a single element. */
   def failNow [A]: AsyncIterator [A] =
     new AsyncIterator [A] {
       def foreach (g: A => Async [Unit]): Async [Unit] =
         supply (throw new DistinguishedException)
     }
 
-  def assertSeq [A] (expected: A*) (actual: AsyncIterator [A]) (implicit s: StubScheduler): Unit =
-    assertResult (expected) (actual.toSeq.expectPass())
+  // Scala disambiguates on first argument list only; this works around that.
+  class AssertSeq [A] (expected: Seq [A]) {
+
+    def apply (actual: AsyncIterator [A]) (implicit scheduler: StubScheduler): Unit =
+      assertResult (expected) (actual.toSeq.expectPass())
+
+    def apply (actual: BatchIterator [A]) (implicit scheduler: StubScheduler): Unit =
+      assertResult (expected) (actual.toSeq.expectPass())
+  }
+
+  def assertSeq [A] (expected: A*): AssertSeq [A] = new AssertSeq [A] (expected)
 
   def assertFail [E] (iter: AsyncIterator [_]) (implicit s: StubScheduler, m: Manifest [E]): Unit =
     iter.foreach (_ => supply (())) .fail [E]

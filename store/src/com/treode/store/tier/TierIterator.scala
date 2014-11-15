@@ -33,7 +33,7 @@ private abstract class TierIterator (
     disk: Disk
 ) extends CellIterator2 {
 
-  class Foreach (f: Iterator [Cell] => Async [Unit], cb: Callback [Unit]) {
+  class Batch (f: Iterator [Cell] => Async [Unit], cb: Callback [Unit]) {
 
     import desc.pager
 
@@ -156,8 +156,8 @@ private object TierIterator {
       disk: Disk
   ) extends TierIterator (desc, root) {
 
-    def foreach (f: Iterator [Cell] => Async [Unit]): Async [Unit] =
-      async (new Foreach (f, _) .start())
+    def batch (f: Iterator [Cell] => Async [Unit]): Async [Unit] =
+      async (new Batch (f, _) .start())
   }
 
   class FromKey (
@@ -168,8 +168,8 @@ private object TierIterator {
       disk: Disk
   ) extends TierIterator (desc, root) {
 
-    def foreach (f: Iterator [Cell] => Async [Unit]): Async [Unit] =
-      async (new Foreach (f, _) .start (start))
+    def batch (f: Iterator [Cell] => Async [Unit]): Async [Unit] =
+      async (new Batch (f, _) .start (start))
   }
 
   def apply (

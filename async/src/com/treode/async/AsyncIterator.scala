@@ -51,6 +51,13 @@ trait AsyncIterator [A] {
   def withFilter (p: A => Boolean): AsyncIterator [A] =
     filter (p)
 
+  /** A BatchIterator of sequences of one element. */
+  def batch: BatchIterator [A] =
+    new BatchIterator [A] {
+      def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
+        self.foreach (x => f (Iterator (x)))
+    }
+
   /** Execute the asynchronous operation `f` foreach element while `p` is true.  Return the first
     * element for which `p` fails, or `None` if `p` never fails and the whole sequence is
     * consumed.

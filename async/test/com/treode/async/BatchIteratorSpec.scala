@@ -25,6 +25,8 @@ import AsyncIteratorTestTools._
 
 class BatchIteratorSpec extends FreeSpec {
 
+  val items = Seq (Seq (1, 2, 3, 4, 5))
+
   def testStringOf [A] (items: Seq [Seq [A]]): String =
     items.map (_.mkString ("[", ", ", "]")) .mkString ("[", ", ", "]")
 
@@ -56,32 +58,20 @@ class BatchIteratorSpec extends FreeSpec {
       test (Seq (first, second, third))
     }}
 
-  "BatchIterator.flatten should" - {
-
-    "handle foreach" in {
-
-      def test (items: Seq [Seq [Int]]) {
-        implicit val scheduler = StubScheduler.random()
-        val builder = Seq.newBuilder [Int]
-        batch (items) .flatten.foreach (x => supply (builder += x)) .expectPass()
-        assertResult (items.flatten) (builder.result)
-      }
-
-      forAll (test)
-    }
+  "BatchIteartor should" - {
 
     // The implementation of toMap is very similar to toSeq.
     "handle toSeq" in {
 
       def test (items: Seq [Seq [Int]]) {
         implicit val scheduler = StubScheduler.random()
-        assertSeq (items.flatten: _*) (batch (items) .flatten)
+        assertResult (items.flatten) (batch (items) .toSeq.expectPass())
       }
 
       forAll (test)
     }
 
-    // The implementation of toMapWhile is very similar to toSeqWhile.
+    // The implementation of toMapWhile is very similar to toSeqWhile; also tests whilst.
     "handle toSeqWhile" in {
 
       def count (n: Int): Int => Boolean =
@@ -97,10 +87,103 @@ class BatchIteratorSpec extends FreeSpec {
         val out = items.flatten.take (n)
         val last = items.flatten.drop (n) .headOption
         assertResult ((out, last)) {
-          batch (items) .flatten.toSeqWhile (count (n)) .expectPass()
+          batch (items) .toSeqWhile (count (n)) .expectPass()
         }}
 
       forAll (test (0))
       forAll (test (3))
       forAll (test (5))
+    }}
+
+  "BatchIterator.foreach should" - {
+
+    "work with the for keyword" in {
+      val xs = Seq.newBuilder [Int]
+      implicit val scheduler = StubScheduler.random()
+      val task = for (x <- batch (items)) xs += x
+      task.expectPass()
+      assertResult (items.flatten) (xs.result)
+    }
+
+    "handle various batches" in {
+
+      def test (items: Seq [Seq [Int]]) {
+        implicit val scheduler = StubScheduler.random()
+        val builder = Seq.newBuilder [Int]
+        batch (items) .foreach (builder += _) .expectPass()
+        assertResult (items.flatten) (builder.result)
+      }
+
+      forAll (test)
+    }}
+
+  "BatchIterator.map should" - {
+
+    "work with the for keyword" in {
+      implicit val scheduler = StubScheduler.random()
+      val iter = for (x <- adapt (1, 2, 3)) yield x * 2
+      assertSeq (2, 4, 6) (iter)
+    }
+
+    "handle various batches" in {
+
+      def test (items: Seq [Seq [Int]]) {
+        implicit val scheduler = StubScheduler.random()
+        assertSeq (items.flatten.map (_ * 2): _*) (batch (items) .map (_ * 2))
+      }
+
+      forAll (test)
+    }}
+
+  "BatchIterator.flatMap should" - {
+
+    "work with the for keyword" in {
+      implicit val scheduler = StubScheduler.random()
+      val iter = for (x <- batch (items); y <- batch (items)) yield (x, y)
+      val expected = for (x <- items.flatten; y <- items.flatten) yield (x, y)
+      assertSeq (expected: _*) (iter)
+    }
+
+    "handle various batches" in {
+
+      def test (items: Seq [Seq [Int]]) {
+        implicit val scheduler = StubScheduler.random()
+        assertSeq (items.flatten.map (_ * 2): _*) (batch (items) .map (_ * 2))
+      }
+
+      forAll (test)
+    }}
+
+  "BatchIterator.filter should" - {
+
+    def isOdd (x: Int): Boolean = (x & 1) == 0
+
+    "work with the for keyword" in {
+      implicit val scheduler = StubScheduler.random()
+      val iter = for (x <- batch (items); if isOdd (x)) yield x
+      assertSeq (items.flatten.filter (isOdd _): _*) (iter)
+    }
+
+    "handle various batches" in {
+
+      def test (items: Seq [Seq [Int]]) {
+        implicit val scheduler = StubScheduler.random()
+        assertSeq (items.flatten.filter (isOdd _): _*) (batch (items) .filter (isOdd _))
+      }
+
+      forAll (test)
+    }}
+
+  "BatchIterator.flatten should" - {
+
+    "handle foreach" in {
+
+      def test (items: Seq [Seq [Int]]) {
+        implicit val scheduler = StubScheduler.random()
+        val builder = Seq.newBuilder [Int]
+        batch (items) .flatten.foreach (x => supply (builder += x)) .expectPass()
+        assertResult (items.flatten) (builder.result)
+      }
+
+      forAll (test)
     }}}

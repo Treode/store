@@ -20,7 +20,6 @@ import scala.util.Random
 
 import com.treode.async.Async
 import com.treode.async.stubs.StubScheduler
-import com.treode.cluster.HostId
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.store._
 

@@ -43,8 +43,8 @@ class AsyncIteratorPerf extends PerformanceTest.Quickbenchmark {
   // os-name: Mac OS X
   //
   // Parameters(size -> 1000): 0.003
-  // Parameters(size -> 10000): 0.036
-  // Parameters(size -> 100000): 0.357
+  // Parameters(size -> 10000): 0.034
+  // Parameters(size -> 100000): 0.342
   performance of "while (baseline)" in {
     using (lists) in { list =>
       var count = 0
@@ -56,10 +56,10 @@ class AsyncIteratorPerf extends PerformanceTest.Quickbenchmark {
       count
     }}
 
-  // About 2-3x vs while.
-  // Parameters(size -> 1000): 0.007
-  // Parameters(size -> 10000): 0.105
-  // Parameters(size -> 100000): 0.92
+  // About 2x vs while.
+  // Parameters(size -> 1000): 0.006
+  // Parameters(size -> 10000): 0.06
+  // Parameters(size -> 100000): 0.604
   performance of "for" in {
     using (lists) in { xs =>
       var count = 0
@@ -67,10 +67,10 @@ class AsyncIteratorPerf extends PerformanceTest.Quickbenchmark {
       count
     }}
 
-  // About 10-30x vs for.
-  // Parameters(size -> 1000): 0.226
-  // Parameters(size -> 10000): 1.134
-  // Parameters(size -> 100000): 10.491
+  // About 15x vs for.
+  // Parameters(size -> 1000): 0.19
+  // Parameters(size -> 10000): 0.959
+  // Parameters(size -> 100000): 9.013
   performance of "async" in {
     using (lists) in { xs =>
       implicit val scheduler = StubScheduler.random()
@@ -79,22 +79,22 @@ class AsyncIteratorPerf extends PerformanceTest.Quickbenchmark {
       count
     }}
 
-  // About 2-3x vs for.
-  // Parameters(size -> 1000): 0.132
-  // Parameters(size -> 10000): 0.326
-  // Parameters(size -> 100000): 2.236
+  // About 3-5x vs for.
+  // Parameters(size -> 1000): 0.108
+  // Parameters(size -> 10000): 0.254
+  // Parameters(size -> 100000): 1.646
   performance of "batch" in {
     using (lists) in { xs =>
       implicit val scheduler = StubScheduler.random()
       var count = 0
-      xs.batch.foreach (list => supply (list.foreach ((_: Int) => count += 1))) .expectPass()
+      xs.batch.foreach ((_: Int) => count += 1) .expectPass()
       count
     }}
 
-  // About 10-30x vs for.
-  // Parameters(size -> 1000): 0.228
-  // Parameters(size -> 10000): 1.144
-  // Parameters(size -> 100000): 10.565
+  // About 15x vs for.
+  // Parameters(size -> 1000): 0.191
+  // Parameters(size -> 10000): 0.938
+  // Parameters(size -> 100000): 8.641
   performance of "batch.flatten" in {
     using (lists) in { xs =>
       implicit val scheduler = StubScheduler.random()
