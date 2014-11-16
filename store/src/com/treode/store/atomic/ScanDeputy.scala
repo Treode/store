@@ -23,43 +23,49 @@ import com.treode.cluster.RequestDescriptor
 import com.treode.store.{Bytes, Bound, Cell, Key, Slice, TableId, TxClock, Window}
 
 import Async.supply
-import ScanDeputy._
+import ScanDeputy.Cells
 
 private class ScanDeputy (kit: AtomicKit) {
   import kit.{cluster, disk, tstore}
   import kit.config.{scanBatchBytes, scanBatchEntries}
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): Async [(Cells, Point)] =
+  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): Async [(Cells, Option [Cell])] =
     disk.join {
-
-      val builder = Seq.newBuilder [Cell]
-      var entries = 0
-      var bytes = 0
-
-      tstore.scan (table, start, window, slice) .whilst { cell =>
-        entries < scanBatchEntries &&
-        bytes < scanBatchBytes
-      } { cell =>
-        supply (builder += cell)
-      } .map {
-        case Some (cell) => (builder.result, Some (cell.timedKey))
-        case None => (builder.result, None)
-      }}
+      tstore
+      .scan (table, start, window, slice)
+      .rebatch (scanBatchEntries, scanBatchBytes)
+    }
 
   def attach() {
+
+    ScanDeputy.scanV0.listen { case ((table, start, window, slice), from) =>
+      scan (table, start, window, slice)
+      .map {case (cells, last) => (cells, last map (_.timedKey))}
+    }
+
     ScanDeputy.scan.listen { case ((table, start, window, slice), from) =>
       scan (table, start, window, slice)
+      .map {case (cells, last) => (cells, last.isEmpty)}
     }}}
 
 private object ScanDeputy {
 
   type Cells = Seq [Cell]
-  type Point = Option [Key]
 
-  val scan = {
+  // TODO: Remove after release of 0.2.0.
+  // This remains to allow rolling upgrade of a cluster from 0.1.0 to 0.2.0.
+  val scanV0 = {
     import AtomicPicklers._
     RequestDescriptor (
         0xFF9A8D740D013A6BL,
         tuple (tableId, bound (key), window, slice),
         tuple (seq (cell), option (key)))
+  }
+
+  val scan = {
+    import AtomicPicklers._
+    RequestDescriptor (
+        0x1A85D54A2346425BL,
+        tuple (tableId, bound (key), window, slice),
+        tuple (seq (cell), boolean))
   }}

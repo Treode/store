@@ -52,6 +52,9 @@ class Atlas private (
   def quorum (hosts: Set [HostId]): Boolean =
     cohorts forall (_.quorum (hosts))
 
+  def awaiting (hosts: Set [HostId]): Set [HostId] =
+    cohorts.map (_.hosts -- hosts) .fold (Set.empty) (_ ++ _)
+
   def settled: Boolean =
     cohorts forall (_.settled)
 

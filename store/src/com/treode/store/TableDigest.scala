@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
- package com.treode.store
+package com.treode.store
 
 case class TableDigest (id: TableId, tiers: Seq [TableDigest.Tier])
 

@@ -19,6 +19,10 @@ package com.treode.store.atomic
 import com.treode.cluster.{ReplyTracker, Peer}
 import com.treode.store.Cohort
 
+/** Tracks pos specific to each host, and if we have a quorum for each cohort. Rouses hosts that
+  * have not acknowledged request, providing the ops specific to that host. For tracking
+  * acknowledgements to read and prepare requests.
+  */
 private class TightTracker [P] (
     _rouse: (Peer, Seq [P]) => Any,
     val acks: Array [ReplyTracker],

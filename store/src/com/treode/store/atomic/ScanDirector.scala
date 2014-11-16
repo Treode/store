@@ -17,163 +17,176 @@
 package com.treode.store.atomic
 
 import scala.collection.mutable.PriorityQueue
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Try, Success}
 
-import com.treode.async.{Async, Callback, Fiber}
-import com.treode.cluster.Peer
+import com.treode.async.{Async, Callback, Fiber}, Async.{async, guard}
+import com.treode.cluster.{HostId, Peer}
 import com.treode.store._
 
-import Async.async
-import Bound.Exclusive
-import ScanDeputy.{Cells, Point}
-import ScanDirector._
+import ScanDeputy.scan
+import ScanDirector.Element
 
 private class ScanDirector (
-    var start: Bound [Key],
     table: TableId,
+    start: Bound [Key],
     window: Window,
     slice: Slice,
-    kit: AtomicKit,
-    body: Cell => Async [Unit],
-    cb: Callback [Unit]
-) {
+    kit: AtomicKit
+) extends CellIterator2 {
 
   import kit.{cluster, library, random, scheduler}
   import kit.config.scanBatchBackoff
 
-  sealed abstract class State
-  case object Awaiting extends State
-  case object Processing extends State
-  case object Closed extends State
+  private class Batch (body: Iterator [Cell] => Async [Unit], cb: Callback [Unit]) {
 
-  val fiber = new Fiber
-  val pq = new PriorityQueue [Element]
-  var acks = Map.empty [Peer, (Int, Point)]
-  var backoff = scanBatchBackoff.iterator
-  var state: State = Awaiting
+    val fiber = new Fiber
 
-  val port = ScanDeputy.scan.open {
-    case (Success ((cells, point)), from) =>
-      got (cells, point, from)
-    case _ =>
-      ()
-  }
+    // The atlas at the time we began the scan.
+    val atlas = library.atlas
 
-  val take: Callback [Unit] = { v =>
-    fiber.execute {
-      v match {
-        case Failure (t) if state == Closed =>
-          scheduler.fail (cb, t)
-        case Failure (t) if state != Closed =>
-          state = Closed
-          port.close()
-          scheduler.fail (cb, t)
-        case Success (_) if state == Closed =>
-          scheduler.fail (cb, new TimeoutException)
-        case Success (_) if quorum =>
-          give()
-        case _ =>
-          backoff = scanBatchBackoff.iterator
-          state = Awaiting
-          rouse (start)
-      }}}
+    // The data we have now. A null value indicates that this iterator is closed. We use null to
+    // permit prompt garbage collection.
+    var pq = new PriorityQueue [Element]
 
-  rouse (start)
+    // The deputies we have data from now, including deputies that have finished. When this set
+    // forms a quorum, we can give another batch to the client.
+    var have = Set.empty [HostId]
 
-  def quorum: Boolean = {
-    val acks = this.acks
-        .filter {case (key, (count, end)) => count > 0 || end.isEmpty}
-        .keySet.map (_.id)
-    library.atlas.cohorts forall (_.quorum (acks))
-  }
+    // The deputies that have finished. When this set forms a quorum, we can supply the last
+    // batch and then close this iterator.
+    var done = Set.empty [HostId]
 
-  def awaiting: Set [Peer] = {
-    val acks = this.acks
-        .filter {case (key, (count, end)) => count > 0 || end.isEmpty}
-        .keySet.map (_.id)
-    library.atlas.cohorts
-        .map (_.hosts)
-        .fold (Set.empty) (_ ++ _)
-        .filterNot (acks contains _)
-        .map (cluster.peer (_))
-  }
+    // The point we last supplied to the client. On a timeout, this we rouse the deputies using
+    // this start point. On receiving data, we filter incoming cells less than this point.
+    var last = start
 
-  def give() {
-    if (pq.isEmpty) {
-      state = Closed
-      port.close()
-      scheduler.pass (cb, ())
-    } else {
-      val element = pq.dequeue()
-      val (count, end) = acks (element.from)
-      assert (count > 0)
-      acks += element.from -> (count - 1, end)
-      if (count < 5 && end.isDefined)
-        ScanDeputy.scan ((table, Exclusive (end.get), window, slice)) (element.from, port)
-      state = Processing
-      start = Exclusive (element.cell.timedKey)
-      body (element.cell) run (take)
-    }}
+    // The client body is ready for more data.
+    var ready = true
 
-  def got (cells: Cells, point: Point, from: Peer): Unit =
-    fiber.execute {
-      if (state == Closed) return
-      acks get (from) match {
-        case Some ((count, Some (end))) =>
-          var count = 0
-          for (c <- cells; k = c.timedKey; if start <* k && k < end) {
-            pq.enqueue (Element (c, from))
-            count += 1
-          }
-          if (count > 0 || point == None)
-            acks += from -> (count, point)
-        case Some ((count, None)) =>
-          ()
-        case None =>
-          var count = 0
-          for (c <- cells; k = c.timedKey; if start <* k) {
-            pq.enqueue (Element (c, from))
-            count += 1
-          }
-          if (count > 0 || point == None)
-            acks += from -> (count, point)
-      }
-      if (state == Awaiting && quorum)
-        give()
+    val port = scan.open {
+      case (Success ((cells, end)), from) =>
+        got (cells, end, from)
+      case _ =>
+        ()
     }
 
-  def rouse (mark: Bound [Key]): Unit =
-    fiber.execute {
-      state match {
-        case Closed =>
-          ()
-        case _ if !(mark eq start) =>
-          ()
-        case _ if backoff.hasNext =>
-          ScanDeputy.scan ((table, start, window, slice)) (awaiting, port)
-          scheduler.delay (backoff.next) (rouse (start))
-        case Awaiting =>
-          state = Closed
-          port.close()
-          scheduler.fail (cb, new TimeoutException)
-        case Processing =>
-          state = Closed
-          port.close()
+    _rouse (start, scanBatchBackoff.iterator)
+
+    // Wake up and maybe resend; must be run inside fiber.
+    private def _rouse (mark: Bound [Key], backoff: Iterator [Int]) {
+      if (pq == null || mark != last) {
+        // The iterator is closed or the timeout is old, so ignore it.
+      } else if (backoff.hasNext) {
+        val need = atlas.awaiting (have) .map (cluster.peer _)
+        scan (table, mark, window, slice) (need, port)
+        fiber.delay (backoff.next) (_rouse (mark, backoff))
+      } else {
+        pq = null
+        port.close()
+        scheduler.fail (cb, new TimeoutException)
+      }}
+
+    // Merge the next batch from the prioirty queue; must run inside fiber.
+    private def _merge(): Seq [Cell] = {
+      val b = Seq.newBuilder [Cell]
+      var q = atlas.quorum (have)
+      while (q && pq.size > 0) {
+        val e = pq.dequeue()
+        var x = e.x
+        var k = x.timedKey
+        while (last >* k && e.xs.hasNext) {
+          x = e.xs.next
+          k = x.timedKey
+        }
+        if (last <* k) {
+          b += e.x
+          last = Bound (k, false)
+        }
+        if (e.xs.hasNext) {
+          pq.enqueue (e.copy (x = e.xs.next))
+        } else if (!e.end) {
+          scan (table, last, window, slice) (e.from, port)
+          have -= e.from.id
+          q = atlas.quorum (have)
+        } else {
+          done += e.from.id
+        }}
+      b.result
+    }
+
+    // Give the next batch to the body; must be run inside fiber.
+    private def _give (taken: Boolean) {
+      val xs = _merge()
+      if (!xs.isEmpty) {
+        // We have data to give, and we proactively asked a deputy for new data.
+        ready = false
+        scheduler.execute (guard (body (xs.iterator)) run (took _))
+      } else if (taken) {
+        // There's nothing to give, no deputies responded while the client body executed.
+        val last = this.last
+        val backoff = scanBatchBackoff.iterator
+        fiber.delay (backoff.next) (_rouse (last, backoff))
+      }}
+
+    // All input iterators finished.
+    private def _finish() {
+      ready = false
+      pq = null
+      port.close()
+      scheduler.pass (cb, ())
+    }
+
+    // Maybe give the next batch to the body; must run inside fiber.
+    private def _next (taken: Boolean) {
+      if (!ready) {
+        ()
+      } else if (atlas.quorum (done)) {
+        _finish()
+      } else {
+        _give (taken)
+      }}
+
+    // The body took the batch; it's ready for more.
+    def took (x: Try [Unit]): Unit = fiber.execute {
+      require (pq != null)
+      x match {
+        case Success (_) =>
+          ready = true
+          _next (true)
+        case Failure (t) =>
+          pq = null
+          scheduler.fail (cb, t)
+      }}
+
+    // We got values from a peer.
+    def got (cells: Seq [Cell], end: Boolean, from: Peer): Unit = fiber.execute {
+      if (pq == null) {
+        // Closed; there's to do.
+      } else if (!cells.isEmpty) {
+        val iter = cells.iterator
+        pq.enqueue (Element (iter.next, iter, end, from))
+        have += from.id
+        _next (false)
+      } else if (end) {
+        have += from.id
+        done += from.id
+        _next (false)
+      } else {
+        scan ((table, last, window, slice)) (from, port)
       }}}
+
+  def batch (f: Iterator [Cell] => Async [Unit]): Async [Unit] =
+    async (new Batch (f, _))
+}
 
 private object ScanDirector {
 
-  case class Element (cell: Cell, from: Peer) extends Ordered [Element] {
+  case class Element (x: Cell, xs: Iterator [Cell], end: Boolean, from: Peer)
+  extends Ordered [Element] {
 
     // Reverse the sort for the PriorityQueue.
     def compare (that: Element): Int =
-      that.cell compare cell
-  }
-
-  object Element extends Ordering [Element] {
-
-    def compare (x: Element, y: Element): Int =
-      x compare y
+      Cell.compare (that.x, x)
   }
 
   def scan (
@@ -182,11 +195,6 @@ private object ScanDirector {
       window: Window,
       slice: Slice,
       kit: AtomicKit
-  ): CellIterator2 = {
-    import kit.scheduler
-    val iter = new CellIterator {
-      def foreach (f: Cell => Async [Unit]): Async [Unit] =
-        async (new ScanDirector (start, table, window, slice, kit, f, _))
-    }
-    iter.batch.dedupe.window (window)
-  }}
+  ): CellIterator2 =
+    (new ScanDirector (table, start, window, slice, kit)) .window (window)
+}

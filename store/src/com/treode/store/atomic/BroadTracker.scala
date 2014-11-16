@@ -19,6 +19,9 @@ package com.treode.store.atomic
 import com.treode.cluster.Peer
 import com.treode.store.Cohort
 
+/** Tracks hosts that have acknowledged request. Rouses hosts that have not acknowledged the
+  * request. For tracking acknowledgements to commit requests.
+  */
 private class BroadTracker (_rouse: Set [Peer] => Any, var hosts: Set [Peer]) {
 
   def += (p: Peer): Unit =

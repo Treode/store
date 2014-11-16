@@ -20,7 +20,7 @@ import java.net.SocketAddress
 import java.util.concurrent.{TimeoutException => JTimeoutException}
 import java.util.logging.{Level, Logger}, Level.WARNING
 
-import com.treode.async.{AsyncIterator, BatchIterator}
+import com.treode.async.{Async, AsyncIterator, BatchIterator}
 import com.treode.cluster.{RemoteException => CRemoteException, HostId, PortId}
 
 package store {
@@ -73,6 +73,16 @@ package object store {
   val PriorValueEpoch = Retention
 
   private [store] implicit class RichCellIterator (iter: CellIterator2) {
+
+    def rebatch (count: Int, bytes: Int): Async [(Seq [Cell], Option [Cell])] = {
+      @volatile var _count = count
+      @volatile var _bytes = bytes
+      iter.toSeqWhile { cell =>
+        _bytes -= cell.byteSize
+        val r = _count > 0 && (_bytes > 0 || _count == count)
+        _count -= 1
+        r
+      }}
 
     def dedupe: CellIterator2 =
       iter.filter (Filters.dedupe)
