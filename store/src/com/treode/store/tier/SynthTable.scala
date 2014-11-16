@@ -140,7 +140,7 @@ private class SynthTable (
       readLock.unlock()
     }}
 
-  def iterator (residents: Residents): CellIterator = {
+  def iterator (residents: Residents): CellIterator2 = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -152,7 +152,7 @@ private class SynthTable (
         .clean (desc, id, residents)
   }
 
-  def iterator (start: Bound [Key], residents: Residents): CellIterator = {
+  def iterator (start: Bound [Key], residents: Residents): CellIterator2 = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -250,7 +250,7 @@ private class SynthTable (
   def checkpoint (gen: Long, secondary: MemTier, residents: Residents): Async [Checkpoint] = guard {
 
     // Write the new tier. When the write has completed, update the set of tiers and return them.
-    val iter = TierIterator .adapt (secondary) .flatten.clean (desc, id, residents)
+    val iter = TierIterator .adapt (secondary) .clean (desc, id, residents)
     val est = countKeys (secondary)
     for {
       tier <- TierBuilder.build (desc, id, gen, est, residents, iter)

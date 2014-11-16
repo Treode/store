@@ -16,7 +16,6 @@
 
 package com.treode.store.atomic
 
-import com.treode.async.AsyncIterator
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork

@@ -59,9 +59,9 @@ private [store] trait TierTable {
 
   def get (key: Bytes, time: TxClock): Async [Cell]
 
-  def iterator (residents: Residents): CellIterator
+  def iterator (residents: Residents): CellIterator2
 
-  def iterator (start: Bound [Key], residents: Residents): CellIterator
+  def iterator (start: Bound [Key], residents: Residents): CellIterator2
 
   /** Put a key.
     *

@@ -20,7 +20,7 @@ import java.nio.file.{Path, Paths}
 import scala.language.implicitConversions
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncIterator}
+import com.treode.async.{Async, AsyncIterator, BatchIterator}
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId
@@ -73,7 +73,32 @@ private trait StoreTestTools {
   def testStringOf (cells: Seq [Cell]): String =
     cells.map (testStringOf _) .mkString ("[", ", ", "]")
 
+  // Scala uses only the first argument list to disambiguate method references; this works around
+  // that limitation.
+  class AssertCells (expected: Seq [Cell]) {
+
+    def apply (actual: BatchIterator [Cell]) (implicit scheduler: StubScheduler) {
+      val _actual = actual.toSeq.expectPass()
+      if (expected != _actual)
+        fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
+    }
+
+    def apply (actual: AsyncIterator [Cell]) (implicit scheduler: StubScheduler) {
+      val _actual = actual.toSeq.expectPass()
+      if (expected != _actual)
+        fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
+    }}
+
+  /*def assertCells (expected: Cell*): AssertCells =
+    new AssertCells (expected)*/
+
   def assertCells (expected: Cell*) (actual: AsyncIterator [Cell]) (implicit scheduler: StubScheduler) {
+    val _actual = actual.toSeq.expectPass()
+    if (expected != _actual)
+      fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
+  }
+
+  def assertCellsB (expected: Cell*) (actual: BatchIterator [Cell]) (implicit scheduler: StubScheduler) {
     val _actual = actual.toSeq.expectPass()
     if (expected != _actual)
       fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")

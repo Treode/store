@@ -16,8 +16,6 @@
 
 package com.treode.store
 
-import com.treode.async.AsyncIterator
-
 /** A window of time for scanning a table.
   *
   * TreodeDB retains past values for rows, and windows permit the scanning of just one recent
@@ -30,7 +28,7 @@ sealed abstract class Window {
 
   def later: Bound [TxClock]
 
-  def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell]
+  def filter: Cell => Boolean
 }
 
 /** A window of time for scanning a table.
@@ -45,15 +43,17 @@ object Window {
   /** Choose only the latest value as of `later` so long as that was set after `earlier`. */
   case class Latest (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
 
-    def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell] = {
-      var key = Option.empty [Bytes]
-      iter.filter { cell =>
-        if (later >* cell.time && earlier <* cell.time && (key.isEmpty || cell.key != key.get)) {
-          key = Some (cell.key)
-          true
-        } else {
-          false
-        }}}}
+    def filter: Cell => Boolean =
+      new Function [Cell, Boolean] {
+        var key = Option.empty [Bytes]
+        def apply (cell: Cell): Boolean =
+          if (later >* cell.time && earlier <* cell.time && (key.isEmpty || cell.key != key.get)) {
+            key = Some (cell.key)
+            true
+          } else {
+            false
+          }}
+  }
 
   object Latest {
 
@@ -87,9 +87,11 @@ object Window {
   /** Choose all changes between `later` and `earlier`. */
   case class Between (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
 
-    def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell] =
-      iter.filter (cell => later >* cell.time && earlier <* cell.time)
-  }
+    def filter: Cell => Boolean =
+      new Function [Cell, Boolean] {
+        def apply (cell: Cell): Boolean =
+          later >* cell.time && earlier <* cell.time
+      }}
 
   object Between {
 
@@ -102,18 +104,20 @@ object Window {
     */
   case class Through (later: Bound [TxClock], earlier: TxClock) extends Window {
 
-    def filter (iter: AsyncIterator [Cell]): AsyncIterator [Cell] = {
-      var key = Option.empty [Bytes]
-      iter.filter { cell =>
-        if (later >* cell.time && earlier < cell.time) {
-          key = None
-          true
-        } else if (earlier >= cell.time && (key.isEmpty || cell.key != key.get)) {
-          key = Some (cell.key)
-          true
-        } else {
-          false
-        }}}}
+    def filter: Cell => Boolean =
+      new Function [Cell, Boolean] {
+        var key = Option.empty [Bytes]
+        def apply (cell: Cell): Boolean =
+          if (later >* cell.time && earlier < cell.time) {
+            key = None
+            true
+          } else if (earlier >= cell.time && (key.isEmpty || cell.key != key.get)) {
+            key = Some (cell.key)
+            true
+          } else {
+            false
+          }}
+  }
 
   object Through {
 

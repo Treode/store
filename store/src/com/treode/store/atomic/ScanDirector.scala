@@ -182,10 +182,11 @@ private object ScanDirector {
       window: Window,
       slice: Slice,
       kit: AtomicKit
-  ): CellIterator = {
+  ): CellIterator2 = {
+    import kit.scheduler
     val iter = new CellIterator {
       def foreach (f: Cell => Async [Unit]): Async [Unit] =
         async (new ScanDirector (start, table, window, slice, kit, f, _))
     }
-    window.filter (iter.dedupe)
+    iter.batch.dedupe.window (window)
   }}

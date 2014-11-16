@@ -18,7 +18,6 @@ package com.treode.store
 
 import java.lang.Integer.highestOneBit
 
-import com.treode.async.AsyncIterator
 import com.treode.pickle.Pickler
 
 /** A slice of a table.

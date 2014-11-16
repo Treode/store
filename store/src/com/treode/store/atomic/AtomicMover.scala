@@ -60,7 +60,7 @@ private class AtomicMover (kit: AtomicKit) {
           case Some (table) if Point.Middle (table.id) < limit =>
             (table.id, table.iterator (residents), Point.Middle (table.id.id + 1))
           case _ =>
-            (TableId.MinValue, AsyncIterator.empty [Cell], limit)
+            (TableId.MinValue, BatchIterator.empty [Cell], limit)
         }
 
       iter.whilst { cell =>

@@ -77,7 +77,7 @@ private class StubPaxosHost (
     !paxos.proposers.proposers.isEmpty
 
   def audit: BatchIterator [Cell] =
-    paxos.archive.iterator (Residents.all) .batch
+    paxos.archive.iterator (Residents.all)
 
   def lead (key: Long, value: Int): Async [Int] =
     paxos.lead (Bytes (key), 0, Bytes (value)) .map (_.int)

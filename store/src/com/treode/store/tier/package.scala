@@ -33,10 +33,10 @@ package object tier {
   private [tier] def memTierEntryToCell (entry: JMap.Entry [Key, Option [Bytes]]): Cell =
     Cell (entry.getKey.key, entry.getKey.time, entry.getValue)
 
-  private [tier] implicit class RichCellIterator (iter: CellIterator) {
+  private [tier] implicit class RichCellIterator (iter: CellIterator2) {
 
     def clean (desc: TierDescriptor, id: TableId, residents: Residents) (
-        implicit config: Store.Config): CellIterator =
+        implicit config: Store.Config): CellIterator2 =
       iter.dedupe
           .retire (config.retentionBridge.limit)
           .filter (desc.residency (residents, id, _))

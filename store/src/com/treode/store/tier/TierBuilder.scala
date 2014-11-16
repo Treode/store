@@ -21,7 +21,7 @@ import scala.collection.JavaConversions._
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.disk.{Disk, Position}
-import com.treode.store.{Bytes, Cell, CellIterator, Residents, Store, TableId, TxClock}
+import com.treode.store.{Bytes, Cell, CellIterator2, Residents, Store, TableId, TxClock}
 
 import Async.{async, guard, supply, when}
 
@@ -209,7 +209,7 @@ private object TierBuilder {
       gen: Long,
       est: Long,
       residents: Residents,
-      iter: CellIterator
+      iter: CellIterator2
   ) (implicit
       scheduler: Scheduler,
       disk: Disk,
@@ -218,7 +218,7 @@ private object TierBuilder {
     val bloom = BloomFilter (math.max (1L, est), config.falsePositiveProbability)
     val builder = new TierBuilder (desc, id, gen, residents, bloom)
     for {
-      _ <- iter.foreach (builder.add (_))
+      _ <- iter.flatten.foreach (builder.add (_))
       tier <- builder.result()
     } yield tier
   }}

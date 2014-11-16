@@ -19,7 +19,7 @@ package com.treode.store.atomic
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions
 
-import com.treode.async.{Async, AsyncIterator, Callback, Latch}
+import com.treode.async.{Async, BatchIterator, Callback, Latch}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disk, ObjectId, PageHandler, Position, RecordDescriptor}
@@ -105,8 +105,8 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
         case op: Delete => t.delete (op.key, wt)
       }}}
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
-    AsyncIterator.make {
+  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator2 =
+    BatchIterator.make {
       for {
         _ <- space.scan (window.later.bound)
       } yield {

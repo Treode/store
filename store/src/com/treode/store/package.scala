@@ -72,19 +72,19 @@ package object store {
   @deprecated ("Use Retention", "0.2.0")
   val PriorValueEpoch = Retention
 
-  private [store] implicit class RichCellIterator (iter: CellIterator) {
+  private [store] implicit class RichCellIterator (iter: CellIterator2) {
 
-    def dedupe: CellIterator =
-      Filters.dedupe (iter)
+    def dedupe: CellIterator2 =
+      iter.filter (Filters.dedupe)
 
-    def retire (limit: TxClock): CellIterator =
-      Filters.retire (iter, limit)
+    def retire (limit: TxClock): CellIterator2 =
+      iter.filter (Filters.retire (limit))
 
-    def slice (table: TableId, slice: Slice): CellIterator =
+    def slice (table: TableId, slice: Slice): CellIterator2 =
       iter.filter (c => slice.contains (Cell.locator, (table, c.key)))
 
     def window (window: Window) =
-      window.filter (iter)
+      iter.filter (window.filter)
   }
 
   private [store] object log {

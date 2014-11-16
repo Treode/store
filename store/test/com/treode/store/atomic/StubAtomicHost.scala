@@ -82,7 +82,7 @@ private class StubAtomicHost (
   def audit: BatchIterator [(TableId, Cell)] =
     for {
       e <- atomic.tstore.tables.entrySet.batch
-      cell <- e.getValue.iterator (Residents.all) .batch
+      cell <- e.getValue.iterator (Residents.all)
     } yield {
       (e.getKey, cell)
     }

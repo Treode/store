@@ -17,7 +17,6 @@
 package com.treode.store
 
 import java.util.concurrent.ConcurrentHashMap
-import com.treode.async.AsyncIterator
 import com.treode.store.locks.LockSet
 import com.treode.store.tier.{TierMedic, TierTable}
 

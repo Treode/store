@@ -16,7 +16,7 @@
 
 package com.treode.store.tier
 
-import com.treode.async.{Async, AsyncIterator}
+import com.treode.async.{Async, BatchIterator}
 import com.treode.async.implicits._
 
 private class TrackedTable (table: TestTable, tracker: TableTracker) {
@@ -24,7 +24,7 @@ private class TrackedTable (table: TestTable, tracker: TableTracker) {
   def get (key: Int): Async [Option [Int]] =
     table.get (key)
 
-  def iterator: AsyncIterator [TestCell] =
+  def iterator: BatchIterator [TestCell] =
     table.iterator
 
   def put (key: Int, value: Int): Async [Unit] = {

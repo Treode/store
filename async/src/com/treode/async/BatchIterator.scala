@@ -189,4 +189,9 @@ object BatchIterator {
       scheduler: Scheduler
   ): BatchIterator [A] =
     new MergeIterator (iters)
-}
+
+  def make [A] (maker: => Async [BatchIterator [A]]): BatchIterator [A] =
+    new BatchIterator [A] {
+      def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
+        maker.flatMap (_.batch (f))
+    }}

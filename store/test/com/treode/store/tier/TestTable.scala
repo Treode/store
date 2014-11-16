@@ -16,7 +16,7 @@
 
 package com.treode.store.tier
 
-import com.treode.async.{Async, AsyncIterator}
+import com.treode.async.{Async, BatchIterator}
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.disk.{Disk, ObjectId, PageHandler, RecordDescriptor}
@@ -32,7 +32,7 @@ extends PageHandler [Long] {
       yield cell.value.map (_.int)
   }
 
-  def iterator: AsyncIterator [TestCell] =
+  def iterator: BatchIterator [TestCell] =
     table.iterator (Residents.all) .map (new TestCell (_))
 
   def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] =

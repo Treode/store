@@ -124,9 +124,10 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
             .iterator
             .takeWhile (_._1.table == table)
             .map {case (key, value) => Cell (key.key, key.time, value)}
-            .async
+            .batch
             .slice (table, slice)
             .window (window)
+            .flatten
       }}
 
   def scan (table: TableId): Seq [Cell] =
