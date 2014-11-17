@@ -58,7 +58,7 @@ class BatchIteratorSpec extends FreeSpec {
       test (Seq (first, second, third))
     }}
 
-  "BatchIteartor should" - {
+  "BatchIterator should" - {
 
     // The implementation of toMap is very similar to toSeq.
     "handle toSeq" in {
@@ -121,8 +121,8 @@ class BatchIteratorSpec extends FreeSpec {
 
     "work with the for keyword" in {
       implicit val scheduler = StubScheduler.random()
-      val iter = for (x <- adapt (1, 2, 3)) yield x * 2
-      assertSeq (2, 4, 6) (iter)
+      val iter = for (x <- batch (items)) yield x * 2
+      assertSeq (items.flatten.map (_ * 2): _*) (iter)
     }
 
     "handle various batches" in {
@@ -139,8 +139,8 @@ class BatchIteratorSpec extends FreeSpec {
 
     "work with the for keyword" in {
       implicit val scheduler = StubScheduler.random()
-      val iter = for (x <- batch (items); y <- batch (items)) yield (x, y)
-      val expected = for (x <- items.flatten; y <- items.flatten) yield (x, y)
+      val iter = for (x <- batch (items); y <- Iterator (3, 4)) yield (x, y)
+      val expected = items.flatten.flatMap (x => Iterator (3, 4) .map (y => (x, y)))
       assertSeq (expected: _*) (iter)
     }
 
@@ -148,7 +148,9 @@ class BatchIteratorSpec extends FreeSpec {
 
       def test (items: Seq [Seq [Int]]) {
         implicit val scheduler = StubScheduler.random()
-        assertSeq (items.flatten.map (_ * 2): _*) (batch (items) .map (_ * 2))
+        val iter = batch (items) .flatMap (x => Iterator (1, 2, 3) .map (y => (x, y)))
+        val expected = for (x <- items.flatten; y <- Iterator (1, 2, 3)) yield (x, y)
+        assertSeq (expected: _*) (iter)
       }
 
       forAll (test)
@@ -169,6 +171,20 @@ class BatchIteratorSpec extends FreeSpec {
       def test (items: Seq [Seq [Int]]) {
         implicit val scheduler = StubScheduler.random()
         assertSeq (items.flatten.filter (isOdd _): _*) (batch (items) .filter (isOdd _))
+      }
+
+      forAll (test)
+    }}
+
+  "BatchIterator.batchFlatMap should" - {
+
+    "handle various batches" in {
+
+      def test (items: Seq [Seq [Int]]) {
+        implicit val scheduler = StubScheduler.random()
+        val iter = batch (items) .batchFlatMap (x => batch (items) .map (y => (x, y)))
+        val expected = for (x <- items.flatten; y <- items.flatten) yield (x, y)
+        assertSeq (expected: _*) (iter)
       }
 
       forAll (test)

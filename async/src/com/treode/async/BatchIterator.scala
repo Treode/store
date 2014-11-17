@@ -25,6 +25,7 @@ import com.treode.async.implicits._
 
 import Async.{async, guard, supply, when}
 
+/** Concrete classes should implement `batch`. */
 trait BatchIterator [A] {
   self =>
 
@@ -40,13 +41,11 @@ trait BatchIterator [A] {
         self.batch (xs => g (xs map f))
     }
 
-  def flatMap [B] (f: A => BatchIterator [B]) (implicit scheduler: Scheduler): BatchIterator [B] =
+  def flatMap [B] (f: A => Iterator [B]): BatchIterator [B] =
     new BatchIterator [B] {
       def batch (g: Iterator [B] => Async [Unit]): Async [Unit] =
-        self.batch { xs =>
-          scheduler.whilst (xs.hasNext) {
-            f (xs.next) .batch (g)
-          }}}
+        self.batch (xs => g (xs flatMap f))
+    }
 
   def filter (p: A => Boolean): BatchIterator [A] =
     new BatchIterator [A] {
@@ -58,6 +57,43 @@ trait BatchIterator [A] {
 
   def withFilter (p: A => Boolean): BatchIterator [A] =
     filter (p)
+
+  def batchFlatMap [B] (f: A => BatchIterator [B]) (implicit scheduler: Scheduler): BatchIterator [B] =
+    new BatchIterator [B] {
+      def batch (g: Iterator [B] => Async [Unit]): Async [Unit] =
+        self.batch { xs =>
+          scheduler.whilst (xs.hasNext) {
+            f (xs.next) .batch (g)
+          }}}
+
+  /** Flatten to iterate individual elements rather than batches of elements.
+    *
+    * This returns an asynchronous iterator that provides batched implementations for:
+    *
+    *   - [[AsyncIterator#toMap]]
+    *   - [[AsyncIterator#toMapWhile]]
+    *   - [[AsyncIterator#toSeq]]
+    *   - [[AsyncIterator#toSeqWhile]]
+    */
+  def flatten (implicit scheduler: Scheduler): AsyncIterator [A] =
+    new AsyncIterator [A] {
+
+      def foreach (f: A => Async [Unit]): Async [Unit] =
+        self.batch (_.async.foreach (f))
+
+      override def toMap [K, V] (implicit witness: <:< [A, (K, V)]): Async [Map [K, V]] =
+        self.toMap
+
+      override def toMapWhile [K, V] (p: A => Boolean) (implicit witness: <:< [A, (K, V)]):
+          Async [(Map [K, V], Option [A])] =
+        self.toMapWhile (p)
+
+      override def toSeq: Async [Seq [A]] =
+        self.toSeq
+
+      override def toSeqWhile (p: A => Boolean): Async [(Seq [A], Option [A])] =
+        self.toSeqWhile (p)
+    }
 
   /** Execute the operation `f` foreach element while `p` is true.  Return the first element for
     * which `p` fails, or `None` if `p` never fails and the whole sequence is consumed.
@@ -124,36 +160,7 @@ trait BatchIterator [A] {
   def toSeqWhile (p: A => Boolean): Async [(Seq [A], Option [A])] = {
     val b = Seq.newBuilder [A]
     self.whilst (p) (b += _) .map (n => (b.result, n))
-  }
-
-  /** Flatten to iterate individual elements rather than batches of elements.
-    *
-    * This returns an asynchronous iterator that provides batched implementations for:
-    *
-    *   - [[AsyncIterator#toMap]]
-    *   - [[AsyncIterator#toMapWhile]]
-    *   - [[AsyncIterator#toSeq]]
-    *   - [[AsyncIterator#toSeqWhile]]
-    */
-  def flatten (implicit scheduler: Scheduler): AsyncIterator [A] =
-    new AsyncIterator [A] {
-
-      def foreach (f: A => Async [Unit]): Async [Unit] =
-        self.batch (_.async.foreach (f))
-
-      override def toMap [K, V] (implicit witness: <:< [A, (K, V)]): Async [Map [K, V]] =
-        self.toMap
-
-      override def toMapWhile [K, V] (p: A => Boolean) (implicit witness: <:< [A, (K, V)]):
-          Async [(Map [K, V], Option [A])] =
-        self.toMapWhile (p)
-
-      override def toSeq: Async [Seq [A]] =
-        self.toSeq
-
-      override def toSeqWhile (p: A => Boolean): Async [(Seq [A], Option [A])] =
-        self.toSeqWhile (p)
-    }}
+  }}
 
 object BatchIterator {
 

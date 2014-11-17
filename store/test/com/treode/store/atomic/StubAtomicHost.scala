@@ -16,6 +16,7 @@
 
 package com.treode.store.atomic
 
+import scala.collection.JavaConversions._
 import scala.util.Random
 
 import com.treode.async.{Async, BatchIterator, Scheduler}
@@ -80,12 +81,10 @@ private class StubAtomicHost (
     !atomic.writers.deputies.isEmpty
 
   def audit: BatchIterator [(TableId, Cell)] =
-    for {
-      e <- atomic.tstore.tables.entrySet.batch
-      cell <- e.getValue.iterator (Residents.all)
-    } yield {
-      (e.getKey, cell)
-    }
+    atomic.tstore.tables.entrySet.batch.batchFlatMap { e =>
+      e.getValue.iterator (Residents.all) .map { c =>
+        (e.getKey, c)
+      }}
 
   def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
     atomic.read (rt, ops:_*)
