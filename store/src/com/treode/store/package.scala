@@ -74,13 +74,13 @@ package object store {
 
   private [store] implicit class RichCellIterator (iter: CellIterator2) {
 
-    def rebatch (count: Int, bytes: Int): Async [(Seq [Cell], Option [Cell])] = {
-      @volatile var _count = count
-      @volatile var _bytes = bytes
+    def rebatch (batch: Batch): Async [(Seq [Cell], Option [Cell])] = {
+      @volatile var entries = batch.entries
+      @volatile var bytes = batch.bytes
       iter.toSeqWhile { cell =>
-        _bytes -= cell.byteSize
-        val r = _count > 0 && (_bytes > 0 || _count == count)
-        _count -= 1
+        bytes -= cell.byteSize
+        val r = entries > 0 && (bytes > 0 || entries == batch.entries)
+        entries -= 1
         r
       }}
 

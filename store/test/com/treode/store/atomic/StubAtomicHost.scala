@@ -16,7 +16,6 @@
 
 package com.treode.store.atomic
 
-import scala.collection.JavaConversions._
 import scala.util.Random
 
 import com.treode.async.{Async, BatchIterator, Scheduler}
@@ -95,8 +94,15 @@ private class StubAtomicHost (
   def status (xid: TxId): Async [TxStatus] =
     atomic.status (xid)
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator2 =
-    atomic.scan (table, start, window, slice)
+  def scan (
+      table: TableId,
+      x: Int,
+      start: Bound [Key] = Bound.firstKey,
+      window: Window = Window.all,
+      slice: Slice = Slice.all,
+      batch: Batch = Batch.suggested
+  ): CellIterator2 =
+    atomic.scan (table, start, window, slice, batch)
 
   def putCells (id: TableId, cs: Cell*) (implicit scheduler: StubScheduler): Unit =
     atomic.tstore.receive (id, cs) .expectPass()

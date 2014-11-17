@@ -34,44 +34,35 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
   }
 
   def scan (
+      window: Window = Window.all,
+      slice: Slice = Slice.all,
+      batch: Batch = Batch.suggested
+  ) (implicit
+      store: Store
+  ): BatchIterator [Cell] =
+    store.scan (id, Bound.firstKey, window, slice, batch) .map (Cell.apply (_))
+
+  def from (
       start: Bound [(K, TxClock)],
-      window: Window,
-      slice: Slice
+      window: Window = Window.Latest (TxClock.now, true),
+      slice: Slice = Slice.all,
+      batch: Batch = Batch.suggested
   ) (implicit
       store: Store
   ): BatchIterator [Cell] = {
     val (key, time) = start.bound
     val _start = Bound (Key (this.key.freeze (key), time) , start.inclusive)
-    store.scan (id, _start, window, slice) .map (Cell.apply (_))
+    store.scan (id, _start, window, slice, batch) .map (Cell.apply (_))
   }
 
-  def scan (
-      start: K,
-      window: Window,
-      slice: Slice
+  def latest (
+    time: TxClock,
+    slice: Slice = Slice.all,
+    batch: Batch = Batch.suggested
   ) (implicit
-      store: Store
-  ): BatchIterator [Cell] = {
-    val _start = Bound (Key (this.key.freeze (start), TxClock.MaxValue) , true)
-    store.scan (id, _start, window, slice) .map (Cell.apply (_))
-  }
-
-  def scan (
-      window: Window,
-      slice: Slice
-  ) (implicit
-      store: Store
+    store: Store
   ): BatchIterator [Cell] =
-    store.scan (id, Bound.firstKey, window, slice) .map (Cell.apply (_))
-
-  def scan () (implicit store: Store): BatchIterator [Cell] =
-    scan (Window.all, Slice.all)
-
-  def latest (rt: TxClock, start: K) (implicit store: Store): BatchIterator [Cell] =
-    scan (start, Window.Latest (rt, true), Slice.all)
-
-  def latest (rt: TxClock) (implicit store: Store): BatchIterator [Cell] =
-    scan (Window.Latest (rt, true), Slice.all)
+    scan (Window.Latest (time, true), slice, batch)
 }
 
 object TableDescriptor {

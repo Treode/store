@@ -53,14 +53,14 @@ private class StubScanDeputy (
   val tables: Map [TableId, StubTable] =
     Map (fruitsId -> fruitsMap) .withDefaultValue (SortedMap.empty)
 
-  ScanDeputy.scan.listen { case ((table, start, window, slice), from) =>
+  ScanDeputy.scan.listen { case ((table, start, window, slice, batch), from) =>
     tables (table)
     .from (start.bound)
     .iterator
     .filter (start <* _._1)
     .map {case (key, value) => Cell (key.key, key.time, value)}
     .batch
-    .rebatch (random.nextInt (9), Int.MaxValue)
+    .rebatch (Batch (random.nextInt (9), Int.MaxValue))
     .map {case (cells, last) => (cells, last.isEmpty)}
   }
 

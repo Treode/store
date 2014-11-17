@@ -84,7 +84,7 @@ trait StoreBehaviors {
     def check(): Async [Unit] =
       guard  {
         for {
-          _history <- Accounts.scan() .toSeq
+          _history <- Accounts.scan (0, window = Window.all) .toSeq
         } yield {
           var tracker = Map.empty [Int, Int] .withDefaultValue (opening)
           val supply = naccounts * opening
