@@ -50,8 +50,6 @@ class StoreTestConfig (
     s ++= s"readBackoff = $readBackoff, "
     s ++= s"retention = $retention, "
     s ++= s"scanBatchBackoff = $scanBatchBackoff, "
-    s ++= s"scanBatchBytes = $scanBatchBytes, "
-    s ++= s"scanBatchEntries = $scanBatchEntries, "
     s ++= s"targetPageBytes = $targetPageBytes)"
     s.result
   }}
@@ -76,8 +74,6 @@ object StoreTestConfig {
       readBackoff: Backoff = Backoff (100, 100, 1 seconds, 7),
       retention: Retention = Retention.UnixEpoch,
       scanBatchBackoff: Backoff = Backoff (700, 300, 10 seconds, 7),
-      scanBatchBytes: Int = 1<<16,
-      scanBatchEntries: Int = 1000,
       targetPageBytes: Int = 1<<10
   ): StoreTestConfig = {
     new StoreTestConfig (
@@ -101,7 +97,5 @@ object StoreTestConfig {
             readBackoff = readBackoff,
             retention = retention,
             scanBatchBackoff = scanBatchBackoff,
-            scanBatchBytes = scanBatchBytes,
-            scanBatchEntries = scanBatchEntries,
             targetPageBytes = targetPageBytes))
   }}

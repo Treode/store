@@ -32,6 +32,7 @@ private trait StorePicklers extends Picklers {
 
   def atlas = Atlas.pickler
   def ballotNumber = BallotNumber.pickler
+  def batch = Batch.pickler
   def bytes = Bytes.pickler
   def catId = CatalogId.pickler
   def cell = Cell.pickler

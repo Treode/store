@@ -94,12 +94,19 @@ trait Store {
     *   details.
     * @param slice A slice of the rows to scan, where that slice respects replica placement; see
     *   [[Slice]] for details.
+    * @param batch A hint how to chop the scan into batches; see [[Batch]] for details.
     * @return An [[com.treode.async.AsyncIterator AsyncIterator]] to iterate the rows.  Multiple
     *   updates for a row will be iterated in reverse chronological order.
     * @throws TimeoutException If the scanner could not obtain a quorum of replicas for every
     *   cohort.  This may mean hosts are unreachable.
     */
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): BatchIterator [Cell]
+  def scan (
+    table: TableId,
+    start: Bound [Key] = Bound.firstKey,
+    window: Window = Window.all,
+    slice: Slice = Slice.all,
+    batch: Batch = Batch.suggested
+  ): BatchIterator [Cell]
 }
 
 object Store {
@@ -121,8 +128,10 @@ object Store {
       readBackoff: Backoff,
       retention: Retention,
       scanBatchBackoff: Backoff,
-      scanBatchBytes: Int,
-      scanBatchEntries: Int,
+      @deprecated ("Supply batch argument to scan method", "0.2.0")
+      scanBatchBytes: Int = 0,
+      @deprecated ("Supply batch argument to scan method", "0.2.0")
+      scanBatchEntries: Int = 0,
       targetPageBytes: Int
   ) {
 
@@ -159,14 +168,6 @@ object Store {
         "The preparing timeout must be more than 0 milliseconds.")
 
     require (
-        scanBatchBytes > 0,
-        "The scan batch size must be more than 0 bytes.")
-
-    require (
-        scanBatchEntries > 0,
-        "The scan batch size must be more than 0 entries.")
-
-    require (
         targetPageBytes > 0,
         "The target size of a page must be more than zero bytes.")
 
@@ -190,8 +191,6 @@ object Store {
         proposingBackoff = Backoff (100, 100, 1.seconds, 7),
         readBackoff = Backoff (100, 100, 1.seconds, 7),
         retention = Retention.StartOfYesterday,
-        scanBatchBytes = 1 << 16,
-        scanBatchEntries = 1000,
         scanBatchBackoff = Backoff (2.seconds, 3.seconds, 1.minutes, 7),
         targetPageBytes = 1 << 20)
   }

@@ -18,33 +18,38 @@ package com.treode.store.atomic
 
 import scala.util.{Failure, Success}
 
-import com.treode.async.Async
+import com.treode.async.Async, Async.supply
 import com.treode.cluster.RequestDescriptor
-import com.treode.store.{Bytes, Bound, Cell, Key, Slice, TableId, TxClock, Window}
+import com.treode.store._
 
-import Async.supply
 import ScanDeputy.Cells
 
 private class ScanDeputy (kit: AtomicKit) {
   import kit.{cluster, disk, tstore}
   import kit.config.{scanBatchBytes, scanBatchEntries}
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): Async [(Cells, Option [Cell])] =
+  def scan (
+      table: TableId,
+      start: Bound [Key],
+      window: Window,
+      slice: Slice,
+      batch: Batch
+  ): Async [(Cells, Option [Cell])] =
     disk.join {
       tstore
       .scan (table, start, window, slice)
-      .rebatch (scanBatchEntries, scanBatchBytes)
+      .rebatch (batch)
     }
 
   def attach() {
 
     ScanDeputy.scanV0.listen { case ((table, start, window, slice), from) =>
-      scan (table, start, window, slice)
+      scan (table, start, window, slice, Batch.suggested)
       .map {case (cells, last) => (cells, last map (_.timedKey))}
     }
 
-    ScanDeputy.scan.listen { case ((table, start, window, slice), from) =>
-      scan (table, start, window, slice)
+    ScanDeputy.scan.listen { case ((table, start, window, slice, batch), from) =>
+      scan (table, start, window, slice, batch)
       .map {case (cells, last) => (cells, last.isEmpty)}
     }}}
 
@@ -66,6 +71,6 @@ private object ScanDeputy {
     import AtomicPicklers._
     RequestDescriptor (
         0x1A85D54A2346425BL,
-        tuple (tableId, bound (key), window, slice),
+        tuple (tableId, bound (key), window, slice, batch),
         tuple (seq (cell), boolean))
   }}

@@ -62,6 +62,9 @@ class Transaction (rt: TxClock) (implicit store: Store) {
   private var _cache = Map.empty [Key, Value]
   private var _vt = TxClock.MinValue
 
+  /** A window to scan the latest values as of this transaction's time. */
+  lazy val latest = Window.Latest (rt, true)
+
   def vt = _vt
 
   /** Prefetch rows from the database into this transaction's cache. */
@@ -86,12 +89,6 @@ class Transaction (rt: TxClock) (implicit store: Store) {
 
   /** Create a fetcher to prefetch different kinds of rows. */
   def fetcher: Fetcher = new Fetcher (this)
-
-  def latest [K] (desc: TableDescriptor [K, _], start: K): BatchIterator [desc.Cell] =
-    desc.latest (rt, start)
-
-  def latest [K] (desc: TableDescriptor [K, _]): BatchIterator [desc.Cell] =
-    desc.latest (rt)
 
   /** Get a row from this transaction's cache. Call `fetch` to prefetch rows from the database
     * into the cache before calling `get`.
