@@ -300,7 +300,7 @@ class ResourceSpec extends FreeSpec {
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-        .expect
+          .expect
           .statusCode (200)
           .body (matchesJson ("""[
             {"key": "a", "time": 2, "value": "a2"},

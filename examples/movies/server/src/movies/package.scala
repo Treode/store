@@ -25,7 +25,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.datatype.joda.JodaModule
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.treode.async.AsyncIterator
+import com.treode.async.BatchIterator
 import com.treode.async.misc
 import com.treode.cluster.HostId
 import com.treode.jackson.DefaultTreodeModule
@@ -101,7 +101,7 @@ package object movies {
       rsp
     }
 
-    def json [A] (req: Request, iter: AsyncIterator [A]): Response  = {
+    def json [A] (req: Request, iter: BatchIterator [A]): Response  = {
       implicit val mapper = if (req.pretty) prettyJson else textJson
       val rsp = req.response
       rsp.status = Status.Ok

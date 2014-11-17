@@ -59,8 +59,8 @@ private class AtomicKit (implicit
   def status (xid: TxId): Async [TxStatus] =
     deliberate.propose (xid.id, xid.time, TxStatus.Aborted)
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
-    ScanDirector.scan (table, start, window, slice, this) .flatten
+  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator2 =
+    ScanDirector.scan (table, start, window, slice, this)
 
   def rebalance (atlas: Atlas): Async [Unit] = {
     val targets = Targets (atlas)

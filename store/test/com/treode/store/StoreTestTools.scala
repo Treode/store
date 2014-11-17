@@ -73,32 +73,7 @@ private trait StoreTestTools {
   def testStringOf (cells: Seq [Cell]): String =
     cells.map (testStringOf _) .mkString ("[", ", ", "]")
 
-  // Scala uses only the first argument list to disambiguate method references; this works around
-  // that limitation.
-  class AssertCells (expected: Seq [Cell]) {
-
-    def apply (actual: BatchIterator [Cell]) (implicit scheduler: StubScheduler) {
-      val _actual = actual.toSeq.expectPass()
-      if (expected != _actual)
-        fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
-    }
-
-    def apply (actual: AsyncIterator [Cell]) (implicit scheduler: StubScheduler) {
-      val _actual = actual.toSeq.expectPass()
-      if (expected != _actual)
-        fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
-    }}
-
-  /*def assertCells (expected: Cell*): AssertCells =
-    new AssertCells (expected)*/
-
-  def assertCells (expected: Cell*) (actual: AsyncIterator [Cell]) (implicit scheduler: StubScheduler) {
-    val _actual = actual.toSeq.expectPass()
-    if (expected != _actual)
-      fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
-  }
-
-  def assertCellsB (expected: Cell*) (actual: BatchIterator [Cell]) (implicit scheduler: StubScheduler) {
+  def assertCells (expected: Cell*) (actual: BatchIterator [Cell]) (implicit scheduler: StubScheduler) {
     val _actual = actual.toSeq.expectPass()
     if (expected != _actual)
       fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
@@ -156,7 +131,7 @@ private trait StoreTestTools {
 
   implicit class RichStore (store: Store) {
 
-    def scan (table: TableId): CellIterator =
+    def scan (table: TableId): CellIterator2 =
       store.scan (table, MinStart, AllTimes, AllSlices)
 
     def expectCells (table: TableId) (expected: Cell*) (implicit scheduler: StubScheduler) =

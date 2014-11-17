@@ -17,7 +17,7 @@
 package movies
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.implicits._
 import com.treode.pickle.Picklers
 import com.treode.store.{Store, TxClock}
@@ -119,7 +119,7 @@ private object PhysicalModel {
             .async()
       } yield ()
 
-    def list (rt: TxClock) (implicit store: Store): AsyncIterator [AM.Movie] =
+    def list (rt: TxClock) (implicit store: Store): BatchIterator [AM.Movie] =
       for {
         cell <- MovieTable.latest (rt)
         if cell.value.isDefined
@@ -338,7 +338,7 @@ private object PhysicalModel {
             .async()
       } yield ()
 
-    def list (rt: TxClock) (implicit store: Store): AsyncIterator [AM.Actor] =
+    def list (rt: TxClock) (implicit store: Store): BatchIterator [AM.Actor] =
       for {
         cell <- ActorTable.latest (rt)
         if cell.value.isDefined
@@ -445,12 +445,12 @@ private object PhysicalModel {
 
     val empty = Roles (Seq.empty)
 
-    def list (rt: TxClock) (implicit scheduler: Scheduler, store: Store): AsyncIterator [AM.Role] =
+    def list (rt: TxClock) (implicit scheduler: Scheduler, store: Store): BatchIterator [AM.Role] =
       for {
         cell <- RolesTable.latest (rt)
         if cell.value.isDefined
         val actorId = cell.key
-        role <- cell.value.get.roles.async
+        role <- cell.value.get.roles.iterator
       } yield {
         AM.Role (actorId, role.movieId, role.role)
       }

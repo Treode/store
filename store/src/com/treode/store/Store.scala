@@ -21,7 +21,7 @@ import java.nio.file.Path
 import java.util.concurrent.Executors
 import scala.util.{Failure, Random}
 
-import com.treode.async.{Async, AsyncIterator, Backoff, Scheduler}
+import com.treode.async.{Async, BatchIterator, Backoff, Scheduler}
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
 import com.treode.disk.{Disk, DriveAttachment, DriveDigest, DriveGeometry}
@@ -99,7 +99,7 @@ trait Store {
     * @throws TimeoutException If the scanner could not obtain a quorum of replicas for every
     *   cohort.  This may mean hosts are unreachable.
     */
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): AsyncIterator [Cell]
+  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): BatchIterator [Cell]
 }
 
 object Store {
@@ -182,7 +182,7 @@ object Store {
         exodusThreshold = 0.2D,
         falsePositiveProbability = 0.01,
         lockSpaceBits = 10,
-        moveBatchBackoff = Backoff (2.seconds, 1.seconds, 1.minutes, 7),
+        moveBatchBackoff = Backoff (2.seconds, 3.seconds, 1.minutes, 7),
         moveBatchBytes = 1 << 20,
         moveBatchEntries = 10000,
         prepareBackoff = Backoff (100, 100, 1.seconds, 7),
@@ -192,7 +192,7 @@ object Store {
         retention = Retention.StartOfYesterday,
         scanBatchBytes = 1 << 16,
         scanBatchEntries = 1000,
-        scanBatchBackoff = Backoff (700, 300, 10.seconds, 7),
+        scanBatchBackoff = Backoff (2.seconds, 3.seconds, 1.minutes, 7),
         targetPageBytes = 1 << 20)
   }
 

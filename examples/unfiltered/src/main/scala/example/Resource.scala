@@ -20,7 +20,7 @@ import java.io.OutputStream
 
 import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.JsonNode
-import com.treode.async.{Async, AsyncIterator}, Async.supply
+import com.treode.async.{Async, BatchIterator}, Async.supply
 import com.treode.cluster.HostId
 import com.treode.store._
 import com.treode.twitter.finagle.http.BadRequestException
@@ -35,11 +35,11 @@ class Resource (host: HostId, store: Store) extends Plan {
 
   object ParamKey extends Params.Extract ("key", Params.first ~> Params.nonempty)
 
-  case class ResponseIterator [A] (iter: AsyncIterator [A]) extends ResponseStreamer {
+  case class ResponseIterator [A] (iter: BatchIterator [A]) extends ResponseStreamer {
 
     private def iterate (jgen: JsonGenerator): Async [Unit] =
       for (v <- iter)
-        supply (textJson.writeValue (jgen, v))
+        textJson.writeValue (jgen, v)
 
     def stream (os: OutputStream) {
       val jgen = textJson.getFactory.createGenerator (os)

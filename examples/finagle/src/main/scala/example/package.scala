@@ -18,7 +18,7 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.treode.async.AsyncIterator
+import com.treode.async.BatchIterator
 import com.treode.async.misc.RichOption
 import com.treode.jackson.DefaultTreodeModule
 import com.treode.store.{Bytes, TableId, TxClock}
@@ -67,7 +67,7 @@ package object example {
       rsp
     }
 
-    def json [A] (req: Request, iter: AsyncIterator [A]): Response  = {
+    def json [A] (req: Request, iter: BatchIterator [A]): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok
       rsp.json = iter

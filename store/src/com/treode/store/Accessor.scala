@@ -16,7 +16,7 @@
 
 package com.treode.store
 
-import com.treode.async.AsyncIterator
+import com.treode.async.BatchIterator
 import com.treode.pickle.Pickler
 
 import WriteOp.{Create, Delete, Hold, Update}
@@ -42,11 +42,11 @@ trait Accessor [K, V] {
       slice: Slice
   ) (implicit
       store: Store
-  ): AsyncIterator [ACell]
+  ): BatchIterator [ACell]
 
-  def scan (window: Window, slice: Slice) (implicit store: Store): AsyncIterator [ACell]
+  def scan (window: Window, slice: Slice) (implicit store: Store): BatchIterator [ACell]
 
-  def recent (rt: TxClock) (implicit store: Store): AsyncIterator [ACell]
+  def recent (rt: TxClock) (implicit store: Store): BatchIterator [ACell]
 }
 
 @deprecated ("Use Transaction", "0.2.0")
@@ -71,15 +71,15 @@ object Accessor {
           slice: Slice
       ) (implicit
           store: Store
-      ): AsyncIterator [ACell] = {
+      ): BatchIterator [ACell] = {
         val (key, time) = start.bound
         val _start = Bound (Key (Bytes (pk, key), time), start.inclusive)
         store.scan (id, _start, window, slice) .map (cell _)
       }
 
-      def scan (window: Window, slice: Slice) (implicit store: Store): AsyncIterator [ACell] =
+      def scan (window: Window, slice: Slice) (implicit store: Store): BatchIterator [ACell] =
         store.scan (id, Bound.firstKey, window, slice) .map (cell _)
 
-      def recent (rt: TxClock) (implicit store: Store): AsyncIterator [ACell] =
+      def recent (rt: TxClock) (implicit store: Store): BatchIterator [ACell] =
         scan (Window.Latest (rt, true), Slice.all)
     }}

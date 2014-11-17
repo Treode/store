@@ -16,7 +16,7 @@
 
 package com.treode.store.alt
 
-import com.treode.async.{Async, AsyncIterator}
+import com.treode.async.{Async, BatchIterator}
 import com.treode.store._
 
 import WriteOp._
@@ -87,10 +87,10 @@ class Transaction (rt: TxClock) (implicit store: Store) {
   /** Create a fetcher to prefetch different kinds of rows. */
   def fetcher: Fetcher = new Fetcher (this)
 
-  def latest [K] (desc: TableDescriptor [K, _], start: K): AsyncIterator [desc.Cell] =
+  def latest [K] (desc: TableDescriptor [K, _], start: K): BatchIterator [desc.Cell] =
     desc.latest (rt, start)
 
-  def latest [K] (desc: TableDescriptor [K, _]): AsyncIterator [desc.Cell] =
+  def latest [K] (desc: TableDescriptor [K, _]): BatchIterator [desc.Cell] =
     desc.latest (rt)
 
   /** Get a row from this transaction's cache. Call `fetch` to prefetch rows from the database

@@ -19,7 +19,7 @@ package com.treode.store.stubs
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentSkipListMap}
 import scala.collection.JavaConversions
 
-import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.cluster.HostId
@@ -114,8 +114,8 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
         cb.pass (st)
     } .on (scheduler)
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): AsyncIterator [Cell] =
-    AsyncIterator.make {
+  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): BatchIterator [Cell] =
+    BatchIterator.make {
       for {
         _ <- space.scan (window.later.bound)
       } yield {
@@ -127,7 +127,6 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
             .batch
             .slice (table, slice)
             .window (window)
-            .flatten
       }}
 
   def scan (table: TableId): Seq [Cell] =

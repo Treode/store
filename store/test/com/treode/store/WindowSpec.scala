@@ -38,7 +38,7 @@ class WindowSpec extends FreeSpec {
       val out = items .map (_._2) .flatten
       s"handle ${testStringOf (in)}" in {
         implicit val scheduler = StubScheduler.random()
-        assertCellsB (out: _*) (in.iterator.batch.window (filter))
+        assertCells (out: _*) (in.iterator.batch.window (filter))
       }}
 
     val apples = Seq (
@@ -121,7 +121,7 @@ class WindowSpec extends FreeSpec {
       val out = items .map (_._2) .flatten
       s"handle ${testStringOf (in)}" in {
         implicit val scheduler = StubScheduler.random()
-        assertCellsB (out: _*) (in.iterator.batch.window (filter))
+        assertCells (out: _*) (in.iterator.batch.window (filter))
       }}
 
     val apple1 = (
@@ -168,7 +168,7 @@ class WindowSpec extends FreeSpec {
       val out = items .map (_._2) .flatten
       s"handle ${testStringOf (in)}" in {
         implicit val scheduler = StubScheduler.random()
-        assertCellsB (out: _*) (in.iterator.batch.window (filter))
+        assertCells (out: _*) (in.iterator.batch.window (filter))
       }}
 
     val apple1 = (

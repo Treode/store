@@ -22,7 +22,7 @@ import scala.util.{Failure, Success}
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.treode.async.AsyncIterator
+import com.treode.async.BatchIterator
 import com.treode.async.misc.{RichOption, parseInt}
 import com.treode.cluster.HostId
 import com.treode.jackson.DefaultTreodeModule
@@ -31,7 +31,7 @@ import com.treode.twitter.finagle.http.{BadRequestException, RichRequest}
 import com.treode.twitter.util.RichTwitterFuture
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
 import com.twitter.finagle.netty3.ChannelBufferBuf
-import org.jboss.netty.buffer.ChannelBuffers
+import org.jboss.netty.buffer.{ChannelBufferOutputStream, ChannelBuffers}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 package object http {
@@ -63,25 +63,33 @@ package object http {
       rsp.close()
     }
 
-    private def buf (msg: String): ChannelBufferBuf =
-      ChannelBufferBuf (ChannelBuffers.wrappedBuffer (msg.getBytes ("UTF-8")))
-
-    def json_= [A] (iter: AsyncIterator [A]) (implicit mapper: ObjectMapper) {
+    def json_= [A] (iter: BatchIterator [A]) (implicit mapper: ObjectMapper) {
       rsp.mediaType = MediaType.Json
       rsp.setChunked (true)
+      val writer = mapper.writer()
       var first = true
-      iter.foreach { v =>
-        if (first) {
-          first = false
-          rsp.writer.write (buf ("[" + mapper.writeValueAsString (v))) .toAsync
-        } else {
-          rsp.writer.write (buf ("," + mapper.writeValueAsString (v))) .toAsync
+      iter.batch { vs =>
+        val buffer = ChannelBuffers.dynamicBuffer()
+        val stream = new ChannelBufferOutputStream (buffer)
+        for (v <- vs) {
+          if (first) {
+            first = false
+            stream.writeByte ('[')
+          } else {
+            stream.writeByte (',')
+          }
+          writer.writeValue (stream, v)
         }
+        stream.flush()
+        rsp.writer.write (ChannelBufferBuf (buffer)) .toAsync
       } .flatMap { _ =>
+        val buffer = ChannelBuffers.dynamicBuffer()
+        val stream = new ChannelBufferOutputStream (buffer)
         if (first)
-          rsp.writer.write (buf ("[]")) .toAsync
-        else
-          rsp.writer.write (buf ("]")) .toAsync
+          stream.writeByte ('[')
+        stream.writeByte (']')
+        stream.flush()
+        rsp.writer.write (ChannelBufferBuf (buffer)) .toAsync
       } .run {
         case Success (_) =>
           rsp.close()

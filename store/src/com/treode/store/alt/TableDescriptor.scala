@@ -16,7 +16,7 @@
 
 package com.treode.store.alt
 
-import com.treode.async.AsyncIterator
+import com.treode.async.BatchIterator
 import com.treode.store.{Cell => SCell, _}
 
 /** A TableDescriptor ties together a [[com.treode.store.TableId TableId]], a [[Froster]] for the
@@ -39,7 +39,7 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
       slice: Slice
   ) (implicit
       store: Store
-  ): AsyncIterator [Cell] = {
+  ): BatchIterator [Cell] = {
     val (key, time) = start.bound
     val _start = Bound (Key (this.key.freeze (key), time) , start.inclusive)
     store.scan (id, _start, window, slice) .map (Cell.apply (_))
@@ -51,7 +51,7 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
       slice: Slice
   ) (implicit
       store: Store
-  ): AsyncIterator [Cell] = {
+  ): BatchIterator [Cell] = {
     val _start = Bound (Key (this.key.freeze (start), TxClock.MaxValue) , true)
     store.scan (id, _start, window, slice) .map (Cell.apply (_))
   }
@@ -61,16 +61,16 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
       slice: Slice
   ) (implicit
       store: Store
-  ): AsyncIterator [Cell] =
+  ): BatchIterator [Cell] =
     store.scan (id, Bound.firstKey, window, slice) .map (Cell.apply (_))
 
-  def scan () (implicit store: Store): AsyncIterator [Cell] =
+  def scan () (implicit store: Store): BatchIterator [Cell] =
     scan (Window.all, Slice.all)
 
-  def latest (rt: TxClock, start: K) (implicit store: Store): AsyncIterator [Cell] =
+  def latest (rt: TxClock, start: K) (implicit store: Store): BatchIterator [Cell] =
     scan (start, Window.Latest (rt, true), Slice.all)
 
-  def latest (rt: TxClock) (implicit store: Store): AsyncIterator [Cell] =
+  def latest (rt: TxClock) (implicit store: Store): BatchIterator [Cell] =
     scan (Window.Latest (rt, true), Slice.all)
 }
 
