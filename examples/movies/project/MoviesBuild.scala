@@ -16,6 +16,7 @@
 
 import sbtassembly.Plugin.AssemblyKeys
 import sbtassembly.Plugin.assemblySettings
+import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 import sbt._
 import sbtassembly.Plugin._
@@ -59,6 +60,7 @@ object MoviesBuild extends Build {
     Project ("server", file ("server"))
     .dependsOn (common)
     .settings (assemblySettings: _*)
+    .settings (gitStampSettings: _*)
     .settings (commonSettings: _*)
     .settings (
 
@@ -84,6 +86,7 @@ object MoviesBuild extends Build {
     Project ("spark", file ("spark"))
     .dependsOn (common)
     .settings (assemblySettings: _*)
+    .settings (gitStampSettings: _*)
     .settings (commonSettings: _*)
     .settings (
 

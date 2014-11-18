@@ -1,6 +1,9 @@
 import AssemblyKeys._
+import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 assemblySettings
+
+gitStampSettings
 
 name := "finatra-example"
 
