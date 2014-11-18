@@ -20,7 +20,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.implicits._
 import com.treode.pickle.Picklers
-import com.treode.store.{Batch, Bound, Store, TxClock}
+import com.treode.store.{Batch, Bound, Store, TxClock, Window}
 import com.treode.store.alt.{Froster, TableDescriptor, Transaction}
 import com.treode.twitter.finagle.http.BadRequestException
 import org.joda.time.DateTime
@@ -121,7 +121,9 @@ private object PhysicalModel {
 
     def list (rt: TxClock) (implicit store: Store): BatchIterator [AM.Movie] =
       for {
-        cell <- MovieTable.latest (rt, batch = Batch (4000, 1 << 18))
+        cell <- MovieTable.scan (
+            window = Window.Latest (rt, true), 
+            batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
       } yield {
         val movie = cell.value.get
@@ -340,7 +342,9 @@ private object PhysicalModel {
 
     def list (rt: TxClock) (implicit store: Store): BatchIterator [AM.Actor] =
       for {
-        cell <- ActorTable.latest (rt, batch = Batch (4000, 1 << 18))
+        cell <- ActorTable.scan (
+            window = Window.Latest (rt, true), 
+            batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
       } yield {
         val actor = cell.value.get
@@ -447,7 +451,9 @@ private object PhysicalModel {
 
     def list (rt: TxClock) (implicit store: Store): BatchIterator [AM.Role] =
       for {
-        cell <- RolesTable.latest (rt,  batch = Batch (4000, 1 << 18))
+        cell <- RolesTable.scan (
+            window = Window.Latest (rt, true),  
+            batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
         val actorId = cell.key
         role <- cell.value.get.roles.iterator
