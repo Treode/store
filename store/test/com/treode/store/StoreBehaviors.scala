@@ -74,7 +74,7 @@ trait StoreBehaviors {
     def audit(): Async [Unit] =
       guard [Unit] {
         for {
-          cells <- Accounts.latest (nextTick) .toSeq
+          cells <- Accounts.scan (window = Window.Latest (nextTick, true)) .toSeq
         } yield {
           val total = cells.map (_.value.get) .sum
           assert (supply == total)
@@ -84,7 +84,7 @@ trait StoreBehaviors {
     def check(): Async [Unit] =
       guard  {
         for {
-          _history <- Accounts.scan (0, window = Window.all) .toSeq
+          _history <- Accounts.scan() .toSeq
         } yield {
           var tracker = Map.empty [Int, Int] .withDefaultValue (opening)
           val supply = naccounts * opening

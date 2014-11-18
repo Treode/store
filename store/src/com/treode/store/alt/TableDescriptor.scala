@@ -44,7 +44,7 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
 
   def from (
       start: Bound [(K, TxClock)],
-      window: Window = Window.Latest (TxClock.now, true),
+      window: Window = Window.all,
       slice: Slice = Slice.all,
       batch: Batch = Batch.suggested
   ) (implicit
@@ -53,17 +53,7 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
     val (key, time) = start.bound
     val _start = Bound (Key (this.key.freeze (key), time) , start.inclusive)
     store.scan (id, _start, window, slice, batch) .map (Cell.apply (_))
-  }
-
-  def latest (
-    time: TxClock,
-    slice: Slice = Slice.all,
-    batch: Batch = Batch.suggested
-  ) (implicit
-    store: Store
-  ): BatchIterator [Cell] =
-    scan (Window.Latest (time, true), slice, batch)
-}
+  }}
 
 object TableDescriptor {
 
