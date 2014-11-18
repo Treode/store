@@ -1,4 +1,5 @@
 import AssemblyKeys._
+import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 assemblySettings
 
@@ -28,3 +29,5 @@ jarName in assembly := "finagle-server.jar"
 mainClass in assembly := Some ("example.Main")
 
 test in assembly := {}
+
+Seq ( gitStampSettings: _* )

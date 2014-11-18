@@ -16,6 +16,7 @@
 
 import sbtassembly.Plugin.AssemblyKeys
 import sbtassembly.Plugin.assemblySettings
+import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 import sbt._
 import sbtassembly.Plugin._
@@ -78,6 +79,8 @@ object MoviesBuild extends Build {
 
       test in assembly := {}
     )
+    .settings (gitStampSettings: _*)
+
 
   // The Spark connector.
   lazy val spark =

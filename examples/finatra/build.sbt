@@ -1,4 +1,5 @@
 import AssemblyKeys._
+import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 assemblySettings
 
@@ -20,6 +21,8 @@ resolvers += "Twitter" at "http://maven.twttr.com"
 resolvers += Resolver.url (
   "treode-oss",
   new URL ("https://oss.treode.com/ivy")) (Resolver.ivyStylePatterns)
+
+Seq( gitStampSettings: _* )
 
 jarName in assembly := "finatra-server.jar"
 

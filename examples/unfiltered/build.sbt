@@ -1,4 +1,5 @@
 import AssemblyKeys._
+import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 assemblySettings
 
@@ -34,3 +35,5 @@ mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
     case x => old (x)
   }
 }
+
+Seq ( gitStampSettings: _* )
