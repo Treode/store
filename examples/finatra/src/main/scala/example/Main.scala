@@ -18,7 +18,6 @@ package example
 
 import java.net.SocketAddress
 
-import com.treode.finatra.AsyncFinatraServer
 import com.treode.twitter.app.StoreKit
 import com.twitter.finagle.util.InetSocketAddressUtil.{parseHosts, toPublic}
 import com.twitter.finatra.config.{port => httpPort, _}

@@ -14,11 +14,12 @@
  * limitations under the License.
  */
 
-package com.treode
+package example
 
-package finatra {
+import com.twitter.finatra.FinatraServer
 
-  class BadRequestException (val message: String) extends Exception {
+class AsyncFinatraServer extends FinatraServer {
 
-    override def getMessage(): String = message
-  }}
+  def register (c: AsyncFinatraController): Unit =
+    register (c.delegate)
+}

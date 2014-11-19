@@ -19,8 +19,8 @@ package example
 import com.fasterxml.jackson.databind.JsonNode
 import com.treode.async.Async
 import com.treode.cluster.HostId
-import com.treode.finatra.{AsyncFinatraController, BadRequestException}
 import com.treode.store._
+import com.treode.twitter.finagle.http.BadRequestException
 import com.twitter.finatra.{Request, ResponseBuilder}
 import org.joda.time.Instant
 

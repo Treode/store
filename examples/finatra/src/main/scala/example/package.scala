@@ -26,9 +26,9 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.Async
 import com.treode.async.misc.{RichOption, parseInt, parseUnsignedLong}
 import com.treode.cluster.{CellId, HostId}
-import com.treode.finatra.BadRequestException
 import com.treode.jackson.DefaultTreodeModule
 import com.treode.store.{Bytes, Slice, TableId, TxClock, TxId, Value}
+import com.treode.twitter.finagle.http.BadRequestException
 import com.twitter.app.Flaggable
 import com.twitter.finagle.http.{MediaType, ParamMap}
 import com.twitter.finatra.{Request, ResponseBuilder}
