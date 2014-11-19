@@ -17,7 +17,7 @@
 package com.treode.twitter.app
 
 import java.net.{InetAddress, InetSocketAddress}
-import java.nio.file.Paths
+import java.nio.file.{Path, Paths}
 import scala.reflect.ClassTag
 
 import com.treode.async.{Globals, Scheduler}
@@ -25,6 +25,7 @@ import com.treode.cluster.{Cluster, HostId}
 import com.treode.disk.Disk
 import com.treode.store.{Cohort, Store}
 import com.twitter.app.App
+import com.twitter.finagle.util.InetSocketAddressUtil.{parseHosts, toPublic}
 import com.twitter.logging.{ConsoleHandler, Level, LoggerFactory}
 
 /** Mixin that supplies a [[com.treode.store.Store.Controller Store.Controller]] for a Twitter
@@ -87,8 +88,11 @@ trait StoreKit {
   private val superBlockBits =
     flag [Int] ("superBlockBits",  14, "Size of the super block (log base 2)")
 
-  private val peerPort =
-    flag [Int] ("peerPort", 6278, "Port on which peers should connect")
+  private val peerAddrFlag =
+    flag [String] ("peerAddr", ":6278", "Address for listening (example, 0.0.0.0:6278).")
+
+  private val sharePeerAddrFlag =
+    flag [String] ("sharePeerAddr", ":6278", "Address for connecting (example, 192.168.1.1:6278).")
 
   private val solo =
     flag [Boolean] ("solo", false, "Run the server solo")
@@ -100,14 +104,14 @@ trait StoreKit {
       "List of peers to hail on startup.")
 
   @volatile
-  private var paths: Array [String] = null
+  private var paths: Array [Path] = null
 
   premain {
     if (args.length == 0) {
       println ("At least one path is required.")
       System.exit (1)
     }
-    paths = args
+    paths = args map (Paths.get (_))
   }
 
   implicit val scheduler: Scheduler = Globals.scheduler
@@ -116,16 +120,19 @@ trait StoreKit {
 
     require (paths != null, "Register users of the controller in premain.")
 
+    val peerAddr = parseHosts (peerAddrFlag()) .head
+
+    val sharePeerAddr =
+      if (sharePeerAddrFlag.isDefined)
+        parseHosts (sharePeerAddrFlag()) .head
+      else
+        toPublic (peerAddr)
+
     implicit val diskConfig = Disk.Config.suggested.copy (superBlockBits = superBlockBits())
     implicit val clusterConfig = Cluster.Config.suggested
     implicit val storeConfig = Store.Config.suggested
 
-    val controller =
-      Store.recover (
-        bindAddr = new InetSocketAddress (peerPort()),
-        shareAddr = new InetSocketAddress (InetAddress.getLocalHost, peerPort()),
-        paths = args map (Paths.get (_)): _*)
-      .await()
+    val controller = Store.recover (peerAddr, sharePeerAddr, paths: _*  ) .await()
 
     if (solo())
       controller.cohorts = Array (Cohort.settled (controller.hostId))

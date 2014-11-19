@@ -13,7 +13,6 @@ libraryDependencies ++= Seq (
   "com.treode" %% "jackson" % "0.2.0-SNAPSHOT",
   "com.treode" %% "store" % "0.2.0-SNAPSHOT" % "compile;test->stub",
   "com.treode" %% "twitter-server" % "0.2.0-SNAPSHOT",
-  "com.treode" %% "twitter-util" % "0.2.0-SNAPSHOT",
   "com.twitter" %% "finagle-http" % "6.22.0",
   "org.scalatest" %% "scalatest" % "2.2.2" % "test")
 

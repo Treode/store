@@ -232,23 +232,9 @@ object TreodeBuild extends Build {
           "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.2"))
 
   // Separated because not everyone wants it and its dependencies.
-  lazy val twitterUtil = Project ("twitter-util", file ("twitter-util"))
-    .configs (IntensiveTest, PeriodicTest, Perf)
-    .dependsOn (store)
-    .settings (standardSettings: _*)
-    .settings (
-
-        resolvers += "Twitter" at "http://maven.twttr.com",
-
-        libraryDependencies ++= Seq (
-          "com.twitter" %% "util-app" % "6.22.1",
-          "com.twitter" %% "util-core" % "6.22.1",
-          "com.twitter" %% "util-logging" % "6.22.1"))
-
-  // Separated because not everyone wants it and its dependencies.
   lazy val twitterServer = Project ("twitter-server", file ("twitter-server"))
     .configs (IntensiveTest, PeriodicTest, Perf)
-    .dependsOn (store, jackson, twitterUtil)
+    .dependsOn (store, jackson)
     .settings (standardSettings: _*)
     .settings (
 
@@ -281,7 +267,7 @@ object TreodeBuild extends Build {
 
   // The doc project includes everything for unidoc.
   lazy val doc = Project ("doc", file ("doc"))
-    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterUtil, twitterServer)
+    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterServer)
     .settings (versionInfo: _*)
     .settings (unidocSettings: _*)
     .settings (
@@ -311,9 +297,9 @@ object TreodeBuild extends Build {
       publish := {})
 
   // The root project includes everything that can be built across Scala versions; that is
-  // everything except Finatra and Twitter Server, which can be built in 2.10 only.
+  // everything except Twitter Server, which can be built in 2.10 only.
   lazy val root = Project ("root", file ("."))
-    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterUtil)
+    .aggregate (buffer, pickle, async, cluster, disk, store, jackson)
     .settings (versionInfo: _*)
     .settings (
 
