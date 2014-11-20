@@ -81,6 +81,7 @@ object MoviesBuild extends Build {
       test in assembly := {}
     )
 
+
   // The Spark connector.
   lazy val spark =
     Project ("spark", file ("spark"))
