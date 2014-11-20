@@ -3,6 +3,8 @@ import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 assemblySettings
 
+gitStampSettings
+
 name := "finatra-example"
 
 version := "0.2.0-SNAPSHOT"
@@ -21,8 +23,6 @@ resolvers += "Twitter" at "http://maven.twttr.com"
 resolvers += Resolver.url (
   "treode-oss",
   new URL ("https://oss.treode.com/ivy")) (Resolver.ivyStylePatterns)
-
-Seq( gitStampSettings: _* )
 
 jarName in assembly := "finatra-server.jar"
 

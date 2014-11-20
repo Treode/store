@@ -3,6 +3,8 @@ import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 assemblySettings
 
+gitStampSettings
+
 name := "finagle-example"
 
 version := "0.2.0-SNAPSHOT"
@@ -30,4 +32,3 @@ mainClass in assembly := Some ("example.Main")
 
 test in assembly := {}
 
-Seq ( gitStampSettings: _* )

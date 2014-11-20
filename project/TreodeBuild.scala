@@ -18,7 +18,6 @@ import com.typesafe.sbteclipse.plugin.EclipsePlugin.EclipseKeys
 import sbtassembly.Plugin.AssemblyKeys
 import sbtassembly.Plugin.assemblySettings
 import sbtunidoc.Plugin.{ScalaUnidoc, UnidocKeys, unidocSettings}
-import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 import sbt._
 import AssemblyKeys._
@@ -220,7 +219,6 @@ object TreodeBuild extends Build {
     .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
     .dependsOn (cluster % "compile;stub->stub", disk % "compile;stub->stub")
     .settings (stubSettings: _*)
-    .settings (gitStampSettings: _*)
 
   // Separated because not everyone wants it and its dependencies.
   lazy val jackson = Project ("jackson", file ("jackson"))

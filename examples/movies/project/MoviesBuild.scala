@@ -60,6 +60,7 @@ object MoviesBuild extends Build {
     Project ("server", file ("server"))
     .dependsOn (common)
     .settings (assemblySettings: _*)
+    .settings (gitStampSettings: _*)
     .settings (commonSettings: _*)
     .settings (
 
@@ -79,7 +80,6 @@ object MoviesBuild extends Build {
 
       test in assembly := {}
     )
-    .settings (gitStampSettings: _*)
 
 
   // The Spark connector.
@@ -87,6 +87,7 @@ object MoviesBuild extends Build {
     Project ("spark", file ("spark"))
     .dependsOn (common)
     .settings (assemblySettings: _*)
+    .settings (gitStampSettings: _*)
     .settings (commonSettings: _*)
     .settings (
 

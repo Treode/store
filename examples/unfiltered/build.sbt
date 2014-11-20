@@ -3,6 +3,8 @@ import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 assemblySettings
 
+gitStampSettings
+
 organization := "com.treode"
 
 version := "0.2.0-SNAPSHOT"
@@ -36,4 +38,3 @@ mergeStrategy in assembly <<= (mergeStrategy in assembly) { (old) =>
   }
 }
 
-Seq ( gitStampSettings: _* )
