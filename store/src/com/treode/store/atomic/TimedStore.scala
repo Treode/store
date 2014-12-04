@@ -110,10 +110,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
       for {
         _ <- space.scan (window.later.bound)
       } yield {
-        getTable (table)
-            .iterator (start, library.residents)
-            .slice (table, slice)
-            .window (window)
+        getTable (table) .iterator (start, window, slice, library.residents)
       }}
 
   def receive (table: TableId, cells: Seq [Cell]): Async [Unit] = {

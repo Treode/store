@@ -29,14 +29,19 @@ class WindowSpec extends FreeSpec {
   def concat [A, B] (x: (Seq [A], Seq [B]), y: (Seq [A], Seq [B])): (Seq [A], Seq [B]) =
     (x._1 ++ y._1, x._2 ++ y._2)
 
+  def testOverlap (window: Window, latest: Long, earliest: Long, expected: Boolean) {
+    s"$window should ${if (expected) "overlap" else "not overlap"} [$earliest, $latest]" in {
+      assertResult (expected) (window.overlaps (latest, earliest))
+    }}
+
   "Window.Latest should" - {
 
     val filter = Latest (3, true, 2, true)
 
-    def test (items: (Seq [Cell], Seq [Cell])*) {
+    def testFilter (items: (Seq [Cell], Seq [Cell])*) {
       val in = items .map (_._1) .flatten
       val out = items .map (_._2) .flatten
-      s"handle ${testStringOf (in)}" in {
+      s"filter ${testStringOf (in)}" in {
         implicit val scheduler = StubScheduler.random()
         assertCells (out: _*) (in.iterator.batch.window (filter))
       }}
@@ -105,11 +110,20 @@ class WindowSpec extends FreeSpec {
         ( Seq (Banana##1::1),
           Seq ()))
 
-    test ((Seq.empty, Seq.empty))
+    testFilter ((Seq.empty, Seq.empty))
     for (a <- apples)
-      test (a)
+      testFilter (a)
     for (a <- apples; b <- bananas)
-      test (concat (a, b))
+      testFilter (concat (a, b))
+
+    testOverlap (Latest (3, true,  2, true ), 2, 1, true )
+    testOverlap (Latest (3, true,  2, false), 2, 1, false)
+    testOverlap (Latest (3, true,  2, true ), 3, 2, true )
+    testOverlap (Latest (3, true,  2, false), 3, 2, true )
+    testOverlap (Latest (3, false, 2, true ), 3, 2, true )
+    testOverlap (Latest (3, false, 2, false), 3, 2, true )
+    testOverlap (Latest (3, true,  2, true ), 4, 3, true )
+    testOverlap (Latest (3, false, 2, true ), 4, 3, false)
   }
 
   "Window.Between should" - {
@@ -157,6 +171,15 @@ class WindowSpec extends FreeSpec {
     test ((Seq.empty, Seq.empty))
     for (a <- apples)
       test (a)
+
+    testOverlap (Between (3, true,  2, true ), 2, 1, true )
+    testOverlap (Between (3, true,  2, false), 2, 1, false)
+    testOverlap (Between (3, true,  2, true ), 3, 2, true )
+    testOverlap (Between (3, true,  2, false), 3, 2, true )
+    testOverlap (Between (3, false, 2, true ), 3, 2, true )
+    testOverlap (Between (3, false, 2, false), 3, 2, true )
+    testOverlap (Between (3, true,  2, true ), 4, 3, true )
+    testOverlap (Between (3, false, 2, true ), 4, 3, false)
   }
 
   "Window.Through should" - {
@@ -236,4 +259,10 @@ class WindowSpec extends FreeSpec {
       test (a)
     for (a <- apples; b <- bananas)
       test (concat (a, b))
+
+    testOverlap (Through (3, true,  2), 2, 1, true )
+    testOverlap (Through (3, true,  2), 3, 2, true )
+    testOverlap (Through (3, false, 2), 3, 2, true )
+    testOverlap (Through (3, true,  2), 4, 3, true )
+    testOverlap (Through (3, false, 2), 4, 3, false)
   }}

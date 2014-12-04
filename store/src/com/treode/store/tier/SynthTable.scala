@@ -164,6 +164,20 @@ private class SynthTable (
         .clean (desc, id, residents)
   }
 
+  def iterator (start: Bound [Key], window: Window, slice: Slice, residents: Residents): CellIterator2 = {
+    readLock.lock()
+    val (primary, secondary, tiers) = try {
+      (this.primary, this.secondary, this.tiers)
+    } finally {
+      readLock.unlock()
+    }
+    TierIterator
+        .merge (desc, start, primary, secondary, tiers.overlaps (window))
+        .clean (desc, id, residents)
+        .slice (id, slice)
+        .window (window)
+  }
+
   def receive (cells: Seq [Cell]): (Long, Seq [Cell]) = {
     readLock.lock()
     try {

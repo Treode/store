@@ -17,7 +17,7 @@
 package com.treode.store.tier
 
 import com.treode.disk.Position
-import com.treode.store.{Residents, Store, StorePicklers, TableDigest}
+import com.treode.store.{Residents, Store, StorePicklers, TableDigest, Window}
 
  private case class Tiers (tiers: Seq [Tier]) {
 
@@ -29,6 +29,9 @@ import com.treode.store.{Residents, Store, StorePicklers, TableDigest}
 
   def isEmpty: Boolean =
     tiers.isEmpty
+
+  def overlaps (window: Window): Tiers =
+    Tiers (tiers.filter (_.overlaps (window)))
 
   def maxGen: Long =
     if (tiers.isEmpty) 0 else tiers.head.gen

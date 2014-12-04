@@ -150,10 +150,8 @@ package object movies {
 
   implicit class RichRequest (request: Request) extends http.RichRequest (request) {
 
-    def id (prefix: String): String = {
+    def id (prefix: String): String =
       request.path.substring (prefix.length)
-
-    }
 
     def pretty: Boolean =
       // If the accept header lacks "application/json", then pretty print the response.

@@ -27,6 +27,8 @@ package com.treode.store
 sealed abstract class Window {
 
   def later: Bound [TxClock]
+  
+  def overlaps (latest: TxClock, earliest: TxClock): Boolean
 
   def filter: Cell => Boolean
 }
@@ -42,6 +44,9 @@ object Window {
 
   /** Choose only the latest value as of `later` so long as that was set after `earlier`. */
   case class Latest (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
+
+    def overlaps (latest: TxClock, earliest: TxClock): Boolean =
+      earlier <* latest && later >* earliest
 
     def filter: Cell => Boolean =
       new Function [Cell, Boolean] {
@@ -87,6 +92,9 @@ object Window {
   /** Choose all changes between `later` and `earlier`. */
   case class Between (later: Bound [TxClock], earlier: Bound [TxClock]) extends Window {
 
+    def overlaps (latest: TxClock, earliest: TxClock): Boolean =
+      earlier <* latest && later >* earliest
+
     def filter: Cell => Boolean =
       new Function [Cell, Boolean] {
         def apply (cell: Cell): Boolean =
@@ -103,6 +111,9 @@ object Window {
     * `earlier`.
     */
   case class Through (later: Bound [TxClock], earlier: TxClock) extends Window {
+
+    def overlaps (latest: TxClock, earliest: TxClock): Boolean =
+      later >* earliest
 
     def filter: Cell => Boolean =
       new Function [Cell, Boolean] {

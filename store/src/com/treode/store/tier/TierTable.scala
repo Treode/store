@@ -63,6 +63,8 @@ private [store] trait TierTable {
 
   def iterator (start: Bound [Key], residents: Residents): CellIterator2
 
+  def iterator (start: Bound [Key], window: Window, slice: Slice, residents: Residents): CellIterator2
+
   /** Put a key.
     *
     * @return The generation. The client must log this key piece of data, and provide it to the

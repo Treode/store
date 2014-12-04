@@ -119,10 +119,10 @@ private object PhysicalModel {
             .async()
       } yield ()
 
-    def list (rt: TxClock) (implicit store: Store): BatchIterator [AM.Movie] =
+    def list (window: Window) (implicit store: Store): BatchIterator [AM.Movie] =
       for {
         cell <- MovieTable.scan (
-            window = Window.Latest (rt, true), 
+            window = window, 
             batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
       } yield {
@@ -340,10 +340,10 @@ private object PhysicalModel {
             .async()
       } yield ()
 
-    def list (rt: TxClock) (implicit store: Store): BatchIterator [AM.Actor] =
+    def list (window: Window) (implicit store: Store): BatchIterator [AM.Actor] =
       for {
         cell <- ActorTable.scan (
-            window = Window.Latest (rt, true), 
+            window = window, 
             batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
       } yield {
@@ -449,10 +449,10 @@ private object PhysicalModel {
 
     val empty = Roles (Seq.empty)
 
-    def list (rt: TxClock) (implicit store: Store): BatchIterator [AM.Role] =
+    def list (window: Window) (implicit store: Store): BatchIterator [AM.Role] =
       for {
         cell <- RolesTable.scan (
-            window = Window.Latest (rt, true),  
+            window = window,  
             batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
         val actorId = cell.key

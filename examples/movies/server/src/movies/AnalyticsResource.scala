@@ -29,8 +29,7 @@ object AnalyticsResource {
     router.register ("/rdd/actors") { request =>
       request.method match {
         case Method.Get =>
-          val rt = request.lastModificationBefore
-          supply (respond.json (request, PM.Actor.list (rt)))
+          supply (respond.json (request, PM.Actor.list (request.window)))
         case _ =>
           supply (respond (request, Status.MethodNotAllowed))
       }}
@@ -38,8 +37,7 @@ object AnalyticsResource {
     router.register ("/rdd/movies") { request =>
       request.method match {
         case Method.Get =>
-          val rt = request.lastModificationBefore
-          supply (respond.json (request, PM.Movie.list (rt)))
+          supply (respond.json (request, PM.Movie.list (request.window)))
         case _ =>
           supply (respond (request, Status.MethodNotAllowed))
       }}
@@ -47,8 +45,7 @@ object AnalyticsResource {
     router.register ("/rdd/roles") { request =>
       request.method match {
         case Method.Get =>
-          val rt = request.lastModificationBefore
-          supply (respond.json (request, PM.Roles.list (rt)))
+          supply (respond.json (request, PM.Roles.list (request.window)))
         case _ =>
           supply (respond (request, Status.MethodNotAllowed))
       }}}}

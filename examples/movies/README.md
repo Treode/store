@@ -430,10 +430,20 @@ Run the Spark shell.
 
     spark-shell --jars spark/target/scala-2.10/movies-spark.jar
 
-Finally, run your queries.
+At Spark's prompt, run your queries.
 
-    scala> val ms = movies.MoviesRDD.movies (sc, "http://<your-host>/db/", 1)
-    scala> ms.count()
+    import movies._
+    val ms = sc.movies (sc, "http://<your-host>/db/", 1)
+    ms.count()
+    
+Or, run a stream processor.
+
+    import org.apache.spark.streaming._
+    import movies._
+    val ssc = new StreamingContext (sc, Seconds (15))
+    val ms = ssc.movies ("http://<your-host>/db/", 1)
+    ms.print()
+    ssc.start()
 
 
 

@@ -94,9 +94,11 @@ object MoviesBuild extends Build {
 
       libraryDependencies ++= Seq (
         "org.apache.spark" %% "spark-core" % "1.1.0" % "provided",
+        "org.apache.spark" %% "spark-streaming" % "1.1.0" % "provided",
         // Use Jackson 2.3.1 because spark-core does.
         "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.3.1",
-        "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.1"),
+        "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.1",
+        "org.scalatest" %% "scalatest" % "2.2.2" % "test"),
 
       jarName in assembly := "movies-spark.jar",
 

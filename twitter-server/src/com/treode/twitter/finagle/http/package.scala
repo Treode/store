@@ -26,7 +26,7 @@ import com.treode.async.BatchIterator
 import com.treode.async.misc.{RichOption, parseInt}
 import com.treode.cluster.HostId
 import com.treode.jackson.DefaultTreodeModule
-import com.treode.store.{Slice, TxClock, TxId}
+import com.treode.store.{Slice, TxClock, TxId, Window}
 import com.treode.twitter.finagle.http.{BadRequestException, RichRequest}
 import com.treode.twitter.util.RichTwitterFuture
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
@@ -121,6 +121,11 @@ package object http {
         TxClock.parse (value) .getOrThrow (new BadRequestException (s"Bad time for $name: $value"))
       }
 
+    private def optTxClockParam (name: String): Option [TxClock] =
+      request.params.get (name) .map { value =>
+        TxClock.parse (value) .getOrThrow (new BadRequestException (s"Bad time for $name: $value"))
+      }
+
     def ifModifiedSince: TxClock =
       optTxClockHeader ("If-Modified-Since") getOrElse (TxClock.MinValue)
 
@@ -143,6 +148,23 @@ package object http {
         throw new BadRequestException ("Both slice and nslices are needed together")
       } else {
         Slice.all
+      }}
+
+    /** Get window from `since` and `until` query parameters. Window will be `Latest` from `since`
+      * exclusive to `until` inclusive. If the query contains no window parameters, the default is
+      * `Latest` from 0 to now inclusive.
+      */
+    def window: Window = {
+      val since = optTxClockParam ("since")
+      val until = optTxClockParam ("until")
+      if (since.isDefined && until.isDefined) {
+        if (since.get > until.get)
+          throw new BadRequestException ("Since must preceed until.")
+        Window.Latest (until.get, true, since.get, false)
+      } else if (since.isDefined || until.isDefined) {
+        throw new BadRequestException ("Both since and until are needed together")
+      } else {
+        Window.Latest (TxClock.now, true, TxClock.MinValue, true)
       }}
 
     def transactionId (host: HostId): TxId =
