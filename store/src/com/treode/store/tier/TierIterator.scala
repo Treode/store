@@ -22,7 +22,7 @@ import scala.util.{Failure, Success}
 import com.treode.async.{Async, BatchIterator, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.disk.{Disk, Position}
-import com.treode.store.{Bytes, Bound, Cell, CellIterator2, Key, TxClock}
+import com.treode.store.{Bytes, Bound, Cell, CellIterator, Key, TxClock}
 
 import Async.async
 
@@ -31,7 +31,7 @@ private abstract class TierIterator (
     root: Position
 ) (implicit
     disk: Disk
-) extends CellIterator2 {
+) extends CellIterator {
 
   class Batch (f: Iterator [Cell] => Async [Unit], cb: Callback [Unit]) {
 
@@ -178,7 +178,7 @@ private object TierIterator {
   ) (implicit
       disk: Disk,
       scheduler: Scheduler
-  ): CellIterator2 =
+  ): CellIterator =
     (new FromBeginning (desc, root))
 
   def apply (
@@ -188,13 +188,13 @@ private object TierIterator {
   ) (implicit
       disk: Disk,
       scheduler: Scheduler
-  ): CellIterator2 =
+  ): CellIterator =
     (new FromKey (desc, root, start))
 
-  def adapt (tier: MemTier) (implicit scheduler: Scheduler): CellIterator2 =
+  def adapt (tier: MemTier) (implicit scheduler: Scheduler): CellIterator =
     tier.entrySet.iterator.map (memTierEntryToCell _) .batch
 
-  def adapt (tier: MemTier, start: Bound [Key]) (implicit scheduler: Scheduler): CellIterator2 =
+  def adapt (tier: MemTier, start: Bound [Key]) (implicit scheduler: Scheduler): CellIterator =
     adapt (tier.tailMap (start.bound, start.inclusive))
 
   def merge (
@@ -203,9 +203,9 @@ private object TierIterator {
   ) (implicit
       scheduler: Scheduler,
       disk: Disk
-  ): CellIterator2 = {
+  ): CellIterator = {
 
-    val allTiers = new Array [CellIterator2] (tiers.size)
+    val allTiers = new Array [CellIterator] (tiers.size)
     for (i <- 0 until tiers.size)
       allTiers (i) = TierIterator (desc, tiers (i) .root)
 
@@ -220,9 +220,9 @@ private object TierIterator {
   ) (implicit
       scheduler: Scheduler,
       disk: Disk
-  ): CellIterator2 = {
+  ): CellIterator = {
 
-    val allTiers = new Array [CellIterator2] (tiers.size + 2)
+    val allTiers = new Array [CellIterator] (tiers.size + 2)
     allTiers (0) = adapt (primary)
     allTiers (1) = adapt (secondary)
     for (i <- 0 until tiers.size)
@@ -240,9 +240,9 @@ private object TierIterator {
   ) (implicit
       scheduler: Scheduler,
       disk: Disk
-  ): CellIterator2 = {
+  ): CellIterator = {
 
-    val allTiers = new Array [CellIterator2] (tiers.size + 2)
+    val allTiers = new Array [CellIterator] (tiers.size + 2)
     allTiers (0) = adapt (primary, start)
     allTiers (1) = adapt (secondary, start)
     for (i <- 0 until tiers.size; tier = tiers (i))

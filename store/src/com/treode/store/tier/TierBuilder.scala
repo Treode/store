@@ -21,7 +21,7 @@ import scala.collection.JavaConversions._
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.disk.{Disk, Position}
-import com.treode.store.{Bytes, Cell, CellIterator2, Residents, Store, TableId, TxClock}
+import com.treode.store.{Bytes, Cell, CellIterator, Residents, Store, TableId, TxClock}
 
 import Async.{async, guard, supply, when}
 
@@ -209,7 +209,7 @@ private object TierBuilder {
       gen: Long,
       est: Long,
       residents: Residents,
-      iter: CellIterator2
+      iter: CellIterator
   ) (implicit
       scheduler: Scheduler,
       disk: Disk,

@@ -140,7 +140,7 @@ private class SynthTable (
       readLock.unlock()
     }}
 
-  def iterator (residents: Residents): CellIterator2 = {
+  def iterator (residents: Residents): CellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -152,7 +152,7 @@ private class SynthTable (
         .clean (desc, id, residents)
   }
 
-  def iterator (start: Bound [Key], residents: Residents): CellIterator2 = {
+  def iterator (start: Bound [Key], residents: Residents): CellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -164,7 +164,7 @@ private class SynthTable (
         .clean (desc, id, residents)
   }
 
-  def iterator (start: Bound [Key], window: Window, slice: Slice, residents: Residents): CellIterator2 = {
+  def iterator (start: Bound [Key], window: Window, slice: Slice, residents: Residents): CellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)

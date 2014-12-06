@@ -105,7 +105,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
         case op: Delete => t.delete (op.key, wt)
       }}}
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator2 =
+  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
     BatchIterator.make {
       for {
         _ <- space.scan (window.later.bound)

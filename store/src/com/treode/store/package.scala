@@ -62,9 +62,7 @@ package store {
 
 package object store {
 
-  type CellIterator = AsyncIterator [Cell]
-
-  type CellIterator2 = BatchIterator [Cell]
+  type CellIterator = BatchIterator [Cell]
 
   @deprecated ("Use Retention", "0.2.0")
   type PriorValueEpoch = Retention
@@ -72,7 +70,7 @@ package object store {
   @deprecated ("Use Retention", "0.2.0")
   val PriorValueEpoch = Retention
 
-  private [store] implicit class RichCellIterator (iter: CellIterator2) {
+  private [store] implicit class RichCellIterator (iter: CellIterator) {
 
     def rebatch (batch: Batch): Async [(Seq [Cell], Option [Cell])] = {
       @volatile var entries = batch.entries
@@ -84,13 +82,13 @@ package object store {
         r
       }}
 
-    def dedupe: CellIterator2 =
+    def dedupe: CellIterator =
       iter.filter (Filters.dedupe)
 
-    def retire (limit: TxClock): CellIterator2 =
+    def retire (limit: TxClock): CellIterator =
       iter.filter (Filters.retire (limit))
 
-    def slice (table: TableId, slice: Slice): CellIterator2 =
+    def slice (table: TableId, slice: Slice): CellIterator =
       iter.filter (c => slice.contains (Cell.locator, (table, c.key)))
 
     def window (window: Window) =

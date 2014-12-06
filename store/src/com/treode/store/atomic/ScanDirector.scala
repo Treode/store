@@ -33,7 +33,7 @@ private class ScanDirector (
     slice: Slice,
     batch: Batch,
     kit: AtomicKit
-) extends CellIterator2 {
+) extends CellIterator {
 
   import kit.{cluster, library, random, scheduler}
   import kit.config.scanBatchBackoff
@@ -197,6 +197,6 @@ private object ScanDirector {
       slice: Slice,
       batch: Batch,
       kit: AtomicKit
-  ): CellIterator2 =
+  ): CellIterator =
     (new ScanDirector (table, start, window, slice, batch, kit)) .window (window)
 }

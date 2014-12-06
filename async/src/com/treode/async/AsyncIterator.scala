@@ -24,6 +24,7 @@ import com.treode.async.implicits._
 import Async.{async, supply, when}
 
 /** Concrete classes should implement `foreach`. */
+@deprecated ("use BatchIterator", "0.2.0")
 trait AsyncIterator [A] {
   self =>
 

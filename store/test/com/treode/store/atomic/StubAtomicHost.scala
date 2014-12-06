@@ -101,7 +101,7 @@ private class StubAtomicHost (
       window: Window = Window.all,
       slice: Slice = Slice.all,
       batch: Batch = Batch.suggested
-  ): CellIterator2 =
+  ): CellIterator =
     atomic.scan (table, start, window, slice, batch)
 
   def putCells (id: TableId, cs: Cell*) (implicit scheduler: StubScheduler): Unit =
