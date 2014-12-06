@@ -33,13 +33,13 @@ LOG=$DIR/build.log
 . $DIR/scripts/build-functions.sh
 
 # Really clean everything.
-echo-do git clean -dfx
+# echo-do git clean -dfx
 
 # SBT has had trouble compiling, testing and assembling in one go. So we have broken the steps
 # into separate commands.
 echo-do ${SBT} +test:compile
 echo-do ${SBT} +test
-echo-do ${SBT} +intensive:test
+# echo-do ${SBT} +intensive:test
 
 # Finatra and Twitter Server are available for Scala 2.10.4 only. The can be compiled and tested
 # in one go.

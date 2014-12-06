@@ -40,8 +40,8 @@ object TreodeBuild extends Build {
   lazy val versionInfo = Seq (
     organization := "com.treode",
     version := versionString,
-    scalaVersion := "2.11.2",
-    crossScalaVersions := Seq ("2.10.4", "2.11.2"))
+    scalaVersion := "2.11.4",
+    crossScalaVersions := Seq ("2.10.4", "2.11.4"))
 
   // Settings common to both projects with stubs and without stubs. Squashes the source directory
   // structure. Adds production libraries to the default config. Removes docs from Ivy artifacts in
@@ -55,7 +55,7 @@ object TreodeBuild extends Build {
 
     scalacOptions <++= scalaVersion map {
       case "2.10.4" => Seq.empty
-      case "2.11.2" => Seq ("-Ywarn-unused-import")
+      case "2.11.4" => Seq ("-Ywarn-unused-import")
     },
 
     libraryDependencies <+= scalaVersion ("org.scala-lang" % "scala-reflect" % _),
@@ -66,7 +66,7 @@ object TreodeBuild extends Build {
       "com.google.guava" % "guava" % "18.0",
       "com.googlecode.javaewah" % "JavaEWAH" % "0.9.0",
       "com.nothome" % "javaxdelta" % "2.0.1",
-      "joda-time" % "joda-time" % "2.4",
+      "joda-time" % "joda-time" % "2.5",
       "org.joda" % "joda-convert" % "1.7",
       "org.slf4j" % "slf4j-api" % "1.7.7",
       "org.slf4j" % "slf4j-simple" % "1.7.7"),
@@ -106,9 +106,9 @@ object TreodeBuild extends Build {
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
-      "org.scalacheck" %% "scalacheck" % "1.11.5" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.12.0" % "test",
       "com.storm-enroute" %% "scalameter" % "0.6" % "perf",
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.4" % "test",
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test",
       "org.scalatest" %% "scalatest" % "2.2.2" % "test"))
 
   // Settings for projects without stubs.
@@ -166,9 +166,9 @@ object TreodeBuild extends Build {
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
-      "org.scalacheck" %% "scalacheck" % "1.11.5" % "stub->default",
+      "org.scalacheck" %% "scalacheck" % "1.12.0" % "stub->default",
       "com.storm-enroute" %% "scalameter" % "0.6" % "stub->default",
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.4" % "stub->default",
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "stub->default",
       "org.scalatest" %% "scalatest" % "2.2.2" % "stub->default"))
 
   // Settings for projects with stubs.
@@ -228,8 +228,8 @@ object TreodeBuild extends Build {
     .settings (
 
         libraryDependencies ++= Seq (
-          "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.2",
-          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.2"))
+          "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.4",
+          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.4"))
 
   // Separated because not everyone wants it and its dependencies.
   lazy val twitterServer = Project ("twitter-server", file ("twitter-server"))
@@ -244,7 +244,7 @@ object TreodeBuild extends Build {
         resolvers += "Twitter" at "http://maven.twttr.com",
 
         libraryDependencies ++= Seq (
-          "com.jayway.restassured" % "rest-assured" % "2.3.4" % "test",
+          "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
           "com.twitter" %% "twitter-server" % "1.8.0"))
 
   // A standalone server for system tests.  Separated to keep system testing components out of

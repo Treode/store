@@ -12,7 +12,7 @@ version := "0.2.0-SNAPSHOT"
 scalaVersion := "2.10.4"
 
 libraryDependencies ++= Seq (
-  "com.jayway.restassured" % "rest-assured" % "2.3.4" % "test",
+  "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
   "com.treode" %% "jackson" % "0.2.0-SNAPSHOT",
   "com.treode" %% "store" % "0.2.0-SNAPSHOT" % "compile;test->stub",
   "com.treode" %% "twitter-server" % "0.2.0-SNAPSHOT",
