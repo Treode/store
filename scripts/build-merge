@@ -80,6 +80,9 @@ echo-do ${SBT} ++2.10.4 twitter-server/test
 echo-do ${SBT} publish-local
 echo-do ${SBT} ++2.10.4 publish-local twitter-server/publish-local
 
+# Build the Finagle example, which includes only a server.
+(cd examples/finagle; echo-do ${SBT} test assembly); expect-status 0
+
 # Build the Finatra example, which includes only a server.
 (cd examples/finatra; echo-do ${SBT} test assembly); expect-status 0
 
@@ -106,6 +109,11 @@ echo-do ${SBT} ++2.10.4 publish twitter-server/publish
 # Documentation.
 echo-do mkdir -p stage/docs/scala/store
 echo-do mv doc/target/scala-2.10/unidoc stage/docs/scala/store/${version}
+
+# Finagle example.
+STAGE_FINAGLE=stage/examples/finagle/${version}
+echo-do mkdir -p ${STAGE_FINAGLE}
+echo-do cp examples/finagle/target/scala-2.10/finagle-server.jar ${STAGE_FINAGLE}/finagle-server-${version}.jar
 
 # Finatra example.
 STAGE_FINATRA=stage/examples/finatra/${version}

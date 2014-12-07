@@ -33,13 +33,13 @@ LOG=$DIR/build.log
 . $DIR/scripts/build-functions.sh
 
 # Really clean everything.
-# echo-do git clean -dfx
+echo-do git clean -dfx
 
 # SBT has had trouble compiling, testing and assembling in one go. So we have broken the steps
 # into separate commands.
 echo-do ${SBT} +test:compile
 echo-do ${SBT} +test
-# echo-do ${SBT} +intensive:test
+echo-do ${SBT} +intensive:test
 
 # Finatra and Twitter Server are available for Scala 2.10.4 only. The can be compiled and tested
 # in one go.
@@ -49,14 +49,17 @@ echo-do ${SBT} ++2.10.4 twitter-server/test
 echo-do ${SBT} publish-local
 echo-do ${SBT} ++2.10.4 publish-local twitter-server/publish-local
 
+# Build the Finagle example, which includes only a server.
+(cd examples/finagle; echo-do ${SBT} test); expect-status 0
+
 # Build the Finatra example, which includes only a server.
-(cd examples/finatra; echo-do ${SBT} test assembly); expect-status 0
+(cd examples/finatra; echo-do ${SBT} test); expect-status 0
 
 # Build the Unfiltered example, which includes only a server.
-(cd examples/unfiltered; echo-do ${SBT} test assembly); expect-status 0
+(cd examples/unfiltered; echo-do ${SBT} test); expect-status 0
 
 # Build the Movies example, which includes a server, Spark connector, and web UI.
-(cd examples/movies; echo-do ${SBT} test assembly); expect-status 0
+(cd examples/movies; echo-do ${SBT} test); expect-status 0
 (cd examples/movies/webui; echo-do npm install --save); expect-status 0
 (cd examples/movies/webui; echo-do ${GRUNT} dist); expect-status 0
 
