@@ -7,6 +7,7 @@ filter command
 requires:
  - a full RDF dump from freebase in gzip format.
 produces:
+ - films.only.rdf -> has only the film.film entries
  - film.filtered.data.rdf -> has all film data we need for uploading
  - film.filtered.names.rdf -> has all RDF 'names' 
  - keys.rdf -> has all movie keys found for verification with treode.
@@ -20,7 +21,7 @@ requires:
  - film.filtered.names.rdf
 
 Example:
-time ./process-freebase.py upload --film=film.filtered.data.rdf --filmperformance=film.filtered.data.rdf --names=film.filtered.names.rdf 
+time ./process-freebase.py upload --film=films.only.rdf --filmperformance=film.filtered.data.rdf --names=film.filtered.names.rdf 
 
 """
 from optparse import OptionParser
@@ -182,6 +183,7 @@ class MoviesRDFDumpParser:
     def filter_dump (self, dumpfile, options ):
         logger.info("Processing RDF dump - Pass 1 - Films")
         f_filmsdata = open ( "film.filtered.data.rdf", 'wb' )
+        f_filmsonly = open ( "films.only.rdf", 'wb')
         f_keys = open ("keys.rdf" , "wb" )
         all_keys_set = set()
         with gzip.open ( dumpfile, 'rb' ) as f_in:
@@ -189,6 +191,7 @@ class MoviesRDFDumpParser:
                 # FILMS
                 m = re_films.match(line)
                 if m is not None:
+                    f_filmsonly.write(line)
                     f_keys.write(m.group(1)+"\n")
                     all_keys_set.add(m.group(1))
                 else:
@@ -199,6 +202,7 @@ class MoviesRDFDumpParser:
                         all_keys_set.add(m.group(1))
                         all_keys_set.add(m.group(3))
         f_filmsdata.close()
+        f_filmsonly.close()
         f_keys.close()
         logger.info("Pass 1 - Done")
         logger.info("Processing RDF dump - Pass 2 - Names")
