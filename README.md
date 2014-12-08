@@ -30,7 +30,7 @@ resolvers += Resolver.url (
     new URL ("https://oss.treode.com/ivy")) (Resolver.ivyStylePatterns)
 
 libraryDependencies += 
-    "com.treode" %% "store" % "0.1.0" % "compile;test->stubs"
+    "com.treode" %% "store" % "0.2.0" % "compile;test->stubs"
 ```
 
 
@@ -50,7 +50,7 @@ libraryDependencies +=
 - [Email](mailto:questions@treode.com)
 
 
-[api-docs]: http://oss.treode.com/docs/scala/store/0.1.0 "API Docs"
+[api-docs]: http://oss.treode.com/docs/scala/store/0.2.0 "API Docs"
 
 [arch]: architecture.png "Architecture"
 
