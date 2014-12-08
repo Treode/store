@@ -188,14 +188,14 @@ private object PageLedger {
 
   def read (file: File, geom: DriveGeometry, pos: Long): Async [PageLedger] =
     guard {
-      val buf = PagedBuffer (12)
+      val buf = PagedBuffer (geom.blockBits)
       for (_ <- file.deframe (checksum, buf, pos, geom.blockBits))
         yield Zipped.pickler.unpickle (buf) .unzip
     }
 
   def write (ledger: Zipped, file: File, geom: DriveGeometry, pos: Long, limit: Long): Async [Unit] =
     guard {
-      val buf = PagedBuffer (12)
+      val buf = PagedBuffer (geom.blockBits)
       Zipped.pickler.frame (checksum, ledger, buf)
       buf.writePos = geom.blockAlignUp (buf.writePos)
       if (buf.writePos > limit - pos)

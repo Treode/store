@@ -62,7 +62,7 @@ private object RecordHeader {
 
   def init (file: File, geom: DriveGeometry, pos: Long): Async [Unit] =
     guard {
-      val buf = PagedBuffer (12)
+      val buf = PagedBuffer (geom.blockBits)
       pickler.frame (LogEnd, buf)
       buf.writePos = geom.blockAlignUp (buf.writePos)
       file.flush (buf, pos)
