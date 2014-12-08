@@ -188,7 +188,8 @@ private object PageLedger {
 
   def read (file: File, geom: DriveGeometry, pos: Long): Async [PageLedger] =
     guard {
-      val buf = PagedBuffer (geom.blockBits)
+      // TODO: fix read alignment issues in StubFile
+      val buf = PagedBuffer (math.max (12, geom.blockBits))
       for (_ <- file.deframe (checksum, buf, pos, geom.blockBits))
         yield Zipped.pickler.unpickle (buf) .unzip
     }
