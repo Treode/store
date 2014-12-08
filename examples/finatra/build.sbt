@@ -7,14 +7,14 @@ gitStampSettings
 
 name := "finatra-example"
 
-version := "0.2.0-SNAPSHOT"
+version := "0.2.0"
 
 scalaVersion := "2.10.4"
 
 libraryDependencies ++= Seq (
-  "com.treode" %% "jackson" % "0.2.0-SNAPSHOT",
-  "com.treode" %% "store" % "0.2.0-SNAPSHOT" % "compile;test->stub",
-  "com.treode" %% "twitter-server" % "0.2.0-SNAPSHOT",
+  "com.treode" %% "jackson" % "0.2.0",
+  "com.treode" %% "store" % "0.2.0" % "compile;test->stub",
+  "com.treode" %% "twitter-server" % "0.2.0",
   "com.twitter" %% "finatra" % "1.5.4",
   "org.scalatest" %% "scalatest" % "2.2.2" % "test")
 

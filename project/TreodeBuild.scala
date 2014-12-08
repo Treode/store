@@ -35,7 +35,7 @@ object TreodeBuild extends Build {
   // The perf config runs only Scalameter tests.
   lazy val Perf = config ("perf") extend (Test)
 
-  lazy val versionString = "0.2.0-SNAPSHOT"
+  lazy val versionString = "0.2.0"
 
   lazy val versionInfo = Seq (
     organization := "com.treode",
