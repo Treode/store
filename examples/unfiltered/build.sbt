@@ -7,15 +7,15 @@ gitStampSettings
 
 organization := "com.treode"
 
-version := "0.2.0"
+version := "0.3.0-SNAPSHOT"
 
 scalaVersion := "2.10.4"
 
 libraryDependencies ++= Seq (
   "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
-  "com.treode" %% "jackson" % "0.2.0",
-  "com.treode" %% "store" % "0.2.0" % "compile;test->stub",
-  "com.treode" %% "twitter-server" % "0.2.0",
+  "com.treode" %% "jackson" % "0.3.0-SNAPSHOT",
+  "com.treode" %% "store" % "0.3.0-SNAPSHOT" % "compile;test->stub",
+  "com.treode" %% "twitter-server" % "0.3.0-SNAPSHOT",
   "net.databinder" %% "unfiltered-netty-server" % "0.8.3",
   "org.scalatest" %% "scalatest" % "2.2.2" % "test")
 

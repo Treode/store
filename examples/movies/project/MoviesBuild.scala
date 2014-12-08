@@ -25,7 +25,7 @@ import Keys._
 
 object MoviesBuild extends Build {
 
-  val versionString = "0.2.0"
+  val versionString = "0.3.0-SNAPSHOT"
 
   val commonSettings = Seq (
 
