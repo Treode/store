@@ -23,6 +23,15 @@ requires:
 Example:
 time ./process-freebase.py upload --film=films.only.rdf --filmperformance=film.filtered.data.rdf --names=film.filtered.names.rdf 
 
+
+Films in RDF dump are in this format:
+<http://rdf.freebase.com/ns/m.0yq437z><http://rdf.freebase.com/ns/type.object.type><http://rdf.freebase.com/ns/film.film>.
+
+Performances in RDF dump are in this format:
+<http://rdf.freebase.com/ns/m.02nwvmx><http://rdf.freebase.com/ns/film.performance.film><http://rdf.freebase.com/ns/m.0ddjy>.
+<http://rdf.freebase.com/ns/m.02nwvmx><http://rdf.freebase.com/ns/film.performance.actor><http://rdf.freebase.com/ns/m.0c0k1>.
+<http://rdf.freebase.com/ns/m.02nwvmx><http://rdf.freebase.com/ns/film.performance.character><http://rdf.freebase.com/ns/m.0fjn8>.
+
 """
 from optparse import OptionParser
 import sys
@@ -33,11 +42,6 @@ from json import JSONEncoder
 import time, datetime
 import logging
 import json
-
-FORMAT = '%(asctime)-15s %(name)s[%(process)d] [%(levelname)s] %(message)s'
-logging.basicConfig(format=FORMAT,filename="upload.log")
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
 
 
 # REGEX
@@ -56,182 +60,162 @@ re_filmobj = re.compile  (r'^<http://rdf\.freebase\.com/ns/m\.([^>]+)>\s+<http:/
 
 class MoviesRDFDumpParser:
 
-    def upload_splitfiles ( self, options ):
-        dict_names = {}
-        cnt_linesprocessed = 0
-        cnt_linesfilm = 0
-        cnt_actors = 0
-        if options.objnames:
-            logger.info("Loading names in memory...")
-            print "Loading names..."
+    def __init__ ( self, options ):
+        self.options = options
+        FORMAT = '%(asctime)-15s %(name)s[%(process)d] [%(levelname)s] %(message)s'
+        logging.basicConfig(format=FORMAT,filename="upload.log",level=logging.DEBUG) 
+        self.logger = logging.getLogger()
+        self.logger.setLevel(logging.INFO)
+        #console = logging.StreamHandler()
+        #console.setLevel(logging.INFO)
+        #console.setFormatter(logging.Formatter(FORMAT))
+        #self.logger.addHandler(console)
+
+    def upload_filmname( self, movie_id, movie_title ):
+        try:
+            data = JSONEncoder().encode({"id":movie_id,"title":movie_title})
             start_time = time.time()
-            with open ( options.objnames, 'rb' ) as f_names:
-                cnt_names = 0
-                for line in f_names:
-                    m = re_objnames.match(line)
-                    if m is not None:
-                        dict_names[ m.group(1) ] = m.group(3)
-                        cnt_names = cnt_names + 1
-  
+            conn = httplib.HTTPConnection(self.options.host,self.options.port)
+            conn.request("PUT","/movie/%s" % movie_id, data,headers={"Connection":"close"})
+            response = conn.getresponse()
             elapsed_time = time.time() - start_time
-            print "Finished loading %d names - elapsed %s" % (cnt_names,str(datetime.timedelta(seconds=elapsed_time)) )
-            logger.info("%d names loaded in memory - elapsed %s" % (cnt_names, str(datetime.timedelta(seconds=elapsed_time))))
-        
-        #
-        # films in RDF dump are in the format:
-        # <http://rdf.freebase.com/ns/m.0yq437z><http://rdf.freebase.com/ns/type.object.type><http://rdf.freebase.com/ns/film.film>.
-        #
-        if options.film:
-            with open(options.film,'rb') as f_films:
-                for line in f_films:
-                    cnt_linesprocessed = cnt_linesprocessed + 1
+            response.read()
+            conn.close()
+            self.logger.debug("response=%d,elapsed_ms=%s,DATA=%s" % ( response.status,
+                                                                      str(datetime.timedelta(seconds=elapsed_time)),
+                                                                      data ) )
+        except:
+            self.logger.error("uploading %s" % str(data))
+            #self.logger.exception(movie_id)
+
+    def upload_filmdata( self, _data ):
+        try:
+            movie_c = httplib.HTTPConnection(self.options.host,self.options.port)
+            movie_c.request("GET","/movie/%s" % _data['film'], headers={"Connection":"close"})
+            movie_r = movie_c.getresponse()
+            movie_r.read()
+            movie_c.close()
+            if movie_r.status==200:
+                role_name = "?" # default role name
+                role_id = self._film_data.setdefault('character',"?")
+                role_name = self._names.setdefault(role_id,"?")
+                data = JSONEncoder().encode({"id":_data['actor'],
+                                             "name":self._names.setdefault(_data['actor'],"?"),
+                                             "roles":[{"movieId":_data['film'],
+                                                       "role":role_name}]})
+                c = httplib.HTTPConnection(self.options.host,self.options.port)
+                c.request("PUT","/actor/%s" % _data['actor'], data, headers={"Connection":"close"})
+                r = c.getresponse()
+                d = r.read()
+                self.logger.info("OK: %s" % str(data))
+                self.logger.debug("STATUS: %d, REASON: %s, HEADERS: %s, DATA: :%s" % ( r.status,
+                                                                                       r.reason,
+                                                                                       r.getheaders(),
+                                                                                       str(data) ))
+                c.close()
+            else:
+                self.logger.error("MOVIE NOT FOUND %d -  %s" % ( movie_r.status,str(_data)))
+        except:
+            self.logger.error("uploading %s" % str(_data))
+            self.logger.exception(str(_data))
+
+
+
+    def upload_splitfiles ( self ):
+        self._names = {}
+        self._films = []
+        self._film_data = {}
+        start_time = time.time()
+        self.logger.info("Start processing filtered data...")
+        with open(self.options.filtered,'rb') as f_filtered:
+            for line in f_filtered:
+                # NAMES
+                m = re_objnames.match(line)
+                if m is not None:
+                    self._names[ m.group(1) ] = m.group(3)
+                else:
+                    # FILMS
                     m = re_films.match(line)
                     if m is not None:
-                        if m.group(1) in dict_names:
-                            try:
-                                movie_id = m.group(1)
-                                movie_title = dict_names[m.group(1)]
-                                data = JSONEncoder().encode({"id":movie_id,"title":movie_title})
-                                start_time = time.time()
-                                conn = httplib.HTTPConnection(options.host,options.port)
-                                conn.request("PUT","/movie/%s" % movie_id, data)
-                                response = conn.getresponse()
-                                elapsed_time = time.time() - start_time
-                                response.read()
-                                conn.close()
-                                logger.info("PROCESSED=%d,FILMS=%d,ELAPSED_MS=%s,RESPONSE=%d,DATA=%s" % ( cnt_linesprocessed,
-                                                                                                          cnt_linesfilm,
-                                                                                                          str(datetime.timedelta(seconds=elapsed_time)),
-                                                                                                          response.status,
-                                                                                                          data ) )
-                            except:
-                                logger.exception(movie_id)
-                        else:
-                            logger.warn("FILM WITHOUT A NAME IN ENGLISH=%s",m.group(1))
-                            
+                        self._films.append(m.group(1))
+                    else:
+                        # FILM DATA
+                        m = re_filmdata.match(line)
+                        if m is not None:
+                            self._film_data.setdefault(m.group(1),{})[m.group(2)] = m.group(3)
 
-        if options.performance:
+        self.logger.info("Data in memory")
+        self.logger.info("Uploading films")
+        for f in self._films:
+            if f in self._names:
+                self.upload_filmname(f,self._names[f])
+            else:
+                self.logger.info("WARNING: Film name not in English %s" % f)
 
-            #<http://rdf.freebase.com/ns/m.02nwvmx><http://rdf.freebase.com/ns/film.performance.film><http://rdf.freebase.com/ns/m.0ddjy>.
-            #<http://rdf.freebase.com/ns/m.02nwvmx><http://rdf.freebase.com/ns/film.performance.actor><http://rdf.freebase.com/ns/m.0c0k1>.
-            #<http://rdf.freebase.com/ns/m.02nwvmx><http://rdf.freebase.com/ns/film.performance.character><http://rdf.freebase.com/ns/m.0fjn8>.
-            perf_dict = {}
-            perf_id = ""
-            cnt = 1
-            with open ( options.performance, 'rb' ) as f_filmdata:
-                for line in f_filmdata:
-                    m = re_filmdata.match(line)
-                    if m is not None:
-                        if m.group(1) != perf_id:
-                            if perf_dict:
-                                cnt = cnt + 1
-                                logger.debug("PERFORMANCE:%s" % str(perf_dict))
-                                if 'film_id' in perf_dict:
-                                    try:
-                                        movie_c = httplib.HTTPConnection(options.host,options.port)
-                                        movie_c.request("GET","/movie/%s" % perf_dict['film_id'],headers={"Connection":"close"})
-                                        movie_r = movie_c.getresponse()
-                                        movie_r.read()
-                                        movie_c.close()
-                                        if movie_r.status==200:
-                                            if 'actor_id' in perf_dict:
-                                                actor_name="?"
-                                                role_name="?"
-                                                if perf_dict['actor_id'] in dict_names:
-                                                    actor_name = dict_names[perf_dict['actor_id']]
-                                                if 'role_id' in perf_dict and perf_dict['role_id'] in dict_names:
-                                                    role_name = dict_names[perf_dict['role_id']]
-                                                data = JSONEncoder().encode({"id":perf_dict['actor_id'],
-                                                                             "name":actor_name,
-                                                                             "roles":[{"movieId":perf_dict['film_id'],
-                                                                                       "role":role_name}]})
-                                                c = httplib.HTTPConnection(options.host,options.port)
-                                                c.request("PUT","/actor/%s" % perf_dict['actor_id'], data,headers={"Connection":"close"})
-                                                r = c.getresponse()
-                                                d = r.read()
-                                                logger.debug("STATUS: %d, REASON: %s, HEADERS: %s, CONTENT:%s" % ( r.status,
-                                                                                                                   r.reason,
-                                                                                                                   r.getheaders(),
-                                                                                                                   d ))
-                                                c.close()
-                                                logger.info("%d - perf_id:%s - perf_dict:%s" % (r.status,perf_id,str(perf_dict)))
-                                            else:
-                                                logger.error("actor_id not in perf_id:%s - perf_dict:%s" % (perf_id,str(perf_dict)))
-                                        else:
-                                            logger.error("MOVIE NOT FOUND %d - perf_id:%s -  %s" % ( movie_r.status,perf_id,str(perf_dict)))
-                                    except:
-                                        logger.exception(perf_dict)
+        count = 0
+        for k in self._film_data.keys():
+            if 'film' in self._film_data[k] and 'actor' in self._film_data[k]:
+                if self._film_data[k]['film'] in self._names and \
+                   self._film_data[k]['actor'] in self._names :
+                    self.upload_filmdata(self._film_data[k])
+                else:
+                    self.logger.info("WARNING: film data name not in english %s" % str(self._film_data[k]))
+            else:
+                self.logger.info("WARNING: performance data incomplete %s" % str(self._film_data[k]))
 
-                                else:
-                                    logger.error("film_id not in perf_id (%s)  %s" % (perf_id,str(perf_dict)))
-                                    
-                                # cleaning perf_dict
-                                perf_dict = {}
+        elapsed_time = time.time() - start_time
+        self.logger.info("Finished process-freebase  - elapsed %s" % (str(datetime.timedelta(seconds=elapsed_time)) ))
+        
 
-                            # set perf_id
-                            perf_id = m.group(1)
-                        else:
-                            # same performance, store film, actor and character
-                            if m.group(2) == 'film':
-                                perf_dict['film_id'] = m.group(3)
-                            elif m.group(2) == 'actor':
-                                perf_dict['actor_id'] = m.group(3)
-                            elif m.group(2) == 'character':
-                                perf_dict['role_id'] = m.group(3)
-
-
-    def filter_dump (self, dumpfile, options ):
-        logger.info("Processing RDF dump - Pass 1 - Films")
+    def filter_dump (self, dumpfile ):
+        self.logger.info("Processing RDF dump - Pass 1 - Films")
+        f_namestmp = open ('names.tmp.rdf', 'wb' )
         f_filmsdata = open ( "film.filtered.data.rdf", 'wb' )
-        f_filmsonly = open ( "films.only.rdf", 'wb')
         f_keys = open ("keys.rdf" , "wb" )
         all_keys_set = set()
         with gzip.open ( dumpfile, 'rb' ) as f_in:
             for line in f_in:
-                # FILMS
-                m = re_films.match(line)
+                # NAMES
+                m = re_objnames.match(line)
                 if m is not None:
-                    f_filmsonly.write(line)
-                    f_keys.write(m.group(1)+"\n")
-                    all_keys_set.add(m.group(1))
+                    f_namestmp.write(line)
                 else:
-                    # FILM DATA
-                    m = re_filmdata.match(line)
+                    # FILMS
+                    m = re_films.match(line)
                     if m is not None:
                         f_filmsdata.write(line)
+                        f_keys.write(m.group(1)+"\n")
                         all_keys_set.add(m.group(1))
-                        all_keys_set.add(m.group(3))
-        f_filmsdata.close()
-        f_filmsonly.close()
+                    else:
+                        # FILM DATA
+                        m = re_filmdata.match(line)
+                        if m is not None:
+                            f_filmsdata.write(line)
+                            all_keys_set.add(m.group(1))
+                            all_keys_set.add(m.group(3))
+
+        f_namestmp.close()
         f_keys.close()
-        logger.info("Pass 1 - Done")
-        logger.info("Processing RDF dump - Pass 2 - Names")
-        f_names = open ("film.filtered.names.rdf" , 'wb' )
-        with gzip.open ( dumpfile, 'rb' ) as f_in:
+        self.logger.info("Pass 1 - Done")
+        self.logger.info("Processing RDF dump - Pass 2 - Names")
+
+        with open ( "names.tmp.rdf", 'rb' ) as f_in:
             for line in f_in:
                 m = re_objnames.match(line)
                 # FILM DATA
                 if m is not None:
                     if m.group(1) in all_keys_set:
-                        f_names.write(line)
+                        f_filmsdata.write(line)
 
-        f_names.close()
-        logger.info("Pass 2 - Done")
+        f_filmsdata.close()
+        self.logger.info("Pass 2 - Done")
 
 def main():
     parser = OptionParser()
-    parser.add_option("--names",
-                      dest="objnames",
+    parser.add_option("--filtered",
+                      dest="filtered",
                       default=None,
-                      help="File to store object names")
-    parser.add_option("--film",
-                      dest="film",
-                      default=None,
-                      help="File to store films")
-    parser.add_option("--filmperformance",
-                      dest="performance",
-                      default=None,
-                      help="File to store film data")
+                      help="Filtered file")
     parser.add_option("--host",
                       dest="host",
                       default="127.0.0.1",
@@ -243,13 +227,13 @@ def main():
 
     (options,args) = parser.parse_args()
 
-    if args[0] == 'upload' and ( options.objnames or options.film or options.performance ):
-        dump = MoviesRDFDumpParser()
-        dump.upload_splitfiles ( options )
+    if args[0] == 'upload' and options.filtered:
+        dump = MoviesRDFDumpParser( options )
+        dump.upload_splitfiles ( )
 
     if args[0] == 'filter' and len(args) == 2:
-        dump = MoviesRDFDumpParser()
-        dump.filter_dump ( args[1], options )
+        dump = MoviesRDFDumpParser( options )
+        dump.filter_dump ( args[1] )
 
         
 if __name__ == '__main__':
