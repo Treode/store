@@ -16,7 +16,7 @@
 
 package com.treode.async.stubs
 
-import com.treode.async.{Async, AsyncIterator}
+import com.treode.async.Async
 import org.scalatest.Assertions
 
 import Assertions.assertResult
@@ -39,7 +39,7 @@ package object implicits {
       * [[scala.util.Success Success]] and return the result.
       */
     def expectPass () (implicit scheduler: StubScheduler): A =
-      capture() .expectPass
+      capture() .expectPass()
 
     /** Run until the asynchronous operation completes, then assert that it yielded
       * [[scala.util.Success Failure]] and assert that the result is as expected.

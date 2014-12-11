@@ -19,7 +19,7 @@ package com.treode.store.tier
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import scala.collection.JavaConversions
 
-import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.disk.{Disk, PageDescriptor, Position}
 import com.treode.store._

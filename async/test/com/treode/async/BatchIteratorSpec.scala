@@ -20,48 +20,216 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import org.scalatest.FreeSpec
 
-import Async.supply
+import Async.{guard, supply, when}
 import AsyncIteratorTestTools._
 
 class BatchIteratorSpec extends FreeSpec {
 
-  val items = Seq (Seq (1, 2, 3, 4, 5))
+  "foreach should" - {
 
-  def testStringOf [A] (items: Seq [Seq [A]]): String =
-    items.map (_.mkString ("[", ", ", "]")) .mkString ("[", ", ", "]")
-
-  def forAll (test: Seq [Seq [Int]] => Any) {
-
-    // No batches.
-    test (Seq.empty)
-
-    // One batch.
-    test (Seq (Seq.empty))
-    test (Seq (Seq (1)))
-    test (Seq (Seq (1, 2)))
-    test (Seq (Seq (1, 2, 3, 4, 5)))
-
-    // Two batches.
-    for {
-      first <- Seq (Seq.empty, Seq (1), Seq (1, 2), Seq (1, 2, 3, 4, 5))
-      second <- Seq (Seq.empty, Seq (6), Seq (6, 7), Seq (6, 7, 8, 9, 10))
-    } {
-      test (Seq (first, second))
+    "work with the for keyword" in {
+      val xs = Seq.newBuilder [Int]
+      implicit val scheduler = StubScheduler.random()
+      val task = for (x <- batch (items)) xs += x
+      task.expectPass()
+      assertResult (items.flatten) (xs.result)
     }
 
-    // Three batches.
-    for {
-      first <- Seq (Seq.empty, Seq (1), Seq (1, 2), Seq (1, 2, 3, 4, 5))
-      second <- Seq (Seq.empty, Seq (6), Seq (6, 7), Seq (6, 7, 8, 9, 10))
-      third <- Seq (Seq.empty, Seq (11), Seq (11, 12), Seq (11, 12, 13, 14, 15))
-    } {
-      test (Seq (first, second, third))
+    "handle various batches" in {
+
+      def test (items: Seq [Seq [Int]]) {
+        implicit val scheduler = StubScheduler.random()
+        val builder = Seq.newBuilder [Int]
+        batch (items) .foreach (builder += _) .expectPass()
+        assertResult (items.flatten) (builder.result)
+      }
+
+      forAll (test)
+    }
+
+    "pass through an exception" in {
+      implicit val scheduler = StubScheduler.random()
+      guard {
+        for (x <- batch (items))
+          if (x == 3)
+            throw new DistinguishedException
+      } .fail [DistinguishedException]
     }}
 
-  "BatchIterator should" - {
+  "map should" - {
 
-    // The implementation of toMap is very similar to toSeq.
-    "handle toSeq" in {
+    "work with the for keyword" in {
+      implicit val scheduler = StubScheduler.random()
+      val iter = for (x <- batch (items)) yield x * 2
+      assertSeq (items.flatten.map (_ * 2)) (iter)
+    }
+
+    "handle various batches" in {
+
+      def test (items: Seq [Seq [Int]]) {
+        implicit val scheduler = StubScheduler.random()
+        assertSeq (items.flatten.map (_ * 2)) (batch (items) .map (_ * 2))
+      }
+
+      forAll (test)
+    }
+
+    "pass through an exception" in {
+      implicit val scheduler = StubScheduler.random()
+      assertFail [DistinguishedException] {
+        for (x <- batch (items)) yield
+          if (x == 3)
+            throw new DistinguishedException
+          else
+            x * 2
+      }}}
+
+  "flatMap should" - {
+
+    def inner = Iterator (1, 2, 3)
+
+    "work with the for keyword" in {
+      implicit val scheduler = StubScheduler.random()
+      val iter = for (x <- batch (items); y <- inner) yield (x, y)
+      val expected = for (x <- items.flatten; y <- inner) yield (x, y)
+      assertSeq (expected) (iter)
+    }
+
+    "handle various batches" in {
+
+      def test (items: Seq [Seq [Int]]) {
+        implicit val scheduler = StubScheduler.random()
+        val iter = batch (items) .flatMap (x => inner.map (y => (x, y)))
+        val expected = for (x <- items.flatten; y <- inner) yield (x, y)
+        assertSeq (expected) (iter)
+      }
+
+      forAll (test)
+    }
+
+    "pass through an exception" in {
+      implicit val scheduler = StubScheduler.random()
+      assertFail [DistinguishedException] {
+        for (x <- batch (items); y <- inner) yield
+          if (y == 2)
+            throw new DistinguishedException
+          else
+            (x, y)
+      }}}
+
+  "filter should" - {
+
+    "work with the for keyword" in {
+      implicit val scheduler = StubScheduler.random()
+      val iter = for (x <- batch (items); if isOdd (x)) yield x
+      assertSeq (items.flatten.filter (isOdd _)) (iter)
+    }
+
+    "handle various batches" in {
+
+      def test (items: Seq [Seq [Int]]) {
+        implicit val scheduler = StubScheduler.random()
+        assertSeq (items.flatten.filter (isOdd _)) (batch (items) .filter (isOdd _))
+      }
+
+      forAll (test)
+    }
+
+    "pass through an exception" in {
+      implicit val scheduler = StubScheduler.random()
+      assertFail [DistinguishedException] {
+        for {
+          x <- batch (items)
+          if x == 3 && (throw new DistinguishedException)
+        } yield x
+      }}}
+
+  "batchFlatMap should" - {
+
+    "handle various batches" in {
+
+      def test (items: Seq [Seq [Int]]) {
+        implicit val scheduler = StubScheduler.random()
+        val iter = batch (items) .batchFlatMap (x => batch (items) .map (y => (x, y)))
+        val expected = for (x <- items.flatten; y <- items.flatten) yield (x, y)
+        assertSeq (expected) (iter)
+      }
+
+      forAll (test)
+    }}
+
+  "whilst should" - {
+
+    "handle an empty input iterator" in {
+      implicit val scheduler = StubScheduler.random()
+      var seen = Set.empty [Int]
+      val last = batch [Int] (Seq.empty) .whilst (_ => true) (seen += _) .expectPass()
+      assertResult (Set.empty) (seen)
+      assertResult (None) (last)
+    }
+
+    "stop when the condition fails immediately" in {
+      implicit val scheduler = StubScheduler.random()
+      var seen = Set.empty [Int]
+      val last = batch (items) .whilst (_ < 0) (seen += _) .expectPass()
+      assertResult (Set.empty) (seen)
+      assertResult (Some (1)) (last)
+    }
+
+    "stop when the condition fails before the iterator stops" in {
+      implicit val scheduler = StubScheduler.random()
+      var seen = Set.empty [Int]
+      val last = batch (items) .whilst (_ < 3) (seen += _) .expectPass()
+      assertResult (Set (1, 2)) (seen)
+      assertResult (Some (3)) (last)
+    }
+
+    "stop when the input iterator stops before the condition fails" in {
+      implicit val scheduler = StubScheduler.random()
+      var seen = Set.empty [Int]
+      val last = batch (items) .whilst (_ < 6) (seen += _) .expectPass()
+      assertResult (Set (1, 2, 3, 4, 5)) (seen)
+      assertResult (None) (last)
+    }
+
+    "pass througn an exception from the input iterator" in {
+      implicit val scheduler = StubScheduler.random()
+      var seen = Set.empty [Int]
+      val iter =
+        for (x <- batch (items)) yield
+          if (x == 3)
+            throw new DistinguishedException
+          else
+            x
+      iter.whilst (_ < 5) (x => supply (seen += x)) .fail [DistinguishedException]
+      assertResult (Set (1, 2)) (seen)
+    }
+
+    "pass througn an exception from the predicate" in {
+      implicit val scheduler = StubScheduler.random()
+      var seen = Set.empty [Int]
+      batch (items) .whilst { x =>
+        if (x == 3)
+          throw new DistinguishedException
+        x < 5
+      } (seen += _) .fail [DistinguishedException]
+      assertResult (Set (1, 2)) (seen)
+    }
+
+    "pass through an exception from the body" in {
+      implicit val scheduler = StubScheduler.random()
+      var seen = Set.empty [Int]
+      batch (items) .whilst (_ < 5) { x =>
+        if (x == 3) throw new DistinguishedException
+        seen += x
+      } .fail [DistinguishedException]
+      assertResult (Set (1, 2)) (seen)
+    }}
+
+  // The implementation of toMap is very similar to toSeq.
+  "toSeq should" - {
+
+    "handle various batches" in {
 
       def test (items: Seq [Seq [Int]]) {
         implicit val scheduler = StubScheduler.random()
@@ -69,10 +237,12 @@ class BatchIteratorSpec extends FreeSpec {
       }
 
       forAll (test)
-    }
+    }}
 
-    // The implementation of toMapWhile is very similar to toSeqWhile; also tests whilst.
-    "handle toSeqWhile" in {
+  // The implementation of toMapWhile is very similar to toSeqWhile.
+  "toSeqWhile should" - {
+
+    "handle various batches" in {
 
       def count (n: Int): Int => Boolean =
         new Function [Int, Boolean] {
@@ -93,113 +263,4 @@ class BatchIteratorSpec extends FreeSpec {
       forAll (test (0))
       forAll (test (3))
       forAll (test (5))
-    }}
-
-  "BatchIterator.foreach should" - {
-
-    "work with the for keyword" in {
-      val xs = Seq.newBuilder [Int]
-      implicit val scheduler = StubScheduler.random()
-      val task = for (x <- batch (items)) xs += x
-      task.expectPass()
-      assertResult (items.flatten) (xs.result)
-    }
-
-    "handle various batches" in {
-
-      def test (items: Seq [Seq [Int]]) {
-        implicit val scheduler = StubScheduler.random()
-        val builder = Seq.newBuilder [Int]
-        batch (items) .foreach (builder += _) .expectPass()
-        assertResult (items.flatten) (builder.result)
-      }
-
-      forAll (test)
-    }}
-
-  "BatchIterator.map should" - {
-
-    "work with the for keyword" in {
-      implicit val scheduler = StubScheduler.random()
-      val iter = for (x <- batch (items)) yield x * 2
-      assertSeq (items.flatten.map (_ * 2): _*) (iter)
-    }
-
-    "handle various batches" in {
-
-      def test (items: Seq [Seq [Int]]) {
-        implicit val scheduler = StubScheduler.random()
-        assertSeq (items.flatten.map (_ * 2): _*) (batch (items) .map (_ * 2))
-      }
-
-      forAll (test)
-    }}
-
-  "BatchIterator.flatMap should" - {
-
-    "work with the for keyword" in {
-      implicit val scheduler = StubScheduler.random()
-      val iter = for (x <- batch (items); y <- Iterator (3, 4)) yield (x, y)
-      val expected = items.flatten.flatMap (x => Iterator (3, 4) .map (y => (x, y)))
-      assertSeq (expected: _*) (iter)
-    }
-
-    "handle various batches" in {
-
-      def test (items: Seq [Seq [Int]]) {
-        implicit val scheduler = StubScheduler.random()
-        val iter = batch (items) .flatMap (x => Iterator (1, 2, 3) .map (y => (x, y)))
-        val expected = for (x <- items.flatten; y <- Iterator (1, 2, 3)) yield (x, y)
-        assertSeq (expected: _*) (iter)
-      }
-
-      forAll (test)
-    }}
-
-  "BatchIterator.filter should" - {
-
-    def isOdd (x: Int): Boolean = (x & 1) == 0
-
-    "work with the for keyword" in {
-      implicit val scheduler = StubScheduler.random()
-      val iter = for (x <- batch (items); if isOdd (x)) yield x
-      assertSeq (items.flatten.filter (isOdd _): _*) (iter)
-    }
-
-    "handle various batches" in {
-
-      def test (items: Seq [Seq [Int]]) {
-        implicit val scheduler = StubScheduler.random()
-        assertSeq (items.flatten.filter (isOdd _): _*) (batch (items) .filter (isOdd _))
-      }
-
-      forAll (test)
-    }}
-
-  "BatchIterator.batchFlatMap should" - {
-
-    "handle various batches" in {
-
-      def test (items: Seq [Seq [Int]]) {
-        implicit val scheduler = StubScheduler.random()
-        val iter = batch (items) .batchFlatMap (x => batch (items) .map (y => (x, y)))
-        val expected = for (x <- items.flatten; y <- items.flatten) yield (x, y)
-        assertSeq (expected: _*) (iter)
-      }
-
-      forAll (test)
-    }}
-
-  "BatchIterator.flatten should" - {
-
-    "handle foreach" in {
-
-      def test (items: Seq [Seq [Int]]) {
-        implicit val scheduler = StubScheduler.random()
-        val builder = Seq.newBuilder [Int]
-        batch (items) .flatten.foreach (x => supply (builder += x)) .expectPass()
-        assertResult (items.flatten) (builder.result)
-      }
-
-      forAll (test)
     }}}

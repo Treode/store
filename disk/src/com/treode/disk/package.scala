@@ -21,7 +21,7 @@ import java.util.concurrent.ExecutorService
 import java.util.logging.{Level, Logger}
 
 import com.google.common.hash.Hashing
-import com.treode.async.{AsyncIterator, Scheduler}
+import com.treode.async.Scheduler
 import com.treode.async.io.File
 
 import Level.INFO
@@ -74,7 +74,6 @@ package object disk {
 
   private [disk] type LogDispatcher = Dispatcher [PickledRecord]
   private [disk] type PageDispatcher = Dispatcher [PickledPage]
-  private [disk] type ReplayIterator = AsyncIterator [(Long, Unit => Any)]
 
   private [disk] val checksum = Hashing.murmur3_32
 

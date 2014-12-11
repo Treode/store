@@ -115,8 +115,8 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
   /** Run until the callback has been invoked, then assert that it yielded
     * [[scala.util.Success Success]] and return the result.
     */
-  def expectPass () (implicit scheduler: StubScheduler): T = {
-    scheduler.run (timers = !wasInvoked)
+  def expectPass () (implicit s: StubScheduler): T = {
+    s.run (timers = !wasInvoked)
     assertPassed
   }
 

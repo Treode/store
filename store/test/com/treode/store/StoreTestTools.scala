@@ -20,7 +20,7 @@ import java.nio.file.{Path, Paths}
 import scala.language.implicitConversions
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncIterator, BatchIterator}
+import com.treode.async.{Async, BatchIterator}
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId

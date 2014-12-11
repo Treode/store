@@ -25,14 +25,14 @@ import com.treode.async.misc.RichOption
 import com.treode.buffer.ArrayBuffer
 import com.treode.disk.RecordRegistry
 
-import Async.async
+import Async.{async, supply}
 
 class StubDiskDrive (implicit random: Random) {
 
   private val stack = new ArrayDeque [Callback [Unit]]
   private var records = new ArrayList [Seq [StubRecord]]
   private var pages = Map.empty [Long, StubPage]
-  
+
   /** If true, the next call to `flush` or `fill` will be captured and push on a stack. */
   var stop: Boolean = false
 

@@ -25,7 +25,13 @@ import com.treode.async.implicits._
 
 import Async.{async, guard, supply, when}
 
-/** Concrete classes should implement `batch`. */
+/** Iterate batches of items asynchronously.
+  *
+  * Compare to [[AsyncIterator]]. The `foreach` and `whilst` methods here take a plain old
+  * function, whereas those methods in AsyncIterator take an asynchronous function.
+  *
+  * Concrete classes should implement `batch`.
+  */
 trait BatchIterator [A] {
   self =>
 
@@ -76,24 +82,7 @@ trait BatchIterator [A] {
     *   - [[AsyncIterator#toSeqWhile]]
     */
   def flatten (implicit scheduler: Scheduler): AsyncIterator [A] =
-    new AsyncIterator [A] {
-
-      def foreach (f: A => Async [Unit]): Async [Unit] =
-        self.batch (_.async.foreach (f))
-
-      override def toMap [K, V] (implicit witness: <:< [A, (K, V)]): Async [Map [K, V]] =
-        self.toMap
-
-      override def toMapWhile [K, V] (p: A => Boolean) (implicit witness: <:< [A, (K, V)]):
-          Async [(Map [K, V], Option [A])] =
-        self.toMapWhile (p)
-
-      override def toSeq: Async [Seq [A]] =
-        self.toSeq
-
-      override def toSeqWhile (p: A => Boolean): Async [(Seq [A], Option [A])] =
-        self.toSeqWhile (p)
-    }
+    new AsyncIterator [A] (self)
 
   /** Execute the operation `f` foreach element while `p` is true.  Return the first element for
     * which `p` fails, or `None` if `p` never fails and the whole sequence is consumed.
