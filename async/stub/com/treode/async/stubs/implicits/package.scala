@@ -16,7 +16,7 @@
 
 package com.treode.async.stubs
 
-import com.treode.async.{Async, AsyncIterator}
+import com.treode.async.Async
 import org.scalatest.Assertions
 
 import Assertions.assertResult

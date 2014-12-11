@@ -73,7 +73,7 @@ class MergeIteratorSpec extends FreeSpec with AsyncChecks {
     xsss.flatten.flatten.sorted
 
   def merge (xs: Seq [BatchIterator [Int]]) (implicit scheduler: StubScheduler) =
-    BatchIterator.merge (xs) (ordering, scheduler) .flatten.toSeq.expectPass()
+    BatchIterator.merge (xs) (ordering, scheduler) .toSeq.expectPass()
 
   def testStringOf [A] (xsss: Seq [Seq [Seq [A]]]): String =
     xsss.map (_.map (_.mkString ("[", ", ", "]")) .mkString ("[", ", ", "]")) .mkString ("; ")

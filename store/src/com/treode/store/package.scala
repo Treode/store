@@ -20,7 +20,7 @@ import java.net.SocketAddress
 import java.util.concurrent.{TimeoutException => JTimeoutException}
 import java.util.logging.{Level, Logger}, Level.WARNING
 
-import com.treode.async.{Async, AsyncIterator, BatchIterator}
+import com.treode.async.{Async, BatchIterator}
 import com.treode.cluster.{RemoteException => CRemoteException, HostId, PortId}
 
 package store {

@@ -23,8 +23,14 @@ import com.treode.async.implicits._
 
 import Async.{async, supply, when}
 
-/** Concrete classes should implement `foreach`. */
-@deprecated ("use BatchIterator", "0.2.0")
+/** Concrete classes should implement `foreach`.
+  *
+  * You should consider using BatchIterator whenever possible. This places a task on the scheduler
+  * foreach element, and that can adds overhead. If you must do some asynchronous task for every
+  * element, you will incur that overhead anyway, so the point is moot, and this interface will be
+  * more convenient. On the other hand, if you can do that asynchronous task for a batch of items,
+  * you can save that overhead by using BatchIterator.
+  */
 trait AsyncIterator [A] {
   self =>
 

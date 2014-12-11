@@ -27,7 +27,6 @@ import com.treode.store._
 import org.scalatest.FreeSpec
 
 import Async.supply
-import AtomicTestTools._
 import AtomicTracker._
 
 trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {

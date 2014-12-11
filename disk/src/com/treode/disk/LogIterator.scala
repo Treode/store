@@ -20,7 +20,7 @@ import java.nio.file.Path
 import java.util.ArrayDeque
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncIterator, BatchIterator, Callback, Scheduler}
+import com.treode.async.{Async, BatchIterator, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
