@@ -23,47 +23,34 @@ import com.treode.async.implicits._
 
 import Async.{async, supply, when}
 
-/** Concrete classes should implement `foreach`.
+/** Iterate items asynchronously.
   *
-  * You should consider using BatchIterator whenever possible. This places a task on the scheduler
-  * foreach element, and that can adds overhead. If you must do some asynchronous task for every
-  * element, you will incur that overhead anyway, so the point is moot, and this interface will be
-  * more convenient. On the other hand, if you can do that asynchronous task for a batch of items,
-  * you can save that overhead by using BatchIterator.
+  * Compare to [[BatchIterator]]. The `foreach` and `whilst` methods here take an asynchronous
+  * function, whereas those methods in BatchIterator take a plain old function.
+  *
+  * You should consider using BatchIterator whenever possible. AsyncIterator places a task on the
+  * scheduler foreach element, and that can adds overhead. If you must do some asynchronous task
+  * for every element, you will incur that overhead anyway, so the point is moot, and this
+  * interface will be more convenient. On the other hand, if you can do that asynchronous task for
+  * a batch of items, you can save that overhead by using BatchIterator.
   */
-trait AsyncIterator [A] {
-  self =>
+class AsyncIterator [A] (val batch: BatchIterator [A]) (implicit scheduler: Scheduler) {
 
   /** Execute the asynchronous operation `f` foreach element. */
-  def foreach (f: A => Async [Unit]): Async [Unit]
+  def foreach (f: A => Async [Unit]): Async [Unit] =
+    batch.batch (xs => scheduler.whilst (xs.hasNext) (f (xs.next)))
 
   def map [B] (f: A => B): AsyncIterator [B] =
-    new AsyncIterator [B] {
-      def foreach (g: B => Async [Unit]): Async [Unit] =
-        self.foreach (x => g (f (x)))
-    }
+    new AsyncIterator (batch.map (f))
 
   def flatMap [B] (f: A => AsyncIterator [B]): AsyncIterator [B] =
-    new AsyncIterator [B] {
-      def foreach (g: B => Async [Unit]): Async [Unit] =
-        self.foreach (x => f (x) foreach (g))
-    }
+    new AsyncIterator (batch.batchFlatMap (x => f (x) .batch))
 
   def filter (p: A => Boolean): AsyncIterator [A] =
-    new AsyncIterator [A] {
-      def foreach (g: A => Async [Unit]): Async [Unit] =
-        self.foreach (x => when (p (x)) (g (x)))
-    }
+    new AsyncIterator (batch.filter (p))
 
   def withFilter (p: A => Boolean): AsyncIterator [A] =
-    filter (p)
-
-  /** A BatchIterator of sequences of one element. */
-  def batch: BatchIterator [A] =
-    new BatchIterator [A] {
-      def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
-        self.foreach (x => f (Iterator (x)))
-    }
+    new AsyncIterator (batch.withFilter (p))
 
   /** Execute the asynchronous operation `f` foreach element while `p` is true.  Return the first
     * element for which `p` fails, or `None` if `p` never fails and the whole sequence is
@@ -89,10 +76,8 @@ trait AsyncIterator [A] {
       }}
 
   /** Iterate the entire asynchronous iterator and build a standard map. */
-  def toMap [K, V] (implicit witness: <:< [A, (K, V)]): Async [Map [K, V]] = {
-    val builder = Map.newBuilder [K, V]
-    foreach (x => supply (builder += x)) .map (_ => builder.result)
-  }
+  def toMap [K, V] (implicit w: <:< [A, (K, V)]): Async [Map [K, V]] =
+    batch.toMap
 
   /** Iterate the asynchronous iterator while `p` is true and build a standard map.
     *
@@ -100,17 +85,12 @@ trait AsyncIterator [A] {
     * @return The map and the next element if there is one.  The next element is the first
     *   element for which `p` returned false.
     */
-  def toMapWhile [K, V] (p: A => Boolean) (implicit witness: <:< [A, (K, V)]):
-      Async [(Map [K, V], Option [A])] = {
-    val builder = Map.newBuilder [K, V]
-    whilst (p) (x => supply (builder += x)) .map (n => (builder.result, n))
-  }
+  def toMapWhile [K, V] (p: A => Boolean) (implicit w: <:< [A, (K, V)]): Async [(Map [K, V], Option [A])] =
+    batch.toMapWhile (p)
 
   /** Iterate the entire asynchronous iterator and build a standard sequence. */
-  def toSeq: Async [Seq [A]] = {
-    val builder = Seq.newBuilder [A]
-    foreach (x => supply (builder += x)) .map (_ => builder.result)
-  }
+  def toSeq: Async [Seq [A]] =
+    batch.toSeq
 
   /** Iterate the asynchronous iterator while `p` is true and build a standard sequence.
     *
@@ -118,35 +98,23 @@ trait AsyncIterator [A] {
     * @return The sequence and the next element if there is one.  The next element is the first
     *   element for which `p` returned false.
     */
-  def toSeqWhile (p: A => Boolean): Async [(Seq [A], Option [A])] = {
-    val builder = Seq.newBuilder [A]
-    whilst (p) (x => supply (builder += x)) .map (n => (builder.result, n))
-  }}
+  def toSeqWhile (p: A => Boolean): Async [(Seq [A], Option [A])] =
+    batch.toSeqWhile (p)
+}
 
 object AsyncIterator {
 
-  def empty [A] =
-    new AsyncIterator [A] {
-      def foreach (f: A => Async [Unit]): Async [Unit] =
-        async (_.pass (()))
-    }
+  def empty [A] (implicit scheduler: Scheduler): AsyncIterator [A] =
+    new AsyncIterator (BatchIterator.empty)
 
   /** Transform a Scala iterator into an AsyncIterator. */
   def adapt [A] (iter: Iterator [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
-    new AsyncIterator [A] {
-      def foreach (f: A => Async [Unit]): Async [Unit] =
-        scheduler.whilst (iter.hasNext) (f (iter.next))
-    }
+    new AsyncIterator (BatchIterator.adapt (iter))
 
   /** Transform a Java iterator into an AsyncIterator. */
   def adapt [A] (iter: JIterator [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
-    new AsyncIterator [A] {
-      def foreach (f: A => Async [Unit]): Async [Unit] =
-        scheduler.whilst (iter.hasNext) (f (iter.next))
-  }
+    new AsyncIterator (BatchIterator.adapt (iter))
 
-  def make [A] (maker: => Async [AsyncIterator [A]]): AsyncIterator [A] =
-    new AsyncIterator [A] {
-      def foreach (f: A => Async [Unit]): Async [Unit] =
-        maker.flatMap (_.foreach (f))
-    }}
+  def make [A] (maker: => Async [AsyncIterator [A]]) (implicit scheduler: Scheduler): AsyncIterator [A] =
+    new AsyncIterator (BatchIterator.make (maker .map (_.batch)))
+}

@@ -94,7 +94,7 @@ package object implicits {
       */
     def rescue (f: PartialFunction [Throwable, Try [A]]): Callback [A] =
       (v => cb (v recoverWith f))
-}
+  }
 
   implicit class RichIterator [A] (iter: Iterator [A]) {
 

@@ -27,42 +27,48 @@ object AsyncIteratorTestTools {
 
   class DistinguishedException extends Exception
 
-  /** An async iterator over each given value. */
-  def adapt [A] (xs: A*) (implicit scheduler: StubScheduler): AsyncIterator [A] =
-    AsyncIterator.adapt (xs.iterator)
+  val items = Seq (Seq (1, 2, 3, 4, 5))
+
+  /** Run a test for several different batches. */
+  def forAll (test: Seq [Seq [Int]] => Any) {
+
+    // No batches.
+    test (Seq.empty)
+
+    // One batch.
+    test (Seq (Seq.empty))
+    test (Seq (Seq (1)))
+    test (Seq (Seq (1, 2)))
+    test (Seq (Seq (1, 2, 3, 4, 5)))
+
+    // Two batches.
+    for {
+      first <- Seq (Seq.empty, Seq (1), Seq (1, 2), Seq (1, 2, 3, 4, 5))
+      second <- Seq (Seq.empty, Seq (6), Seq (6, 7), Seq (6, 7, 8, 9, 10))
+    } {
+      test (Seq (first, second))
+    }
+
+    // Three batches.
+    for {
+      first <- Seq (Seq.empty, Seq (1), Seq (1, 2), Seq (1, 2, 3, 4, 5))
+      second <- Seq (Seq.empty, Seq (6), Seq (6, 7), Seq (6, 7, 8, 9, 10))
+      third <- Seq (Seq.empty, Seq (11), Seq (11, 12), Seq (11, 12, 13, 14, 15))
+    } {
+      test (Seq (first, second, third))
+    }}
 
   /** A batch iterator over each given batch. */
-  def batch [A] (xs: Seq [Seq [A]]) (implicit scheduler: StubScheduler): BatchIterator [A] =
+  def batch [A] (xs: Seq [Seq [A]]) (implicit s: StubScheduler): BatchIterator [A] =
     new BatchIterator [A] {
       val iter = xs.iterator
       def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
-        scheduler.whilst (iter.hasNext) (f (iter.next.iterator))
+        s.whilst (iter.hasNext) (f (iter.next.iterator))
     }
 
-  /** Invoke f each time an element is consumed from the iterator. */
-  def track [A] (iter: AsyncIterator [A]) (f: A => Any): AsyncIterator [A] =
-    new AsyncIterator [A] {
-      def foreach (g: A => Async [Unit]): Async [Unit] = {
-        iter.foreach { x =>
-          f (x)
-          g (x)
-        }}}
-
-  /** Adapt the foreach body to thrown an exception on the element where p is true. */
-  def failWhen [A] (iter: AsyncIterator [A]) (p: A => Boolean): AsyncIterator [A] =
-    new AsyncIterator [A] {
-      def foreach (g: A => Async [Unit]): Async [Unit] = {
-        iter.foreach { x =>
-          if (p (x)) throw new DistinguishedException
-          g (x)
-        }}}
-
-  /** Yield an exeption from foreach before consuming a single element. */
-  def failNow [A]: AsyncIterator [A] =
-    new AsyncIterator [A] {
-      def foreach (g: A => Async [Unit]): Async [Unit] =
-        supply (throw new DistinguishedException)
-    }
+  /** An async iterator over each given value. */
+  def flatten [A] (xs: Seq [Seq [A]]) (implicit s: StubScheduler): AsyncIterator [A] =
+    batch (xs) .flatten
 
   // Scala disambiguates on first argument list only; this works around that.
   class AssertSeq [A] (expected: Seq [A]) {
@@ -74,8 +80,10 @@ object AsyncIteratorTestTools {
       assertResult (expected) (actual.toSeq.expectPass())
   }
 
-  def assertSeq [A] (expected: A*): AssertSeq [A] = new AssertSeq [A] (expected)
+  def assertSeq [A] (expected: Seq [A]): AssertSeq [A] = new AssertSeq [A] (expected)
 
-  def assertFail [E] (iter: AsyncIterator [_]) (implicit s: StubScheduler, m: Manifest [E]): Unit =
+  def assertFail [E] (iter: BatchIterator [_]) (implicit s: StubScheduler, m: Manifest [E]): Unit =
     iter.foreach (_ => supply (())) .fail [E]
+
+  def isOdd (x: Int): Boolean = (x & 1) == 0
 }
