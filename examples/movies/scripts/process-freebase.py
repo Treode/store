@@ -1,4 +1,18 @@
 #!/usr/bin/env python
+# Copyright 2014 Treode, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 """ 
 This script process a full RDF dump and filters it to create three files with much reduced content.
 After the filtered files have been created, this script may upload into a treode movies server.
@@ -168,7 +182,8 @@ class MoviesRDFDumpParser:
         self.logger.info("Processing RDF dump - Pass 1 - Films")
         f_namestmp = open('names.tmp.rdf', 'wb')
         f_filmsdata = open("film.filtered.data.rdf", 'wb')
-        f_keys = open("keys.rdf", "wb")
+        if options.dumpKeys:
+            f_keys = open("keys.rdf", "wb")
         all_keys_set = set()
         with gzip.open(dumpfile, 'rb') as f_in:
             for line in f_in:
@@ -181,7 +196,8 @@ class MoviesRDFDumpParser:
                     m = re_films.match(line)
                     if m is not None:
                         f_filmsdata.write(line)
-                        f_keys.write(m.group(1)+"\n")
+                        if options.dumpKeys:
+                            f_keys.write(m.group(1)+"\n")
                         all_keys_set.add(m.group(1))
                     else:
                         # FILM DATA
@@ -192,7 +208,8 @@ class MoviesRDFDumpParser:
                             all_keys_set.add(m.group(3))
 
         f_namestmp.close()
-        f_keys.close()
+        if options.dumpKeys:
+            f_keys.close()
         self.logger.info("Pass 1 - Done")
         self.logger.info("Processing RDF dump - Pass 2 - Names")
 
@@ -206,7 +223,7 @@ class MoviesRDFDumpParser:
 
         f_filmsdata.close()
         self.logger.info("Pass 2 - Done")
-        if not options.keepTempFile:
+        if not options.keepTempFiles:
             os.remove(NAMES_TMP_RDF)
 
 
@@ -233,7 +250,7 @@ def main():
                       action="store_true",
                       help="Dump all keys in a file")
     parser.add_option("--keepTempFiles",
-                      dest="keepTempFile",
+                      dest="keepTempFiles",
                       default=False,
                       action="store_true",
                       help="Keep temporary files")
