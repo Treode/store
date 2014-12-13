@@ -64,12 +64,6 @@ package object store {
 
   type CellIterator = BatchIterator [Cell]
 
-  @deprecated ("Use Retention", "0.2.0")
-  type PriorValueEpoch = Retention
-
-  @deprecated ("Use Retention", "0.2.0")
-  val PriorValueEpoch = Retention
-
   private [store] implicit class RichCellIterator (iter: CellIterator) {
 
     def rebatch (batch: Batch): Async [(Seq [Cell], Option [Cell])] = {

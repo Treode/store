@@ -26,7 +26,6 @@ import ScanDeputy.Cells
 
 private class ScanDeputy (kit: AtomicKit) {
   import kit.{cluster, disk, tstore}
-  import kit.config.{scanBatchBytes, scanBatchEntries}
 
   def scan (
       table: TableId,

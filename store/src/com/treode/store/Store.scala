@@ -122,16 +122,10 @@ object Store {
       moveBatchEntries: Int,
       prepareBackoff: Backoff,
       preparingTimeout: Int,
-      @deprecated ("Use retention", "0.2.0")
-      priorValueEpoch: Retention = null,
       proposingBackoff: Backoff,
       readBackoff: Backoff,
       retention: Retention,
       scanBatchBackoff: Backoff,
-      @deprecated ("Supply batch argument to scan method", "0.2.0")
-      scanBatchBytes: Int = 0,
-      @deprecated ("Supply batch argument to scan method", "0.2.0")
-      scanBatchEntries: Int = 0,
       targetPageBytes: Int
   ) {
 
@@ -170,9 +164,6 @@ object Store {
     require (
         targetPageBytes > 0,
         "The target size of a page must be more than zero bytes.")
-
-    def retentionBridge =
-      if (priorValueEpoch == null) retention else priorValueEpoch
   }
 
   object Config {
