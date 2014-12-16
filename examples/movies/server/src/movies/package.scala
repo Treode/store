@@ -33,6 +33,8 @@ import com.treode.store.{Bytes, TxClock}
 import com.treode.store.alt.Froster
 import com.treode.twitter.finagle.http, http.{BadRequestException, RichResponse}
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
+import com.twitter.finagle.http.filter.{CommonLogFormatter, LoggingFilter}
+import com.twitter.logging.Logger
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
@@ -108,6 +110,8 @@ package object movies {
       rsp.json = iter
       rsp
     }}
+
+  object LoggingFilter extends LoggingFilter (Logger ("access"), new CommonLogFormatter)
 
   def toBase36 (v: Long): String =
     java.lang.Long.toString (v, 36)
