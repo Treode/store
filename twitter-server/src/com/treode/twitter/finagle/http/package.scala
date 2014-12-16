@@ -27,7 +27,6 @@ import com.treode.async.misc.{RichOption, parseInt}
 import com.treode.cluster.HostId
 import com.treode.jackson.DefaultTreodeModule
 import com.treode.store.{Slice, TxClock, TxId, Window}
-import com.treode.twitter.finagle.http.{BadRequestException, RichRequest}
 import com.treode.twitter.util.RichTwitterFuture
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
 import com.twitter.finagle.netty3.ChannelBufferBuf
@@ -81,7 +80,7 @@ package object http {
           writer.writeValue (stream, v)
         }
         stream.flush()
-        rsp.writer.write (ChannelBufferBuf (buffer)) .toAsync
+        rsp.writer.write (ChannelBufferBuf.Owned (buffer)) .toAsync
       } .flatMap { _ =>
         val buffer = ChannelBuffers.dynamicBuffer()
         val stream = new ChannelBufferOutputStream (buffer)
@@ -89,7 +88,7 @@ package object http {
           stream.writeByte ('[')
         stream.writeByte (']')
         stream.flush()
-        rsp.writer.write (ChannelBufferBuf (buffer)) .toAsync
+        rsp.writer.write (ChannelBufferBuf.Owned (buffer)) .toAsync
       } .run {
         case Success (_) =>
           rsp.close()

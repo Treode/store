@@ -16,7 +16,6 @@
 
 package com.treode.twitter.finagle.http.filter
 
-import com.fasterxml.jackson.core.JsonProcessingException
 import com.treode.twitter.finagle.http.BadRequestException
 import com.twitter.finagle.{Service, SimpleFilter}
 import com.twitter.finagle.http.{Request, Response, Status}

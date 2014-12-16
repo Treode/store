@@ -238,14 +238,11 @@ object TreodeBuild extends Build {
     .settings (standardSettings: _*)
     .settings (
 
-        scalaVersion := "2.10.4",
-        crossScalaVersions := Seq.empty,
-
         resolvers += "Twitter" at "http://maven.twttr.com",
 
         libraryDependencies ++= Seq (
           "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
-          "com.twitter" %% "twitter-server" % "1.8.0"))
+          "com.twitter" %% "twitter-server" % "1.9.0"))
 
   // A standalone server for system tests.  Separated to keep system testing components out of
   // production code (these components are in the default config in this project).
@@ -265,7 +262,7 @@ object TreodeBuild extends Build {
 
   lazy val copyDocAssetsTask = taskKey [Unit] ("Copy doc assets")
 
-  // The doc project includes everything for unidoc.
+  // The doc project includes everything.
   lazy val doc = Project ("doc", file ("doc"))
     .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterServer)
     .settings (versionInfo: _*)
@@ -296,10 +293,9 @@ object TreodeBuild extends Build {
       publishLocal := {},
       publish := {})
 
-  // The root project includes everything that can be built across Scala versions; that is
-  // everything except Twitter Server, which can be built in 2.10 only.
+  // The root project includes everything.
   lazy val root = Project ("root", file ("."))
-    .aggregate (buffer, pickle, async, cluster, disk, store, jackson)
+    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterServer)
     .settings (versionInfo: _*)
     .settings (
 

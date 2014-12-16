@@ -40,7 +40,7 @@ class AtlasHandlerSpec extends FlatSpec with SpecTools {
 
   it should "handle PUT" in
     served { case (port, controller) =>
-      (controller.cohorts_= _) .expects (Seq.empty) .returning()
+      (controller.cohorts_= _) .expects (Seq.empty) .returning (())
       given
         .port (port)
         .body ("[]")

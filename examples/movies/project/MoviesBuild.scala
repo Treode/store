@@ -30,6 +30,7 @@ object MoviesBuild extends Build {
   val commonSettings = Seq (
 
       version := versionString,
+
       scalaVersion := "2.10.4",
 
       unmanagedSourceDirectories in Compile <<=
@@ -81,7 +82,7 @@ object MoviesBuild extends Build {
       test in assembly := {}
     )
 
-  // The Spark connector.
+  // The Spark connector; can be built with Scala 2.10 only.
   lazy val spark =
     Project ("spark", file ("spark"))
     .dependsOn (common)
@@ -93,8 +94,8 @@ object MoviesBuild extends Build {
       name := "movies-spark",
 
       libraryDependencies ++= Seq (
-        "org.apache.spark" %% "spark-core" % "1.1.0" % "provided",
-        "org.apache.spark" %% "spark-streaming" % "1.1.0" % "provided",
+        "org.apache.spark" %% "spark-core" % "1.2.0" % "provided",
+        "org.apache.spark" %% "spark-streaming" % "1.2.0" % "provided",
         // Use Jackson 2.3.1 because spark-core does.
         "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.3.1",
         "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.1",

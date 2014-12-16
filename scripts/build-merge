@@ -63,12 +63,10 @@ log "Building $version"
 # Compile, and also publish locally for the examples below.
 echo-do ${SBT} +test:compile +publish-local
 
-# Twitter Server and Spark are available for Scala 2.10 only.
-echo-do ${SBT} ++${SCALA_2_10} twitter-server/test:compile twitter-server/publish-local
-
 # Skeleton examples.
 (cd examples/finagle; echo-do ${SBT} test:compile); expect-status 0
-(cd examples/finatra; echo-do ${SBT} test:compile); expect-status 0
+# Skip Finatra until it works with Twitter Server 1.9 (Finagle 6.24).
+#(cd examples/finatra; echo-do ${SBT} test:compile); expect-status 0
 (cd examples/unfiltered; echo-do ${SBT} test:compile); expect-status 0
 
 # Movies example; it has multiple components.
@@ -77,17 +75,17 @@ echo-do ${SBT} ++${SCALA_2_10} twitter-server/test:compile twitter-server/publis
 (cd examples/movies/webui; echo-do ${GRUNT} dist); expect-status 0
 
 # The documentation.
-echo-do ${SBT} ++${SCALA_2_10} doc/unidoc
+echo-do ${SBT} doc/unidoc
 
 #
 # Test
 #
 
-echo-do ${SBT} ++${SCALA_2_11} test intensive:test
-echo-do ${SBT} ++${SCALA_2_10} twitter-server/test
+echo-do ${SBT} test intensive:test
 
 (cd examples/finagle; echo-do ${SBT} test); expect-status 0
-(cd examples/finatra; echo-do ${SBT} test); expect-status 0
+# Skip Finatra until it works with Twitter Server 1.9 (Finagle 6.24).
+#(cd examples/finatra; echo-do ${SBT} test); expect-status 0
 (cd examples/unfiltered; echo-do ${SBT} test); expect-status 0
 (cd examples/movies; echo-do ${SBT} test); expect-status 0
 
@@ -97,25 +95,25 @@ echo-do ${SBT} ++${SCALA_2_10} twitter-server/test
 
 # Ivy artifacts.
 echo-do ${SBT} +publish
-echo-do ${SBT} ++${SCALA_2_10} publish twitter-server/publish
 
 # Finagle example.
 STAGE_FINAGLE=stage/examples/finagle/${version}
 (cd examples/finagle; echo-do ${SBT} assembly); expect-status 0
 echo-do mkdir -p ${STAGE_FINAGLE}
-echo-do cp examples/finagle/target/scala-2.10/finagle-server.jar ${STAGE_FINAGLE}/finagle-server-${version}.jar
+echo-do cp examples/finagle/target/scala-2.11/finagle-server.jar ${STAGE_FINAGLE}/finagle-server-${version}.jar
 
 # Finatra example.
-STAGE_FINATRA=stage/examples/finatra/${version}
-(cd examples/finatra; echo-do ${SBT} assembly); expect-status 0
-echo-do mkdir -p ${STAGE_FINATRA}
-echo-do cp examples/finatra/target/scala-2.10/finatra-server.jar ${STAGE_FINATRA}/finatra-server-${version}.jar
+# Skip Finatra until it works with Twitter Server 1.9 (Finagle 6.24).
+#STAGE_FINATRA=stage/examples/finatra/${version}
+#(cd examples/finatra; echo-do ${SBT} assembly); expect-status 0
+#echo-do mkdir -p ${STAGE_FINATRA}
+#echo-do cp examples/finatra/target/scala-2.10/finatra-server.jar ${STAGE_FINATRA}/finatra-server-${version}.jar
 
 # Unfiltered example.
 STAGE_UNFILTERED=stage/examples/unfiltered/${version}
 (cd examples/unfiltered; echo-do ${SBT} assembly); expect-status 0
 echo-do mkdir -p ${STAGE_UNFILTERED}
-echo-do cp examples/unfiltered/target/scala-2.10/unfiltered-server.jar ${STAGE_UNFILTERED}/unfiltered-server-${version}.jar
+echo-do cp examples/unfiltered/target/scala-2.11/unfiltered-server.jar ${STAGE_UNFILTERED}/unfiltered-server-${version}.jar
 
 # Movies example.
 STAGE_MOVIES=stage/examples/movies/${version}
@@ -127,7 +125,7 @@ echo-do cp examples/movies/spark/target/scala-2.10/movies-spark.jar ${STAGE_MOVI
 
 # Documentation.
 echo-do mkdir -p stage/docs/scala/store
-echo-do mv doc/target/scala-2.10/unidoc stage/docs/scala/store/${version}
+echo-do mv doc/target/scala-2.11/unidoc stage/docs/scala/store/${version}
 
 #
 # Done

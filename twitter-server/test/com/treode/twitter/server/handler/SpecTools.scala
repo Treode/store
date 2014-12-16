@@ -25,7 +25,7 @@ import com.treode.twitter.finagle.http.filter._
 import com.twitter.finagle.{Http, Service}
 import com.twitter.finagle.http.{Request, Response}
 import com.twitter.finagle.http.filter.ExceptionFilter
-import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}, Matchers._
+import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Suite
 

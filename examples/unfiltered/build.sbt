@@ -9,7 +9,7 @@ organization := "com.treode"
 
 version := "0.3.0-SNAPSHOT"
 
-scalaVersion := "2.10.4"
+scalaVersion := "2.11.4"
 
 libraryDependencies ++= Seq (
   "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",

@@ -37,12 +37,10 @@ clean
 # Compile, and also publish locally for the examples below.
 echo-do ${SBT} +test:compile +publish-local
 
-# Twitter Server is available for Scala 2.10 only.
-echo-do ${SBT} ++${SCALA_2_10} twitter-server/test:compile twitter-server/publish-local
-
 # Skeleton examples.
 (cd examples/finagle; echo-do ${SBT} test:compile); expect-status 0
-(cd examples/finatra; echo-do ${SBT} test:compile); expect-status 0
+# Skip Finatra until it works with Twitter Server 1.9 (Finagle 6.24).
+#(cd examples/finatra; echo-do ${SBT} test:compile); expect-status 0
 (cd examples/unfiltered; echo-do ${SBT} test:compile); expect-status 0
 
 # Movies example; it has multiple components.
@@ -54,11 +52,11 @@ echo-do ${SBT} ++${SCALA_2_10} twitter-server/test:compile twitter-server/publis
 # Test
 #
 
-echo-do ${SBT} ++${SCALA_2_11} test intensive:test
-echo-do ${SBT} ++${SCALA_2_10} twitter-server/test
+echo-do ${SBT} test intensive:test
 
 (cd examples/finagle; echo-do ${SBT} test); expect-status 0
-(cd examples/finatra; echo-do ${SBT} test); expect-status 0
+# Skip Finatra until it works with Twitter Server 1.9 (Finagle 6.24).
+#(cd examples/finatra; echo-do ${SBT} test); expect-status 0
 (cd examples/unfiltered; echo-do ${SBT} test); expect-status 0
 (cd examples/movies; echo-do ${SBT} test); expect-status 0
 

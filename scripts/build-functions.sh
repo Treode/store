@@ -22,10 +22,6 @@
 : ${NPM:='npm'}
 : ${SBT:=${DIR}'/scripts/sbt'}
 
-# These must match the strings in crossScalaVersions of the SBT build configuration.
-: ${SCALA_2_11:='2.11.4'}
-: ${SCALA_2_10:='2.10.4'}
-
 #
 # Common Functions
 #
