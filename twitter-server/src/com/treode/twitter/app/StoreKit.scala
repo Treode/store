@@ -173,16 +173,20 @@ object StoreKit {
     */
   class Main [A: ClassTag] {
 
+    def usage() {
+      val name = getClass.getName stripSuffix "$"
+      println (s"usage: $name [command] [options]")
+      println (s"   or: $name [command] -help")
+      println ("Available commands are:")
+      println ("    init   initialize the repository")
+      println ("    serve  serve the repository")
+      System.exit (-1)
+    }
+
     def main (args: Array [String]) {
 
-      if (args.length == 0) {
-        val name = getClass.getName stripSuffix "$"
-        println (s"usage: $name [command]")
-        println ("Available commands are:")
-        println ("    init   initialize the repository")
-        println ("    serve  serve the repository")
-        System.exit (1)
-      }
+      if (args.length == 0)
+        usage()
 
       args.head match {
 
@@ -194,4 +198,7 @@ object StoreKit {
           val inst = cls.getConstructor().newInstance()
           val main = cls.getMethod ("main", classOf [Array [String]])
           main.invoke (inst, args.tail)
+
+        case _ =>
+          usage()
       }}}}
