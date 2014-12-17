@@ -12,10 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Functions common to the various build scripts.
+#
+# Common Variables
+#
+
+: ${LOG:=$DIR/build.log}
+
+: ${GRUNT:='grunt'}
+: ${NPM:='npm'}
+: ${SBT:=${DIR}'/scripts/sbt'}
+
+# These must match the strings in crossScalaVersions of the SBT build configuration.
+: ${SCALA_2_11:='2.11.4'}
+: ${SCALA_2_10:='2.10.4'}
+
+#
+# Common Functions
+#
 
 # Exit the shell if the actual exit status of the most recent command is not the expected value.
-# If an error occurs, echo a message to both $LOG and STDOUT. The default expected value is 0, as 
+# If an error occurs, echo a message to both $LOG and STDOUT. The default expected value is 0, as
 # most command line utilities exit with status zero on success. A handful of commands do something
 # different.
 #
@@ -57,4 +73,26 @@ log() {
   local log=${LOG:-"build.log"}
   echo $*
   echo $* >> $log
+}
+
+# Really clean everything.
+#
+# Usage:
+#    clean
+clean() {
+  if [ -z "$SKIP_CLEAN" ] ; then
+    echo-do git clean -dfx
+  fi
+}
+
+# Double check the log file for failures. Exit with a parting message.
+#
+# Usage:
+#    warpup
+wrapup() {
+  # Sometimes tests fail and yet SBT exits with a good status.
+  egrep 'ABORTED|FAILED' build.log
+  expect-status 1 "Failures found in build.log"
+  echo "Build successful"
+  exit 0
 }

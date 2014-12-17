@@ -26,22 +26,11 @@
 # 2) Runs the periodic tests.
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SBT=$DIR/scripts/sbt
-LOG=$DIR/build.log
-
 . $DIR/scripts/build-functions.sh
 
-# Really clean everything.
-echo-do git clean -dfx
+clean
 
-# SBT has had trouble compiling, testing and assembling in one go. So we have broken the steps
-# into separate commands.
-echo-do scripts/sbt +test:compile
-echo-do scripts/sbt +periodic:test
+echo-do ${SBT} test:compile
+echo-do ${SBT} periodic:test
 
-# Sometimes tests fail and yet SBT exits with a good status.
-egrep 'ABORTED|FAILED' build.log
-expect-status 1 "Failures found in build.log"
-
-echo "Build successful"
-exit 0
+wrapup

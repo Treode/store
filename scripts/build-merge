@@ -18,28 +18,22 @@
 #
 # This script works with the Jenkins service. Jenkins triggers the build whenever there is a push
 # on a merge branch (that is a branch named 'merge/*'). It runs this script, and if it is
-# successful, then Jenkins merges the change into the master branch. This script produces a .tgz
-# file containing all files that need to be put on oss.treode.com.
+# successful, then Jenkins merges the change into the master branch. This script produces a
+# directory with everything that needs to be put on oss.treode.com.
 #
 # Specifically, this script
 # 1) Builds and tests the libraries for the Treode store.
 # 2) Publishes those libraries locally.
 # 3) Builds and tests the examples using the locally published libraries.
 # 4) Builds the Scala docs.
-# 5) Stages everything for the .tgz file, and then packages it.
+# 5) Stages everything in 'stage' for ftp to oss.
 #
-# Actually putting the files on oss.treode.com requires a password, so that has been left for a
-# person.
+# Actually putting the files on oss requires a password, so that has been left for a person.
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-: ${SBT:=${DIR}'/scripts/sbt'}
-: ${GRUNT:='grunt'}
-LOG=$DIR/build.log
-
 . $DIR/scripts/build-functions.sh
 
-# Really clean everything.
-echo-do git clean -dfx
+clean
 
 # Check that every version number is in sync across all build files.
 version=`scripts/version-number \
@@ -63,85 +57,80 @@ esac
 log "Building $version"
 
 #
-# Build and test.
+# Compile.
 #
 
-# SBT has had trouble compiling, testing and assembling in one go. So we have broken the steps
-# into separate commands.
-echo-do ${SBT} +test:compile
-echo-do ${SBT} +test
-echo-do ${SBT} +intensive:test
+# Compile, and also publish locally for the examples below.
+echo-do ${SBT} +test:compile +publish-local
 
-# Finatra and Twitter Server are available for Scala 2.10.4 only. The can be compiled and tested
-# in one go.
-echo-do ${SBT} ++2.10.4 twitter-server/test
+# Twitter Server and Spark are available for Scala 2.10 only.
+echo-do ${SBT} ++${SCALA_2_10} twitter-server/test:compile twitter-server/publish-local
 
-# Publish the Ivy artifacts to the local Ivy directory so that we can build and test the examples.
-echo-do ${SBT} publish-local
-echo-do ${SBT} ++2.10.4 publish-local twitter-server/publish-local
+# Skeleton examples.
+(cd examples/finagle; echo-do ${SBT} test:compile); expect-status 0
+(cd examples/finatra; echo-do ${SBT} test:compile); expect-status 0
+(cd examples/unfiltered; echo-do ${SBT} test:compile); expect-status 0
 
-# Build the Finagle example, which includes only a server.
-(cd examples/finagle; echo-do ${SBT} test assembly); expect-status 0
-
-# Build the Finatra example, which includes only a server.
-(cd examples/finatra; echo-do ${SBT} test assembly); expect-status 0
-
-# Build the Unfiltered example, which includes only a server.
-(cd examples/unfiltered; echo-do ${SBT} test assembly); expect-status 0
-
-# Build the Movies example, which includes a server, Spark connector, and web UI.
-# Package the web UI files into a tgz for the docker container.
-(cd examples/movies; echo-do ${SBT} test assembly); expect-status 0
-(cd examples/movies/webui; echo-do npm install --save); expect-status 0
+# Movies example; it has multiple components.
+(cd examples/movies; echo-do ${SBT} test:compile); expect-status 0
+(cd examples/movies/webui; echo-do ${NPM} install --save); expect-status 0
 (cd examples/movies/webui; echo-do ${GRUNT} dist); expect-status 0
 
-# Build the documentation.
-echo-do ${SBT} ++2.10.4 doc/unidoc
+# The documentation.
+echo-do ${SBT} ++${SCALA_2_10} doc/unidoc
+
+#
+# Test
+#
+
+echo-do ${SBT} ++${SCALA_2_11} test intensive:test
+echo-do ${SBT} ++${SCALA_2_10} twitter-server/test
+
+(cd examples/finagle; echo-do ${SBT} test); expect-status 0
+(cd examples/finatra; echo-do ${SBT} test); expect-status 0
+(cd examples/unfiltered; echo-do ${SBT} test); expect-status 0
+(cd examples/movies; echo-do ${SBT} test); expect-status 0
 
 #
 # Stage release.
 #
 
 # Ivy artifacts.
-echo-do ${SBT} publish
-echo-do ${SBT} ++2.10.4 publish twitter-server/publish
-
-# Documentation.
-echo-do mkdir -p stage/docs/scala/store
-echo-do mv doc/target/scala-2.10/unidoc stage/docs/scala/store/${version}
+echo-do ${SBT} +publish
+echo-do ${SBT} ++${SCALA_2_10} publish twitter-server/publish
 
 # Finagle example.
 STAGE_FINAGLE=stage/examples/finagle/${version}
+(cd examples/finagle; echo-do ${SBT} assembly); expect-status 0
 echo-do mkdir -p ${STAGE_FINAGLE}
 echo-do cp examples/finagle/target/scala-2.10/finagle-server.jar ${STAGE_FINAGLE}/finagle-server-${version}.jar
 
 # Finatra example.
 STAGE_FINATRA=stage/examples/finatra/${version}
+(cd examples/finatra; echo-do ${SBT} assembly); expect-status 0
 echo-do mkdir -p ${STAGE_FINATRA}
 echo-do cp examples/finatra/target/scala-2.10/finatra-server.jar ${STAGE_FINATRA}/finatra-server-${version}.jar
 
+# Unfiltered example.
+STAGE_UNFILTERED=stage/examples/unfiltered/${version}
+(cd examples/unfiltered; echo-do ${SBT} assembly); expect-status 0
+echo-do mkdir -p ${STAGE_UNFILTERED}
+echo-do cp examples/unfiltered/target/scala-2.10/unfiltered-server.jar ${STAGE_UNFILTERED}/unfiltered-server-${version}.jar
+
 # Movies example.
 STAGE_MOVIES=stage/examples/movies/${version}
+(cd examples/movies; echo-do ${SBT} assembly); expect-status 0
 echo-do mkdir -p ${STAGE_MOVIES}
 echo-do tar cz -f ${STAGE_MOVIES}/movies-ui-${version}.tgz -C examples/movies/webui/dist/ .
 echo-do cp examples/movies/server/target/scala-2.10/movies-server.jar ${STAGE_MOVIES}/movies-server-${version}.jar
 echo-do cp examples/movies/spark/target/scala-2.10/movies-spark.jar ${STAGE_MOVIES}/movies-spark-${version}.jar
 
-# Unfiltered example.
-STAGE_UNFILTERED=stage/examples/unfiltered/${version}
-echo-do mkdir -p ${STAGE_UNFILTERED}
-echo-do cp examples/unfiltered/target/scala-2.10/unfiltered-server.jar ${STAGE_FINATRA}/unfiltered-server-${version}.jar
-
-# Package the staging area into a tgz for easy distribution.
-echo-do tar cz -f stage-${version}.tgz -C stage .
+# Documentation.
+echo-do mkdir -p stage/docs/scala/store
+echo-do mv doc/target/scala-2.10/unidoc stage/docs/scala/store/${version}
 
 #
-# Wrapup.
+# Done
 #
 
-# Sometimes tests fail and yet SBT exits with a good status.
-egrep 'ABORTED|FAILED' build.log
-expect-status 1 "Failures found in build.log"
-
-echo "Build successful"
-exit 0
+wrapup
