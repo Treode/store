@@ -97,7 +97,7 @@ See the [Contributor Category][forum-contributor] of the [Online Forum][forum] f
 
 [cla-corporate]: https://treode.github.io/store/cla-corporate.html
 
-[build-status]: https://build.treode.com/buildStatus/icon?job=store-merges "Build Status"
+[build-status]: https://build.treode.com/job/store-merges/badge/icon "Build Status"
 
 [forum]: https://forum.treode.com "Forum for Treode Users and Developers"
 
