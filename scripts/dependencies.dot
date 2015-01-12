@@ -1,0 +1,15 @@
+// The dependencies image used here:
+//   https://forum.treode.com/t/building-and-testing-treode/30
+//
+// To generate the image, run:
+//   dot -Tpng dependencies.dot -o dependencies.png
+
+graph {
+    "twitter-server" -- {store, jackson};
+    jackson -- store;
+    store -- {cluster, disk};
+    disk -- {async, pickle};
+    cluster -- {async, pickle};
+    async -- buffer;
+    pickle -- buffer;
+}
