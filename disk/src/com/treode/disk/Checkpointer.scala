@@ -37,14 +37,14 @@ private class Checkpointer (kit: DiskKit) {
   private def reengage() {
     fanout (checkreqs) .pass (())
     checkreqs = List.empty
-    bytes = 0
-    entries = 0
     engaged = false
   }
 
   private def _checkpoint() {
     guard {
       engaged = true
+      bytes = 0
+      entries = 0
       for {
         marks <- drives.mark()
         _ <- checkpoints.checkpoint()
