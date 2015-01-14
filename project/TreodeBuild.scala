@@ -279,7 +279,7 @@ object TreodeBuild extends Build {
       scalacOptions in (ScalaUnidoc, unidoc) ++= Seq (
         "-diagrams",
         "-doc-title", "TreodeDB " + versionString,
-        "-doc-root-content", baseDirectory.value + "/doc/rootdoc.html"),
+        "-doc-root-content", "doc/rootdoc.html"),
 
       unidocConfigurationFilter in (ScalaUnidoc, unidoc) :=
         inConfigurations (Compile, Stub),
