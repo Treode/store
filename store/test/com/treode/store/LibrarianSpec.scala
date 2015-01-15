@@ -72,7 +72,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
     def rebalance (atlas: Atlas): Async [Unit] = {
       val active = atlas.cohorts (0) contains localId
       val moving = atlas.cohorts exists (_.moving)
-      when (active && moving) (rebalancer.add())
+      when (active && moving) (rebalancer.start())
     }
 
     val librarian = Librarian (rebalance _)
