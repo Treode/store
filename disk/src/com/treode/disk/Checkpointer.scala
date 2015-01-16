@@ -36,8 +36,11 @@ private class Checkpointer (kit: DiskKit) {
 
   private def reengage() {
     fanout (checkreqs) .pass (())
-    checkreqs = List.empty
-    engaged = false
+    if (config.checkpoint (this.bytes, this.entries))
+      _checkpoint()
+    else
+      checkreqs = List.empty
+      engaged = false
   }
 
   private def _checkpoint() {
