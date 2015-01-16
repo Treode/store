@@ -216,12 +216,14 @@ private class DiskDrive (
   }
 
   private def writeRecords (buf: PagedBuffer, batch: Long, entries: Seq [PickledRecord]) = {
+    val start = buf.writePos
     val callbacks = new UnrolledBuffer [Callback [Unit]]
     for (entry <- entries) {
       entry.write (batch, buf)
       callbacks.add (entry.cb)
     }
-    callbacks
+    val end = buf.writePos
+    (callbacks, end - start)
   }
 
   private def reallocRecords(): Async [Unit] = {
@@ -272,9 +274,9 @@ private class DiskDrive (
 
       val (accepts, rejects, realloc) = splitRecords (entries)
       logmp.replace (rejects)
-      val callbacks = writeRecords (logBuf, batch, accepts)
+      val (callbacks, length) = writeRecords (logBuf, batch, accepts)
       val cb = fanout (callbacks)
-      checkpointer.tally (logBuf.readableBytes, accepts.size)
+      checkpointer.tally (length, accepts.size)
 
       if (realloc)
         reallocRecords() run cb
@@ -405,7 +407,7 @@ private object DiskDrive {
             SuperBlock.clear (boot.gen + 1, file),
             RecordHeader.init (file, geom, logSeg.base))
       } yield {
-        new DiskDrive (id, path, file, geom, alloc, kit, logBuf, false, logSegs, logSeg.base, 
+        new DiskDrive (id, path, file, geom, alloc, kit, logBuf, false, logSegs, logSeg.base,
             logSeg.base, logSeg.limit, pageSeg, pageSeg.limit, new PageLedger, true)
        }}
 

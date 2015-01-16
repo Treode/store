@@ -16,53 +16,45 @@
 
 package com.treode.async.stubs
 
+import java.util.ArrayDeque
+
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 
 import Async.async
 import Callback.fanout
 
-/** Capture an asynchronous call so it may be completed later.
-  *
-  * You may `start` an asynchronous operation once; if you are mocking a method that is called
-  * multiple times, return a new `AsyncCaptor` for each call.  You may not call `pass` or `fail`
-  * until after  `start`.
-  *
-  * This class is most easily used with the single-threaded
-  * [[com.treode.async.stubs.StubScheduler StubScheduler]].  If you are using a multithreaded
-  * scheduler, you must arrange that `start` happens-before `pass` or `fail`.
-  */
-class AsyncCaptor [A] private (implicit scheduler: Scheduler) {
+/** Capture an asynchronous call so you may be completed later. */
+class AsyncCaptor [A] private (implicit scheduler: StubScheduler) {
 
-  private var cbs = List.empty [Callback [A]]
+  private val cbs = new ArrayDeque [Callback [A]]
 
+  def outstanding: Int = cbs.size
+
+  /** Simulate a call to an asynchronous function. Returns an Async to the caller that can be
+    * completed later using `pass` or `fail`. Multiple calls to start are queued (FIFO).
+    */
   def start(): Async [A] =
     async { cb =>
-      require (cbs.isEmpty, "An async is already outstanding.")
-      cbs ::= cb
+      cbs.add (cb)
     }
 
-  def add(): Async [A] =
-    async { cb =>
-      cbs ::= cb
-    }
-
+  /** Pass the next asynchronous function that was started earlier. */
   def pass (v: A) {
-    require (!cbs.isEmpty)
-    val cb = fanout (cbs)
-    cbs = List.empty
-    cb.pass (v)
+    require (!cbs.isEmpty, "No outstanding asynchronous calls.")
+    cbs.remove.pass (v)
+    scheduler.run()
   }
 
+  /** Fail the next asynchronous function that was started earlier. */
   def fail (t: Throwable) {
-    require (!cbs.isEmpty)
-    val cb = fanout (cbs)
-    cbs = List.empty
-    cb.fail (t)
+    require (!cbs.isEmpty, "No outstanding asynchronous calls.")
+    cbs.remove.fail (t)
+    scheduler.run()
   }}
 
 object AsyncCaptor {
 
-  def apply [A] (implicit scheduler: Scheduler): AsyncCaptor [A] =
+  def apply [A] (implicit scheduler: StubScheduler): AsyncCaptor [A] =
     new AsyncCaptor [A]
 }
