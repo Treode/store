@@ -22,7 +22,7 @@ import scala.util.Random
 import com.treode.async._
 import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.{AsyncCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.disk.stubs.CrashChecks
 import com.treode.pickle.{InvalidTagException, Picklers}
@@ -224,4 +224,36 @@ class LogSpec extends FlatSpec with CrashChecks {
           disk.checkpoint(),
           disk.checkpoint()) .expectPass()
       assert (checkpointed, "Expected a checkpoint")
-    }}}
+    }}
+
+  it should "restart a checkpoint after a crash" taggedAs (Periodic) in {
+    forAllSeeds { implicit random =>
+
+      var file: StubFile = null
+
+      // Record a few log entries.
+      {
+        implicit val scheduler = StubScheduler.random()
+        file = StubFile (1<<20, geom.blockBits)
+        implicit val recovery = Disk.recover()
+        implicit val disk = recovery.attachAndLaunch (("a", file, geom))
+        records.str.record ("one") .expectPass()
+        records.str.record ("two") .expectPass()
+        records.str.record ("three") .expectPass()
+      }
+
+      // Restart with a low threshold, replays should trigger a checkpoint.
+      {
+        implicit val config = DiskTestConfig (checkpointEntries = 1)
+        val captor = AsyncCaptor [Unit]
+
+        implicit val scheduler = StubScheduler.random()
+        file = StubFile (file.data, geom.blockBits)
+        implicit val recovery = Disk.recover()
+        records.str.replay (_ => ())
+        val launch = recovery.reattachAndWait (("a", file)) .expectPass()
+        launch.checkpoint (captor.start())
+        launch.launch()
+        scheduler.run()
+        assertResult (1) (captor.outstanding)
+      }}}}
