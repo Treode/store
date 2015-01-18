@@ -48,33 +48,52 @@ class PagedBufferSpec extends FlatSpec {
   capacity (64, 2)
   capacity (65, 3)
 
-  def discard (nbytes: Int, npages: Int) {
-    it should (s"discard the right pages for nbytes=$nbytes") in {
+  def discard (nbytes: Int, npages: Int, wbytes: Int, rbytes: Int, dbytes: Int) {
+    it should (s"discard the right pages for nbytes=$nbytes and must return the right number of bytes discarded") in {
       val buffer = PagedBuffer (pageBits)
       buffer.writePos  = (4 << pageBits) - 1
       buffer.readPos = nbytes
       val before = (Seq (buffer.pages: _*), buffer.writePos, buffer.readPos)
-      buffer.discard (nbytes)
+      val disc = buffer.discard (nbytes)
       assertResult ((4 - npages) << pageBits) (buffer.capacity)
       val after = (Seq (buffer.pages: _*), buffer.writePos, buffer.readPos)
       for (i <- 0 until before._1.length - npages)
         assert (before._1 (i + npages) == after._1 (i))
       for (i <- before._1.length - npages until after._1.length)
         assert (after._1 (i) == null)
+
       assertResult (before._2 - pageSize * npages) (after._2)
       assertResult (before._3 - pageSize * npages) (after._3)
+      assertResult ((4 << pageBits) - 1 - buffer.writePos) (disc)
+
+      //Return value assertion added
+      assertResult (nbytes - buffer.readPos) (disc)
+
+      val buffer2 = PagedBuffer (pageBits)
+      buffer2.writePos  = wbytes
+      buffer2.readPos = rbytes
+      val discarded = buffer2.discard (dbytes)
+      val newreadpos = buffer2.readPos
+      val newwritepos = buffer2.writePos
+      
+      //Asserting if the wpos and rpos are shifted by the number of bytes
+      //discarded
+      assertResult (wbytes - newwritepos) (discarded)
+      assertResult (rbytes - newreadpos) (discarded)
+
     }}
 
   behavior of "PagedBuffer.discard"
-  discard (0, 0)
-  discard (7, 0)
-  discard (31, 0)
-  discard (32, 1)
-  discard (39, 1)
-  discard (63, 1)
-  discard (64, 2)
-  discard (71, 2)
-  discard (96, 3)
+  discard (0, 0, 0, 0, 0)
+  discard (7, 0, 6, 5, 5)
+  discard (31, 0, 32, 31, 0)
+  discard (32, 1, 32, 31, 1)
+  discard (39, 1, 66, 39, 1)
+  discard (63, 1, 126, 63, 1)
+  discard (64, 2, 64, 64, 2)
+  discard (71, 2, 512, 71, 2)
+  discard (73, 2, 517, 517, 517)
+  discard (96, 3, 1024, 96, 3)
 
   def buffer (sbyte: Int, nbytes: Int, page: Int, first: Int, last: Int) {
     it should (s"yield the right range for sbyte=$sbyte, nbytes=$nbytes") in {
@@ -405,4 +424,12 @@ class PagedBufferSpec extends FlatSpec {
       val buffer = PagedBuffer (3)
       buffer.writeString (x)
       assertResult (x) (buffer.readString())
-    }}}
+    }}
+  
+  //New Tests
+  /*it should "return the number of bytes discarded" in {
+      forAll ("x") { x: String =>
+        val buffer = PagedBuffer (3)
+        buffer.writeString (x)}
+    }*/
+  }

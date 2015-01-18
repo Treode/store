@@ -55,10 +55,11 @@ class PagedBuffer private (val pageBits: Int) extends Buffer {
     rpos = 0
   }
 
-  def discard (length: Int) {
+  def discard (length: Int): Int = {
     require (length <= readPos)
     if (length == writePos) {
       clear()
+      return length;
     } else {
       val ndiscard = length >> pageBits
       val nkeep = limit - ndiscard
@@ -71,7 +72,9 @@ class PagedBuffer private (val pageBits: Int) extends Buffer {
       limit = limit - ndiscard
       woff = woff - ndiscard * pageSize
       roff = roff - ndiscard * pageSize
-    }}
+      return ndiscard * pageSize;
+    }
+    }
 
   def capacity: Int = limit << pageBits
 
