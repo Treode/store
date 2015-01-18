@@ -29,12 +29,19 @@ private class Allocator private (private var _free: IntSet) {
     segmentBounds (num, geometry, config)
   }
 
+  def alloc (num: Int, geometry: DriveGeometry, config: Disk.Config): SegmentBounds = {
+    _free = _free.remove (num)
+    segmentBounds (num, geometry, config)
+  }
+  
+  /*
   def alloc (num: Int, geometry: DriveGeometry, config: Disk.Config): (SegmentBounds, Boolean) = {
     val alreadyAlloced = !_free.contains(num)
     _free = _free.remove (num)
     (segmentBounds (num, geometry, config), alreadyAlloced)
   }
-
+  */
+  
   def free (nums: IntSet): Unit =
     _free = _free.add (nums)
 
