@@ -313,7 +313,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         .recover { implicit scheduler =>
           file = StubFile (file.data, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val disk = recovery.reattachAndLaunch (("a", file))
+          implicit val launch = recovery.reattachAndWait (("a", file)) .expectPass()
+          import launch.disk
+          tracker.attach()
+          launch.launchAndPass()
           tracker.check()
         }}}
 
@@ -343,7 +346,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         .recover { implicit scheduler =>
           file = StubFile (file.data, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val disk = recovery.reattachAndLaunch (("a", file))
+          implicit val launch = recovery.reattachAndWait (("a", file)) .expectPass()
+          import launch.disk
+          tracker.attach()
+          launch.launchAndPass()
           tracker.check()
         }}}
 
@@ -382,10 +388,13 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file2 = StubFile (file2.data, geom.blockBits)
           file3 = StubFile (file3.data, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val disk = recovery.reattachAndLaunch (
+          implicit val launch = recovery.reattachAndWait (
               ("a", file1),
               ("b", file2),
-              ("c", file3))
+              ("c", file3)) .expectPass()
+          import launch.disk
+          tracker.attach()
+          launch.launchAndPass()
           tracker.check()
         }}}
 
@@ -423,7 +432,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file1 = StubFile (file1.data, geom.blockBits)
           file2 = StubFile (file2.data, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val disk = recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2))
+          implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .expectPass()
+          import launch.disk
+          tracker.attach()
+          launch.launchAndPass()
           tracker.check()
         }}}
 
