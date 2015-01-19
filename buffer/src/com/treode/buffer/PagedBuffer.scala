@@ -70,9 +70,10 @@ class PagedBuffer private (val pageBits: Int) extends Buffer {
         i += 1
       }
       limit = limit - ndiscard
-      woff = woff - ndiscard * pageSize
-      roff = roff - ndiscard * pageSize
-      return ndiscard * pageSize;
+      val discarded = ndiscard * pageSize
+      woff = woff - discarded
+      roff = roff - discarded
+      return discarded
     }
     }
 

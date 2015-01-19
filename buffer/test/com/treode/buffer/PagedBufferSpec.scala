@@ -48,52 +48,65 @@ class PagedBufferSpec extends FlatSpec {
   capacity (64, 2)
   capacity (65, 3)
 
-  def discard (nbytes: Int, npages: Int, wbytes: Int, rbytes: Int, dbytes: Int) {
-    it should (s"discard the right pages for nbytes=$nbytes and must return the right number of bytes discarded") in {
+  def discard (nbytes: Int, rbytes: Int, wbytes: Int, npages: Int) {
+    it should (s"discard the right pages for nbytes=$nbytes, rbytes=$rbytes, wbytes=$wbytes") in {
       val buffer = PagedBuffer (pageBits)
-      buffer.writePos  = (4 << pageBits) - 1
-      buffer.readPos = nbytes
+      buffer.writePos = wbytes
+      buffer.readPos = rbytes
+      val initpages = buffer.capacity >> pageBits;
+
       val before = (Seq (buffer.pages: _*), buffer.writePos, buffer.readPos)
-      val disc = buffer.discard (nbytes)
-      assertResult ((4 - npages) << pageBits) (buffer.capacity)
+      val discarded = buffer.discard (nbytes)
       val after = (Seq (buffer.pages: _*), buffer.writePos, buffer.readPos)
-      for (i <- 0 until before._1.length - npages)
-        assert (before._1 (i + npages) == after._1 (i))
-      for (i <- before._1.length - npages until after._1.length)
-        assert (after._1 (i) == null)
 
-      assertResult (before._2 - pageSize * npages) (after._2)
-      assertResult (before._3 - pageSize * npages) (after._3)
-      assertResult ((4 << pageBits) - 1 - buffer.writePos) (disc)
-
-      //Return value assertion added
-      assertResult (nbytes - buffer.readPos) (disc)
-
-      val buffer2 = PagedBuffer (pageBits)
-      buffer2.writePos  = wbytes
-      buffer2.readPos = rbytes
-      val discarded = buffer2.discard (dbytes)
-      val newreadpos = buffer2.readPos
-      val newwritepos = buffer2.writePos
+      //Calculating the number of bytes discarded manually
+      val expectedDiscard = (if (nbytes == wbytes) (nbytes) else (npages * pageSize))
       
-      //Asserting if the wpos and rpos are shifted by the number of bytes
-      //discarded
-      assertResult (wbytes - newwritepos) (discarded)
-      assertResult (rbytes - newreadpos) (discarded)
+      //Checking if the right number of bytes are discarded
+      assertResult (discarded) (expectedDiscard)  
+      
+      //Checking if writePos and readPos get shifted by 'expectedDiscard'
+      assertResult (after._2) (before._2 - expectedDiscard) 
+      assertResult (after._3) (before._3 - expectedDiscard) 
 
-    }}
+      //We have a separate case when the 2 quantities below are not equal in the discard function
+      if (nbytes != wbytes) {
+
+        //Checking if the right number of pages are discarded
+        assertResult (buffer.capacity) ((initpages - npages) << pageBits)
+        
+        //Checking if the pages are shifted properly
+        for (i <- 0 until before._1.length - npages)
+          assert (before._1 (i + npages) == after._1 (i))
+        for (i <- before._1.length - npages until after._1.length)
+          assert (after._1 (i) == null)
+      }
+  }}
 
   behavior of "PagedBuffer.discard"
-  discard (0, 0, 0, 0, 0)
-  discard (7, 0, 6, 5, 5)
-  discard (31, 0, 32, 31, 0)
-  discard (32, 1, 32, 31, 1)
-  discard (39, 1, 66, 39, 1)
-  discard (63, 1, 126, 63, 1)
-  discard (64, 2, 64, 64, 2)
-  discard (71, 2, 512, 71, 2)
-  discard (73, 2, 517, 517, 517)
-  discard (96, 3, 1024, 96, 3)
+  //Page size is 32 bytes
+  //Testing for 0 pages removals
+  discard (0, 0, 0, 0)//consistency check
+  discard (0, 0, 2, 0)
+  discard (0, 3, 3, 0)
+  discard (0, 512, 1024, 0)
+  discard(31, 31, 31, 0)//trying to remove quantity just less than 1 page size
+  discard(31, 31, 32, 0)
+  discard(31, 32, 32, 0)
+  discard(31, 32, 33, 0)
+  //Testing for 1 page removals
+  discard(32, 32, 32, 1)//removing exactly one page
+  discard(32, 32, 33, 1)
+  discard(32, 33, 33, 1)
+  discard(32, 33, 36, 1)
+  discard(37, 43, 66, 1)
+  discard(49, 53, 69, 1)
+  discard(63, 63, 63, 1)//random tests
+  //Testing for more than 1 page removals
+  discard(95, 96, 96, 2)
+  discard(128, 128, 128, 4)
+  discard(128, 161, 194, 4)
+  
 
   def buffer (sbyte: Int, nbytes: Int, page: Int, first: Int, last: Int) {
     it should (s"yield the right range for sbyte=$sbyte, nbytes=$nbytes") in {
@@ -426,10 +439,4 @@ class PagedBufferSpec extends FlatSpec {
       assertResult (x) (buffer.readString())
     }}
   
-  //New Tests
-  /*it should "return the number of bytes discarded" in {
-      forAll ("x") { x: String =>
-        val buffer = PagedBuffer (3)
-        buffer.writeString (x)}
-    }*/
   }
