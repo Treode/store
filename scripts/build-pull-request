@@ -60,6 +60,11 @@ echo-do ${SBT} test intensive:test
 (cd examples/unfiltered; echo-do ${SBT} test); expect-status 0
 (cd examples/movies; echo-do ${SBT} test); expect-status 0
 
+
+#set NSEEDS
+NSEEDS=10
+
+
 #
 # Done.
 #

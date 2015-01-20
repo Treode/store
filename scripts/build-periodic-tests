@@ -33,4 +33,7 @@ clean
 echo-do ${SBT} test:compile
 echo-do ${SBT} periodic:test
 
+#set NSEEDS
+NSEEDS=100
+
 wrapup
