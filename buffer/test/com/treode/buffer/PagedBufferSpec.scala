@@ -63,23 +63,29 @@ class PagedBufferSpec extends FlatSpec {
       val expectedDiscard = (if (nbytes == wbytes) (nbytes) else (npages * pageSize))
       
       //Checking if the right number of bytes are discarded
-      assertResult (discarded) (expectedDiscard)  
+      assertResult (expectedDiscard) (discarded)  
       
       //Checking if writePos and readPos get shifted by 'expectedDiscard'
-      assertResult (after._2) (before._2 - expectedDiscard) 
-      assertResult (after._3) (before._3 - expectedDiscard) 
+      assertResult (expectedDiscard) (before._2 - after._2) 
+      assertResult (expectedDiscard) (before._3 - after._3) 
 
-      //We have a separate case when the 2 quantities below are not equal in the discard function
+      //We have separate cases depending on whether the 2 quantities below are
+      //equal or not equal in the discard function
       if (nbytes != wbytes) {
 
         //Checking if the right number of pages are discarded
-        assertResult (buffer.capacity) ((initpages - npages) << pageBits)
+        assertResult (npages) (initpages - ((buffer.capacity) >> pageBits))
         
         //Checking if the pages are shifted properly
         for (i <- 0 until before._1.length - npages)
           assert (before._1 (i + npages) == after._1 (i))
         for (i <- before._1.length - npages until after._1.length)
           assert (after._1 (i) == null)
+      }
+      else {
+        //Checking if the writePos and readPos are reset
+        assert (after._2 == 0)
+        assert (after._3 == 0)
       }
   }}
 
@@ -106,6 +112,13 @@ class PagedBufferSpec extends FlatSpec {
   discard(95, 96, 96, 2)
   discard(128, 128, 128, 4)
   discard(128, 161, 194, 4)
+  discard(255, 255, 255, 7)
+  //Testing for more than 8 (InitPages) pages
+  discard(256, 256, 256, 8)
+  discard(256, 257, 259, 8)
+  discard(511, 512, 512, 15)
+  discard(512, 512, 512, 16)
+  discard(512, 530, 720, 16)
   
 
   def buffer (sbyte: Int, nbytes: Int, page: Int, first: Int, last: Int) {
