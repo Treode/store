@@ -51,8 +51,8 @@ private class LogIterator private (
   private var logPos = superb.logHead
   private var pagePos = Option.empty [Long]
   private var pageLedger = new PageLedger
-  var checkpointer = kit.checkpointer;
-  var compactor = kit.compactor;
+  //var checkpointer = kit.checkpointer;
+  //var compactor = kit.compactor;
 
   class Batch (f: Iterator [(Long, Unit => Any)] => Async [Unit], cb: Callback [Unit]) {
 
@@ -81,9 +81,9 @@ private class LogIterator private (
           scheduler.pass (cb, ())
 
         case LogAlloc (next) =>
-          logSeg = alloc.alloc (next, geom, config)
-          //val (logSeg, alreadyAlloced) = alloc.alloc (next, geom, config)
-          // todo if (!alreadyAlloced) {
+          // todo logSeg = alloc.alloc (next, geom, config)
+          val (logSeg, alreadyAlloced) = alloc.alloc (next, geom, config)
+          //if (!alreadyAlloced) {
           //compactor.tally(1);
           //}
           logSegs.add (logSeg.num)
@@ -93,8 +93,8 @@ private class LogIterator private (
 
         case PageWrite (pos, _ledger) =>
           val num = segmentNum (pos) 
-          alloc.alloc (num, geom, config)
-          // todo val (_, alreadyAlloced) = alloc.alloc (num, geom, config)
+          //alloc.alloc (num, geom, config)
+          val (_, alreadyAlloced) = alloc.alloc (num, geom, config)
           //if (!alreadyAlloced) {
           //compactor.tally(1)
           //}
@@ -105,9 +105,9 @@ private class LogIterator private (
           file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case PageClose (num) =>
-          alloc.alloc (num, superb.geometry, config)
-          //val (_, alreadyAlloced) = alloc.alloc (num, superb.geometry, config)
-          //todo if (!alreadyAlloced) {
+          // todo alloc.alloc (num, superb.geometry, config)
+          val (_, alreadyAlloced) = alloc.alloc (num, superb.geometry, config)
+          //if (!alreadyAlloced) {
           //compactor.tally(1)
           //}
           pagePos = None
@@ -124,9 +124,9 @@ private class LogIterator private (
 
         case Checkpoint (pos, _ledger) =>
           val num = segmentNum (pos - 1)
-          alloc.alloc (num, superb.geometry, config)
-          // todo val (_, alreadyAlloced) = alloc.alloc (num, superb.geometry, config)
-          // todo if (!alreadyAlloced) {
+          // todo alloc.alloc (num, superb.geometry, config)
+          val (_, alreadyAlloced) = alloc.alloc (num, superb.geometry, config)
+          //if (!alreadyAlloced) {
           //compactor.tally(1)
           //}
           pagePos = Some (pos)
@@ -165,9 +165,9 @@ private class LogIterator private (
         (seg, -1L, new PageLedger, false)
       case Some (pos) =>
         val num = segmentNum (pos - 1)
-        val seg = alloc.alloc (num, geom, config)
-        // todo val (seg, alreadyAlloced) = alloc.alloc (num, geom, config)
-        // todo if (!alreadyAlloced) {
+        // todo val seg = alloc.alloc (num, geom, config)
+        val (seg, alreadyAlloced) = alloc.alloc (num, geom, config)
+        //if (!alreadyAlloced) {
         //compactor.tally(1)
         //}
         (seg, pos, pageLedger, true)
@@ -205,8 +205,8 @@ private object LogIterator {
     val geom = superb.geometry
     val alloc = Allocator (superb.free)
     val num = geom.segmentNum (superb.logHead)
-    val logSeg = alloc.alloc (num, geom, config)
-    // todo val (logSeg, _) = alloc.alloc (num, geom, config)
+    // todo val logSeg = alloc.alloc (num, geom, config)
+    val (logSeg, _) = alloc.alloc (num, geom, config)
     val logSegs = new ArrayDeque [Int]
     logSegs.add (logSeg.num)
     val buf = PagedBuffer (geom.blockBits)

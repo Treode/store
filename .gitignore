@@ -2,7 +2,6 @@
 *.jar
 .cache
 .classpath
-.DS_Store
 .history
 .idea
 .idea_modules
