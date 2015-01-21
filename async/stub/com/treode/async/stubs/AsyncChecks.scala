@@ -25,13 +25,7 @@ import org.scalatest.{Informing, Suite}
 trait AsyncChecks {
   this: Suite with Informing =>
 
-  /** The value of `TEST_INTENSITY` from the environment, or `std` if the environment has no
-    * setting for that.
-    */
-  val intensity: String = {
-    val env = System.getenv ("TEST_INTENSITY")
-    if (env == null) "std" else env
-  }
+  
 
   /** The number of seeds is parsed from the environment if it is set
     * otherwise 1

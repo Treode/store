@@ -61,7 +61,7 @@ echo-do ${SBT} test intensive:test
 (cd examples/movies; echo-do ${SBT} test); expect-status 0
 
 
-#set NSEEDS
+#Number of seeds for pseudo-random tests
 NSEEDS=10
 
 

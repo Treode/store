@@ -127,7 +127,7 @@ echo-do cp examples/movies/spark/target/scala-2.10/movies-spark.jar ${STAGE_MOVI
 echo-do mkdir -p stage/docs/scala/store
 echo-do mv doc/target/scala-2.11/unidoc stage/docs/scala/store/${version}
 
-#set NSEEDS
+#Number of seeds for pseudo-random tests
 NSEEDS=10
 
 

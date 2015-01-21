@@ -33,7 +33,7 @@ clean
 echo-do ${SBT} test:compile
 echo-do ${SBT} periodic:test
 
-#set NSEEDS
+#Number of seeds for pseudo-random tests
 NSEEDS=100
 
 wrapup
