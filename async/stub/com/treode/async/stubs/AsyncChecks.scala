@@ -25,22 +25,15 @@ import org.scalatest.{Informing, Suite}
 trait AsyncChecks {
   this: Suite with Informing =>
 
-  /** The value of `TEST_INTENSITY` from the environment, or `std` if the environment has no
-    * setting for that.
-    */
-  val intensity: String = {
-    val env = System.getenv ("TEST_INTENSITY")
-    if (env == null) "std" else env
-  }
+  
 
-  /** The number of seeds tried in `forAllSeeds`.  1 when when `intensity` is `dev` and 100
-    * otherwise.
+  /** The number of seeds is parsed from the environment if it is set
+    * otherwise 1
     */
-  val nseeds =
-    intensity match {
-      case "dev" => 1
-      case _ => 100
-    }
+  val nseeds: Int = {
+    val envseeds = System.getenv("NSEEDS")
+    if (envseeds == null) 1 else Integer.parseInt(envseeds)
+  }
 
   /** Run the test with a PRNG seeded by `seed`. */
   def forSeed (seed: Long) (test: Random => Any) {

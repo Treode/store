@@ -30,7 +30,12 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 clean
 
+
+#Number of seeds for pseudo-random tests
+export NSEEDS=100
+
 echo-do ${SBT} test:compile
 echo-do ${SBT} periodic:test
+
 
 wrapup

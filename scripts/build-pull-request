@@ -30,6 +30,10 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 clean
 
+
+#Number of seeds for pseudo-random tests
+export NSEEDS=10
+
 #
 # Compile.
 #
@@ -59,6 +63,9 @@ echo-do ${SBT} test intensive:test
 #(cd examples/finatra; echo-do ${SBT} test); expect-status 0
 (cd examples/unfiltered; echo-do ${SBT} test); expect-status 0
 (cd examples/movies; echo-do ${SBT} test); expect-status 0
+
+
+
 
 #
 # Done.
