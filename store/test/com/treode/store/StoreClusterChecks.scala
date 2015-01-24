@@ -349,19 +349,58 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ) {
     val seed = Random.nextLong()
+    
     val countWith1 = for1host (seed) (init)
     val countWith3 = for3hosts (seed) (init)
     val countWith8 = for8hosts (seed) (init)
     val countWith3Offline1 = for3with1offline (seed) (init)
+    
     val targetWith3Crashing1 = target(countWith3)
     val countWith3Crashing1 = for3with1crashing (seed, countWith3, targetWith3Crashing1) (init)
     for3with1rebooting (seed, countWith3Offline1, target(countWith3Offline1)) (init)
     for3with1bouncing (seed, targetWith3Crashing1, target(countWith3Crashing1)) (init)
+    
     for1to1 (seed, countWith1, target(countWith1)) (init)
+    
     val targetWith1to3 = target(countWith1)
     val countWith1to3 = for1to3 (seed, countWith1, targetWith1to3) (init)
     for1to3with1bouncing (seed, targetWith1to3, target(countWith1to3)) (init)
-    for3replacing1 (seed, countWith3, target(countWith3)) (init)
+    
+    val targetWith3replacing1 = target(countWith3)
+    val countWith3replacing1 = for3replacing1 (seed, countWith3, targetWith3replacing1) (init)
+    for3replacing1withSourceBouncing (seed, targetWith3replacing1, target(countWith3replacing1)) (init)
+    
+    val targetWith3replacing1Target = target(countWith3)
+    val countWith3replacing1Target = for3replacing1 (seed, countWith3, targetWith3replacing1Target) (init)
+    for3replacing1withTargetBouncing (seed, targetWith3replacing1Target, target(countWith3replacing1Target)) (init)
+    
+    val targetWith3replacing1Common = target(countWith3)
+    val countWith3replacing1Common = for3replacing1 (seed, countWith3, targetWith3replacing1Common) (init)
+    for3replacing1withCommonBouncing (seed, targetWith3replacing1Common, target(countWith3replacing1Common)) (init)
+    
+    val targetWith3replacing2 = target(countWith3)
+    val countWith3replacing2 = for3replacing2 (seed, countWith3, targetWith3replacing2) (init)
+    for3replacing2withSourceBouncing (seed, targetWith3replacing2, target(countWith3replacing2)) (init)
+    
+    val targetWith3replacing2Target = target(countWith3)
+    val countWith3replacing2Target = for3replacing1 (seed, countWith3, targetWith3replacing2Target) (init)
+    for3replacing2withTargetBouncing (seed, targetWith3replacing2Target, target(countWith3replacing2Target)) (init)
+    
+    val targetWith3replacing2Common = target(countWith3)
+    val countWith3replacing2Common = for3replacing1 (seed, countWith3, targetWith3replacing2Common) (init)
+    for3replacing2withCommonBouncing (seed, targetWith3replacing2Common, target(countWith3replacing2Common)) (init)
+    
+    val targetWith3to3 = target(countWith3)
+    val countWith3to3 = for3to3 (seed, countWith3, targetWith3to3) (init)
+    for3to3withSourceBouncing (seed, targetWith3to3, target(countWith3to3)) (init)
+    
+    val targetWith3to3Target = target(countWith3)
+    val countWith3to3Target = for3to3 (seed, countWith3, targetWith3to3Target) (init)
+    for3to3withTargetBouncing (seed, targetWith3to3Target, target(countWith3to3Target)) (init)
+    
+    for3to8 (seed, countWith3, target(countWith3)) (init)
+    
+    for8to3 (seed, countWith8, target(countWith8)) (init)
   }
   
   private def target (n: Int): Int = {
