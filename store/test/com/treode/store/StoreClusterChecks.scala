@@ -342,7 +342,32 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       } finally {
         executor.shutdown()
       }}}
-
+  
+  def forVariousClusterConfigs [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val seed = Random.nextLong()
+    val countWith1 = for1host (seed) (init)
+    val countWith3 = for3hosts (seed) (init)
+    val countWith8 = for8hosts (seed) (init)
+    val countWith3Offline1 = for3with1offline (seed) (init)
+    val targetWith3Crashing1 = target(countWith3)
+    val countWith3Crashing1 = for3with1crashing (seed, countWith3, targetWith3Crashing1) (init)
+    for3with1rebooting (seed, countWith3Offline1, target(countWith3Offline1)) (init)
+    for3with1bouncing (seed, targetWith3Crashing1, target(countWith3Crashing1)) (init)
+    for1to1 (seed, countWith1, target(countWith1)) (init)
+    val targetWith1to3 = target(countWith1)
+    val countWith1to3 = for1to3 (seed, countWith1, targetWith1to3) (init)
+    for1to3with1bouncing (seed, targetWith1to3, target(countWith1to3)) (init)
+    for3replacing1 (seed, countWith3, target(countWith3)) (init)
+  }
+  
+  private def target (n: Int): Int = {
+    Random.nextInt (n - 1) + 1
+  }
+  
   private def forSeeds (test: Long => Any): Long = {
     val start = System.currentTimeMillis
     for (_ <- 0 until nseeds)
