@@ -26,6 +26,7 @@ import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
+import com.treode.async.implicits._
 import org.scalatest.Assertions
 
 import Assertions.assertResult
@@ -131,7 +132,7 @@ private object DiskTestTools {
     private def tickle [M] (dispatcher: Dispatcher [M]) (
         implicit tag: ClassTag [M], scheduler: StubScheduler): Int = {
       while (!dispatcher.receivers.isEmpty)
-        dispatcher.receivers.remove () (0L, new UnrolledBuffer [M])
+        dispatcher.receivers.remove().pass ((0L, new UnrolledBuffer [M]))
       scheduler.run()
     }
 

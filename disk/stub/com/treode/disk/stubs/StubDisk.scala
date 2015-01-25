@@ -49,7 +49,7 @@ private class StubDisk (
   }
 
   def receiver (batch: Long, records: UnrolledBuffer [(StubRecord, Callback [Unit])]) {
-    logd.replace (new UnrolledBuffer)
+    logd.send (new UnrolledBuffer [(StubRecord, Callback [Unit])])
     val cb = fanout (records .map (_._2))
     disk.log (records .map (_._1) .toSeq) .run { v =>
       logd.receive (receiver _)
