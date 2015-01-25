@@ -28,15 +28,9 @@ private class Allocator private (private var _free: IntSet) {
     _free = _free.remove (num)
     segmentBounds (num, geometry, config)
   }
-
-  /*
-  def alloc (num: Int, geometry: DriveGeometry, config: Disk.Config): SegmentBounds = {
-    _free = _free.remove (num)
-    segmentBounds (num, geometry, config)
-  }
-  */
   
   def alloc (num: Int, geometry: DriveGeometry, config: Disk.Config): (SegmentBounds, Boolean) = {
+    // Reporting if we alloc the same num more than once
     var alreadyAlloced = !_free.contains(num)
     _free = _free.remove (num)
     (segmentBounds (num, geometry, config), alreadyAlloced)

@@ -81,9 +81,11 @@ private class LogIterator private (
           scheduler.pass (cb, ())
 
         case LogAlloc (next) =>
+          // Using logSegVal to avoid shadowing logSeg
           val (logSegVal, alreadyAlloced) = alloc.alloc (next, geom, config)
           logSeg = logSegVal
           if (!alreadyAlloced) {
+            // Only counting new locations, not already alloced locations
             compactor.tally(1);
           }
           logSegs.add (logSeg.num)
@@ -100,6 +102,7 @@ private class LogIterator private (
           pagePos = Some (pos)
           pageLedger.add (_ledger)
           logPos += len + 4
+          // Counting updates to the log position (logPos)
           checkpointer.tally(len + 4, 1)
           file.deframe (logBuf, logPos, blockBits) run (_read)
 
@@ -237,6 +240,7 @@ private object LogIterator {
 
     var kit = new DiskKit (boot.sysid, logBatch)
     for {
+      // Using DiskKit in LogIterator to tally with Checkpointer and Compactor
       logs <- reads.latch.map foreach (apply (useGen0, _, records, kit))
       iter = BatchIterator.merge (logs.values.toSeq) (ordering, scheduler)
       _ <- iter.foreach (replay _)
