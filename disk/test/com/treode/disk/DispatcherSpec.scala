@@ -20,9 +20,9 @@ import scala.collection.mutable.UnrolledBuffer
 import scala.util.Random
 
 import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import org.scalatest.FlatSpec
 
-import DispatcherTestTools._
 
 class DispatcherSpec extends FlatSpec {
 
@@ -30,145 +30,60 @@ class DispatcherSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
-    dsp.expect (1)
-    dsp.replace (list())
-    dsp.expectNone()
-  }
-
-  it should "send multiple messages to a later receiver" in {
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-    dsp.send (1)
-    dsp.send (2)
-    dsp.send (3)
-    dsp.expect (1, 2, 3)
-    dsp.replace (list())
-    dsp.expectNone()
+    val captor = dsp.receive().capture()
+    captor.expectPass ((1, UnrolledBuffer (1)))
   }
 
   it should "send one message to an earlier receiver" in {
     implicit val scheduler = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
-    val rcpt = dsp.receptor()
+    val captor = dsp.receive().capture()
     dsp.send (1)
-    rcpt.expect (1)
-    dsp.replace (list())
-    dsp.expectNone()
+    captor.expectPass ((1, UnrolledBuffer (1)))
   }
 
-  it should "send multiple messages to an earlier receiver" in {
-    implicit val scheduler = StubScheduler.random()
+  it should "queue several messages to a receiver" in {
+    implicit val schedule = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
-    val rcpt1 = dsp.receptor()
-    val rcpt2 = dsp.receptor()
     dsp.send (1)
     dsp.send (2)
     dsp.send (3)
-    rcpt1.expect (1)
-    rcpt2.assertNotInvoked()
-    dsp.replace (list())
-    rcpt2.expect (2, 3)
-    dsp.replace (list())
-    dsp.expectNone()
+    val captor = dsp.receive().capture()
+    captor.expectPass ((1, UnrolledBuffer (1,2,3)))
   }
 
-  it should "send multiple messages to a later receiver when disengaged" in {
+  it should "attempt to send multiple messages with only one receiver" in {
+    implicit val schedule = StubScheduler.random()
+    val dsp = new Dispatcher [Int] (0)
+    val captor = dsp.receive().capture()
+    dsp.send (1)
+    dsp.send (2)
+    captor.expectPass ((1, UnrolledBuffer(1)))
+  }
+
+  it should "create several receievers, each should receive a single message " in {
     implicit val scheduler = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
-    val rcpt1 = dsp.receptor()
+    val captor = dsp.receive().capture()
+    val captor2 = dsp.receive().capture()
     dsp.send (1)
-    val rcpt2 = dsp.receptor()
     dsp.send (2)
     dsp.send (3)
-    rcpt1.expect (1)
-    rcpt2.assertNotInvoked()
-    dsp.replace (list())
-    rcpt2.expect (2, 3)
-    dsp.replace (list())
-    dsp.expectNone()
+    captor.expectPass ((1, UnrolledBuffer(1)))
+    captor2.expectPass ((2, UnrolledBuffer(2)))
+  
   }
 
-  it should "send rejects to the next receiver" in {
+  it should "have two messages immediately get picked up by receivers, leaving one messaged queued and later received" in {
     implicit val scheduler = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
+    val captor = dsp.receive().capture()
+    val captor2 = dsp.receive().capture()
     dsp.send (1)
     dsp.send (2)
-    dsp.expect (1, 2)
-    dsp.replace (list (2))
-    dsp.expect (2)
-    dsp.replace (list())
-  }
-
-  it should "send rejects to the next receiver from earlier" in {
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-    dsp.send (1)
-    dsp.send (2)
-    val rcpt1 = dsp.receptor()
-    val rcpt2 = dsp.receptor()
-    rcpt1.expect (1, 2)
-    rcpt2.assertNotInvoked()
-    dsp.replace (list (2))
-    rcpt2.expect (2)
-    dsp.replace (list())
-  }
-
-  it should "send rejects and queued messages to the next receiver" in {
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-    dsp.send (1)
-    dsp.send (2)
-    val rcpt1 = dsp.receptor()
     dsp.send (3)
-    rcpt1.expect (1, 2)
-    dsp.replace (list (2))
-    scheduler.run()
-    val rcpt2 = dsp.receptor()
-    rcpt2.expect (2, 3)
-    dsp.replace (list())
-  }
-
-  it should "send rejects and queued messages to the next receiver from earlier" in {
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-    dsp.send (1)
-    dsp.send (2)
-    val rcpt1 = dsp.receptor()
-    val rcpt2 = dsp.receptor()
-    dsp.send (3)
-    rcpt1.expect (1, 2)
-    rcpt2.assertNotInvoked()
-    dsp.replace (list (2))
-    rcpt2.expect (2, 3)
-    dsp.replace (list())
-  }
-
-  it should "recycle rejects until accepted" in {
-
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-
-    var received = Set.empty [Int]
-
-    /* Accept upto 5 messages m where (m % n == i).
-     * Ensure m was not already accepted.
-     */
-    def receive (n: Int, i: Int) (num: Long, msgs: UnrolledBuffer [Int]) {
-      assert (!(msgs exists (received contains _)))
-      val (accepts, rejects) = msgs.partition (_ % n == i)
-      dsp.replace ((accepts drop 5) ++ rejects)
-      received ++= accepts take 5
-      dsp.receive (receive (n, i))
-    }
-
-    dsp.receive (receive (3, 0))
-    dsp.receive (receive (3, 1))
-    dsp.receive (receive (3, 2))
-
-    val count = 100
-    for (i <- 0 until count)
-      dsp.send (i)
-    scheduler.run()
-
-    assertResult ((0 until count).toSet) (received)
+    captor.expectPass ((1, UnrolledBuffer(1)))
+    captor2.expectPass ((2, UnrolledBuffer(2)))
+    val captor3 = dsp.receive().capture()
+    captor3.expectPass ((3, UnrolledBuffer(3)))
   }}

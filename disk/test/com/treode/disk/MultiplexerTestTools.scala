@@ -24,7 +24,7 @@ import org.scalatest.Assertions
 
 import Assertions.{assertResult, fail}
 
-object DispatcherTestTools {
+object MultiplexerTestTools {
 
   def list [M] (messages: M*) (implicit mtag: ClassTag [M]): UnrolledBuffer [M] =
     UnrolledBuffer [M] (messages: _*)
