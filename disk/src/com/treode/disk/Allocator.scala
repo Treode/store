@@ -37,10 +37,9 @@ private class Allocator private (private var _free: IntSet) {
   */
   
   def alloc (num: Int, geometry: DriveGeometry, config: Disk.Config): (SegmentBounds, Boolean) = {
-    //var alreadyAlloced = !_free.contains(num)
+    var alreadyAlloced = !_free.contains(num)
     _free = _free.remove (num)
-    (segmentBounds (num, geometry, config), false)
-    //(segmentBounds (num, geometry, config), alreadyAlloced)
+    (segmentBounds (num, geometry, config), alreadyAlloced)
   }
   
   def free (nums: IntSet): Unit =
