@@ -19,7 +19,8 @@ package com.treode.disk
 import java.util.{ArrayDeque}
 import scala.collection.mutable.UnrolledBuffer
 import scala.reflect.ClassTag
-import com.treode.async.{Fiber, Scheduler}
+import scala.util.{Failure, Success}
+import com.treode.async.{Async, Callback, Fiber, Scheduler }, Async.async
 
 private class Dispatcher [M] (
     private var counter: Long
@@ -28,12 +29,9 @@ private class Dispatcher [M] (
     mtag: ClassTag [M]
 ) {
 
-  private type R = (Long, UnrolledBuffer [M]) => Any
-
+  private type R = Callback[(Long, UnrolledBuffer [M])] 
   private val fiber = new Fiber
-  private var engaged = false
   private var messages = new UnrolledBuffer [M]
-
   val receivers = new ArrayDeque [R]
 
   private def singleton (m: M): UnrolledBuffer [M] =
@@ -47,29 +45,37 @@ private class Dispatcher [M] (
 
   private def engage (receiver: R, messages: UnrolledBuffer [M]) {
     counter += 1
-    engaged = true
-    scheduler.execute (receiver (counter, messages))
+    scheduler.pass (receiver, (counter, messages))
   }
 
   def send (message: M): Unit = fiber.execute {
-    if (engaged || receivers.isEmpty)
+    if (receivers.isEmpty)
       messages += message
     else
       engage (receivers.remove(), singleton (message))
   }
 
-  def receive (receiver: R): Unit = fiber.execute {
-    if (engaged || messages.isEmpty)
-      receivers.add (receiver)
-    else
-      engage (receiver, drain())
-  }
-
-  def replace (rejects: UnrolledBuffer [M]): Unit = fiber.execute {
-    rejects.concat (messages)
-    messages = rejects
+  def send (sendMessages: UnrolledBuffer [M]): Unit = fiber.execute {
+    sendMessages.concat (messages)
+    messages = sendMessages
     if (!messages.isEmpty && !receivers.isEmpty)
       engage (receivers.remove(), drain())
+  }
+
+  def receive (receiver: (Long, UnrolledBuffer [M]) => Any): Unit = 
+    receive() run {
+      case Success ( (counter, messages) ) => receiver(counter, messages)
+
+      case Failure (thrown) => throw thrown
+    }
+  
+
+  def receive () : Async [(Long, UnrolledBuffer [M])] ={
+    fiber.async {cb =>
+      if(messages.isEmpty)
+      receivers.add (cb)
     else
-      engaged = false
-  }}
+      engage (cb, drain())
+    } 
+  }
+}
