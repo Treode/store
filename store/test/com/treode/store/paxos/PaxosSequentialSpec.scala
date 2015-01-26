@@ -65,5 +65,5 @@ class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
         achieveConsensus (10, 10)
       }
 
-      forVariousClusterConfigs (init)
+      forVariousClusters (init)
     }}}
