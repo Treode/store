@@ -344,6 +344,8 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       }}}
   
   def forVariousClusterConfigs [H <: Host] (
+      seed: Long
+  ) (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
@@ -391,6 +393,14 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     for3to8 (seed, countWith3, targetWith3) (init)
     
     for8to3 (seed, countWith8, target(countWith8)) (init)
+  }
+  
+  def forVariousClusterConfigs [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    forSeeds (forVariousClusterConfigs (_) (init))
   }
   
   private def target (n: Int): Int = {
