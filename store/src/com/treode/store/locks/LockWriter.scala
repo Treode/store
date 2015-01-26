@@ -21,18 +21,32 @@ import com.treode.async.Callback
 import com.treode.async.implicits._
 import com.treode.store.TxClock
 
-// Tracks the acquisition of locks and invokes the callback when they have all been granted.
+/** Tracks the acquisition of locks and invokes the callback when they have all been granted.
+  * @param space The parent LockSpace.
+  * @param _ft The forecasted lower bound for the write timestamp.
+  * @param ids The locks that are needed.
+  * @param cb The callback to invoke when the locks have been acquired.
+  */
 private class LockWriter (
-    space: LockSpace,
-    _ft: TxClock,
-    private var ids: SortedSet [Int],
-    private var cb: Callback [LockSet]) extends LockSet {
 
-  // For testing mocks.
+    space: LockSpace,
+
+    // We raise the forecast as locks are granted.
+    private var _ft: TxClock,
+
+    // We null the ids to indicate they were release, and thus prevent double releases.
+    private var ids: SortedSet [Int],
+
+    // We null the cb when invoking it to prevent early release and memory leaks.
+    private var cb: Callback [LockSet]
+
+) extends LockSet {
+
+  /** For testing mocks. */
   def this() = this (null, TxClock.MinValue, SortedSet.empty, Callback.ignore)
 
+  /** The remaining locks that are needed. */
   private val iter = ids.iterator
-  private var max = _ft
 
   private def finish() {
     val cb = this.cb
@@ -40,22 +54,24 @@ private class LockWriter (
     cb.pass (this)
   }
 
-  // Attempt to acquire the locks.  Some of them will be granted immediately, then we will need
-  // to wait for one, which will be granted later by a call to grant.  Do this in ascending order
-  // of lock id to prevent deadlocks.
+  /** Attempt to acquire the locks.  Some of them will be granted immediately, then we will need
+    * to wait for one, which will be granted later by a call to [[grant]].  Do this in ascending
+    * order of lock id to prevent deadlocks.
+    */
   private def acquire(): Boolean = {
     while (iter.hasNext) {
       val id = iter.next
       space.write (id, this) match {
-        case Some (max) =>
-          if (this.max < max)
-            this.max = max
-        case None =>
-          return false
+        case Some (ft) if _ft < ft => _ft = ft
+        case Some (_) => ()
+        case None => return false
       }}
     true
   }
 
+  /** Start aquiring locks in order of id. May obtain them all and invoke the callback promptly,
+    * or may acquire only some and wait on one.
+    */
   def init() {
     val ready = synchronized {
       acquire()
@@ -64,17 +80,21 @@ private class LockWriter (
       finish()
   }
 
-  def grant (max: TxClock): Unit = {
+  /** Continue acquiring locks in order of id. We obtained the one lock we were waiting on. May
+    * obtain the rest and invoke the callback, or may acquire only some and wait on another one.
+    * @param ft A lower bound for the write timestamp.
+    */
+  def grant (ft: TxClock): Unit = {
     val ready = synchronized {
-      if (this.max < max)
-        this.max = max
+      if (_ft < ft)
+        _ft = ft
       acquire()
     }
     if (ready)
       finish()
   }
 
-  def ft = max
+  def ft = _ft
 
   def release() {
     require (cb == null, "Locks cannot be released until acquired.")

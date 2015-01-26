@@ -123,8 +123,8 @@ class StubFile private (
 object StubFile {
 
   def apply (data: Array [Byte], align: Int) (implicit scheduler: Scheduler): StubFile = {
-    require (align > 0, "Alignment must more than 0 bits")
-    new StubFile (data, align-1)
+    require (align >= 0, "Alignment must be non-negative")
+    new StubFile (data, (1 << align) - 1)
   }
 
   def apply (size: Int, align: Int) (implicit scheduler: Scheduler): StubFile =

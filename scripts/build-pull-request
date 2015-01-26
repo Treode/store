@@ -28,6 +28,9 @@
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 . $DIR/scripts/build-functions.sh
 
+# Number of seeds for pseudo-random tests.
+export NSEEDS=10
+
 clean
 
 #

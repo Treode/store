@@ -21,45 +21,50 @@ import scala.collection.JavaConversions._
 
 import com.treode.store.TxClock
 
-// A reader/writer lock that implements a Lamport clock.  It allows one writer at a time, and
-// assists the writer in committing as of timestamps greater than any past reader.  It allows
-// multiple readers at a time.  It even allows readers while a writer holds the lock, as long
-// as the reader's timestamp is less than the one at which the writer will commit.
+/** A reader/writer lock that implements a Lamport clock.  It allows one writer at a time, and it
+  * tracks the lower bound timestamp, which a writer must commit after. It allows multiple readers
+  * at a time. When a writer holds the lock, readers using an as-of timestamp strictly after the
+  * lower bound are held, whereas readers using an as-of timestamp at or before the lower bound are
+  * not held.
+  */
 private class Lock {
 
+  /** A constant; saves allocation and initialization time. */
   private val NoReaders = new util.ArrayList [LockReader] (0)
 
-  // The forecasted minimum version timestamp.  All future writers shall commit a value with a
-  // version timestamp above this.  Any current reader as of a timestamp at or below this may
-  // proceed immediately since it is assured that no future writer will invalidate its read.  A
-  // reader as of a timestamp greater than this must wait for the current writer to release the
-  // lock since that writer could commit the value with timestamp forecast+1; then the reader must
-  // raise the forecasted value to prevent later writers from invalidating its read.
+  /** The forecasted lower bound timestamp.  All future writers shall commit at a timestamp
+    * strictly after this.  Any reader as-of a timestamp at or before this may proceed immediately,
+    * since no future writer will invalidate its read.  A reader as-of a timestamp after this must
+    * wait for the current writer to release the lock, since that writer could commit the value with
+    * timestamp forecast+1.
+    */
   private var forecast = TxClock.MinValue
 
-  // Does a writer hold the lock?  If non-null, a writer holds the lock.  If it commits values,
-  // they will be timestamped greater than the forecasted timestamp.
+  /** If non-null, a writer holds the lock. */
   private var engaged: LockWriter = null
 
-  // These readers want to acquire the lock at a timestamp greater than the forecasted timestamp
-  // of the writer that currently holds the lock.
+  /** Readers waiting for the writer to release the lock. */
   private var readers = new util.ArrayList [LockReader]
 
-  // These writers want to acquire the lock, but a writer already holds the lock.
+  /** Writers waiting for the current writer to release the lock. */
   private val writers = new util.ArrayDeque [LockWriter]
 
-  // A reader wants to acquire the lock; this means the reader ensures that no writer will commit
-  // a value with a timestamp at or below the reader's timestamp.
-  // - If its read timestamp is less than or equal to the forecasted one, the reader may proceed.
-  // - If its read timestamp is greater than the forecasted one and the lock is free, then the
-  //   reader may proceed.  First, it raises the forecast to ensure no writer commits a value with
-  //   a lower timestamp.
-  // - If its read timestamp is greater than the forecasted one and a writer holds the lock, then
-  //   the reader must wait for the writer to release it since that writer could commit a value
-  //   with a timestamp as low as forecast+1.
-  //
-  // If the reader may proceed immediately, this returns true.  Otherwise, it returns false and
-  // queues the reader to be called back later.
+  /** A reader wants to acquire the lock to read as-of timestamp `rt`; the lock will ensure no
+    * future writer commits at or before that timestamp.
+    *
+    * If the reader's timestamp `rt` is
+    *
+    * - less than or equal to the forecasted one, the reader may proceed.
+    *
+    * - greater than the forecasted one and the lock is free, then the reader may proceed; the lock
+    *   raises forecast to ensure no writer commits before or at `rt`.
+    *
+    * - greater than the forecasted one and a writer holds the lock, then the reader must wait for
+    *   the writer to release the lock, since that writer could commit at forecast+1.
+    *
+    * If the reader may proceed immediately, this returns true.  Otherwise, it returns false and
+    * queues the reader to be called back later.
+    */
   def read (r: LockReader): Boolean = synchronized {
     if (r.rt <= forecast) {
       true
@@ -71,12 +76,12 @@ private class Lock {
       false
     }}
 
-  // A writer wants to acquire the lock; it must ensure that it does not invalidate the read of
-  // any past reader.  No past reader has read a value as of a timestamp greater than forecast,
-  // so the writer must commit its values at a timestamp greater than forecast.
-  //
-  // If the writer may proceed immediately, returns Some (forecast).  Otherwise, it queues the
-  // writer to be called back later.
+  /** A writer wants to acquire the lock; the lock provides a lower bound, and the writer must
+    * commit strictly after that timestamp.
+    *
+    * If the writer may proceed immediately, returns Some (forecast).  Otherwise, it queues the
+    * writer to be called back later.
+    */
   def write (w: LockWriter): Option [TxClock] = synchronized {
     if (engaged == null) {
       if (forecast < w.ft)
@@ -88,9 +93,10 @@ private class Lock {
       None
     }}
 
-  // A writer is finished with the lock.  If there are any waiting readers, raise the forecast to
-  // the maximum of all of them and then let all of them proceed.  If there is a waiting writer,
-  // next let it proceed with that forecast.
+  /** A writer is finished with the lock.  If there are any waiting readers, raise the forecast to
+    * the maximum read timestamp of all of them, and then let all of them proceed.  Next, if there
+    * are waiting writers, let one proceed with that forecast.
+    */
   def release (w0: LockWriter): Unit = {
     require (engaged == w0, "The writer releasing the lock does not hold it.")
     var rs = NoReaders
@@ -125,5 +131,5 @@ private class Lock {
     w foreach (_.grant (ft))
   }
 
-  override def toString = s"Lock (ft=${forecast}"
+  override def toString = s"Lock (ft=${forecast})"
 }

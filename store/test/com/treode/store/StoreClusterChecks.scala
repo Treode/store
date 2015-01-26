@@ -40,9 +40,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
   this: FreeSpec =>
 
   private val ntargets =
-    intensity match {
-      case "dev" => 1
-      case _ => 10
+    nseeds match {
+      case 100 => 10
+      case _ => 1
     }
 
   private val nthreads =
@@ -357,42 +357,49 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     val countWith8 = for8hosts (seed) (init)
     
     val countWith3Offline1 = for3with1offline (seed) (init)
-    for3with1rebooting (seed, countWith3Offline1, target(countWith3Offline1)) (init)
+    for3with1rebooting (seed, target(countWith3Offline1)) (init)
     
     val targetWith3 = target(countWith3)
     
-    val countWith3Crashing1 = for3with1crashing (seed, countWith3, targetWith3) (init)
-    for3with1bouncing (seed, targetWith3, target(countWith3Crashing1)) (init)
+    val countWith3Crashing1 = for3with1crashing (seed, targetWith3) (init)
+    if (countWith3Crashing1 > 1) {
+      for3with1bouncing (seed, targetWith3, target(countWith3Crashing1)) (init)
+    }
     
-    for1to1 (seed, countWith1, target(countWith1)) (init)
+    for1to1 (seed, target(countWith1)) (init)
     
     val targetWith1to3 = target(countWith1)
-    val countWith1to3 = for1to3 (seed, countWith1, targetWith1to3) (init)
-    for1to3with1bouncing (seed, targetWith1to3, target(countWith1to3)) (init)
+    val countWith1to3 = for1to3 (seed, targetWith1to3) (init)
+    if (countWith1to3 > 1) {
+     for1to3with1bouncing (seed, targetWith1to3, target(countWith1to3)) (init) 
+    }
 
-    val countWith3replacing1 = for3replacing1 (seed, countWith3, targetWith3) (init)
-    val targetWith3replacing1 = target(countWith3replacing1)
+    val countWith3replacing1 = for3replacing1 (seed, targetWith3) (init)
+    if (countWith3replacing1 > 1) {
+      val targetWith3replacing1 = target(countWith3replacing1)
+      for3replacing1withSourceBouncing (seed, targetWith3, targetWith3replacing1) (init)
+      for3replacing1withTargetBouncing (seed, targetWith3, targetWith3replacing1) (init)
+      for3replacing1withCommonBouncing (seed, targetWith3, targetWith3replacing1) (init)
+    }
     
-    for3replacing1withSourceBouncing (seed, targetWith3, targetWith3replacing1) (init)
-    for3replacing1withTargetBouncing (seed, targetWith3, targetWith3replacing1) (init)
-    for3replacing1withCommonBouncing (seed, targetWith3, targetWith3replacing1) (init)
-
-    val countWith3replacing2 = for3replacing2 (seed, countWith3, targetWith3) (init)
-    val targetWith3replacing2 = target(countWith3replacing2)
+    val countWith3replacing2 = for3replacing2 (seed, targetWith3) (init)
+    if (countWith3replacing2 > 1) {
+      val targetWith3replacing2 = target(countWith3replacing2)
+      for3replacing2withSourceBouncing (seed, targetWith3, targetWith3replacing2) (init)
+      for3replacing2withTargetBouncing (seed, targetWith3, targetWith3replacing2) (init)
+      for3replacing2withCommonBouncing (seed, targetWith3, targetWith3replacing2) (init)
+    }
     
-    for3replacing2withSourceBouncing (seed, targetWith3, targetWith3replacing2) (init)
-    for3replacing2withTargetBouncing (seed, targetWith3, targetWith3replacing2) (init)
-    for3replacing2withCommonBouncing (seed, targetWith3, targetWith3replacing2) (init)
-
-    val countWith3to3 = for3to3 (seed, countWith3, targetWith3) (init)
-    val targetWith3to3 = target(countWith3to3)
+    val countWith3to3 = for3to3 (seed, targetWith3) (init)
+    if (countWith3to3 > 1) {
+      val targetWith3to3 = target(countWith3to3)
+      for3to3withSourceBouncing (seed, targetWith3, targetWith3to3) (init)
+      for3to3withTargetBouncing (seed, targetWith3, targetWith3to3) (init)
+    }
     
-    for3to3withSourceBouncing (seed, targetWith3, targetWith3to3) (init)
-    for3to3withTargetBouncing (seed, targetWith3, targetWith3to3) (init)
+    for3to8 (seed, targetWith3) (init)
     
-    for3to8 (seed, countWith3, targetWith3) (init)
-    
-    for8to3 (seed, countWith8, target(countWith8)) (init)
+    for8to3 (seed, target(countWith8)) (init)
   }
   
   def forVariousClusters [H <: Host] (
@@ -689,7 +696,6 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
   def for3with1crashing [H <: Host] (
       seed: Long,
-      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -697,7 +703,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ): Int =
 
-    s"for3with1crashing (${seed}L, $count, $target, $config)"
+    s"for3with1crashing (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -776,7 +782,6 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
   def for3with1rebooting [H <: Host] (
       seed: Long,
-      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -784,7 +789,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ): Unit =
 
-    s"for3with1rebooting (${seed}L, $count, $target, $config)"
+    s"for3with1rebooting (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -906,7 +911,6 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
   def for1to1 [H <: Host] (
       seed: Long,
-      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -914,7 +918,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ): Unit =
 
-    s"for1to1 (${seed}L, $count, $target, $config)"
+    s"for1to1 (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -937,7 +941,6 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
   def for1to3 [H <: Host] (
       seed: Long,
-      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -945,7 +948,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ): Int =
 
-    s"for1to3 (${seed}L, $count, $target, $config)"
+    s"for1to3 (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1012,7 +1015,6 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
   def for3to1 [H <: Host] (
       seed: Long,
-      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1020,7 +1022,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ): Int =
 
-    s"for3to1 (${seed}L, $count, $target, $config)"
+    s"for3to1 (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1087,7 +1089,6 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
   def for3replacing1 [H <: Host] (
       seed: Long,
-      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1095,7 +1096,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ): Int =
 
-    s"for3replacing1 (${seed}L, $count, $target, $config)"
+    s"for3replacing1 (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1248,7 +1249,6 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
   def for3replacing2 [H <: Host] (
       seed: Long,
-      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1256,7 +1256,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ): Int =
 
-    s"for3replacing2 (${seed}L, $count, $target, $config)"
+    s"for3replacing2 (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1413,7 +1413,6 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
   def for3to3 [H <: Host] (
       seed: Long,
-      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1421,7 +1420,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ): Int =
 
-    s"for3to3 (${seed}L, $count, $target, $config)"
+    s"for3to3 (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1538,7 +1537,6 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
   def for3to8 [H <: Host] (
       seed: Long,
-      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1546,7 +1544,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ): Unit =
 
-    s"for3to8 (${seed}L, $count, $target, $config)"
+    s"for3to8 (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
@@ -1616,7 +1614,6 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
   def for8to3 [H <: Host] (
       seed: Long,
-      count: Int,
       target: Int
   ) (
       init: Random => ForStoreClusterRunner [H]
@@ -1624,7 +1621,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ): Unit =
 
-    s"for8to3 (${seed}L, $count, $target, $config)"
+    s"for8to3 (${seed}L, $target, $config)"
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 

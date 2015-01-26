@@ -38,10 +38,15 @@ object TreodeBuild extends Build {
   lazy val versionString = "0.3.0-SNAPSHOT"
 
   lazy val versionInfo = Seq (
+
     organization := "com.treode",
     version := versionString,
     scalaVersion := "2.11.4",
-    crossScalaVersions := Seq ("2.10.4", "2.11.4"))
+    crossScalaVersions := Seq ("2.10.4", "2.11.4"),
+
+    // Use a local Scala installation if SCALA_HOME is set. Otherwise, download the Scala tools
+    // per scalaVersion.
+    scalaHome := Option (System.getenv ("SCALA_HOME")) map (file _))
 
   // Settings common to both projects with stubs and without stubs. Squashes the source directory
   // structure. Adds production libraries to the default config. Removes docs from Ivy artifacts in
