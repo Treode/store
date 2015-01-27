@@ -46,13 +46,12 @@ private class LogIterator private (
 
   import superb.{geometry => geom, id}
   import superb.geometry.{blockAlignDown, blockBits, segmentNum}
-
+  import kit.{checkpointer, compactor}
+  
   private var draining = superb.draining
   private var logPos = superb.logHead
   private var pagePos = Option.empty [Long]
   private var pageLedger = new PageLedger
-  var checkpointer = kit.checkpointer;
-  var compactor = kit.compactor;
 
   class Batch (f: Iterator [(Long, Unit => Any)] => Async [Unit], cb: Callback [Unit]) {
 
