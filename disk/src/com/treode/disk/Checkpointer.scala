@@ -36,11 +36,12 @@ private class Checkpointer (kit: DiskKit) {
 
   private def reengage() {
     fanout (checkreqs) .pass (())
-    checkreqs = List.empty
-    if (config.checkpoint (this.bytes, this.entries))
+    if (config.checkpoint (this.bytes, this.entries)) {
       _checkpoint()
-    else
+    } else {
+      checkreqs = List.empty
       engaged = false
+    }
   }
 
   private def _checkpoint() {
