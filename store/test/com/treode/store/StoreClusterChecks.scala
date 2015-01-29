@@ -396,7 +396,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       for3to3withSourceBouncing (seed, targetWith3, targetWith3to3) (init)
       for3to3withTargetBouncing (seed, targetWith3, targetWith3to3) (init)
     }
-    
+     
     for3to8 (seed, targetWith3) (init)
     
     for8to3 (seed, target(countWith8)) (init)
