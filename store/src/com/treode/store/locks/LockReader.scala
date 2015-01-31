@@ -20,19 +20,27 @@ import com.treode.async.{Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.store.TxClock
 
-// Tracks the acquisition of locks and invokes the callback when they have all been granted.
+/** Tracks the acquisition of locks and invokes the callback when they have all been granted.
+  * @param _rt The timestamp this reader wants to read as-of.
+  * @param cb The callback to invoke when the locks have been acquired.
+  */
 private class LockReader (_rt: TxClock, cb: Callback [Unit]) {
 
-  // For testing mocks.
+  /** For testing mocks. */
   def this() = this (TxClock.MinValue, Callback.ignore)
 
+  /** The number of locks needed before invoking the callback. */
   private var needed = 0
 
   private def finish(): Unit =
     cb.pass (())
 
-  // Attempt to acquire the locks.  Some of them will be granted immediately.  For others, we
-  // will receive a callback via grant().
+  /** Attempt to acquire the locks.  Some of them will be granted immediately, and others will
+    * await a call to [[grant]]. If all are granted now, invoke the callback promptly, otherwise
+    * wait.
+    * @param space The parent LockSpace.
+    * @param ids The locks that are needed.
+    */
   def init (space: LockSpace, ids: Set [Int]) {
     val ready = synchronized {
       for (id <- ids)
@@ -44,8 +52,9 @@ private class LockReader (_rt: TxClock, cb: Callback [Unit]) {
       finish()
   }
 
-  def rt = _rt
-
+  /** Receive a grant that this reader was waiting on. If this is the last grant, invoke the
+    * callback, otherwise continue to wait.
+    */
   def grant(): Unit = {
     val ready = synchronized {
       needed -= 1
@@ -54,6 +63,10 @@ private class LockReader (_rt: TxClock, cb: Callback [Unit]) {
     if (ready)
       finish()
   }
+
+  /** The timestamp this reader wants to read as-of. */
+  // Should be a val in the constructor, but ScalaMock barfs.
+  def rt = _rt
 
   override def toString = s"LockReader (rt=$rt, ready=${needed == 0})"
 }

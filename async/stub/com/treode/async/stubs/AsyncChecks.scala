@@ -25,22 +25,13 @@ import org.scalatest.{Informing, Suite}
 trait AsyncChecks {
   this: Suite with Informing =>
 
-  /** The value of `TEST_INTENSITY` from the environment, or `std` if the environment has no
-    * setting for that.
+  /** The number of times to run a psuedo-random test. Uses `NSEEDS` from the environment, or
+    * defaults to 1.
     */
-  val intensity: String = {
-    val env = System.getenv ("TEST_INTENSITY")
-    if (env == null) "std" else env
+  val nseeds: Int = {
+    val envseeds = System.getenv("NSEEDS")
+    if (envseeds == null) 1 else Integer.parseInt(envseeds)
   }
-
-  /** The number of seeds tried in `forAllSeeds`.  1 when when `intensity` is `dev` and 100
-    * otherwise.
-    */
-  val nseeds =
-    intensity match {
-      case "dev" => 1
-      case _ => 100
-    }
 
   /** Run the test with a PRNG seeded by `seed`. */
   def forSeed (seed: Long) (test: Random => Any) {
@@ -53,9 +44,8 @@ trait AsyncChecks {
         throw t
     }}
 
-  /** Run the test many times, each time with a PRNG seeded differently.  When developing, set
-    * the environment variable `TEST_INTENSITY` to `dev` to run the test only once.  Let your
-    * continuous build spend the time running it over and over.
+  /** Run a psuedo-random test many times, each time with a PRNG seeded differently. Use `NSEEDS`
+    * from the environment to determine how many times, or defaults to 1.
     */
   def forAllSeeds (test: Random => Any) {
     for (_ <- 0 until nseeds)

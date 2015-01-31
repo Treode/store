@@ -57,7 +57,7 @@ class Socket (socket: AsynchronousSocketChannel) (implicit scheduler: Scheduler)
     async (socket.write (srcs, 0, srcs.length, -1, MILLISECONDS, _, Callback.LongHandler))
 
   /** Read from the socket until `input` has at least `len` readable bytes.  If `input` already has
-    * that many readable bytes, this will invoke the callback promptly.
+    * that many readable bytes, this will immediately queue the callback on the scheduler.
     */
   def fill (input: PagedBuffer, len: Int): Async [Unit] = {
     input.capacity (input.writePos + len)
@@ -76,8 +76,7 @@ class Socket (socket: AsynchronousSocketChannel) (implicit scheduler: Scheduler)
     * Interpret those as the length of bytes needed.  Read from the socket again if necessary,
     * until `input` has at least that many additional readable bytes.
     *
-    * The write counter-part to this method can be found in the
-    * [[com.treode.pickle.Pickler Pickler]].
+    * The mated method `frame` lives in [[com.treode.pickle.Pickler Pickler]].
     */
   def deframe (input: PagedBuffer): Async [Int] = {
     for {

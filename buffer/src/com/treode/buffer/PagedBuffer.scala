@@ -55,22 +55,25 @@ class PagedBuffer private (val pageBits: Int) extends Buffer {
     rpos = 0
   }
 
-  def discard (length: Int) {
+  def discard (length: Int): Int = {
     require (length <= readPos)
     if (length == writePos) {
       clear()
+      return length;
     } else {
-      val ndiscard = length >> pageBits
-      val nkeep = limit - ndiscard
-      System.arraycopy (pages, ndiscard, pages, 0, nkeep)
+      val ndrop = length >> pageBits
+      val nkeep = limit - ndrop
+      System.arraycopy (pages, ndrop, pages, 0, nkeep)
       var i = nkeep
       while (i < pages.length) {
         pages (i) = null
         i += 1
       }
-      limit = limit - ndiscard
-      woff = woff - ndiscard * pageSize
-      roff = roff - ndiscard * pageSize
+      val discarded = ndrop * pageSize
+      limit = limit - ndrop
+      woff = woff - discarded
+      roff = roff - discarded
+      return discarded
     }}
 
   def capacity: Int = limit << pageBits

@@ -32,12 +32,6 @@ trait CrashChecks extends AsyncChecks with TimeLimitedTests {
 
   override val timeLimit = 5 minutes
 
-  private val ncrashes =
-    intensity match {
-      case "dev" => 1
-      case _ => 10
-    }
-
   class ForCrashesRunner (
       val messages: Seq [String],
       val setup: StubScheduler => Async [_],
@@ -110,31 +104,18 @@ trait CrashChecks extends AsyncChecks with TimeLimitedTests {
         throw t
     }}
 
-  def forAllCrashes (seed: Long) (init: Random => ForCrashesRunner): Int = {
-
-    // Run the first time for as long as possible.
-    val count = forCrash (seed, Int.MaxValue) (init)
-
-    // Run the subsequent times for a portion of what was possible.
-    if (count < ncrashes) {
-      for (i <- 1 to count)
-        forCrash (seed, i) (init)
-      count
-    } else {
-      val random = new Random (seed)
-      for (i <- 1 to ncrashes)
-        forCrash (seed, random.nextInt (count - 1) + 1) (init)
-      ncrashes
-    }}
-
   def forAllCrashes (init: Random => ForCrashesRunner) {
     val start = System.currentTimeMillis
-    var count = 0
-    for (_ <- 0 until nseeds / ncrashes) {
+
+    for (_ <- 0 until nseeds  ) {
+
       val seed = Random.nextLong()
-      count += forAllCrashes (seed) (init)
+      val count = forCrash (seed , Int.MaxValue) (init)
+      val random = new Random (seed)
+      forCrash(seed, random.nextInt(count - 1) + 1) (init)
+
     }
     val end = System.currentTimeMillis
-    val average = (end - start) / count
+    val average = (end - start) / nseeds
     info (s"Crash and recovery average time ${average}ms")
   }}

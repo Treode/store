@@ -21,7 +21,23 @@ import scala.util.control.ControlThrowable
 import com.google.common.hash.{HashCode, HashFunction, Hashing}
 import com.treode.buffer.{ArrayBuffer, Buffer, Input, PagedBuffer, Output, OutputBuffer}
 
-/** How to read and write an object of a particular type. */
+/** How to read and write an object of a particular type.
+  *
+  * @define Frame
+  * Allow four bytes for the length, and write `v` after that. Once `v` has been written, compute
+  * its byte length and write that to the first four bytes. This begins writing the length at
+  * `writePos` and leaves `writePos` at the end of `v`.
+  *
+  * @define FrameChecksum
+  * Allow some number of bytes for the checksum, depedning on `hashf`, next allow four bytes for
+  * the length, and then write `v` after that. Once `v` has been written, compute its checksum and
+  * byte length and write that at the beginning. This begins writing the checksum and length at
+  * `writePos` and leaves `writePos` at the end of `v`.
+  *
+  * @define MatedDeframe
+  * The mated `deframe` method lives in [[com.treode.async.io.File File]] and
+  * [[com.treode.async.io.Socket Socket]].
+  */
 trait Pickler [A] {
 
   def p (v: A, ctx: PickleContext)
@@ -74,6 +90,12 @@ trait Pickler [A] {
     v
   }
 
+  /** Write a frame with its own length to the buffer.
+    *
+    * $Frame
+    *
+    * $MatedDeframe
+    */
   def frame (v: A, buf: OutputBuffer) {
     val start = buf.writePos
     buf.writePos += 4
@@ -84,6 +106,12 @@ trait Pickler [A] {
     buf.writePos = end
   }
 
+  /** Write a frame with its own checksum and length to the buffer.
+    *
+    * $FrameChecksum
+    *
+    * $MatedDeframe
+    */
   def frame (hashf: HashFunction, v: A, buf: Buffer) {
     val start = buf.writePos
     val head = 4 + (hashf.bits >> 3)

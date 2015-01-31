@@ -21,7 +21,7 @@ import scala.util.Random
 
 import com.treode.async.{Async, Callback}
 import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.{AsyncCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import org.scalatest.FreeSpec
 
@@ -179,4 +179,55 @@ class PageSpec extends FreeSpec {
       disk.clean()
       intercept [DistinguishedException] {
         scheduler.run()
+      }}
+
+
+    "restart a compaction after a crash" in {
+
+      var file: StubFile = null
+
+      // Write enough pages to disk to allocate a couple segments.
+      {
+        implicit val config = DiskTestConfig (cleaningFrequency = 3)
+        implicit val random = new Random (0)
+        implicit val scheduler = StubScheduler.random (random)
+        file = StubFile (1<<20, geom.blockBits)
+        val recovery = Disk.recover()
+        implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
+        import launch.disk
+        pagers.stuff.handle (new PageHandler [Int] {
+          def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+            supply (groups)
+          def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+            supply (())
+        })
+        launch.launch()
+
+        for (i <- 0 until 20)
+          pagers.stuff.write (0, i, Stuff (random.nextLong)) .expectPass()
+      }
+
+      // Restart with a low threshold, allocations should trigger a compaction.
+      {
+        println ("restart")
+        implicit val config = DiskTestConfig (cleaningFrequency = 1)
+        val captor = AsyncCaptor [Set [Int]]
+
+        implicit val random = new Random (0)
+        implicit val scheduler = StubScheduler.random (random)
+        file = StubFile (file.data, geom.blockBits)
+        val recovery = Disk.recover()
+        implicit val launch = recovery.reattachAndWait (("a", file)) .expectPass()
+        import launch.disk
+        pagers.stuff.handle (new PageHandler [Int] {
+          def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+            captor.start()
+          def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+            supply (())
+        })
+        launch.launch()
+        scheduler.run()
+
+        assertResult (1) (captor.outstanding)
+
       }}}}

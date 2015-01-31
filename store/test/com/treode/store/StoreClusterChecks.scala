@@ -40,9 +40,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
   this: FreeSpec =>
 
   private val ntargets =
-    intensity match {
-      case "dev" => 1
-      case _ => 10
+    nseeds match {
+      case 100 => 10
+      case _ => 1
     }
 
   private val nthreads =

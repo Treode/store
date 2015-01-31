@@ -28,7 +28,30 @@ import com.treode.buffer.PagedBuffer
 
 import Async.{async, guard, when}
 
-/** A file that has useful behavior (flush/fill) and that can be mocked. */
+/** A file that has useful behavior (flush/fill) and that can be mocked.
+  *
+  * @define Aligned
+  * This will align the end point of the file read to a boundary of <code>2^align</code> bytes.
+  * It requires the starting position is already aligned, which means
+  * <ul>
+  * <li>`input.writePos` is aligned, and</li>
+  * <li>`input.readPos + input.readableBytes` is aligned, and</li>
+  * <li>`pos + input.readableBytes` is aligned.</li>
+  * </ul>
+  *
+  * @define MatedFrame
+  * The mated method `frame` lives in [[com.treode.pickle.Pickler Pickler]].
+  *
+  * @define Deframe
+  * Ensure `input` has at least four readable bytes, reading from the file if necessary.
+  * Interpret those as the length of bytes needed.  Read from the file again if necessary,
+  * until `input` has at least that many additional readable bytes.
+  *
+  * @define DeframeChecksum
+  * Ensure `input` has at enough bytes for the checksum and integer length, reading from the file
+  * if necessary. Read from the file again if necessary, until `input` has enough readable bytes
+  * for the frame length. Finally, hash the frame bytes and check it against the checksum.
+  */
 class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Scheduler) {
 
   private def read (dst: ByteBuffer, pos: Long): Async [Int] = {
@@ -66,9 +89,9 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
 
   /** Read from the file until `input` has at least `len` readable bytes, respecting alignment. If
     * `input` already has that many readable bytes, this will immediately queue the callback on the
-    * scheduler. If `input` does not have `len` bytes, then this will align the end point of the
-    * file read to a boundary of `2^align` bytes; it requires that `input.writePos` is already
-    * aligned for the start point of the file read.
+    * scheduler.
+    *
+    * $Aligned
     */
   def fill (input: PagedBuffer, pos: Long, len: Int, align: Int): Async [Unit] =
     when (input.readableBytes < len) {
@@ -81,12 +104,9 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
 
   /** Read a frame with its own length from the file; return the length.
     *
-    * Ensure `input` has at least four readable bytes, reading from the file if necessary.
-    * Interpret those as the length of bytes needed.  Read from the file again if necessary,
-    * until `input` has at least that many additional readable bytes.
+    * $Deframe
     *
-    * The write counter-part to this method can be found in the
-    * [[com.treode.pickle.Pickler Pickler]].
+    * $MatedFrame
     */
   def deframe (input: PagedBuffer, pos: Long): Async [Int] = {
     for {
@@ -98,17 +118,11 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
 
   /** Read a frame with its own length from the file, respecting alignment; return the length.
     *
-    * Ensure `input` has at least four readable bytes, reading from the file if necessary.
-    * Interpret those as the length of bytes needed.  Read from the file again if necessary,
-    * until `input` has at least that many additional readable bytes.
+    * $Deframe
     *
-    * This keeps the file reads aligned, though the frame need not be aligned. For example, if
-    * `align` is 12, then this aligns the file read to a 4K (2^12) boundary. This method aligns
-    * the ending boundary of the read; it requires that `writePos` be aligned to align the
-    * starting boundary.
+    * $Aligned
     *
-    * The write counter-part to this method can be found in the
-    * [[com.treode.pickle.Pickler Pickler]].
+    * $MatedFrame
     */
   def deframe (input: PagedBuffer, pos: Long, align: Int): Async [Int] =
     guard {
@@ -131,14 +145,9 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
 
   /** Read a frame with its own checksum and length from the file; return the length.
     *
-    * Ensure `input` has at least some number readable bytes, depending on `hashf`, reading from
-    * the file if necessary.  Interpret those as a checksum.  Then ensure `input` has at least four
-    * readable bytes, reading from the file again if necessary.  Interpret those as the length of
-    * bytes needed.  Read from the file again if necessary, until `input` has at least that many
-    * additional readable bytes.  Finally, check the hash of the read bytes against the checksum.
+    * $DeframeChecksum
     *
-    * The write counter-part to this method can be found in the
-    * [[com.treode.pickle.Pickler Pickler]].
+    * $MatedFrame
     */
   def deframe (hashf: HashFunction, input: PagedBuffer, pos: Long): Async [Int] = {
     val head = 4 + (hashf.bits >> 3)
@@ -151,19 +160,14 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
       len
     }}
 
-  /** Read a frame with its own length from the file, respecting alignment; return the length.
+  /** Read a frame with its own checksum and length from the file, respecting alignment; return the
+    * length.
     *
-    * Ensure `input` has at least four readable bytes, reading from the file if necessary.
-    * Interpret those as the length of bytes needed.  Read from the file again if necessary,
-    * until `input` has at least that many additional readable bytes.
+    * $DeframeChecksum
     *
-    * This keeps the file reads aligned, though the frame need not be aligned. For example, if
-    * `align` is 12, then this aligns the file read to a 4K (2^12) boundary. This method aligns
-    * the ending boundary of the read; it requires that `writePos` be aligned to align the
-    * starting boundary.
+    * $Aligned
     *
-    * The write counter-part to this method can be found in the
-    * [[com.treode.pickle.Pickler Pickler]].
+    * $MatedFrame
     */
   def deframe (hashf: HashFunction, input: PagedBuffer, pos: Long, align: Int): Async [Int] =
     guard {
