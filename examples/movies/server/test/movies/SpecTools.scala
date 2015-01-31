@@ -22,7 +22,7 @@ import scala.util.Random
 import com.fasterxml.jackson.databind.JsonNode
 import com.jayway.restassured.response.{Response => RestAssuredResponse}
 import com.jayway.restassured.specification.ResponseSpecification
-import com.treode.async.stubs.StubScheduler, StubScheduler.scheduler
+import com.treode.async.stubs.{StubGlobals, StubScheduler}, StubGlobals.scheduler
 import com.treode.async.stubs.implicits._
 import com.treode.store.{Bytes, Cell, TxClock, TxId}
 import com.treode.store.stubs.StubStore

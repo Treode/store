@@ -209,12 +209,11 @@ class PageSpec extends FreeSpec {
 
       // Restart with a low threshold, allocations should trigger a compaction.
       {
-        println ("restart")
+        implicit val random = new Random (0)
+        implicit val scheduler = StubScheduler.random (random)
         implicit val config = DiskTestConfig (cleaningFrequency = 1)
         val captor = AsyncCaptor [Set [Int]]
 
-        implicit val random = new Random (0)
-        implicit val scheduler = StubScheduler.random (random)
         file = StubFile (file.data, geom.blockBits)
         val recovery = Disk.recover()
         implicit val launch = recovery.reattachAndWait (("a", file)) .expectPass()
