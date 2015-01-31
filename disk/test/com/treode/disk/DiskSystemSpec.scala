@@ -21,7 +21,7 @@ import scala.util.Random
 
 import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.{StubGlobals, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.disk.stubs.CrashChecks
 import com.treode.tags.{Intensive, Periodic}
@@ -264,7 +264,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       }}
 
     "when multithreaded" taggedAs (Intensive, Periodic) in {
-      import StubScheduler.scheduler
+      import StubGlobals.scheduler
 
       implicit val config = DiskTestConfig (
           maximumRecordBytes = 1<<9,

@@ -19,17 +19,16 @@ package com.treode.disk
 import java.util.logging.{Level, Logger}
 import scala.util.Random
 
-import com.treode.async._
+import com.treode.async._, Async.{async, latch}
 import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.{AsyncCaptor, StubScheduler}
+import com.treode.async.stubs.{AsyncCaptor, StubScheduler, StubGlobals}
 import com.treode.async.stubs.implicits._
 import com.treode.disk.stubs.CrashChecks
 import com.treode.pickle.{InvalidTagException, Picklers}
 import com.treode.tags.Periodic
 import org.scalatest.FlatSpec
-
-import Async.{async, latch}
+ 
 import DiskTestTools._
 
 class LogSpec extends FlatSpec with CrashChecks {
@@ -244,10 +243,10 @@ class LogSpec extends FlatSpec with CrashChecks {
 
       // Restart with a low threshold, replays should trigger a checkpoint.
       {
+        implicit val scheduler = StubScheduler.random()
         implicit val config = DiskTestConfig (checkpointEntries = 1)
         val captor = AsyncCaptor [Unit]
 
-        implicit val scheduler = StubScheduler.random()
         file = StubFile (file.data, geom.blockBits)
         implicit val recovery = Disk.recover()
         records.str.replay (_ => ())

@@ -19,7 +19,7 @@ package com.treode.store.atomic
 import java.util.concurrent.Executors
 import scala.util.Random
 
-import com.treode.async.stubs.{AsyncChecks, CallbackCaptor, StubScheduler}
+import com.treode.async.stubs.{AsyncChecks, CallbackCaptor, StubGlobals, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.stubs.StubNetwork
 import com.treode.store._
@@ -57,7 +57,7 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks with Time
       }}
 
     "conserve money during account transfers (multithreaded)" taggedAs (Intensive, Periodic) in {
-      import StubScheduler.scheduler
+      import StubGlobals.scheduler
       implicit val random = Random
       implicit val network = StubNetwork (random)
       implicit val store = newStore()
