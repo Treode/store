@@ -22,7 +22,7 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import org.scalatest.FlatSpec
 
-import DispatcherTestTools._
+import MultiplexerTestTools._
 
 class MultiplexerSpec extends FlatSpec {
 
@@ -32,7 +32,6 @@ class MultiplexerSpec extends FlatSpec {
     val mplx = new Multiplexer (dsp)
     dsp.send (1)
     mplx.expect (1)
-    mplx.replace (list())
     mplx.expectNone()
   }
 
@@ -43,9 +42,8 @@ class MultiplexerSpec extends FlatSpec {
     dsp.send (1)
     dsp.send (2)
     mplx.expect (1, 2)
-    mplx.replace (list (2))
+    mplx.send (list (2))
     dsp.expect (2)
-    dsp.replace (list())
     mplx.expectNone()
   }
 
@@ -55,7 +53,6 @@ class MultiplexerSpec extends FlatSpec {
     val mplx = new Multiplexer (dsp)
     mplx.send (2)
     mplx.expect (2)
-    mplx.replace (list())
     mplx.expectNone()
   }
 
@@ -68,9 +65,8 @@ class MultiplexerSpec extends FlatSpec {
     scheduler.run()
     mplx.send (2)
     rcpt2.expect (2)
-    mplx.replace (list (2))
+    mplx.send (list (2))
     mplx.expect (2)
-    mplx.replace (list())
     rcpt1.expectNone()
   }
 
@@ -81,9 +77,8 @@ class MultiplexerSpec extends FlatSpec {
     val mplx = new Multiplexer (dsp)
     mplx.send (2)
     mplx.expect (2)
-    mplx.replace (list (2))
+    mplx.send (list (2))
     mplx.expect (2)
-    mplx.replace (list())
     rcpt1.expectNone()
   }
 
@@ -130,7 +125,7 @@ class MultiplexerSpec extends FlatSpec {
       assert (!(msgs exists (received contains _)))
       assert (msgs forall (m => ((m & 0xF) == 0 || (m & 0xF) == i)))
       val (accepts, rejects) = msgs.partition (m => (m & 0xF0) == (i << 4))
-      mplx.replace ((accepts drop 5) ++ rejects)
+      mplx.send ((accepts drop 5) ++ rejects)
       received ++= accepts take 5
       mplx.receive (receive (mplx, i))
     }

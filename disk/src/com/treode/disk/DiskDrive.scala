@@ -273,7 +273,7 @@ private class DiskDrive (
     fiber.execute {
 
       val (accepts, rejects, realloc) = splitRecords (entries)
-      logmp.replace (rejects)
+      logmp.send (rejects)
       val (callbacks, length) = writeRecords (logBuf, batch, accepts)
       val cb = fanout (callbacks)
       checkpointer.tally (length, accepts.size)
@@ -349,7 +349,7 @@ private class DiskDrive (
     fiber.execute {
 
       val (accepts, rejects, realloc) = splitPages (pages)
-      pagemp.replace (rejects)
+      pagemp.send (rejects)
       val (buffer, callbacks, ledger) = writePages (accepts)
       val pos = pageHead - buffer.readableBytes
       assert (pos >= pageSeg.base + blockBytes)

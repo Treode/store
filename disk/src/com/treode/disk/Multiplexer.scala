@@ -96,7 +96,7 @@ private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
     case _ =>
       assert (enrolled)
       enrolled = false
-      dispatcher.replace (messages)
+      dispatcher.send (messages)
   }
 
   private val dispatch = (_dispatch _)
@@ -123,12 +123,12 @@ private class Multiplexer [M] (dispatcher: Dispatcher [M]) (
       scheduler.pass (fanout (cbs), ())
   }
 
-  def replace (rejects: UnrolledBuffer [M]): Unit = execute {
+  def send (rejects: UnrolledBuffer [M]): Unit = execute {
     case _ if exclusive =>
       messages = rejects.concat (messages)
     case _ =>
       assert (!enrolled)
-      dispatcher.replace (rejects)
+      dispatcher.send (rejects)
   }
 
   def pause(): Async [Unit] = async {
