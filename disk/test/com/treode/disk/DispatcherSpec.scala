@@ -16,7 +16,6 @@
 
 package com.treode.disk
 
-import scala.collection.mutable.UnrolledBuffer
 import scala.util.Random
 
 import com.treode.async.stubs.StubScheduler
@@ -31,7 +30,7 @@ class DispatcherSpec extends FlatSpec {
     val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
     val captor = dsp.receive().capture()
-    captor.expectPass ((1, UnrolledBuffer (1)))
+    captor.expectPass ((1, Seq (1)))
   }
 
   it should "send one message to an earlier receiver" in {
@@ -39,7 +38,7 @@ class DispatcherSpec extends FlatSpec {
     val dsp = new Dispatcher [Int] (0)
     val captor = dsp.receive().capture()
     dsp.send (1)
-    captor.expectPass ((1, UnrolledBuffer (1)))
+    captor.expectPass ((1, Seq (1)))
   }
 
   it should "queue several messages to a receiver" in {
@@ -49,7 +48,7 @@ class DispatcherSpec extends FlatSpec {
     dsp.send (2)
     dsp.send (3)
     val captor = dsp.receive().capture()
-    captor.expectPass ((1, UnrolledBuffer (1,2,3)))
+    captor.expectPass ((1, Seq (1,2,3)))
   }
 
   it should "attempt to send multiple messages with only one receiver" in {
@@ -58,7 +57,7 @@ class DispatcherSpec extends FlatSpec {
     val captor = dsp.receive().capture()
     dsp.send (1)
     dsp.send (2)
-    captor.expectPass ((1, UnrolledBuffer(1)))
+    captor.expectPass ((1, Seq(1)))
   }
 
   it should "create several receievers, each should receive a single message " in {
@@ -69,8 +68,8 @@ class DispatcherSpec extends FlatSpec {
     dsp.send (1)
     dsp.send (2)
     dsp.send (3)
-    captor.expectPass ((1, UnrolledBuffer(1)))
-    captor2.expectPass ((2, UnrolledBuffer(2)))
+    captor.expectPass ((1, Seq (1)))
+    captor2.expectPass ((2, Seq (2)))
   
   }
 
@@ -82,8 +81,8 @@ class DispatcherSpec extends FlatSpec {
     dsp.send (1)
     dsp.send (2)
     dsp.send (3)
-    captor.expectPass ((1, UnrolledBuffer(1)))
-    captor2.expectPass ((2, UnrolledBuffer(2)))
+    captor.expectPass ((1, Seq (1)))
+    captor2.expectPass ((2, Seq (2)))
     val captor3 = dsp.receive().capture()
-    captor3.expectPass ((3, UnrolledBuffer(3)))
+    captor3.expectPass ((3, Seq (3)))
   }}

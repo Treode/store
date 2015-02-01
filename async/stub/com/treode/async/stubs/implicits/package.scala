@@ -44,7 +44,7 @@ package object implicits {
     /** Run until the asynchronous operation completes, then assert that it yielded
       * [[scala.util.Success Failure]] and assert that the result is as expected.
       */
-    def expectPass (expected: A) (implicit scheduler: StubScheduler): Unit =
+    def expectPass (expected: Any) (implicit scheduler: StubScheduler): Unit =
       assertResult (expected) (expectPass())
 
     /** Run until the asynchronous operation completes, then assert that it yielded
