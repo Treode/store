@@ -17,13 +17,12 @@
 package com.treode.store.catalog
 
 import java.util.ArrayDeque
-import scala.collection.JavaConversions._
 
 import com.nothome.delta.{Delta, GDiffPatcher}
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disk, PageDescriptor, Position, RecordDescriptor}
-import com.treode.store.{Bytes, CatalogId, StaleException}
+import com.treode.store.{Bytes, CatalogId}
 
 import Async.{guard, when}
 import Callback.ignore
@@ -31,54 +30,56 @@ import Handler.{Meta, pager}
 
 private class Handler (
     val id: CatalogId,
-    var version: Int,
-    var checksum: Int,
-    var bytes:  Bytes,
-    var history: ArrayDeque [Bytes],
+    val chronicle: Chronicle,
     var saved: Option [Meta]
 ) (implicit
     disk: Disk
 ) {
 
-  def diff (other: Int): Update = {
-    val start = other - version + history.size
-    if (start >= history.size) {
-      Patch (version, checksum, Seq.empty)
-    } else if (start < 0) {
-      Assign (version, bytes, history.toSeq)
-    } else {
-      Patch (version, checksum, history.drop (start) .toSeq)
-    }}
+  def version = chronicle.version
+  def checksum = chronicle.checksum
+  def bytes = chronicle.bytes
+  def history = chronicle.history
 
-  def patch (version: Int, bytes: Bytes, history: Seq [Bytes]): Boolean = {
-    if (version <= this.version)
-      return false
-    this.version = version
-    this.checksum = bytes.murmur32
-    this.bytes = bytes
-    this.history.clear()
-    this.history.addAll (history)
-    Handler.update.record ((id, Assign (version, bytes, history))) run (ignore)
-    true
+  def this(id: CatalogId,
+    version: Int,
+    checksum: Int,
+    bytes: Bytes,
+    history: ArrayDeque [Bytes],
+    saved: Option [Meta]
+  ) (implicit disk:Disk) {
+    this (id, new Chronicle (version, checksum, bytes, history), saved)
   }
 
-  def patch (end: Int, checksum: Int, patches: Seq [Bytes]) : Boolean ={
-    val span = end - version
-    if (span <= 0 || patches.length < span)
-      return false
-    val future = patches drop (patches.length - span)
-    var bytes = this.bytes
-    for (patch <- future)
-      bytes = Patch.patch (bytes, patch)
-    assert (bytes.murmur32 == checksum, "Patch application went awry.")
-    this.version += span
-    this.checksum = checksum
-    this.bytes = bytes
-    for (_ <- 0 until history.size + span - catalogHistoryLimit)
-      history.remove()
-    history.addAll (future)
-    Handler.update.record ((id, Patch (version, checksum, future))) run (ignore)
-    true
+  def diff (other: Int): Update = {
+    chronicle.diff (other)
+  }
+
+  def diff (version: Int, bytes: Bytes): Patch = {
+    chronicle.diff (version, bytes)
+  }
+
+  /*
+   * Update your own Chronicle to the given (version, bytes, history)
+   */
+  def patch (version: Int, bytes: Bytes, history: Seq [Bytes]): Boolean = {
+    chronicle.patch (version, bytes, history) match {
+      case Some (update) =>
+        Handler.update.record ((id, update)) run (ignore)
+        true
+      case None =>
+        false
+    }
+  }
+
+  def patch (end: Int, checksum: Int, patches: Seq [Bytes]) : Boolean = {
+    chronicle.patch (end, checksum, patches) match {
+      case Some (update) =>
+        Handler.update.record ((id, update)) run (ignore)
+        true
+      case None =>
+        false
+    }
   }
 
   def patch (update: Update): Boolean =
@@ -89,12 +90,6 @@ private class Handler (
         patch (end, checksum, patches)
     }
 
-  def diff (version: Int, bytes: Bytes): Patch = {
-    if (version != this.version + 1)
-      throw new StaleException
-    Patch (version, bytes.murmur32, Seq (Patch.diff (this.bytes, bytes)))
-  }
-
   def probe (groups: Set [Int]): Set [Int] =
     if (saved.isDefined)
       Set (saved.get.version)
@@ -103,10 +98,10 @@ private class Handler (
 
   def save(): Async [Unit] =
     guard {
-      val history = materialize (this.history)
+      val history = materialize (chronicle.history)
       for {
-        pos <- pager.write (id.id, version, (version, bytes, history))
-        meta = Meta (version, pos)
+        pos <- pager.write (id.id, chronicle.version, (version, bytes, history))
+        meta = Meta (chronicle.version, pos)
         _ <- Handler.checkpoint.record (id, meta)
       } yield {
         this.saved = Some (meta)
@@ -118,7 +113,7 @@ private class Handler (
   def checkpoint(): Async [Unit] =
     guard {
       saved match {
-        case Some (meta) if meta.version == version =>
+        case Some (meta) if meta.version == chronicle.version =>
           Handler.checkpoint.record (id, saved.get)
         case _ =>
           save()
