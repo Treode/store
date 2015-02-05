@@ -150,22 +150,21 @@ class PagedBuffer private (val pageBits: Int) extends Buffer {
   private [this] def requireWritable (length: Int): Unit =
     capacity (woff + wpos + length)
 
-  private [this] def write (v: Int) {
+  private [this] def wfix() {
     if (wpos == wpage.length) {
       wpage = pages ((woff >> pageBits) + 1)
       woff = woff + pageSize
       wpos = 0
-    }
+    }}
+
+  private [this] def write (v: Int) {
+    wfix()
     wpage (wpos) = v.toByte
     wpos += 1
   }
 
   private [this] def write (v: Long) {
-    if (wpos == wpage.length) {
-      wpage = pages ((woff >> pageBits) + 1)
-      woff = woff + pageSize
-      wpos = 0
-    }
+    wfix()
     wpage (wpos) = v.toByte
     wpos += 1
   }
@@ -181,12 +180,15 @@ class PagedBuffer private (val pageBits: Int) extends Buffer {
       throw new BufferUnderflowException (length, available)
   }
 
-  private [this] def read(): Byte = {
+  private [this] def rfix() {
     if (rpos == rpage.length) {
       rpage = pages ((roff >> pageBits) + 1)
       roff = roff + pageSize
       rpos = 0
-    }
+    }}
+
+  private [this] def read(): Byte = {
+    rfix()
     val v = rpage (rpos)
     rpos += 1
     v
@@ -844,6 +846,7 @@ class PagedBuffer private (val pageBits: Int) extends Buffer {
     val len = readVarUInt()
     val chars = new Array [Char] (len)
     var i = 0
+    rfix()
     var c = rpage (rpos) & 0xFF
     while (i < len && rpos+1 < pageSize && c < 128) {
       // Super fast case for ASCII strings within a page.

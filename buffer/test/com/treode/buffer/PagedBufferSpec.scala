@@ -311,6 +311,14 @@ class PagedBufferSpec extends FlatSpec {
     intercept [BufferUnderflowException] (buffer.readDouble())
   }
 
+  it should "read a string with its length ending on a page boundary" in {
+    val buffer = PagedBuffer (pageBits)
+    buffer.writePos = 31
+    buffer.writeString ("hello")
+    buffer.readPos = 31
+    assertResult ("hello") (buffer.readString())
+  }
+
   it should "read and write shorts within a page" in {
     forAll ("x") { x: Short =>
       val buffer = PagedBuffer (5)
@@ -449,6 +457,4 @@ class PagedBufferSpec extends FlatSpec {
       val buffer = PagedBuffer (3)
       buffer.writeString (x)
       assertResult (x) (buffer.readString())
-    }}
-
-  }
+    }}}
