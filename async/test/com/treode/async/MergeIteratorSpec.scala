@@ -102,7 +102,7 @@ class MergeIteratorSpec extends FreeSpec with AsyncChecks {
     }
 
     "work with varying inputs" taggedAs (Periodic) in {
-      forAllSeeds { implicit random =>
+      forAllRandoms { implicit random =>
         val inputs =
           // upto 7 inputs
           for (_ <- 0 until random.nextInt (8)) yield {

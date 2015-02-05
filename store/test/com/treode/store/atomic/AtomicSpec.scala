@@ -50,7 +50,7 @@ class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks with Time
     }
 
     "conserve money during account transfers" taggedAs (Intensive, Periodic) in {
-      forAllSeeds { random =>
+      forAllRandoms { random =>
         implicit val (r, s, n) = newKit()
         implicit val store = newStore()
         testAccountTransfers (100)

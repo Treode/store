@@ -263,11 +263,11 @@ class BrokerProperties extends PropSpec with AsyncChecks {
     }}
 
   property ("The broker should distribute catalogs", Intensive, Periodic) {
-    forAllSeeds { random =>
+    forAllRandoms { random =>
       checkUnity (random, 0.0)
     }}
 
   property ("The broker should distribute catalogs with a flakey network", Intensive, Periodic) {
-    forAllSeeds { random =>
+    forAllRandoms { random =>
       checkUnity (random, 0.1)
     }}}

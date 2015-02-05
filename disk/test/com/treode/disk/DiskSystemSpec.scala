@@ -239,7 +239,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
   "The logger should write more data than disk" - {
 
     "when randomly scheduled" taggedAs (Intensive, Periodic) in {
-      forAllSeeds { implicit random =>
+      forAllRandoms { implicit random =>
 
         implicit val config = DiskTestConfig (
             maximumRecordBytes = 1<<9,
@@ -482,7 +482,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         }}}
 
     "more data than disk" taggedAs (Intensive, Periodic) in {
-      forAllSeeds { implicit random =>
+      forAllRandoms { implicit random =>
 
         implicit val config = DiskTestConfig (
             maximumRecordBytes = 1<<9,
