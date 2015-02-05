@@ -16,6 +16,7 @@
 
 package com.treode.disk
 
+import scala.collection.mutable.UnrolledBuffer
 import scala.util.Random
 
 import com.treode.async.stubs.StubScheduler
@@ -25,64 +26,90 @@ import org.scalatest.FlatSpec
 
 class DispatcherSpec extends FlatSpec {
 
-  "The Dispatcher" should "send one message to a later receiver" in {
+  "The Dispatcher" should "queue one message for a later receiver" in {
     implicit val scheduler = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
     val captor = dsp.receive().capture()
     captor.expectPass ((1, Seq (1)))
+    assert (dsp.isEmpty)
   }
 
-  it should "send one message to an earlier receiver" in {
+  it should "deliver one message to an earlier receiver" in {
     implicit val scheduler = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
     val captor = dsp.receive().capture()
     dsp.send (1)
     captor.expectPass ((1, Seq (1)))
+    assert (dsp.isEmpty)
   }
 
-  it should "queue several messages to a receiver" in {
+  it should "queue several messages for a later receiver" in {
     implicit val schedule = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
     dsp.send (2)
-    dsp.send (3)
     val captor = dsp.receive().capture()
-    captor.expectPass ((1, Seq (1,2,3)))
+    captor.expectPass ((1, Seq (1, 2)))
+    assert (dsp.isEmpty)
   }
 
-  it should "attempt to send multiple messages with only one receiver" in {
+  it should "queue one batch of messages for a later receiver" in {
+    implicit val scheduler = StubScheduler.random()
+    val dsp = new Dispatcher [Int] (0)
+    dsp.send (UnrolledBuffer (1, 2, 3))
+    val captor = dsp.receive().capture()
+    captor.expectPass ((1, Seq (1, 2, 3)))
+    assert (dsp.isEmpty)
+  }
+
+  it should "deliver one batch of messages to an earlier receiver" in {
+    implicit val scheduler = StubScheduler.random()
+    val dsp = new Dispatcher [Int] (0)
+    val captor = dsp.receive().capture()
+    dsp.send (UnrolledBuffer (1, 2, 3))
+    captor.expectPass ((1, Seq (1, 2, 3)))
+    assert (dsp.isEmpty)
+  }
+
+  it should "queue several batches of messages for a later receiver" in {
     implicit val schedule = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
+    dsp.send (UnrolledBuffer (1, 2))
+    dsp.send (UnrolledBuffer (3, 4))
     val captor = dsp.receive().capture()
-    dsp.send (1)
-    dsp.send (2)
-    captor.expectPass ((1, Seq(1)))
+    captor.expectPass ((1, Seq (1, 2, 3, 4)))
+    assert (dsp.isEmpty)
   }
 
-  it should "create several receievers, each should receive a single message " in {
-    implicit val scheduler = StubScheduler.random()
+  it should "queue a message and a message batch for a later receiver" in {
+    implicit val schedule = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
-    val captor = dsp.receive().capture()
-    val captor2 = dsp.receive().capture()
     dsp.send (1)
-    dsp.send (2)
-    dsp.send (3)
-    captor.expectPass ((1, Seq (1)))
-    captor2.expectPass ((2, Seq (2)))
-  
+    dsp.send (UnrolledBuffer (2, 3))
+    val captor = dsp.receive().capture()
+    captor.expectPass ((1, Seq (1, 2, 3)))
+    assert (dsp.isEmpty)
   }
 
-  it should "have two messages immediately get picked up by receivers, leaving one messaged queued and later received" in {
+  it should "queue a message batch and a message for a later receiver" in {
+    implicit val schedule = StubScheduler.random()
+    val dsp = new Dispatcher [Int] (0)
+    dsp.send (UnrolledBuffer (1, 2))
+    dsp.send (3)
+    val captor = dsp.receive().capture()
+    captor.expectPass ((1, Seq (1, 2, 3)))
+    assert (dsp.isEmpty)
+  }
+
+  it should "queue several receievers, and deliver messages immediately" in {
     implicit val scheduler = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
-    val captor = dsp.receive().capture()
-    val captor2 = dsp.receive().capture()
+    val c1 = dsp.receive().capture()
+    val c2 = dsp.receive().capture()
     dsp.send (1)
     dsp.send (2)
-    dsp.send (3)
-    captor.expectPass ((1, Seq (1)))
-    captor2.expectPass ((2, Seq (2)))
-    val captor3 = dsp.receive().capture()
-    captor3.expectPass ((3, Seq (3)))
+    c1.expectPass ((1, Seq (1)))
+    c2.expectPass ((2, Seq (2)))
+    assert (dsp.isEmpty)
   }}
