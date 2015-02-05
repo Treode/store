@@ -39,11 +39,11 @@ package com.treode.async
   *
   *   "It" should "work" in {
   *
-  *     // The forAllSeeds method runs a test many times, each time with a
+  *     // The forAllRandoms method runs a test many times, each time with a
   *     // Random that has been seeded differently.  If the test throws an
-  *     // error, forAllSeeds will inform you of which seed trigged the
+  *     // error, forAllRandoms will inform you of which seed trigged the
   *     // problem.
-  *     forAllSeeds { random =>
+  *     forAllRandoms { random =>
   *       implicit val scheduler = StubScheduler.random (random)
   *       implicit val latch = new CountDownLatch (2)
   *
@@ -51,14 +51,14 @@ package com.treode.async
   *       val cb = latch.await().capture()
   *
   *       // The decrement method uses fiber.execute which schedules the task,
-  *       // but the StubScheduler does not run it until its runTasks method
-  *       // is called.
+  *       // but the StubScheduler does not run it until its runTasks method is
+  *       // called.
   *       latch.decrement()
   *       latch.decrement()
   *
-  *       // The passed method on the CallbackCaptor runs all current and
-  *       // added tasks; when none remain it checks that the callback was
-  *       // invoked with Success.
+  *       // The passed method on the CallbackCaptor runs all current and added
+  *       // tasks; when none remain it checks that the callback was invoked
+  *       // with Success.
   *       cb.passed
   *     } } }
   * }}}

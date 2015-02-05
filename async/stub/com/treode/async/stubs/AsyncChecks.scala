@@ -33,21 +33,27 @@ trait AsyncChecks {
     if (envseeds == null) 1 else Integer.parseInt(envseeds)
   }
 
-  /** Run the test with a PRNG seeded by `seed`. */
-  def forSeed (seed: Long) (test: Random => Any) {
+  /** Run the test with `seed`; add `seed` to the test info on failure. */
+  def forSeed (seed: Long) (test: Long => Any) {
     try {
-      val random = new Random (seed)
-      test (random)
+      test (seed)
     } catch {
       case t: Throwable =>
         info (s"Test failed; seed = ${seed}L")
         throw t
     }}
 
+  /** Run a test many times, each time with a different seed. Use `NSEEDS` from the environment to
+    * determine how many times, or defaults to 1.
+    */
+  def forAllSeeds (test: Long => Any) {
+    for (_ <- 0 until nseeds)
+      forSeed (Random.nextLong) (test)
+  }
+
   /** Run a psuedo-random test many times, each time with a PRNG seeded differently. Use `NSEEDS`
     * from the environment to determine how many times, or defaults to 1.
     */
-  def forAllSeeds (test: Random => Any) {
-    for (_ <- 0 until nseeds)
-      forSeed (Random.nextLong) (test)
-  }}
+  def forAllRandoms (test: Random => Any): Unit =
+    forAllSeeds (seed => test (new Random (seed)))
+}

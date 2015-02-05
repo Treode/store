@@ -28,7 +28,7 @@ import com.treode.disk.stubs.CrashChecks
 import com.treode.pickle.{InvalidTagException, Picklers}
 import com.treode.tags.Periodic
 import org.scalatest.FlatSpec
- 
+
 import DiskTestTools._
 
 class LogSpec extends FlatSpec with CrashChecks {
@@ -196,7 +196,7 @@ class LogSpec extends FlatSpec with CrashChecks {
 
 
   it should "run one checkpoint at a time" taggedAs (Periodic) in {
-    forAllSeeds { implicit random =>
+    forAllRandoms { implicit random =>
 
       implicit val scheduler = StubScheduler.random (random)
       val file = StubFile (1<<20, geom.blockBits)
@@ -226,7 +226,7 @@ class LogSpec extends FlatSpec with CrashChecks {
     }}
 
   it should "restart a checkpoint after a crash" taggedAs (Periodic) in {
-    forAllSeeds { implicit random =>
+    forAllRandoms { implicit random =>
 
       var file: StubFile = null
 
