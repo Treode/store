@@ -240,7 +240,7 @@ private object LogIterator {
     var kit = new DiskKit (boot.sysid, logBatch)
     for {
       // Using DiskKit in LogIterator to tally with Checkpointer and Compactor
-      logs <- reads.latch.map foreach (apply (useGen0, _, records, kit))
+      logs <- reads.latch.collate (apply (useGen0, _, records, kit))
       iter = BatchIterator.merge (logs.values.toSeq) (ordering, scheduler)
       _ <- iter.foreach (replay _)
       drives =

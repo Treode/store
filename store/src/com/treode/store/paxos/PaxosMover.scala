@@ -115,7 +115,7 @@ private class PaxosMover (kit: PaxosKit) {
 
   def send (batch: Batch, targets: Targets): Async [Unit] =
     guard {
-      for ((num, cells) <- batch.latch.unit)
+      for ((num, cells) <- batch.latch)
         send (targets.version, cells, targets (num))
     }
 

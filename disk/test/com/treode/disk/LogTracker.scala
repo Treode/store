@@ -43,14 +43,14 @@ class LogTracker {
 
   def batch (nkeys: Int, round: Int, nputs: Int) (
       implicit random: Random, disk: Disk): Async [Unit] =
-    for (k <- random.nextInts (nputs, nkeys) .latch.unit)
+    for (k <- random.nextInts (nputs, nkeys) .latch)
       put (round, k, random.nextInt (1<<20))
 
   def batches (nkeys: Int, nbatches: Int, nputs: Int, start: Int = 0) (
       implicit random: Random, scheduler: Scheduler, disk: Disk): Async [Unit] =
     for {
       n <- (0 until nbatches) .async
-      k <- random.nextInts (nputs, nkeys) .latch.unit
+      k <- random.nextInts (nputs, nkeys) .latch
     } {
       put (n + start, k, random.nextInt (1<<20))
     }

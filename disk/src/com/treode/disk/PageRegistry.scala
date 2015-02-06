@@ -51,8 +51,8 @@ private class PageRegistry (kit: DiskKit) extends AbstractPageRegistry {
 
   def probe (ledger: PageLedger): Async [Long] = {
     val _liveGroups =
-      for (((typ, obj), groups) <- ledger.groups.latch.map)
-        probe (typ, obj, groups)
+      for (((typ, obj), groups) <- ledger.groups.latch.collate)
+        yield probe (typ, obj, groups)
     for (liveGroups <- _liveGroups)
       yield ledger.liveBytes (liveGroups)
   }

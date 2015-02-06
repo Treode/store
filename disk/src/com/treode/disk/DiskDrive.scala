@@ -451,7 +451,7 @@ private object DiskDrive {
       val boot = BootBlock.apply (sysid, 0, items.size, attaching)
       for {
         _ <-
-        for (((path, file, geom), id) <- items.zipWithIndex.latch.unit)
+        for (((path, file, geom), id) <- items.zipWithIndex.latch)
           init (id, path, file, geom, boot)
       } yield {
         log.initializedDrives (attaching)
