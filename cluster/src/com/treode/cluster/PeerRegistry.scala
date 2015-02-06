@@ -51,7 +51,7 @@ private class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit 
     }}
 
   def shutdown(): Async [Unit] =
-    peers.values.latch.unit foreach (_.close())
+    peers.values.latch (_.close())
 
   override def toString =
     "PeerRegistry" +

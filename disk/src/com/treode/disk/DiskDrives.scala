@@ -82,7 +82,7 @@ private class DiskDrives (kit: DiskKit) {
     val attached = drives.values.setBy (_.path)
     val draining = drives.values.filter (_.draining)
     for {
-      segs <- draining.latch.casual foreach (_.drain())
+      segs <- draining.latch.collect (_.drain())
     } yield {
       compactor.drain (segs.iterator.flatten)
       queue.launch()
@@ -94,7 +94,7 @@ private class DiskDrives (kit: DiskKit) {
   def _close (cb: Callback [Unit]): Option [Runnable] =
     queue.run (cb) {
       closed = true
-      drives.values.latch.unit.foreach (_.close())
+      drives.values.latch (_.close())
     }
 
   def close(): Async [Unit] =
@@ -104,7 +104,7 @@ private class DiskDrives (kit: DiskKit) {
 
   def digest: Async [Seq [DriveDigest]] =
     fiber.guard {
-      drives.values.latch.casual.foreach (_.digest)
+      drives.values.latch.collect (_.digest)
     }
 
   private def _attach (items: Seq [AttachItem], cb: Callback [Unit]): Option [Runnable] =
@@ -125,9 +125,9 @@ private class DiskDrives (kit: DiskKit) {
 
       for {
         newDisks <-
-          for (((path, file, geometry), i) <- items.zipWithIndex.latch.seq)
-            DiskDrive.init (this.number + i + 1, path, file, geometry, newBoot, kit)
-        _ <- priorDisks.latch.unit foreach (_.checkpoint (newBoot, None))
+          for (((path, file, geometry), i) <- items.indexed)
+            yield DiskDrive.init (this.number + i + 1, path, file, geometry, newBoot, kit)
+        _ <- priorDisks.latch (_.checkpoint (newBoot, None))
       } yield {
         drives ++= newDisks.mapBy (_.id)
         this.bootgen = bootgen
@@ -164,12 +164,12 @@ private class DiskDrives (kit: DiskKit) {
       val newboot = BootBlock (sysid, bootgen, number, keepPaths)
 
       for {
-        _ <- drives.values.latch.unit foreach (_.checkpoint (newboot, None))
+        _ <- drives.values.latch (_.checkpoint (newboot, None))
         _ <- supply {
           this.drives = keepDrives
           this.bootgen = bootgen
         }
-        _ <- items.latch.unit.foreach (_.detach())
+        _ <- items.latch (_.detach())
       } yield {
         log.detachedDrives (items.setBy (_.path))
       }}
@@ -196,7 +196,7 @@ private class DiskDrives (kit: DiskKit) {
         throw new ControllerException ("Cannot drain all disks.")
 
       for {
-        segs <- drainDrives.latch.casual foreach (_.drain())
+        segs <- drainDrives.latch.collect (_.drain())
       } yield {
         checkpointer.checkpoint()
             .ensure (compactor.drain (segs.iterator.flatten))
@@ -219,7 +219,7 @@ private class DiskDrives (kit: DiskKit) {
       val attached = drives.values.setBy (_.path)
       val newBoot = BootBlock (sysid, bootgen, number, attached)
       for {
-        _ <- drives.values.latch.unit foreach (disk => disk.checkpoint (newBoot, marks get disk.id))
+        _ <- drives.values.latch (disk => disk.checkpoint (newBoot, marks get disk.id))
       } yield {
         this.bootgen = bootgen
       }}
@@ -237,17 +237,17 @@ private class DiskDrives (kit: DiskKit) {
 
   def mark(): Async [Map [Int, Long]] =
     guard {
-      drives.values.latch.map foreach (_.mark())
+      drives.values.latch.collate (_.mark())
     }
 
   def cleanable(): Async [Iterator [SegmentPointer]] =  {
     guard {
       for {
-        segs <- drives.values.filterNot (_.draining) .latch.casual.foreach (_.cleanable())
+        segs <- drives.values.filterNot (_.draining) .latch.collect (_.cleanable())
       } yield segs.iterator.flatten
     }}
 
-def fetch [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] = 
+def fetch [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
   guard {
     val drive = drives (pos.disk)
     DiskDrive.read (drive.file, drive.geom, desc, pos)

@@ -127,7 +127,7 @@ private class AtomicMover (kit: AtomicKit) {
 
   def send (table: TableId, batch: Batch, targets: Targets): Async [Unit] =
     guard {
-      for ((num, cells) <- batch.latch.unit)
+      for ((num, cells) <- batch.latch)
         send (targets.version, table, cells, targets (num))
     }
 

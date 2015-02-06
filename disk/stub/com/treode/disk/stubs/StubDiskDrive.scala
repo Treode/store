@@ -59,7 +59,7 @@ class StubDiskDrive (implicit random: Random) {
         }}}}
 
   private [stubs] def replay (registry: RecordRegistry) (implicit scheduler: Scheduler): Async [Unit] =
-    for (rs <- records.async; r <- rs.latch.unit)
+    for (rs <- records.async; r <- rs.latch)
       async [Unit] { cb =>
         scheduler.execute {
           registry.read (r.typ, r.data) (())

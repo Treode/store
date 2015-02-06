@@ -32,5 +32,5 @@ private class CheckpointRegistry {
 
   def checkpoint(): Async [Unit] =
     guard {
-      checkpoints.latch.unit foreach (_(()))
+      checkpoints.latch (_(()))
     }}

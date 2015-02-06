@@ -113,6 +113,8 @@ package object implicits {
     def batch (implicit scheduler: Scheduler): BatchIterator [A] =
       BatchIterator.adapt (iter.iterator)
 
+    def indexed = iter.zipWithIndex.latch
+
     object latch extends IterableLatch (iter, iter.size)
   }
 
@@ -132,6 +134,8 @@ package object implicits {
 
     def batch (implicit scheduler: Scheduler): BatchIterator [A] =
       BatchIterator.adapt (iter.iterator)
+
+    def indexed = iter.zipWithIndex.latch
 
     object latch extends IterableLatch (iter, iter.size)
   }
