@@ -52,6 +52,16 @@ package object http {
     def etag_= (time: TxClock): Unit =
       rsp.headerMap.add ("ETag", time.toString)
 
+	//Added
+	def conditionTxClock: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def conditionTxClock_= (time: TxClock): Unit  = {
+      rsp.headerMap.add ("Condition-TxClock", time.toString)
+	}
+	//Added
+
+
     /** Do not use; necessary for Scala style setter. */
     def json: Any =
       throw new UnsupportedOperationException
@@ -97,6 +107,51 @@ package object http {
           throw t
       }}
 
+	//Added
+	def date: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def date_= (time: TxClock): Unit  = {
+      rsp.headerMap.add ("Date", time.toDateTime.toString)
+	}
+	//Added
+
+	//Added
+	def lastModified: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def lastModified_= (time: TxClock): Unit  = {
+      rsp.headerMap.add ("Last-Modified", time.toDateTime.toString)
+	}
+	//Added
+
+	//Added
+	def readTxClock: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def readTxClock_= (time: TxClock): Unit  = {
+      rsp.headerMap.add ("Read-TxClock", time.toString)
+	}
+	//Added
+
+	//Added
+	def valueTxClock: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def valueTxClock_= (time: TxClock): Unit  = {
+      rsp.headerMap.add ("Value-TxClock", time.toString)
+	}
+	//Added
+
+	//Added
+	def vary: String  = {
+      throw new UnsupportedOperationException
+	}
+	def vary_= (vary: String): Unit  = {
+      rsp.headerMap.add ("Vary", vary)
+	}
+	//Added
+
     def plain_= (value: String) {
       rsp.mediaType = "text/plain"
       rsp.write (value)
@@ -134,6 +189,12 @@ package object http {
     def lastModificationBefore: TxClock =
       optTxClockHeader ("Last-Modification-Before") getOrElse (TxClock.now)
 
+    def requestTxClock: TxClock =
+      optTxClockHeader ("Request-TxClock") getOrElse (TxClock.now)
+      
+    def conditionTxClock: TxClock =
+      optTxClockHeader ("Condition-TxClock") getOrElse (TxClock.MinValue)
+      
     def slice: Slice = {
       val slice = optIntParam ("slice")
       val nslices = optIntParam ("nslices")

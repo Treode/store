@@ -62,10 +62,10 @@ class MovieResourceSpec extends FreeSpec with SpecTools {
           .get ("/movie/1")
       }
 
-    "PUT /movie/1 should respond Ok with an etag" in
+    "PUT /movie/1 should respond Ok with an conditionTxClock" in
       served { (port, store) => implicit movies =>
         val r1 = addStarWars (port)
-        val t1 = r1.etag
+        val t1 = r1.conditionTxClock
         store.expectCells (PM.MovieTable) (
             ("1", t1, PO.starWars))
         store.expectCells (PM.CastTable) (
@@ -76,7 +76,7 @@ class MovieResourceSpec extends FreeSpec with SpecTools {
             ("star wars", t1, PO.movies ("1")))
       }
 
-    "POST /movie should respond Ok with an etag" in
+    "POST /movie should respond Ok with an conditionTxClock" in
       served { (port, store) => implicit movies =>
 
         val r1 = given
@@ -92,7 +92,7 @@ class MovieResourceSpec extends FreeSpec with SpecTools {
         given
           .port (port)
         .expect
-          .etag (r1.etag)
+          .conditionTxClock (r1.conditionTxClock)
           .body (matchesJson (s"""{
               "id": "$id",
               "title": "Star Wars",
@@ -140,7 +140,7 @@ class MovieResourceSpec extends FreeSpec with SpecTools {
         given
           .port (port)
         .expect
-          .etag (r1.etag)
+          .conditionTxClock (r1.conditionTxClock)
           .body (matchesJson (starWars))
         .when
           .get ("/movie/1")
@@ -153,50 +153,50 @@ class MovieResourceSpec extends FreeSpec with SpecTools {
           .port (port)
           .header ("If-Modified-Since", "0")
         .expect
-          .etag (r1.etag)
+          .conditionTxClock (r1.conditionTxClock)
           .body (matchesJson (starWars))
         .when
           .get ("/movie/1")
       }
 
-    "GET /movie/1 with If-Modified-Since:(r1.etag) should respond Not Modified" in
+    "GET /movie/1 with If-Modified-Since:(r1.conditionTxClock) should respond Not Modified" in
       served { (port, store) => implicit movies =>
         val r1 = addStarWars (port)
         given
           .port (port)
-          .header ("If-Modified-Since", r1.etag.toString)
+          .header ("If-Modified-Since", r1.conditionTxClock.toString)
         .expect
           .statusCode (304)
         .when
           .get ("/movie/1")
       }
 
-    "GET /movie/1 with Last-Modification-Before:(r1.etag-1) should respond Not Found" in
+    "GET /movie/1 with Last-Modification-Before:(r1.conditionTxClock-1) should respond Not Found" in
       served { (port, store) => implicit movies =>
         val r1 = addStarWars (port)
         given
           .port (port)
-          .header ("Last-Modification-Before", (r1.etag-1).toString)
+          .header ("Last-Modification-Before", (r1.conditionTxClock-1).toString)
         .expect
           .statusCode (404)
         .when
           .get ("/movie/1")
       }
 
-    "GET /movie/1 with Last-Modification-Before:(r1.etag) should respond Ok" in
+    "GET /movie/1 with Last-Modification-Before:(r1.conditionTxClock) should respond Ok" in
       served { (port, store) => implicit movies =>
         val r1 = addStarWars (port)
         given
           .port (port)
-          .header ("Last-Modification-Before", (r1.etag).toString)
+          .header ("Last-Modification-Before", (r1.conditionTxClock).toString)
         .expect
-          .etag (r1.etag)
+          .conditionTxClock (r1.conditionTxClock)
           .body (matchesJson (starWars))
         .when
           .get ("/movie/1")
       }
 
-    "PUT /movie/1 with should respond Ok with an etag" in
+    "PUT /movie/1 with should respond Ok with an conditionTxClock" in
       served { (port, store) => implicit movies =>
 
         val r1 = addStarWars (port)
@@ -206,7 +206,7 @@ class MovieResourceSpec extends FreeSpec with SpecTools {
         .when
           .put ("/movie/1")
 
-        val (t1, t2) = (r1.etag, r2.etag)
+        val (t1, t2) = (r1.conditionTxClock, r2.conditionTxClock)
         store.expectCells (PM.MovieTable) (
             ("1", t2, PO.aNewHope),
             ("1", t1, PO.starWars))
@@ -220,18 +220,18 @@ class MovieResourceSpec extends FreeSpec with SpecTools {
             ("star wars: a new hope", t2, PO.movies ("1")))
       }
 
-    "PUT /movie/1 with a If-Unmodified-Since:1 should respond Ok with an etag" in
+    "PUT /movie/1 with a If-Unmodified-Since:1 should respond Ok with an conditionTxClock" in
       served { (port, store) => implicit movies =>
 
         val r1 = addStarWars (port)
         val r2 = given
           .port (port)
-          .header ("If-Unmodified-Since", r1.etag.toString)
+          .header ("If-Unmodified-Since", r1.conditionTxClock.toString)
           .body (aNewHope)
         .when
           .put ("/movie/1")
 
-        val (t1, t2) = (r1.etag, r2.etag)
+        val (t1, t2) = (r1.conditionTxClock, r2.conditionTxClock)
         store.expectCells (PM.MovieTable) (
             ("1", t2, PO.aNewHope),
             ("1", t1, PO.starWars))
@@ -258,7 +258,7 @@ class MovieResourceSpec extends FreeSpec with SpecTools {
         .when
           .put ("/movie/1")
 
-        val t1 = r1.etag
+        val t1 = r1.conditionTxClock
         store.expectCells (PM.MovieTable) (
             ("1", t1, PO.starWars))
         store.expectCells (PM.CastTable) (

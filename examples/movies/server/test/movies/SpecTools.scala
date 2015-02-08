@@ -102,6 +102,13 @@ trait SpecTools {
       val parse = TxClock.parse (string)
       assert (parse.isDefined, s"""Could not parse ETag "$string" as a TxClock""")
       parse.get
+    }
+	def conditionTxClock: TxClock = {
+      val string = rsp.getHeader ("Condition-TxClock")
+      assert (string != null, "Expected response to have a Condition-TxClock.")
+      val parse = TxClock.parse (string)
+      assert (parse.isDefined, s"""Could not parse Condition-TxClock "$string" as a TxClock""")
+      parse.get
     }}
 
   implicit class RichRandom (r: Random) {
@@ -114,6 +121,8 @@ trait SpecTools {
 
     def etag (ts: TxClock): ResponseSpecification =
       rsp.header ("ETag", ts.toString)
+    def conditionTxClock (ts: TxClock): Unit =
+      rsp.header ("Condition-TxClock", ts.toString)
   }
 
   implicit class RichStubStore (store: StubStore) {
