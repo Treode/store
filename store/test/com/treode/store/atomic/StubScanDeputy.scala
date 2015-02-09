@@ -56,7 +56,6 @@ private class StubScanDeputy (
   ScanDeputy.scan.listen { case ((table, start, window, slice, batch), from) =>
     tables (table)
     .from (start.bound)
-    .iterator
     .filter (start <* _._1)
     .map {case (key, value) => Cell (key.key, key.time, value)}
     .batch

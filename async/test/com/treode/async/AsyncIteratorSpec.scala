@@ -130,7 +130,7 @@ class AsyncIteratorSpec extends FreeSpec {
           else
             x
       iter.whilst (_ < 5) (x => supply (seen += x)) .fail [DistinguishedException]
-      assertResult (Set (1, 2)) (seen)
+      assertResult (Set.empty) (seen)
     }
 
     "pass througn an exception from the predicate" in {

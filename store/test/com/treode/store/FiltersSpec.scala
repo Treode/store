@@ -35,7 +35,7 @@ class FiltersSpec extends FreeSpec {
       val out = items .map (_._2) .flatten
       s"handle ${testStringOf (in)}" in {
         implicit val scheduler = StubScheduler.random()
-        assertCells (out: _*) (in.iterator.batch.dedupe)
+        assertCells (out: _*) (in.batch.dedupe)
       }}
 
     val apple1 = (
@@ -84,7 +84,7 @@ class FiltersSpec extends FreeSpec {
       val out = item._2
       s"handle ${testStringOf (in)}" in {
         implicit val scheduler = StubScheduler.random()
-        assertCells (out: _*) (in.iterator.batch.retire (7))
+        assertCells (out: _*) (in.batch.retire (7))
       }}
 
     val apple1 = (

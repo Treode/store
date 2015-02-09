@@ -17,7 +17,7 @@
 package com.treode.store.stubs
 
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentSkipListMap}
-import scala.collection.JavaConversions
+import scala.collection.JavaConversions._
 
 import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.implicits._
@@ -27,7 +27,6 @@ import com.treode.store._
 import com.treode.store.locks.LockSpace
 
 import Async.{async, guard}
-import JavaConversions._
 
 class StubStore (implicit scheduler: Scheduler) extends Store {
 
@@ -121,10 +120,10 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
       } yield {
         data
             .tailMap (StubKey (table, start.bound.key, start.bound.time), start.inclusive)
-            .iterator
-            .takeWhile (_._1.table == table)
-            .map {case (key, value) => Cell (key.key, key.time, value)}
+            .headMap (StubKey (table.id + 1, Bytes.empty, TxClock.MaxValue))
+            .entrySet
             .batch
+            .map (e => Cell (e.getKey.key, e.getKey.time, e.getValue))
             .slice (table, slice)
             .window (window)
       }}
