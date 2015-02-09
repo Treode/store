@@ -53,7 +53,7 @@ private class LogIterator private (
   private var pagePos = Option.empty [Long]
   private var pageLedger = new PageLedger
 
-  class Batch (f: Iterator [(Long, Unit => Any)] => Async [Unit], cb: Callback [Unit]) {
+  class Batch (f: Iterable [(Long, Unit => Any)] => Async [Unit], cb: Callback [Unit]) {
 
     val _read: Callback [Int] = {
       case Success (v) => cb.defer (read (v))
@@ -147,14 +147,14 @@ private class LogIterator private (
           val entry = records.read (id.id, logBuf, len - end + start)
           logPos += len + 4
           checkpointer.tally(len + 4, 1)
-          f (Iterator ((batch, entry))) run (_next)
+          f (Iterable ((batch, entry))) run (_next)
       }}
 
     def next() {
       file.deframe (logBuf, logPos, blockBits) run (_read)
     }}
 
-  def batch (f: Iterator [(Long, Unit => Any)] => Async [Unit]): Async [Unit] =
+  def batch (f: Iterable [(Long, Unit => Any)] => Async [Unit]): Async [Unit] =
     async (new Batch (f, _) .next())
 
   def pages(): (SegmentBounds, Long, PageLedger, Boolean) =

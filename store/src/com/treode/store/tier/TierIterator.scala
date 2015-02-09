@@ -16,7 +16,6 @@
 
 package com.treode.store.tier
 
-import scala.collection.JavaConversions._
 import scala.util.{Failure, Success}
 
 import com.treode.async.{Async, BatchIterator, Callback, Scheduler}
@@ -33,7 +32,7 @@ private abstract class TierIterator (
     disk: Disk
 ) extends CellIterator {
 
-  class Batch (f: Iterator [Cell] => Async [Unit], cb: Callback [Unit]) {
+  class Batch (f: Iterable [Cell] => Async [Unit], cb: Callback [Unit]) {
 
     import desc.pager
 
@@ -118,7 +117,7 @@ private abstract class TierIterator (
       }}
 
     def body (page: CellPage, index: Int): Option [Unit] = {
-      f (page.iterator.drop (index)) run (_next)
+      f (page.entries.drop (index)) run (_next)
       None
     }
 
@@ -156,7 +155,7 @@ private object TierIterator {
       disk: Disk
   ) extends TierIterator (desc, root) {
 
-    def batch (f: Iterator [Cell] => Async [Unit]): Async [Unit] =
+    def batch (f: Iterable [Cell] => Async [Unit]): Async [Unit] =
       async (new Batch (f, _) .start())
   }
 
@@ -168,7 +167,7 @@ private object TierIterator {
       disk: Disk
   ) extends TierIterator (desc, root) {
 
-    def batch (f: Iterator [Cell] => Async [Unit]): Async [Unit] =
+    def batch (f: Iterable [Cell] => Async [Unit]): Async [Unit] =
       async (new Batch (f, _) .start (start))
   }
 
@@ -192,7 +191,7 @@ private object TierIterator {
     (new FromKey (desc, root, start))
 
   def adapt (tier: MemTier) (implicit scheduler: Scheduler): CellIterator =
-    tier.entrySet.iterator.map (memTierEntryToCell _) .batch
+    tier.entrySet.batch.map (memTierEntryToCell _)
 
   def adapt (tier: MemTier, start: Bound [Key]) (implicit scheduler: Scheduler): CellIterator =
     adapt (tier.tailMap (start.bound, start.inclusive))

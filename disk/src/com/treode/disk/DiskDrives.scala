@@ -84,7 +84,7 @@ private class DiskDrives (kit: DiskKit) {
     for {
       segs <- draining.latch.collect (_.drain())
     } yield {
-      compactor.drain (segs.iterator.flatten)
+      compactor.drain (segs.flatten)
       queue.launch()
       log.openedDrives (attached)
       if (!draining.isEmpty)
@@ -199,7 +199,7 @@ private class DiskDrives (kit: DiskKit) {
         segs <- drainDrives.latch.collect (_.drain())
       } yield {
         checkpointer.checkpoint()
-            .ensure (compactor.drain (segs.iterator.flatten))
+            .ensure (compactor.drain (segs.flatten))
             .run (ignore)
         log.drainingDrives (drainPaths)
       }}
@@ -240,11 +240,11 @@ private class DiskDrives (kit: DiskKit) {
       drives.values.latch.collate (_.mark())
     }
 
-  def cleanable(): Async [Iterator [SegmentPointer]] =  {
+  def cleanable(): Async [Iterable [SegmentPointer]] =  {
     guard {
       for {
         segs <- drives.values.filterNot (_.draining) .latch.collect (_.cleanable())
-      } yield segs.iterator.flatten
+      } yield segs.flatten
     }}
 
 def fetch [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =

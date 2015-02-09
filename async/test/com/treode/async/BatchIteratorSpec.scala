@@ -86,7 +86,7 @@ class BatchIteratorSpec extends FreeSpec {
 
   "flatMap should" - {
 
-    def inner = Iterator (1, 2, 3)
+    def inner = Iterable (1, 2, 3)
 
     "work with the for keyword" in {
       implicit val scheduler = StubScheduler.random()
@@ -202,7 +202,7 @@ class BatchIteratorSpec extends FreeSpec {
           else
             x
       iter.whilst (_ < 5) (x => supply (seen += x)) .fail [DistinguishedException]
-      assertResult (Set (1, 2)) (seen)
+      assertResult (Set.empty) (seen)
     }
 
     "pass througn an exception from the predicate" in {

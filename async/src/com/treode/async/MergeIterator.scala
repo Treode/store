@@ -37,7 +37,7 @@ private class MergeIterator [A] (
       if (r != 0) r else that.n compare n
     }}
 
-  private class Batch (f: Iterator [A] => Async [Unit], cb: Callback [Unit]) {
+  private class Batch (f: Iterable [A] => Async [Unit], cb: Callback [Unit]) {
 
     val fiber = new Fiber
     val pq = new PriorityQueue [Element]
@@ -46,7 +46,7 @@ private class MergeIterator [A] (
     var thrown = Option.empty [Throwable]
 
     // Merge the next batch from the prioirty queue; must run inside fiber.
-    private def _merge(): Iterator [A] = {
+    private def _merge(): Iterable [A] = {
       val b = Seq.newBuilder [A]
       while (pq.size == count) {
         val e = pq.dequeue()
@@ -56,7 +56,7 @@ private class MergeIterator [A] (
         else
           scheduler.pass (e.cb, ())
       }
-      b.result.iterator
+      b.result
     }
 
     // Give the next batch to the body; must be run inside fiber.
@@ -128,10 +128,10 @@ private class MergeIterator [A] (
 
     if (count == 0)
       scheduler.pass (cb, ())
-    for ((iter, n) <- iters.zipWithIndex)
-      iter.batch (xs => async (cb => got (n, xs, cb))) run (close (_))
+    for ((i, n) <- iters.zipWithIndex)
+      i.batch (b => async (cb => got (n, b.iterator, cb))) run (close (_))
   }
 
-  def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
+  def batch (f: Iterable [A] => Async [Unit]): Async [Unit] =
     async (new Batch (f, _))
 }

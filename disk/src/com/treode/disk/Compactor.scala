@@ -29,7 +29,7 @@ import PageLedger.Groups
 private class Compactor (kit: DiskKit) {
   import kit.{config, drives, releaser, scheduler}
 
-  type DrainReq = Iterator [SegmentPointer]
+  type DrainReq = Iterable [SegmentPointer]
 
   val fiber = new Fiber
   var pages: PageRegistry = null
@@ -101,7 +101,7 @@ private class Compactor (kit: DiskKit) {
       } yield compact (groups, segs, true)
     } run (probed)
 
-  private def probeForDrain (iter: Iterator [SegmentPointer]): Unit =
+  private def probeForDrain (iter: Iterable [SegmentPointer]): Unit =
     guard {
       engaged = true
       for (groups <- pages.probeForDrain (iter))
@@ -170,7 +170,7 @@ private class Compactor (kit: DiskKit) {
         cleanreq = true
     }
 
-  def drain (iter: Iterator [SegmentPointer]): Unit =
+  def drain (iter: Iterable [SegmentPointer]): Unit =
     fiber.execute {
       if (!engaged)
         probeForDrain (iter)

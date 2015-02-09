@@ -36,7 +36,7 @@ private class StubPageRegistry (releaser: EpochReleaser) (implicit
 
   import config.compactionProbability
 
-  def probe (iter: Iterator [(Long, StubPage)]): Async [(Groups, Seq [Long])] = {
+  def probe (iter: Iterable [(Long, StubPage)]): Async [(Groups, Seq [Long])] = {
     val merger = new Merger
     val segments = Seq.newBuilder [Long]
     iter.async.foreach { case (offset, page) =>
