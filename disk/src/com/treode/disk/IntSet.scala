@@ -20,7 +20,7 @@ import scala.collection.JavaConversions._
 import com.googlecode.javaewah.{EWAHCompressedBitmap => Bitmap}
 import com.treode.pickle.{Pickler, PickleContext, UnpickleContext}
 
-private class IntSet private (private val bitmap: Bitmap) {
+private class IntSet private (private val bitmap: Bitmap) extends Iterable [Int] {
 
   def this() = this (Bitmap.bitmapOf())
 
@@ -51,14 +51,11 @@ private class IntSet private (private val bitmap: Bitmap) {
   def min: Int =
     bitmap.iterator.next
 
-  def size: Int =
-    bitmap.cardinality()
-
   def iterator: Iterator [Int] =
     asScalaIterator (bitmap.iterator.map (_.toInt))
 
-  def toSet: Set [Int] =
-    iterator.toSet
+  override def size: Int =
+    bitmap.cardinality()
 
   override def hashCode: Int = bitmap.hashCode
 

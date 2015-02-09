@@ -131,13 +131,13 @@ private class DiskDrive (
       IntSet ((pageSeg.num +: logSegs.toSeq).sorted: _*)
   }
 
-  private def _cleanable: Iterator [SegmentPointer] = {
+  private def _cleanable: Iterable [SegmentPointer] = {
     val skip = _protected.add (compacting)
-    for (seg <- alloc .cleanable (skip) .iterator)
+    for (seg <- alloc .cleanable (skip))
       yield SegmentPointer (this, segmentBounds (seg))
   }
 
-  def cleanable(): Async [Iterator [SegmentPointer]] =
+  def cleanable(): Async [Iterable [SegmentPointer]] =
     fiber.supply {
       _cleanable
     }
@@ -166,7 +166,7 @@ private class DiskDrive (
       PageLedger.write (pageLedger.clone(), file, geom, pageSeg.base, pageHead)
     }
 
-  def drain(): Async [Iterator [SegmentPointer]] =
+  def drain(): Async [Iterable [SegmentPointer]] =
     fiber.guard {
       for {
         _ <- latch (logmp.pause(), pagemp.close())

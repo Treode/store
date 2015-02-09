@@ -61,9 +61,9 @@ object AsyncIteratorTestTools {
   /** A batch iterator over each given batch. */
   def batch [A] (xs: Seq [Seq [A]]) (implicit s: StubScheduler): BatchIterator [A] =
     new BatchIterator [A] {
-      val iter = xs.iterator
-      def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
-        s.whilst (iter.hasNext) (f (iter.next.iterator))
+      val i = xs.iterator
+      def batch (f: Iterable [A] => Async [Unit]): Async [Unit] =
+        s.whilst (i.hasNext) (f (i.next))
     }
 
   /** An async iterator over each given value. */
