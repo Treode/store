@@ -28,10 +28,10 @@ import scala.util.{Failure, Success}
 import com.treode.async.Callback
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
-import org.scalatest.Assertions
+import org.scalatest.Assertions._
 
 /** ScalaMock refuses to mock AsynchronousSocketChannel. */
-class AsyncSocketMock extends AsynchronousSocketChannel (null) with Assertions {
+class AsyncSocketMock extends AsynchronousSocketChannel (null) {
 
   private class Expectation {
     def read (dst: ByteBuffer) {

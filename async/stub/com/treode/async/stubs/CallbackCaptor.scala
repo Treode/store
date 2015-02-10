@@ -18,10 +18,10 @@ package com.treode.async.stubs
 
 import scala.util.{Failure, Success, Try}
 
-import org.scalatest.Assertions
+import org.scalatest.Assertions._
 
 /** Capture the result of an asynchronous call so you may test for success or failure later. */
-class CallbackCaptor [A] private extends (Try [A] => Unit) with Assertions {
+class CallbackCaptor [A] private extends (Try [A] => Unit) {
 
   private var _invokation: Array [StackTraceElement] = null
   private var _v: A = null.asInstanceOf [A]

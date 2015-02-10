@@ -27,10 +27,10 @@ import scala.util.{Success, Failure}
 import com.treode.async.Callback
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
-import org.scalatest.Assertions
+import org.scalatest.Assertions._
 
 /** ScalaMock refuses to mock AsynchronousFileChannel. */
-class AsyncFileMock extends AsynchronousFileChannel with Assertions {
+class AsyncFileMock extends AsynchronousFileChannel {
 
   private class Expectation {
     def read (dst: ByteBuffer, position: Long) {
