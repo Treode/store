@@ -32,18 +32,15 @@ class AsyncQueueSpec extends FlatSpec {
   class TestQueue (implicit scheduler: StubScheduler) {
 
     val fiber = new Fiber
-    val queue = AsyncQueue (fiber) (next())
+    val queue = new AsyncQueue (fiber) (reengage _)
     var callbacks = new ArrayDeque [Callback [Unit]]
     var captor = AsyncCaptor [Unit]
 
     queue.launch()
 
-    def next(): Option [Runnable] = {
-      if (callbacks.isEmpty) {
-        None
-      } else {
+    def reengage(): Unit =
+      if (!callbacks.isEmpty)
         queue.run (callbacks.remove()) (captor.start())
-      }}
 
     def start(): CallbackCaptor [Unit] = {
       val cb = queue.async [Unit] (cb => callbacks.add (cb)) .capture()

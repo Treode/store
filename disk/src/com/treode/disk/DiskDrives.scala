@@ -53,7 +53,7 @@ private class DiskDrives (kit: DiskKit) {
 
   val queue = AsyncQueue (fiber) {
     if (closed) {
-      None
+      // noop
     } else if (!closereqs.isEmpty) {
       val cb = fanout [Unit] (closereqs)
       closereqs = List.empty
@@ -91,7 +91,7 @@ private class DiskDrives (kit: DiskKit) {
         log.drainingDrives (draining.setBy (_.path))
     }}
 
-  def _close (cb: Callback [Unit]): Option [Runnable] =
+  def _close (cb: Callback [Unit]): Unit =
     queue.run (cb) {
       closed = true
       drives.values.latch (_.close())
@@ -107,7 +107,7 @@ private class DiskDrives (kit: DiskKit) {
       drives.values.latch.collect (_.digest)
     }
 
-  private def _attach (items: Seq [AttachItem], cb: Callback [Unit]): Option [Runnable] =
+  private def _attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
     queue.run (cb) {
 
       val priorDisks = drives.values
@@ -155,7 +155,7 @@ private class DiskDrives (kit: DiskKit) {
       _attach (files)
     }
 
-  private def _detach (items: List [DiskDrive]): Option [Runnable] =
+  private def _detach (items: List [DiskDrive]): Unit =
     queue.run (ignore) {
 
       val keepDrives = this.drives -- (items map (_.id))
@@ -179,7 +179,7 @@ private class DiskDrives (kit: DiskKit) {
       detachreqs ::= disk
     }
 
-  private def _drain (items: Seq [Path], cb: Callback [Unit]): Option [Runnable] =
+  private def _drain (items: Seq [Path], cb: Callback [Unit]): Unit =
     queue.run (cb) {
 
       val byPath = drives.values.mapBy (_.path)
@@ -213,7 +213,7 @@ private class DiskDrives (kit: DiskKit) {
       drainreqs = drainreqs.enqueue (items, cb)
     }
 
-  private def _checkpoint (marks: Map [Int, Long], cb: Callback [Unit]): Option [Runnable] =
+  private def _checkpoint (marks: Map [Int, Long], cb: Callback [Unit]): Unit =
     queue.run (cb) {
       val bootgen = this.bootgen + 1
       val attached = drives.values.setBy (_.path)
