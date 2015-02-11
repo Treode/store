@@ -16,51 +16,81 @@
 
 package com.treode.async
 
-/** Experimental. */
-class AsyncQueue (fiber: Fiber) (deque: => Option [Runnable]) {
+/** Serialize asynchronous operations.
+  *
+  * Your class uses a fiber to serialize requests for work and manage data
+  * structures that track the work to be done. The AsyncQueue runs one
+  * asynchronous task at a time, and it asks your class to begin the next
+  * asynchronous task when the first completes. Your class may receive multiple
+  * requests from your user while an asynchronous task is underway. The
+  * AsyncQueue allows your class to implement complex logic that prioritizes
+  * and combines those requests.
+  *
+  * @param fiber The fiber your class uses to serialize requests.
+  * @param reengage The function to begin the next asynchronous task.
+  */
+class AsyncQueue (fiber: Fiber) (reengage: () => Any) {
 
   private [this] var _engaged = true
 
-  private def _reengage() {
-    deque match {
-      case Some (task) =>
-        _engaged = true
-        task.run()
-      case None =>
-        _engaged = false
-    }}
-
-  private def reengage(): Unit =
+  private def disengage(): Unit =
     fiber.execute {
-      _reengage()
+      _engaged = false
+      reengage()
     }
 
-  def engaged: Boolean = _engaged
+  /** Engage the queue, if not already engaged. If an asyncrhonous task is
+    * already underway, this does nothing. Otherwise, this reengages the queue
+    * to begin an asynchronous task (that is, it invokes `reengage`). Your
+    * class should call this everytime it has added work to its queues.
+    */
+  def engage() {
+    if (!_engaged)
+      reengage()
+  }
 
-  def run [A] (cb: Callback [A]) (task: => Async [A]): Option [Runnable] =
-    Some (new Runnable {
-      def run(): Unit = Async.guard (task) ensure (reengage()) run (cb)
-    })
+  /** Begin the next asynchronous task. Requires that this queue is not already
+    * engaged in an asynchronous task. Launches the given task, and when it
+    * completes, reengages the queue to run the next task (that is, it invokes
+    * `reengage`). Your class should call this in response to reengage.
+    */
+  def begin [A] (task: => Async [A]) {
+    require (_engaged == false)
+    _engaged = true
+    Async.guard (task) ensure (disengage()) run (Callback.ignore)
+  }
 
+  /** To be removed. */
+  def engaged = _engaged
+
+  /** To be removed. */
   def launch(): Unit =
-    reengage()
+    disengage()
 
+  /** To be removed. */
   def execute (f: => Any): Unit =
     fiber.execute {
       f
-      if (!_engaged)
-        _reengage()
+      engage()
     }
 
+  /** To be removed. */
   def async [A] (f: Callback [A] => Any): Async [A] =
     fiber.async  { cb =>
       f (cb)
-      if (!_engaged)
-        _reengage()
-    }}
+      engage()
+    }
+
+  /** To be removed. */
+  def run [A] (cb: Callback [A]) (task: => Async [A]) {
+    require (_engaged == false)
+    _engaged = true
+    Async.guard (task) ensure (disengage()) run (cb)
+  }}
 
 object AsyncQueue {
 
-  def apply (fiber: Fiber) (deque: => Option [Runnable]): AsyncQueue =
-    new AsyncQueue (fiber) (deque)
+  /** To be removed. */
+  def apply (fiber: Fiber) (reengage: => Any) (implicit scheduler: Scheduler): AsyncQueue =
+    new AsyncQueue (fiber) (() => reengage)
 }
