@@ -75,7 +75,7 @@ package object movies {
       val rsp = req.response
       rsp.status = Status.Ok
       //rsp.etag = time
-	  rsp.conditionTxClock = time
+	  rsp.valueTxClock = time
       //rsp.headerMap.add ("Condition-TxClock", time.toString)
       rsp
     }
@@ -84,7 +84,7 @@ package object movies {
       val rsp = req.response
       rsp.status = Status.Created
       //rsp.etag = time
-	  rsp.conditionTxClock = time
+	  rsp.valueTxClock = time
       //rsp.headerMap.add ("Condition-TxClock", time.toString)
       rsp.location = location
       rsp
@@ -104,10 +104,10 @@ package object movies {
       rsp.status = Status.Ok
       //rsp.etag = time
       //Added
-	  rsp.date = req.requestTxClock
+	  rsp.date = req.lastModificationBefore
 	  rsp.valueTxClock = time
 	  rsp.lastModified = time
-	  rsp.readTxClock = req.requestTxClock
+	  rsp.readTxClock = req.lastModificationBefore
 	  rsp.vary = "Request-TxClock"
 	  //Added
       rsp.json = value

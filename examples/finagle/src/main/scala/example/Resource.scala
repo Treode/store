@@ -32,10 +32,8 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
   object KeyParam extends ParamMatcher ("key")
 
   def read (req: Request, tab: TableId, key: String): Async [Response] = {
-    //val rt = req.lastModificationBefore
-    //val ct = req.ifModifiedSince
-    val rt = req.requestTxClock
-    val ct = req.conditionTxClock
+    val rt = req.lastModificationBefore
+    val ct = req.ifModifiedSince
     val ops = Seq (ReadOp (tab, Bytes (key)))
     store.read (rt, ops:_*) .map { vs =>
       val v = vs.head
@@ -49,8 +47,8 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
       }}}
 
   def scan (req: Request, table: TableId): Async [Response] = {
-    val rt = req.requestTxClock
-    val ct = req.conditionTxClock
+    val rt = req.lastModificationBefore
+    val ct = req.ifModifiedSince
     val window = Window.Latest (rt, true, ct, false)
     val slice = req.slice
     val iter = store
@@ -61,8 +59,8 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
 
   def history (req: Request, table: TableId): Async [Response] = {
     val start = Bound.Inclusive (Key.MinValue)
-    val rt = req.requestTxClock
-    val ct = req.conditionTxClock
+    val rt = req.lastModificationBefore
+    val ct = req.ifModifiedSince
     val window = Window.Between (rt, true, ct, false)
     val slice = req.slice
     val iter = store.scan (table, Bound.firstKey, window, slice)
@@ -78,7 +76,7 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     .map [Response] { vt =>
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.headerMap.add ("Condition-TxClock", vt.toString)
+      rsp.headerMap.add ("Value-TxClock", vt.toString)
       rsp
     }
     .recover {
@@ -94,7 +92,7 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     .map [Response] { vt =>
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.headerMap.add ("Condition-TxClock", vt.toString)
+      rsp.headerMap.add ("Value-TxClock", vt.toString)
       rsp
     }
     .recover {

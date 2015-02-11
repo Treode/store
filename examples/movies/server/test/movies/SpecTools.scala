@@ -96,18 +96,11 @@ trait SpecTools {
 
   implicit class RichResposne (rsp: RestAssuredResponse) {
 
-    def etag: TxClock = {
-      val string = rsp.getHeader ("ETag")
-      assert (string != null, "Expected response to have an ETag.")
+	def valueTxClock: TxClock = {
+      val string = rsp.getHeader ("Value-TxClock")
+      assert (string != null, "Expected response to have a Value-TxClock.")
       val parse = TxClock.parse (string)
-      assert (parse.isDefined, s"""Could not parse ETag "$string" as a TxClock""")
-      parse.get
-    }
-	def conditionTxClock: TxClock = {
-      val string = rsp.getHeader ("Condition-TxClock")
-      assert (string != null, "Expected response to have a Condition-TxClock.")
-      val parse = TxClock.parse (string)
-      assert (parse.isDefined, s"""Could not parse Condition-TxClock "$string" as a TxClock""")
+      assert (parse.isDefined, s"""Could not parse Value-TxClock "$string" as a TxClock""")
       parse.get
     }}
 
@@ -119,10 +112,8 @@ trait SpecTools {
 
   implicit class RichResponseSpecification (rsp: ResponseSpecification) {
 
-    def etag (ts: TxClock): ResponseSpecification =
-      rsp.header ("ETag", ts.toString)
-    def conditionTxClock (ts: TxClock): Unit =
-      rsp.header ("Condition-TxClock", ts.toString)
+    def valueTxClock (ts: TxClock): ResponseSpecification =
+      rsp.header ("Value-TxClock", ts.time.toString)
   }
 
   implicit class RichStubStore (store: StubStore) {
