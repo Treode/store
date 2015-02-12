@@ -32,6 +32,8 @@ import com.twitter.finagle.http.{MediaType, Request, Response, Status}
 import com.twitter.finagle.netty3.ChannelBufferBuf
 import org.jboss.netty.buffer.{ChannelBufferOutputStream, ChannelBuffers}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 
 package object http {
 
@@ -97,6 +99,52 @@ package object http {
           throw t
       }}
 
+    /** Do not use; necessary for Scala style setter. */
+	def date: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def date_= (time: TxClock): Unit  = {
+      val dt = time.toDateTime;
+      val fmt = DateTimeFormat.forPattern("EEE, d MMM HH:mm:ss y zzz");
+      val str = fmt.print(dt);
+      rsp.headerMap.add ("Date", str)
+	}
+
+    /** Do not use; necessary for Scala style setter. */
+	def lastModified: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def lastModified_= (time: TxClock): Unit  = {
+      val dt = time.toDateTime;
+      val fmt = DateTimeFormat.forPattern("EEE, d MMM HH:mm:ss y zzz");
+      val str = fmt.print(dt);
+      rsp.headerMap.add ("Last-Modified", str)
+	}
+
+    /** Do not use; necessary for Scala style setter. */
+	def readTxClock: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def readTxClock_= (time: TxClock): Unit  = {
+      rsp.headerMap.add ("Read-TxClock", time.time.toString)
+	}
+
+    /** Do not use; necessary for Scala style setter. */
+	def valueTxClock: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def valueTxClock_= (time: TxClock): Unit  = {
+      rsp.headerMap.add ("Value-TxClock", time.time.toString)
+	}
+
+    /** Do not use; necessary for Scala style setter. */
+	def vary: String  = {
+      throw new UnsupportedOperationException
+	}
+	def vary_= (vary: String): Unit  = {
+      rsp.headerMap.add ("Vary", vary)
+	}
+
     def plain_= (value: String) {
       rsp.mediaType = "text/plain"
       rsp.write (value)
@@ -125,14 +173,20 @@ package object http {
         TxClock.parse (value) .getOrThrow (new BadRequestException (s"Bad time for $name: $value"))
       }
 
+	//Maintaining compatibility with un-updated servers that use older headers
     def ifModifiedSince: TxClock =
-      optTxClockHeader ("If-Modified-Since") getOrElse (TxClock.MinValue)
+      optTxClockHeader ("Condition-TxClock") getOrElse
+	  	(optTxClockHeader ("If-Modified-Since") getOrElse (TxClock.MinValue))
 
+	//Maintaining compatibility with un-updated servers that use older headers
     def ifUnmodifiedSince: TxClock =
-      optTxClockHeader ("If-Unmodified-Since") getOrElse (TxClock.now)
+      optTxClockHeader ("Condition-TxClock") getOrElse
+	  	(optTxClockHeader ("If-Unmodified-Since") getOrElse (TxClock.now))
 
+	//Maintaining compatibility with un-updated servers that use older headers
     def lastModificationBefore: TxClock =
-      optTxClockHeader ("Last-Modification-Before") getOrElse (TxClock.now)
+      optTxClockHeader ("Request-TxClock") getOrElse
+	  	(optTxClockHeader ("Last-Modification-Before") getOrElse (TxClock.now))
 
     def slice: Slice = {
       val slice = optIntParam ("slice")

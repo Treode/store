@@ -76,7 +76,7 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     .map [Response] { vt =>
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.headerMap.add ("ETag", vt.toString)
+      rsp.headerMap.add ("Value-TxClock", vt.toString)
       rsp
     }
     .recover {
@@ -92,7 +92,7 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     .map [Response] { vt =>
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.headerMap.add ("ETag", vt.toString)
+      rsp.headerMap.add ("Value-TxClock", vt.toString)
       rsp
     }
     .recover {
