@@ -18,7 +18,7 @@ package movies
 
 import com.treode.async.Async, Async.supply
 import com.treode.cluster.HostId
-import com.treode.store.StaleException
+import com.treode.store.{StaleException, TxClock}
 import com.twitter.finagle.http.{Method, Request, Response, Status}
 
 import movies.{DisplayModel => DM}
@@ -28,8 +28,8 @@ object MovieResource {
   def apply (host: HostId, movies: MovieStore, router: Router) {
 
     def get (request: Request, id: String): Async [Response] = {
-      val rt = request.lastModificationBefore
-      val ct = request.ifModifiedSince
+      val rt = request.requestTxClock
+      val ct = request.conditionTxClock (TxClock.MinValue)
       for {
         (vt, movie) <- movies.readMovie (rt, id)
       } yield {
@@ -43,7 +43,7 @@ object MovieResource {
         }}}
 
     def query (request: Request): Async [Response] = {
-      val rt = request.lastModificationBefore
+      val rt = request.requestTxClock
       val q = request.query
       for {
         result <- movies.query (rt, q, true, false)
@@ -53,7 +53,7 @@ object MovieResource {
 
     def post (request: Request): Async [Response] = {
       val xid = request.transactionId (host)
-      val ct = request.ifUnmodifiedSince
+      val ct = request.conditionTxClock (TxClock.now)
       val movie = request.readJson [DM.Movie]
       (for {
         (id, vt) <- movies.create (xid, ct, movie)
@@ -66,7 +66,7 @@ object MovieResource {
 
     def put (request: Request, id: String): Async [Response] = {
       val xid = request.transactionId (host)
-      val ct = request.ifUnmodifiedSince
+      val ct = request.conditionTxClock (TxClock.now)
       val movie = request.readJson [DM.Movie]
       (for {
         vt <- movies.update (xid, ct, id, movie)

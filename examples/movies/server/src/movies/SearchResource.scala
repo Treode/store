@@ -26,7 +26,7 @@ object SearchResource {
   def apply (movies: MovieStore, router: Router) {
 
     def query (request: Request): Async [Response] = {
-      val rt = request.lastModificationBefore
+      val rt = request.requestTxClock
       val q = request.query
       for {
         result <- movies.query (rt, q, true, true)
