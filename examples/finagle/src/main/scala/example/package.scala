@@ -22,7 +22,7 @@ import com.treode.async.BatchIterator
 import com.treode.async.misc.RichOption
 import com.treode.jackson.DefaultTreodeModule
 import com.treode.store.{Bytes, TableId, TxClock}
-import com.treode.twitter.finagle.http.{RichResponse, BadRequestException}
+import com.treode.twitter.finagle.http.{RichResponse, BadRequestException, RichRequest}
 import com.twitter.finagle.http.{Request, Response, Status}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
@@ -62,7 +62,11 @@ package object example {
     def json (req: Request, time: TxClock, value: Any): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.etag = time
+      rsp.date = req.requestTxClock
+      rsp.lastModified = time
+      rsp.readTxClock = req.requestTxClock
+      rsp.valueTxClock = time
+      rsp.vary = "Request-TxClock"
       rsp.json = value
       rsp
     }
