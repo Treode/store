@@ -74,18 +74,14 @@ package object movies {
     def ok (req: Request, time: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.Ok
-      //rsp.etag = time
 	  rsp.valueTxClock = time
-      //rsp.headerMap.add ("Condition-TxClock", time.toString)
       rsp
     }
 
     def created (req: Request, time: TxClock, location: String): Response = {
       val rsp = req.response
       rsp.status = Status.Created
-      //rsp.etag = time
 	  rsp.valueTxClock = time
-      //rsp.headerMap.add ("Condition-TxClock", time.toString)
       rsp.location = location
       rsp
     }
@@ -102,14 +98,11 @@ package object movies {
       implicit val mapper = if (req.pretty) prettyJson else textJson
       val rsp = req.response
       rsp.status = Status.Ok
-      //rsp.etag = time
-      //Added
-	  rsp.date = req.lastModificationBefore
+	  rsp.date = req.requestTxClock
 	  rsp.valueTxClock = time
 	  rsp.lastModified = time
-	  rsp.readTxClock = req.lastModificationBefore
+	  rsp.readTxClock = req.requestTxClock
 	  rsp.vary = "Request-TxClock"
-	  //Added
       rsp.json = value
       rsp
     }
