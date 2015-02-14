@@ -38,7 +38,7 @@ private class ScanDirector (
   import kit.{cluster, library, random, scheduler}
   import kit.config.scanBatchBackoff
 
-  private class Batch (body: Iterator [Cell] => Async [Unit], cb: Callback [Unit]) {
+  private class Batch (body: Iterable [Cell] => Async [Unit], cb: Callback [Unit]) {
 
     val fiber = new Fiber
 
@@ -121,7 +121,7 @@ private class ScanDirector (
       if (!xs.isEmpty) {
         // We have data to give, and we proactively asked a deputy for new data.
         ready = false
-        scheduler.execute (guard (body (xs.iterator)) run (took _))
+        scheduler.execute (guard (body (xs)) run (took _))
       } else if (taken) {
         // There's nothing to give, no deputies responded while the client body executed.
         val last = this.last
@@ -176,7 +176,7 @@ private class ScanDirector (
         scan (table, last, window, slice, batch) (from, port)
       }}}
 
-  def batch (f: Iterator [Cell] => Async [Unit]): Async [Unit] =
+  def batch (f: Iterable [Cell] => Async [Unit]): Async [Unit] =
     async (new Batch (f, _))
 }
 

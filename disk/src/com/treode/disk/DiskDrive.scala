@@ -131,13 +131,13 @@ private class DiskDrive (
       IntSet ((pageSeg.num +: logSegs.toSeq).sorted: _*)
   }
 
-  private def _cleanable: Iterator [SegmentPointer] = {
+  private def _cleanable: Iterable [SegmentPointer] = {
     val skip = _protected.add (compacting)
-    for (seg <- alloc .cleanable (skip) .iterator)
+    for (seg <- alloc .cleanable (skip))
       yield SegmentPointer (this, segmentBounds (seg))
   }
 
-  def cleanable(): Async [Iterator [SegmentPointer]] =
+  def cleanable(): Async [Iterable [SegmentPointer]] =
     fiber.supply {
       _cleanable
     }
@@ -166,7 +166,7 @@ private class DiskDrive (
       PageLedger.write (pageLedger.clone(), file, geom, pageSeg.base, pageHead)
     }
 
-  def drain(): Async [Iterator [SegmentPointer]] =
+  def drain(): Async [Iterable [SegmentPointer]] =
     fiber.guard {
       for {
         _ <- latch (logmp.pause(), pagemp.close())
@@ -273,7 +273,7 @@ private class DiskDrive (
     fiber.execute {
 
       val (accepts, rejects, realloc) = splitRecords (entries)
-      logmp.replace (rejects)
+      logmp.send (rejects)
       val (callbacks, length) = writeRecords (logBuf, batch, accepts)
       val cb = fanout (callbacks)
       checkpointer.tally (length, accepts.size)
@@ -349,7 +349,7 @@ private class DiskDrive (
     fiber.execute {
 
       val (accepts, rejects, realloc) = splitPages (pages)
-      pagemp.replace (rejects)
+      pagemp.send (rejects)
       val (buffer, callbacks, ledger) = writePages (accepts)
       val pos = pageHead - buffer.readableBytes
       assert (pos >= pageSeg.base + blockBytes)
@@ -451,7 +451,7 @@ private object DiskDrive {
       val boot = BootBlock.apply (sysid, 0, items.size, attaching)
       for {
         _ <-
-        for (((path, file, geom), id) <- items.zipWithIndex.latch.unit)
+        for (((path, file, geom), id) <- items.zipWithIndex.latch)
           init (id, path, file, geom, boot)
       } yield {
         log.initializedDrives (attaching)

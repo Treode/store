@@ -25,10 +25,38 @@ import Async.async
   *
   * {{{
   * import com.treode.async.implicits._
+  *
+  * // Await completions, ignore results.
   * def process (xs: Seq [Int]): Async [Unit] =
-  *   for (x <- xs.latch.unit) {
-  *     // Some asynchronous operation using x
-  *   }
+  *   for (x <- xs.latch)
+  *     // Some asynchronous operation using x.
+  *
+  * // Await completions, ignore results.
+  * def process (xs: Seq [Int]): Async [Unit] =
+  *   xs.latch (x => ...)
+  *
+  * // Await completions, collect results in any order.
+  * def process (xs: Seq [Int]): Async [Seq [B]] =
+  *   for (x <- xs.latch.collect) yield
+  *     // Some asynchronous operation using x, yielding a B.
+  *
+  * // Await completions, collect results in any order.
+  * def process (xs: Seq [Int]): Async [Seq [B]] =
+  *   xs.latch.collect (x => ...)
+  *
+  * // Await completions, collect results in a map.
+  * def process (xs: Seq [Int]): Async [Map [K, V]] =
+  *   for (x <- xs.latch.collate) yield
+  *     // Some asynchronous operation using x, yielding (K, V).
+  *
+  * // Await completions, collect results in a map.
+  * def process (xs: Seq [Int]): Async [Map [K, V]] =
+  *    xs.latch.collate (x => ...)
+  *
+  * // Await completions, collect results in input order.
+  * def process (xs: Seq [Int]): Async [Seq [B]] =
+  *   for ((x, i) <- xs.indexed) yield
+  *     // Some asynchronous operation using x and i, yielding a B.
   * }}}
   */
 class IterableLatch [A, R] private [async] (iter: FilterMonadic [A, R], size: Int) {
@@ -36,67 +64,60 @@ class IterableLatch [A, R] private [async] (iter: FilterMonadic [A, R], size: In
   private def run [A, R, B] (iter: FilterMonadic [A, R], cb: Callback [B]) (f: A => Async [B]): Unit =
     iter foreach (x => f (x) run (cb))
 
+  def apply [B] (f: A => Async [B]): Async [Unit] =
+    async { cb =>
+      run [A, R, B] (iter, new CountingLatch [B] (size, cb)) (f)
+    }
+
+  def foreach [B] (f: A => Async [B]): Async [Unit] =
+    apply (f)
+
+  def map [C, B] (f: A => Async [B]) (implicit m: Manifest [B], w: A <:< (C, Int)): Async [Seq [B]] =
+    async { cb =>
+      run [A, R, (Int, B)] (iter, new ArrayLatch (size, cb)) {
+        x => f (x) map ((x._2, _))
+      }}
+
+  def filter (p: A => Boolean) =
+    new IterableLatch (iter.withFilter (p), size)
+
+  def withFilter (p: A => Boolean) =
+    new IterableLatch (iter.withFilter (p), size)
+
   /** The iterated method must yield a result; the final result is a sequence whose order depends
     * on the scheduling of the asynchronous operations.
     */
-  object casual {
+  object collect {
 
-    def foreach [B] (f: A => Async [B]) (implicit m: Manifest [B]): Async [Seq [B]] =
+    def apply [B] (f: A => Async [B]) (implicit m: Manifest [B]): Async [Seq [B]] =
       async { cb =>
         run [A, R, B] (iter, new CasualLatch [B] (size, cb)) (f)
       }
 
+    def map [B] (f: A => Async [B]) (implicit m: Manifest [B]): Async [Seq [B]] =
+      apply (f)
+
     def filter (p: A => Boolean) =
-      new IterableLatch (iter.withFilter (p), size) .casual
+      new IterableLatch (iter.withFilter (p), size) .collect
 
     def withFilter (p: A => Boolean) =
-      new IterableLatch (iter.withFilter (p), size) .casual
+      new IterableLatch (iter.withFilter (p), size) .collect
   }
 
   /** The iterated method must yield a pair (key, value); the final result is a map. */
-  object map {
+  object collate {
 
-    def foreach [K, V] (f: A => Async [(K, V)]): Async [Map [K, V]] =
+    def apply [K, V] (f: A => Async [(K, V)]): Async [Map [K, V]] =
       async { cb =>
         run [A, R, (K, V)] (iter, new MapLatch [K, V] (size, cb)) (f)
       }
 
-    def filter (p: A => Boolean) =
-      new IterableLatch (iter.withFilter (p), size) .map
-
-    def withFilter (p: A => Boolean) =
-      new IterableLatch (iter.withFilter (p), size) .map
-  }
-
-  /** The iterated method must yield a result; the final result is a sequence whose order matches
-    * that of the input iterator.
-    */
-  object seq {
-
-    def foreach [C, B] (f: A => Async [B]) (implicit m: Manifest [B], w: A <:< (C, Int)): Async [Seq [B]] =
-      async { cb =>
-        run [A, R, (Int, B)] (iter, new ArrayLatch (size, cb)) {
-          x => f (x) map ((x._2, _))
-        }}
+    def map [K, V] (f: A => Async [(K, V)]): Async [Map [K, V]] =
+      apply (f)
 
     def filter (p: A => Boolean) =
-      new IterableLatch (iter.withFilter (p), size) .seq
+      new IterableLatch (iter.withFilter (p), size) .collate
 
     def withFilter (p: A => Boolean) =
-      new IterableLatch (iter.withFilter (p), size) .seq
-  }
-
-  /** The result of the iterated method is ignored; the final result is a Unit. */
-  object unit {
-
-    def foreach [B] (f: A => Async [B]): Async [Unit] =
-      async { cb =>
-        run [A, R, B] (iter, new CountingLatch [B] (size, cb)) (f)
-      }
-
-    def filter (p: A => Boolean) =
-      new IterableLatch (iter.withFilter (p), size) .unit
-
-    def withFilter (p: A => Boolean) =
-      new IterableLatch (iter.withFilter (p), size) .unit
+      new IterableLatch (iter.withFilter (p), size) .collate
   }}

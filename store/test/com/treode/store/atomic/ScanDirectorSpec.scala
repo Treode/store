@@ -48,7 +48,7 @@ class ScanDirectorSpec extends FreeSpec with AsyncChecks {
   "The ScanDirector should" - {
 
     "scan from one replica" taggedAs (Periodic)  in {
-      forAllSeeds { implicit random =>
+      forAllRandoms { implicit random =>
         implicit val scheduler = StubScheduler.random (random)
         implicit val network = StubNetwork (random)
         val h = StubAtomicHost.install() .expectPass()
@@ -58,7 +58,7 @@ class ScanDirectorSpec extends FreeSpec with AsyncChecks {
       }}
 
     "scan from three replicas" taggedAs (Periodic) in {
-      forAllSeeds { implicit random =>
+      forAllRandoms { implicit random =>
         implicit val scheduler = StubScheduler.random (random)
         implicit val network = StubNetwork (random)
         val h = StubAtomicHost.install() .expectPass()

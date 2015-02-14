@@ -20,7 +20,7 @@ import java.util.concurrent.Executors
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.async.stubs.{AsyncChecks, StubScheduler}
+import com.treode.async.stubs.{AsyncChecks, StubGlobals, StubScheduler}
 import com.treode.tags.{Intensive, Periodic}
 import com.treode.store._
 import org.scalatest.FreeSpec
@@ -35,7 +35,7 @@ class StubStoreSpec extends FreeSpec with AsyncChecks with StoreBehaviors {
     }
 
     "conserve money during account transfers (multithreaded)" taggedAs (Intensive, Periodic) in {
-      import StubScheduler.scheduler
+      import StubGlobals.scheduler
       implicit val random = Random
       implicit val store = new StubStore () (scheduler)
       testAccountTransfers (500)

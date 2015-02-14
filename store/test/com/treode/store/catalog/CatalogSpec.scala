@@ -90,7 +90,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
 
       "stable hosts and a reliable network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
-        forAllSeeds { implicit random =>
+        forAllRandoms { implicit random =>
           implicit val scheduler = StubScheduler.random (random)
           implicit val network = StubNetwork (random)
           val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
@@ -104,7 +104,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
 
       "stable hosts and a flakey network" taggedAs (Intensive, Periodic) in {
         var summary = new Summary
-        forAllSeeds { implicit random =>
+        forAllRandoms { implicit random =>
           implicit val scheduler = StubScheduler.random (random)
           implicit val network = StubNetwork (random)
           val hs = Seq.fill (3) (new StubCatalogHost (random.nextLong))
@@ -129,7 +129,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
     }
 
     "distribute one issue of a catalog" in {
-      forAllSeeds { random =>
+      forAllRandoms { random =>
         implicit val (scheduler, hs, h1, _) = setup (random)
         h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
         scheduler.run (timers = true, count = 500)
@@ -138,7 +138,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       }}
 
     "distribute two issues of a catalog, one after the other" in {
-      forAllSeeds { random =>
+      forAllRandoms { random =>
         implicit val (scheduler, hs, h1, _) = setup (random)
         h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
         h1.catalogs.issue (cat1) (2, 0x48B944DD188FD6D1L) .expectPass()

@@ -16,7 +16,7 @@
 
 package com.treode.async
 
-import java.util.{Iterator => JIterator}
+import java.lang.{Iterable => JIterable}
 import scala.util.{Failure, Success}
 
 import com.treode.async.implicits._
@@ -38,7 +38,10 @@ class AsyncIterator [A] (val batch: BatchIterator [A]) (implicit scheduler: Sche
 
   /** Execute the asynchronous operation `f` foreach element. */
   def foreach (f: A => Async [Unit]): Async [Unit] =
-    batch.batch (xs => scheduler.whilst (xs.hasNext) (f (xs.next)))
+    batch.batch { b =>
+      val xs = b.iterator
+      scheduler.whilst (xs.hasNext) (f (xs.next))
+    }
 
   def map [B] (f: A => B): AsyncIterator [B] =
     new AsyncIterator (batch.map (f))
@@ -107,12 +110,12 @@ object AsyncIterator {
   def empty [A] (implicit scheduler: Scheduler): AsyncIterator [A] =
     new AsyncIterator (BatchIterator.empty)
 
-  /** Transform a Scala iterator into an AsyncIterator. */
-  def adapt [A] (iter: Iterator [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
+  /** Transform a Scala Iterable into an AsyncIterator. */
+  def adapt [A] (iter: Iterable [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
     new AsyncIterator (BatchIterator.adapt (iter))
 
-  /** Transform a Java iterator into an AsyncIterator. */
-  def adapt [A] (iter: JIterator [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
+  /** Transform a Java Iterable into an AsyncIterator. */
+  def adapt [A] (iter: JIterable [A]) (implicit scheduler: Scheduler): AsyncIterator [A] =
     new AsyncIterator (BatchIterator.adapt (iter))
 
   def make [A] (maker: => Async [AsyncIterator [A]]) (implicit scheduler: Scheduler): AsyncIterator [A] =

@@ -136,7 +136,7 @@ trait StoreBehaviors {
 
     val brokers = {
       for {
-        _ <- (0 until nbrokers) .latch.unit foreach (broker (_))
+        _ <- (0 until nbrokers) .latch (broker (_))
       } yield {
         running = false
       }}

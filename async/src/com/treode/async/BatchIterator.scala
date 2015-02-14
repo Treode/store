@@ -16,7 +16,7 @@
 
 package com.treode.async
 
-import java.util.{Iterator => JIterator}
+import java.lang.{Iterable => JIterable}
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Builder
 import scala.util.{Failure, Success}
@@ -36,26 +36,26 @@ trait BatchIterator [A] {
   self =>
 
   /** Execute the asynchronous operation `f` foreach batch of elements. */
-  def batch (f: Iterator [A] => Async [Unit]): Async [Unit]
+  def batch (f: Iterable [A] => Async [Unit]): Async [Unit]
 
   def foreach (f: A => Unit): Async [Unit] =
     batch (xs => supply (xs foreach f))
 
   def map [B] (f: A => B): BatchIterator [B] =
     new BatchIterator [B] {
-      def batch (g: Iterator [B] => Async [Unit]): Async [Unit] =
+      def batch (g: Iterable [B] => Async [Unit]): Async [Unit] =
         self.batch (xs => g (xs map f))
     }
 
-  def flatMap [B] (f: A => Iterator [B]): BatchIterator [B] =
+  def flatMap [B] (f: A => Iterable [B]): BatchIterator [B] =
     new BatchIterator [B] {
-      def batch (g: Iterator [B] => Async [Unit]): Async [Unit] =
+      def batch (g: Iterable [B] => Async [Unit]): Async [Unit] =
         self.batch (xs => g (xs flatMap f))
     }
 
   def filter (p: A => Boolean): BatchIterator [A] =
     new BatchIterator [A] {
-      def batch (g: Iterator [A] => Async [Unit]): Async [Unit] =
+      def batch (g: Iterable [A] => Async [Unit]): Async [Unit] =
         self.batch { xs =>
           val ys = xs filter p
           when (!ys.isEmpty) (g (ys))
@@ -66,10 +66,11 @@ trait BatchIterator [A] {
 
   def batchFlatMap [B] (f: A => BatchIterator [B]) (implicit scheduler: Scheduler): BatchIterator [B] =
     new BatchIterator [B] {
-      def batch (g: Iterator [B] => Async [Unit]): Async [Unit] =
-        self.batch { xs =>
-          scheduler.whilst (xs.hasNext) {
-            f (xs.next) .batch (g)
+      def batch (g: Iterable [B] => Async [Unit]): Async [Unit] =
+        self.batch { b =>
+          val i = b.iterator
+          scheduler.whilst (i.hasNext) {
+            f (i.next) .batch (g)
           }}}
 
   /** Flatten to iterate individual elements rather than batches of elements.
@@ -94,11 +95,12 @@ trait BatchIterator [A] {
     */
   def whilst [B >: A] (p: A => Boolean) (f: A => Unit): Async [Option [B]] =
     async { close =>
-      self.batch { xs =>
+      self.batch { b =>
         async { next =>
+          val i = b.iterator
           var last = Option.empty [A]
-          while (xs.hasNext && last.isEmpty) {
-            val x = xs.next
+          while (i.hasNext && last.isEmpty) {
+            val x = i.next
             if (p (x))
               f (x)
             else
@@ -114,7 +116,7 @@ trait BatchIterator [A] {
       }}
 
   /** Iterate the entire batch iterator and build a standard map. */
-  def toMap [K, V] (implicit witness: <:< [A, (K, V)]): Async [Map [K, V]] = {
+  def toMap [K, V] (implicit w: <:< [A, (K, V)]): Async [Map [K, V]] = {
     val builder = Map.newBuilder [K, V]
     self
       .batch (xs => supply (builder ++= xs.asInstanceOf [Iterator [(K, V)]]))
@@ -155,21 +157,21 @@ object BatchIterator {
 
   def empty [A] =
     new BatchIterator [A] {
-      def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
+      def batch (f: Iterable [A] => Async [Unit]): Async [Unit] =
         async (_.pass (()))
     }
 
-  /** Transform a Scala iterator into an BatchIterator. */
-  def adapt [A] (iter: Iterator [A]): BatchIterator [A] =
+  /** Transform a Scala Iterable into an BatchIterator. */
+  def adapt [A] (iter: Iterable [A]): BatchIterator [A] =
     new BatchIterator [A] {
-      def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
+      def batch (f: Iterable [A] => Async [Unit]): Async [Unit] =
         guard (f (iter))
     }
 
-  /** Transform a Java iterator into an BatchIterator. */
-  def adapt [A] (iter: JIterator [A]): BatchIterator [A] =
+  /** Transform a Java Iterable into an BatchIterator. */
+  def adapt [A] (iter: JIterable [A]): BatchIterator [A] =
     new BatchIterator [A] {
-      def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
+      def batch (f: Iterable [A] => Async [Unit]): Async [Unit] =
         guard (f (iter))
   }
 
@@ -188,6 +190,6 @@ object BatchIterator {
 
   def make [A] (maker: => Async [BatchIterator [A]]): BatchIterator [A] =
     new BatchIterator [A] {
-      def batch (f: Iterator [A] => Async [Unit]): Async [Unit] =
+      def batch (f: Iterable [A] => Async [Unit]): Async [Unit] =
         maker.flatMap (_.batch (f))
     }}

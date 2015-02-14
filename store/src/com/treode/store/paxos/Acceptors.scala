@@ -66,7 +66,7 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   def checkpoint(): Async [Unit] =
     guard {
       for {
-        _ <- materialize (acceptors.values) .latch.unit foreach (_.checkpoint())
+        _ <- materialize (acceptors.values) .latch (_.checkpoint())
         meta <- archive.checkpoint (library.residents)
         _ <- Acceptors.checkpoint.record (meta)
       } yield ()

@@ -66,7 +66,7 @@ private class RecoveryKit (implicit
     fiber.guard {
       import launch.disk
       for {
-        handlers <- medics.keySet.latch.map foreach (close (_))
+        handlers <- medics.keySet.latch.collate (close (_))
         broker = new Broker (handlers)
         kit = new CatalogKit (broker)
       } yield {

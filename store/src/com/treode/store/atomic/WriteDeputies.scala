@@ -52,7 +52,7 @@ private class WriteDeputies (kit: AtomicKit) {
   def checkpoint(): Async [Unit] =
     guard {
       for {
-        _ <- materialize (deputies.values) .latch.unit foreach (_.checkpoint())
+        _ <- materialize (deputies.values) .latch (_.checkpoint())
         _ <- tstore.checkpoint()
       } yield ()
     }

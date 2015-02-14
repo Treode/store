@@ -33,7 +33,7 @@ private class TrackedTable (table: TestTable, tracker: TableTracker) {
   }
 
   def putAll (kvs: (Int, Int)*): Async [Unit] =
-    for ((key, value) <- kvs.latch.unit)
+    for ((key, value) <- kvs.latch)
       put (key, value)
 
   def delete (key: Int): Async [Unit] = {

@@ -122,7 +122,7 @@ private object PhysicalModel {
     def list (window: Window) (implicit store: Store): BatchIterator [AM.Movie] =
       for {
         cell <- MovieTable.scan (
-            window = window, 
+            window = window,
             batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
       } yield {
@@ -343,7 +343,7 @@ private object PhysicalModel {
     def list (window: Window) (implicit store: Store): BatchIterator [AM.Actor] =
       for {
         cell <- ActorTable.scan (
-            window = window, 
+            window = window,
             batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
       } yield {
@@ -452,11 +452,11 @@ private object PhysicalModel {
     def list (window: Window) (implicit store: Store): BatchIterator [AM.Role] =
       for {
         cell <- RolesTable.scan (
-            window = window,  
+            window = window,
             batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
         val actorId = cell.key
-        role <- cell.value.get.roles.iterator
+        role <- cell.value.get.roles
       } yield {
         AM.Role (actorId, role.movieId, role.role)
       }

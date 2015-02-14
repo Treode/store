@@ -55,7 +55,7 @@ class StuffTracker (implicit random: Random) {
   def batch (nbatches: Int, nwrites: Int) (implicit scheduler: Scheduler, disk: Disk): Async [Unit] =
     for {
       _ <- (0 until nbatches) .async
-      _ <- (0 until nwrites) .latch.unit
+      _ <- (0 until nwrites) .latch
     } {
       write() .flatMap (_ => scheduler.sleep (1))
     }
@@ -81,7 +81,7 @@ class StuffTracker (implicit random: Random) {
       def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] = {
         guard {
           _compacted = true
-          for (seed <- groups.latch.unit)
+          for (seed <- groups.latch)
             for (pos <- pager.write (0, seed, Stuff (seed)))
               yield written += seed -> pos
         }}})

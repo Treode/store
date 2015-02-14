@@ -96,7 +96,7 @@ private class RecoveryKit (implicit
     kit.tstore.recover (tstore.close())
     val medics = writers.values
     for {
-      _ <- medics.filter (_.isCommitted) .latch.unit.foreach (_.close (kit))
+      _ <- medics.filter (_.isCommitted) .latch (_.close (kit))
     } yield {
       medics.filter (_.isPrepared) .foreach (_.close (kit) .run (ignore))
       kit.reader.attach()

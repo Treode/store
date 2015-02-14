@@ -37,7 +37,7 @@ private class PaxosMover (kit: PaxosKit) {
   import kit.library.{atlas, releaser}
 
   private val fiber = new Fiber
-  private val queue = AsyncQueue (fiber) (next())
+  private val queue = new AsyncQueue (fiber) (next _)
   private val tracker = new Tracker
   private var callbacks = List.empty [Callback [Unit]]
 
@@ -115,7 +115,7 @@ private class PaxosMover (kit: PaxosKit) {
 
   def send (batch: Batch, targets: Targets): Async [Unit] =
     guard {
-      for ((num, cells) <- batch.latch.unit)
+      for ((num, cells) <- batch.latch)
         send (targets.version, cells, targets (num))
     }
 
@@ -132,14 +132,13 @@ private class PaxosMover (kit: PaxosKit) {
       case _: JTimeoutException => continue (start)
     }
 
-  def next(): Option [Runnable] =
+  def next(): Unit =
     (tracker.deque: @unchecked) match {
       case Some ((Range (start: Point.Middle, end), targets)) =>
-        queue.run (ignore) (rebalance (start, end, targets))
+        queue.begin (rebalance (start, end, targets))
       case None =>
         callbacks foreach (scheduler.pass (_, ()))
         callbacks = List.empty
-        None
     }
 
   def rebalance (targets: Targets): Async [Unit] =

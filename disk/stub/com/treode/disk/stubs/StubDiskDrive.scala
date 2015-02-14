@@ -59,7 +59,7 @@ class StubDiskDrive (implicit random: Random) {
         }}}}
 
   private [stubs] def replay (registry: RecordRegistry) (implicit scheduler: Scheduler): Async [Unit] =
-    for (rs <- records.async; r <- rs.latch.unit)
+    for (rs <- records.async; r <- rs.latch)
       async [Unit] { cb =>
         scheduler.execute {
           registry.read (r.typ, r.data) (())
@@ -98,9 +98,9 @@ class StubDiskDrive (implicit random: Random) {
       cb.pass (pages .get (pos) .getOrThrow (new Exception (s"Page $pos not found")))
     }
 
-  private [stubs] def cleanable(): Iterator [(Long, StubPage)] =
+  private [stubs] def cleanable(): Iterable [(Long, StubPage)] =
     synchronized {
-      pages.iterator
+      pages
     }
 
   private [stubs] def free (pos: Seq [Long]): Unit =

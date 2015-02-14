@@ -20,155 +20,96 @@ import scala.collection.mutable.UnrolledBuffer
 import scala.util.Random
 
 import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
 import org.scalatest.FlatSpec
 
-import DispatcherTestTools._
 
 class DispatcherSpec extends FlatSpec {
 
-  "The Dispatcher" should "send one message to a later receiver" in {
+  "The Dispatcher" should "queue one message for a later receiver" in {
     implicit val scheduler = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
-    dsp.expect (1)
-    dsp.replace (list())
-    dsp.expectNone()
+    val captor = dsp.receive().capture()
+    captor.expectPass ((1, Seq (1)))
+    assert (dsp.isEmpty)
   }
 
-  it should "send multiple messages to a later receiver" in {
+  it should "deliver one message to an earlier receiver" in {
     implicit val scheduler = StubScheduler.random()
+    val dsp = new Dispatcher [Int] (0)
+    val captor = dsp.receive().capture()
+    dsp.send (1)
+    captor.expectPass ((1, Seq (1)))
+    assert (dsp.isEmpty)
+  }
+
+  it should "queue several messages for a later receiver" in {
+    implicit val schedule = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
     dsp.send (1)
     dsp.send (2)
+    val captor = dsp.receive().capture()
+    captor.expectPass ((1, Seq (1, 2)))
+    assert (dsp.isEmpty)
+  }
+
+  it should "queue one batch of messages for a later receiver" in {
+    implicit val scheduler = StubScheduler.random()
+    val dsp = new Dispatcher [Int] (0)
+    dsp.send (UnrolledBuffer (1, 2, 3))
+    val captor = dsp.receive().capture()
+    captor.expectPass ((1, Seq (1, 2, 3)))
+    assert (dsp.isEmpty)
+  }
+
+  it should "deliver one batch of messages to an earlier receiver" in {
+    implicit val scheduler = StubScheduler.random()
+    val dsp = new Dispatcher [Int] (0)
+    val captor = dsp.receive().capture()
+    dsp.send (UnrolledBuffer (1, 2, 3))
+    captor.expectPass ((1, Seq (1, 2, 3)))
+    assert (dsp.isEmpty)
+  }
+
+  it should "queue several batches of messages for a later receiver" in {
+    implicit val schedule = StubScheduler.random()
+    val dsp = new Dispatcher [Int] (0)
+    dsp.send (UnrolledBuffer (1, 2))
+    dsp.send (UnrolledBuffer (3, 4))
+    val captor = dsp.receive().capture()
+    captor.expectPass ((1, Seq (1, 2, 3, 4)))
+    assert (dsp.isEmpty)
+  }
+
+  it should "queue a message and a message batch for a later receiver" in {
+    implicit val schedule = StubScheduler.random()
+    val dsp = new Dispatcher [Int] (0)
+    dsp.send (1)
+    dsp.send (UnrolledBuffer (2, 3))
+    val captor = dsp.receive().capture()
+    captor.expectPass ((1, Seq (1, 2, 3)))
+    assert (dsp.isEmpty)
+  }
+
+  it should "queue a message batch and a message for a later receiver" in {
+    implicit val schedule = StubScheduler.random()
+    val dsp = new Dispatcher [Int] (0)
+    dsp.send (UnrolledBuffer (1, 2))
     dsp.send (3)
-    dsp.expect (1, 2, 3)
-    dsp.replace (list())
-    dsp.expectNone()
+    val captor = dsp.receive().capture()
+    captor.expectPass ((1, Seq (1, 2, 3)))
+    assert (dsp.isEmpty)
   }
 
-  it should "send one message to an earlier receiver" in {
+  it should "queue several receievers, and deliver messages immediately" in {
     implicit val scheduler = StubScheduler.random()
     val dsp = new Dispatcher [Int] (0)
-    val rcpt = dsp.receptor()
-    dsp.send (1)
-    rcpt.expect (1)
-    dsp.replace (list())
-    dsp.expectNone()
-  }
-
-  it should "send multiple messages to an earlier receiver" in {
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-    val rcpt1 = dsp.receptor()
-    val rcpt2 = dsp.receptor()
+    val c1 = dsp.receive().capture()
+    val c2 = dsp.receive().capture()
     dsp.send (1)
     dsp.send (2)
-    dsp.send (3)
-    rcpt1.expect (1)
-    rcpt2.assertNotInvoked()
-    dsp.replace (list())
-    rcpt2.expect (2, 3)
-    dsp.replace (list())
-    dsp.expectNone()
-  }
-
-  it should "send multiple messages to a later receiver when disengaged" in {
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-    val rcpt1 = dsp.receptor()
-    dsp.send (1)
-    val rcpt2 = dsp.receptor()
-    dsp.send (2)
-    dsp.send (3)
-    rcpt1.expect (1)
-    rcpt2.assertNotInvoked()
-    dsp.replace (list())
-    rcpt2.expect (2, 3)
-    dsp.replace (list())
-    dsp.expectNone()
-  }
-
-  it should "send rejects to the next receiver" in {
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-    dsp.send (1)
-    dsp.send (2)
-    dsp.expect (1, 2)
-    dsp.replace (list (2))
-    dsp.expect (2)
-    dsp.replace (list())
-  }
-
-  it should "send rejects to the next receiver from earlier" in {
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-    dsp.send (1)
-    dsp.send (2)
-    val rcpt1 = dsp.receptor()
-    val rcpt2 = dsp.receptor()
-    rcpt1.expect (1, 2)
-    rcpt2.assertNotInvoked()
-    dsp.replace (list (2))
-    rcpt2.expect (2)
-    dsp.replace (list())
-  }
-
-  it should "send rejects and queued messages to the next receiver" in {
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-    dsp.send (1)
-    dsp.send (2)
-    val rcpt1 = dsp.receptor()
-    dsp.send (3)
-    rcpt1.expect (1, 2)
-    dsp.replace (list (2))
-    scheduler.run()
-    val rcpt2 = dsp.receptor()
-    rcpt2.expect (2, 3)
-    dsp.replace (list())
-  }
-
-  it should "send rejects and queued messages to the next receiver from earlier" in {
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-    dsp.send (1)
-    dsp.send (2)
-    val rcpt1 = dsp.receptor()
-    val rcpt2 = dsp.receptor()
-    dsp.send (3)
-    rcpt1.expect (1, 2)
-    rcpt2.assertNotInvoked()
-    dsp.replace (list (2))
-    rcpt2.expect (2, 3)
-    dsp.replace (list())
-  }
-
-  it should "recycle rejects until accepted" in {
-
-    implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
-
-    var received = Set.empty [Int]
-
-    /* Accept upto 5 messages m where (m % n == i).
-     * Ensure m was not already accepted.
-     */
-    def receive (n: Int, i: Int) (num: Long, msgs: UnrolledBuffer [Int]) {
-      assert (!(msgs exists (received contains _)))
-      val (accepts, rejects) = msgs.partition (_ % n == i)
-      dsp.replace ((accepts drop 5) ++ rejects)
-      received ++= accepts take 5
-      dsp.receive (receive (n, i))
-    }
-
-    dsp.receive (receive (3, 0))
-    dsp.receive (receive (3, 1))
-    dsp.receive (receive (3, 2))
-
-    val count = 100
-    for (i <- 0 until count)
-      dsp.send (i)
-    scheduler.run()
-
-    assertResult ((0 until count).toSet) (received)
+    c1.expectPass ((1, Seq (1)))
+    c2.expectPass ((2, Seq (2)))
+    assert (dsp.isEmpty)
   }}

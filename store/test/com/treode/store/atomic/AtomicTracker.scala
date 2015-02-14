@@ -110,7 +110,7 @@ class AtomicTracker {
       random: Random
   ): Async [Unit] = {
     val khs = for (ks <- random.nextKeys (ntables, nkeys, nwrites, nops); h <- hs) yield (ks, h)
-    for ((ks, h) <- khs.latch.unit)
+    for ((ks, h) <- khs.latch)
       write (h, random.nextUpdates (ks))
   }
 

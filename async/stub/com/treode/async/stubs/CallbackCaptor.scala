@@ -18,13 +18,13 @@ package com.treode.async.stubs
 
 import scala.util.{Failure, Success, Try}
 
-import org.scalatest.Assertions
+import org.scalatest.Assertions._
 
 /** Capture the result of an asynchronous call so you may test for success or failure later. */
-class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
+class CallbackCaptor [A] private extends (Try [A] => Unit) {
 
   private var _invokation: Array [StackTraceElement] = null
-  private var _v: T = null.asInstanceOf [T]
+  private var _v: A = null.asInstanceOf [A]
   private var _t: Throwable = null
 
   private def invoked() {
@@ -37,7 +37,7 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
       fail ("Callback was already invoked.")
     }}
 
-  def apply (v: Try [T]): Unit = synchronized {
+  def apply (v: Try [A]): Unit = synchronized {
     invoked()
     v match {
       case Success (v) => _v = v
@@ -74,7 +74,7 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
   }
 
   /** Assert the callback was invoked with [[scala.util.Success Success]] and return the result. */
-  def assertPassed(): T = synchronized {
+  def assertPassed(): A = synchronized {
     assertInvoked()
     if (_t != null)
       throw _t
@@ -83,12 +83,12 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
 
   /** Assert the callback was invoked with [[scala.util.Success Success]] and assert the result was
     * the expected value. */
-  def assertPassed (expected: T): Unit =
+  def assertPassed (expected: A): Unit =
     assertResult (expected) (assertPassed)
 
   /** Assert the callback was invoked with [[scala.util.Success Success]] and assert the result was
     * the expected [[scala.collection.Seq Seq]]. */
-  def assertSeq [S] (xs: S*) (implicit w: T <:< Seq [S]): Unit =
+  def assertSeq [B] (xs: B*) (implicit w: A <:< Seq [B]): Unit =
     assertResult (xs) (assertPassed)
 
 
@@ -115,7 +115,7 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
   /** Run until the callback has been invoked, then assert that it yielded
     * [[scala.util.Success Success]] and return the result.
     */
-  def expectPass () (implicit s: StubScheduler): T = {
+  def expectPass () (implicit s: StubScheduler): A = {
     s.run (timers = !wasInvoked)
     assertPassed
   }
@@ -123,7 +123,7 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
   /** Run until the callback has been invoked, then assert that it yielded
     * [[scala.util.Success Success]] and check that the result is as expected.
     */
-  def expectPass (expected: T) (implicit s: StubScheduler) {
+  def expectPass (expected: Any) (implicit s: StubScheduler) {
     s.run (timers = !wasInvoked)
     assertResult (expected) (assertPassed)
   }
@@ -132,7 +132,7 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
     * [[scala.util.Success Success]] and assert that the result was the expect
     * [[scala.collection.Seq Seq]].
     */
-  def expectSeq [S] (xs: S*) (implicit s: StubScheduler, w: T <:< Seq [S]) {
+  def expectSeq [B] (xs: B*) (implicit s: StubScheduler, w: A <:< Seq [B]) {
     s.run (timers = !wasInvoked)
     assertResult (xs) (assertPassed)
   }
@@ -156,5 +156,5 @@ class CallbackCaptor [T] private extends (Try [T] => Unit) with Assertions {
 
 object CallbackCaptor {
 
-  def apply [T] = new CallbackCaptor [T]
+  def apply [A] = new CallbackCaptor [A]
 }

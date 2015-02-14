@@ -16,8 +16,7 @@
 
 package com.treode.async
 
-import java.lang.{Iterable => JavaIterable}
-import java.util.{Iterator => JavaIterator}
+import java.lang.{Iterable => JIterable}
 import scala.collection.JavaConversions._
 import scala.concurrent.{Future => ScalaFuture, ExecutionContext}
 import scala.util.{Failure, Random, Success, Try}
@@ -96,42 +95,28 @@ package object implicits {
       (v => cb (v recoverWith f))
   }
 
-  implicit class RichIterator [A] (iter: Iterator [A]) {
+  implicit class RichIterable [A] (iter: Iterable [A]) {
 
     def async (implicit scheduler: Scheduler): AsyncIterator [A] =
       AsyncIterator.adapt (iter)
 
     def batch (implicit scheduler: Scheduler): BatchIterator [A] =
       BatchIterator.adapt (iter)
-  }
 
-  implicit class RichIterable [A] (iter: Iterable [A]) {
-
-    def async (implicit scheduler: Scheduler): AsyncIterator [A] =
-      AsyncIterator.adapt (iter.iterator)
-
-    def batch (implicit scheduler: Scheduler): BatchIterator [A] =
-      BatchIterator.adapt (iter.iterator)
+    def indexed = iter.zipWithIndex.latch
 
     object latch extends IterableLatch (iter, iter.size)
   }
 
-  implicit class RichJavaIterator [A] (iter: JavaIterator [A]) {
+  implicit class RichJavaIterable [A] (iter: JIterable [A]) {
 
     def async (implicit scheduler: Scheduler): AsyncIterator [A] =
       AsyncIterator.adapt (iter)
 
     def batch (implicit scheduler: Scheduler): BatchIterator [A] =
       BatchIterator.adapt (iter)
-  }
 
-  implicit class RichJavaIterable [A] (iter: JavaIterable [A]) {
-
-    def async (implicit scheduler: Scheduler): AsyncIterator [A] =
-      AsyncIterator.adapt (iter.iterator)
-
-    def batch (implicit scheduler: Scheduler): BatchIterator [A] =
-      BatchIterator.adapt (iter.iterator)
+    def indexed = iter.zipWithIndex.latch
 
     object latch extends IterableLatch (iter, iter.size)
   }

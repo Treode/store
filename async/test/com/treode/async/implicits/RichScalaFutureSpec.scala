@@ -18,7 +18,7 @@ package com.treode.async.implicits
 
 import scala.concurrent.Future
 
-import com.treode.async.stubs.StubScheduler, StubScheduler.executionContext
+import com.treode.async.stubs.{StubGlobals, StubScheduler}, StubGlobals.executionContext
 import org.scalatest.FlatSpec
 
 class RichScalaFutureSpec extends FlatSpec {

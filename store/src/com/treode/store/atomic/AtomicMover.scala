@@ -37,7 +37,7 @@ private class AtomicMover (kit: AtomicKit) {
   import kit.library.{atlas, releaser}
 
   private val fiber = new Fiber
-  private val queue = AsyncQueue (fiber) (next())
+  private val queue = new AsyncQueue (fiber) (next _)
   private val tracker = new Tracker
   private var callbacks = List.empty [Callback [Unit]]
 
@@ -127,7 +127,7 @@ private class AtomicMover (kit: AtomicKit) {
 
   def send (table: TableId, batch: Batch, targets: Targets): Async [Unit] =
     guard {
-      for ((num, cells) <- batch.latch.unit)
+      for ((num, cells) <- batch.latch)
         send (targets.version, table, cells, targets (num))
     }
 
@@ -144,14 +144,13 @@ private class AtomicMover (kit: AtomicKit) {
       case _: JTimeoutException => continue (start)
     }
 
-  def next(): Option [Runnable] =
+  def next(): Unit =
     (tracker.deque: @unchecked) match {
       case Some ((Range (start: Point.Middle, end), targets)) =>
-        queue.run (ignore) (rebalance (start, end, targets))
+        queue.begin (rebalance (start, end, targets))
       case None =>
         callbacks foreach (_.pass (()))
         callbacks = List.empty
-        None
     }
 
   def rebalance (targets: Targets): Async [Unit] =
