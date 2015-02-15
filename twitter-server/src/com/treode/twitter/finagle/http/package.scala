@@ -45,12 +45,13 @@ package object http {
   mapper.registerModule (DefaultScalaModule)
   mapper.registerModule (DefaultTreodeModule)
 
+  private val fmt = DateTimeFormat.forPattern("EEE, d MMM HH:mm:ss y zzz");
+
   implicit class RichResponse (rsp: Response) {
 
     private object TxClockFormat {
       def toStdFormat(time: TxClock): String = {
         val dt = time.toDateTime;
-        val fmt = DateTimeFormat.forPattern("EEE, d MMM HH:mm:ss y zzz");
         val str = fmt.print(dt);
 		str
       }}
