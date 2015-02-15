@@ -32,6 +32,8 @@ import com.twitter.finagle.http.{MediaType, Request, Response, Status}
 import com.twitter.finagle.netty3.ChannelBufferBuf
 import org.jboss.netty.buffer.{ChannelBufferOutputStream, ChannelBuffers}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
+import org.joda.time.DateTime
+import org.joda.time.format.DateTimeFormat
 
 package object http {
 
@@ -43,7 +45,16 @@ package object http {
   mapper.registerModule (DefaultScalaModule)
   mapper.registerModule (DefaultTreodeModule)
 
+  private val fmt = DateTimeFormat.forPattern("EEE, d MMM HH:mm:ss y zzz");
+
   implicit class RichResponse (rsp: Response) {
+
+    private object TxClockFormat {
+      def toStdFormat(time: TxClock): String = {
+        val dt = time.toDateTime;
+        val str = fmt.print(dt);
+		str
+      }}
 
     /** Do not use; necessary for Scala style setter. */
     def etag: TxClock =
@@ -97,6 +108,48 @@ package object http {
           throw t
       }}
 
+    /** Do not use; necessary for Scala style setter. */
+	def date: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def date_= (time: TxClock): Unit  = {
+      val dt = TxClockFormat.toStdFormat(time)
+      rsp.headerMap.add ("Date", dt)
+	}
+
+    /** Do not use; necessary for Scala style setter. */
+	def lastModified: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def lastModified_= (time: TxClock): Unit  = {
+      val dt = TxClockFormat.toStdFormat(time)
+      rsp.headerMap.add ("Last-Modified", dt)
+	}
+
+    /** Do not use; necessary for Scala style setter. */
+	def readTxClock: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def readTxClock_= (time: TxClock): Unit  = {
+      rsp.headerMap.add ("Read-TxClock", time.time.toString)
+	}
+
+    /** Do not use; necessary for Scala style setter. */
+	def valueTxClock: TxClock  = {
+      throw new UnsupportedOperationException
+	}
+	def valueTxClock_= (time: TxClock): Unit  = {
+      rsp.headerMap.add ("Value-TxClock", time.time.toString)
+	}
+
+    /** Do not use; necessary for Scala style setter. */
+	def vary: String  = {
+      throw new UnsupportedOperationException
+	}
+	def vary_= (vary: String): Unit  = {
+      rsp.headerMap.add ("Vary", vary)
+	}
+
     def plain_= (value: String) {
       rsp.mediaType = "text/plain"
       rsp.write (value)
@@ -125,14 +178,11 @@ package object http {
         TxClock.parse (value) .getOrThrow (new BadRequestException (s"Bad time for $name: $value"))
       }
 
-    def ifModifiedSince: TxClock =
-      optTxClockHeader ("If-Modified-Since") getOrElse (TxClock.MinValue)
+	def conditionTxClock(default: TxClock): TxClock = 
+      optTxClockHeader ("Condition-TxClock") getOrElse (default)
 
-    def ifUnmodifiedSince: TxClock =
-      optTxClockHeader ("If-Unmodified-Since") getOrElse (TxClock.now)
-
-    def lastModificationBefore: TxClock =
-      optTxClockHeader ("Last-Modification-Before") getOrElse (TxClock.now)
+    def requestTxClock: TxClock = 									 
+      optTxClockHeader ("Request-TxClock") getOrElse (TxClock.now)
 
     def slice: Slice = {
       val slice = optIntParam ("slice")

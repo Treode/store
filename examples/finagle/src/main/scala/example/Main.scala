@@ -38,16 +38,20 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
     val httpAddr =
       parseHosts (httpAddrFlag()) .head
 
+
     val shareHttpAddr =
       if (shareHttpAddrFlag.isDefined)
         parseHosts (shareHttpAddrFlag()) .head
       else
         toPublic (httpAddr)
 
+
     controller.announce (Some (shareHttpAddr), None)
+
 
     val resource =
       new Resource (controller.hostId, controller.store)
+
 
     val server = Http.serve (
       httpAddr,
@@ -57,6 +61,7 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
       JsonExceptionFilter andThen
       PeersFilter ("/peers", controller) andThen
       resource)
+
 
     onExit {
       server.close()

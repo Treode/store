@@ -79,7 +79,6 @@ class PagedBufferSpec extends FlatSpec {
           assert (before._1 (i + npages) == after._1 (i))
         for (i <- before._1.length - npages until after._1.length)
           assert (after._1 (i) == null)
-
       } else {
         // Checking if the writePos and readPos are reset
         assert (after._2 == 0)
@@ -457,4 +456,6 @@ class PagedBufferSpec extends FlatSpec {
       val buffer = PagedBuffer (3)
       buffer.writeString (x)
       assertResult (x) (buffer.readString())
-    }}}
+    }}
+  
+  }
