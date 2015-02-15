@@ -79,7 +79,7 @@ private class Broker (
       val cat = _get (id)
       if (cat.patch (update))
         deliver (id, cat)
-  }
+    }
 
   private def _status: Ping =
     for ((id, cat) <- catalogs.toSeq)
@@ -126,14 +126,16 @@ private class Broker (
     }
 
   def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
-    fiber.guard {
-      _get (obj.id) .compact (groups)
-    }
+    for {
+      cat <- get (obj.id)
+      _ <- cat.compact (groups)
+    } yield ()
 
   def checkpoint(): Async [Unit] =
-    fiber.guard {
-      catalogs.values.latch (_.checkpoint())
-    }
+    for {
+      cats <- fiber.supply (catalogs.values)
+      _ <- cats.latch (_.checkpoint())
+    } yield ()
 
   def attach () (implicit launch: Disk.Launch, cluster: Cluster) {
 

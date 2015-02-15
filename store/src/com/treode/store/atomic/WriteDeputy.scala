@@ -391,7 +391,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     fiber.async (state.abort (_))
 
   def checkpoint(): Async [Unit] =
-    fiber.guard (state.checkpoint())
+    fiber.async (cb => state.checkpoint() run (cb))
 
   override def toString = state.toString
 }

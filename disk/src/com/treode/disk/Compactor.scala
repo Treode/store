@@ -179,7 +179,8 @@ private class Compactor (kit: DiskKit) {
     }
 
   def close(): Async [Unit] =
-    fiber.guard {
-      closed = true
-      pages.close()
-    }}
+    for {
+      _ <- fiber.supply (closed = true)
+      _ <- pages.close()
+    } yield ()
+}
