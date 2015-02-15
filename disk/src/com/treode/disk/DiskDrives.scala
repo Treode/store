@@ -103,8 +103,11 @@ private class DiskDrives (kit: DiskKit) {
     }
 
   def digest: Async [Seq [DriveDigest]] =
-    fiber.guard {
-      drives.values.latch.collect (_.digest)
+    for {
+      _drives <- fiber.supply (drives.values)
+      _digests <- _drives.latch.collect (_.digest)
+    } yield {
+      _digests
     }
 
   private def _attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =

@@ -118,19 +118,6 @@ class FiberSpec extends FlatSpec {
     f.async [Unit] (cb => throw new DistinguishedException) .fail [DistinguishedException]
   }
 
-  "Fiber.guard" should "report an exception through the callback" in {
-    implicit val s = StubScheduler.random()
-    val f = new Fiber
-    f.guard (throw new DistinguishedException) .fail [DistinguishedException]
-  }
-
-  it should "reject the return keyword" in {
-    implicit val s = StubScheduler.random()
-    val f = new Fiber
-    def method(): Async [Int] = f.guard (return supply (0))
-    method() .fail [ReturnException]
-  }
-
   "Fiber.supply" should "invoke the callback" in {
     implicit val s = StubScheduler.random()
     val f = new Fiber

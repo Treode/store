@@ -117,31 +117,21 @@ class Fiber (implicit scheduler: Scheduler) extends Scheduler {
   def at (millis: Long, task: Runnable): Unit =
     scheduler.at (millis) (execute (task))
 
-  def async [A] (f: Callback [A] => Any): Async [A] =
+  def async [A] (task: Callback [A] => Any): Async [A] =
     Async.async { cb =>
       execute {
         try {
-          f (cb)
+          task (cb)
         } catch {
           case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnException)
           case t: Throwable => scheduler.fail (cb, t)
         }}}
 
-  def guard [A] (f: => Async [A]): Async [A] =
-    Async.async [Async [A]] { cb =>
-      execute {
-        try {
-          scheduler.pass (cb, f)
-        } catch {
-          case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnException)
-          case t: Throwable => scheduler.fail (cb, t)
-        }}} .flatten
-
-  def supply [A] (f: => A): Async [A] =
+  def supply [A] (task: => A): Async [A] =
     Async.async { cb =>
       execute {
         try {
-          scheduler.pass (cb, f)
+          scheduler.pass (cb, task)
         } catch {
           case t: NonLocalReturnControl [_] => scheduler.fail (cb, new ReturnException)
           case t: Throwable => scheduler.fail (cb, t)

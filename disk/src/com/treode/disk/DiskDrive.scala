@@ -98,17 +98,18 @@ private class DiskDrive (
     }
 
   private def _checkpoint2(): Async [Unit] =
-    fiber.guard {
-      record (Checkpoint (pageHead, pageLedger.zip))
-    }
+    for {
+      chkpt <- fiber.supply (Checkpoint (pageHead, pageLedger.zip))
+      _ <- record (chkpt)
+    } yield ()
 
   private def _checkpoint3 (boot: BootBlock): Async [Unit] =
-    fiber.guard {
-      val superb = SuperBlock (id, boot, geom, draining, alloc.free, logHead)
-      SuperBlock.write (superb, file)
-    }
+    for {
+      sb <- fiber.supply (SuperBlock (id, boot, geom, draining, alloc.free, logHead))
+      _ <- SuperBlock.write (sb, file)
+    } yield ()
 
-  private def _checkpoint (boot: BootBlock, mark: Long): Async [Unit] = {
+  private def _checkpoint (boot: BootBlock, mark: Long): Async [Unit] = 
     for {
       _ <- _checkpoint1 (mark)
       _ <- pagemp.pause()
@@ -116,7 +117,7 @@ private class DiskDrive (
       _ <- _checkpoint3 (boot)
     } yield {
       pagemp.resume()
-    }}
+    }
 
   def checkpoint (boot: BootBlock, mark: Option [Long]): Async [Unit] =
     mark match {
@@ -160,40 +161,44 @@ private class DiskDrive (
           drives.detach (this)
       }}
 
-  private def _writeLedger(): Async [Unit] =
-    when (pageLedgerDirty) {
-      pageLedgerDirty = false
-      PageLedger.write (pageLedger.clone(), file, geom, pageSeg.base, pageHead)
-    }
-
-  def drain(): Async [Iterable [SegmentPointer]] =
-    fiber.guard {
-      for {
-        _ <- latch (logmp.pause(), pagemp.close())
-        _ <- _writeLedger()
-        _ <- record (DiskDrain (pageSeg.num))
-        _ = draining = true
-        segs <- cleanable()
-      } yield {
-        segs
+  private def _writeLedger(): Async [(Option [PageLedger], SegmentBounds, Long)] = 
+    fiber.supply {
+      if (pageLedgerDirty) {
+        pageLedgerDirty = false
+        (Some (pageLedger.clone), pageSeg, pageHead)
+      } else {
+        (None, pageSeg, pageHead)
       }}
 
+  def drain(): Async [Iterable [SegmentPointer]] =
+    for {
+      _ <- latch (logmp.pause(), pagemp.close())
+      (ldgr, seg, head) <- _writeLedger()
+      _ <- when (!ldgr.isEmpty) (PageLedger.write (ldgr.get, file, geom, seg.base, head))
+      _ <- record (DiskDrain (seg.num))
+      _ = draining = true
+      segs <- cleanable()
+    } yield {
+      segs
+    }
+
   def detach(): Async [Unit] =
-    fiber.guard {
-      open = false
-      logmp.close()
-      .ensure (file.close())
+    for {
+      _ <- fiber.supply (open = false)
+      _ <- logmp.close()
+    } yield {
+      file.close()
     }
 
   def close(): Async [Unit] =
-    fiber.guard {
-      open = false
-      for {
-        _ <- pagemp.close()
-        _ <- logmp.close()
-      } yield {
-        file.close()
-      }}
+    for {
+      _ <- fiber.supply (open = false)
+      _ <- pagemp.close()
+      _ <- logmp.close()
+    } yield {
+      file.close()
+    }
+
 
   private def splitRecords (entries: UnrolledBuffer [PickledRecord]) = {
     val accepts = new UnrolledBuffer [PickledRecord]
