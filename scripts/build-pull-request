@@ -42,8 +42,6 @@ echo-do ${SBT} +test:compile +publish-local
 
 # Skeleton examples.
 (cd examples/finagle; echo-do ${SBT} test:compile); expect-status 0
-# Skip Finatra until it works with Twitter Server 1.9 (Finagle 6.24).
-#(cd examples/finatra; echo-do ${SBT} test:compile); expect-status 0
 (cd examples/unfiltered; echo-do ${SBT} test:compile); expect-status 0
 
 # Movies example; it has multiple components.
@@ -58,8 +56,6 @@ echo-do ${SBT} +test:compile +publish-local
 echo-do ${SBT} test intensive:test
 
 (cd examples/finagle; echo-do ${SBT} test); expect-status 0
-# Skip Finatra until it works with Twitter Server 1.9 (Finagle 6.24).
-#(cd examples/finatra; echo-do ${SBT} test); expect-status 0
 (cd examples/unfiltered; echo-do ${SBT} test); expect-status 0
 (cd examples/movies; echo-do ${SBT} test); expect-status 0
 

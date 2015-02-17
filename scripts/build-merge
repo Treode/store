@@ -41,7 +41,6 @@ clean
 # Check that every version number is in sync across all build files.
 version=`scripts/version-number \
   project/TreodeBuild.scala \
-  examples/finatra/build.sbt \
   examples/movies/project/MoviesBuild.scala`
 expect-status 0
 
@@ -68,8 +67,6 @@ echo-do ${SBT} +test:compile +publish-local
 
 # Skeleton examples.
 (cd examples/finagle; echo-do ${SBT} test:compile); expect-status 0
-# Skip Finatra until it works with Twitter Server 1.9 (Finagle 6.24).
-#(cd examples/finatra; echo-do ${SBT} test:compile); expect-status 0
 (cd examples/unfiltered; echo-do ${SBT} test:compile); expect-status 0
 
 # Movies example; it has multiple components.
@@ -87,8 +84,6 @@ echo-do ${SBT} doc/unidoc
 echo-do ${SBT} test intensive:test
 
 (cd examples/finagle; echo-do ${SBT} test); expect-status 0
-# Skip Finatra until it works with Twitter Server 1.9 (Finagle 6.24).
-#(cd examples/finatra; echo-do ${SBT} test); expect-status 0
 (cd examples/unfiltered; echo-do ${SBT} test); expect-status 0
 (cd examples/movies; echo-do ${SBT} test); expect-status 0
 
@@ -104,13 +99,6 @@ STAGE_FINAGLE=stage/examples/finagle/${version}
 (cd examples/finagle; echo-do ${SBT} assembly); expect-status 0
 echo-do mkdir -p ${STAGE_FINAGLE}
 echo-do cp examples/finagle/target/scala-2.11/finagle-server.jar ${STAGE_FINAGLE}/finagle-server-${version}.jar
-
-# Finatra example.
-# Skip Finatra until it works with Twitter Server 1.9 (Finagle 6.24).
-#STAGE_FINATRA=stage/examples/finatra/${version}
-#(cd examples/finatra; echo-do ${SBT} assembly); expect-status 0
-#echo-do mkdir -p ${STAGE_FINATRA}
-#echo-do cp examples/finatra/target/scala-2.10/finatra-server.jar ${STAGE_FINATRA}/finatra-server-${version}.jar
 
 # Unfiltered example.
 STAGE_UNFILTERED=stage/examples/unfiltered/${version}
