@@ -6,7 +6,7 @@ import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
 import scala.util.{Failure, Success}
-import com.treode.buffer.PagedBuffer
+import com.treode.buffer.{ArrayBuffer, PagedBuffer}
 import com.treode.async.Async
 import com.treode.async.Async.async
 import org.scalatest._
@@ -24,16 +24,20 @@ class SimpleLog (file: StubFile, geom: DriveGeometry) (implicit scheduler: Sched
    async { cb =>
       // read pos is aligned at start, and after each record
       // write pos is at end of last record
-      if (buf.writePos > 0) {
-         buf.writePos -= 1
+      if (buf.writePos > 0) {  // if there is already one record
          buf.writeByte(1)
       }
+      val start = buf.writePos
+      buf.writeInt(0)  // set initially to 0
       buf.writeString (s)
-      buf.writeByte(0)
-      
+
       val end = buf.writePos // remember where we parked
+      buf.writePos = start
+      buf.writeInt (end - start - 4)    // string length in bytes
+      buf.writePos = end
+      buf.writeByte(0)
       buf.writePos = geom.blockAlignUp (buf.writePos)
-      
+
       file.flush (buf, pos) run {
          case Success (length) => {
             // flush move readPos to == writePos
@@ -53,46 +57,37 @@ class SimpleLogSpec extends FlatSpec {
    
    "SimpleLog" should "record once to a StubFile" in {
       implicit val scheduler = StubScheduler.random()
-      var testfile = StubFile(new Array[Byte](50), 0)
+      var testfile = StubFile(1 << 16, 0)
       val rec = new SimpleLog(testfile, DriveGeometry(10, 10, 16384))
+      
       var str = "hithere"
       rec.record(str).expectPass()
       
-      var input = PagedBuffer(12)
-      testfile.fill (input, 0, str.length()) .expectPass()
-      
-      var actual = input.readString()
-      actual += input.readByte()
-      
-      assert (str+0 == actual)
+      var input = ArrayBuffer(testfile.data)
+    
+      assert(input.readInt() == str.length() + 1)
+      assert(input.readString() == str)
+      assert(input.readByte() == 0)
    }
    
    "SimpleLog" should "record twice to a StubFile" in {
       implicit val scheduler = StubScheduler.random()
-      var testfile = StubFile(new Array[Byte](50), 0)
+      var testfile = StubFile(1 << 16, 0)
       val rec = new SimpleLog(testfile, DriveGeometry(10, 10, 16384))
       var str = "hithere"
       var strTwo = "nowzzz"
       
       rec.record(str).expectPass()
-      var input = PagedBuffer(12)
-      testfile.fill (input, 0, str.length()) .expectPass()
-      
-      var actual = input.readString()
-      actual += input.readByte()
-      
-      assert (str+0 == actual)
       
       rec.record(strTwo).expectPass()
-      var expected = str+1+strTwo+0
-      input = PagedBuffer(12)
-      testfile.fill (input, 0, expected.length()+2) .expectPass()
       
-      actual = input.readString()
-      actual += input.readByte()
-      actual += input.readString()
-      actual += input.readByte()
-      
-      assert (expected == actual)
+      var input = ArrayBuffer(testfile.data)
+
+      assert(input.readInt() == str.length() + 1)
+      assert(input.readString() == str)
+      assert(input.readByte() == 1)
+      assert(input.readInt() == strTwo.length() + 1)
+      assert(input.readString() == strTwo)
+      assert(input.readByte() == 0)
    }
 }

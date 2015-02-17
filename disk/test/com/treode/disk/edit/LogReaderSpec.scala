@@ -6,17 +6,35 @@ import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
 import scala.util.{Failure, Success}
-import com.treode.buffer.PagedBuffer
+import com.treode.buffer.{ArrayBuffer, PagedBuffer}
 import com.treode.async.Async
 import com.treode.async.Async.async
 import org.scalatest._
 import com.treode.async.stubs.implicits._
 import com.treode.async.Globals
 
-class LogReader (file: StubFile, geom: DriveGeometry) {
+class LogReader (file: StubFile, geom: DriveGeometry) (implicit scheduler: Scheduler){
    
    var buf = PagedBuffer(12)
    var pos = 0
+   
+   /*def read(): Async[Seq[String]] = {
+     val builder = Seq.newBuilder [String]
+     var continue = true
+     scheduler.whilst (continue) {
+       for {
+              _ <- file.fill (buf, pos, 4)
+              length = buf.readInt()
+              _ <- file.fill (buf, pos+4, length)
+          } yield {
+              val s = buf.readString()
+              builder += s
+              pos += 4 + length
+          }
+     }
+   }*/
+   
+   
    var end = 1
    
    def read(): Async[Seq[String]] = {
@@ -45,13 +63,13 @@ class LogReaderSpec extends FlatSpec {
    
    "LogReader" should "read once from a StubFile" in {
       implicit val scheduler = StubScheduler.random()
-      var testfile = StubFile(new Array[Byte](50), 0)
-      var logreader = new LogReader(testfile, DriveGeometry(10, 10, 16384))
+      var testfile = StubFile(1 << 16, 0)
+      
       var str = "hithere"
-      var input = PagedBuffer(12)
-      input.writeString (str)
-      input.writeByte(0)
-      testfile.flush (input, 0).expectPass()
+      var buf = ArrayBuffer(testfile.data)
+      buf.writeString (str)
+      buf.writeByte(0)
+      var logreader = new LogReader(testfile, DriveGeometry(10, 10, 16384))
       
       var readStr = logreader.read().expectPass()
       assert(readStr(0) == str)
@@ -59,17 +77,17 @@ class LogReaderSpec extends FlatSpec {
    
    "LogReader" should "read twice from a StubFile" in {
       implicit val scheduler = StubScheduler.random()
-      var testfile = StubFile(new Array[Byte](50), 0)
+      var testfile = StubFile(1 << 16, 0)
       var logreader = new LogReader(testfile, DriveGeometry(10, 10, 16384))
       
       var str = "hithere"
-      var input = PagedBuffer(12)
-      input.writeString (str)
-      input.writeByte(1)
+      var buf = ArrayBuffer(testfile.data)
+      buf.writeString (str)
+      buf.writeByte(1)
       var str2 = "nowzzz"
-      input.writeString (str2)
-      input.writeByte(0)
-      testfile.flush (input, 0).expectPass()
+      buf.writeString (str2)
+      buf.writeByte(0)
+      
       var readStr = logreader.read().expectPass()
       assert(readStr(0) == str)
       
