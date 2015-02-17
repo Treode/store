@@ -56,6 +56,7 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
       BadRequestFilter andThen
       JsonExceptionFilter andThen
       PeersFilter ("/peers", controller) andThen
+      LoggingFilter andThen
       resource)
 
     onExit {
