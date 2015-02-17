@@ -40,7 +40,7 @@ class Bytes private (val bytes: Array [Byte]) extends Ordered [Bytes] {
     hash (Hashing.murmur3_32) .asInt
 
   def murmur128: (Long, Long) = {
-    val b = ArrayBuffer (hash (Hashing.murmur3_128) .asBytes)
+    val b = ArrayBuffer.readable (hash (Hashing.murmur3_128) .asBytes)
     (b.readLong(), b.readLong())
   }
 

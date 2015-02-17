@@ -27,7 +27,7 @@ class ArrayBufferSpec extends FlatSpec {
   "An ArrayBuffer" should "hash bytes at the beginning" in {
     val hashf = Hashing.murmur3_32()
     val bytes = Array.tabulate (11) (i => (i + 1).toByte)
-    val buf = ArrayBuffer (32)
+    val buf = ArrayBuffer.writable (32)
     buf.writeBytes (bytes, 0, 11)
     assertResult (hashf.hashBytes (bytes)) (buf.hash (0, 11, hashf))
   }
@@ -35,7 +35,7 @@ class ArrayBufferSpec extends FlatSpec {
   it should "hash bytes in the middle" in {
     val hashf = Hashing.murmur3_32()
     val bytes = Array.tabulate (11) (i => (i + 1).toByte)
-    val buf = ArrayBuffer (32)
+    val buf = ArrayBuffer.writable (32)
     buf.writePos = 7
     buf.writeBytes (bytes, 0, 11)
     assertResult (hashf.hashBytes (bytes)) (buf.hash (7, 11, hashf))
@@ -44,19 +44,19 @@ class ArrayBufferSpec extends FlatSpec {
   it should "hash bytes at the end" in {
     val hashf = Hashing.murmur3_32()
     val bytes = Array.tabulate (11) (i => (i + 1).toByte)
-    val buf = ArrayBuffer (32)
+    val buf = ArrayBuffer.writable (32)
     buf.writePos = 21
     buf.writeBytes (bytes, 0, 11)
     assertResult (hashf.hashBytes (bytes)) (buf.hash (21, 11, hashf))
   }
 
-  // We regard PageBuffer as the gold standard, and check that ArrayBuffer and read and write data
+  // We regard PageBuffer as the gold standard, and check that ArrayBuffer can read and write data
   // from one.  Whereas in PagedBufferSpec, we check that a PagedBuffer can read and write with
   // itself only, and not with ArrayBuffer.
   private def flip (in: PagedBuffer): ArrayBuffer = {
     val bytes = new Array [Byte] (in.readableBytes)
     in.readBytes (bytes, 0, in.readableBytes)
-    ArrayBuffer (bytes)
+    ArrayBuffer.readable (bytes)
   }
 
   private def flip (buf: ArrayBuffer): PagedBuffer = {
@@ -77,7 +77,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   it should "write shorts" in {
     forAll ("x") { x: Short =>
-      val out = ArrayBuffer (256)
+      val out = ArrayBuffer.writable (256)
       out.writeShort (x)
       val in = flip (out)
       assertResult (x) (in.readShort())
@@ -93,7 +93,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   it should "write ints" in {
     forAll ("x") { x: Int =>
-      val out = ArrayBuffer (256)
+      val out = ArrayBuffer.writable (256)
       out.writeInt (x)
       val in = flip (out)
       assertResult (x) (in.readInt())
@@ -109,7 +109,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   it should "write var ints" in {
     forAll ("x") { x: Int =>
-      val out = ArrayBuffer (256)
+      val out = ArrayBuffer.writable (256)
       out.writeVarInt (x)
       val in = flip (out)
       assertResult (x) (in.readVarInt())
@@ -125,7 +125,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   it should "write unsigned var ints" in {
     forAll ("x") { x: Int =>
-      val out = ArrayBuffer (256)
+      val out = ArrayBuffer.writable (256)
       out.writeVarUInt (x)
       val in = flip (out)
       assertResult (x) (in.readVarUInt())
@@ -141,7 +141,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   it should "write longs" in {
     forAll ("x") { x: Long =>
-      val out = ArrayBuffer (256)
+      val out = ArrayBuffer.writable (256)
       out.writeLong (x)
       val in = flip (out)
       assertResult (x) (in.readLong())
@@ -157,7 +157,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   it should "write var longs" in {
     forAll ("x") { x: Byte =>
-      val out = ArrayBuffer (256)
+      val out = ArrayBuffer.writable (256)
       out.writeVarLong (-1L)
       val in = flip (out)
       assertResult (-1L) (in.readVarLong())
@@ -173,7 +173,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   it should "write unsigned var longs" in {
     forAll ("x") { x: Long =>
-      val out = ArrayBuffer (256)
+      val out = ArrayBuffer.writable (256)
       out.writeVarULong (x)
       val in = flip (out)
       assertResult (x) (in.readVarULong())
@@ -189,7 +189,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   it should "write floats" in {
     forAll ("x") { x: Float =>
-      val out = ArrayBuffer (256)
+      val out = ArrayBuffer.writable (256)
       out.writeFloat (x)
       val in = flip (out)
       assertResult (x) (in.readFloat())
@@ -205,7 +205,7 @@ class ArrayBufferSpec extends FlatSpec {
 
   it should "write doubles" in {
     forAll ("x") { x: Double =>
-      val out = ArrayBuffer (256)
+      val out = ArrayBuffer.writable (256)
       out.writeDouble (x)
       val in = flip (out)
       assertResult (x) (in.readDouble())
@@ -227,7 +227,7 @@ class ArrayBufferSpec extends FlatSpec {
   it should "write strings" in {
     forAll ("x") { x: String =>
       try {
-      val out = ArrayBuffer (1024)
+      val out = ArrayBuffer.writable (1024)
       out.writeString (x)
       val in = flip (out)
       assertResult (x) (in.readString())

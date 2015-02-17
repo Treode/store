@@ -51,7 +51,7 @@ private class Broker (
 
   private def deliver (id: CatalogId, cat: Handler): Unit =
     scheduler.execute {
-      ports.unpickle (id.id, ArrayBuffer (cat.bytes.bytes))
+      ports.unpickle (id.id, ArrayBuffer.readable (cat.bytes.bytes))
     }
 
   def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =

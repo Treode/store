@@ -21,7 +21,8 @@ import java.util.Arrays
 
 import com.google.common.hash.{HashCode, HashFunction}
 
-class ArrayBuffer private (val data: Array [Byte]) extends Buffer {
+/** A Buffer that has a fixed size. */
+class ArrayBuffer private (data: Array [Byte]) extends Buffer {
 
   private [this] var wpos = 0
   private [this] var rpos = 0
@@ -465,12 +466,29 @@ class ArrayBuffer private (val data: Array [Byte]) extends Buffer {
 
 object ArrayBuffer {
 
-  def apply (data: Array [Byte]): ArrayBuffer = {
+  /** Create an ArrayBuffer setup for reading data.
+    * @param data The byte array to wrap.
+    * @return An ArrayBuffer that wraps `data` for reading, with `readPos` set at the beginning,
+    * and with `writePos` set at the end.
+    */
+  def readable (data: Array [Byte]): ArrayBuffer = {
     val buffer = new ArrayBuffer (data)
     buffer.writePos = data.length
     buffer
   }
 
-  def apply (length: Int): ArrayBuffer =
+  /** Create an ArrayBuffer setup for writing data.
+    * @param data The byte array to wrap.
+    * @return An ArrayBuffer that wraps `data` for writing, with `readPos` and `writePos` set at
+    * the beginning.
+    */
+  def writable (data: Array [Byte]): ArrayBuffer =
+    new ArrayBuffer (data)
+
+  /** Create an ArrayBuffer setup for writing data.
+    * @param length The size of the byte array to allocate and then wrap.
+    * @return An ArrayBuffer for writing, with `readPos` and `writePos` set at the beginning.
+    */
+  def writable (length: Int): ArrayBuffer =
     new ArrayBuffer (new Array (length))
 }
