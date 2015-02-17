@@ -50,14 +50,20 @@ class Resource (host: HostId, store: Store) extends Plan {
     }}
 
   def read (request: Request, table: TableId, key: String): Async [Response] = {
-    val rt = request.getLastModificationBefore
-    val ct = request.getIfModifiedSince
+    val rt = request.requestTxClock
+    val ct = request.conditionTxClock (TxClock.MinValue)
     val ops = Seq (ReadOp (table, Bytes (key)))
     store.read (rt, ops:_*) .map { vs =>
       val v = vs.head
       v.value match {
         case Some (value) if ct < v.time =>
-          JsonContent ~> ETag (v.time.toString) ~> ResponseString (value.toJsonText)
+          JsonContent ~>
+          Date (httpDate.print(rt.toDateTime)) ~>
+          LastModified (httpDate.print (v.time.toDateTime)) ~>
+          ReadTxClock (rt.toString) ~>
+          ValueTxClock (v.time.toString) ~>
+          Vary ("Request-TxClock") ~>
+          ResponseString (value.toJsonText)
         case Some (_) =>
           NotModified
         case None =>
@@ -65,8 +71,8 @@ class Resource (host: HostId, store: Store) extends Plan {
       }}}
 
   def scan (request: Request, table: TableId): Async [Response] = {
-    val rt = request.getLastModificationBefore
-    val ct = request.getIfModifiedSince
+    val rt = request.requestTxClock
+    val ct = request.conditionTxClock (TxClock.MinValue)
     val window = Window.Latest (rt, true, ct, false)
     val slice = request.getSlice
     val iter = store
@@ -77,8 +83,8 @@ class Resource (host: HostId, store: Store) extends Plan {
 
   def history (request: Request, table: TableId): Async [Response] = {
     val start = Bound.Inclusive (Key.MinValue)
-    val rt = request.getLastModificationBefore
-    val ct = request.getIfModifiedSince
+    val rt = request.requestTxClock
+    val ct = request.conditionTxClock (TxClock.MinValue)
     val window = Window.Between (rt, true, ct, false)
     val slice = request.getSlice
     val iter = store.scan (table, Bound.firstKey, window, slice)
@@ -87,12 +93,12 @@ class Resource (host: HostId, store: Store) extends Plan {
 
   def put (request: Request, table: TableId, key: String): Async [Response] = {
     val tx = request.getTransactionId (host)
-    val ct = request.getIfUnmodifiedSince
+    val ct = request.conditionTxClock (TxClock.now)
     val value = request.readJson [JsonNode]
     val ops = Seq (WriteOp.Update (table, Bytes (key), value.toBytes))
     store.write (tx, ct, ops:_*)
     .map [Response] { vt =>
-      ETag (vt.toString)
+      ValueTxClock (vt.toString)
     }
     .recover {
       case _: StaleException =>
@@ -101,11 +107,11 @@ class Resource (host: HostId, store: Store) extends Plan {
 
   def delete (request: Request, table: TableId, key: String): Async [Response] = {
     val tx = request.getTransactionId (host)
-    val ct = request.getIfUnmodifiedSince
+    val ct = request.conditionTxClock (TxClock.now)
     val ops = Seq (WriteOp.Delete (table, Bytes (key)))
     store.write (tx, ct, ops:_*)
     .map [Response] { vt =>
-      ETag (vt.toString)
+      ValueTxClock (vt.toString)
     }
     .recover {
       case _: StaleException =>

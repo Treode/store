@@ -29,7 +29,8 @@ import com.treode.twitter.finagle.http.BadRequestException
 import io.netty.handler.codec.http.HttpResponse
 import unfiltered.netty.ReceivedMessage
 import unfiltered.request.{Body, HttpRequest}
-import unfiltered.response.ResponseFunction
+import unfiltered.response._
+import org.joda.time.format.DateTimeFormat
 
 package object example {
 
@@ -39,9 +40,15 @@ package object example {
 
   val binaryJson = new ObjectMapper (new SmileFactory)
 
+  val httpDate = DateTimeFormat.forPattern ("EEE, d MMM HH:mm:ss y zzz")
+
   type Request = HttpRequest [ReceivedMessage]
 
   type Response = ResponseFunction [HttpResponse]
+
+  object ValueTxClock extends HeaderName ("Value-TxClock")
+
+  object ReadTxClock extends HeaderName ("Read-TxClock")
 
   implicit class RichAny (v: Any) {
 
@@ -80,14 +87,11 @@ package object example {
         TxClock.parse (value) .getOrThrow (new BadRequestException (s"Bad time for $name: $value"))
       }
 
-    def getIfModifiedSince: TxClock =
-      optTxClockHeader ("If-Modified-Since") getOrElse (TxClock.MinValue)
+    def conditionTxClock (default: TxClock): TxClock =
+      optTxClockHeader ("Condition-TxClock") getOrElse (default)
 
-    def getIfUnmodifiedSince: TxClock =
-      optTxClockHeader ("If-Unmodified-Since") getOrElse (TxClock.now)
-
-    def getLastModificationBefore: TxClock =
-      optTxClockHeader ("Last-Modification-Before") getOrElse (TxClock.now)
+    def requestTxClock: TxClock =
+      optTxClockHeader ("Request-TxClock") getOrElse (TxClock.now)
 
     def getSlice: Slice = {
       val slice = optIntParam ("slice")
