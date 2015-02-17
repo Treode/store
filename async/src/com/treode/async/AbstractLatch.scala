@@ -16,31 +16,53 @@
 
 package com.treode.async
 
+import scala.util.{Failure, Success, Try}
+
 import com.treode.async.implicits._
 
-private abstract class AbstractLatch [A] (private var count: Int, cb: Callback [A]) {
+private abstract class AbstractLatch [A, B] (cb: Callback [B])
+extends Callback [A] {
 
+  private var started = false
+  private var count = 0
   private var thrown = List.empty [Throwable]
 
-  def value: A
+  /** Invoked inside `synchronized` after last release. */
+  protected def result: B
 
-  def init() {
-    if (count == 0)
-      cb.pass (value)
-  }
+  /** Invoked inside `synchronized` in response to `apply`. */
+  protected def add (v: A)
 
-  def release() {
-    require (count > 0, "Latch was already released.")
-    count -= 1
-    if (count > 0)
-      return
+  private [this] def finish() {
     if (!thrown.isEmpty)
       cb.fail (MultiException.fit (thrown))
     else
-      cb.pass (value)
+      cb.pass (result)
   }
 
-  def failure (t: Throwable) {
-    thrown ::= t
-    release()
-  }}
+  private [this] def release() {
+    require (!started || count > 0, "Latch was already released.")
+    count -= 1
+    if (!started || count > 0)
+      return
+    finish()
+  }
+
+  def start (count: Int): Unit = synchronized {
+    require (!started)
+    this.started = true
+    this.count += count
+    if (this.count > 0)
+      return
+    finish()
+  }
+
+  def apply (v: Try [A]): Unit = synchronized {
+    v match {
+      case Success (v) =>
+        add (v)
+        release()
+      case Failure (t) =>
+        thrown ::= t
+        release()
+    }}}

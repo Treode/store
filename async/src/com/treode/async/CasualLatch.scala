@@ -16,26 +16,13 @@
 
 package com.treode.async
 
-import scala.util.{Failure, Success, Try}
-
-private class CasualLatch [A] (
-    count: Int,
-    cb: Callback [Seq [A]]
-) (implicit
-    manifest: Manifest [A]
-) extends AbstractLatch [Seq [A]] (count, cb) with Callback [A] {
+private class CasualLatch [A] (cb: Callback [Seq [A]]) (implicit manifest: Manifest [A])
+extends AbstractLatch [A, Seq [A]] (cb) {
 
   private val values = Seq.newBuilder [A]
-  values.sizeHint (count)
 
-  init()
+  protected def result = values.result
 
-  def value = values.result
-
-  def apply (v: Try [A]): Unit = synchronized {
-    v match {
-      case Success (v) =>
-        values += v
-        release()
-      case Failure (t) => failure (t)
-    }}}
+  protected def add  (v: A): Unit =
+    values += v
+}

@@ -105,7 +105,7 @@ package object implicits {
 
     def indexed = iter.zipWithIndex.latch
 
-    object latch extends IterableLatch (iter, iter.size)
+    object latch extends IterableLatch (iter)
   }
 
   implicit class RichJavaIterable [A] (iter: JIterable [A]) {
@@ -118,7 +118,7 @@ package object implicits {
 
     def indexed = iter.zipWithIndex.latch
 
-    object latch extends IterableLatch (iter, iter.size)
+    object latch extends IterableLatch (iter)
   }
 
   implicit class RichScalaFuture [A] (fut: ScalaFuture [A]) {

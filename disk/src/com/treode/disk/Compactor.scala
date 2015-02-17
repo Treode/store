@@ -19,7 +19,7 @@ package com.treode.disk
 import scala.collection.immutable.Queue
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, Callback, Fiber, Latch, Scheduler}
+import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 
 import Async.{async, guard}
@@ -108,13 +108,6 @@ private class Compactor (kit: DiskKit) {
         yield compact (groups, iter.toSeq, false)
     } run (probed)
 
-  private def release (segments: Seq [SegmentPointer]): Callback [Unit] = {
-    case Success (v) =>
-      releaser.release (segments foreach (_.free()))
-    case Failure (t) =>
-      // Exception already reported by compacted callback
-  }
-
   private def compact (id: (TypeId, ObjectId), groups: Set [PageGroup]): Async [Unit] =
     async { cb =>
       book.get (id) match {
@@ -126,16 +119,18 @@ private class Compactor (kit: DiskKit) {
 
   private def compact (groups: Groups, segments: Seq [SegmentPointer], cleaning: Boolean): Unit =
     fiber.execute {
-      val latch = Latch.unit [Unit] (groups.size, release (segments))
       for ((disk, segs) <- segments groupBy (_.disk))
         disk.compacting (segs)
-      for ((id, gs) <- groups) {
+      (for ((id, gs) <- groups.latch) {
         if (cleaning)
           cleanq += id
         else
           drainq += id
-        compact (id, gs) run (latch)
-      }}
+        compact (id, gs)
+      })
+      .map (_ => releaser.release (segments foreach (_.free())))
+      .run (ignore)
+    }
 
   def launch (pages: PageRegistry): Async [Unit] =
     fiber.supply {

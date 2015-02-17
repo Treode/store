@@ -19,7 +19,7 @@ package com.treode.store.atomic
 import scala.collection.JavaConversions
 import scala.util.Random
 
-import com.treode.async.{Async, Callback, Latch, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster

@@ -18,12 +18,13 @@ package com.treode.disk.stubs
 
 import scala.util.{Failure, Random, Success}
 
-import com.treode.async.{Async, Fiber, Callback, Latch, Scheduler}
+import com.treode.async.{Async, Fiber, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.misc.EpochReleaser
 import com.treode.disk._
 
 import Async.{async, guard}
+import Callback.ignore
 import PageLedger.Groups
 
 private class StubCompactor (
@@ -92,13 +93,6 @@ private class StubCompactor (
       } yield compact (groups, segments)
     } run (probed)
 
-  private def release (segments: Seq [Long]): Callback [Unit] = {
-    case Success (v) =>
-      releaser.release (disk.free (segments))
-    case Failure (t) =>
-      // Exception already reported by compacted callback
-  }
-
   private def compact (id: (TypeId, ObjectId), groups: Set [PageGroup]): Async [Unit] =
     async { cb =>
       book.get (id) match {
@@ -110,11 +104,13 @@ private class StubCompactor (
 
   private def compact (groups: Groups, segments: Seq [Long]): Unit =
     fiber.execute {
-      val latch = Latch.unit [Unit] (groups.size, release (segments))
-      for ((id, gs) <- groups) {
+      (for ((id, gs) <- groups.latch) {
         cleanq += id
-        compact (id, gs) run (latch)
-      }}
+        compact (id, gs)
+      })
+      .map (_ => releaser.release (disk.free (segments)))
+      .run (ignore)
+    }
 
   def launch (pages: StubPageRegistry): Unit =
     fiber.execute {

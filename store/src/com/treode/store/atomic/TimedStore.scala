@@ -19,7 +19,7 @@ package com.treode.store.atomic
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions
 
-import com.treode.async.{Async, BatchIterator, Callback, Latch}
+import com.treode.async.{Async, BatchIterator, Callback}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disk, ObjectId, PageHandler, Position, RecordDescriptor}

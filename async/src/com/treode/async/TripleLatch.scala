@@ -18,16 +18,30 @@ package com.treode.async
 
 import scala.util.{Failure, Success}
 
-private class TripleLatch [A, B, C] (cb: Callback [(A, B, C)])
-extends AbstractLatch [(A, B, C)] (3, cb) {
+import com.treode.async.implicits._
 
+private class TripleLatch [A, B, C] (cb: Callback [(A, B, C)]) {
+
+  private var count = 3
+  private var thrown = List.empty [Throwable]
   private var va: A = null.asInstanceOf [A]
   private var vb: B = null.asInstanceOf [B]
   private var vc: C = null.asInstanceOf [C]
 
-  def value: (A, B, C) = (va, vb, vc)
+  private [this] def release() {
+    count -= 1
+    if (count > 0)
+      return
+    if (!thrown.isEmpty)
+      cb.fail (MultiException.fit (thrown))
+    else
+      cb.pass ((va, vb, vc))
+  }
 
-  init()
+  private [this] def failure (t: Throwable): Unit = synchronized {
+    thrown ::= t
+    release()
+  }
 
   val cbA: Callback [A] = {
     case Success (v) => synchronized {
@@ -35,19 +49,19 @@ extends AbstractLatch [(A, B, C)] (3, cb) {
       va = v
       release()
     }
-    case Failure (t) => synchronized {
+    case Failure (t) =>
       failure (t)
-    }}
+  }
 
   val cbB: Callback [B] = {
     case Success (v) => synchronized {
-      require (vb == null, "Value 'b' was already set.")
+      require (vb == null, "Value 'b'  was already set.")
       vb = v
       release()
     }
-    case Failure (t) => synchronized {
+    case Failure (t) =>
       failure (t)
-    }}
+  }
 
   val cbC: Callback [C] = {
     case Success (v) => synchronized {
@@ -55,6 +69,6 @@ extends AbstractLatch [(A, B, C)] (3, cb) {
       vc = v
       release()
     }
-    case Failure (t) => synchronized {
+    case Failure (t) =>
       failure (t)
-    }}}
+  }}
