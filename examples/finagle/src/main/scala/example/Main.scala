@@ -52,11 +52,11 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
     val server = Http.serve (
       httpAddr,
       NettyToFinagle andThen
+      LoggingFilter andThen
       ExceptionFilter andThen
       BadRequestFilter andThen
       JsonExceptionFilter andThen
       PeersFilter ("/peers", controller) andThen
-      LoggingFilter andThen
       resource)
 
     onExit {
