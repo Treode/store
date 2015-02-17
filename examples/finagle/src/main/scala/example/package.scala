@@ -25,6 +25,9 @@ import com.treode.store.{Bytes, TableId, TxClock}
 import com.treode.twitter.finagle.http.{RichResponse, BadRequestException, RichRequest}
 import com.twitter.finagle.http.{Request, Response, Status}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
+import com.twitter.finagle.http.filter.{CommonLogFormatter, LoggingFilter}
+import com.twitter.logging.Logger
+
 
 package object example {
 
@@ -77,6 +80,8 @@ package object example {
       rsp.json = iter
       rsp
     }}
+
+  object LoggingFilter extends LoggingFilter (Logger ("access"), new CommonLogFormatter)
 
   implicit class RichAny (v: Any) {
 
