@@ -71,7 +71,7 @@ trait Pickler [A] {
     hash (v, Hashing.murmur3_32) .asInt
 
   def murmur128 (v: A): (Long, Long) = {
-    val b = ArrayBuffer (hash (v, Hashing.murmur3_128) .asBytes)
+    val b = ArrayBuffer.readable (hash (v, Hashing.murmur3_128) .asBytes)
     (b.readLong(), b.readLong())
   }
 
@@ -84,7 +84,7 @@ trait Pickler [A] {
   }
 
   def fromByteArray (bytes: Array [Byte]): A = {
-    val buf = ArrayBuffer (bytes)
+    val buf = ArrayBuffer.readable (bytes)
     val v = unpickle (buf)
     require (buf.readableBytes == 0, "Bytes remain after unpickling.")
     v

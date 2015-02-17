@@ -36,7 +36,7 @@ private class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit sched
     ports.loopback (desc.pmsg, desc.id.id, msg)
 
   def unpickle (id: RumorId, msg: Array [Byte]): Handler =
-    ports.unpickle (id.id, ArrayBuffer (msg))
+    ports.unpickle (id.id, ArrayBuffer.readable (msg))
 
   def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
     fiber.execute {

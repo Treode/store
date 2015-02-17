@@ -28,7 +28,7 @@ private class RecordRegistry {
     records.register (desc.prec, desc.id.id) (msg => _ => f (msg))
 
   def read (id: TypeId, data: Array [Byte]): Unit => Any =
-    records.unpickle (id.id, ArrayBuffer (data))
+    records.unpickle (id.id, ArrayBuffer.readable (data))
 
   def read (id: Long, buf: PagedBuffer, len: Int): Unit => Any =
     records.unpickle (id, buf, len)
