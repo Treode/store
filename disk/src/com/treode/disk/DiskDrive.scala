@@ -23,7 +23,7 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.UnrolledBuffer
 import scala.util.{Failure, Success, Try}
 
-import com.treode.async.{Async, Callback, Fiber, Latch, Scheduler}
+import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
@@ -109,7 +109,7 @@ private class DiskDrive (
       _ <- SuperBlock.write (sb, file)
     } yield ()
 
-  private def _checkpoint (boot: BootBlock, mark: Long): Async [Unit] = 
+  private def _checkpoint (boot: BootBlock, mark: Long): Async [Unit] =
     for {
       _ <- _checkpoint1 (mark)
       _ <- pagemp.pause()
@@ -161,7 +161,7 @@ private class DiskDrive (
           drives.detach (this)
       }}
 
-  private def _writeLedger(): Async [(Option [PageLedger], SegmentBounds, Long)] = 
+  private def _writeLedger(): Async [(Option [PageLedger], SegmentBounds, Long)] =
     fiber.supply {
       if (pageLedgerDirty) {
         pageLedgerDirty = false

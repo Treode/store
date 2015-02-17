@@ -271,6 +271,30 @@ object Async {
       case t: Throwable => _fail (t)
     }
 
+  def count [A] (n: Int) (f: => Async [A]): Async [Unit] =
+    async { cb =>
+      val latch = new CountingLatch [A] (cb)
+      latch.start (n)
+      for (_ <- 0 until n)
+        f run (latch)
+    }
+
+  def collect [A] (n: Int) (f: => Async [A]) (implicit m: Manifest [A]): Async [Seq [A]] =
+    async { cb =>
+      val latch = new CasualLatch (cb)
+      latch.start (n)
+      for (_ <- 0 until n)
+        f run (latch)
+    }
+
+  def collate [A] (n: Int) (f: Int => Async [A]) (implicit m: Manifest [A]): Async [Seq [A]] =
+    async { cb =>
+      val latch = new ArrayLatch (cb)
+      latch.start (n)
+      for (i <- 0 until n)
+        f (i) map (x => (i, x)) run (latch)
+    }
+
   /** Await the completion of two simultaneous asynchronous operations. */
   def latch [A, B] (a: Async [A], b: Async [B]): Async [(A, B)] =
     async { cb =>
@@ -286,4 +310,7 @@ object Async {
       a run latch.cbA
       b run latch.cbB
       c run latch.cbC
-    }}
+    }
+
+
+  }

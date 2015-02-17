@@ -16,7 +16,7 @@
 
 package com.treode.store.paxos
 
-import com.treode.async.{Async, Latch}
+import com.treode.async.Async
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disk, ObjectId, PageDescriptor, PageHandler, Position, RecordDescriptor}
