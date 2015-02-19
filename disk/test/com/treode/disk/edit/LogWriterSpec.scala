@@ -16,7 +16,7 @@ import com.treode.async.Globals
 class LogWriterSpec extends FlatSpec {
    import com.treode.disk.DriveGeometry
    
-   "SimpleLog" should "record once to a StubFile" in {
+   "LogWriter" should "record once to a StubFile" in {
       implicit val scheduler = StubScheduler.random()
       var testfile = StubFile(1 << 16, 0)
       val rec = new LogWriter(testfile, DriveGeometry(10, 10, 16384))
@@ -31,7 +31,7 @@ class LogWriterSpec extends FlatSpec {
       assert(input.readByte() == 0)
    }
    
-   "SimpleLog" should "record twice to a StubFile" in {
+   "LogWriter" should "record twice to a StubFile" in {
       implicit val scheduler = StubScheduler.random()
       var testfile = StubFile(1 << 16, 0)
       val rec = new LogWriter(testfile, DriveGeometry(10, 10, 16384))
