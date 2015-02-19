@@ -13,33 +13,6 @@ import org.scalatest._
 import com.treode.async.stubs.implicits._
 import com.treode.async.Globals
 
-class LogReader (file: StubFile, geom: DriveGeometry) (implicit scheduler: Scheduler){
-   
-   var buf = PagedBuffer(12)
-   var pos = 0
-   
-   def read(): Async[Seq[String]] = {
-     val builder = Seq.newBuilder [String]
-     var continue = true
-     scheduler.whilst (continue) {
-       for {
-              _ <- file.fill (buf, pos, 4)
-              length = buf.readInt()
-              _ <- file.fill (buf, pos+4, length)
-          } yield {
-              val s = buf.readString()
-              builder += s
-              pos += 4 + length
-              if (buf.readByte() == 0) {
-                continue = false
-              }
-          }
-     } map {
-       _ => builder.result()
-     }
-   }
-}
-
 class LogReaderSpec extends FlatSpec {
    import com.treode.disk.DriveGeometry
    
