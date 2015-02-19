@@ -66,7 +66,7 @@ class LogTracker {
       } yield ()
     }
 
-  def probe (groups: Set [Int]) (implicit scheduler: Scheduler): Async [Set [Int]] =
+  def probe (groups: Set [GroupId]) (implicit scheduler: Scheduler): Async [Set [GroupId]] =
     supply (groups)
 
   def compact () (implicit disk: Disk): Async [Unit] =
@@ -79,12 +79,12 @@ class LogTracker {
 
     launch.checkpoint (checkpoint())
 
-    pagers.table.handle (new PageHandler [Int] {
+    pagers.table.handle (new PageHandler {
 
-      def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+      def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
         self.probe (groups)
 
-      def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+      def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
         self.checkpoint()
     })
   }
@@ -115,5 +115,5 @@ object LogTracker {
     import DiskPicklers._
 
     val table =
-      PageDescriptor (0x79, uint, map (uint, uint))
+      PageDescriptor (0x79, map (uint, uint))
   }}

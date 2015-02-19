@@ -39,8 +39,8 @@ class PageSpec extends FreeSpec {
 
   object pagers {
     import DiskPicklers._
-    val str = PageDescriptor (0xE9, uint, string)
-    val stuff = PageDescriptor (0x25, uint, Stuff.pickler)
+    val str = PageDescriptor (0xE9, string)
+    val stuff = PageDescriptor (0x25, Stuff.pickler)
   }
 
   "The pager should" - {
@@ -143,10 +143,10 @@ class PageSpec extends FreeSpec {
       val recovery = Disk.recover()
       implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
       import launch.disk
-      pagers.stuff.handle (new PageHandler [Int] {
-        def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+      pagers.stuff.handle (new PageHandler {
+        def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
           throw new DistinguishedException
-        def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+        def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
           throw new AssertionError
       })
       launch.launch()
@@ -166,10 +166,10 @@ class PageSpec extends FreeSpec {
       val recovery = Disk.recover()
       implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
       import launch.disk
-      pagers.stuff.handle (new PageHandler [Int] {
-        def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+      pagers.stuff.handle (new PageHandler {
+        def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
           supply (Set (groups.head))
-        def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+        def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
           throw new DistinguishedException
       })
       launch.launch()
@@ -195,10 +195,10 @@ class PageSpec extends FreeSpec {
         val recovery = Disk.recover()
         implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
         import launch.disk
-        pagers.stuff.handle (new PageHandler [Int] {
-          def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+        pagers.stuff.handle (new PageHandler {
+          def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
             supply (groups)
-          def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+          def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
             supply (())
         })
         launch.launch()
@@ -212,16 +212,16 @@ class PageSpec extends FreeSpec {
         implicit val random = new Random (0)
         implicit val scheduler = StubScheduler.random (random)
         implicit val config = DiskTestConfig (cleaningFrequency = 1)
-        val captor = AsyncCaptor [Set [Int]]
+        val captor = AsyncCaptor [Set [GroupId]]
 
         file = StubFile (file.data, geom.blockBits)
         val recovery = Disk.recover()
         implicit val launch = recovery.reattachAndWait (("a", file)) .expectPass()
         import launch.disk
-        pagers.stuff.handle (new PageHandler [Int] {
-          def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+        pagers.stuff.handle (new PageHandler {
+          def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
             captor.start()
-          def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+          def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
             supply (())
         })
         launch.launch()

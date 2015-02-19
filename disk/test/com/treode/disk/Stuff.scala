@@ -18,7 +18,7 @@ package com.treode.disk
 
 import scala.util.Random
 
-class Stuff (val seed: Long, val items: Seq [Int]) {
+class Stuff (val seed: GroupId, val items: Seq [Int]) {
 
   override def equals (other: Any): Boolean =
     other match {
@@ -26,7 +26,7 @@ class Stuff (val seed: Long, val items: Seq [Int]) {
       case _ => false
     }
 
-  override def toString = f"Stuff(0x$seed%016X, 0x${items.hashCode}%08X)"
+  override def toString = f"Stuff(0x${seed.id}%016X, 0x${items.hashCode}%08X)"
 }
 
 object Stuff {
@@ -34,26 +34,24 @@ object Stuff {
   val countLimit = 100
   val valueLimit = Int.MaxValue
 
-  def apply (seed: Long): Stuff = {
-    val r = new Random (seed)
+  def apply (seed: GroupId): Stuff = {
+    val r = new Random (seed.id)
     val xs = Seq.fill (r.nextInt (countLimit)) (r.nextInt (valueLimit))
     new Stuff (seed, xs)
   }
 
-  def apply (seed: Long, length: Int): Stuff = {
-    val r = new Random (seed)
+  def apply (seed: GroupId, length: Int): Stuff = {
+    val r = new Random (seed.id)
     val xs = Seq.fill (length) (r.nextInt (valueLimit))
     new Stuff (seed, xs)
   }
 
   val pickler = {
     import DiskPicklers._
-    wrap (fixedLong, seq (int))
+    wrap (groupId, seq (int))
     .build (v => new Stuff (v._1, v._2))
     .inspect (v => (v.seed, v.items))
   }
 
-  val pager = {
-    import DiskPicklers._
-    PageDescriptor (0x26, fixedLong, Stuff.pickler)
-  }}
+  val pager = PageDescriptor (0x26, Stuff.pickler)
+}

@@ -22,7 +22,7 @@ import scala.collection.JavaConversions
 import com.treode.async.{Async, BatchIterator, Callback}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disk, ObjectId, PageHandler, Position, RecordDescriptor}
+import com.treode.disk.{Disk, GroupId, ObjectId, PageHandler, Position, RecordDescriptor}
 import com.treode.store._
 import com.treode.store.locks.LockSpace
 import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
@@ -30,7 +30,7 @@ import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
 import Async.{async, guard, supply, when}
 import JavaConversions._
 
-private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
+private class TimedStore (kit: AtomicKit) extends PageHandler {
   import kit.{config, disk, library, scheduler}
 
   val space = new LockSpace
@@ -118,7 +118,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     when (!novel.isEmpty) (TimedStore.receive.record (table, gen, novel))
   }
 
-  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+  def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
     guard {
       getTable (obj.id) .probe (groups)
     }
@@ -128,7 +128,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
       table.compact()
   }
 
-  def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
+  def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
     guard {
       val id = TableId (obj.id)
       val residents = library.residents

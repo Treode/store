@@ -378,7 +378,7 @@ private object DiskDrive {
   def offset (id: Int, offset: Long, length: Int, cb: Callback [Position]): Callback [Long] =
     cb.continue (base => Some (Position (id, base + offset, length)))
 
-  def read [P] (file: File, geom: DriveGeometry, desc: PageDescriptor [_, P], pos: Position): Async [P] =
+  def read [P] (file: File, geom: DriveGeometry, desc: PageDescriptor [P], pos: Position): Async [P] =
     guard {
       val buf = PagedBuffer (geom.blockBits)
       for (_ <- file.fill (buf, pos.offset, pos.length))

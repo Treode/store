@@ -41,7 +41,7 @@ private class LaunchAgent (val kit: DiskKit) extends Disk.Launch {
       roots.checkpoint (f)
     }
 
-  def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]): Unit =
+  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit =
     synchronized {
       requireOpen()
       pages.handle (desc, handler)

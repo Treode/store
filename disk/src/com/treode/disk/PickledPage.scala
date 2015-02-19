@@ -22,7 +22,7 @@ import com.treode.buffer.Output
 private abstract class PickledPage (
     val typ: TypeId,
     val obj: ObjectId,
-    val group: PageGroup,
+    val group: GroupId,
     val cb: Callback [Position]
 ) {
   def byteSize: Int
@@ -31,14 +31,14 @@ private abstract class PickledPage (
 
 private object PickledPage {
 
-  def apply [G, P] (
-      desc: PageDescriptor [G, P],
+  def apply [P] (
+      desc: PageDescriptor [P],
       obj: ObjectId,
-      group: G,
+      group: GroupId,
       page: P,
       cb: Callback [Position]
   ): PickledPage =
-    new PickledPage (desc.id, obj, PageGroup (desc.pgrp, group), cb) {
+    new PickledPage (desc.id, obj, group, cb) {
       def byteSize = desc.ppag.byteSize (page)
       def write (out: Output) = desc.ppag.pickle (page, out)
       override def toString = s"PickledPage($obj, $group)"

@@ -27,7 +27,7 @@ private abstract class AbstractPageRegistry {
 
   val handlers = new ConcurrentHashMap [TypeId, PickledHandler]
 
-  def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]) {
+  def handle (desc: PageDescriptor [_], handler: PageHandler) {
     val h0 = handlers.putIfAbsent (desc.id, PickledHandler (desc, handler))
     require (h0 == null, f"PageHandler ${desc.id.id}%X already registered")
   }
@@ -38,36 +38,36 @@ private abstract class AbstractPageRegistry {
     h
   }
 
-  def probe (typ: TypeId, obj: ObjectId, groups: Set [PageGroup]): Async [Probe] =
+  def probe (typ: TypeId, obj: ObjectId, groups: Set [GroupId]): Async [Probe] =
     guard {
       get (typ) .probe (obj, groups)
     }
 
-  def compact (id: TypeId, obj: ObjectId, groups: Set [PageGroup]): Async [Unit] =
+  def compact (id: TypeId, obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
     guard {
       get (id) .compact (obj, groups)
     }}
 
 private object AbstractPageRegistry {
 
-  type Probe = ((TypeId, ObjectId), Set [PageGroup])
+  type Probe = ((TypeId, ObjectId), Set [GroupId])
 
   trait PickledHandler {
 
-    def probe (obj: ObjectId, groups: Set [PageGroup]): Async [Probe]
-    def compact (obj: ObjectId, groups: Set [PageGroup]): Async [Unit]
+    def probe (obj: ObjectId, groups: Set [GroupId]): Async [Probe]
+    def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit]
   }
 
   object PickledHandler {
 
-    def apply [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]): PickledHandler =
+    def apply (desc: PageDescriptor [_], handler: PageHandler): PickledHandler =
       new PickledHandler {
 
-        def probe (obj: ObjectId, groups: Set [PageGroup]): Async [Probe] = {
-          for (live <- handler.probe (obj, groups map (_.unpickle (desc.pgrp))))
-            yield ((desc.id, obj), live map (PageGroup (desc.pgrp, _)))
+        def probe (obj: ObjectId, groups: Set [GroupId]): Async [Probe] = {
+          for (live <- handler.probe (obj, groups ))
+            yield ((desc.id, obj), live)
         }
 
-        def compact (obj: ObjectId, groups: Set [PageGroup]): Async [Unit] =
-          handler.compact (obj, groups map (_.unpickle (desc.pgrp)))
+        def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
+          handler.compact (obj, groups)
      }}}

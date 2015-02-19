@@ -19,13 +19,13 @@ package com.treode.store.paxos
 import com.treode.async.Async
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disk, ObjectId, PageDescriptor, PageHandler, Position, RecordDescriptor}
+import com.treode.disk._
 import com.treode.store.{Bytes, Cell, Residents, TxClock}
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
 import Async.{guard, latch, supply, when}
 
-private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
+private class Acceptors (kit: PaxosKit) extends PageHandler {
   import kit.{archive, cluster, disk, library}
   import kit.library.atlas
 
@@ -50,12 +50,12 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   def remove (key: Bytes, time: TxClock, a: Acceptor): Unit =
     acceptors.remove ((key, time), a)
 
-  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+  def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
     guard {
       archive.probe (groups)
     }
 
-  def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
+  def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
     guard {
       for {
         meta <- archive.compact (groups, library.residents)

@@ -67,7 +67,7 @@ private class StubDisk (
       checkpointer.tally()
     }
 
-  def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
+  def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
     guard {
       for {
         page <- disk.read (pos.offset)
@@ -76,7 +76,7 @@ private class StubDisk (
         desc.ppag.fromByteArray (page.data)
       }}
 
-  def write [G, P] (desc: PageDescriptor [G, P], obj: ObjectId, group: G, page: P): Async [Position] =
+  def write [P] (desc: PageDescriptor [P], obj: ObjectId, group: GroupId, page: P): Async [Position] =
     guard {
       val _page = StubPage (desc, obj, group, page)
       for {
@@ -86,7 +86,7 @@ private class StubDisk (
         Position (0, offset, align (_page.length))
       }}
 
-  def compact (desc: PageDescriptor [_, _], obj: ObjectId): Async [Unit] =
+  def compact (desc: PageDescriptor [_], obj: ObjectId): Async [Unit] =
     compactor.compact (desc.id, obj)
 
   def join [A] (task: Async [A]): Async [A] =

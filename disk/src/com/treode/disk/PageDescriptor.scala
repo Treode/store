@@ -21,13 +21,10 @@ import com.treode.async.Async
 import com.treode.pickle.Pickler
 
 /** Describes a page of data. */
-class PageDescriptor [G, P] private (
+class PageDescriptor [P] private (
 
     /** The ID to tag pages in the segment map; see [[PageHandler]]. */
     val id: TypeId,
-
-    /** The picklers to serialize the group ID; see [[PageHandler]]. */
-    val pgrp: Pickler [G],
 
     /** The pickler to serialize the page data. */
     val ppag: Pickler [P]
@@ -40,7 +37,7 @@ class PageDescriptor [G, P] private (
     * A handler must be registered with the launch builder. The disk system will panic if it
     * discovers a page of data that it cannot identify.
     */
-  def handle (handler: PageHandler [G]) (implicit launch: Disk.Launch): Unit =
+  def handle (handler: PageHandler) (implicit launch: Disk.Launch): Unit =
     launch.handle (this, handler)
 
   /** Read a page.
@@ -56,7 +53,7 @@ class PageDescriptor [G, P] private (
     * @param grp The ID of the group; see [[PageHandler]].
     * @param page The data.
     */
-  def write (obj: ObjectId, group: G, page: P) (implicit disk: Disk): Async [Position] =
+  def write (obj: ObjectId, group: GroupId, page: P) (implicit disk: Disk): Async [Position] =
     disk.write (this, obj, group, page)
 
   /** Schedule the object for compaction.
@@ -75,7 +72,11 @@ class PageDescriptor [G, P] private (
 
 object PageDescriptor {
 
-  def apply [G, P] (id: TypeId, pgrp: Pickler [G], ppag: Pickler [P]) (
-      implicit tpag: ClassTag [P]): PageDescriptor [G, P] =
-    new PageDescriptor (id, pgrp, ppag)
+  def apply [P] (
+    id: TypeId,
+    ppag: Pickler [P]
+  ) (implicit
+    tpag: ClassTag [P]
+  ): PageDescriptor [P] =
+    new PageDescriptor (id, ppag)
 }

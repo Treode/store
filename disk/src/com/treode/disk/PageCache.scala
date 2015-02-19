@@ -28,7 +28,7 @@ private class PageCache (kit: DiskKit) {
   import kit.config.pageCacheEntries
   import kit.drives
 
-  class Load (desc: PageDescriptor [_, Any], pos: Position)
+  class Load (desc: PageDescriptor [Any], pos: Position)
   extends Callable [Future [Any]] {
     def call(): Future [Any] =
       drives.fetch (desc, pos) .toFuture
@@ -39,10 +39,10 @@ private class PageCache (kit: DiskKit) {
       .build()
       .asInstanceOf [Cache [(Int, Long), Future [Any]]]
 
-  def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
+  def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
     guard {
       pages
-          .get ((pos.disk, pos.offset), new Load (desc.asInstanceOf [PageDescriptor [_, Any]], pos))
+          .get ((pos.disk, pos.offset), new Load (desc.asInstanceOf [PageDescriptor [Any]], pos))
           .map (v => desc.tpag.runtimeClass.cast (v) .asInstanceOf [P])
     }
 
