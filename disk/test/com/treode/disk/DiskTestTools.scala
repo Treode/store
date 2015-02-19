@@ -109,7 +109,7 @@ private object DiskTestTools {
       assertResult (nreceivers) (paged.receivers.size)
     }
 
-    def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, grp: PageGroup) (
+    def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, grp: GroupId) (
         implicit scheduler: StubScheduler) {
       val drive = drives.drives (pos.disk)
       val num = (pos.offset >> drive.geom.segmentBits).toInt
@@ -175,11 +175,11 @@ private object DiskTestTools {
       disk.assertLaunched()
     }}
 
-  implicit class RichPager [G, P] (pager: PageDescriptor [G, P]) {
+  implicit class RichPager [P] (pager: PageDescriptor [P]) {
 
-    def assertInLedger (pos: Position, obj: ObjectId, grp: G) (
+    def assertInLedger (pos: Position, obj: ObjectId, grp: GroupId) (
         implicit scheduler: StubScheduler, disk: Disk): Unit =
-      disk.assertInLedger (pos, pager.id, obj, PageGroup (pager.pgrp, grp))
+      disk.assertInLedger (pos, pager.id, obj, grp)
 
     def fetch (pos: Position) (implicit disk: Disk): Async [P] =
       disk.asInstanceOf [DiskAgent] .kit.drives.fetch (pager, pos)
@@ -195,8 +195,7 @@ private object DiskTestTools {
       ks
     }
 
-    def nextGroup(): PageGroup =
-      PageGroup (DiskPicklers.fixedLong, random.nextLong())
+    def nextGroup(): GroupId = random.nextLong()
   }
 
   implicit class RichRecovery (recovery: Disk.Recovery) {

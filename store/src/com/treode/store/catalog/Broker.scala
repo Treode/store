@@ -20,7 +20,7 @@ import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.buffer.ArrayBuffer
 import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
-import com.treode.disk.{Disk, ObjectId, PageDescriptor, PageHandler, Position}
+import com.treode.disk.{Disk, GroupId, ObjectId, PageDescriptor, PageHandler, Position}
 import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 import com.treode.pickle.PicklerRegistry
 
@@ -33,7 +33,7 @@ private class Broker (
 ) (implicit
     scheduler: Scheduler,
     disk: Disk
-) extends PageHandler [Int] {
+) extends PageHandler {
 
   private val fiber = new Fiber
 
@@ -120,12 +120,12 @@ private class Broker (
       gab()
     }}
 
-  def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+  def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
     fiber.supply {
       _get (obj.id) .probe (groups)
     }
 
-  def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+  def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
     for {
       cat <- get (obj.id)
       _ <- cat.compact (groups)

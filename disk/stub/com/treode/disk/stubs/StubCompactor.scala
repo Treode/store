@@ -40,7 +40,7 @@ private class StubCompactor (
   var pages: StubPageRegistry = null
   var cleanq = Set.empty [(TypeId, ObjectId)]
   var compactq = Set.empty [(TypeId, ObjectId)]
-  var book = Map.empty [(TypeId, ObjectId), (Set [PageGroup], List [Callback [Unit]])]
+  var book = Map.empty [(TypeId, ObjectId), (Set [GroupId], List [Callback [Unit]])]
   var cleanreq = false
   var entries = 0
   var engaged = true
@@ -93,7 +93,7 @@ private class StubCompactor (
       } yield compact (groups, segments)
     } run (probed)
 
-  private def compact (id: (TypeId, ObjectId), groups: Set [PageGroup]): Async [Unit] =
+  private def compact (id: (TypeId, ObjectId), groups: Set [GroupId]): Async [Unit] =
     async { cb =>
       book.get (id) match {
         case Some ((groups0, cbs0)) =>
@@ -129,7 +129,7 @@ private class StubCompactor (
     fiber.async { cb =>
       val id = (typ, obj)
       compactq += id
-      compact (id, Set.empty [PageGroup]) run (cb)
+      compact (id, Set.empty [GroupId]) run (cb)
       if (!engaged)
         reengage()
     }}

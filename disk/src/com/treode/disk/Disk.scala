@@ -98,13 +98,13 @@ trait Disk {
   def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit]
 
   /** See [[PageDescriptor#read]]. */
-  def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P]
+  def read [P] (desc: PageDescriptor [P], pos: Position): Async [P]
 
   /** See [[PageDescriptor#write]]. */
-  def write [G, P] (desc: PageDescriptor [G, P], obj: ObjectId, group: G, page: P): Async [Position]
+  def write [P] (desc: PageDescriptor [P], obj: ObjectId, group: GroupId, page: P): Async [Position]
 
   /** See [[PageDescriptor#compact]]. */
-  def compact (desc: PageDescriptor [_, _], obj: ObjectId): Async [Unit]
+  def compact (desc: PageDescriptor [_], obj: ObjectId): Async [Unit]
 
   /** Join a release epoch, and leave it when the async task completes. Pages which are live at the
     * beginning of the epoch will remain available, even if they should become unreachable during
@@ -261,7 +261,7 @@ object Disk {
     def checkpoint (f: => Async [Unit])
 
     /** Register a page handler. */
-    def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G])
+    def handle (desc: PageDescriptor [_], handler: PageHandler)
 
     /** Launch the checkpointer and cleaner.
       *

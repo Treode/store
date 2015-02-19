@@ -47,7 +47,7 @@ private class StubLaunchAgent (
       roots.checkpoint (f)
     }
 
-  def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]): Unit =
+  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit =
     pages.handle (desc, handler)
 
   def launch(): Unit =

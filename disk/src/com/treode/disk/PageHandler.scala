@@ -19,7 +19,7 @@ package com.treode.disk
 import com.treode.async.Async
 
 /** Determines which pages are live, and compacts pages. */
-trait PageHandler [G] {
+trait PageHandler {
 
   /** Returns those groups which are still live.
     *
@@ -27,7 +27,7 @@ trait PageHandler [G] {
     * were written. They can be anything, as long as they allow the handler to positiviley
     * identify which groups are still live.
     */
-  def probe (obj: ObjectId, groups: Set [G]): Async [Set [G]]
+  def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]]
 
   /** Compact the object.
     *
@@ -37,5 +37,5 @@ trait PageHandler [G] {
     * anything, as long as they allow the object to positiviley identify which groups must be
     * copied.
     */
-  def compact (obj: ObjectId, groups: Set [G]): Async [Unit]
+  def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit]
 }

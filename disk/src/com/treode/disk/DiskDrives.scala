@@ -250,7 +250,7 @@ private class DiskDrives (kit: DiskKit) {
       } yield segs.flatten
     }}
 
-def fetch [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
+def fetch [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
   guard {
     val drive = drives (pos.disk)
     DiskDrive.read (drive.file, drive.geom, desc, pos)

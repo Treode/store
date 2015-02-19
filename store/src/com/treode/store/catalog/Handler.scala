@@ -21,7 +21,7 @@ import java.util.ArrayDeque
 import com.nothome.delta.{Delta, GDiffPatcher}
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disk, PageDescriptor, Position, RecordDescriptor}
+import com.treode.disk.{Disk, GroupId, PageDescriptor, Position, RecordDescriptor}
 import com.treode.store.{Bytes, CatalogId}
 
 import Async.{guard, when}
@@ -90,7 +90,7 @@ private class Handler (
         patch (end, checksum, patches)
     }
 
-  def probe (groups: Set [Int]): Set [Int] =
+  def probe (groups: Set [GroupId]): Set [GroupId] =
     if (saved.isDefined)
       Set (saved.get.version)
     else
@@ -107,7 +107,7 @@ private class Handler (
         this.saved = Some (meta)
       }}
 
-  def compact (groups: Set [Int]): Async [Unit] =
+  def compact (groups: Set [GroupId]): Async [Unit] =
     when (saved.isDefined && (groups contains saved.get.version)) (save())
 
   def checkpoint(): Async [Unit] =
@@ -146,7 +146,7 @@ private object Handler {
 
   val pager = {
     import CatalogPicklers._
-    PageDescriptor (0x8407E7035A50C6CFL, uint, tuple (uint, bytes, seq (bytes)))
+    PageDescriptor (0x8407E7035A50C6CFL, tuple (uint, bytes, seq (bytes)))
   }
 
   def apply (id: CatalogId) (implicit disk: Disk): Handler =

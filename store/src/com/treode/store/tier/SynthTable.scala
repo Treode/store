@@ -21,7 +21,7 @@ import scala.collection.JavaConversions
 
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
-import com.treode.disk.{Disk, PageDescriptor, Position}
+import com.treode.disk.{Disk, GroupId, PageDescriptor, Position}
 import com.treode.store._
 
 import Async.{async, guard, supply, when}
@@ -193,13 +193,13 @@ private class SynthTable (
       readLock.unlock()
     }}
 
-  def probe (groups: Set [Long]): Async [Set [Long]] = async { cb =>
+  def probe (groups: Set [GroupId]): Async [Set [GroupId]] = async { cb =>
     writeLock.lock()
     try {
       if (!secondary.isEmpty)
         queue ::= toRunnable (probe (groups), cb)
       else
-        cb.on (scheduler) .pass (tiers.active)
+        cb.on (scheduler) .pass (tiers.active map (GroupId (_)))
     } finally {
       writeLock.unlock()
     }}
@@ -236,7 +236,7 @@ private class SynthTable (
       meta
     }}
 
-  def compact (groups: Set [Long], residents: Residents): Async [Option [Compaction]] = async { cb =>
+  def compact (groups: Set [GroupId], residents: Residents): Async [Option [Compaction]] = async { cb =>
 
     // Choose which tiers to compact, accounting for which groups the disk cleaner needs moved,
     // and accounting for tier sizes. There may be no work to do.
@@ -245,7 +245,7 @@ private class SynthTable (
       if (!secondary.isEmpty) {
         queue ::= toRunnable (compact (groups, residents), cb)
       } else {
-        val chosen = tiers.choose (groups, residents)
+        val chosen = tiers.choose (groups map (_.id), residents)
         if (chosen.isEmpty) {
           cb.on (scheduler) .pass (None)
         } else if (primary.isEmpty) {
