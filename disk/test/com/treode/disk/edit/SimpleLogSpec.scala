@@ -24,8 +24,9 @@ class SimpleLog (file: StubFile, geom: DriveGeometry) (implicit scheduler: Sched
    async { cb =>
       // read pos is aligned at start, and after each record
       // write pos is at end of last record
-      if (buf.writePos > 0) {  // if there is already one record
-         buf.writeByte(1)
+      if (buf.writePos > 0) {  
+        // if there is already one record
+        buf.writeByte(1)
       }
       val start = buf.writePos
       buf.writeInt(0)  // set initially to 0
@@ -63,7 +64,7 @@ class SimpleLogSpec extends FlatSpec {
       var str = "hithere"
       rec.record(str).expectPass()
       
-      var input = ArrayBuffer(testfile.data)
+      var input = ArrayBuffer.readable(testfile.data)
     
       assert(input.readInt() == str.length() + 1)
       assert(input.readString() == str)
@@ -81,7 +82,7 @@ class SimpleLogSpec extends FlatSpec {
       
       rec.record(strTwo).expectPass()
       
-      var input = ArrayBuffer(testfile.data)
+      var input = ArrayBuffer.readable(testfile.data)
 
       assert(input.readInt() == str.length() + 1)
       assert(input.readString() == str)

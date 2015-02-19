@@ -18,7 +18,7 @@ class LogReader (file: StubFile, geom: DriveGeometry) (implicit scheduler: Sched
    var buf = PagedBuffer(12)
    var pos = 0
    
-   /*def read(): Async[Seq[String]] = {
+   def read(): Async[Seq[String]] = {
      val builder = Seq.newBuilder [String]
      var continue = true
      scheduler.whilst (continue) {
@@ -30,31 +30,13 @@ class LogReader (file: StubFile, geom: DriveGeometry) (implicit scheduler: Sched
               val s = buf.readString()
               builder += s
               pos += 4 + length
+              if (buf.readByte() == 0) {
+                continue = false
+              }
           }
+     } map {
+       _ => builder.result()
      }
-   }*/
-   
-   
-   var end = 1
-   
-   def read(): Async[Seq[String]] = {
-      for {
-         _ <- file.fill(buf, pos, 8)
-         count = buf.readString()
-         _ <- file.fill(buf, pos+8, 1)
-      } yield {
-         if (end == 0) {
-            Seq.empty[String]
-         } else {
-            if (buf.readByte() == 0) {
-               pos = 0
-               end = 0
-            } else {
-               pos += 9
-            }
-            Seq.fill (1) (count)
-         }
-      }
    }
 }
 
@@ -64,12 +46,13 @@ class LogReaderSpec extends FlatSpec {
    "LogReader" should "read once from a StubFile" in {
       implicit val scheduler = StubScheduler.random()
       var testfile = StubFile(1 << 16, 0)
+      var logreader = new LogReader(testfile, DriveGeometry(10, 10, 16384))
       
       var str = "hithere"
-      var buf = ArrayBuffer(testfile.data)
+      var buf = ArrayBuffer.writable(testfile.data)
+      buf.writeInt(str.length() + 1)
       buf.writeString (str)
       buf.writeByte(0)
-      var logreader = new LogReader(testfile, DriveGeometry(10, 10, 16384))
       
       var readStr = logreader.read().expectPass()
       assert(readStr(0) == str)
@@ -81,17 +64,17 @@ class LogReaderSpec extends FlatSpec {
       var logreader = new LogReader(testfile, DriveGeometry(10, 10, 16384))
       
       var str = "hithere"
-      var buf = ArrayBuffer(testfile.data)
+      var buf = ArrayBuffer.writable(testfile.data)
+      buf.writeInt(str.length() + 1)
       buf.writeString (str)
       buf.writeByte(1)
-      var str2 = "nowzzz"
-      buf.writeString (str2)
+      var strTwo = "nowzzz"
+      buf.writeInt(strTwo.length() + 1)
+      buf.writeString (strTwo)
       buf.writeByte(0)
       
       var readStr = logreader.read().expectPass()
       assert(readStr(0) == str)
-      
-      readStr = logreader.read().expectPass()
-      assert(readStr(0) == str2)
+      assert(readStr(1) == strTwo)
    }
 }
