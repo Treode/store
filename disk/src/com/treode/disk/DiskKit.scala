@@ -32,8 +32,9 @@ private class DiskKit (
     val config: Disk.Config
 ) {
 
-  val logd = new Dispatcher [PickledRecord] (logBatch)
-  val paged = new Dispatcher [PickledPage] (0L)
+  val logd = new Dispatcher [PickledRecord]
+  logd.batch = logBatch
+  val paged = new Dispatcher [PickledPage]
   val drives = new DiskDrives (this)
   val checkpointer = new Checkpointer (this)
   val releaser = new EpochReleaser

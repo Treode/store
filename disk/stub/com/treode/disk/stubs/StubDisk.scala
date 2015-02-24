@@ -36,7 +36,7 @@ private class StubDisk (
     config: StubDisk.Config
 ) extends Disk {
 
-  val logd = new Dispatcher [(StubRecord, Callback [Unit])] (0L)
+  val logd = new Dispatcher [(StubRecord, Callback [Unit])]
   val checkpointer = new StubCheckpointer
   val compactor = new StubCompactor (releaser)
 
