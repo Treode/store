@@ -70,7 +70,7 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
     guard {
       input.capacity (input.readPos + len)
       var _pos = pos + input.readableBytes
-      var _buf = input.buffer (input.writePos, input.writeableBytes)
+      var _buf = input.buffer (input.writePos, input.writableBytes)
       whilst (input.readableBytes < len) {
         for (result <- read (_buf, _pos)) yield {
           if (result < 0)
@@ -78,7 +78,7 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
           input.writePos = input.writePos + result
           _pos += result
           if (_buf.remaining == 0 && input.readableBytes < len)
-            _buf = input.buffer (input.writePos, input.writeableBytes)
+            _buf = input.buffer (input.writePos, input.writableBytes)
         }}}
 
   /** Read from the file until `input` has at least `len` readable bytes.  If `input` already has

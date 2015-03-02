@@ -87,7 +87,7 @@ class StubFile private (
           scheduler.fail (cb, new EOFException)
         } else  {
           input.capacity (input.readPos + len)
-          val _len = math.min (data.length - _pos, input.writeableBytes)
+          val _len = math.min (data.length - _pos, input.writableBytes)
           require ((_len & mask) == 0, "Fill length must be aligned")
           input.writeBytes (data, _pos, _len)
           if (data.length < pos + len) {
