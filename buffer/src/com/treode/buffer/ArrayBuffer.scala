@@ -44,7 +44,7 @@ class ArrayBuffer private (data: Array [Byte]) extends Buffer {
     this.wpos = pos
   }
 
-  def writeableBytes: Int = data.length - wpos
+  def writableBytes: Int = data.length - wpos
 
   def readPos: Int = rpos
 

@@ -205,7 +205,7 @@ class PagedBuffer private (val pageBits: Int) extends Buffer {
     wpos = pos & pageMask
   }
 
-  def writeableBytes: Int =
+  def writableBytes: Int =
     capacity - writePos
 
   def readPos: Int =
