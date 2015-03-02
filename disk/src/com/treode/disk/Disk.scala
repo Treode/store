@@ -101,7 +101,7 @@ trait Disk {
   def read [P] (desc: PageDescriptor [P], pos: Position): Async [P]
 
   /** See [[PageDescriptor#write]]. */
-  def write [P] (desc: PageDescriptor [P], obj: ObjectId, group: GroupId, page: P): Async [Position]
+  def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position]
 
   /** See [[PageDescriptor#compact]]. */
   def compact (desc: PageDescriptor [_], obj: ObjectId): Async [Unit]

@@ -144,9 +144,9 @@ class PageSpec extends FreeSpec {
       implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
       import launch.disk
       pagers.stuff.handle (new PageHandler {
-        def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
+        def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] =
           throw new DistinguishedException
-        def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
+        def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] =
           throw new AssertionError
       })
       launch.launch()
@@ -167,9 +167,9 @@ class PageSpec extends FreeSpec {
       implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
       import launch.disk
       pagers.stuff.handle (new PageHandler {
-        def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
-          supply (Set (groups.head))
-        def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
+        def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] =
+          supply (Set (gens.head))
+        def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] =
           throw new DistinguishedException
       })
       launch.launch()
@@ -196,9 +196,9 @@ class PageSpec extends FreeSpec {
         implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
         import launch.disk
         pagers.stuff.handle (new PageHandler {
-          def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
+          def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
             supply (groups)
-          def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
+          def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
             supply (())
         })
         launch.launch()
@@ -212,16 +212,16 @@ class PageSpec extends FreeSpec {
         implicit val random = new Random (0)
         implicit val scheduler = StubScheduler.random (random)
         implicit val config = DiskTestConfig (cleaningFrequency = 1)
-        val captor = AsyncCaptor [Set [GroupId]]
+        val captor = AsyncCaptor [Set [Long]]
 
         file = StubFile (file.data, geom.blockBits)
         val recovery = Disk.recover()
         implicit val launch = recovery.reattachAndWait (("a", file)) .expectPass()
         import launch.disk
         pagers.stuff.handle (new PageHandler {
-          def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
+          def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
             captor.start()
-          def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
+          def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
             supply (())
         })
         launch.launch()

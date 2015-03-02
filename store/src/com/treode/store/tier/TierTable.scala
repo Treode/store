@@ -17,7 +17,7 @@
 package com.treode.store.tier
 
 import com.treode.async.{Async, Callback, Scheduler}
-import com.treode.disk.{Disk, GroupId, TypeId}
+import com.treode.disk.{Disk, TypeId}
 import com.treode.store._
 
 import Async.async
@@ -88,11 +88,11 @@ private [store] trait TierTable {
     */
   def receive (cells: Seq [Cell]): (Long, Seq [Cell])
 
-  def probe (groups: Set [GroupId]): Async [Set [GroupId]]
+  def probe (gens: Set [Long]): Async [Set [Long]]
 
   def compact()
 
-  def compact (groups: Set [GroupId], residents: Residents): Async [Option [Compaction]]
+  def compact (gens: Set [Long], residents: Residents): Async [Option [Compaction]]
 
   def checkpoint (residents: Residents): Async [Checkpoint]
 

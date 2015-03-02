@@ -50,12 +50,12 @@ private class Acceptors (kit: PaxosKit) extends PageHandler {
   def remove (key: Bytes, time: TxClock, a: Acceptor): Unit =
     acceptors.remove ((key, time), a)
 
-  def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
+  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
     guard {
       archive.probe (groups)
     }
 
-  def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
+  def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
       for {
         meta <- archive.compact (groups, library.residents)

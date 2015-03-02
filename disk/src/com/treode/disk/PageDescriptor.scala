@@ -50,11 +50,11 @@ class PageDescriptor [P] private (
   /** Write a page.
     *
     * @param obj The ID of the object; see [[PageHandler]].
-    * @param grp The ID of the group; see [[PageHandler]].
+    * @param gen The generation of the page; see [[PageHandler]].
     * @param page The data.
     */
-  def write (obj: ObjectId, group: GroupId, page: P) (implicit disk: Disk): Async [Position] =
-    disk.write (this, obj, group, page)
+  def write (obj: ObjectId, gen: Long, page: P) (implicit disk: Disk): Async [Position] =
+    disk.write (this, obj, gen, page)
 
   /** Schedule the object for compaction.
     *

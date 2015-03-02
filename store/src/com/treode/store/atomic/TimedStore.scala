@@ -22,7 +22,7 @@ import scala.collection.JavaConversions
 import com.treode.async.{Async, BatchIterator, Callback}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disk, GroupId, ObjectId, PageHandler, Position, RecordDescriptor}
+import com.treode.disk.{Disk, ObjectId, PageHandler, Position, RecordDescriptor}
 import com.treode.store._
 import com.treode.store.locks.LockSpace
 import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
@@ -118,9 +118,9 @@ private class TimedStore (kit: AtomicKit) extends PageHandler {
     when (!novel.isEmpty) (TimedStore.receive.record (table, gen, novel))
   }
 
-  def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
+  def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] =
     guard {
-      getTable (obj.id) .probe (groups)
+      getTable (obj.id) .probe (gens)
     }
 
   def compact() {
@@ -128,7 +128,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler {
       table.compact()
   }
 
-  def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
+  def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
       val id = TableId (obj.id)
       val residents = library.residents
