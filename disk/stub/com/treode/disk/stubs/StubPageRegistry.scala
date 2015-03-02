@@ -40,7 +40,7 @@ private class StubPageRegistry (releaser: EpochReleaser) (implicit
     val merger = new Merger
     val segments = Seq.newBuilder [Long]
     iter.async.foreach { case (offset, page) =>
-      val groups = Set (page.group)
+      val groups = Set (page.gen)
       for {
         live <- probe (page.typ, page.obj, groups)
       } yield {

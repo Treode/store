@@ -29,8 +29,8 @@ import Stuff.pager
 
 class StuffTracker (implicit random: Random) {
 
-  private var seeds = Set.empty [GroupId]
-  private var written = Map.empty [GroupId, Position]
+  private var seeds = Set.empty [Long]
+  private var written = Map.empty [Long, Position]
   private var _probed = false
   private var _compacted = false
   private var _maximum = 0L
@@ -45,7 +45,7 @@ class StuffTracker (implicit random: Random) {
       seed = random.nextLong()
     seeds += seed
     for {
-      pos <- pager.write (0, seed, Stuff (seed.id))
+      pos <- pager.write (0, seed, Stuff (seed))
     } yield {
       if (pos.offset > _maximum)
         _maximum = pos.offset
@@ -68,20 +68,20 @@ class StuffTracker (implicit random: Random) {
 
     pager.handle (new PageHandler {
 
-      def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
+      def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] =
         supply {
           _probed = true
-          val (keep, remove) = groups partition { s =>
+          val (keep, remove) = gens partition { s =>
             !(written contains s) || random.nextInt (3) == 0
           }
           written --= remove
           keep
         }
 
-      def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] = {
+      def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] = {
         guard {
           _compacted = true
-          for (seed <- groups.latch)
+          for (seed <- gens.latch)
             for (pos <- pager.write (0, seed, Stuff (seed)))
               yield written += seed -> pos
         }}})

@@ -109,22 +109,22 @@ private object DiskTestTools {
       assertResult (nreceivers) (paged.receivers.size)
     }
 
-    def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, grp: GroupId) (
+    def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, gen: Long) (
         implicit scheduler: StubScheduler) {
       val drive = drives.drives (pos.disk)
       val num = (pos.offset >> drive.geom.segmentBits).toInt
       if (num == drive.pageSeg.num) {
         val ledger = drive.pageLedger
         assert (
-            ledger.get (typ, obj, grp) > 0,
-            s"Expected ($typ, $obj, $grp) in restored from log.")
+            ledger.get (typ, obj, gen) > 0,
+            s"Expected ($typ, $obj, $gen) in restored from log.")
       } else {
         assert (!drive.alloc.free.contains (num), "Expected segment to be allocated.")
         val seg = drive.geom.segmentBounds (num)
         val ledger = PageLedger.read (drive.file, drive.geom, seg.base) .expectPass()
         assert (
-            ledger.get (typ, obj, grp) > 0,
-            s"Expected ($typ, $obj, $grp) in ledger at ${seg.base} on ${drive.id}.")
+            ledger.get (typ, obj, gen) > 0,
+            s"Expected ($typ, $obj, $gen) in ledger at ${seg.base} on ${drive.id}.")
       }}
 
     // After detaching, closed multiplexers may still reside in the dispatcher's receiver
@@ -177,9 +177,9 @@ private object DiskTestTools {
 
   implicit class RichPager [P] (pager: PageDescriptor [P]) {
 
-    def assertInLedger (pos: Position, obj: ObjectId, grp: GroupId) (
+    def assertInLedger (pos: Position, obj: ObjectId, gen: Long) (
         implicit scheduler: StubScheduler, disk: Disk): Unit =
-      disk.assertInLedger (pos, pager.id, obj, grp)
+      disk.assertInLedger (pos, pager.id, obj, gen)
 
     def fetch (pos: Position) (implicit disk: Disk): Async [P] =
       disk.asInstanceOf [DiskAgent] .kit.drives.fetch (pager, pos)
@@ -195,7 +195,7 @@ private object DiskTestTools {
       ks
     }
 
-    def nextGroup(): GroupId = random.nextLong()
+    def nextGroup(): Long = random.nextLong()
   }
 
   implicit class RichRecovery (recovery: Disk.Recovery) {

@@ -76,9 +76,9 @@ private class StubDisk (
         desc.ppag.fromByteArray (page.data)
       }}
 
-  def write [P] (desc: PageDescriptor [P], obj: ObjectId, group: GroupId, page: P): Async [Position] =
+  def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
     guard {
-      val _page = StubPage (desc, obj, group, page)
+      val _page = StubPage (desc, obj, gen, page)
       for {
         offset <- disk.write (_page)
       } yield {

@@ -20,7 +20,7 @@ import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.buffer.ArrayBuffer
 import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
-import com.treode.disk.{Disk, GroupId, ObjectId, PageDescriptor, PageHandler, Position}
+import com.treode.disk.{Disk, ObjectId, PageDescriptor, PageHandler, Position}
 import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 import com.treode.pickle.PicklerRegistry
 
@@ -120,15 +120,15 @@ private class Broker (
       gab()
     }}
 
-  def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
+  def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] =
     fiber.supply {
-      _get (obj.id) .probe (groups)
+      _get (obj.id) .probe (gens)
     }
 
-  def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
+  def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] =
     for {
       cat <- get (obj.id)
-      _ <- cat.compact (groups)
+      _ <- cat.compact (gens)
     } yield ()
 
   def checkpoint(): Async [Unit] =

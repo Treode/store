@@ -16,15 +16,15 @@
 
 package com.treode.disk.stubs
 
-import com.treode.disk.{GroupId, ObjectId, PageDescriptor, TypeId}
+import com.treode.disk.{ObjectId, PageDescriptor, TypeId}
 
-private case class StubPage (typ: TypeId, obj: ObjectId, group: GroupId, data: Array [Byte]) {
+private case class StubPage (typ: TypeId, obj: ObjectId, gen: Long, data: Array [Byte]) {
 
   def length = data.length
 }
 
 private object StubPage {
 
-  def apply [P] (desc: PageDescriptor [P], obj: ObjectId, group: GroupId, page: P): StubPage =
-    new StubPage (desc.id, obj, group, desc.ppag.toByteArray (page))
+  def apply [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): StubPage =
+    new StubPage (desc.id, obj, gen, desc.ppag.toByteArray (page))
 }

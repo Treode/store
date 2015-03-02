@@ -19,7 +19,7 @@ package com.treode.store.tier
 import com.treode.async.{Async, BatchIterator}
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{Disk, GroupId, ObjectId, PageHandler, RecordDescriptor}
+import com.treode.disk.{Disk, ObjectId, PageHandler, RecordDescriptor}
 import com.treode.store.{Bytes, Residents, StorePicklers, TxClock}
 
 import Async.{guard, when}
@@ -52,13 +52,13 @@ extends PageHandler {
     TestTable.delete.record (gen, key)
   }
 
-  def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] = guard {
-    table.probe (groups)
+  def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] = guard {
+    table.probe (gens)
   }
 
-  def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] = guard {
+  def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] = guard {
     for {
-      meta <- table.compact (groups, Residents.all)
+      meta <- table.compact (gens, Residents.all)
       _ <- when (meta.isDefined) (TestTable.compact.record (meta.get))
     } yield ()
   }

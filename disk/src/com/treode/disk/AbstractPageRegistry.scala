@@ -38,24 +38,24 @@ private abstract class AbstractPageRegistry {
     h
   }
 
-  def probe (typ: TypeId, obj: ObjectId, groups: Set [GroupId]): Async [Probe] =
+  def probe (typ: TypeId, obj: ObjectId, gens: Set [Long]): Async [Probe] =
     guard {
-      get (typ) .probe (obj, groups)
+      get (typ) .probe (obj, gens)
     }
 
-  def compact (id: TypeId, obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
+  def compact (id: TypeId, obj: ObjectId, gens: Set [Long]): Async [Unit] =
     guard {
-      get (id) .compact (obj, groups)
+      get (id) .compact (obj, gens)
     }}
 
 private object AbstractPageRegistry {
 
-  type Probe = ((TypeId, ObjectId), Set [GroupId])
+  type Probe = ((TypeId, ObjectId), Set [Long])
 
   trait PickledHandler {
 
-    def probe (obj: ObjectId, groups: Set [GroupId]): Async [Probe]
-    def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit]
+    def probe (obj: ObjectId, gens: Set [Long]): Async [Probe]
+    def compact (obj: ObjectId, gens: Set [Long]): Async [Unit]
   }
 
   object PickledHandler {
@@ -63,11 +63,11 @@ private object AbstractPageRegistry {
     def apply (desc: PageDescriptor [_], handler: PageHandler): PickledHandler =
       new PickledHandler {
 
-        def probe (obj: ObjectId, groups: Set [GroupId]): Async [Probe] = {
-          for (live <- handler.probe (obj, groups ))
+        def probe (obj: ObjectId, gens: Set [Long]): Async [Probe] = {
+          for (live <- handler.probe (obj, gens ))
             yield ((desc.id, obj), live)
         }
 
-        def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
-          handler.compact (obj, groups)
+        def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] =
+          handler.compact (obj, gens)
      }}}

@@ -21,7 +21,7 @@ import java.util.ArrayDeque
 import com.nothome.delta.{Delta, GDiffPatcher}
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disk, GroupId, PageDescriptor, Position, RecordDescriptor}
+import com.treode.disk.{Disk, PageDescriptor, Position, RecordDescriptor}
 import com.treode.store.{Bytes, CatalogId}
 
 import Async.{guard, when}
@@ -90,7 +90,7 @@ private class Handler (
         patch (end, checksum, patches)
     }
 
-  def probe (groups: Set [GroupId]): Set [GroupId] =
+  def probe (gens: Set [Long]): Set [Long] =
     if (saved.isDefined)
       Set (saved.get.version)
     else
@@ -107,8 +107,8 @@ private class Handler (
         this.saved = Some (meta)
       }}
 
-  def compact (groups: Set [GroupId]): Async [Unit] =
-    when (saved.isDefined && (groups contains saved.get.version)) (save())
+  def compact (gens: Set [Long]): Async [Unit] =
+    when (saved.isDefined && (gens contains saved.get.version)) (save())
 
   def checkpoint(): Async [Unit] =
     guard {

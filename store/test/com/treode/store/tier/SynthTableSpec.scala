@@ -25,7 +25,7 @@ import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{GroupId, ObjectId, PageHandler}
+import com.treode.disk.{ObjectId, PageHandler}
 import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.store.{Fruits, Residents, StoreTestConfig}
 import com.treode.pickle.Picklers
@@ -42,13 +42,13 @@ class SynthTableSpec extends FreeSpec {
 
   class TierHandler (table: SynthTable) extends PageHandler {
 
-    def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] = guard {
-      table.probe (groups)
+    def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] = guard {
+      table.probe (gens)
     }
 
-    def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] = guard {
+    def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] = guard {
       for {
-        _ <- table.compact (groups, Residents.all)
+        _ <- table.compact (gens, Residents.all)
       } yield ()
     }
 

@@ -38,9 +38,9 @@ private class DiskAgent (val kit: DiskKit) extends Disk {
   def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
     cache.read (desc, pos)
 
-  def write [P] (desc: PageDescriptor [P], obj: ObjectId, group: GroupId, page: P): Async [Position] =
+  def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
     async [Position] { cb =>
-      val _page = PickledPage (desc, obj, group, page, cb)
+      val _page = PickledPage (desc, obj, gen, page, cb)
       if (_page.byteSize > maximumPageBytes)
         throw new OversizedPageException (maximumPageBytes, _page.byteSize)
       paged.send (_page)
