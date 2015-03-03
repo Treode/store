@@ -249,6 +249,26 @@ object TreodeBuild extends Build {
           "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
           "com.twitter" %% "twitter-server" % "1.9.0"))
 
+  // Our key-value server.
+  lazy val server = Project ("server", file ("server"))
+    .configs (IntensiveTest, PeriodicTest, Perf)
+    .dependsOn (twitterServer, store % "compile;test->stub")
+    .settings (standardSettings: _*)
+    .settings (assemblySettings: _*)
+    .settings (
+
+      name := "server",
+
+      mainClass in assembly := Some ("com.treode.server"),
+
+      test in assembly := {},
+
+      publishLocal := {},
+      publish := {},
+
+      libraryDependencies ++= Seq (
+          "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test"))
+
   // A standalone server for system tests.  Separated to keep system testing components out of
   // production code (these components are in the default config in this project).
   lazy val systest = Project ("systest", file ("systest"))
@@ -300,7 +320,7 @@ object TreodeBuild extends Build {
 
   // The root project includes everything.
   lazy val root = Project ("root", file ("."))
-    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterServer)
+    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterServer, server)
     .settings (versionInfo: _*)
     .settings (
 
