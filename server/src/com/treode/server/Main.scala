@@ -24,6 +24,7 @@ import com.twitter.finagle.http.filter.ExceptionFilter
 import com.twitter.finagle.util.InetSocketAddressUtil.{parseHosts, toPublic}
 import com.twitter.server.TwitterServer
 import com.twitter.util.Await
+import scala.collection.mutable.HashMap
 
 class Serve extends TwitterServer with StoreKit with TreodeAdmin {
 
@@ -34,6 +35,11 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
     flag [String] ("shareHttpAddr", "Address for connecting (example, 192.168.1.1:7070).")
 
   def main() {
+    
+    val map = new HashMap[String, Long]()
+
+    val schema =
+      new Schema (map)
 
     val httpAddr =
       parseHosts (httpAddrFlag()) .head
@@ -47,7 +53,7 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
     controller.announce (Some (shareHttpAddr), None)
 
     val resource =
-      new Resource (controller.hostId, controller.store)
+      new Resource (controller.hostId, new SchematicStore (controller.store, schema))
 
     val server = Http.serve (
       httpAddr,

@@ -27,15 +27,14 @@ import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.finagle.http.path._
 import com.twitter.util.Future
 
-class Resource (host: HostId, store: Store) extends Service [Request, Response] {
+class Resource (host: HostId, store: SchematicStore) extends Service [Request, Response] {
 
   object KeyParam extends ParamMatcher ("key")
 
-  def read (req: Request, tab: TableId, key: String): Async [Response] = {
+  def read (req: Request, tab: String, key: String): Async [Response] = {
     val rt = req.requestTxClock
     val ct = req.conditionTxClock (TxClock.MinValue)
-    val ops = Seq (ReadOp (tab, Bytes (key)))
-    store.read (rt, ops:_*) .map { vs =>
+  store.read (tab, key, rt) .map { vs =>
       val v = vs.head
       v.value match {
         case Some (value) if ct < v.time =>
@@ -46,7 +45,7 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
           respond (req, Status.NotFound)
       }}}
 
-  def scan (req: Request, table: TableId): Async [Response] = {
+  def scan (req: Request, table: String): Async [Response] = {
     val rt = req.requestTxClock
     val ct = req.conditionTxClock (TxClock.MinValue)
     val window = Window.Latest (rt, true, ct, false)
@@ -57,7 +56,7 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     supply (respond.json (req, iter))
   }
 
-  def history (req: Request, table: TableId): Async [Response] = {
+  def history (req: Request, table: String): Async [Response] = {
     val start = Bound.Inclusive (Key.MinValue)
     val rt = req.requestTxClock
     val ct = req.conditionTxClock (TxClock.MinValue)
@@ -67,12 +66,11 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     supply (respond.json (req, iter))
   }
 
-  def put (req: Request, table: TableId, key: String): Async [Response] = {
+  def put (req: Request, table: String, key: String): Async [Response] = {
     val tx = req.transactionId (host)
     val ct = req.conditionTxClock (TxClock.now)
     val value = req.readJson [JsonNode]
-    val ops = Seq (WriteOp.Update (table, Bytes (key), value.toBytes))
-    store.write (tx, ct, ops:_*)
+    store.update (table, key, value, tx, ct)
     .map [Response] { vt =>
       val rsp = req.response
       rsp.status = Status.Ok
@@ -84,11 +82,10 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
         respond (req, Status.PreconditionFailed)
     }}
 
-  def delete (req: Request, table: TableId, key: String): Async [Response] = {
+  def delete (req: Request, table: String, key: String): Async [Response] = {
     val tx = req.transactionId (host)
     val ct = req.conditionTxClock (TxClock.now)
-    val ops = Seq (WriteOp.Delete (table, Bytes (key)))
-    store.write (tx, ct, ops:_*)
+    store.delete (table, key, tx, ct)
     .map [Response] { vt =>
       val rsp = req.response
       rsp.status = Status.Ok
@@ -106,11 +103,11 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
       case Root / "table" / tab :? KeyParam (key) =>
         req.method match {
           case Method.Get =>
-            read (req, tab.getTableId, key) .toTwitterFuture
+            read (req, tab, key) .toTwitterFuture
           case Method.Put =>
-            put (req, tab.getTableId, key) .toTwitterFuture
+            put (req, tab, key) .toTwitterFuture
           case Method.Delete =>
-            delete (req, tab.getTableId, key) .toTwitterFuture
+            delete (req, tab, key) .toTwitterFuture
           case _ =>
             Future.value (respond (req, Status.MethodNotAllowed))
         }
@@ -118,7 +115,7 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
       case Root / "table" / tab :? _ =>
         req.method match {
           case Method.Get =>
-            scan (req, tab.getTableId) .toTwitterFuture
+            scan (req, tab) .toTwitterFuture
           case _ =>
             Future.value (respond (req, Status.MethodNotAllowed))
         }
@@ -126,7 +123,7 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
       case Root / "history" / tab :? _ =>
         req.method match {
           case Method.Get =>
-            history (req, tab.getTableId) .toTwitterFuture
+            history (req, tab) .toTwitterFuture
           case _ =>
             Future.value (respond (req, Status.MethodNotAllowed))
         }
