@@ -16,6 +16,8 @@
 
 package com.treode.server
 
+import scala.collection.mutable.HashMap
+
 import com.treode.twitter.app.StoreKit
 import com.treode.twitter.finagle.http.filter._
 import com.treode.twitter.server.TreodeAdmin
@@ -35,6 +37,10 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
 
   def main() {
 
+    val map = new HashMap [String, Long] ()
+
+    val schema = new Schema (map)
+
     val httpAddr =
       parseHosts (httpAddrFlag()) .head
 
@@ -47,7 +53,7 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
     controller.announce (Some (shareHttpAddr), None)
 
     val resource =
-      new Resource (controller.hostId, controller.store)
+      new Resource (controller.hostId, new SchematicStore (controller.store, schema))
 
     val server = Http.serve (
       httpAddr,
