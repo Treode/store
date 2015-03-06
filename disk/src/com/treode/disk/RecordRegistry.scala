@@ -16,7 +16,7 @@
 
 package com.treode.disk
 
-import com.treode.buffer.{ArrayBuffer, PagedBuffer}
+import com.treode.buffer.PagedBuffer
 import com.treode.pickle.PicklerRegistry
 
 private class RecordRegistry {
@@ -25,10 +25,10 @@ private class RecordRegistry {
     PicklerRegistry [Unit => Any] ("RecordRegistry")
 
   def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
-    records.register (desc.prec, desc.id.id) (msg => _ => f (msg))
+    records.register (desc.id.id, desc.prec) (msg => _ => f (msg))
 
   def read (id: TypeId, data: Array [Byte]): Unit => Any =
-    records.unpickle (id.id, ArrayBuffer.readable (data))
+    records.unpickle (id.id, data)
 
   def read (id: Long, buf: PagedBuffer, len: Int): Unit => Any =
     records.unpickle (id, buf, len)

@@ -51,12 +51,12 @@ private class Broker (
 
   private def deliver (id: CatalogId, cat: Handler): Unit =
     scheduler.execute {
-      ports.unpickle (id.id, ArrayBuffer.readable (cat.bytes.bytes))
+      ports.unpickle (id.id, cat.bytes.bytes)
     }
 
   def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =
     fiber.execute {
-      ports.register (desc.pcat, desc.id.id) (f)
+      ports.register (desc.id.id, desc.pcat) (f)
       catalogs get (desc.id) match {
         case Some (cat) if cat.bytes.murmur32 != 0 => deliver (desc.id, cat)
         case _ => ()
