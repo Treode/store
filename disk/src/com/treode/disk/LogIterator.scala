@@ -145,6 +145,7 @@ private class LogIterator private (
         case Entry (batch, id) =>
           val end = logBuf.readPos
           val entry = records.read (id.id, logBuf, len - end + start)
+          logBuf.discard (logBuf.readPos)
           logPos += len + 4
           checkpointer.tally(len + 4, 1)
           f (Iterable ((batch, entry))) run (_next)

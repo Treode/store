@@ -19,7 +19,7 @@ package com.treode.cluster
 import scala.util.{Failure, Success, Try}
 
 import com.treode.async.Async
-import com.treode.pickle.{Pickler, Picklers}
+import com.treode.pickle.Pickler
 
 import Async.guard
 
@@ -32,12 +32,12 @@ class RequestDescriptor [Q, A] private (
   type Port = EphemeralPort [Option [A]]
 
   private val _preq = {
-    import Picklers._
-    tuple (PortId.pickler, preq)
+    import ClusterPicklers._
+    tuple (portId, preq)
   }
 
   private val _prsp = {
-    import Picklers._
+    import ClusterPicklers._
     option (prsp)
   }
 

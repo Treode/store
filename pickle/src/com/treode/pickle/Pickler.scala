@@ -25,14 +25,16 @@ import com.treode.buffer.{ArrayBuffer, Buffer, Input, PagedBuffer, Output, Outpu
   *
   * @define Frame
   * Allow four bytes for the length, and write `v` after that. Once `v` has been written, compute
-  * its byte length and write that to the first four bytes. This begins writing the length at
-  * `writePos` and leaves `writePos` at the end of `v`.
+  * its byte length and write that to the first four bytes. The length is that of the value only;
+  * it does not include the length of itself. This starts writing the length at `writePos`, and it
+  * leaves `writePos` at the end of `v`.
   *
   * @define FrameChecksum
-  * Allow some number of bytes for the checksum, depedning on `hashf`, next allow four bytes for
-  * the length, and then write `v` after that. Once `v` has been written, compute its checksum and
-  * byte length and write that at the beginning. This begins writing the checksum and length at
-  * `writePos` and leaves `writePos` at the end of `v`.
+  * Allow four bytes for the length, next allow space for the checksum, finally write `v` after
+  * that. Once `v` has been written, compute its byte length and checksum, and write those at the
+  * beginning. The length is that of the value only; it does not include the length of itself or
+  * checksum. This starts writing the length and checksum at `writePos`, and it leaves `writePos`
+  * at the end of `v`.
   *
   * @define MatedDeframe
   * The mated `deframe` method lives in [[com.treode.async.io.File File]] and
@@ -106,7 +108,7 @@ trait Pickler [A] {
     buf.writePos = end
   }
 
-  /** Write a frame with its own checksum and length to the buffer.
+  /** Write a frame with its own length and checksum to the buffer.
     *
     * $FrameChecksum
     *
