@@ -24,8 +24,7 @@ import scala.util.{Failure, Random}
 import com.treode.async.{Async, BatchIterator, Backoff, Scheduler}
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{CellId, Cluster, ClusterConfig, HostId, Peer, RumorDescriptor}
-import com.treode.disk.{Disk, DiskConfig, DiskController, DiskLaunch, DiskRecovery, DriveAttachment,
-  DriveDigest, DriveGeometry}
+import com.treode.disk._
 
 import Async.guard
 
@@ -137,7 +136,7 @@ object Store {
       diskBytes: Long,
       paths: Path*
   ): Unit = {
-    val sysid = StorePicklers.sysid.toByteArray ((hostId, cellId))
+    val sysid = SystemId (cellId.id, hostId.id)
     Disk.init (sysid, superBlockBits, segmentBits, blockBits, diskBytes, paths: _*)
   }
 
@@ -165,7 +164,8 @@ object Store {
       val _store = Store.recover()
       for {
         launch <- _disk.reattach (paths: _*)
-        (hostId, cellId) = StorePicklers.sysid.fromByteArray (launch.sysid)
+        cellId = CellId (launch.sysid.id1)
+        hostId = HostId (launch.sysid.id2)
         cluster = Cluster.live (cellId, hostId, bindAddr, shareAddr)
         store <- _store.launch (launch, cluster)
       } yield {

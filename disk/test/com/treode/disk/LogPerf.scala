@@ -30,7 +30,7 @@ import StandardOpenOption._
 class LogPerf extends PerformanceTest.Quickbenchmark {
 
   val path = Paths.get ("test-8EF661F2")
-  val sysid = "sysid".getBytes
+  val sysid = SystemId (0, 0)
 
   val record = RecordDescriptor (0x52, Picklers.string)
 

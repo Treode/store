@@ -46,7 +46,7 @@ extends DiskRecovery {
       open = false
     }
 
-  def _attach (sysid: Array [Byte], items: (Path, File, DriveGeometry)*): Async [DiskLaunch] =
+  def _attach (sysid: SystemId, items: (Path, File, DriveGeometry)*): Async [DiskLaunch] =
     guard {
 
       val attaching = items.map (_._1) .toSet
@@ -66,7 +66,7 @@ extends DiskRecovery {
         new LaunchAgent (kit)
       }}
 
-  def attach (sysid: Array [Byte], items: (Path, DriveGeometry)*): Async [DiskLaunch] =
+  def attach (sysid: SystemId, items: (Path, DriveGeometry)*): Async [DiskLaunch] =
     guard {
       val files =
         for ((path, geom) <- items)

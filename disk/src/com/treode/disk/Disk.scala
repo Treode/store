@@ -158,7 +158,7 @@ object Disk {
     * @param paths The paths of raw devices or files.
     */
   def init (
-      sysid: Array [Byte],
+      sysid: SystemId,
       superBlockBits: Int,
       segmentBits: Int,
       blockBits: Int,

@@ -58,5 +58,5 @@ private class StubLaunchAgent (
   def controller: DiskController =
     throw new UnsupportedOperationException ("The StubDisk do not provide a controller.")
 
-  val sysid = new Array [Byte] (0)
+  val sysid = SystemId (0, 0)
 }
