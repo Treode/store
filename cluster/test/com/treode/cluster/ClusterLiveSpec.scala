@@ -21,7 +21,7 @@ import java.util.concurrent.TimeoutException
 import scala.util.Random
 import scala.language.postfixOps
 
-import com.treode.async.{Async, Backoff, Callback, Fiber, Scheduler}, 
+import com.treode.async.{Async, Backoff, Callback, Fiber, Scheduler},
   Async.{async, supply}, Callback.{ignore => disregard}
 import com.treode.async.implicits._
 import com.treode.async.stubs.{AsyncChecks, StubGlobals, StubScheduler}, StubGlobals.scheduler
@@ -31,7 +31,7 @@ import org.scalatest.FlatSpec
 class ClusterLiveSpec extends FlatSpec {
 
   implicit val random = Random
-  implicit val config = Cluster.Config.suggested
+  implicit val config = ClusterConfig.suggested
 
   val Cell1 = CellId (0x89)
   val Cell2 = CellId (0x27)
