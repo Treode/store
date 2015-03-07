@@ -31,8 +31,8 @@ trait DiskLaunch {
   /** The disk controller. */
   implicit def controller: DiskController
 
-  /** This system ID found in the superblock. */
-  def sysid: Array [Byte]
+  /** The SystemId found in the superblock. */
+  def sysid: SystemId
 
   /** Register a checkpointer. */
   def checkpoint (f: => Async [Unit])

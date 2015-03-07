@@ -16,21 +16,22 @@
 
 package com.treode.disk
 
-import java.lang.{Integer => JInt}
-import java.nio.file.Path
-import java.util.{Arrays, Objects}
+import com.treode.pickle.Picklers
 
-private case class BootBlock (
-    sysid: SystemId,
-    gen: Int,
-    number: Int,
-    drives: Set [Path])
+case class SystemId (id1: Long, id2: Long) {
 
-private object BootBlock {
+  override def toString =
+    if (id1 < 256 && id2 < 256)
+      f"System:$id1%02X:$id2%02X"
+    else
+      f"System:$id1%016X:$id2%016X"
+}
+
+object SystemId {
 
   val pickler = {
-    import DiskPicklers._
-    wrap (systemId, uint, uint, set (path))
+    import Picklers._
+    wrap (fixedLong, fixedLong)
     .build ((apply _).tupled)
-    .inspect (v => (v.sysid, v.gen, v.number, v.drives))
+    .inspect (v => (v.id1, v.id2))
   }}

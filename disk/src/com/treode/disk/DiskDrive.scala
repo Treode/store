@@ -443,7 +443,7 @@ private object DiskDrive {
     }
 
   def init (
-      sysid: Array [Byte],
+      sysid: SystemId,
       items: Seq [(Path, File, DriveGeometry)]
   ) (implicit
       scheduler: Scheduler,
@@ -463,7 +463,7 @@ private object DiskDrive {
       }}
 
   def init (
-      sysid: Array [Byte],
+      sysid: SystemId,
       superBlockBits: Int,
       segmentBits: Int,
       blockBits: Int,

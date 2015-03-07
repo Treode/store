@@ -29,6 +29,7 @@ private trait DiskPicklers extends Picklers {
   def objectId = ObjectId.pickler
   def pageLedger = PageLedger.Zipped.pickler
   def pos = Position.pickler
+  def systemId = SystemId.pickler
   def typeId = TypeId.pickler
 }
 
