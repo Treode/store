@@ -64,7 +64,7 @@ class PageDescriptor [P] private (
     * the number of compactions that are in flight at one time, and the disk system can double up
     * compaction desired by the object itself with compaction desired by the cleaner.
     */
-  def compact (obj: ObjectId) (implicit disk: Disk): Async [Unit] =
+  def compact (obj: ObjectId) (implicit disk: Disk): Unit =
     disk.compact (this, obj)
 
   override def toString = s"PageDescriptor($id)"

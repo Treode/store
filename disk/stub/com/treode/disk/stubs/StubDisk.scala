@@ -86,7 +86,7 @@ private class StubDisk (
         Position (0, offset, align (_page.length))
       }}
 
-  def compact (desc: PageDescriptor [_], obj: ObjectId): Async [Unit] =
+  def compact (desc: PageDescriptor [_], obj: ObjectId): Unit =
     compactor.compact (desc.id, obj)
 
   def join [A] (task: Async [A]): Async [A] =

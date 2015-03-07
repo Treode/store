@@ -148,11 +148,11 @@ private class Compactor (kit: DiskKit) {
           cleanreq = true
     }
 
-  def compact (typ: TypeId, obj: ObjectId): Async [Unit] =
-    fiber.async { cb =>
+  def compact (typ: TypeId, obj: ObjectId): Unit =
+    fiber.execute {
       val id = (typ, obj)
       compactq += id
-      compact (id, Set.empty [Long]) run (cb)
+      compact (id, Set.empty [Long]) run (ignore)
       if (!engaged)
         reengage()
     }
