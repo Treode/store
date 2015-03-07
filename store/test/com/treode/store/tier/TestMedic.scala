@@ -19,7 +19,7 @@ package com.treode.store.tier
 import com.treode.async.Async
 import com.treode.async.stubs.StubScheduler
 import com.treode.disk.{DiskLaunch, DiskRecovery}
-import com.treode.store.{Bytes, Store, TableId, TxClock}
+import com.treode.store.{Bytes, StoreConfig, TableId, TxClock}
 
 import Async.supply
 import TestTable.{checkpoint, compact, delete, descriptor, put}
@@ -29,7 +29,7 @@ private class TestMedic (
 ) (implicit
     scheduler: StubScheduler,
     recovery: DiskRecovery,
-    config: Store.Config
+    config: StoreConfig
 ) extends TestTable.Medic {
 
   val medic = TierMedic (descriptor, id.id)

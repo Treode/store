@@ -17,7 +17,7 @@
 package com.treode.store.tier
 
 import com.treode.disk.Position
-import com.treode.store.{Residents, Store, StorePicklers, TableDigest, Window}
+import com.treode.store.{Residents, StoreConfig, StorePicklers, TableDigest, Window}
 
  private case class Tiers (tiers: Seq [Tier]) {
 
@@ -48,7 +48,7 @@ import com.treode.store.{Residents, Store, StorePicklers, TableDigest, Window}
   def active: Set [Long] =
     tiers .map (_.gen) .toSet
 
-  def choose (gens: Set [Long], residents: Residents) (implicit config: Store.Config): Tiers = {
+  def choose (gens: Set [Long], residents: Residents) (implicit config: StoreConfig): Tiers = {
     var selected = -1
     var bytes = 0L
     var i = 0

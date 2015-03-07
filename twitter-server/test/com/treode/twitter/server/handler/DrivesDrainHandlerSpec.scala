@@ -18,12 +18,12 @@ package com.treode.twitter.server.handler
 
 import com.jayway.restassured.RestAssured.given
 import com.treode.async.Async, Async.supply
-import com.treode.store.Store, Store.Controller
+import com.treode.store.{Store, StoreController}
 import org.scalatest.FlatSpec
 
 class DrivesDrainHandlerSpec extends FlatSpec with SpecTools {
 
-  def handler (controller: Controller) =
+  def handler (controller: StoreController) =
     new DrivesDrainHandler (controller)
 
   "The DrivesDrainHandler" should "handle POST" in

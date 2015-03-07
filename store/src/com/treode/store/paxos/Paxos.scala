@@ -21,7 +21,7 @@ import scala.util.Random
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.{DiskLaunch, DiskRecovery}
-import com.treode.store.{Atlas, Bytes, Library, Store, TxClock}
+import com.treode.store.{Atlas, Bytes, Library, StoreConfig, TxClock}
 
 private [store] trait Paxos {
 
@@ -44,7 +44,7 @@ private [store] object Paxos {
       scheduler: Scheduler,
       library: Library,
       recovery: DiskRecovery,
-      config: Store.Config
+      config: StoreConfig
   ): Recovery =
     new RecoveryKit
 }

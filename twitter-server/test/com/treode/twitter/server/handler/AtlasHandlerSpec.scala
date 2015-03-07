@@ -17,13 +17,13 @@
 package com.treode.twitter.server.handler
 
 import com.jayway.restassured.RestAssured.given
-import com.treode.store.Store, Store.Controller
+import com.treode.store.{Store, StoreController}
 import org.hamcrest.Matchers, Matchers._
 import org.scalatest.FlatSpec
 
 class AtlasHandlerSpec extends FlatSpec with SpecTools {
 
-  def handler (controller: Controller) =
+  def handler (controller: StoreController) =
     new AtlasHandler (controller)
 
   "The AtlasHandler" should "handle GET" in

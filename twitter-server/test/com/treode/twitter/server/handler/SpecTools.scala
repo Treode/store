@@ -19,7 +19,7 @@ package com.treode.twitter.server.handler
 import scala.util.Random
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.treode.store.Store, Store.Controller
+import com.treode.store.{Store, StoreController}
 import com.treode.twitter.finagle.http.mapper
 import com.treode.twitter.finagle.http.filter._
 import com.twitter.finagle.{Http, Service}
@@ -32,10 +32,10 @@ import org.scalatest.Suite
 trait SpecTools extends MockFactory {
   this: Suite =>
 
-  def handler (controller: Controller): Service [Request, Response]
+  def handler (controller: StoreController): Service [Request, Response]
 
-  def served (test: (Int, Controller) => Any) {
-    val controller = mock [Controller]
+  def served (test: (Int, StoreController) => Any) {
+    val controller = mock [StoreController]
     val port = Random.nextInt (65535 - 49152) + 49152
     val server = Http.serve (
       s":$port",

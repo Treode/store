@@ -168,6 +168,6 @@ private [store] object TierTable {
     }}
 
   def apply (desc: TierDescriptor, id: TableId) (
-      implicit scheduler: Scheduler, disk: Disk, config: Store.Config): TierTable =
+      implicit scheduler: Scheduler, disk: Disk, config: StoreConfig): TierTable =
     SynthTable (desc, id)
 }

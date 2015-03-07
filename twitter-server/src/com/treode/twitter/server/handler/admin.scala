@@ -19,14 +19,14 @@ package com.treode.twitter.server.handler
 import java.nio.file.Path
 
 import com.treode.disk.DriveAttachment
-import com.treode.store.{Cohort, Store}, Store.Controller
+import com.treode.store.{Cohort, Store, StoreController}
 import com.treode.twitter.finagle.http.{RichRequest, mapper}
 import com.treode.twitter.util._
 import com.twitter.finagle.Service
 import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.util.Future
 
-class AtlasHandler (controller: Controller) extends Service [Request, Response] {
+class AtlasHandler (controller: StoreController) extends Service [Request, Response] {
 
   def apply (req: Request): Future [Response] = {
     req.method match {
@@ -42,7 +42,7 @@ class AtlasHandler (controller: Controller) extends Service [Request, Response] 
         Future.value (respond (req, Status.MethodNotAllowed))
     }}}
 
-class DrivesHandler (controller: Controller) extends Service [Request, Response] {
+class DrivesHandler (controller: StoreController) extends Service [Request, Response] {
 
   def apply (req: Request): Future [Response] = {
     req.method match {
@@ -56,7 +56,7 @@ class DrivesHandler (controller: Controller) extends Service [Request, Response]
         Future.value (respond (req, Status.MethodNotAllowed))
     }}}
 
-class DrivesAttachHandler (controller: Controller) extends Service [Request, Response] {
+class DrivesAttachHandler (controller: StoreController) extends Service [Request, Response] {
 
   def apply (req: Request): Future [Response] = {
     req.method match {
@@ -71,7 +71,7 @@ class DrivesAttachHandler (controller: Controller) extends Service [Request, Res
         Future.value (respond (req, Status.MethodNotAllowed))
     }}}
 
-class DrivesDrainHandler (controller: Controller) extends Service [Request, Response] {
+class DrivesDrainHandler (controller: StoreController) extends Service [Request, Response] {
 
   def apply (req: Request): Future [Response] = {
     req.method match {
@@ -86,7 +86,7 @@ class DrivesDrainHandler (controller: Controller) extends Service [Request, Resp
         Future.value (respond (req, Status.MethodNotAllowed))
     }}}
 
-class TablesHandler (controller: Controller) extends Service [Request, Response] {
+class TablesHandler (controller: StoreController) extends Service [Request, Response] {
 
   def apply (req: Request): Future [Response] = {
     req.method match {

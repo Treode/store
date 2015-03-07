@@ -26,7 +26,7 @@ class StoreTestConfig (
     val messageFlakiness: Double
 ) (implicit
     val stubDiskConfig: StubDiskConfig,
-    val storeConfig: Store.Config
+    val storeConfig: StoreConfig
 ) {
 
   override def toString = {
@@ -82,7 +82,7 @@ object StoreTestConfig {
         stubDiskConfig = StubDiskConfig (
             checkpointProbability = checkpointProbability,
             compactionProbability = compactionProbability),
-        storeConfig = Store.Config (
+        storeConfig = StoreConfig (
             closedLifetime = closedLifetime,
             deliberatingTimeout = deliberatingTimeout,
             exodusThreshold = exodusThreshold,

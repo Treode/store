@@ -28,8 +28,8 @@ import Async.guard
 private class ExtendedController (
     disk: DiskController,
     cluster: Cluster,
-    controller: Store.Controller
-) extends Store.Controller {
+    controller: StoreController
+) extends StoreController {
 
   implicit val store: Store = controller.store
 
