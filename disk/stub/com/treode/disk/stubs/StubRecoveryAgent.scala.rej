@@ -1,0 +1,21 @@
+***************
+*** 73,81 ****
+        new StubLaunchAgent (releaser, disk) (random, scheduler, drive, config)
+      }
+  
+-   def reattach (items: Path*): Async [Launch] =
+      guard (throw new UnsupportedOperationException ("The StubDisk does not use files."))
+  
+-   def attach (items: (Path, DriveGeometry)*): Async [Launch] =
+      guard (throw new UnsupportedOperationException ("The StubDisk does not use files."))
+  }
+--- 71,79 ----
+        new StubLaunchAgent (releaser, disk) (random, scheduler, drive, config)
+      }
+  
++   def reattach (items: Path*): Async [DiskLaunch] =
+      guard (throw new UnsupportedOperationException ("The StubDisk does not use files."))
+  
++   def attach (items: (Path, DriveGeometry)*): Async [DiskLaunch] =
+      guard (throw new UnsupportedOperationException ("The StubDisk does not use files."))
+  }

@@ -17,7 +17,7 @@
 package com.treode.store.tier
 
 import com.treode.async.Scheduler
-import com.treode.disk.Disk
+import com.treode.disk.DiskLaunch
 import com.treode.store.{Bytes, Cell, Store, TableId, TxClock}
 
 private [store] trait TierMedic {
@@ -34,7 +34,7 @@ private [store] trait TierMedic {
 
   def checkpoint (meta: TierTable.Checkpoint)
 
-  def close () (implicit launch: Disk.Launch): TierTable
+  def close () (implicit launch: DiskLaunch): TierTable
 }
 
 private [store] object TierMedic {

@@ -20,12 +20,12 @@ import scala.language.postfixOps
 
 import com.treode.async.Backoff
 import com.treode.async.misc.RichInt
-import com.treode.disk.stubs.StubDisk
+import com.treode.disk.stubs.StubDiskConfig
 
 class StoreTestConfig (
     val messageFlakiness: Double
 ) (implicit
-    val stubDiskConfig: StubDisk.Config,
+    val stubDiskConfig: StubDiskConfig,
     val storeConfig: Store.Config
 ) {
 
@@ -79,7 +79,7 @@ object StoreTestConfig {
     new StoreTestConfig (
         messageFlakiness = messageFlakiness
     ) (
-        stubDiskConfig = StubDisk.Config (
+        stubDiskConfig = StubDiskConfig (
             checkpointProbability = checkpointProbability,
             compactionProbability = compactionProbability),
         storeConfig = Store.Config (

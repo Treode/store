@@ -55,7 +55,7 @@ class RecordDescriptor [R] private (
     * A replayer must be registered with the recovery builder. The disk system will refuse to
     * recover if it cannot identify all log entries.
     */
-  def replay (f: R => Any) (implicit recovery: Disk.Recovery): Unit =
+  def replay (f: R => Any) (implicit recovery: DiskRecovery): Unit =
     recovery.replay (this) (f)
 
   override def toString = s"RecordDescriptor($id)"

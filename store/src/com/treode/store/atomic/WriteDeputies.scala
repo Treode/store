@@ -20,7 +20,7 @@ import com.treode.async.Async
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.cluster.IgnoreRequestException
-import com.treode.disk.Disk
+import com.treode.disk.DiskLaunch
 import com.treode.store.TxId
 
 import Async.guard
@@ -57,7 +57,7 @@ private class WriteDeputies (kit: AtomicKit) {
       } yield ()
     }
 
-  def attach () (implicit launch: Disk.Launch) {
+  def attach () (implicit launch: DiskLaunch) {
 
     launch.checkpoint (checkpoint())
 

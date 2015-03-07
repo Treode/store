@@ -22,7 +22,7 @@ import java.util.concurrent.ExecutorService
 
 import com.treode.async.Async
 import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
-import com.treode.disk.{Disk, DriveAttachment, DriveDigest, DriveGeometry}
+import com.treode.disk.{Disk, DiskController, DriveAttachment, DriveDigest, DriveGeometry}
 import com.treode.store.atomic.Atomic
 import com.treode.store.catalog.Catalogs
 
@@ -30,7 +30,7 @@ import Async.supply
 
 private class SimpleController (
     cluster: Cluster,
-    disk: Disk.Controller,
+    disk: DiskController,
     library: Library,
     librarian: Librarian,
     catalogs: Catalogs,

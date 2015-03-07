@@ -60,7 +60,7 @@ class StuffTracker (implicit random: Random) {
       write() .flatMap (_ => scheduler.sleep (1))
     }
 
-  def attach () (implicit scheduler: Scheduler, launch: Disk.Launch) {
+  def attach () (implicit scheduler: Scheduler, launch: DiskLaunch) {
     import launch.disk
 
     _probed = false

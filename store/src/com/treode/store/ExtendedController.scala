@@ -21,12 +21,12 @@ import java.nio.file.Path
 
 import com.treode.async.Async
 import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
-import com.treode.disk.{Disk, DriveAttachment, DriveDigest}
+import com.treode.disk.{DiskController, DriveAttachment, DriveDigest}
 
 import Async.guard
 
 private class ExtendedController (
-    disk: Disk.Controller,
+    disk: DiskController,
     cluster: Cluster,
     controller: Store.Controller
 ) extends Store.Controller {

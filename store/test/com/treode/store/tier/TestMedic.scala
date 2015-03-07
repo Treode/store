@@ -18,7 +18,7 @@ package com.treode.store.tier
 
 import com.treode.async.Async
 import com.treode.async.stubs.StubScheduler
-import com.treode.disk.Disk
+import com.treode.disk.{DiskLaunch, DiskRecovery}
 import com.treode.store.{Bytes, Store, TableId, TxClock}
 
 import Async.supply
@@ -28,7 +28,7 @@ private class TestMedic (
     id: TableId
 ) (implicit
     scheduler: StubScheduler,
-    recovery: Disk.Recovery,
+    recovery: DiskRecovery,
     config: Store.Config
 ) extends TestTable.Medic {
 
@@ -50,7 +50,7 @@ private class TestMedic (
     medic.checkpoint (meta)
   }
 
-  def launch (implicit launch: Disk.Launch): Async [TestTable] = supply {
+  def launch (implicit launch: DiskLaunch): Async [TestTable] = supply {
     import launch.{checkpoint, disk}
     val table = new TestTable (medic.close())
     checkpoint (table.checkpoint())

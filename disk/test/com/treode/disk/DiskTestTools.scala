@@ -30,7 +30,6 @@ import com.treode.async.implicits._
 import org.scalatest.Assertions
 
 import Assertions.assertResult
-import Disk.Launch
 
 private object DiskTestTools {
 
@@ -43,7 +42,7 @@ private object DiskTestTools {
   implicit def stringToPath (path: String): Path =
     Paths.get (path)
 
-  implicit class RichControllerAgent (controller: Disk.Controller) {
+  implicit class RichControllerAgent (controller: DiskController) {
     val agent = controller.asInstanceOf [ControllerAgent]
     import agent.disk
 
@@ -155,7 +154,7 @@ private object DiskTestTools {
         blockBits: Int = 6,
         diskBytes: Long = 1<<20
     ) (implicit
-        config: Disk.Config
+        config: DiskConfig
      ): DriveGeometry =
        DriveGeometry (
            segmentBits,
@@ -163,7 +162,7 @@ private object DiskTestTools {
            diskBytes)
   }
 
-  implicit class RichLaunchAgent (launch: Disk.Launch) {
+  implicit class RichLaunchAgent (launch: DiskLaunch) {
     val agent = launch.asInstanceOf [LaunchAgent]
     import agent.disk
 
@@ -198,17 +197,17 @@ private object DiskTestTools {
     def nextGroup(): Long = random.nextLong()
   }
 
-  implicit class RichRecovery (recovery: Disk.Recovery) {
+  implicit class RichRecovery (recovery: DiskRecovery) {
     val agent = recovery.asInstanceOf [RecoveryAgent]
 
-    def attachAndWait (items: AttachItem*): Async [Launch] =
+    def attachAndWait (items: AttachItem*): Async [DiskLaunch] =
       agent._attach (sysid, items: _*)
 
-    def attachAndCapture (items: AttachItem*): CallbackCaptor [Launch] =
+    def attachAndCapture (items: AttachItem*): CallbackCaptor [DiskLaunch] =
       attachAndWait (items: _*) .capture()
 
     def attachAndControl (items: AttachItem*)  (
-        implicit scheduler: StubScheduler): Disk.Controller = {
+        implicit scheduler: StubScheduler): DiskController = {
       val launch = attachAndWait (items: _*) .expectPass()
       launch.launchAndPass()
       launch.controller
@@ -220,7 +219,7 @@ private object DiskTestTools {
       launch.disk
     }
 
-    def reattachAndWait (items: ReattachItem*): Async [Launch] =
+    def reattachAndWait (items: ReattachItem*): Async [DiskLaunch] =
       agent._reattach (items: _*)
 
     def reattachAndLaunch (items: ReattachItem*) (implicit scheduler: StubScheduler): Disk = {
@@ -230,14 +229,14 @@ private object DiskTestTools {
     }
 
     def reopenAndWait (paths: Path*) (items: ReattachItem*) (
-        implicit scheduler: StubScheduler, config: Disk.Config): Async [Launch] = {
+        implicit scheduler: StubScheduler, config: DiskConfig): Async [DiskLaunch] = {
       val files = items.toMap
       def superbs (path: Path) = SuperBlocks.read (path, files (path))
       agent._reattach (paths) (superbs _)
     }
 
     def reopenAndLaunch (paths: Path*) (items: ReattachItem*) (
-        implicit scheduler: StubScheduler, config: Disk.Config): Disk = {
+        implicit scheduler: StubScheduler, config: DiskConfig): Disk = {
       val launch = reopenAndWait (paths: _*) (items: _*) .expectPass()
       launch.launchAndPass()
       launch.disk
