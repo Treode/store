@@ -9,7 +9,7 @@ name := "finagle-example"
 
 version := "0.3.0-SNAPSHOT"
 
-scalaVersion := "2.11.4"
+scalaVersion := "2.11.6"
 
 libraryDependencies ++= Seq (
   "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
@@ -17,7 +17,7 @@ libraryDependencies ++= Seq (
   "com.treode" %% "store" % "0.3.0-SNAPSHOT" % "compile;test->stub",
   "com.treode" %% "twitter-server" % "0.3.0-SNAPSHOT",
   "com.twitter" %% "finagle-http" % "6.24.0",
-  "org.scalatest" %% "scalatest" % "2.2.2" % "test")
+  "org.scalatest" %% "scalatest" % "2.2.4" % "test")
 
 resolvers += "Twitter" at "http://maven.twttr.com"
 

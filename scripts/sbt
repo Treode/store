@@ -10,5 +10,5 @@ java \
     -Xss1M \
     -Djava.util.logging.config.file="$DIR/logging.properties" \
     -Dsbt.log.noformat=true \
-    -jar "${HOME}/.sbt/sbt-launch-0.13.5.jar" \
+    -jar "${HOME}/.sbt/sbt-launch-0.13.7.jar" \
      "$@"
