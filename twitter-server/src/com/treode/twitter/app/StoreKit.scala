@@ -21,7 +21,7 @@ import java.nio.file.{Path, Paths}
 import scala.reflect.ClassTag
 
 import com.treode.async.{Globals, Scheduler}
-import com.treode.cluster.{Cluster, HostId}
+import com.treode.cluster.{Cluster, ClusterConfig, HostId}
 import com.treode.disk.DiskConfig
 import com.treode.store.{Cohort, Store}
 import com.twitter.app.App
@@ -129,7 +129,7 @@ trait StoreKit {
         toPublic (peerAddr)
 
     implicit val diskConfig = DiskConfig.suggested.copy (superBlockBits = superBlockBits())
-    implicit val clusterConfig = Cluster.Config.suggested
+    implicit val clusterConfig = ClusterConfig.suggested
     implicit val storeConfig = Store.Config.xdcr
 
     val controller = Store.recover (peerAddr, sharePeerAddr, paths: _*  ) .await()

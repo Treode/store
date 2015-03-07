@@ -56,22 +56,14 @@ trait Cluster {
 
 object Cluster {
 
-  case class Config (
-      connectingBackoff: Backoff,
-      statsUpdatePeriod: Int
-  ) {
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use ClusterConfig", "0.3.0")
+  type Config = ClusterConfig
 
-    require (
-        statsUpdatePeriod > 0,
-        "The stats update period must be more than 0 milliseconds.")
-  }
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use ClusterConfig", "0.3.0")
+  val Config = ClusterConfig
 
-  object Config {
-
-    val suggested = Config (
-        connectingBackoff = Backoff (3.seconds, 2.seconds, 3.minutes),
-        statsUpdatePeriod = 1.minutes)
-  }
 
   def live (
       cellId: CellId,
@@ -81,7 +73,7 @@ object Cluster {
   ) (implicit
       random: Random,
       scheduler: Scheduler,
-      config: Config
+      config: ClusterConfig
   ): Cluster = {
 
     var group: AsynchronousChannelGroup = null

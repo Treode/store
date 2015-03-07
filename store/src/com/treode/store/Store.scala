@@ -23,7 +23,7 @@ import scala.util.{Failure, Random}
 
 import com.treode.async.{Async, BatchIterator, Backoff, Scheduler}
 import com.treode.async.misc.RichInt
-import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
+import com.treode.cluster.{CellId, Cluster, ClusterConfig, HostId, Peer, RumorDescriptor}
 import com.treode.disk.{Disk, DiskConfig, DiskController, DiskLaunch, DiskRecovery, DriveAttachment,
   DriveDigest, DriveGeometry}
 
@@ -287,7 +287,7 @@ object Store {
       paths: Path*
   ) (implicit
       diskConfig: DiskConfig,
-      clusterConfig: Cluster.Config,
+      clusterConfig: ClusterConfig,
       storeConfig: Store.Config,
       scheduler: Scheduler
   ): Async [Controller] = {
