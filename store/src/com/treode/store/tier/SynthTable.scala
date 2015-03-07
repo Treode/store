@@ -205,7 +205,7 @@ private class SynthTable (
     }}
 
   def compact(): Unit =
-    pager.compact (id.id) run (ignore)
+    pager.compact (id.id)
 
   def countKeys (tier: MemTier): Long = {
     var count = 0L

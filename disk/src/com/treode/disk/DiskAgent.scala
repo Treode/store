@@ -49,7 +49,7 @@ private class DiskAgent (val kit: DiskKit) extends Disk {
       pos
     }
 
-  def compact (desc: PageDescriptor [_], obj: ObjectId): Async [Unit] =
+  def compact (desc: PageDescriptor [_], obj: ObjectId): Unit =
     compactor.compact (desc.id, obj)
 
   def join [A] (task: Async [A]): Async [A] =

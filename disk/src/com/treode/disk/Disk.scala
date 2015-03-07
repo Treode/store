@@ -104,7 +104,7 @@ trait Disk {
   def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position]
 
   /** See [[PageDescriptor#compact]]. */
-  def compact (desc: PageDescriptor [_], obj: ObjectId): Async [Unit]
+  def compact (desc: PageDescriptor [_], obj: ObjectId): Unit
 
   /** Join a release epoch, and leave it when the async task completes. Pages which are live at the
     * beginning of the epoch will remain available, even if they should become unreachable during
