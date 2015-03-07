@@ -16,21 +16,12 @@
 
 package com.treode.store
 
-import com.treode.pickle.Pickler
+import com.treode.async.Async
+import com.treode.cluster.Cluster
+import com.treode.disk.DiskLaunch
 
-class CatalogDescriptor [C] (val id: CatalogId, val pcat: Pickler [C]) {
+trait StoreRecovery {
 
-  def listen (f: C => Any) (implicit store: StoreController): Unit =
-    store.listen (this) (f)
-
-  def issue (version: Int, cat: C) (implicit store: StoreController): Unit =
-    store.issue (this) (version, cat)
-
-  override def toString = s"CatalogDescriptor($id)"
+  def launch (implicit launch: DiskLaunch, cluster: Cluster): Async [StoreController]
 }
 
-object CatalogDescriptor {
-
-  def apply [M] (id: CatalogId, pval: Pickler [M]): CatalogDescriptor [M] =
-    new CatalogDescriptor (id, pval)
-}

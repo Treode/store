@@ -35,7 +35,7 @@ private class SimpleController (
     librarian: Librarian,
     catalogs: Catalogs,
     atomic: Atomic
-) extends Store.Controller {
+) extends StoreController {
 
   private val peers =
     new PeersScuttlebutt (cluster, library.atlas)

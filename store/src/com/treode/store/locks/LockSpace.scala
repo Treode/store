@@ -20,11 +20,11 @@ import scala.collection.SortedSet
 import scala.language.postfixOps
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.store.{Store, TxClock}
+import com.treode.store.{StoreConfig, TxClock}
 
 import Async.async
 
-private [store] class LockSpace (implicit config: Store.Config) {
+private [store] class LockSpace (implicit config: StoreConfig) {
   import config.lockSpaceBits
 
   /** A mask to quickly hash a lock ID onto the lock space by using bitwise-and. */

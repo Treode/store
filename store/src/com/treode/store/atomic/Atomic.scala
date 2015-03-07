@@ -21,7 +21,7 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
 import com.treode.disk.{Disk, DiskLaunch, DiskRecovery}
-import com.treode.store.{Atlas, Library, Store, TableDigest}
+import com.treode.store.{Atlas, Library, Store, StoreConfig, TableDigest}
 import com.treode.store.paxos.Paxos
 
 private [store] trait Atomic extends Store {
@@ -43,7 +43,7 @@ private [store] object Atomic {
       scheduler: Scheduler,
       library: Library,
       recovery: DiskRecovery,
-      config: Store.Config
+      config: StoreConfig
   ): Recovery =
     new RecoveryKit
 }

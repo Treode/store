@@ -20,7 +20,7 @@ import scala.util.Random
 
 import com.jayway.restassured.RestAssured.given
 import com.treode.cluster.{Peer, RumorDescriptor}
-import com.treode.store.Store, Store.Controller
+import com.treode.store.{Store, StoreController}
 import com.twitter.finagle.Http
 import com.twitter.finagle.http.service.NullService
 import org.hamcrest.Matchers, Matchers._
@@ -29,10 +29,10 @@ import org.scalatest.FlatSpec
 
 class PeersFilterSpec extends FlatSpec with MockFactory {
 
-  def served (test: (Int, Controller) => Any) {
+  def served (test: (Int, StoreController) => Any) {
     val store = mock [Store]
 
-    val controller = mock [Controller]
+    val controller = mock [StoreController]
     (controller.listen (_: RumorDescriptor [Any]) (_: (Any, Peer) => Any))
         .expects(*, *)
         .anyNumberOfTimes()

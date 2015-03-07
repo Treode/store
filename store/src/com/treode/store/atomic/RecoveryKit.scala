@@ -24,7 +24,7 @@ import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
 import com.treode.disk.{DiskLaunch, DiskRecovery}
-import com.treode.store.{Cohort, Library, Store, TxClock, TxId}
+import com.treode.store.{Cohort, Library, Store, StoreConfig, TxClock, TxId}
 import com.treode.store.paxos.Paxos
 import com.treode.store.tier.TierMedic
 
@@ -39,7 +39,7 @@ private class RecoveryKit (implicit
     val scheduler: Scheduler,
     val library: Library,
     val recovery: DiskRecovery,
-    val config: Store.Config
+    val config: StoreConfig
 ) extends Atomic.Recovery {
 
   val tstore = new TimedMedic (this)
