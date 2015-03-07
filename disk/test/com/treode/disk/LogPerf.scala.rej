@@ -1,0 +1,17 @@
+***************
+*** 102,108 ****
+    private val desc = RecordDescriptor (0x52, Picklers.string)
+  
+    private implicit val disk = {
+-     implicit val config = Disk.Config.suggested
+      Disk.init (sysid, 13, 20, 13, 1 << 30, path)
+      val launch = Disk .recover() .reattach (path) .expectPass()
+      launch.launch()
+--- 102,108 ----
+    private val desc = RecordDescriptor (0x52, Picklers.string)
+  
+    private implicit val disk = {
++     implicit val config = DiskConfig.suggested
+      Disk.init (sysid, 13, 20, 13, 1 << 30, path)
+      val launch = Disk .recover() .reattach (path) .expectPass()
+      launch.launch()

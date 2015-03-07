@@ -19,7 +19,7 @@ package com.treode.store.tier
 import com.treode.async.{Async, BatchIterator}
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{Disk, ObjectId, PageHandler, RecordDescriptor}
+import com.treode.disk.{Disk, DiskLaunch, ObjectId, PageHandler, RecordDescriptor}
 import com.treode.store.{Bytes, Residents, StorePicklers, TxClock}
 
 import Async.{guard, when}
@@ -74,7 +74,7 @@ private object TestTable {
 
   trait Medic {
 
-    def launch (implicit launch: Disk.Launch): Async [TestTable]
+    def launch (implicit launch: DiskLaunch): Async [TestTable]
   }
 
   val descriptor = TierDescriptor (0x28) ((_, _, _) => true)

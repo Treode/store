@@ -22,7 +22,7 @@ import scala.reflect.ClassTag
 
 import com.treode.async.{Globals, Scheduler}
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.disk.Disk
+import com.treode.disk.DiskConfig
 import com.treode.store.{Cohort, Store}
 import com.twitter.app.App
 import com.twitter.finagle.util.InetSocketAddressUtil.{parseHosts, toPublic}
@@ -128,7 +128,7 @@ trait StoreKit {
       else
         toPublic (peerAddr)
 
-    implicit val diskConfig = Disk.Config.suggested.copy (superBlockBits = superBlockBits())
+    implicit val diskConfig = DiskConfig.suggested.copy (superBlockBits = superBlockBits())
     implicit val clusterConfig = Cluster.Config.suggested
     implicit val storeConfig = Store.Config.xdcr
 

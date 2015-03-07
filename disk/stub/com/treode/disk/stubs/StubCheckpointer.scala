@@ -29,7 +29,7 @@ private class StubCheckpointer (implicit
     random: Random,
     scheduler: Scheduler,
     disk: StubDiskDrive,
-    config: StubDisk.Config
+    config: StubDiskConfig
 ) {
 
   val fiber = new Fiber

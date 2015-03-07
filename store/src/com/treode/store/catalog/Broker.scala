@@ -20,7 +20,7 @@ import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.buffer.ArrayBuffer
 import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
-import com.treode.disk.{Disk, ObjectId, PageDescriptor, PageHandler, Position}
+import com.treode.disk.{Disk, DiskLaunch, ObjectId, PageDescriptor, PageHandler, Position}
 import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 import com.treode.pickle.PicklerRegistry
 
@@ -137,7 +137,7 @@ private class Broker (
       _ <- cats.latch (_.checkpoint())
     } yield ()
 
-  def attach () (implicit launch: Disk.Launch, cluster: Cluster) {
+  def attach () (implicit launch: DiskLaunch, cluster: Cluster) {
 
     pager.handle (this)
 

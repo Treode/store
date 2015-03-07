@@ -60,7 +60,7 @@ class LogPerf extends PerformanceTest.Quickbenchmark {
       try {
         val executor = Executors.newSingleThreadScheduledExecutor
         implicit val scheduler = Scheduler (executor)
-        implicit val config = DiskConfig.suggested
+        implicit val config = Disk.Config.suggested
 
         Disk.init (sysid, 13, 20, 13, 1 << 30, path)
         val launch = Disk .recover() .reattach (path) .await

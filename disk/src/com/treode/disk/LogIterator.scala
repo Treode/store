@@ -41,7 +41,7 @@ private class LogIterator private (
     private var logSeg: SegmentBounds
 ) (implicit
     scheduler: Scheduler,
-    config: Disk.Config
+    config: DiskConfig
 ) extends BatchIterator [(Long, Unit => Any)] {
 
   import kit.{checkpointer, compactor}
@@ -195,7 +195,7 @@ private object LogIterator {
       kit: DiskKit
   ) (implicit
       scheduler: Scheduler,
-      config: Disk.Config
+      config: DiskConfig
   ): Async [(Int, LogIterator)] = {
 
     val path = read.path
@@ -224,7 +224,7 @@ private object LogIterator {
       records: RecordRegistry
   ) (implicit
       scheduler: Scheduler,
-      config: Disk.Config
+      config: DiskConfig
   ): Async [DiskKit] = {
 
     val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)

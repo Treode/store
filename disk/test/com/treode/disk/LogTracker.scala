@@ -74,7 +74,7 @@ class LogTracker {
       checkpoint()
     }
 
-  def attach () (implicit scheduler: Scheduler, launch: Disk.Launch) {
+  def attach () (implicit scheduler: Scheduler, launch: DiskLaunch) {
     import launch.disk
 
     launch.checkpoint (checkpoint())

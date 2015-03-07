@@ -14,22 +14,14 @@
  * limitations under the License.
  */
 
-package com.treode.disk
+package com.treode.disk.stubs
 
-import java.nio.file.Path
 import com.treode.async.Async
+import com.treode.disk.{DiskLaunch, DiskRecovery}
 
-private class ControllerAgent (kit: DiskKit, val disk: Disk) extends DiskController  {
+trait StubDiskRecovery extends DiskRecovery {
 
-  def drives: Async [Seq [DriveDigest]] =
-    kit.drives.digest
+  def reattach (disk: StubDiskDrive): Async [DiskLaunch]
 
-  def attach (items: DriveAttachment*): Async [Unit] =
-    kit.drives.attach (items)
-
-  def drain (items: Path*): Async [Unit] =
-    kit.drives.drain (items)
-
-  def shutdown(): Async [Unit] =
-    kit.close()
+  def attach (disk: StubDiskDrive): Async [DiskLaunch]
 }

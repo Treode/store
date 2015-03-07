@@ -24,7 +24,8 @@ import scala.util.{Failure, Random}
 import com.treode.async.{Async, BatchIterator, Backoff, Scheduler}
 import com.treode.async.misc.RichInt
 import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
-import com.treode.disk.{Disk, DriveAttachment, DriveDigest, DriveGeometry}
+import com.treode.disk.{Disk, DiskConfig, DiskController, DiskLaunch, DiskRecovery, DriveAttachment,
+  DriveDigest, DriveGeometry}
 
 import Async.guard
 
@@ -256,7 +257,7 @@ object Store {
 
   trait Recovery {
 
-    def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Controller]
+    def launch (implicit launch: DiskLaunch, cluster: Cluster): Async [Controller]
   }
 
   def init (
@@ -275,7 +276,7 @@ object Store {
   def recover() (implicit
       random: Random,
       scheduler: Scheduler,
-      recovery: Disk.Recovery,
+      recovery: DiskRecovery,
       config: Store.Config
   ): Recovery =
     new RecoveryKit
@@ -285,7 +286,7 @@ object Store {
       shareAddr: SocketAddress,
       paths: Path*
   ) (implicit
-      diskConfig: Disk.Config,
+      diskConfig: DiskConfig,
       clusterConfig: Cluster.Config,
       storeConfig: Store.Config,
       scheduler: Scheduler

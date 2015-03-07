@@ -72,7 +72,7 @@ private class Acceptors (kit: PaxosKit) extends PageHandler {
       } yield ()
     }
 
-  def attach () (implicit launch: Disk.Launch) {
+  def attach () (implicit launch: DiskLaunch) {
     import Acceptor.{ask, choose, propose}
 
     launch.checkpoint (checkpoint())

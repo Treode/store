@@ -37,7 +37,7 @@ class PageDescriptor [P] private (
     * A handler must be registered with the launch builder. The disk system will panic if it
     * discovers a page of data that it cannot identify.
     */
-  def handle (handler: PageHandler) (implicit launch: Disk.Launch): Unit =
+  def handle (handler: PageHandler) (implicit launch: DiskLaunch): Unit =
     launch.handle (this, handler)
 
   /** Read a page.

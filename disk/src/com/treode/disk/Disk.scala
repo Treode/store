@@ -123,184 +123,25 @@ trait Disk {
 
 object Disk {
 
-  case class Config (
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use DiskConfig", "0.3.0")
+  type Config = DiskConfig
 
-      /** Begin a checkpoint after this many bytes have been logged. */
-      checkpointBytes: Int,
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use DiskConfig", "0.3.0")
+  val Config = DiskConfig
 
-      /** Begin a checkpoint after this many entries have been logged. */
-      checkpointEntries: Int,
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use DiskController", "0.3.0")
+  type Controller = DiskController
 
-      /** Probe and compact after this many segments have been allocated. */
-      cleaningFrequency: Int,
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use DiskLaunch", "0.3.0")
+  type Launch = DiskLaunch
 
-      /** Compact this many segments at a time. */
-      cleaningLoad: Int,
-
-      /** Reject log records larger than this limit. */
-      maximumRecordBytes: Int,
-
-      /** Reject pages larger than this limit. */
-      maximumPageBytes: Int,
-
-      /** Cache this many pages. */
-
-      pageCacheEntries: Int,
-
-      /** The size of the superblock in bits (for example, 14 = 16K). */
-      superBlockBits: Int
-  ) {
-
-    require (
-        checkpointBytes > 0,
-        "The checkpoint interval must be more than 0 bytes.")
-
-    require (
-        checkpointEntries > 0,
-        "The checkpoint interval must be more than 0 entries.")
-
-    require (
-        cleaningFrequency > 0,
-        "The cleaning interval must be more than 0 segments.")
-
-    require (
-        cleaningLoad > 0,
-        "The cleaning load must be more than 0 segemnts.")
-
-    require (
-        maximumRecordBytes > 0,
-        "The maximum record size must be more than 0 bytes.")
-
-    require (
-        maximumPageBytes > 0,
-        "The maximum page size must be more than 0 bytes.")
-
-    require (
-        pageCacheEntries > 0,
-        "The size of the page cache must be more than 0 entries.")
-
-    require (
-        superBlockBits > 0,
-        "A superblock must have more than 0 bytes.")
-
-    val superBlockBytes = 1 << superBlockBits
-    val superBlockMask = superBlockBytes - 1
-    val diskLeadBytes = 1 << (superBlockBits + 1)
-
-    val minimumSegmentBits = {
-      val bytes = math.max (maximumRecordBytes, maximumPageBytes)
-      Integer.SIZE - Integer.numberOfLeadingZeros (bytes - 1) + 1
-    }
-
-    def checkpoint (bytes: Int, entries: Int): Boolean =
-      bytes > checkpointBytes || entries > checkpointEntries
-
-    def clean (segments: Int): Boolean =
-      segments >= cleaningFrequency
-  }
-
-  object Config {
-
-    val suggested = Config (
-        checkpointBytes = 1 << 24,
-        checkpointEntries = 10000,
-        cleaningFrequency = 7,
-        cleaningLoad = 1,
-        maximumRecordBytes = 1 << 24,
-        maximumPageBytes = 1 << 24,
-        pageCacheEntries = 10000,
-        superBlockBits = 14)
-  }
-
-  /** The disk controller.
-    *
-    * All the admin-y things you can do with the disk system.
-    */
-  trait Controller {
-
-    /** This disk system. */
-    implicit def disk: Disk
-
-    /** Summary information of the drives attached to this disk system. */
-    def drives: Async [Seq [DriveDigest]]
-
-    /** Attach new drives.
-      *
-      * When this method returns, the drives are a part of the disk system.
-      */
-    def attach (items: DriveAttachment*): Async [Unit]
-
-    /** Drain attached drives.
-      *
-      * The disk system drains drives by copying all live data on them to someplace else. When this
-      * method returns, the drain has begun, but it may not complete until later. When they have
-      * drained, the disk system will detach the drives and log a message.
-      */
-    def drain (items: Path*): Async [Unit]
-
-    def shutdown(): Async [Unit]
-  }
-
-  /** The launch builder. */
-  trait Launch {
-
-    /** The disk system.
-      *
-      * It is ready for recording log entries, and reading and writing pages. However, before
-      * launch it is not checkpointing or cleaning pages. It is not reclaiming segments.
-      */
-    implicit def disk: Disk
-
-    /** The disk controller. */
-    implicit def controller: Controller
-
-    /** This system ID found in the superblock. */
-    def sysid: Array [Byte]
-
-    /** Register a checkpointer. */
-    def checkpoint (f: => Async [Unit])
-
-    /** Register a page handler. */
-    def handle (desc: PageDescriptor [_], handler: PageHandler)
-
-    /** Launch the checkpointer and cleaner.
-      *
-      * Call `launch` after registering all checkpointers and page handlers. This method closes
-      * this launch builder.
-      */
-    def launch()
-  }
-
-  /** The recovery builder. */
-  trait Recovery {
-
-    /** Register a replayer for a log entry. */
-    def replay [R] (desc: RecordDescriptor [R]) (f: R => Any)
-
-    /** Reattach one or more paths.
-      *
-      * You need provide only some of the paths previously attached to this disk system. The
-      * recovery mechanim will find the complete list of paths in the superblock. If not for this
-      * behavior, you would need to attach and drain disks, and simultaneously update the config
-      * files or startup scripts. With this feature, you can
-      *
-      *   - Add a disk:
-      *
-      *       1. Attach the disk; see [[Controller#attach]].
-      *
-      *       2. Add this disk to config files or startup scripts.
-      *
-      *   - Drain a disk.
-      *
-      *       1. Remove the disk from config files or startup scripts.
-      *
-      *       2. Drain the disk; see [[Controller#drain]].
-      *
-      * Call `reattach` ''after'' registering all replayers. This method closes this recovery
-      * builder.
-      */
-    def reattach (items: Path*): Async [Launch]
-  }
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use DiskRecovery", "0.3.0")
+  type Recovery = DiskRecovery
 
   /** Initialize the disk system.
     *
@@ -331,6 +172,6 @@ object Disk {
     * The `superBlockBits` in the [[Disk.Config]] must match the `superBlockBits` given to
     * initialization.
     */
-  def recover () (implicit scheduler: Scheduler, config: Disk.Config): Recovery =
+  def recover () (implicit scheduler: Scheduler, config: DiskConfig): DiskRecovery =
     new RecoveryAgent
 }
