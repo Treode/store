@@ -53,7 +53,7 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
     .setup { implicit scheduler =>
       implicit val network = StubNetwork (random)
       for {
-        host <- StubPaxosHost.boot (H1, disk, true)
+        host <- StubPaxosHost.boot (H1, disk)
         _ = host.setAtlas (settled (host))
         _ <- tracker.batches (nbatch, nputs, host)
       } yield ()
@@ -61,7 +61,7 @@ trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
 
     .recover { implicit scheduler =>
       implicit val network = StubNetwork (random)
-      val host = StubPaxosHost .boot (H1, disk, false) .expectPass()
+      val host = StubPaxosHost.boot (H1, disk) .expectPass()
       host.setAtlas (settled (host))
       tracker.check (host) .expectPass()
     }}

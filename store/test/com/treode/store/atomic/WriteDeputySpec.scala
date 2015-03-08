@@ -118,7 +118,7 @@ class WriteDeputySpec extends FreeSpec {
   private def reboot (h: StubAtomicHost) (
       implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
     h.shutdown()
-    StubAtomicHost .boot (h.localId, h.drive, false) .expectPass()
+    StubAtomicHost.boot (h.localId, h.drive) .expectPass()
   }
 
   "When the WriteDeputy is" - {
@@ -131,7 +131,7 @@ class WriteDeputySpec extends FreeSpec {
       def boot (ct: TxClock) (
           implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
         val drive = new StubDiskDrive
-        val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
+        val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
         h.write (xid3, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
         h.prepare (xid2, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
@@ -219,7 +219,7 @@ class WriteDeputySpec extends FreeSpec {
       def boot (ct: TxClock) (
           implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
         val drive = new StubDiskDrive
-        val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
+        val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
         h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
         drive.stop = true
@@ -280,7 +280,7 @@ class WriteDeputySpec extends FreeSpec {
       // Start the write under test; check that it is prepared (xid1)
       def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
         val drive = new StubDiskDrive
-        val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
+        val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
         h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
         h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
@@ -323,7 +323,7 @@ class WriteDeputySpec extends FreeSpec {
       // Start the write under test; check that it is deliberating (xid1)
       def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
         val drive = new StubDiskDrive
-        val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
+        val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
         h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
         h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance)
@@ -366,7 +366,7 @@ class WriteDeputySpec extends FreeSpec {
       // Start the write under test; check that it is tardy (xid1)
       def boot () (implicit r: Random, s: StubScheduler, n: StubNetwork, c: StoreTestConfig) = {
         val drive = new StubDiskDrive
-        val h = StubAtomicHost .boot (h1, drive, true) .expectPass()
+        val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
         h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
         val cb = h.commit (xid1, 2) .capture()
