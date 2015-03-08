@@ -88,7 +88,7 @@ private object StubScanDeputy {
     implicit val _catalogs = Catalogs.recover()
 
     for {
-      launch <- recovery.attach (drive)
+      launch <- recovery.reattach (drive)
       catalogs <- _catalogs.launch (launch, cluster)
     } yield {
       launch.launch()

@@ -45,7 +45,7 @@ class TierSpec extends WordSpec {
     implicit val scheduler = StubScheduler.random (random)
     implicit val recovery = StubDisk.recover()
     val diskDrive = new StubDiskDrive
-    val launch = recovery.attach (diskDrive) .expectPass()
+    val launch = recovery.reattach (diskDrive) .expectPass()
     launch.launch()
     (scheduler, launch.disk, config.storeConfig)
   }

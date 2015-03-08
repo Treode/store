@@ -54,7 +54,7 @@ class LibrarianSpec extends FlatSpec with AsyncChecks {
 
     val _launch =
       for {
-        launch <- recovery.attach (diskDrive)
+        launch <- recovery.reattach (diskDrive)
         catalogs <- _catalogs.launch (launch, cluster)
       } yield {
         launch.launch()

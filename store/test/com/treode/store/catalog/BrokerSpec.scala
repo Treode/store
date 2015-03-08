@@ -66,7 +66,7 @@ object BrokerBehaviors extends FreeSpec {
     val diskDrive = new StubDiskDrive
 
     implicit val recovery = StubDisk.recover()
-    implicit val launch = recovery.attach (diskDrive) .expectPass()
+    implicit val launch = recovery.reattach (diskDrive) .expectPass()
     implicit val disk = launch.disk
     launch.launch()
 

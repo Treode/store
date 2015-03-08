@@ -22,6 +22,4 @@ import com.treode.disk.{DiskLaunch, DiskRecovery}
 trait StubDiskRecovery extends DiskRecovery {
 
   def reattach (disk: StubDiskDrive): Async [DiskLaunch]
-
-  def attach (disk: StubDiskDrive): Async [DiskLaunch]
 }

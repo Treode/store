@@ -87,7 +87,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       audit: Scheduler => Seq [H] => Async [_]
   ) {
 
-    def install (
+    def boot (
         id: HostId
     ) (implicit
         random: Random,
@@ -95,9 +95,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
         network: StubNetwork,
         config: StoreTestConfig
     ): Async [H] =
-      pkg.boot (id, new StubDiskDrive, true)
+      pkg.boot (id, new StubDiskDrive)
 
-    def install (
+    def boot (
         id: HostId,
         drive: StubDiskDrive
     ) (implicit
@@ -106,18 +106,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
         network: StubNetwork,
         config: StoreTestConfig
     ): Async [H] =
-      pkg.boot (id, drive, true)
-
-    def reboot (
-        id: HostId,
-        drive: StubDiskDrive
-    ) (implicit
-        random: Random,
-        parent: Scheduler,
-        network: StubNetwork,
-        config: StoreTestConfig
-    ): Async [H] =
-      pkg.boot (id, drive, false)
+      pkg.boot (id, drive)
 
     def setup (
         host: H
@@ -407,7 +396,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val h1 = runner.install (H1) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
       val hs = Seq (h1)
       h1.setAtlas (settled (h1))
 
@@ -443,9 +432,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
       val hs = Seq (h1, h2, h3)
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -480,9 +469,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     .withMultithreadedScheduler (init) { kit =>
       import kit._
 
-      val h1 = runner.install (H1) .await()
-      val h2 = runner.install (H2) .await()
-      val h3 = runner.install (H3) .await()
+      val h1 = runner.boot (H1) .await()
+      val h2 = runner.boot (H2) .await()
+      val h3 = runner.boot (H3) .await()
       val hs = Seq (h1, h2, h3)
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -520,7 +509,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
       val hs =
         for (id <- Seq (H1, H2, H3, H4, H5, H6, H7, H8))
-          yield runner.install (id) .expectPass()
+          yield runner.boot (id) .expectPass()
       val Seq (h1, h2) = hs take 2
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -561,9 +550,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
 
-      val h1 = runner.install (H1, d1) .expectPass()
-      val h2 = runner.install (H2, d2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
+      val h1 = runner.boot (H1, d1) .expectPass()
+      val h2 = runner.boot (H2, d2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
       val hs = Seq (h1, h2)
       h3.shutdown() .expectPass()
       for (h <- hs)
@@ -604,9 +593,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val d1 = new StubDiskDrive
       val d2 = new StubDiskDrive
 
-      val h1 = runner.install (H1, d1) .await()
-      val h2 = runner.install (H2, d2) .await()
-      val h3 = runner.install (H3) .await()
+      val h1 = runner.boot (H1, d1) .await()
+      val h2 = runner.boot (H2, d2) .await()
+      val h3 = runner.boot (H3) .await()
       h3.shutdown() .await()
       val hs = Seq (h1, h2)
       for (h <- hs)
@@ -639,9 +628,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
       val d3 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      var h3 = runner.install (H3, d3) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      var h3 = runner.boot (H3, d3) .expectPass()
       var hs = Seq (h1, h2, h3)
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -653,7 +642,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val count = scheduler.run (timers = !cb.wasInvoked)
       cb.passedOrTimedout
 
-      h3 = runner.reboot (H3, d3) .expectPass()
+      h3 = runner.boot (H3, d3) .expectPass()
       hs = Seq (h1, h2, h3)
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -676,9 +665,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
       val d3 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .await()
-      val h2 = runner.install (H2) .await()
-      var h3 = runner.install (H3, d3) .await()
+      val h1 = runner.boot (H1) .await()
+      val h2 = runner.boot (H2) .await()
+      var h3 = runner.boot (H3, d3) .await()
       var hs = Seq (h1, h2, h3)
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -690,7 +679,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val end = System.currentTimeMillis
 
       scheduler.run (timers = network.active (h3.localId))
-      h3 = runner.reboot (H3, d3) .await()
+      h3 = runner.boot (H3, d3) .await()
       hs = Seq (h1, h2, h3)
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -725,9 +714,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
       val d3 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      var h3 = runner.install (H3, d3) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      var h3 = runner.boot (H3, d3) .expectPass()
       var hs = Seq (h1, h2, h3)
       h3.shutdown() .expectPass()
       for (h <- hs)
@@ -736,7 +725,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       runner.setup (h1) .expectPass()
       val cb = runner.run (h1, h2) .capture()
       scheduler.run (count = target, timers = true)
-      val cb2 = runner.reboot (H3, d3) .capture()
+      val cb2 = runner.boot (H3, d3) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h3 = cb2.assertPassed()
@@ -763,9 +752,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
       val d3 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      var h3 = runner.install (H3, d3) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      var h3 = runner.boot (H3, d3) .expectPass()
       var hs = Seq (h1, h2, h3)
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -775,7 +764,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target1, timers = true)
       h3.shutdown() .expectPass()
       scheduler.run (count = target2, timers = true)
-      val cb2 = runner.reboot (H3, d3) .capture()
+      val cb2 = runner.boot (H3, d3) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h3 = cb2.assertPassed()
@@ -801,9 +790,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
       val d3 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .await()
-      val h2 = runner.install (H2) .await()
-      var h3 = runner.install (H3, d3) .await()
+      val h1 = runner.boot (H1) .await()
+      val h2 = runner.boot (H2) .await()
+      var h3 = runner.boot (H3, d3) .await()
       var hs = Seq (h1, h2, h3)
       for (h <- hs)
         h.setAtlas (settled (h1, h2, h3))
@@ -815,7 +804,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
           _ <- h3.shutdown()
           _ <- Async.delay (target2)
           _ = scheduler.run (timers = network.active (h3.localId))
-          h <- runner.reboot (H3, d3)
+          h <- runner.boot (H3, d3)
         } yield h) .toFuture
       runner.run (h1, h2) .passOrTimeout
       h3 = _h3.await()
@@ -852,8 +841,8 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
       val hs = Seq (h1, h2)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -882,9 +871,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
       val hs = Seq (h1, h2, h3)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -919,9 +908,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val target2 = random.nextInt (target3)
       val d3 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      var h3 = runner.install (H3, d3) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      var h3 = runner.boot (H3, d3) .expectPass()
       var hs = Seq (h1, h2, h3)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -934,7 +923,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target2, timers = true)
       h3.shutdown() .expectPass()
       scheduler.run (count = target3 - target2, timers = true)
-      val cb2 = runner.reboot (H3, d3) .capture()
+      val cb2 = runner.boot (H3, d3) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h3 = cb2.assertPassed()
@@ -956,9 +945,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
       val hs = Seq (h1, h2, h3)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -993,9 +982,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val target2 = random.nextInt (target3)
       val d3 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      var h3 = runner.install (H3, d3) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      var h3 = runner.boot (H3, d3) .expectPass()
       var hs = Seq (h1, h2, h3)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1008,7 +997,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target2, timers = true)
       h3.shutdown() .expectPass()
       scheduler.run (count = target3 - target2, timers = true)
-      val cb2 = runner.reboot (H3, d3) .capture()
+      val cb2 = runner.boot (H3, d3) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h3 = cb2.assertPassed()
@@ -1030,10 +1019,10 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
-      val h4 = runner.install (H4) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
+      val h4 = runner.boot (H4) .expectPass()
       val hs = Seq (h1, h2, h3, h4)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1068,10 +1057,10 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val target2 = random.nextInt (target3)
       val d3 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      var h3 = runner.install (H3, d3) .expectPass()
-      val h4 = runner.install (H4) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      var h3 = runner.boot (H3, d3) .expectPass()
+      val h4 = runner.boot (H4) .expectPass()
       var hs = Seq (h1, h2, h3, h4)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1084,7 +1073,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target2, timers = true)
       h3.shutdown() .expectPass()
       scheduler.run (count = target3 - target2, timers = true)
-      val cb2 = runner.reboot (H3, d3) .capture()
+      val cb2 = runner.boot (H3, d3) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h3 = cb2.assertPassed()
@@ -1110,10 +1099,10 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val target2 = random.nextInt (target3)
       val d4 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
-      var h4 = runner.install (H4, d4) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
+      var h4 = runner.boot (H4, d4) .expectPass()
       var hs = Seq (h1, h2, h3, h4)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1126,7 +1115,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target2, timers = true)
       h4.shutdown() .expectPass()
       scheduler.run (count = target3 - target2, timers = true)
-      val cb2 = runner.reboot (H4, d4) .capture()
+      val cb2 = runner.boot (H4, d4) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h4 = cb2.assertPassed()
@@ -1152,10 +1141,10 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val target2 = random.nextInt (target3)
       val d2 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      var h2 = runner.install (H2, d2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
-      val h4 = runner.install (H4) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      var h2 = runner.boot (H2, d2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
+      val h4 = runner.boot (H4) .expectPass()
       var hs = Seq (h1, h2, h3, h4)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1168,7 +1157,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target2, timers = true)
       h2.shutdown() .expectPass()
       scheduler.run (count = target3 - target2, timers = true)
-      val cb2 = runner.reboot (H2, d2) .capture()
+      val cb2 = runner.boot (H2, d2) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h2 = cb2.assertPassed()
@@ -1190,11 +1179,11 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
-      val h4 = runner.install (H4) .expectPass()
-      val h5 = runner.install (H5) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
+      val h4 = runner.boot (H4) .expectPass()
+      val h5 = runner.boot (H5) .expectPass()
       val hs = Seq (h1, h2, h3, h4, h5)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1229,11 +1218,11 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val target2 = random.nextInt (target3)
       val d3 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      var h3 = runner.install (H3, d3) .expectPass()
-      val h4 = runner.install (H4) .expectPass()
-      val h5 = runner.install (H5) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      var h3 = runner.boot (H3, d3) .expectPass()
+      val h4 = runner.boot (H4) .expectPass()
+      val h5 = runner.boot (H5) .expectPass()
       var hs = Seq (h1, h2, h3, h4, h5)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1246,7 +1235,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target2, timers = true)
       h3.shutdown() .expectPass()
       scheduler.run (count = target3 - target2, timers = true)
-      val cb2 = runner.reboot (H3, d3) .capture()
+      val cb2 = runner.boot (H3, d3) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h3 = cb2.assertPassed()
@@ -1272,11 +1261,11 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val target2 = random.nextInt (target3)
       val d4 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
-      var h4 = runner.install (H4, d4) .expectPass()
-      val h5 = runner.install (H5) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
+      var h4 = runner.boot (H4, d4) .expectPass()
+      val h5 = runner.boot (H5) .expectPass()
       var hs = Seq (h1, h2, h3, h4, h5)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1289,7 +1278,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target2, timers = true)
       h4.shutdown() .expectPass()
       scheduler.run (count = target3 - target2, timers = true)
-      val cb2 = runner.reboot (H4, d4) .capture()
+      val cb2 = runner.boot (H4, d4) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h4 = cb2.assertPassed()
@@ -1315,11 +1304,11 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val target2 = random.nextInt (target3)
       val d1 = new StubDiskDrive
 
-      var h1 = runner.install (H1, d1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
-      val h4 = runner.install (H4) .expectPass()
-      val h5 = runner.install (H5) .expectPass()
+      var h1 = runner.boot (H1, d1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
+      val h4 = runner.boot (H4) .expectPass()
+      val h5 = runner.boot (H5) .expectPass()
       var hs = Seq (h1, h2, h3, h4, h5)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1332,7 +1321,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target2, timers = true)
       h1.shutdown() .expectPass()
       scheduler.run (count = target3 - target2, timers = true)
-      val cb2 = runner.reboot (H1, d1) .capture()
+      val cb2 = runner.boot (H1, d1) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h1 = cb2.assertPassed()
@@ -1354,12 +1343,12 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
-      val h4 = runner.install (H4) .expectPass()
-      val h5 = runner.install (H5) .expectPass()
-      val h6 = runner.install (H6) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
+      val h4 = runner.boot (H4) .expectPass()
+      val h5 = runner.boot (H5) .expectPass()
+      val h6 = runner.boot (H6) .expectPass()
       val hs = Seq (h1, h2, h3, h4, h5, h6)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1394,12 +1383,12 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val target2 = random.nextInt (target3)
       val d3 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      var h3 = runner.install (H3, d3) .expectPass()
-      val h4 = runner.install (H4) .expectPass()
-      val h5 = runner.install (H5) .expectPass()
-      val h6 = runner.install (H6) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      var h3 = runner.boot (H3, d3) .expectPass()
+      val h4 = runner.boot (H4) .expectPass()
+      val h5 = runner.boot (H5) .expectPass()
+      val h6 = runner.boot (H6) .expectPass()
       var hs = Seq (h1, h2, h3, h4, h5, h6)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1412,7 +1401,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target2, timers = true)
       h3.shutdown() .expectPass()
       scheduler.run (count = target3 - target2, timers = true)
-      val cb2 = runner.reboot (H3, d3) .capture()
+      val cb2 = runner.boot (H3, d3) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h3 = cb2.assertPassed()
@@ -1438,12 +1427,12 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val target2 = random.nextInt (target3)
       val d6 = new StubDiskDrive
 
-      val h1 = runner.install (H1) .expectPass()
-      val h2 = runner.install (H2) .expectPass()
-      val h3 = runner.install (H3) .expectPass()
-      val h4 = runner.install (H4) .expectPass()
-      val h5 = runner.install (H5) .expectPass()
-      var h6 = runner.install (H6, d6) .expectPass()
+      val h1 = runner.boot (H1) .expectPass()
+      val h2 = runner.boot (H2) .expectPass()
+      val h3 = runner.boot (H3) .expectPass()
+      val h4 = runner.boot (H4) .expectPass()
+      val h5 = runner.boot (H5) .expectPass()
+      var h6 = runner.boot (H6, d6) .expectPass()
       var hs = Seq (h1, h2, h3, h4, h5, h6)
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1456,7 +1445,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target2, timers = true)
       h6.shutdown() .expectPass()
       scheduler.run (count = target3 - target2, timers = true)
-      val cb2 = runner.reboot (H6, d6) .capture()
+      val cb2 = runner.boot (H6, d6) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       h6 = cb2.assertPassed()
@@ -1480,7 +1469,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
       val hs =
         for (id <- Seq (H1, H2, H3, H4, H5, H6, H7, H8))
-          yield runner.install (id) .expectPass()
+          yield runner.boot (id) .expectPass()
       val Seq (h1, h2, h3) = hs take 3
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1511,7 +1500,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
       val hs =
         for (id <- Seq (H1, H2, H3, H4, H5, H6, H7, H8))
-          yield runner.install (id) .expectPass()
+          yield runner.boot (id) .expectPass()
       val Seq (h1, h2, h3) = hs take 3
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1557,7 +1546,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
       val hs =
         for (id <- Seq (H1, H2, H3, H4, H5, H6, H7, H8))
-          yield runner.install (id) .expectPass()
+          yield runner.boot (id) .expectPass()
       val Seq (h1, h2, _) = hs take 3
       for (h1 <- hs; h2 <- hs)
         h1.hail (h2.localId)
@@ -1582,27 +1571,27 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       config: StoreTestConfig
   ) {
     val seed = Random.nextLong()
-    
+
     val countWith1 = for1host (seed) (init)
     val countWith3 = for3hosts (seed) (init)
     val countWith8 = for8hosts (seed) (init)
-    
+
     val countWith3Offline1 = for3with1offline (seed) (init)
     for3with1rebooting (seed, target(countWith3Offline1)) (init)
-    
+
     val targetWith3 = target(countWith3)
-    
+
     val countWith3Crashing1 = for3with1crashing (seed, targetWith3) (init)
     if (countWith3Crashing1 > 1) {
       for3with1bouncing (seed, targetWith3, target(countWith3Crashing1)) (init)
     }
-    
+
     for1to1 (seed, target(countWith1)) (init)
-    
+
     val targetWith1to3 = target(countWith1)
     val countWith1to3 = for1to3 (seed, targetWith1to3) (init)
     if (countWith1to3 > 1) {
-     for1to3with1bouncing (seed, targetWith1to3, target(countWith1to3)) (init) 
+     for1to3with1bouncing (seed, targetWith1to3, target(countWith1to3)) (init)
     }
 
     val countWith3replacing1 = for3replacing1 (seed, targetWith3) (init)
@@ -1612,7 +1601,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       for3replacing1withTargetBouncing (seed, targetWith3, targetWith3replacing1) (init)
       for3replacing1withCommonBouncing (seed, targetWith3, targetWith3replacing1) (init)
     }
-    
+
     val countWith3replacing2 = for3replacing2 (seed, targetWith3) (init)
     if (countWith3replacing2 > 1) {
       val targetWith3replacing2 = target(countWith3replacing2)
@@ -1620,19 +1609,19 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       for3replacing2withTargetBouncing (seed, targetWith3, targetWith3replacing2) (init)
       for3replacing2withCommonBouncing (seed, targetWith3, targetWith3replacing2) (init)
     }
-    
+
     val countWith3to3 = for3to3 (seed, targetWith3) (init)
     if (countWith3to3 > 1) {
       val targetWith3to3 = target(countWith3to3)
       for3to3withSourceBouncing (seed, targetWith3, targetWith3to3) (init)
       for3to3withTargetBouncing (seed, targetWith3, targetWith3to3) (init)
     }
-     
+
     for3to8 (seed, targetWith3) (init)
-    
+
     for8to3 (seed, target(countWith8)) (init)
   }
-  
+
   def forVariousClusters [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
@@ -1655,8 +1644,8 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
     .withRandomScheduler (seed, init) { kit =>
       import kit._
 
-      val agent = runner.install (H1) .expectPass()
-      val deputy = runner.install (H2) .expectPass()
+      val agent = runner.boot (H1) .expectPass()
+      val deputy = runner.boot (H2) .expectPass()
       val hs = Seq (agent, deputy)
       for (h <- hs)
         h.setAtlas (settled (deputy))
@@ -1688,8 +1677,8 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       val target2 = random.nextInt (count - target1)
       val disk = new StubDiskDrive
 
-      val agent = runner.install (H1) .expectPass()
-      var deputy = runner.install (H2, disk) .expectPass()
+      val agent = runner.boot (H1) .expectPass()
+      var deputy = runner.boot (H2, disk) .expectPass()
       var hs = Seq (agent, deputy)
       for (h <- hs)
         h.setAtlas (settled (deputy))
@@ -1699,7 +1688,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       scheduler.run (count = target1, timers = true)
       deputy.shutdown() .expectPass()
       scheduler.run (count = target2, timers = true)
-      val cb2 = runner.reboot (H2, disk) .capture()
+      val cb2 = runner.boot (H2, disk) .capture()
       scheduler.run (timers = !cb.wasInvoked || !cb2.wasInvoked)
       cb.passedOrTimedout
       deputy = cb2.assertPassed()
@@ -1709,14 +1698,14 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
         h.setAtlas (settled (deputy))
       runner.verify (hs) .expectPass()
     }
-    
+
     def forAgentWithDeputyBouncing [H <: Host] (
       init: Random => ForStoreClusterRunner [H]
   ) (implicit
       config: StoreTestConfig
   ) {
     "agent with deputy bouncing" taggedAs (Intensive, Periodic) in {
-      val average = 
+      val average =
         {
           val start = System.currentTimeMillis
           var nruns = 0
@@ -1753,8 +1742,7 @@ object StoreClusterChecks {
 
     def boot (
         id: HostId,
-        drive: StubDiskDrive,
-        init: Boolean
+        drive: StubDiskDrive
     ) (implicit
         random: Random,
         parent: Scheduler,

@@ -53,7 +53,7 @@ class TierSystemSpec extends FreeSpec with CrashChecks {
     .setup { implicit scheduler =>
       implicit val recovery = StubDisk.recover()
       val medic = new TestMedic (ID)
-      val launch = recovery.attach (diskDrive) .expectPass()
+      val launch = recovery.reattach (diskDrive) .expectPass()
       val rawtable = medic.launch (launch) .expectPass()
       launch.launch()
       val table = new TrackedTable (rawtable, tracker)

@@ -63,7 +63,7 @@ class SynthTableSpec extends FreeSpec {
     val config = StoreTestConfig (checkpointProbability = 0.0, compactionProbability = 0.0)
     import config._
     implicit val recovery = StubDisk.recover()
-    implicit val launch = recovery.attach (diskDrive) .expectPass()
+    implicit val launch = recovery.reattach (diskDrive) .expectPass()
     import launch.disk
     val table = SynthTable (tier, 0x62)
     tier.handle (new TierHandler (table))

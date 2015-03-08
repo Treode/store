@@ -90,8 +90,7 @@ private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] 
 
   def boot (
       id: HostId,
-      drive: StubDiskDrive,
-      init: Boolean
+      drive: StubDiskDrive
   ) (implicit
       random: Random,
       parent: Scheduler,
@@ -109,7 +108,7 @@ private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] 
     val _paxos = Paxos.recover()
 
     for {
-      launch <- if (init) recovery.attach (drive) else recovery.reattach (drive)
+      launch <- recovery.reattach (drive)
       catalogs <- _catalogs.launch (launch, cluster)
       paxos <- _paxos.launch (launch, cluster) map (_.asInstanceOf [PaxosKit])
     } yield {
@@ -119,5 +118,5 @@ private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] 
 
   def install () (implicit r: Random, s: Scheduler, n: StubNetwork): Async [StubPaxosHost] = {
     implicit val config = StoreTestConfig()
-    boot (r.nextLong, new StubDiskDrive, true)
+    boot (r.nextLong, new StubDiskDrive)
   }}

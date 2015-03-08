@@ -112,8 +112,7 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
 
   def boot (
       id: HostId,
-      drive: StubDiskDrive,
-      init: Boolean
+      drive: StubDiskDrive
   ) (implicit
       random: Random,
       parent: Scheduler,
@@ -132,7 +131,7 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
     val _atomic = Atomic.recover()
 
     for {
-      launch <- if (init) recovery.attach (drive) else recovery.reattach (drive)
+      launch <- recovery.reattach (drive)
       catalogs <- _catalogs.launch (launch, cluster)
       paxos <- _paxos.launch (launch, cluster)
       atomic <- _atomic.launch (launch, cluster, paxos) .map (_.asInstanceOf [AtomicKit])
@@ -143,5 +142,5 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
 
   def install () (implicit r: Random, s: StubScheduler, n: StubNetwork): Async [StubAtomicHost] = {
     implicit val config = StoreTestConfig()
-    boot (r.nextLong, new StubDiskDrive, true)
+    boot (r.nextLong, new StubDiskDrive)
   }}

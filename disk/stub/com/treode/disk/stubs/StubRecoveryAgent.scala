@@ -60,20 +60,6 @@ private class StubRecoveryAgent (implicit
         new StubLaunchAgent (releaser, disk) (random, scheduler, drive, config)
       }}
 
-  def attach (drive: StubDiskDrive): Async [DiskLaunch] =
-    supply {
-      synchronized {
-        requireOpen()
-        open = false
-      }
-      val releaser = new EpochReleaser
-      val disk = new StubDisk (releaser) (random, scheduler, drive, config)
-      new StubLaunchAgent (releaser, disk) (random, scheduler, drive, config)
-    }
-
   def reattach (items: Path*): Async [DiskLaunch] =
-    guard (throw new UnsupportedOperationException ("The StubDisk do not use files."))
-
-  def attach (items: (Path, DriveGeometry)*): Async [DiskLaunch] =
-    guard (throw new UnsupportedOperationException ("The StubDisk do not use files."))
+    guard (throw new UnsupportedOperationException ("The StubDisk does not use files."))
 }
