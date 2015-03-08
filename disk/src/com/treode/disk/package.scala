@@ -28,7 +28,13 @@ import Level.INFO
 
 package disk {
 
+  case class Compaction (obj: ObjectId, gens: Set [Long])
+
+  case class DiskSystemDigest (drives: Seq [DriveDigest])
+
   case class DriveAttachment (path: Path, geometry: DriveGeometry)
+
+  case class DriveChange (attaches: Seq [DriveAttachment], drains: Seq [Path])
 
   case class DriveDigest (path: Path, geometry: DriveGeometry, allocated: Int, draining: Boolean)
 
@@ -36,6 +42,10 @@ package disk {
 
   class DiskFullException extends Exception {
     override def getMessage = "Disk full."
+  }
+
+  class DisksClosedException extends IllegalStateException {
+    override def getMessage = "The disk system is closed."
   }
 
   class ExtraDisksException (val paths: Seq [Path]) extends IllegalArgumentException {
