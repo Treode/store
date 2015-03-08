@@ -116,7 +116,7 @@ package object misc {
     * positive values too large for 63 bits, but still rejects values too large for 64 bits.
     *
     * @param string The string to parse.
-    * @radix The base to interpret the string.
+    * @param radix The base to interpret the string.
     * @return `Some` if the parse succeeded, `None` otherwise.
     */
   def parseUnsignedLong (string: String, radix: Int): Option [Long] = {

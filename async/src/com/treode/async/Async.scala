@@ -89,6 +89,10 @@ import Scheduler.toRunnable
   * eventually remove without ever running.  You must hand a callback to the [[run]] method, or
   * use one of the methods that does so for you.  These include [[await]], the monad methods, the
   * various `to*Future` methods.
+  *
+  * @define GuavaListenableFuture http://docs.guava-libraries.googlecode.com/git-history/release/javadoc/com/google/common/util/concurrent/ListenableFuture.html
+  * @define JavaFuture http://docs.oracle.com/javase/7/docs/api/java/util/concurrent/Future.html
+  * @define ScalaFuture http://www.scala-lang.org/api/current/index.html#scala.concurrent.Future
   */
 trait Async [A] {
 
@@ -156,7 +160,7 @@ trait Async [A] {
       case Failure (t) => throw t
     }}
 
-  /** Run the asynchronous operation and immediately return an asynchronous
+  /** Begin the asynchronous operation and return an asynchronous
     * [[com.treode.async.Future Future]] to capture its result.
     */
   def toFuture: Future [A] = {
@@ -165,9 +169,9 @@ trait Async [A] {
     f
   }
 
-  /** Run the asynchronous operation and immediately return a Guava
-    * [[com.google.common.util.concurrent.ListenableFuture ListenableFuture]] to capture its
-    * result.
+  /** Begin the asynchronous operation and return a Guava
+    * [[$GuavaListenableFuture ListenableFuture]]
+    * to capture its result.
     */
   def toGuavaFuture: GuavaFuture [A] = {
     val f = SettableFuture.create [A]
@@ -178,8 +182,9 @@ trait Async [A] {
     f
   }
 
-  /** Run the asynchronous operation and immediately return a Java
-    * [[java.util.concurrent.Future Future]] to capture its result.
+  /** Begin the asynchronous operation and return a Java
+    * [[$JavaFuture Future]]
+    * to capture its result.
     */
   def toJavaFuture: JavaFuture [A] = {
     val f = new FutureTask (new Callable [A] {
@@ -189,8 +194,8 @@ trait Async [A] {
     f
   }
 
-  /** Run the asynchronous operation and immediately return a Scala
-    * [[scala.concurrent.Future Future]] to capture its result.
+  /** Begin the asynchronous operation and return a Scala
+    * [[$ScalaFuture Future]] to capture its result.
     */
   def toScalaFuture: ScalaFuture [A] = {
     val p = Promise [A] ()
