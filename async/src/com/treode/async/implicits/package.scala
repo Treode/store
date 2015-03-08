@@ -23,12 +23,16 @@ import scala.util.{Failure, Random, Success, Try}
 
 package object implicits {
 
+  /** @define Some http://www.scala-lang.org/api/current/index.html#scala.Some
+    * @define Failure http://www.scala-lang.org/api/current/index.html#scala.util.Failure
+    * @define Success http://www.scala-lang.org/api/current/index.html#scala.util.Success
+    */
   implicit class RichCallback [A] (cb: Try [A] => Any) {
 
-    /** Invoke this callback with [[scala.util.Success Success]]. */
+    /** Invoke this callback with [[$Success Success]]. */
     def pass (v: A): Unit = cb (Success (v))
 
-    /** Invoke this callback with [[scala.util.Failure Failure]]. */
+    /** Invoke this callback with [[$Failure Failure]]. */
     def fail (t: Throwable) = cb (Failure (t))
 
     /** Invoke `f` immediately, and then invoke this callback if `f` throws an exception. */
@@ -40,7 +44,7 @@ package object implicits {
       }}
 
     /** Invoke `f` immediately, and then invoke this callback if `f` throws an exception or
-      * returns [[scala.Some Some]].
+      * returns [[$Some Some]].
       */
     def callback (f: => Option [A]) {
       Try (f) match {
@@ -49,8 +53,8 @@ package object implicits {
         case Failure (t) => cb (Failure (t))
       }}
 
-    /** Create a callback that will invoke `f` on [[scala.util.Success Success]], and then
-      * invoke this callback if `f` throws an exception or returns [[scala.Some Some]].
+    /** Create a callback that will invoke `f` on [[$Success Success]], and then invoke this
+      * callback if `f` throws an exception or returns [[$Some Some]].
       */
     def continue [B] (f: B => Option [A]): Callback [B] = {
       case Success (b) => callback (f (b))
@@ -66,9 +70,8 @@ package object implicits {
     def on (s: Scheduler): Callback [A] =
       (v => s.execute (cb, v))
 
-    /** Create a callback that first invokes `f`, regardless of receiving
-      * [[scala.util.Success Success]] or [[scala.util.Failure Failure]], and then invokes this
-      * callback.
+    /** Create a callback that first invokes `f`, regardless of receiving [[$Success Success]] or
+      * [[$Failure Failure]], and then invokes this callback.
       */
     def ensure (f: => Any): Callback [A] = {
       case Success (v) =>
@@ -82,14 +85,14 @@ package object implicits {
         cb (v)
     }
 
-    /** Create a callback that will invoke `f` on [[scala.util.Failure Failure]] and then invoke
-      * this callback.
+    /** Create a callback that will invoke `f` on [[$Failure Failure]] and then invoke this
+      * callback.
       */
     def recover (f: PartialFunction [Throwable, A]): Callback [A] =
       (v => cb (v recover f))
 
-    /** Create a callback that will invoke `f` on [[scala.util.Failure Failure]] and then invoke
-      * this callback.
+    /** Create a callback that will invoke `f` on [[$Failure Failure]] and then invoke this
+      * callback.
       */
     def rescue (f: PartialFunction [Throwable, Try [A]]): Callback [A] =
       (v => cb (v recoverWith f))

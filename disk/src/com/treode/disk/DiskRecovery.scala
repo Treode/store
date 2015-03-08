@@ -35,7 +35,7 @@ trait DiskRecovery {
     *
     *   - Add a disk:
     *
-    *       1. Attach the disk; see [[Controller#attach]].
+    *       1. Attach the disk; see [[DiskController#attach]].
     *
     *       2. Add this disk to config files or startup scripts.
     *
@@ -43,7 +43,7 @@ trait DiskRecovery {
     *
     *       1. Remove the disk from config files or startup scripts.
     *
-    *       2. Drain the disk; see [[Controller#drain]].
+    *       2. Drain the disk; see [[DiskController#drain]].
     *
     * Call `reattach` ''after'' registering all replayers. This method closes this recovery
     * builder.

@@ -24,6 +24,10 @@ import Async.supply
 
 package object implicits {
 
+  /** @define Seq http://www.scala-lang.org/api/current/index.html#scala.collection.Seq
+    * @define Failure http://www.scala-lang.org/api/current/index.html#scala.util.Failure
+    * @define Success http://www.scala-lang.org/api/current/index.html#scala.util.Success
+    */
   implicit class TestingAsync [A] (async: Async [A]) {
 
     /** Provide a [[com.treode.async.stubs.CallbackCaptor CallbackCaptor]] to the asynchronous
@@ -36,27 +40,26 @@ package object implicits {
     }
 
     /** Run until the asynchronous operation completes, then assert that it yielded
-      * [[scala.util.Success Success]] and return the result.
+      * [[$Success Success]] and return the result.
       */
     def expectPass () (implicit scheduler: StubScheduler): A =
       capture() .expectPass()
 
     /** Run until the asynchronous operation completes, then assert that it yielded
-      * [[scala.util.Success Failure]] and assert that the result is as expected.
+      * [[$Failure Failure]] and assert that the result is as expected.
       */
     def expectPass (expected: Any) (implicit scheduler: StubScheduler): Unit =
       assertResult (expected) (expectPass())
 
     /** Run until the asynchronous operation completes, then assert that it yielded
-      * [[scala.util.Success Success]] and assert that the
-      * [[scala.collection.Seq Seq]] result is as expected.
+      * [[$Success Success]] and assert that the [[$Seq Seq]] result is as expected.
       */
     def expectSeq [B] (xs: B*) (implicit s: StubScheduler, w: A <:< Seq [B]): Unit =
       capture() .expectSeq (xs: _*)
 
     // TODO: rename to expectFail
     /** Run until the asynchronous operation completes, then assert that it yielded
-      * [[scala.util.Failure Failure]] and return the exception.
+      * [[$Failure Failure]] and return the exception.
       */
     def fail [E] (implicit scheduler: StubScheduler, m: Manifest [E]): E =
       capture() .expectFail [E]

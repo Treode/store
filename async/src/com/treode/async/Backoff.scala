@@ -28,10 +28,11 @@ import Backoff.BackoffIterator
   * ''i'',,''n'',, never exceeds `max`.
   * The sequence has length `retries`.
   *
-  * This requires a [[scala.util.Random Random]] to form the iterator.  The PRNG is provided to
-  * `iterator` rather than the constructor.  This allows you to define a `Backoff` as a constant
-  * or configuration property.  You can use Scala's [[scala.util.Random Random]] in production,
-  * and you can use [[com.treode.async.stubs.AsyncChecks AsyncChecks]] to seed a random in testing.
+  * This requires a [[$Random Random]] to form the iterator.  The PRNG is provided to `iterator`
+  * rather than the constructor.  This allows you to define a `Backoff` as a constant or
+  * configuration property.
+  *
+  * @define Random http://www.scala-lang.org/api/current/index.html#scala.util.Random
   */
 class Backoff private (
     start: Int,

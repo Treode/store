@@ -34,10 +34,14 @@ import org.jboss.netty.buffer.{ChannelBufferOutputStream, ChannelBuffers}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import org.joda.time.format.DateTimeFormat
 
+/**
+  * @define ScalaObjectMapper http://fasterxml.github.io/jackson-module-scala/latest/api/#com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+  * @define DefaultScalaModule http://fasterxml.github.io/jackson-module-scala/latest/api/#com.fasterxml.jackson.module.scala.DefaultScalaModule
+  */
 package object http {
 
-  /** A [[com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper ScalaObjectMapper]]
-    * with the [[com.fasterxml.jackson.module.scala.DefaultScalaModule DefaultScalaModule]]
+  /** A [[$ScalaObjectMapper ScalaObjectMapper]]
+    * with the [[$DefaultScalaModule DefaultScalaModule]]
     * and the [[com.treode.jackson.DefaultTreodeModule DefaultTreodeModule]].
     */
   implicit val mapper = new ObjectMapper with ScalaObjectMapper
@@ -115,7 +119,7 @@ package object http {
       rsp.headerMap.add ("Read-TxClock", time.time.toString)
 
     /** Do not use; necessary for Scala style setter. */
-    def valueTxClock: TxClock = 
+    def valueTxClock: TxClock =
       throw new UnsupportedOperationException
 
     def valueTxClock_= (time: TxClock): Unit =
@@ -156,10 +160,10 @@ package object http {
         TxClock.parse (value) .getOrThrow (new BadRequestException (s"Bad time for $name: $value"))
       }
 
-    def conditionTxClock(default: TxClock): TxClock = 
+    def conditionTxClock(default: TxClock): TxClock =
       optTxClockHeader ("Condition-TxClock") getOrElse (default)
 
-    def requestTxClock: TxClock =                    
+    def requestTxClock: TxClock =
       optTxClockHeader ("Request-TxClock") getOrElse (TxClock.now)
 
     def slice: Slice = {

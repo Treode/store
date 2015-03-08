@@ -29,7 +29,7 @@ import com.twitter.finagle.util.InetSocketAddressUtil.{parseHosts, toPublic}
 import com.twitter.logging.{ConsoleHandler, Level, LoggerFactory}
 
 /** Mixin that supplies a [[com.treode.store.Store.Controller Store.Controller]] for a Twitter
-  * [[com.twitter.app.App App]].
+  * [[http://twitter.github.io/util/docs/#com.twitter.app.App App]].
   *
   * ==Command Line Usage==
   *
@@ -145,6 +145,8 @@ trait StoreKit {
     controller
   }}
 
+/** @define TwitterApp http://twitter.github.io/util/docs/#com.twitter.app.App
+  */
 object StoreKit {
 
   /** A main class that packages multiple commands "git style".
@@ -157,11 +159,11 @@ object StoreKit {
     *
     *   - init, initialize the repository. See [[Init]] for usage.
     *
-    *   - serve, serve the repository using the given [[com.twitter.app.App App]]. See below.
+    *   - serve, serve the repository using the given [[$TwitterApp App]]. See below.
     *
     * ==Subclass Usage==
     *
-    * If you have an [[com.twitter.app.App App]] class called `Serve`, you can define a main object
+    * If you have an [[$TwitterApp App]] class called `Serve`, you can define a main object
     * as follows:
     *
     * {{{
