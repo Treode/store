@@ -107,7 +107,7 @@ private class Dispatcher [M] (implicit
     * any are queued, or the receiver gets called later when some sender provides messages. The
     * receiver also gets the batch number, which the Dispatch increments each time it delivers
     * messages to a receiver.
-    * @returns All messages that had been queued, and the next batch number.
+    * @return All messages that had been queued, and the next batch number.
     */
   def receive () : Async [(Long, UnrolledBuffer [M])] =
     async { cb =>

@@ -41,8 +41,9 @@ import TierTable.{Checkpoint, Compaction}
   * for a TierTable, but it gives the client control of the transactional semantics.
   *
   * TierTables do not register themselves with the cleaner of the disk system. The client must
-  * create a [[PageHandler]] to work with the cleaner, and it may pass probe and compact request
-  * through to the tier table. The client may use this hook to implement whole table deletion.
+  * create a [[com.treode.disk.PageHandler PageHandler]] to work with the cleaner, and it may pass
+  * probe and compact request through to the tier table. The client may use this hook to implement
+  * whole table deletion.
   *
   * TierTables are aware of the cohort atlas. When iterating and compacting, they filter items that
   * may have resided on this node at one time, but should not any reside here any longer. Similarly,
