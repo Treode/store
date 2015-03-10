@@ -25,8 +25,10 @@ private trait DiskPicklers extends Picklers {
 
   def path = wrap (string) build (Paths.get (_)) inspect (_.toString)
 
+  def allocationDocket = AllocationDocket.pickler
   def driveGeometry = DriveGeometry.pickler
   def objectId = ObjectId.pickler
+  def pageTally = PageTally.pickler
   def position = Position.pickler
   def typeId = TypeId.pickler
 }

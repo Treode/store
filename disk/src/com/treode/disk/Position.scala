@@ -20,6 +20,8 @@ case class Position (disk: Int, offset: Long, length: Int)
 
 object Position {
 
+  val Null = Position (0, 0, 0)
+
   val pickler = {
     import DiskPicklers._
     wrap (uint, ulong, uint)

@@ -14,16 +14,26 @@
  * limitations under the License.
  */
 
-package com.treode.disk
+package com.treode.disk.stubs.edit
 
-import java.nio.file.{OpenOption, Path}
+import scala.util.Random
 
-import com.treode.async.Scheduler
-import com.treode.async.io.File
+import com.treode.async.{Async, Scheduler}
+import com.treode.disk.Disk
+import com.treode.disk.stubs.StubDiskEvents
 
-/** Something that we can stub for testing. */
-private trait FileSystem {
+trait StubDisk extends Disk {
 
-  /** See `File.open`. */
-  def open (path: Path, opts: OpenOption*) (implicit scheduler: Scheduler): File
+  /** Force a checkpoint. */
+  def checkpoint(): Async [Unit]
+
+  /** Simulate draining a disk; compacts some object generations. */
+  def drain()
 }
+
+object StubDisk {
+
+  def recover () (implicit random: Random, scheduler: Scheduler): StubDiskRecovery = {
+    implicit val events = new StubDiskEvents
+    new StubRecoveryAgent ()
+  }}
