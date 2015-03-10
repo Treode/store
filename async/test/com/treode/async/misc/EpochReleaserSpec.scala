@@ -16,9 +16,9 @@
 
 package com.treode.async.misc
 
-import org.scalatest.FlatSpec
+import org.scalatest.WordSpec
 
-class EpochReleaserSpec extends FlatSpec {
+class EpochReleaserSpec extends WordSpec {
 
   private class TestReleaser () {
 
@@ -40,42 +40,44 @@ class EpochReleaserSpec extends FlatSpec {
       assertResult (fs) (released)
     }}
 
-  "The EpochReleaser" should "free immediately when there are no parties" in {
-    val releaser = new TestReleaser
-    releaser.releaseAndExpect (0) (0)
-  }
+  "The EpochReleaser" when {
 
-  it should "not free until the party leaves" in {
-    val releaser = new TestReleaser
-    val e1 = releaser.join()
-    releaser.releaseAndExpect (0) ()
-    releaser.leaveAndExpect (e1) (0)
-  }
+    // release
+    "there are no previous epochs and no parties" should {
+      "release immediately" in {
+        val releaser = new TestReleaser
+        releaser.releaseAndExpect (0) (0)
+      }}
 
-  it should "not free until previous epoch is freed" in {
-    val releaser = new TestReleaser
-    val e1 = releaser.join()
-    releaser.releaseAndExpect (0) ()
-    releaser.releaseAndExpect (1) ()
-    releaser.leaveAndExpect (e1) (0, 1)
-  }
+    // join, release, leave
+    "there are actions and a party" should {
+      "release when the party leaves" in {
+        val releaser = new TestReleaser
+        val e1 = releaser.join()
+        releaser.releaseAndExpect (0) ()
+        releaser.leaveAndExpect (e1) (0)
+      }}
 
-  it should "not free until the previous epoch is free and the party leaves" in {
-    val releaser = new TestReleaser
-    val e1 = releaser.join()
-    releaser.releaseAndExpect (0) ()
-    val e2 = releaser.join()
-    releaser.releaseAndExpect (1) ()
-    releaser.leaveAndExpect (e1) (0)
-    releaser.leaveAndExpect (e2) (1)
-  }
+    "there is a previous epoch and a party" should {
 
-  it should "not free until the parties leave the previous epoch is free" in {
-    val releaser = new TestReleaser
-    val e1 = releaser.join()
-    releaser.releaseAndExpect (0) ()
-    val e2 = releaser.join()
-    releaser.releaseAndExpect (1) ()
-    releaser.leaveAndExpect (e2) ()
-    releaser.leaveAndExpect (e1) (0, 1)
-  }}
+      // join(1), release, join(2), release, leave(1), leave(2)
+      "free when the previous epoch frees and then the party leaves" in {
+        val releaser = new TestReleaser
+        val e1 = releaser.join()
+        releaser.releaseAndExpect (0) ()
+        val e2 = releaser.join()
+        releaser.releaseAndExpect (1) ()
+        releaser.leaveAndExpect (e1) (0)
+        releaser.leaveAndExpect (e2) (1)
+      }
+
+      // join(1), release, join(2), release, leave(2), leave(1)
+      "free when the party leaves and then the previous epoch frees" in {
+        val releaser = new TestReleaser
+        val e1 = releaser.join()
+        releaser.releaseAndExpect (0) ()
+        val e2 = releaser.join()
+        releaser.releaseAndExpect (1) ()
+        releaser.leaveAndExpect (e2) ()
+        releaser.leaveAndExpect (e1) (0, 1)
+      }}}}
