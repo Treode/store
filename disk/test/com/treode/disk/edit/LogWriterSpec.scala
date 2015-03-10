@@ -25,38 +25,52 @@ import org.scalatest.FlatSpec
 
 class LogWriterSpec extends FlatSpec {
 
-  "LogWriter" should "record once to a StubFile" in {
+  "LogWriter" should "record one batch of one string to a File" in {
     implicit val scheduler = StubScheduler.random()
     val testfile = StubFile (1 << 16, 0)
-    val rec = new LogWriter (testfile, DriveGeometry (10, 10, 16384))
+    val dsp = new LogDispatcher
+    val rec = new LogWriter (testfile, DriveGeometry (10, 10, 16384), dsp)
 
-    val str = "hithere"
-    rec.record (str) .expectPass()
-
+    val str = "str"
+    dsp.record (str) .expectPass()
+    
     val input = ArrayBuffer.readable(testfile.data)
     // For our test strings, 1 char = 1 byte, + 1 byte for len.
     assert (input.readInt() == str.length() + 1)
+    assert (input.readInt() == 1)
     assert (input.readString() == str)
     assert (input.readByte() == 0)
   }
 
-  "LogWriter" should "record twice to a StubFile" in {
+  "LogWriter" should "record two batches of strings to a File" in {
     implicit val scheduler = StubScheduler.random()
     val testfile = StubFile(1 << 16, 0)
-    val rec = new LogWriter(testfile, DriveGeometry(10, 10, 16384))
+    val dsp = new LogDispatcher
+    val rec = new LogWriter(testfile, DriveGeometry(10, 10, 16384), dsp)
 
-    val str = "hithere"
-    val strTwo = "nowzzz"
-    rec.record (str) .expectPass()
-    rec.record (strTwo) .expectPass()
+    val str = "str"
+    val cb1 = dsp.record (str) .capture()
+    val strTwo = "strTwo"
+    val cb2 = dsp.record (strTwo) .capture()
+    val strThree = "strThree"
+    val cb3 = dsp.record (strThree) .capture()
+    scheduler.run()
+    cb1.assertPassed()
+    cb2.assertPassed()
+    cb3.assertPassed()
 
     val input = ArrayBuffer.readable(testfile.data)
     // For our test strings, 1 char = 1 byte, + 1 byte for len.
+    // first batch of a single string
     assert (input.readInt() == str.length() + 1)
+    assert (input.readInt() == 1)
     assert (input.readString() == str)
     assert (input.readByte() == 1)
-    assert (input.readInt() == strTwo.length() + 1)
+    // second batch of two strings
+    assert (input.readInt() == strTwo.length() + 1 + strThree.length() + 1)
+    assert (input.readInt() == 2)
     assert (input.readString() == strTwo)
+    assert (input.readString() == strThree)
     assert (input.readByte() == 0)
   }
 }

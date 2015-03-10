@@ -25,38 +25,44 @@ import org.scalatest.FlatSpec
 
 class LogReaderSpec extends FlatSpec {
 
-  "LogReader" should "read once from a StubFile" in {
+  "LogReader" should "read one batch from a File" in {
     implicit val scheduler = StubScheduler.random()
     val testfile = StubFile (1 << 16, 0)
     val logreader = new LogReader (testfile, DriveGeometry (10, 10, 16384))
 
-    val str = "hithere"
     val buf = ArrayBuffer.writable (testfile.data)
+    val str = "str"
     buf.writeInt (str.length() + 1)
+    buf.writeInt (1)
     buf.writeString (str)
     buf.writeByte (0)
 
-    var readStr = logreader.read().expectPass()
+    val readStr = logreader.read().expectPass()
     assert (readStr (0) == str)
   }
 
-  "LogReader" should "read twice from a StubFile" in {
+  "LogReader" should "read two batches from a File" in {
     implicit val scheduler = StubScheduler.random()
     val testfile = StubFile (1 << 16, 0)
     val logreader = new LogReader (testfile, DriveGeometry (10, 10, 16384))
 
-    val str = "hithere"
     val buf = ArrayBuffer.writable (testfile.data)
+    val str = "str"
     buf.writeInt(str.length() + 1)
+    buf.writeInt (1)
     buf.writeString (str)
     buf.writeByte (1)
-    val strTwo = "nowzzz"
-    buf.writeInt (strTwo.length() + 1)
+    val strTwo = "strTwo"
+    val strThree = "strThree"
+    buf.writeInt (strTwo.length() + 1 + strThree.length() + 1)
+    buf.writeInt (2)
     buf.writeString (strTwo)
+    buf.writeString (strThree)
     buf.writeByte (0)
 
     val readStr = logreader.read().expectPass()
     assert (readStr (0) == str)
     assert (readStr (1) == strTwo)
+    assert (readStr (2) == strThree)
   }
 }
