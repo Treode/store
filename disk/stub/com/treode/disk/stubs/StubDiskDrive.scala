@@ -19,13 +19,12 @@ package com.treode.disk.stubs
 import java.util.{ArrayDeque, ArrayList, HashMap}
 import scala.util.{Failure, Random, Success}
 
-import com.treode.async.{Async, Callback, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}, Async.{async, supply}
 import com.treode.async.implicits._
 import com.treode.async.misc.RichOption
 import com.treode.buffer.ArrayBuffer
-import com.treode.disk.RecordRegistry
-
-import Async.{async, supply}
+import com.treode.disk.{GenerationDocket, ObjectId, RecordRegistry, TypeId}
+import org.scalatest.Assertions, Assertions.fail
 
 class StubDiskDrive (implicit random: Random) {
 
@@ -66,6 +65,16 @@ class StubDiskDrive (implicit random: Random) {
           cb.pass (())
         }}
 
+  private [stubs] def claim (crashed: Boolean, claims: GenerationDocket): Unit =
+    synchronized {
+      for ((pos, page) <- pages)
+        if (!claims.contains (page.typ, page.obj, page.gen))
+          if (crashed)
+            pages -= pos
+          else
+            fail ("Disk leak detected.")
+    }
+
   private [stubs] def mark(): Int =
     synchronized {
       records.size
@@ -80,22 +89,50 @@ class StubDiskDrive (implicit random: Random) {
 
   private [stubs] def log (records: Seq [StubRecord]): Async [Unit] =
     _stop { cb =>
-      this.records.add (records)
+      synchronized {
+        this.records.add (records)
+      }
       cb.pass (())
     }
 
   private [stubs] def write (page: StubPage): Async [Long] =
     _stop { cb =>
-      var pos = random.nextLong & 0x7FFFFFFFFFFFFFFFL
-      while (pages contains pos)
-        pos = random.nextLong
-      pages += pos -> page
+      val pos = synchronized {
+        var pos = random.nextLong & 0x7FFFFFFFFFFFFFFFL
+        while (pages contains pos)
+          pos = random.nextLong
+        pages += pos -> page
+        pos
+      }
       cb.pass (pos)
     }
 
   private [stubs] def read (pos: Long): Async [StubPage] =
     _stop { cb =>
-      cb.pass (pages .get (pos) .getOrThrow (new Exception (s"Page $pos not found")))
+      val page = synchronized {
+        pages.get (pos)
+      }
+      page match {
+        case Some (page) => cb.pass (page)
+        case None => cb.fail (new Exception (s"Page $pos not found"))
+      }}
+
+  private [stubs] def drainable: GenerationDocket = {
+    val ledger = new GenerationDocket
+    for ((pos, page) <- pages)
+      ledger.add (page.typ, page.obj, page.gen)
+    val drains = new GenerationDocket
+    for ((id, gens) <- ledger; gen <- gens)
+      if (random.nextInt (2) == 0)
+        drains.add (id, gen)
+    drains
+  }
+
+  private [stubs] def release (typ: TypeId, obj: ObjectId, gens: Set [Long]): Unit =
+    synchronized {
+      for ((pos, page) <- pages)
+        if (page.typ == typ && page.obj == obj && (gens contains page.gen))
+          pages -= pos
     }
 
   private [stubs] def cleanable(): Iterable [(Long, StubPage)] =
