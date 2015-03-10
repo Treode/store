@@ -17,47 +17,79 @@
 package com.treode.disk.edit
 
 import scala.util.{Failure, Success}
+import scala.collection.mutable.UnrolledBuffer
 
-import com.treode.async.{Async, Scheduler}, Async.async
+import com.treode.async.{Async, Callback, Scheduler}, Async.async, Callback.ignore
 import com.treode.async.implicits._
 import com.treode.async.io.File
 import com.treode.disk.DriveGeometry
 import com.treode.buffer.PagedBuffer
 
-class LogWriter (file: File, geom: DriveGeometry) (implicit scheduler: Scheduler) {
-
-  import geom.{blockAlignUp, blockAlignDown}
+class LogWriter [M] (
+  file: File,
+  geom: DriveGeometry,
+  dsp: LogDispatcher
+) (implicit
+  scheduler: Scheduler
+) {
 
   var pos = 0L
-  val buf = PagedBuffer (10)
+  val buf = PagedBuffer (12)
 
-  def record (s: String): Async [Unit] =
-    async { cb =>
-      // read pos is aligned at start, and after each record
-      // write pos is at end of last record
-      if (buf.writePos > 0)
-        // if there is already one record
-        buf.writeByte (1)
-      val start = buf.writePos
-      buf.writeInt (0)  // make space for length
-      buf.writeString (s)
+  // constantly listens for the next batch from the dispatcher
+  listen() run (ignore)
 
-      val end = buf.writePos // remember where we parked
-      buf.writePos = start
-      buf.writeInt (end - start - 4)    // string length in bytes
-      buf.writePos = end
-      buf.writeByte (0)
-      buf.writePos = geom.blockAlignUp (buf.writePos)
-
-      file.flush (buf, pos) run {
-        case Success (length) => {
-          // flush move readPos to == writePos
-          buf.readPos = geom.blockAlignDown (end)
-          buf.writePos = end
-          pos += buf.discard (buf.readPos)
-          cb.pass (())
-        }
-        case Failure (thrown) => cb.fail (thrown)
-      }
+  def listen(): Async [Unit] =
+    for {
+      (_, strings) <- dsp.receive()
+      _ <- record (strings)
+    } yield {
+      listen() run (ignore)
     }
-}
+
+  /*
+   * Write a batch of Strings to the log file.
+   *
+   * Each batch has format [length] [count] [strings].
+   *
+   * The file will have an 0x1 byte between batches, and end with an 0x0 byte when
+   * there are no more batch to read.
+   *
+   */
+  def record (batch: UnrolledBuffer [(String, Callback[Unit])]): Async [Unit] = {
+    // If there's previous data, re-mark the end to show continuation
+    if (buf.writePos > 0)
+      buf.writeByte (1)
+
+    val start = buf.writePos
+    buf.writeInt (0)  // reserve space for length of batch
+    buf.writeInt (batch.length) // write count
+
+    // Write all batch into the PagedBuffer
+    for (s <- batch)
+      buf.writeString (s._1)
+    val end = buf.writePos // remember where the log ends
+
+    // Go back to beginning and fill in the proper length
+    buf.writePos = start
+    buf.writeInt (end - start - 8)  // subtract the length and count of batch
+
+    // Mark the end with a 0 byte
+    buf.writePos = end
+    buf.writeByte (0)
+
+    // Move up to the next block boundary; must write full block to disk
+    buf.writePos = geom.blockAlignUp (buf.writePos)
+
+    for {
+      _ <- file.flush (buf, pos)
+    } yield {
+      // Discard all blocks in the PagedBuffer that have been filled and
+      // written to disk
+      buf.readPos = geom.blockAlignDown (end)
+      buf.writePos = end
+      pos += buf.discard (buf.readPos)
+      // done flushing, call each string's callback
+      for (s <- batch)
+        s._2.pass(())
+    }}}

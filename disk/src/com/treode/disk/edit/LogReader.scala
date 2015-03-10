@@ -21,28 +21,36 @@ import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.disk.DriveGeometry
 
-class LogReader (file: File, geom: DriveGeometry) (implicit scheduler: Scheduler) {
+class LogReader (
+  file: File,
+  geom: DriveGeometry
+) (implicit
+  scheduler: Scheduler
+) {
 
-  var buf = PagedBuffer(12)
-  var pos = 0
+  var buf = PagedBuffer (12)
+  var pos = 0L
 
-  def read(): Async[Seq[String]] = {
+  def read(): Async [Seq [String]] = {
     val builder = Seq.newBuilder [String]
     var continue = true
     scheduler.whilst (continue) {
       for {
-        _ <- file.fill (buf, pos, 4)
+        _ <- file.fill (buf, pos, 8)
+        // get byte length of batch
         length = buf.readInt()
-        _ <- file.fill (buf, pos+4, length)
+        // get batch count of items in batch
+        count = buf.readInt()
+        // read lengt` bytes
+        _ <- file.fill (buf, pos+8, length)
       } yield {
-        val s = buf.readString()
-        builder += s
-        pos += 4 + length
+        for (i <- 1 to count)
+          builder += buf.readString()
+
+        pos += 8 + length
         if (buf.readByte() == 0)
           continue = false
       }
     } map {
       _ => builder.result()
-    }
-  }
-}
+    }}}
