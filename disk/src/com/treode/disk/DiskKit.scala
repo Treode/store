@@ -40,11 +40,11 @@ private class DiskKit (
   val releaser = new EpochReleaser
   val compactor = new Compactor (this)
 
-  def launch (checkpoints: CheckpointRegistry, pages: PageRegistry): Unit =
+  def launch (checkpointers: CheckpointerRegistry, pages: PageRegistry): Unit =
     guard {
       for {
         _ <- latch (
-            checkpointer.launch (checkpoints),
+            checkpointer.launch (checkpointers),
             compactor.launch (pages))
         _ <- drives.launch()
       } yield ()

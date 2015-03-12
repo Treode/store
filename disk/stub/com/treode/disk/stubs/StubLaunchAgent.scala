@@ -32,7 +32,7 @@ private class StubLaunchAgent (
     config: StubDiskConfig
 ) extends DiskLaunch {
 
-  private val roots = new CheckpointRegistry
+  private val checkpointers = new CheckpointerRegistry.Builder
   private val pages = new StubPageRegistry (releaser)
   private var open = true
 
@@ -42,7 +42,7 @@ private class StubLaunchAgent (
   def checkpoint (f: => Async [Unit]): Unit =
     synchronized {
       requireOpen()
-      roots.checkpoint (f)
+      checkpointers.add (f)
     }
 
   def handle (desc: PageDescriptor [_], handler: PageHandler): Unit =
@@ -52,7 +52,7 @@ private class StubLaunchAgent (
     synchronized {
       requireOpen()
       open = false
-      disk.launch (roots, pages)
+      disk.launch (checkpointers.result, pages)
     }
 
   def controller: DiskController =
