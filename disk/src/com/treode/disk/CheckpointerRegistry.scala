@@ -18,19 +18,28 @@ package com.treode.disk
 
 import java.util.ArrayList
 
-import com.treode.async.Async
+import com.treode.async.Async, Async.guard
 import com.treode.async.implicits._
 
-import Async.guard
+/** A convenient facade for an immutable sequence of checkpoint methods. */
+private class CheckpointerRegistry (checkpointers: ArrayList [Unit => Async [Unit]]) {
 
-private class CheckpointRegistry {
-
-  private val checkpoints = new ArrayList [Unit => Async [Unit]]
-
-  def checkpoint (f: => Async [Unit]): Unit =
-    checkpoints.add (_ => f )
-
+  /** Run each checkpoint in turn. */
   def checkpoint(): Async [Unit] =
     guard {
-      checkpoints.latch (_(()))
+      checkpointers.latch (_(()))
     }}
+
+private object CheckpointerRegistry {
+
+  /** Collect checkpoint methods to build a registry; not thread safe. */
+  class Builder {
+
+    private val checkpointers = new ArrayList [Unit => Async [Unit]]
+
+    def add (f: => Async [Unit]): Unit =
+        checkpointers.add (_ => f)
+
+    def result: CheckpointerRegistry =
+      new CheckpointerRegistry (checkpointers)
+  }}

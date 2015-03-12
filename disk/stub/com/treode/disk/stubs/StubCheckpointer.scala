@@ -21,7 +21,7 @@ import scala.util.Random
 
 import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
-import com.treode.disk.CheckpointRegistry
+import com.treode.disk.CheckpointerRegistry
 
 import Callback.{fanout, ignore}
 
@@ -33,7 +33,7 @@ private class StubCheckpointer (implicit
 ) {
 
   val fiber = new Fiber
-  var checkpoints: CheckpointRegistry = null
+  var checkpointers: CheckpointerRegistry = null
   var entries = 0
   var checkreqs = List.empty [Callback [Unit]]
   var engaged = true
@@ -48,15 +48,15 @@ private class StubCheckpointer (implicit
   private def _checkpoint() {
     engaged = true
     val mark = disk.mark()
-    checkpoints .checkpoint() .map { _ =>
+    checkpointers .checkpoint() .map { _ =>
       disk.checkpoint (mark)
       fiber.execute (reengage())
     } .run (ignore)
   }
 
-  def launch (checkpoints: CheckpointRegistry): Unit =
+  def launch (checkpointers: CheckpointerRegistry): Unit =
     fiber.execute {
-      this.checkpoints = checkpoints
+      this.checkpointers = checkpointers
       if (!checkreqs.isEmpty || config.checkpoint (entries))
         _checkpoint()
       else
