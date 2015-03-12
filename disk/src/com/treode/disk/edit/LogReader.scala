@@ -34,15 +34,15 @@ class LogReader (
     var continue = true
     scheduler.whilst (continue) {
       for {
+        _ <- file.fill (buf, pos, 8)
         // get length of log
-        _ <- file.fill (buf, pos, 4)
         length = buf.readInt()
-        // get batch length, then read `length` bytes
-        _ <- file.fill (buf, pos+4, 4)
-        batch_len = buf.readInt()
+        // get batch count/number of items in batch
+        count = buf.readInt()
+        // read `length` bytes
         _ <- file.fill (buf, pos+8, length)
       } yield {
-        for (i <- 1 to batch_len) {
+        for (i <- 1 to count) {
           builder += buf.readString()
         }
 
