@@ -24,6 +24,7 @@ import com.treode.async.implicits._
 import com.treode.async.stubs.{AsyncChecks, CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.disk.{Disk, DiskConfig, DiskLaunch, DriveGeometry, StubFileSystem}
+import com.treode.disk.stubs.StubDiskEvents
 import org.scalatest.{Informing, Suite}
 
 /** A strategy (see [[http://en.wikipedia.org/wiki/Strategy_pattern Strategy Pattern]]) and

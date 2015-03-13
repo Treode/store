@@ -21,7 +21,7 @@ import java.nio.file.Path
 import com.treode.async.Async, Async.{guard, supply}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.disk.{DiskConfig, DriveDigest, DriveGeometry}
+import com.treode.disk.{DiskConfig, DriveDigest, DriveGeometry, quote}
 
 import SuperBlock.Common
 

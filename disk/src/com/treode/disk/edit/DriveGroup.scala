@@ -25,8 +25,8 @@ import com.treode.async.{Async, AsyncQueue, Callback, Fiber, Scheduler}, Async.g
 import com.treode.async.implicits._
 import com.treode.async.misc.RichOption
 import com.treode.buffer.PagedBuffer
-import com.treode.disk.{Disk, DiskConfig, DisksClosedException, DriveChange, DriveDigest,
-  DriveGeometry, FileSystem, ObjectId, Position, SegmentBounds, TypeId}
+import com.treode.disk.{Disk, DiskConfig, DisksClosedException, DiskEvents, DriveChange, DriveDigest,
+  DriveGeometry, FileSystem, ObjectId, Position, SegmentBounds, TypeId, quote}
 
 import DriveGroup._
 
