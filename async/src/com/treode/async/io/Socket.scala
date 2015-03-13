@@ -61,7 +61,7 @@ class Socket (socket: AsynchronousSocketChannel) (implicit scheduler: Scheduler)
     */
   def fill (input: PagedBuffer, len: Int): Async [Unit] = {
     input.capacity (input.writePos + len)
-    val bufs = input.buffers (input.writePos, input.writeableBytes)
+    val bufs = input.buffers (input.writePos, input.writableBytes)
     whilst (input.readableBytes < len) {
       for (result <- read (bufs)) yield {
         require (result <= Int.MaxValue)

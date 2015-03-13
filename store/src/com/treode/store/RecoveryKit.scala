@@ -21,20 +21,19 @@ import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
-import com.treode.disk.Disk
+import com.treode.disk.{Disk, DiskLaunch, DiskRecovery}
 import com.treode.store.atomic.Atomic
 import com.treode.store.catalog.Catalogs
 import com.treode.store.paxos.Paxos
 
 import Async.latch
-import Store.Controller
 
 private class RecoveryKit (implicit
     random: Random,
     scheduler: Scheduler,
-    recovery: Disk.Recovery,
-    config: Store.Config
-) extends Store.Recovery {
+    recovery: DiskRecovery,
+    config: StoreConfig
+) extends StoreRecovery {
 
   implicit val library = new Library
 
@@ -42,7 +41,7 @@ private class RecoveryKit (implicit
   val _paxos = Paxos.recover()
   val _atomic = Atomic.recover()
 
-  def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Controller] = {
+  def launch (implicit launch: DiskLaunch, cluster: Cluster): Async [StoreController] = {
 
     for {
       catalogs <- _catalogs.launch (launch, cluster)

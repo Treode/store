@@ -21,15 +21,15 @@ import java.nio.file.{Path, Paths}
 import scala.reflect.ClassTag
 
 import com.treode.async.{Globals, Scheduler}
-import com.treode.cluster.{Cluster, HostId}
-import com.treode.disk.Disk
-import com.treode.store.{Cohort, Store}
+import com.treode.cluster.{Cluster, ClusterConfig, HostId}
+import com.treode.disk.DiskConfig
+import com.treode.store.{Cohort, Store, StoreConfig}
 import com.twitter.app.App
 import com.twitter.finagle.util.InetSocketAddressUtil.{parseHosts, toPublic}
 import com.twitter.logging.{ConsoleHandler, Level, LoggerFactory}
 
 /** Mixin that supplies a [[com.treode.store.Store.Controller Store.Controller]] for a Twitter
-  * [[com.twitter.app.App App]].
+  * [[http://twitter.github.io/util/docs/#com.twitter.app.App App]].
   *
   * ==Command Line Usage==
   *
@@ -128,9 +128,9 @@ trait StoreKit {
       else
         toPublic (peerAddr)
 
-    implicit val diskConfig = Disk.Config.suggested.copy (superBlockBits = superBlockBits())
-    implicit val clusterConfig = Cluster.Config.suggested
-    implicit val storeConfig = Store.Config.xdcr
+    implicit val diskConfig = DiskConfig.suggested.copy (superBlockBits = superBlockBits())
+    implicit val clusterConfig = ClusterConfig.suggested
+    implicit val storeConfig = StoreConfig.xdcr
 
     val controller = Store.recover (peerAddr, sharePeerAddr, paths: _*  ) .await()
 
@@ -145,6 +145,8 @@ trait StoreKit {
     controller
   }}
 
+/** @define TwitterApp http://twitter.github.io/util/docs/#com.twitter.app.App
+  */
 object StoreKit {
 
   /** A main class that packages multiple commands "git style".
@@ -157,11 +159,11 @@ object StoreKit {
     *
     *   - init, initialize the repository. See [[Init]] for usage.
     *
-    *   - serve, serve the repository using the given [[com.twitter.app.App App]]. See below.
+    *   - serve, serve the repository using the given [[$TwitterApp App]]. See below.
     *
     * ==Subclass Usage==
     *
-    * If you have an [[com.twitter.app.App App]] class called `Serve`, you can define a main object
+    * If you have an [[$TwitterApp App]] class called `Serve`, you can define a main object
     * as follows:
     *
     * {{{

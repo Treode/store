@@ -43,10 +43,10 @@ private object SuperBlock {
                 v.id, v.boot, v.geometry, v.draining, v.free, v.logHead)))
   }
 
-  def position (gen: Int) (implicit config: Disk.Config): Long =
+  def position (gen: Int) (implicit config: DiskConfig): Long =
     if ((gen & 0x1) == 0) 0L else config.superBlockBytes
 
-  def clear (gen: Int, file: File) (implicit config: Disk.Config): Async [Unit] =
+  def clear (gen: Int, file: File) (implicit config: DiskConfig): Async [Unit] =
     guard {
       val buf = PagedBuffer (config.superBlockBits)
       while (buf.writePos < config.superBlockBytes)
@@ -54,7 +54,7 @@ private object SuperBlock {
       file.flush (buf, position (gen))
     }
 
-  def write (superb: SuperBlock, file: File) (implicit config: Disk.Config): Async [Unit] =
+  def write (superb: SuperBlock, file: File) (implicit config: DiskConfig): Async [Unit] =
     guard {
       val buf = PagedBuffer (config.superBlockBits)
       pickler.pickle (superb, buf)

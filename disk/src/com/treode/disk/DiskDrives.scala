@@ -103,8 +103,11 @@ private class DiskDrives (kit: DiskKit) {
     }
 
   def digest: Async [Seq [DriveDigest]] =
-    fiber.guard {
-      drives.values.latch.collect (_.digest)
+    for {
+      _drives <- fiber.supply (drives.values)
+      _digests <- _drives.latch.collect (_.digest)
+    } yield {
+      _digests
     }
 
   private def _attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
@@ -247,7 +250,7 @@ private class DiskDrives (kit: DiskKit) {
       } yield segs.flatten
     }}
 
-def fetch [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
+def fetch [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
   guard {
     val drive = drives (pos.disk)
     DiskDrive.read (drive.file, drive.geom, desc, pos)

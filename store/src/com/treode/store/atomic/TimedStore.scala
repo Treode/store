@@ -19,7 +19,7 @@ package com.treode.store.atomic
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions
 
-import com.treode.async.{Async, BatchIterator, Callback, Latch}
+import com.treode.async.{Async, BatchIterator, Callback}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disk, ObjectId, PageHandler, Position, RecordDescriptor}
@@ -30,7 +30,7 @@ import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
 import Async.{async, guard, supply, when}
 import JavaConversions._
 
-private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
+private class TimedStore (kit: AtomicKit) extends PageHandler {
   import kit.{config, disk, library, scheduler}
 
   val space = new LockSpace
@@ -118,9 +118,9 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     when (!novel.isEmpty) (TimedStore.receive.record (table, gen, novel))
   }
 
-  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+  def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] =
     guard {
-      getTable (obj.id) .probe (groups)
+      getTable (obj.id) .probe (gens)
     }
 
   def compact() {

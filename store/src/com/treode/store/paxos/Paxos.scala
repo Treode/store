@@ -20,8 +20,8 @@ import scala.util.Random
 
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.cluster.Cluster
-import com.treode.disk.Disk
-import com.treode.store.{Atlas, Bytes, Library, Store, TxClock}
+import com.treode.disk.{DiskLaunch, DiskRecovery}
+import com.treode.store.{Atlas, Bytes, Library, StoreConfig, TxClock}
 
 private [store] trait Paxos {
 
@@ -36,15 +36,15 @@ private [store] object Paxos {
 
   trait Recovery {
 
-    def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Paxos]
+    def launch (implicit launch: DiskLaunch, cluster: Cluster): Async [Paxos]
   }
 
   def recover() (implicit
       random: Random,
       scheduler: Scheduler,
       library: Library,
-      recovery: Disk.Recovery,
-      config: Store.Config
+      recovery: DiskRecovery,
+      config: StoreConfig
   ): Recovery =
     new RecoveryKit
 }

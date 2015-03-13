@@ -16,22 +16,13 @@
 
 package com.treode.async
 
-import scala.util.{Failure, Success, Try}
-
-private class MapLatch [K, V] (count: Int, cb: Callback [Map [K, V]])
-extends AbstractLatch [Map [K, V]] (count, cb) with Callback [(K, V)] {
+private class MapLatch [K, V] (cb: Callback [Map [K, V]])
+extends AbstractLatch [(K, V), Map [K, V]] (cb) {
 
   private val map = Map.newBuilder [K, V]
-  map.sizeHint (count)
 
-  init()
+  def result = map.result
 
-  def value = map.result
-
-  def apply (v: Try [(K, V)]): Unit = synchronized {
-    v match {
-      case Success ((k, v)) =>
-        map += (k -> v)
-        release()
-      case Failure (t) => failure (t)
-    }}}
+  def add (v: (K, V)): Unit =
+    map += v
+}

@@ -31,7 +31,7 @@ import Async.{async, guard}
 class StubStore (implicit scheduler: Scheduler) extends Store {
 
   // The stub uses only the lockSpaceBits.
-  private implicit val config = Store.Config.suggested.copy (lockSpaceBits = 4)
+  private implicit val config = StoreConfig.suggested.copy (lockSpaceBits = 4)
 
   private val space = new LockSpace
   private val xacts = new ConcurrentHashMap [TxId, TxStatus]

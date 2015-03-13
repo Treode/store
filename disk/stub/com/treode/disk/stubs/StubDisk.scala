@@ -25,7 +25,6 @@ import com.treode.disk._
 
 import Async.{async, guard, latch, supply}
 import Callback.{fanout, ignore}
-import Disk.{Launch, Recovery}
 
 private class StubDisk (
     releaser: EpochReleaser
@@ -33,10 +32,10 @@ private class StubDisk (
     random: Random,
     scheduler: Scheduler,
     disk: StubDiskDrive,
-    config: StubDisk.Config
+    config: StubDiskConfig
 ) extends Disk {
 
-  val logd = new Dispatcher [(StubRecord, Callback [Unit])] (0L)
+  val logd = new Dispatcher [(StubRecord, Callback [Unit])]
   val checkpointer = new StubCheckpointer
   val compactor = new StubCompactor (releaser)
 
@@ -67,7 +66,7 @@ private class StubDisk (
       checkpointer.tally()
     }
 
-  def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
+  def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
     guard {
       for {
         page <- disk.read (pos.offset)
@@ -76,9 +75,9 @@ private class StubDisk (
         desc.ppag.fromByteArray (page.data)
       }}
 
-  def write [G, P] (desc: PageDescriptor [G, P], obj: ObjectId, group: G, page: P): Async [Position] =
+  def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
     guard {
-      val _page = StubPage (desc, obj, group, page)
+      val _page = StubPage (desc, obj, gen, page)
       for {
         offset <- disk.write (_page)
       } yield {
@@ -86,7 +85,7 @@ private class StubDisk (
         Position (0, offset, align (_page.length))
       }}
 
-  def compact (desc: PageDescriptor [_, _], obj: ObjectId): Async [Unit] =
+  def compact (desc: PageDescriptor [_], obj: ObjectId): Unit =
     compactor.compact (desc.id, obj)
 
   def join [A] (task: Async [A]): Async [A] =
@@ -95,59 +94,22 @@ private class StubDisk (
 
 object StubDisk {
 
-  class Config private (
-      val checkpointProbability: Double,
-      val compactionProbability: Double
-  ) {
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use StubDiskConfig", "0.3.0")
+  type Config = StubDiskConfig
 
-    val checkpointEntries =
-      if (checkpointProbability > 0)
-        (2 / checkpointProbability).toInt
-      else
-        Int.MaxValue
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use StubDiskConfig", "0.3.0")
+  val Config = StubDiskConfig
 
-    val compactionEntries =
-      if (compactionProbability > 0)
-        (2 / compactionProbability).toInt
-      else
-        Int.MaxValue
-
-    def checkpoint (entries: Int) (implicit random: Random): Boolean =
-      checkpointProbability > 0.0 &&
-        (entries > checkpointEntries || random.nextDouble < checkpointProbability)
-
-    def compact (entries: Int) (implicit random: Random): Boolean =
-      compactionProbability > 0.0 &&
-        (entries > compactionEntries || random.nextDouble < compactionProbability)
-  }
-
-  object Config {
-
-    def apply (
-        checkpointProbability: Double = 0.1,
-        compactionProbability: Double = 0.1
-    ): StubDisk.Config = {
-
-        require (0.0 <= checkpointProbability && checkpointProbability <= 1.0)
-
-        require (0.0 <= compactionProbability && compactionProbability <= 1.0)
-
-        new StubDisk.Config (
-            checkpointProbability,
-            compactionProbability)
-    }}
-
-  trait StubRecovery extends Recovery {
-
-    def reattach (disk: StubDiskDrive): Async [Launch]
-
-    def attach (disk: StubDiskDrive): Async [Launch]
-  }
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use StubDiskRecovery", "0.3.0")
+  type Recovery = StubDiskRecovery
 
   def recover () (implicit
       random: Random,
       scheduler: Scheduler,
-      config: StubDisk.Config
-  ): StubRecovery =
+      config: StubDiskConfig
+  ): StubDiskRecovery =
     new StubRecoveryAgent () (random, scheduler, config)
 }

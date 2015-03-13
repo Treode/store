@@ -26,7 +26,7 @@ import com.treode.async.implicits._
 import com.treode.async.io.Socket
 import com.treode.async.misc.RichInt
 import com.treode.buffer.PagedBuffer
-import com.treode.pickle.Pickler
+import com.treode.pickle.{PickledValue, Pickler}
 
 private class RemoteConnection (
   val id: HostId,
@@ -36,15 +36,14 @@ private class RemoteConnection (
   ports: PortRegistry
 ) (implicit
     scheduler: Scheduler,
-    config: Cluster.Config
+    config: ClusterConfig
 ) extends Peer {
 
   import config.connectingBackoff
 
   require (id != localId)
 
-  type PickledMessage = PagedBuffer => Unit
-  type Queue = util.ArrayList [PickledMessage]
+  type Queue = util.ArrayList [PickledValue]
 
   abstract class State {
 
@@ -63,7 +62,7 @@ private class RemoteConnection (
       state = Closed
     }
 
-    def send (message: PickledMessage) = ()
+    def send (message: PickledValue) = ()
   }
 
   abstract class HaveSocket extends State {
@@ -73,8 +72,8 @@ private class RemoteConnection (
     def buffer: PagedBuffer
     def backoff: Iterator [Int]
 
-    def enque (message: PickledMessage) {
-      message (buffer)
+    def enque (message: PickledValue) {
+      PortRegistry.frame (message, buffer)
     }
 
     override def disconnect (socket: Socket) {
@@ -110,7 +109,7 @@ private class RemoteConnection (
       _close (socket)
     }
 
-    override def send (message: PickledMessage): Unit =
+    override def send (message: PickledValue): Unit =
       enque (message)
   }
 
@@ -118,7 +117,7 @@ private class RemoteConnection (
 
     val time = System.currentTimeMillis
 
-    override def send (message: PickledMessage) {
+    override def send (message: PickledValue) {
       if (address != null) {
         val socket = Socket.open (group)
         greet (socket)
@@ -153,7 +152,7 @@ private class RemoteConnection (
         state = Sending (socket, clientId)
       }}
 
-    override def send (message: PickledMessage) {
+    override def send (message: PickledValue) {
       enque (message)
       flush (socket, buffer)
       state = Sending (socket, clientId)
@@ -289,7 +288,7 @@ private class RemoteConnection (
   }
 
   def send [M] (p: Pickler [M], port: PortId, msg: M): Unit = fiber.execute {
-    state.send (PortRegistry.frame (p, port, msg, _))
+    state.send (PickledValue (port.id, p, msg))
   }
 
   override def hashCode() = id.hashCode()

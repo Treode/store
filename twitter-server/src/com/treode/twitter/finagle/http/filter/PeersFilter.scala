@@ -18,13 +18,13 @@ package com.treode.twitter.finagle.http.filter
 
 import java.net.SocketAddress
 
-import com.treode.store.Store, Store.Controller
+import com.treode.store.{Store, StoreController}
 import com.treode.twitter.finagle.http.{RichRequest, RichResponse, mapper}
 import com.twitter.util.Future
 import com.twitter.finagle.{Filter, Service}
 import com.twitter.finagle.http.{Method, Request, Response, Status}
 
-class PeersFilter private (path: String, controller: Controller)
+class PeersFilter private (path: String, controller: StoreController)
 extends Filter [Request, Response, Request, Response] {
 
   def apply (req: Request, service: Service [Request, Response]): Future [Response] = {
@@ -46,6 +46,6 @@ extends Filter [Request, Response, Request, Response] {
 
 object PeersFilter {
 
-  def apply (path: String, controller: Store.Controller): PeersFilter =
+  def apply (path: String, controller: StoreController): PeersFilter =
     new PeersFilter (path, controller)
 }

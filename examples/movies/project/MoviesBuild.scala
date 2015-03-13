@@ -31,7 +31,7 @@ object MoviesBuild extends Build {
 
       version := versionString,
 
-      scalaVersion := "2.10.4",
+      scalaVersion := "2.10.5",
 
       unmanagedSourceDirectories in Compile <<=
         (baseDirectory ((base: File) => Seq (base / "src"))),
@@ -73,7 +73,7 @@ object MoviesBuild extends Build {
         "com.treode" %% "jackson" % versionString,
         "com.treode" %% "store" % versionString % "compile;test->stub",
         "com.treode" %% "twitter-server" % versionString,
-        "org.scalatest" %% "scalatest" % "2.2.2" % "test"),
+        "org.scalatest" %% "scalatest" % "2.2.4" % "test"),
 
       jarName in assembly := "movies-server.jar",
 
@@ -99,7 +99,7 @@ object MoviesBuild extends Build {
         // Use Jackson 2.3.1 because spark-core does.
         "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.3.1",
         "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.1",
-        "org.scalatest" %% "scalatest" % "2.2.2" % "test"),
+        "org.scalatest" %% "scalatest" % "2.2.4" % "test"),
 
       jarName in assembly := "movies-spark.jar",
 

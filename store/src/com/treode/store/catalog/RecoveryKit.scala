@@ -21,8 +21,8 @@ import scala.util.Random
 import com.treode.async.{Async, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.cluster.Cluster
-import com.treode.disk.{Disk, Position}
-import com.treode.store.{CatalogDescriptor, CatalogId, Library, Store}
+import com.treode.disk.{Disk, DiskLaunch, DiskRecovery, Position}
+import com.treode.store.{CatalogDescriptor, CatalogId, Library, StoreConfig}
 
 import Async.guard
 
@@ -30,8 +30,8 @@ private class RecoveryKit (implicit
     random: Random,
     scheduler: Scheduler,
     library: Library,
-    recovery: Disk.Recovery,
-    config: Store.Config
+    recovery: DiskRecovery,
+    config: StoreConfig
 ) extends Catalogs.Recovery {
 
   private val fiber = new Fiber
@@ -62,17 +62,17 @@ private class RecoveryKit (implicit
       (id, handler)
     }
 
-  def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Catalogs] =
-    fiber.guard {
-      import launch.disk
-      for {
-        handlers <- medics.keySet.latch.collate (close (_))
-        broker = new Broker (handlers)
-        kit = new CatalogKit (broker)
-      } yield {
-        import kit.{acceptors, proposers}
-        acceptors.attach()
-        proposers.attach()
-        broker.attach()
-        kit
-      }}}
+  def launch (implicit launch: DiskLaunch, cluster: Cluster): Async [Catalogs] = {
+    import launch.disk
+    for {
+      _medics <- fiber.supply (medics.keySet)
+      handlers <- _medics.latch.collate (close (_))
+      broker = new Broker (handlers)
+      kit = new CatalogKit (broker)
+    } yield {
+      import kit.{acceptors, proposers}
+      acceptors.attach()
+      proposers.attach()
+      broker.attach()
+      kit
+    }}}

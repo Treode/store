@@ -44,7 +44,7 @@ class Residents private [store] (
       (adjust intersect other.nums).size.toDouble / adjust.size.toDouble
   }
 
-  def exodus (other: Residents) (implicit config: Store.Config): Boolean =
+  def exodus (other: Residents) (implicit config: StoreConfig): Boolean =
     1 - stability (other) > config.exodusThreshold
 
   override def toString = s"Residents($nums, $mask)"

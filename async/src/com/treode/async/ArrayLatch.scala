@@ -16,21 +16,15 @@
 
 package com.treode.async
 
-import scala.util.{Failure, Success, Try}
+import scala.collection.SortedMap
 
-private class ArrayLatch [A] (count: Int, cb: Callback [Seq [A]]) (implicit manifest: Manifest [A])
-extends AbstractLatch [Seq [A]] (count, cb) with Callback [(Int, A)] {
+private class ArrayLatch [A] (cb: Callback [Seq [A]]) (implicit manifest: Manifest [A])
+extends AbstractLatch [(Int, A), Seq [A]] (cb) {
 
-  private val values = new Array [A] (count)
+  private val values = SortedMap.newBuilder [Int, A]
 
-  init()
+  protected def result = values.result.values.toSeq
 
-  def value = values.toSeq
-
-  def apply (v: Try [(Int, A)]): Unit = synchronized {
-    v match {
-      case Success ((i, v)) =>
-        values (i) = v
-        release()
-      case Failure (t) => failure (t)
-    }}}
+  protected def add (v: (Int, A)): Unit =
+    values += v
+}

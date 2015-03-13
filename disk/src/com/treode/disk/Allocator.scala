@@ -20,7 +20,7 @@ import Allocator.segmentBounds
 
 private class Allocator private (private var _free: IntSet) {
 
-  def alloc (geometry: DriveGeometry, config: Disk.Config): SegmentBounds = {
+  def alloc (geometry: DriveGeometry, config: DiskConfig): SegmentBounds = {
     val iter = _free.iterator
     if (!iter.hasNext)
       throw new DiskFullException
@@ -29,7 +29,7 @@ private class Allocator private (private var _free: IntSet) {
     segmentBounds (num, geometry, config)
   }
 
-  def alloc (num: Int, geometry: DriveGeometry, config: Disk.Config): (SegmentBounds, Boolean) = {
+  def alloc (num: Int, geometry: DriveGeometry, config: DiskConfig): (SegmentBounds, Boolean) = {
     // Reporting if we alloc the same num more than once
     var alreadyAlloced = !_free.contains(num)
     _free = _free.remove (num)
@@ -51,7 +51,7 @@ private class Allocator private (private var _free: IntSet) {
 
 private object Allocator {
 
-  def segmentBounds (num: Int, geometry: DriveGeometry, config: Disk.Config): SegmentBounds = {
+  def segmentBounds (num: Int, geometry: DriveGeometry, config: DiskConfig): SegmentBounds = {
     require (0 <= num && num < geometry.segmentCount)
     val pos = if (num == 0) config.diskLeadBytes else num.toLong << geometry.segmentBits
     val end = (num.toLong + 1) << geometry.segmentBits
@@ -62,7 +62,7 @@ private object Allocator {
   def apply (free: IntSet): Allocator =
     new Allocator (free)
 
-  def apply (geometry: DriveGeometry, config: Disk.Config): Allocator = {
+  def apply (geometry: DriveGeometry, config: DiskConfig): Allocator = {
     val all = IntSet.fill (geometry.segmentCount)
     val superbs = IntSet.fill (config.diskLeadBytes >> geometry.segmentBits)
     new Allocator (all.remove (superbs))

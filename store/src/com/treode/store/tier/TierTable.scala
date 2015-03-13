@@ -41,8 +41,9 @@ import TierTable.{Checkpoint, Compaction}
   * for a TierTable, but it gives the client control of the transactional semantics.
   *
   * TierTables do not register themselves with the cleaner of the disk system. The client must
-  * create a [[PageHandler]] to work with the cleaner, and it may pass probe and compact request
-  * through to the tier table. The client may use this hook to implement whole table deletion.
+  * create a [[com.treode.disk.PageHandler PageHandler]] to work with the cleaner, and it may pass
+  * probe and compact request through to the tier table. The client may use this hook to implement
+  * whole table deletion.
   *
   * TierTables are aware of the cohort atlas. When iterating and compacting, they filter items that
   * may have resided on this node at one time, but should not any reside here any longer. Similarly,
@@ -88,11 +89,11 @@ private [store] trait TierTable {
     */
   def receive (cells: Seq [Cell]): (Long, Seq [Cell])
 
-  def probe (groups: Set [Long]): Async [Set [Long]]
+  def probe (gens: Set [Long]): Async [Set [Long]]
 
   def compact()
 
-  def compact (groups: Set [Long], residents: Residents): Async [Option [Compaction]]
+  def compact (gens: Set [Long], residents: Residents): Async [Option [Compaction]]
 
   def checkpoint (residents: Residents): Async [Checkpoint]
 
@@ -168,6 +169,6 @@ private [store] object TierTable {
     }}
 
   def apply (desc: TierDescriptor, id: TableId) (
-      implicit scheduler: Scheduler, disk: Disk, config: Store.Config): TierTable =
+      implicit scheduler: Scheduler, disk: Disk, config: StoreConfig): TierTable =
     SynthTable (desc, id)
 }

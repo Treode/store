@@ -32,8 +32,8 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
   object KeyParam extends ParamMatcher ("key")
 
   def read (req: Request, tab: TableId, key: String): Async [Response] = {
-    val rt = req.lastModificationBefore
-    val ct = req.ifModifiedSince
+    val rt = req.requestTxClock
+    val ct = req.conditionTxClock (TxClock.MinValue)
     val ops = Seq (ReadOp (tab, Bytes (key)))
     store.read (rt, ops:_*) .map { vs =>
       val v = vs.head
@@ -47,8 +47,8 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
       }}}
 
   def scan (req: Request, table: TableId): Async [Response] = {
-    val rt = req.lastModificationBefore
-    val ct = req.ifModifiedSince
+    val rt = req.requestTxClock
+    val ct = req.conditionTxClock (TxClock.MinValue)
     val window = Window.Latest (rt, true, ct, false)
     val slice = req.slice
     val iter = store
@@ -59,8 +59,8 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
 
   def history (req: Request, table: TableId): Async [Response] = {
     val start = Bound.Inclusive (Key.MinValue)
-    val rt = req.lastModificationBefore
-    val ct = req.ifModifiedSince
+    val rt = req.requestTxClock
+    val ct = req.conditionTxClock (TxClock.MinValue)
     val window = Window.Between (rt, true, ct, false)
     val slice = req.slice
     val iter = store.scan (table, Bound.firstKey, window, slice)
@@ -69,14 +69,14 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
 
   def put (req: Request, table: TableId, key: String): Async [Response] = {
     val tx = req.transactionId (host)
-    val ct = req.ifUnmodifiedSince
+    val ct = req.conditionTxClock (TxClock.now)
     val value = req.readJson [JsonNode]
     val ops = Seq (WriteOp.Update (table, Bytes (key), value.toBytes))
     store.write (tx, ct, ops:_*)
     .map [Response] { vt =>
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.headerMap.add ("ETag", vt.toString)
+      rsp.headerMap.add ("Value-TxClock", vt.toString)
       rsp
     }
     .recover {
@@ -86,13 +86,13 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
 
   def delete (req: Request, table: TableId, key: String): Async [Response] = {
     val tx = req.transactionId (host)
-    val ct = req.ifUnmodifiedSince
+    val ct = req.conditionTxClock (TxClock.now)
     val ops = Seq (WriteOp.Delete (table, Bytes (key)))
     store.write (tx, ct, ops:_*)
     .map [Response] { vt =>
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.headerMap.add ("ETag", vt.toString)
+      rsp.headerMap.add ("Value-TxClock", vt.toString)
       rsp
     }
     .recover {

@@ -19,7 +19,7 @@ package com.treode.disk
 import java.nio.file.Path
 import com.treode.async.Async
 
-private class ControllerAgent (kit: DiskKit, val disk: Disk) extends Disk.Controller  {
+private class ControllerAgent (kit: DiskKit, val disk: Disk) extends DiskController  {
 
   def drives: Async [Seq [DriveDigest]] =
     kit.drives.digest

@@ -45,7 +45,7 @@ private object SuperBlocks {
       case e: Throwable => None
     }
 
-  def read (path: Path, file: File) (implicit config: Disk.Config): Async [SuperBlocks] =
+  def read (path: Path, file: File) (implicit config: DiskConfig): Async [SuperBlocks] =
     guard {
       val bits = config.superBlockBits
       val bytes = config.superBlockBytes
@@ -77,7 +77,7 @@ private object SuperBlocks {
     (n0 == superbs.size) && (gen0 > gen1 || n1 != superbs.size)
   }
 
-  def verifyReattachment (superbs: Seq [SuperBlocks]) (implicit config: Disk.Config) {
+  def verifyReattachment (superbs: Seq [SuperBlocks]) (implicit config: DiskConfig) {
 
     val useGen0 = chooseSuperBlock (superbs)
     val boot = superbs.head.superb (useGen0) .boot

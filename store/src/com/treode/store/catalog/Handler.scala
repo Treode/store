@@ -90,7 +90,7 @@ private class Handler (
         patch (end, checksum, patches)
     }
 
-  def probe (groups: Set [Int]): Set [Int] =
+  def probe (gens: Set [Long]): Set [Long] =
     if (saved.isDefined)
       Set (saved.get.version)
     else
@@ -107,8 +107,8 @@ private class Handler (
         this.saved = Some (meta)
       }}
 
-  def compact (groups: Set [Int]): Async [Unit] =
-    when (saved.isDefined && (groups contains saved.get.version)) (save())
+  def compact (gens: Set [Long]): Async [Unit] =
+    when (saved.isDefined && (gens contains saved.get.version)) (save())
 
   def checkpoint(): Async [Unit] =
     guard {
@@ -146,7 +146,7 @@ private object Handler {
 
   val pager = {
     import CatalogPicklers._
-    PageDescriptor (0x8407E7035A50C6CFL, uint, tuple (uint, bytes, seq (bytes)))
+    PageDescriptor (0x8407E7035A50C6CFL, tuple (uint, bytes, seq (bytes)))
   }
 
   def apply (id: CatalogId) (implicit disk: Disk): Handler =

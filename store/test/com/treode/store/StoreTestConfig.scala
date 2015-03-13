@@ -20,13 +20,13 @@ import scala.language.postfixOps
 
 import com.treode.async.Backoff
 import com.treode.async.misc.RichInt
-import com.treode.disk.stubs.StubDisk
+import com.treode.disk.stubs.StubDiskConfig
 
 class StoreTestConfig (
     val messageFlakiness: Double
 ) (implicit
-    val stubDiskConfig: StubDisk.Config,
-    val storeConfig: Store.Config
+    val stubDiskConfig: StubDiskConfig,
+    val storeConfig: StoreConfig
 ) {
 
   override def toString = {
@@ -79,10 +79,10 @@ object StoreTestConfig {
     new StoreTestConfig (
         messageFlakiness = messageFlakiness
     ) (
-        stubDiskConfig = StubDisk.Config (
+        stubDiskConfig = StubDiskConfig (
             checkpointProbability = checkpointProbability,
             compactionProbability = compactionProbability),
-        storeConfig = Store.Config (
+        storeConfig = StoreConfig (
             closedLifetime = closedLifetime,
             deliberatingTimeout = deliberatingTimeout,
             exodusThreshold = exodusThreshold,

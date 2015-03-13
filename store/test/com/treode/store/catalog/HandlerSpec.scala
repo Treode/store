@@ -59,7 +59,7 @@ class HandlerSpec extends FreeSpec {
     implicit val scheduler = StubScheduler.random (random)
     implicit val disk = StubDisk
         .recover()
-        .attach (diskDrive)
+        .reattach (diskDrive)
         .expectPass()
         .disk
     val cat = Handler (0)

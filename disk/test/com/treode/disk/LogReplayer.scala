@@ -54,7 +54,7 @@ class LogReplayer {
       this.reread = Some (pos)
     }}
 
-  def attach (implicit recovery: Disk.Recovery) {
+  def attach (implicit recovery: DiskRecovery) {
     records.put.replay ((put _).tupled)
     records.checkpoint.replay ((checkpoint _).tupled)
   }

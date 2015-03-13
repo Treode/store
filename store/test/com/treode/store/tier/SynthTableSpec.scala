@@ -40,15 +40,15 @@ class SynthTableSpec extends FreeSpec {
 
   val tier = TierDescriptor (0x56) ((_, _, _) => true)
 
-  class TierHandler (table: SynthTable) extends PageHandler [Long] {
+  class TierHandler (table: SynthTable) extends PageHandler {
 
-    def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] = guard {
-      table.probe (groups)
+    def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] = guard {
+      table.probe (gens)
     }
 
-    def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] = guard {
+    def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] = guard {
       for {
-        _ <- table.compact (groups, Residents.all)
+        _ <- table.compact (gens, Residents.all)
       } yield ()
     }
 
@@ -63,7 +63,7 @@ class SynthTableSpec extends FreeSpec {
     val config = StoreTestConfig (checkpointProbability = 0.0, compactionProbability = 0.0)
     import config._
     implicit val recovery = StubDisk.recover()
-    implicit val launch = recovery.attach (diskDrive) .expectPass()
+    implicit val launch = recovery.reattach (diskDrive) .expectPass()
     import launch.disk
     val table = SynthTable (tier, 0x62)
     tier.handle (new TierHandler (table))

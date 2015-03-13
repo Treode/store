@@ -41,8 +41,8 @@ object TreodeBuild extends Build {
 
     organization := "com.treode",
     version := versionString,
-    scalaVersion := "2.11.4",
-    crossScalaVersions := Seq ("2.10.4", "2.11.4"),
+    scalaVersion := "2.11.6",
+    crossScalaVersions := Seq ("2.10.5", "2.11.6"),
 
     // Use a local Scala installation if SCALA_HOME is set. Otherwise, download the Scala tools
     // per scalaVersion.
@@ -59,8 +59,8 @@ object TreodeBuild extends Build {
     scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked"),
 
     scalacOptions <++= scalaVersion map {
-      case "2.10.4" => Seq.empty
-      case "2.11.4" => Seq ("-Ywarn-unused-import")
+      case "2.10.5" => Seq.empty
+      case "2.11.6" => Seq ("-Ywarn-unused-import")
     },
 
     libraryDependencies <+= scalaVersion ("org.scala-lang" % "scala-reflect" % _),
@@ -69,12 +69,13 @@ object TreodeBuild extends Build {
       "com.codahale.metrics" % "metrics-core" % "3.0.2",
       "com.google.code.findbugs" % "jsr305" % "3.0.0",
       "com.google.guava" % "guava" % "18.0",
-      "com.googlecode.javaewah" % "JavaEWAH" % "0.9.0",
+      "com.googlecode.javaewah" % "JavaEWAH" % "1.0.0",
       "com.nothome" % "javaxdelta" % "2.0.1",
-      "joda-time" % "joda-time" % "2.5",
+      "org.apache.commons" % "commons-lang3" % "3.3.2",
+      "joda-time" % "joda-time" % "2.7",
       "org.joda" % "joda-convert" % "1.7",
-      "org.slf4j" % "slf4j-api" % "1.7.7",
-      "org.slf4j" % "slf4j-simple" % "1.7.7"),
+      "org.slf4j" % "slf4j-api" % "1.7.10",
+      "org.slf4j" % "slf4j-simple" % "1.7.10"),
 
     publishArtifact in (Compile, packageDoc) := false,
 
@@ -111,10 +112,10 @@ object TreodeBuild extends Build {
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
-      "org.scalacheck" %% "scalacheck" % "1.12.0" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.12.2" % "test",
       "com.storm-enroute" %% "scalameter" % "0.6" % "perf",
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "test",
-      "org.scalatest" %% "scalatest" % "2.2.2" % "test"))
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % "test",
+      "org.scalatest" %% "scalatest" % "2.2.4" % "test"))
 
   // Settings for projects without stubs.
   lazy val standardSettings =
@@ -171,10 +172,10 @@ object TreodeBuild extends Build {
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
-      "org.scalacheck" %% "scalacheck" % "1.12.0" % "stub->default",
+      "org.scalacheck" %% "scalacheck" % "1.12.2" % "stub->default",
       "com.storm-enroute" %% "scalameter" % "0.6" % "stub->default",
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.2" % "stub->default",
-      "org.scalatest" %% "scalatest" % "2.2.2" % "stub->default"))
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % "stub->default",
+      "org.scalatest" %% "scalatest" % "2.2.4" % "stub->default"))
 
   // Settings for projects with stubs.
   lazy val stubSettings =
@@ -249,6 +250,26 @@ object TreodeBuild extends Build {
           "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
           "com.twitter" %% "twitter-server" % "1.9.0"))
 
+  // Our key-value server.
+  lazy val server = Project ("server", file ("server"))
+    .configs (IntensiveTest, PeriodicTest, Perf)
+    .dependsOn (twitterServer, store % "compile;test->stub")
+    .settings (standardSettings: _*)
+    .settings (assemblySettings: _*)
+    .settings (
+
+      name := "server",
+
+      mainClass in assembly := Some ("com.treode.server"),
+
+      test in assembly := {},
+
+      publishLocal := {},
+      publish := {},
+
+      libraryDependencies ++= Seq (
+          "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test"))
+
   // A standalone server for system tests.  Separated to keep system testing components out of
   // production code (these components are in the default config in this project).
   lazy val systest = Project ("systest", file ("systest"))
@@ -300,7 +321,7 @@ object TreodeBuild extends Build {
 
   // The root project includes everything.
   lazy val root = Project ("root", file ("."))
-    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterServer)
+    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterServer, server)
     .settings (versionInfo: _*)
     .settings (
 

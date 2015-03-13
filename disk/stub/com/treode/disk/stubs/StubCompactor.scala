@@ -18,12 +18,13 @@ package com.treode.disk.stubs
 
 import scala.util.{Failure, Random, Success}
 
-import com.treode.async.{Async, Fiber, Callback, Latch, Scheduler}
+import com.treode.async.{Async, Fiber, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.misc.EpochReleaser
 import com.treode.disk._
 
 import Async.{async, guard}
+import Callback.ignore
 import PageLedger.Groups
 
 private class StubCompactor (
@@ -32,14 +33,14 @@ private class StubCompactor (
      random: Random,
      scheduler: Scheduler,
      disk: StubDiskDrive,
-     config: StubDisk.Config
+     config: StubDiskConfig
 ) {
 
   val fiber = new Fiber
   var pages: StubPageRegistry = null
   var cleanq = Set.empty [(TypeId, ObjectId)]
   var compactq = Set.empty [(TypeId, ObjectId)]
-  var book = Map.empty [(TypeId, ObjectId), (Set [PageGroup], List [Callback [Unit]])]
+  var book = Map.empty [(TypeId, ObjectId), (Set [Long], List [Callback [Unit]])]
   var cleanreq = false
   var entries = 0
   var engaged = true
@@ -92,29 +93,24 @@ private class StubCompactor (
       } yield compact (groups, segments)
     } run (probed)
 
-  private def release (segments: Seq [Long]): Callback [Unit] = {
-    case Success (v) =>
-      releaser.release (disk.free (segments))
-    case Failure (t) =>
-      // Exception already reported by compacted callback
-  }
-
-  private def compact (id: (TypeId, ObjectId), groups: Set [PageGroup]): Async [Unit] =
+  private def compact (id: (TypeId, ObjectId), gens: Set [Long]): Async [Unit] =
     async { cb =>
       book.get (id) match {
-        case Some ((groups0, cbs0)) =>
-          book += id -> ((groups0 ++ groups, cb :: cbs0))
+        case Some ((gens0, cbs0)) =>
+          book += id -> ((gens0 ++ gens, cb :: cbs0))
         case None =>
-          book += id -> ((groups, cb :: Nil))
+          book += id -> ((gens, cb :: Nil))
       }}
 
   private def compact (groups: Groups, segments: Seq [Long]): Unit =
     fiber.execute {
-      val latch = Latch.unit [Unit] (groups.size, release (segments))
-      for ((id, gs) <- groups) {
+      (for ((id, gs) <- groups.latch) {
         cleanq += id
-        compact (id, gs) run (latch)
-      }}
+        compact (id, gs)
+      })
+      .map (_ => releaser.release (disk.free (segments)))
+      .run (ignore)
+    }
 
   def launch (pages: StubPageRegistry): Unit =
     fiber.execute {
@@ -129,11 +125,11 @@ private class StubCompactor (
         probeForClean()
     }
 
-  def compact (typ: TypeId, obj: ObjectId): Async [Unit] =
-    fiber.async { cb =>
+  def compact (typ: TypeId, obj: ObjectId): Unit =
+    fiber.execute {
       val id = (typ, obj)
       compactq += id
-      compact (id, Set.empty [PageGroup]) run (cb)
+      compact (id, Set.empty [Long]) run (ignore)
       if (!engaged)
         reengage()
     }}

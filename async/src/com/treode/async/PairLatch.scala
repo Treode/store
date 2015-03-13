@@ -18,25 +18,39 @@ package com.treode.async
 
 import scala.util.{Failure, Success}
 
-private class PairLatch [A, B] (cb: Callback [(A, B)])
-extends AbstractLatch [(A, B)] (2, cb) {
+import com.treode.async.implicits._
 
+private class PairLatch [A, B] (cb: Callback [(A, B)]) {
+
+  private var count = 2
+  private var thrown = List.empty [Throwable]
   private var va: A = null.asInstanceOf [A]
   private var vb: B = null.asInstanceOf [B]
 
-  def value: (A, B) = (va, vb)
+  private [this] def release() {
+    count -= 1
+    if (count > 0)
+      return
+    if (!thrown.isEmpty)
+      cb.fail (MultiException.fit (thrown))
+    else
+      cb.pass ((va, vb))
+  }
 
-  init()
+  private [this] def failure (t: Throwable): Unit = synchronized {
+    thrown ::= t
+    release()
+  }
 
   val cbA: Callback [A] = {
     case Success (v) => synchronized {
-        require (va == null, "Value 'a' was already set.")
-        va = v
-        release()
+      require (va == null, "Value 'a' was already set.")
+      va = v
+      release()
     }
-    case Failure (t) => synchronized {
+    case Failure (t) =>
       failure (t)
-    }}
+  }
 
   val cbB: Callback [B] = {
     case Success (v) => synchronized {
@@ -44,6 +58,6 @@ extends AbstractLatch [(A, B)] (2, cb) {
       vb = v
       release()
     }
-    case Failure (t) => synchronized {
+    case Failure (t) =>
       failure (t)
-    }}}
+  }}

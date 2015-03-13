@@ -43,14 +43,17 @@ import Async.{async, guard, when}
   * The mated method `frame` lives in [[com.treode.pickle.Pickler Pickler]].
   *
   * @define Deframe
-  * Ensure `input` has at least four readable bytes, reading from the file if necessary.
-  * Interpret those as the length of bytes needed.  Read from the file again if necessary,
-  * until `input` has at least that many additional readable bytes.
+  * Ensure `input` has at least four readable bytes, reading from the file if necessary. Interpret
+  * those as the length of bytes needed. Read from the file again if necessary, until `input` has
+  * at least that many additional readable bytes. The length read is understood to be the length
+  * of the value only, not including the length of itself.
   *
   * @define DeframeChecksum
-  * Ensure `input` has at enough bytes for the checksum and integer length, reading from the file
+  * Ensure `input` has at enough bytes for the length and checksum, reading from the file
   * if necessary. Read from the file again if necessary, until `input` has enough readable bytes
-  * for the frame length. Finally, hash the frame bytes and check it against the checksum.
+  * for the checksum and frame length. Finally, hash the frame bytes and check it against the
+  * checksum.  The length read is understood to be the length of the value only, not including the
+  * length of itself or checksum.
   */
 class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Scheduler) {
 
@@ -70,7 +73,7 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
     guard {
       input.capacity (input.readPos + len)
       var _pos = pos + input.readableBytes
-      var _buf = input.buffer (input.writePos, input.writeableBytes)
+      var _buf = input.buffer (input.writePos, input.writableBytes)
       whilst (input.readableBytes < len) {
         for (result <- read (_buf, _pos)) yield {
           if (result < 0)
@@ -78,7 +81,7 @@ class File private [io] (file: AsynchronousFileChannel) (implicit scheduler: Sch
           input.writePos = input.writePos + result
           _pos += result
           if (_buf.remaining == 0 && input.readableBytes < len)
-            _buf = input.buffer (input.writePos, input.writeableBytes)
+            _buf = input.buffer (input.writePos, input.writableBytes)
         }}}
 
   /** Read from the file until `input` has at least `len` readable bytes.  If `input` already has

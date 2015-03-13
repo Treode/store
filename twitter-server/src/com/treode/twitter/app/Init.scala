@@ -24,7 +24,7 @@ import com.twitter.app.App
 import com.twitter.conversions.storage._
 import com.twitter.util.StorageUnit
 
-/** A Twitter [[com.twitte.app.App App]] to initialize the disk drives.
+/** A Twitter [[$TwitterApp App]] to initialize the disk drives.
   *
   * Usage: Init [flags] path [paths]
   *
@@ -65,6 +65,8 @@ import com.twitter.util.StorageUnit
   * you choose a cell and host ID, you cannot change them, ever. So, the system stores the IDs on
   * disk during initialization. You supply the IDs at that time, and the system finds them on
   * recovery.
+  *
+  * @define TwitterApp http://twitter.github.io/util/docs/#com.twitter.app.App
   */
 class Init extends App {
 

@@ -269,7 +269,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
   class Panicked (s: State, thrown: Throwable) extends State {
 
     releaser.leave (epoch)
-    scheduler.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
+    scheduler.delay ( closedLifetime) (acceptors.remove (key, time, Acceptor.this))
 
     def ask (proposer: Peer, ballot: Long, default: Bytes): Unit = ()
 
@@ -295,7 +295,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     fiber.execute (state.choose (chosen))
 
   def checkpoint(): Async [Unit] =
-    fiber.guard (state.checkpoint())
+    fiber.async (cb => state.checkpoint() run (cb))
 
   def dispose(): Unit =
     releaser.leave (epoch)

@@ -22,8 +22,6 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.async.misc.EpochReleaser
 import com.treode.disk._
 
-import Disk.{Controller, Launch}
-
 private class StubLaunchAgent (
     releaser: EpochReleaser,
     val disk: StubDisk
@@ -31,8 +29,8 @@ private class StubLaunchAgent (
     random: Random,
     scheduler: Scheduler,
     drive: StubDiskDrive,
-    config: StubDisk.Config
-) extends Launch {
+    config: StubDiskConfig
+) extends DiskLaunch {
 
   private val roots = new CheckpointRegistry
   private val pages = new StubPageRegistry (releaser)
@@ -47,7 +45,7 @@ private class StubLaunchAgent (
       roots.checkpoint (f)
     }
 
-  def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]): Unit =
+  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit =
     pages.handle (desc, handler)
 
   def launch(): Unit =
@@ -57,8 +55,8 @@ private class StubLaunchAgent (
       disk.launch (roots, pages)
     }
 
-  def controller: Controller =
+  def controller: DiskController =
     throw new UnsupportedOperationException ("The StubDisk do not provide a controller.")
 
-  val sysid = new Array [Byte] (0)
+  val sysid = SystemId (0, 0)
 }

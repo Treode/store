@@ -21,6 +21,7 @@ import java.util.Arrays
 
 import com.google.common.hash.{HashCode, HashFunction}
 
+/** A Buffer that can resize by adding and dropping pages of bytes. */
 class PagedBuffer private (val pageBits: Int) extends Buffer {
 
   private [this] val InitPages = 8
@@ -204,7 +205,7 @@ class PagedBuffer private (val pageBits: Int) extends Buffer {
     wpos = pos & pageMask
   }
 
-  def writeableBytes: Int =
+  def writableBytes: Int =
     capacity - writePos
 
   def readPos: Int =

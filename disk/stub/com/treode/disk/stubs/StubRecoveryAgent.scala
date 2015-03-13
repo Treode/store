@@ -27,14 +27,12 @@ import com.treode.disk._
 
 import Async.{guard, supply}
 import Callback.ignore
-import Disk.Launch
-import StubDisk.StubRecovery
 
 private class StubRecoveryAgent (implicit
     random: Random,
     scheduler: Scheduler,
-    config: StubDisk.Config
-) extends StubRecovery {
+    config: StubDiskConfig
+) extends StubDiskRecovery {
 
   private val records = new RecordRegistry
   private var open = true
@@ -48,7 +46,7 @@ private class StubRecoveryAgent (implicit
       records.replay (desc) (f)
     }
 
-  def reattach (drive: StubDiskDrive): Async [Launch] =
+  def reattach (drive: StubDiskDrive): Async [DiskLaunch] =
     guard {
       synchronized {
         requireOpen()
@@ -62,20 +60,6 @@ private class StubRecoveryAgent (implicit
         new StubLaunchAgent (releaser, disk) (random, scheduler, drive, config)
       }}
 
-  def attach (drive: StubDiskDrive): Async [Launch] =
-    supply {
-      synchronized {
-        requireOpen()
-        open = false
-      }
-      val releaser = new EpochReleaser
-      val disk = new StubDisk (releaser) (random, scheduler, drive, config)
-      new StubLaunchAgent (releaser, disk) (random, scheduler, drive, config)
-    }
-
-  def reattach (items: Path*): Async [Launch] =
-    guard (throw new UnsupportedOperationException ("The StubDisk do not use files."))
-
-  def attach (items: (Path, DriveGeometry)*): Async [Launch] =
-    guard (throw new UnsupportedOperationException ("The StubDisk do not use files."))
+  def reattach (items: Path*): Async [DiskLaunch] =
+    guard (throw new UnsupportedOperationException ("The StubDisk does not use files."))
 }

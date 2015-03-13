@@ -19,7 +19,7 @@ package com.treode.disk
 import scala.collection.immutable.Queue
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, Callback, Fiber, Latch, Scheduler}
+import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 
 import Async.{async, guard}
@@ -36,7 +36,7 @@ private class Compactor (kit: DiskKit) {
   var cleanq = Set.empty [(TypeId, ObjectId)]
   var compactq = Set.empty [(TypeId, ObjectId)]
   var drainq = Set.empty [(TypeId, ObjectId)]
-  var book = Map.empty [(TypeId, ObjectId), (Set [PageGroup], List [Callback [Unit]])]
+  var book = Map.empty [(TypeId, ObjectId), (Set [Long], List [Callback [Unit]])]
   var segments = 0
   var cleanreq = false
   var drainreq = Queue.empty [DrainReq]
@@ -108,34 +108,29 @@ private class Compactor (kit: DiskKit) {
         yield compact (groups, iter.toSeq, false)
     } run (probed)
 
-  private def release (segments: Seq [SegmentPointer]): Callback [Unit] = {
-    case Success (v) =>
-      releaser.release (segments foreach (_.free()))
-    case Failure (t) =>
-      // Exception already reported by compacted callback
-  }
-
-  private def compact (id: (TypeId, ObjectId), groups: Set [PageGroup]): Async [Unit] =
+  private def compact (id: (TypeId, ObjectId), gens: Set [Long]): Async [Unit] =
     async { cb =>
       book.get (id) match {
-        case Some ((groups0, cbs0)) =>
-          book += id -> ((groups0 ++ groups, cb :: cbs0))
+        case Some ((gens0, cbs0)) =>
+          book += id -> ((gens0 ++ gens, cb :: cbs0))
         case None =>
-          book += id -> ((groups, cb :: Nil))
+          book += id -> ((gens, cb :: Nil))
       }}
 
   private def compact (groups: Groups, segments: Seq [SegmentPointer], cleaning: Boolean): Unit =
     fiber.execute {
-      val latch = Latch.unit [Unit] (groups.size, release (segments))
       for ((disk, segs) <- segments groupBy (_.disk))
         disk.compacting (segs)
-      for ((id, gs) <- groups) {
+      (for ((id, gs) <- groups.latch) {
         if (cleaning)
           cleanq += id
         else
           drainq += id
-        compact (id, gs) run (latch)
-      }}
+        compact (id, gs)
+      })
+      .map (_ => releaser.release (segments foreach (_.free())))
+      .run (ignore)
+    }
 
   def launch (pages: PageRegistry): Async [Unit] =
     fiber.supply {
@@ -153,11 +148,11 @@ private class Compactor (kit: DiskKit) {
           cleanreq = true
     }
 
-  def compact (typ: TypeId, obj: ObjectId): Async [Unit] =
-    fiber.async { cb =>
+  def compact (typ: TypeId, obj: ObjectId): Unit =
+    fiber.execute {
       val id = (typ, obj)
       compactq += id
-      compact (id, Set.empty [PageGroup]) run (cb)
+      compact (id, Set.empty [Long]) run (ignore)
       if (!engaged)
         reengage()
     }
@@ -179,7 +174,8 @@ private class Compactor (kit: DiskKit) {
     }
 
   def close(): Async [Unit] =
-    fiber.guard {
-      closed = true
-      pages.close()
-    }}
+    for {
+      _ <- fiber.supply (closed = true)
+      _ <- pages.close()
+    } yield ()
+}

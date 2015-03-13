@@ -20,7 +20,7 @@ import java.util.ArrayList
 
 import com.treode.async.{Async, Callback, Scheduler}
 
-private class LaunchAgent (val kit: DiskKit) extends Disk.Launch {
+private class LaunchAgent (val kit: DiskKit) extends DiskLaunch {
 
   private val roots = new CheckpointRegistry
   private val pages = new PageRegistry (kit)
@@ -28,7 +28,7 @@ private class LaunchAgent (val kit: DiskKit) extends Disk.Launch {
 
   implicit val disk: Disk = new DiskAgent (kit)
 
-  implicit val controller: Disk.Controller = new ControllerAgent (kit, disk)
+  implicit val controller: DiskController = new ControllerAgent (kit, disk)
 
   val sysid = kit.sysid
 
@@ -41,7 +41,7 @@ private class LaunchAgent (val kit: DiskKit) extends Disk.Launch {
       roots.checkpoint (f)
     }
 
-  def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]): Unit =
+  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit =
     synchronized {
       requireOpen()
       pages.handle (desc, handler)

@@ -23,7 +23,7 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.UnrolledBuffer
 import scala.util.{Failure, Success, Try}
 
-import com.treode.async.{Async, Callback, Fiber, Latch, Scheduler}
+import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
@@ -98,17 +98,18 @@ private class DiskDrive (
     }
 
   private def _checkpoint2(): Async [Unit] =
-    fiber.guard {
-      record (Checkpoint (pageHead, pageLedger.zip))
-    }
+    for {
+      chkpt <- fiber.supply (Checkpoint (pageHead, pageLedger.zip))
+      _ <- record (chkpt)
+    } yield ()
 
   private def _checkpoint3 (boot: BootBlock): Async [Unit] =
-    fiber.guard {
-      val superb = SuperBlock (id, boot, geom, draining, alloc.free, logHead)
-      SuperBlock.write (superb, file)
-    }
+    for {
+      sb <- fiber.supply (SuperBlock (id, boot, geom, draining, alloc.free, logHead))
+      _ <- SuperBlock.write (sb, file)
+    } yield ()
 
-  private def _checkpoint (boot: BootBlock, mark: Long): Async [Unit] = {
+  private def _checkpoint (boot: BootBlock, mark: Long): Async [Unit] =
     for {
       _ <- _checkpoint1 (mark)
       _ <- pagemp.pause()
@@ -116,7 +117,7 @@ private class DiskDrive (
       _ <- _checkpoint3 (boot)
     } yield {
       pagemp.resume()
-    }}
+    }
 
   def checkpoint (boot: BootBlock, mark: Option [Long]): Async [Unit] =
     mark match {
@@ -160,40 +161,44 @@ private class DiskDrive (
           drives.detach (this)
       }}
 
-  private def _writeLedger(): Async [Unit] =
-    when (pageLedgerDirty) {
-      pageLedgerDirty = false
-      PageLedger.write (pageLedger.clone(), file, geom, pageSeg.base, pageHead)
-    }
-
-  def drain(): Async [Iterable [SegmentPointer]] =
-    fiber.guard {
-      for {
-        _ <- latch (logmp.pause(), pagemp.close())
-        _ <- _writeLedger()
-        _ <- record (DiskDrain (pageSeg.num))
-        _ = draining = true
-        segs <- cleanable()
-      } yield {
-        segs
+  private def _writeLedger(): Async [(Option [PageLedger], SegmentBounds, Long)] =
+    fiber.supply {
+      if (pageLedgerDirty) {
+        pageLedgerDirty = false
+        (Some (pageLedger.clone), pageSeg, pageHead)
+      } else {
+        (None, pageSeg, pageHead)
       }}
 
+  def drain(): Async [Iterable [SegmentPointer]] =
+    for {
+      _ <- latch (logmp.pause(), pagemp.close())
+      (ldgr, seg, head) <- _writeLedger()
+      _ <- when (!ldgr.isEmpty) (PageLedger.write (ldgr.get, file, geom, seg.base, head))
+      _ <- record (DiskDrain (seg.num))
+      _ = draining = true
+      segs <- cleanable()
+    } yield {
+      segs
+    }
+
   def detach(): Async [Unit] =
-    fiber.guard {
-      open = false
-      logmp.close()
-      .ensure (file.close())
+    for {
+      _ <- fiber.supply (open = false)
+      _ <- logmp.close()
+    } yield {
+      file.close()
     }
 
   def close(): Async [Unit] =
-    fiber.guard {
-      open = false
-      for {
-        _ <- pagemp.close()
-        _ <- logmp.close()
-      } yield {
-        file.close()
-      }}
+    for {
+      _ <- fiber.supply (open = false)
+      _ <- pagemp.close()
+      _ <- logmp.close()
+    } yield {
+      file.close()
+    }
+
 
   private def splitRecords (entries: UnrolledBuffer [PickledRecord]) = {
     val accepts = new UnrolledBuffer [PickledRecord]
@@ -292,7 +297,7 @@ private class DiskDrive (
     var totalBytes = 0
     var realloc = false
     for (page <- pages) {
-      projector.add (page.typ, page.obj, page.group)
+      projector.add (page.typ, page.obj, page.gen)
       val pageBytes = blockAlignUp (page.byteSize)
       val ledgerBytes = blockAlignUp (projector.byteSize)
       if (totalBytes + ledgerBytes + pageBytes < limit) {
@@ -315,7 +320,7 @@ private class DiskDrive (
       buffer.writePos = blockAlignUp (buffer.writePos)
       val length = buffer.writePos - start
       callbacks.add (offset (id, start, length, page.cb))
-      ledger.add (page.typ, page.obj, page.group, length)
+      ledger.add (page.typ, page.obj, page.gen, length)
     }
     (buffer, callbacks, ledger)
   }
@@ -373,7 +378,7 @@ private object DiskDrive {
   def offset (id: Int, offset: Long, length: Int, cb: Callback [Position]): Callback [Long] =
     cb.continue (base => Some (Position (id, base + offset, length)))
 
-  def read [P] (file: File, geom: DriveGeometry, desc: PageDescriptor [_, P], pos: Position): Async [P] =
+  def read [P] (file: File, geom: DriveGeometry, desc: PageDescriptor [P], pos: Position): Async [P] =
     guard {
       val buf = PagedBuffer (geom.blockBits)
       for (_ <- file.fill (buf, pos.offset, pos.length))
@@ -418,7 +423,7 @@ private object DiskDrive {
       geom: DriveGeometry,
       boot: BootBlock
   ) (implicit
-      config: Disk.Config
+      config: DiskConfig
   ): Async [Unit] =
     guard {
 
@@ -438,11 +443,11 @@ private object DiskDrive {
     }
 
   def init (
-      sysid: Array [Byte],
+      sysid: SystemId,
       items: Seq [(Path, File, DriveGeometry)]
   ) (implicit
       scheduler: Scheduler,
-      config: Disk.Config
+      config: DiskConfig
   ): Async [Unit] =
     guard {
       val attaching = items.setBy (_._1)
@@ -458,7 +463,7 @@ private object DiskDrive {
       }}
 
   def init (
-      sysid: Array [Byte],
+      sysid: SystemId,
       superBlockBits: Int,
       segmentBits: Int,
       blockBits: Int,
@@ -469,7 +474,7 @@ private object DiskDrive {
     var items = Seq.empty [Try [(Path, File, DriveGeometry)]]
     try {
       implicit val scheduler = Scheduler (executor)
-      implicit val config = Disk.Config.suggested.copy (superBlockBits = superBlockBits)
+      implicit val config = DiskConfig.suggested.copy (superBlockBits = superBlockBits)
       val geom = DriveGeometry (segmentBits, blockBits, diskBytes)
       items =
         for (path <- paths)

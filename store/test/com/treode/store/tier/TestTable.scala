@@ -19,13 +19,13 @@ package com.treode.store.tier
 import com.treode.async.{Async, BatchIterator}
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{Disk, ObjectId, PageHandler, RecordDescriptor}
+import com.treode.disk.{Disk, DiskLaunch, ObjectId, PageHandler, RecordDescriptor}
 import com.treode.store.{Bytes, Residents, StorePicklers, TxClock}
 
 import Async.{guard, when}
 
 private class TestTable (table: TierTable) (implicit disk: Disk)
-extends PageHandler [Long] {
+extends PageHandler {
 
   def get (key: Int): Async [Option [Int]] = guard {
     for (cell <- table.get (Bytes (key), TxClock.MaxValue))
@@ -52,13 +52,13 @@ extends PageHandler [Long] {
     TestTable.delete.record (gen, key)
   }
 
-  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] = guard {
-    table.probe (groups)
+  def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] = guard {
+    table.probe (gens)
   }
 
-  def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] = guard {
+  def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] = guard {
     for {
-      meta <- table.compact (groups, Residents.all)
+      meta <- table.compact (gens, Residents.all)
       _ <- when (meta.isDefined) (TestTable.compact.record (meta.get))
     } yield ()
   }
@@ -74,7 +74,7 @@ private object TestTable {
 
   trait Medic {
 
-    def launch (implicit launch: Disk.Launch): Async [TestTable]
+    def launch (implicit launch: DiskLaunch): Async [TestTable]
   }
 
   val descriptor = TierDescriptor (0x28) ((_, _, _) => true)

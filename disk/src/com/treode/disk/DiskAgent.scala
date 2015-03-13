@@ -35,12 +35,12 @@ private class DiskAgent (val kit: DiskKit) extends Disk {
       logd.send (_entry)
     }
 
-  def read [P] (desc: PageDescriptor [_, P], pos: Position): Async [P] =
+  def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
     cache.read (desc, pos)
 
-  def write [G, P] (desc: PageDescriptor [G, P], obj: ObjectId, group: G, page: P): Async [Position] =
+  def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
     async [Position] { cb =>
-      val _page = PickledPage (desc, obj, group, page, cb)
+      val _page = PickledPage (desc, obj, gen, page, cb)
       if (_page.byteSize > maximumPageBytes)
         throw new OversizedPageException (maximumPageBytes, _page.byteSize)
       paged.send (_page)
@@ -49,7 +49,7 @@ private class DiskAgent (val kit: DiskKit) extends Disk {
       pos
     }
 
-  def compact (desc: PageDescriptor [_, _], obj: ObjectId): Async [Unit] =
+  def compact (desc: PageDescriptor [_], obj: ObjectId): Unit =
     compactor.compact (desc.id, obj)
 
   def join [A] (task: Async [A]): Async [A] =

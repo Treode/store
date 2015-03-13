@@ -23,8 +23,8 @@ import scala.util.{Failure, Random}
 
 import com.treode.async.{Async, BatchIterator, Backoff, Scheduler}
 import com.treode.async.misc.RichInt
-import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
-import com.treode.disk.{Disk, DriveAttachment, DriveDigest, DriveGeometry}
+import com.treode.cluster.{CellId, Cluster, ClusterConfig, HostId, Peer, RumorDescriptor}
+import com.treode.disk._
 
 import Async.guard
 
@@ -111,153 +111,21 @@ trait Store {
 
 object Store {
 
-  case class Config (
-      closedLifetime: Int,
-      deliberatingTimeout: Int,
-      exodusThreshold: Double,
-      falsePositiveProbability: Double,
-      lockSpaceBits: Int,
-      moveBatchBackoff: Backoff,
-      moveBatchBytes: Int,
-      moveBatchEntries: Int,
-      prepareBackoff: Backoff,
-      preparingTimeout: Int,
-      proposingBackoff: Backoff,
-      readBackoff: Backoff,
-      retention: Retention,
-      scanBatchBackoff: Backoff,
-      targetPageBytes: Int
-  ) {
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use StoreConfig", "0.3.0")
+  type Config = StoreConfig
 
-    require (
-        closedLifetime > 0,
-        "The closed lifetime must be more than 0 milliseconds.")
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use StoreConfig", "0.3.0")
+  val Config = StoreConfig
 
-    require (
-        deliberatingTimeout > 0,
-        "The deliberating timeout must be more than 0 milliseconds.")
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use StoreController", "0.3.0")
+  type Controller = StoreController
 
-    require (
-        0.0 < exodusThreshold && exodusThreshold < 1.0,
-        "The exodus threshould must be between 0 and 1 exclusive.")
-
-    require (
-        0 < falsePositiveProbability && falsePositiveProbability < 1,
-        "The false positive probability must be between 0 and 1 exclusive.")
-
-    require (
-        0 <= lockSpaceBits && lockSpaceBits <= 14,
-        "The size of the lock space must be between 0 and 14 bits.")
-
-    require (
-        moveBatchBytes > 0,
-        "The move batch size must be more than 0 bytes.")
-
-    require (
-        moveBatchEntries > 0,
-        "The move batch size must be more than 0 entries.")
-
-    require (
-        preparingTimeout > 0,
-        "The preparing timeout must be more than 0 milliseconds.")
-
-    require (
-        targetPageBytes > 0,
-        "The target size of a page must be more than zero bytes.")
-  }
-
-  object Config {
-
-    /** Suggested for intra-datacenter replication; we chose timeouts supposing a RTT of 1ms. */
-    val suggested = Config (
-        closedLifetime = 2.seconds,
-        deliberatingTimeout = 2.seconds,
-        exodusThreshold = 0.2D,
-        falsePositiveProbability = 0.01,
-        lockSpaceBits = 10,
-        moveBatchBackoff = Backoff (2.seconds, 3.seconds, 1.minutes, 7),
-        moveBatchBytes = 1 << 20,
-        moveBatchEntries = 10000,
-        prepareBackoff = Backoff (100, 100, 1.seconds, 7),
-        preparingTimeout = 5.seconds,
-        proposingBackoff = Backoff (100, 100, 1.seconds, 7),
-        readBackoff = Backoff (100, 100, 1.seconds, 7),
-        retention = Retention.StartOfYesterday,
-        scanBatchBackoff = Backoff (2.seconds, 3.seconds, 1.minutes, 7),
-        targetPageBytes = 1 << 20)
-
-    /** Suggested for cross-datacenter replication; we chose timeouts supposing a RTT of 300ms. */
-    val xdcr = Config (
-        closedLifetime = 10.seconds,
-        deliberatingTimeout = 10.seconds,
-        exodusThreshold = 0.2D,
-        falsePositiveProbability = 0.01,
-        lockSpaceBits = 10,
-        moveBatchBackoff = Backoff (10.seconds, 20.seconds, 1.minutes, 7),
-        moveBatchBytes = 1 << 20,
-        moveBatchEntries = 10000,
-        prepareBackoff = Backoff (3.seconds, 4.seconds, 20.seconds, 7),
-        preparingTimeout = 10.seconds,
-        proposingBackoff = Backoff (3.seconds, 4.seconds, 20.seconds, 7),
-        readBackoff = Backoff (3.seconds, 4.seconds, 20.seconds, 7),
-        retention = Retention.StartOfYesterday,
-        scanBatchBackoff = Backoff (10.seconds, 20.seconds, 1.minutes, 7),
-        targetPageBytes = 1 << 20)
-  }
-
-  trait Controller {
-
-    implicit def store: Store
-
-    def cohorts: Seq [Cohort]
-
-    def cohorts_= (cohorts: Seq [Cohort])
-
-    /** The preferred hosts for a slice. See [[Slice]] and [[Preference]] for details. The
-      * addresses provided in the preferences are the ones the peer announced when starting up.
-      *
-      * @param slice The slice to query.
-      * @return The weighted preferences for this slice.
-      */
-    def hosts (slice: Slice): Seq [Preference]
-
-    /** Announce the client addresses for this peer to all other peers. The addresses announced
-      * here will be provided in preferences obtained from the `hosts` method.
-      *
-      * @param addr An address for clients to connect to this peer.
-      * @param sslAddr An address for clients to connect to this peer.
-      */
-    def announce (addr: Option [SocketAddress], sslAddr: Option [SocketAddress])
-
-    def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any)
-
-    def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit]
-
-    def drives: Async [Seq [DriveDigest]]
-
-    def attach (items: DriveAttachment*): Async [Unit]
-
-    def drain (paths: Path*): Async [Unit]
-
-    def cellId: CellId
-
-    def hostId: HostId
-
-    def hail (remoteId: HostId, remoteAddr: SocketAddress)
-
-    def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any)
-
-    def spread [M] (desc: RumorDescriptor [M]) (msg: M)
-
-    def tables: Async [Seq [TableDigest]]
-
-    def shutdown(): Async [Unit]
-  }
-
-  trait Recovery {
-
-    def launch (implicit launch: Disk.Launch, cluster: Cluster): Async [Controller]
-  }
+  /** This has been moved to package level for easier access in the Scaladoc. */
+  @deprecated ("Use StoreRecovery", "0.3.0")
+  type Recovery = StoreRecovery
 
   def init (
       hostId: HostId,
@@ -268,16 +136,16 @@ object Store {
       diskBytes: Long,
       paths: Path*
   ): Unit = {
-    val sysid = StorePicklers.sysid.toByteArray ((hostId, cellId))
+    val sysid = SystemId (cellId.id, hostId.id)
     Disk.init (sysid, superBlockBits, segmentBits, blockBits, diskBytes, paths: _*)
   }
 
   def recover() (implicit
       random: Random,
       scheduler: Scheduler,
-      recovery: Disk.Recovery,
-      config: Store.Config
-  ): Recovery =
+      recovery: DiskRecovery,
+      config: StoreConfig
+  ): StoreRecovery =
     new RecoveryKit
 
   def recover (
@@ -285,23 +153,24 @@ object Store {
       shareAddr: SocketAddress,
       paths: Path*
   ) (implicit
-      diskConfig: Disk.Config,
-      clusterConfig: Cluster.Config,
-      storeConfig: Store.Config,
+      diskConfig: DiskConfig,
+      clusterConfig: ClusterConfig,
+      storeConfig: StoreConfig,
       scheduler: Scheduler
-  ): Async [Controller] = {
+  ): Async [StoreController] = {
     guard {
       implicit val random = Random
       implicit val _disk = Disk.recover()
       val _store = Store.recover()
       for {
         launch <- _disk.reattach (paths: _*)
-        (hostId, cellId) = StorePicklers.sysid.fromByteArray (launch.sysid)
+        cellId = CellId (launch.sysid.id1)
+        hostId = HostId (launch.sysid.id2)
         cluster = Cluster.live (cellId, hostId, bindAddr, shareAddr)
         store <- _store.launch (launch, cluster)
       } yield {
         launch.launch()
         cluster.startup()
-        (new ExtendedController (launch.controller, cluster, store)): Controller
+        (new ExtendedController (launch.controller, cluster, store)): StoreController
       }
     }}}
