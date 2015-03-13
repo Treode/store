@@ -23,7 +23,11 @@ We provide an overview of the Cache class below, including its primary internal 
     1. HTTP library for establishing/managing connection to server (in Python, urllib3)
     2. map for maintaining cache
 - Exceptions: 
+<<<<<<< HEAD
     1. StaleException(Read_time: int, Value_time: int)
+=======
+    1. StaleException(Read\_time: int, Value\_time: int)
+>>>>>>> d65bb97... Draft client design.
 
 ## Cache Structure Description
 
@@ -53,7 +57,11 @@ Specifically, the `(table, key)` keys are composed of the concatenation of the t
 
 The cache entries themselves are stored in these arraylists.  The values are tuples derived from the value timestamps and `(value, read-time)` concatenated strings.  
 
+<<<<<<< HEAD
 If the arraylists are unsorted, then `add` is *O(1)*, and `find` (floor), `replace`, and `remove` are each *O(n)*, where `n` is the length of the arraylist.  If the arraylists are sorted (which takes *O(nlogn)*), all the operations are *O(n)*.  Thus, the arraylists do not need to be sorted, as sorting would not improve the asymptotic runtimes of these operations.
+=======
+If the arraylists are unsorted, then `add` is *O(1)*, and `find` (floor), `replace`, and `remove` are each *O(n)*, where `n` is the length of the arraylist.  If the arraylists are sorted (which takes *O(n log n)*), all the operations are *O(n)*.  Thus, the arraylists do not need to be sorted, as sorting would not improve the asymptotic runtimes of these operations.
+>>>>>>> d65bb97... Draft client design.
 
 Note that the cache can indicate the DB did not have a value for a certain key at a given time by storing None in Python (null in other languages) in the `(value, read-time)` entry. 
 
@@ -100,11 +108,19 @@ If the server accepts the batch write, the write method also updates the cache t
 Otherwise, the write method throws a stale exception, including the value timestamp in the DB that caused the write reject if it is available.
 
 ## HTTP Message Formatting
+<<<<<<< HEAD
 First, we specify the default and custom headers our HTTP messages utilize.  Then we describe the expected forms of requests/responses between the cache and TreodeDB server.
 
 ### Use of HTTP Headers and Directives
 
 In our use of HTTP directives, the term *age* refers to time since the user-specified read\_timestamp.  Specifically, every TreodeDB entry has both a *value timestamp (V_t)* and *read timestamp (R_t)*.  We maintain as an invariant that the given key contained the entry's value between [V\_t, R\_t].
+=======
+First, we specify the default and custom headers our HTTP messages utilize.  Then we describe the expected forms of requests and responses between the cache and TreodeDB server.
+
+### Use of HTTP Headers and Directives
+
+In our use of HTTP directives, the term *age* refers to time since the user-specified read\_timestamp.  Specifically, every TreodeDB entry has both a *value timestamp* (V\_t) and *read timestamp* (R\_t).  We maintain as an invariant that the given key contained the entry's value between [V\_t, R\_t].
+>>>>>>> d65bb97... Draft client design.
 
 We use the following HTTP directives (under the HTTP header Cache-Control):
 
@@ -392,4 +408,8 @@ If the key exists in the Transaction view, set its "deleted" boolean to True.  O
 
 As described above, the view maintains a map of type (table, key) -> (op, value), which stores all operations the user performs on the DB via the Transaction. 
 
+<<<<<<< HEAD
 To commit, we simply pass this map to the Cache write method, which iterates through the map entries and constructs a batch write composed of all its entries.  Finally, it sends this batch write to the DB server.
+=======
+To commit, we simply pass this map to the Cache write method, which iterates through the map entries and constructs a batch write composed of all its entries.  Finally, it sends this batch write to the DB server.
+>>>>>>> d65bb97... Draft client design.
