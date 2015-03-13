@@ -14,13 +14,18 @@
  * limitations under the License.
  */
 
-package com.treode.disk.edit
+package com.treode.disk.stubs
 
 import java.nio.file.Path
 
-private class StubDiskEvents extends DiskEvents {
+import com.treode.disk.{DiskEvents, TypeId}
+
+class StubDiskEvents extends DiskEvents {
 
   override def changedDisks (attached: Set [Path], detached: Set [Path], draining: Set [Path]) = ()
+
+  override def noCompactorFor (id: TypeId): Unit =
+    throw new IllegalArgumentException (s"No compactor for $id.")
 
   override def reattachingDisks (paths: Set [Path]) = ()
 }

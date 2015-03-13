@@ -19,8 +19,8 @@ package com.treode.disk.edit
 import java.util.{ArrayList, HashMap}
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.disk.{Compaction, Disk, DiskController, DiskLaunch, ObjectId, PageDescriptor,
-  PageHandler, SystemId, TypeId}
+import com.treode.disk.{Compaction, Disk, DiskController, DiskEvents, DiskLaunch, ObjectId,
+  PageDescriptor, PageHandler, SystemId, TypeId}
 
 /** The second phase of building the live Disk system. Implements the user trait Launch. */
 private class LaunchAgent (implicit

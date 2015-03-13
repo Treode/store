@@ -20,7 +20,6 @@ import java.nio.file.Path
 
 import com.treode.async.{Async, Scheduler}, Async.async
 import com.treode.buffer.PagedBuffer
-import org.apache.commons.lang3.StringEscapeUtils.escapeJava
 
 package edit {
 
@@ -31,12 +30,3 @@ package edit {
   class ReattachException (failures: Seq [ReattachFailure]) extends Exception {
     override def getMessage() = failures mkString "; "
   }}
-
-package object edit {
-
-  private [edit] def quote (path: Path): String =
-    "\"" + escapeJava (path.toString) + "\""
-
-  private [edit] def quote (paths: Iterable [Path]): String =
-    paths map (quote _) mkString ", "
-}
