@@ -54,4 +54,7 @@ private class DiskAgent (val kit: DiskKit) extends Disk {
 
   def join [A] (task: Async [A]): Async [A] =
     releaser.join (task)
+
+  // The new disk system uses this; the old one can ignore it.
+  def release (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ()
 }

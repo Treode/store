@@ -28,33 +28,11 @@ class RecordDescriptor [R] private (
   /** The pickler to serialize the entry. */
   val prec: Pickler [R]) {
 
-  /** Record an entry into the write log.
-    *
-    * '''Durability''': When the async completes, the entry has reached disk, and it will be
-    * replayed during system recovery. However, checkpoints clean old entries from the log.
-    *
-    * '''Checkpoints''': Most entries logged before the most recent checkpoint will not be
-    * replayed, but a few may. All entries logged after the most recent checkpoint will be
-    * replayed.
-    *
-    * '''Registration''': A replayer must be registered with the recovery builder. The disk system
-    * will refuse to recover if it cannot identify all log entries.
-    *
-    * '''Ordering''': When the async of a first log entry has completed before record has been
-    * invoked with a second log entry, the first will be replayed before the second. When the
-    * async of a first log entry has yet to complete and record is invoked with a second, the
-    * second may be replayed before the first.
-    *
-    * @param entry The entry to record.
-    */
+  /** See [[Disk#record Disk.record]]. */
   def record (entry: R) (implicit disk: Disk): Async [Unit] =
     disk.record (this, entry)
 
-  /** Register a replayer with the recovery builder.
-    *
-    * A replayer must be registered with the recovery builder. The disk system will refuse to
-    * recover if it cannot identify all log entries.
-    */
+  /** See [[DiskRecovery#replay DiskRecovery.replay]]. */
   def replay (f: R => Any) (implicit recovery: DiskRecovery): Unit =
     recovery.replay (this) (f)
 

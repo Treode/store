@@ -41,8 +41,12 @@ private class LaunchAgent (implicit
     agent.launch()
   }
 
+  // The old disk system used this; this new disk system uses claim and compact instead.
+  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit = ()
+
   // TODO
   def checkpoint (f: => Async [Unit]): Unit = ???
-  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit = ???
+  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ???
+  def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit]) = ???
   def sysid: SystemId  = ???
 }

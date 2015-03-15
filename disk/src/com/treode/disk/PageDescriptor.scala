@@ -32,40 +32,21 @@ class PageDescriptor [P] private (
     implicit val tpag: ClassTag [P]
 ) {
 
-  /** Register a handler to work with the cleaner.
-    *
-    * A handler must be registered with the launch builder. The disk system will panic if it
-    * discovers a page of data that it cannot identify.
-    */
-  def handle (handler: PageHandler) (implicit launch: DiskLaunch): Unit =
-    launch.handle (this, handler)
-
-  /** Read a page.
-    *
-    * @param pos The position to read from.
-    */
+  /** See [[Disk#read Disk.read]]. */
   def read (pos: Position) (implicit disk: Disk): Async [P] =
     disk.read (this, pos)
 
-  /** Write a page.
-    *
-    * @param obj The ID of the object; see [[PageHandler]].
-    * @param gen The generation of the page; see [[PageHandler]].
-    * @param page The data.
-    */
+  /** See [[Disk#write Disk.write]]. */
   def write (obj: ObjectId, gen: Long, page: P) (implicit disk: Disk): Async [Position] =
     disk.write (this, obj, gen, page)
 
-  /** Schedule the object for compaction.
-    *
-    * An object on disk should never spontaneously compact itself. If the object on disk desires
-    * to be compacted, it should invoke this method. The disk system will eventually invoke the
-    * compact method of the [[PageHandler]]. This achieves two things: the disk system can control
-    * the number of compactions that are in flight at one time, and the disk system can double up
-    * compaction desired by the object itself with compaction desired by the cleaner.
-    */
+  /** See [[Disk#compact Disk.compact]]. */
   def compact (obj: ObjectId) (implicit disk: Disk): Unit =
     disk.compact (this, obj)
+
+  /** Deprecated. */
+  def handle (handler: PageHandler) (implicit launch: DiskLaunch): Unit =
+    launch.handle (this, handler)
 
   override def toString = s"PageDescriptor($id)"
 }

@@ -23,30 +23,19 @@ import com.treode.async.Async
 /** The recovery builder. */
 trait DiskRecovery {
 
-  /** Register a replayer for a log entry. */
+  /** Register a method to replay a log entry.
+    *
+    * A replayer must be registered for every type of log entry that may be in the write log. The
+    * disk system will refuse to recover if it cannot identify all log entries.
+    */
   def replay [R] (desc: RecordDescriptor [R]) (f: R => Any)
 
-  /** Reattach one or more paths.
+  /** Reattach one or more disk drives.
     *
     * You need provide only some of the paths previously attached to this disk system. The
-    * recovery mechanim will find the complete list of paths in the superblock. If not for this
-    * behavior, you would need to attach and drain disks, and simultaneously update the config
-    * files or startup scripts. With this feature, you can
+    * recovery mechanim will find the complete list of paths in the superblock.
     *
-    *   - Add a disk:
-    *
-    *       1. Attach the disk; see [[DiskController#attach]].
-    *
-    *       2. Add this disk to config files or startup scripts.
-    *
-    *   - Drain a disk.
-    *
-    *       1. Remove the disk from config files or startup scripts.
-    *
-    *       2. Drain the disk; see [[DiskController#drain]].
-    *
-    * Call `reattach` ''after'' registering all replayers. This method closes this recovery
-    * builder.
+    * Call `reattach` after registering all replayers. This method closes the recovery builder.
     */
   def reattach (items: Path*): Async [DiskLaunch]
 }
