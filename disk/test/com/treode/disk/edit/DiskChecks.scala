@@ -25,6 +25,7 @@ import com.treode.async.stubs.{AsyncChecks, CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.disk.{Disk, DiskConfig, DiskLaunch, DriveGeometry, StubFileSystem}
 import com.treode.disk.stubs.StubDiskEvents
+import com.treode.disk.stubs.edit.Counter
 import org.scalatest.{Informing, Suite}
 
 /** A strategy (see [[http://en.wikipedia.org/wiki/Strategy_pattern Strategy Pattern]]) and
@@ -314,6 +315,35 @@ trait DiskChecks extends AsyncChecks {
         throw t
     }
 
+  /** Run a one phase scenario---two phases if you count the verify phase.
+    *
+    * This looks up the step counts for `effects.init`. It adds `effect.last` with max steps to
+    * simulate completing without a crash. This provides a count of steps available after the last
+    * effect has started, which is the upper bound on steps for crashing or starting a subsequent
+    * effect.
+    *
+    * With that upper bound available, this then chooses a number of steps to run the final
+    * effect. It uses that count to simulate a crash, and it updates the counter for later
+    * scenarios to augment.
+    */
+  private [edit] def onePhase [T <: Tracker] (
+    setup: => T,
+    seed: Long,
+    counter: Counter [Effect [T]]
+  ) (
+    effects: Effect [T]*
+  ) (implicit
+    config: DiskConfig
+  ): Int = {
+    val init = effects.init
+    val last = effects.last
+    val cs = counter.get (init)
+    val t = onePhase (setup, seed) (cs :+ last -> Int.MaxValue : _*)
+    val ds = cs :+ last -> t
+    counter.add (effects, ds)
+    onePhase (setup, seed) (ds : _*)
+  }
+
   /** Run a two phase scenario---three phases if you count the verify phase. For each effect, this
     * starts the effect, runs the scheduler a given number of steps, and then starts the next
     * effect.
@@ -340,101 +370,12 @@ trait DiskChecks extends AsyncChecks {
       } else {
         0
       }
+
     } catch {
       case t: Throwable =>
         info (f"twoPhases ($tracker, 0x$seed%XL) (${first mkString ", "}) (${second mkString ", "})")
         throw t
     }
-
-  val Seq (da1, da2, da3) = Seq ("da1", "da2", "da3") map (Paths.get (_))
-  val Seq (db1, db2, db3) = Seq ("db1", "db2", "db3") map (Paths.get (_))
-  val Seq (dc1, dc2, dc3) = Seq ("dc1", "dc2", "dc3") map (Paths.get (_))
-
-  def addA1 (implicit geom: DriveGeometry) = AddDisks ("addA1", da1)
-  def addA2 (implicit geom: DriveGeometry) = AddDisks ("addA2", da1, da2)
-  def addA3 (implicit geom: DriveGeometry) = AddDisks ("addA3", da1, da2, da3)
-  def addB1 (implicit geom: DriveGeometry) = AddDisks ("addB1", db1)
-  def addB2 (implicit geom: DriveGeometry) = AddDisks ("addB2", db1, db2)
-  def addB3 (implicit geom: DriveGeometry) = AddDisks ("addB3", db1, db2, db3)
-  def addC1 (implicit geom: DriveGeometry) = AddDisks ("addC1", dc1)
-  def addC2 (implicit geom: DriveGeometry) = AddDisks ("addC2", dc1, dc2)
-  def addC3 (implicit geom: DriveGeometry) = AddDisks ("addC3", dc1, dc2, dc3)
-  val drnA1 = RemoveDisks ("drnA1", da1)
-  val drnA2 = RemoveDisks ("drnA2", da1, da2)
-  val drnA3 = RemoveDisks ("drnA3", da1, da2, da3)
-  val chkpt = Checkpoint
-
-  /** Tracks the number of scheduler steps to use for each effect introduced into a scenario. */
-  private [edit] class Counter [T] {
-
-    /** A scenario. */
-    type Effects = Seq [Effect [T]]
-
-    /** The count of steps used for each effect in the scenario. */
-    type Counts = Seq [(Effect [T], Int)]
-
-    private var counts = Map.empty [(Effects, Effects, Boolean), (Counts, Counts)]
-    counts += (Seq.empty, Seq.empty, false) -> (Seq.empty, Seq.empty)
-
-    def get (es: Effects): Counts = {
-      counts get ((es, Seq.empty, false)) match {
-        case Some (cs) => cs._1
-        case None => fail (s"Need to test (${es mkString ","})")
-      }}
-
-    def get (es1: Effects, es2: Effects, crashed: Boolean): Counts = {
-      counts get ((es1, es2, crashed)) match {
-        case Some (cs) => cs._2
-        case None => fail (s"Need to test (${es1 mkString ","}):crashed (${es2 mkString ","})")
-      }}
-
-    def contains (es: Effects): Boolean =
-      counts.contains ((es, Seq.empty, false))
-
-    def contains (es1: Effects, es2: Effects, crashed: Boolean): Boolean =
-      counts.contains ((es1, es2, crashed))
-
-    def add (es: Effects, cs: Counts) {
-      if (counts contains (es, Seq.empty, false))
-        fail (s"Already tested (${es mkString ","})")
-      counts += (es, Seq.empty, false) -> (cs, Seq.empty)
-      counts += (es, Seq.empty, true) -> (cs, Seq.empty)
-    }
-
-    def add (es1: Effects, es2: Effects, crashed: Boolean, cs1: Counts, cs2: Counts) {
-      if (counts contains (es1, es2, crashed))
-        fail (s"Already tested (${es1 mkString ","}):$crashed (${es2 mkString ","})")
-      counts += (es1, es2, crashed) -> (cs1, cs2)
-    }}
-
-  /** Run a one phase scenario---two phases if you count the verify phase.
-    *
-    * This looks up the step counts for `effects.init`. It adds `effect.last` with max steps to
-    * simulate completing without a crash. This provides a count of steps available after the last
-    * effect has started, which is the upper bound on steps for crashing or starting a subsequent
-    * effect.
-    *
-    * With that upper bound available, this then chooses a number of steps to run the final
-    * effect. It uses that count to simulate a crash, and it updates the counter for later
-    * scenarios to augment.
-    */
-  private [edit] def onePhase [T <: Tracker] (
-    setup: => T,
-    seed: Long,
-    counter: Counter [T]
-  ) (
-    effects: Effect [T]*
-  ) (implicit
-    config: DiskConfig
-  ): Int = {
-    val init = effects.init
-    val last = effects.last
-    val cs = counter.get (init)
-    val t = onePhase (setup, seed) (cs :+ last -> Int.MaxValue : _*)
-    val ds = cs :+ last -> t
-    counter.add (effects, ds)
-    onePhase (setup, seed) (ds : _*)
-  }
 
   /** Run a two phase scenario---three phases if you count the verify phase.
     *
@@ -443,7 +384,7 @@ trait DiskChecks extends AsyncChecks {
   private [edit] def twoPhases [T <: Tracker] (
     setup: => T,
     seed: Long,
-    counter: Counter [T]
+    counter: Counter [Effect [T]]
   ) (
     first: Effect [T]*
   ) (
@@ -474,6 +415,24 @@ trait DiskChecks extends AsyncChecks {
       twoPhases (setup, seed) (ds1 : _*) (ds2 : _*) // crash second phase
     }}
 
+  val Seq (da1, da2, da3) = Seq ("da1", "da2", "da3") map (Paths.get (_))
+  val Seq (db1, db2, db3) = Seq ("db1", "db2", "db3") map (Paths.get (_))
+  val Seq (dc1, dc2, dc3) = Seq ("dc1", "dc2", "dc3") map (Paths.get (_))
+
+  def addA1 (implicit geom: DriveGeometry) = AddDisks ("addA1", da1)
+  def addA2 (implicit geom: DriveGeometry) = AddDisks ("addA2", da1, da2)
+  def addA3 (implicit geom: DriveGeometry) = AddDisks ("addA3", da1, da2, da3)
+  def addB1 (implicit geom: DriveGeometry) = AddDisks ("addB1", db1)
+  def addB2 (implicit geom: DriveGeometry) = AddDisks ("addB2", db1, db2)
+  def addB3 (implicit geom: DriveGeometry) = AddDisks ("addB3", db1, db2, db3)
+  def addC1 (implicit geom: DriveGeometry) = AddDisks ("addC1", dc1)
+  def addC2 (implicit geom: DriveGeometry) = AddDisks ("addC2", dc1, dc2)
+  def addC3 (implicit geom: DriveGeometry) = AddDisks ("addC3", dc1, dc2, dc3)
+  val drnA1 = RemoveDisks ("drnA1", da1)
+  val drnA2 = RemoveDisks ("drnA2", da1, da2)
+  val drnA3 = RemoveDisks ("drnA3", da1, da2, da3)
+  val chkpt = Checkpoint
+
   /** Run some scenarios with a given PRNG seed. */
   private [edit] def someScenarios [T <: Tracker] (
     setup: => T,
@@ -484,7 +443,8 @@ trait DiskChecks extends AsyncChecks {
     geom: DriveGeometry
   ) {
     try {
-      val counter = new Counter [T]
+      val counter = new Counter [Effect [T]]
+
       onePhase (setup, seed, counter) (addA1)
       onePhase (setup, seed, counter) (addA1, phs1)
       onePhase (setup, seed, counter) (addA1, phs1, chkpt)
@@ -526,7 +486,7 @@ trait DiskChecks extends AsyncChecks {
     geom: DriveGeometry
   ) {
     try {
-      val counter = new Counter [T]
+      val counter = new Counter [Effect [T]]
 
       onePhase (setup, seed, counter) (addA1)
       onePhase (setup, seed, counter) (addA1, phs1)
