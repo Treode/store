@@ -98,7 +98,7 @@ private class DriveGroup (
       ()
     else if (!closing.isEmpty)
       _close()
-    else if (!changers.isEmpty || !checkpoint.isEmpty)
+    else if (!changers.isEmpty || !detaches.isEmpty || !checkpoint.isEmpty)
       _writeSuperblock()
   }
 
@@ -251,7 +251,7 @@ private class DriveGroup (
         drains ::= drive
       }
 
-      // If we get here, then all when well, so we can merge our new changes into the queued
+      // If we get here, then all went well, so we can merge our new changes into the queued
       // changes.
       this.dno = dno
       attaches :::= newAttaches

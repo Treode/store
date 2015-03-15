@@ -242,7 +242,7 @@ trait DiskChecks extends AsyncChecks {
     random: Random,
     files: StubFileSystem,
     drives: DrivesTracker
-  ): Int = {
+  ): (Int, Boolean) = {
     implicit val scheduler = StubScheduler.random (random)
     implicit val recovery = drives.newRecovery
     tracker.recover()
@@ -266,14 +266,14 @@ trait DiskChecks extends AsyncChecks {
           fail (s"$effect failed: ${cb.assertFailed [Throwable]}")
         else if (!cb.hasPassed)
           fail (s"$effect did not complete $cb")
-    count
+    (count, crashed)
   }
 
   /** The final verify phase of the system under test. */
   private def verify (
     tracker: Tracker,
     drives: DrivesTracker,
-    target: Int
+    crashed: Boolean
   ) (implicit
     random: Random,
     files: StubFileSystem
@@ -285,7 +285,6 @@ trait DiskChecks extends AsyncChecks {
     import launch.agent
     tracker.launch()
     launch.launch()
-    val crashed = (target != Int.MaxValue)
     drives.verify (crashed) .expectPass()
     tracker.verify (crashed) .expectPass()
   }
@@ -306,8 +305,8 @@ trait DiskChecks extends AsyncChecks {
       implicit val random = new Random (seed)
       implicit val files = new StubFileSystem
       implicit val drives = new DrivesTracker
-      val count = phase (tracker, effects)
-      verify (tracker, drives, count)
+      val (count, crashed) = phase (tracker, effects)
+      verify (tracker, drives, crashed)
       if (count > 0) random.nextInt (count) else 0
     } catch {
       case t: Throwable =>
@@ -333,10 +332,14 @@ trait DiskChecks extends AsyncChecks {
       implicit val random = new Random (seed)
       implicit val files = new StubFileSystem
       implicit val drives = new DrivesTracker
-      phase (tracker, first)
-      val count = if (!drives.attached.isEmpty) phase (tracker, second) else 0
-      verify (tracker, drives, count)
-      if (count > 0) random.nextInt (count) else 0
+      val (count1, crashed1) = phase (tracker, first)
+      if (!drives.attached.isEmpty) {
+        val (count2, crashed2) = phase (tracker, second)
+        verify (tracker, drives, crashed1 || crashed2)
+        if (count2 > 0) random.nextInt (count2) else 0
+      } else {
+        0
+      }
     } catch {
       case t: Throwable =>
         info (f"twoPhases ($tracker, 0x$seed%XL) (${first mkString ", "}) (${second mkString ", "})")
