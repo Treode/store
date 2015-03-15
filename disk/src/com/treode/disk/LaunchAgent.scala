@@ -52,4 +52,9 @@ private class LaunchAgent (val kit: DiskKit) extends DiskLaunch {
       requireOpen()
       open = false
       kit.launch (checkpointers.result, pages)
-    }}
+    }
+
+  // The new disk system uses these; this old disk system uses handle instead.
+  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ()
+  def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit]) = ()
+}

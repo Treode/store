@@ -68,6 +68,7 @@ private class DiskAgent (
   def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] = ???
   def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] = ???
   def compact (desc: PageDescriptor [_], obj: ObjectId): Unit = ???
+  def release (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ???
   def join [A] (task:  Async[A]): Async[A] = ???
   def drives: Async [Seq [DriveDigest]] = ???
 }

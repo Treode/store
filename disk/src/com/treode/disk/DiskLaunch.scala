@@ -23,27 +23,33 @@ trait DiskLaunch {
 
   /** The disk system.
     *
-    * It is ready for recording log entries, and reading and writing pages. However, before
-    * launch it is not checkpointing or cleaning pages. It is not reclaiming segments.
+    * It is ready for recording log entries, and reading and writing pages. However, before launch
+    * it is not checkpointing or compacting tables, and it is not reclaiming segments.
     */
   implicit def disk: Disk
 
   /** The disk controller. */
   implicit def controller: DiskController
 
-  /** The SystemId found in the superblock. */
+  /** The system ID found in the superblock. */
   def sysid: SystemId
 
   /** Register a checkpointer. */
   def checkpoint (f: => Async [Unit])
 
-  /** Register a page handler. */
-  def handle (desc: PageDescriptor [_], handler: PageHandler)
+  /** Claim generations before launch, or the disk blocks will be released. */
+  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit
 
-  /** Launch the checkpointer and cleaner.
+  /** Register a compactor. */
+  def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit])
+
+  /** Launch the checkpointer and compactor.
     *
-    * Call `launch` after registering all checkpointers and page handlers. This method closes
-    * this launch builder.
+    * Call `launch` after registering all checkpointers and compactors, and making all claims.
+    * This method closes this launch builder.
     */
   def launch()
+
+  /** Deprecated. */
+  def handle (desc: PageDescriptor [_], handler: PageHandler)
 }

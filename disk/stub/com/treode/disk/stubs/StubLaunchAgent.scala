@@ -59,4 +59,8 @@ private class StubLaunchAgent (
     throw new UnsupportedOperationException ("The StubDisk do not provide a controller.")
 
   val sysid = SystemId (0, 0)
+
+  // The new disk system uses these; this old disk system uses handle instead.
+  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ()
+  def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit]) = ()
 }
