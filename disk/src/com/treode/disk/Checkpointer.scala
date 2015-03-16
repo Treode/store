@@ -28,7 +28,7 @@ private class Checkpointer (kit: DiskKit) {
   import kit.{config, drives, scheduler}
 
   val fiber = new Fiber
-  var checkpoints: CheckpointRegistry = null
+  var checkpointers: CheckpointerRegistry = null
   var bytes = 0
   var entries = 0
   var checkreqs = List.empty [Callback [Unit]]
@@ -50,7 +50,7 @@ private class Checkpointer (kit: DiskKit) {
       entries = 0
       for {
         marks <- drives.mark()
-        _ <- checkpoints.checkpoint()
+        _ <- checkpointers.checkpoint()
         _ <- drives.checkpoint (marks)
       } yield fiber.execute {
         reengage()
@@ -58,9 +58,9 @@ private class Checkpointer (kit: DiskKit) {
     } .run (ignore)
   }
 
-  def launch (checkpoints: CheckpointRegistry): Async [Unit] =
+  def launch (checkpointers: CheckpointerRegistry): Async [Unit] =
     fiber.supply {
-      this.checkpoints = checkpoints
+      this.checkpointers = checkpointers
       if (!checkreqs.isEmpty || config.checkpoint (bytes, entries))
         _checkpoint()
       else

@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package com.treode.disk.edit
+package com.treode.disk
 
 import java.nio.file.Path
 import java.util.logging.{Level, Logger}, Level.{INFO, WARNING}
 
-import com.treode.disk.TypeId
-
-/** A logger that we can stub for testing. */
-private class DiskEvents {
+/** Logging and metrics. Users can connect their own logging and metrics mechanisms. We stub it for
+  * testing.
+  */
+class DiskEvents {
 
   val logger = Logger.getLogger ("com.treode.disk")
 

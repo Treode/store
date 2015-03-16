@@ -55,7 +55,7 @@ private class StubDisk (
       cb (v)
     }}
 
-  def launch (checkpoints: CheckpointRegistry, pages: StubPageRegistry) {
+  def launch (checkpoints: CheckpointerRegistry, pages: StubPageRegistry) {
     checkpointer.launch (checkpoints)
     compactor.launch (pages)
   }

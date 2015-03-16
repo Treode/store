@@ -22,7 +22,7 @@ import com.treode.async.{Async, Callback, Scheduler}
 
 private class LaunchAgent (val kit: DiskKit) extends DiskLaunch {
 
-  private val roots = new CheckpointRegistry
+  private val checkpointers = new CheckpointerRegistry.Builder
   private val pages = new PageRegistry (kit)
   private var open = true
 
@@ -38,7 +38,7 @@ private class LaunchAgent (val kit: DiskKit) extends DiskLaunch {
   def checkpoint (f: => Async [Unit]): Unit =
     synchronized {
       requireOpen()
-      roots.checkpoint (f)
+      checkpointers.add (f)
     }
 
   def handle (desc: PageDescriptor [_], handler: PageHandler): Unit =
@@ -51,5 +51,5 @@ private class LaunchAgent (val kit: DiskKit) extends DiskLaunch {
     synchronized {
       requireOpen()
       open = false
-      kit.launch (roots, pages)
+      kit.launch (checkpointers.result, pages)
     }}
