@@ -14,27 +14,28 @@
  * limitations under the License.
  */
 
-package com.treode.disk
+package com.treode.disk.edit
 
 import com.treode.async.Callback
 import com.treode.buffer.Output
+import com.treode.disk.RecordDescriptor
 
-private abstract class PickledRecords (
+private abstract class PickledRecord (
     val cb: Callback [Unit]
 ) {
   def byteSize: Int
   def write (out: Output)
 }
 
-private object PickledRecords {
+private object PickledRecord {
 
   def apply [R] (
       desc: RecordDescriptor [R],
       entry: R,
       cb: Callback [Unit]
-  ): PickledRecords =
-    new PickledRecords (cb) {
+  ): PickledRecord =
+    new PickledRecord (cb) {
       def byteSize = desc.prec.byteSize (entry)
       def write (out: Output) = desc.prec.pickle (entry, out)
-      override def toString = s"PickledRecords($entry)"
+      override def toString = s"PickledRecord($entry)"
     }}
