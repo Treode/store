@@ -23,8 +23,7 @@ We provide an overview of the Cache class below, including its primary internal 
     1. HTTP library for establishing/managing connection to server (in Python, urllib3)
     2. map for maintaining cache
 - Exceptions: 
-    1. StaleException
-    2. StaleException(Value_time: int)
+    1. StaleException(Read_time: int, Value_time: int)
 
 ## Cache Structure Description
 
@@ -44,15 +43,15 @@ We propose two possible designs for implementing the cache; the preferable of th
 
 The cache is a two-level map of the following type:
 
-    table : key -> value-time -> value : read-time
+    (table, key) -> value-time -> (value, read-time)
 
-In Python, the top-level map is a standard Python dictionary, and the inner map is simply an array of `(value-time, value : read-time)` tuples.
+In Python, the top-level map is a standard Python dictionary, and the inner map is simply an array of `(value-time, value, read-time)` tuples.
 
-Specifically, the `table : key` keys are composed of the concatenation of the table identifier string and the key string.  Each `table:key` maps to an arraylist with entries of the following type:
+Specifically, the `(table, key)` keys are composed of the concatenation of the table identifier string and the key string.  Each `(table, key)` maps to an arraylist with entries of the following type:
 
-    (value-time, value : read-time)   
+    (value-time, value, read-time)   
 
-The cache entries themselves are stored in these arraylists.  The values are tuples derived from the value timestamps and `value : read-time` concatenated strings.  
+The cache entries themselves are stored in these arraylists.  The values are tuples derived from the value timestamps and `(value, read-time)` concatenated strings.  
 
 If the arraylists are unsorted, then `add` is *O(1)*, and `find` (floor), `replace`, and `remove` are each *O(n)*, where `n` is the length of the arraylist.  If the arraylists are sorted (which takes *O(nlogn)*), all the operations are *O(n)*.  Thus, the arraylists do not need to be sorted, as sorting would not improve the asymptotic runtimes of these operations.
 
@@ -60,9 +59,9 @@ Note that the cache can indicate the DB did not have a value for a certain key a
 
 #### Skiplist Implementation
 
-If an appropriate skiplist library is available, the cache can be implemented as a skiplist which supports `floor` and `ceiling` operations.  The cache is then a single-level map and has the following type:
+If a skiplist that supports floor and ceiling operations is available, the cache can be implemented using that. The cache is then a single-level map and has the following type:
 
-    table : key : (Long.Max - ValueTime) -> (value, read-time)
+    (table, key, (Long.Max - ValueTime)) -> (value, read-time)
 
 Here is an example of a [skiplist](https://github.com/sepeth/python-skiplist) library in Python, though it does not support floor and ceiling operations.
 
@@ -92,9 +91,9 @@ Note that these max\_age and no\_cache values also appear in Cache read method, 
 ### write
     write(
         table: string, 
-        op_List: list): value (JSON) throws StaleException  
+        transaction_view_map: (table, key) -> (op, value)): value (JSON) throws StaleException(Rt, Vt)  
 
-The write method sends the op\_List to the DB server as a batch write.  
+The write method sends the [Transaction view's map](#view) to the DB server as a batch write.  
 
 If the server accepts the batch write, the write method also updates the cache to reflect the newly written values.
 
@@ -111,6 +110,8 @@ We use the following HTTP directives (under the HTTP header Cache-Control):
 
 * **max-age**: The max number of seconds between our given read\_timestamp and the read\_timestamp of the entry, i.e., (input read\_timestamp) - (entry read\_timestamp) <= max-age.  In other words, we are willing to read a value that could be stale by at most max-age seconds. 
 
+Note that the max-age directive is intended for intermediate caches; the DB ignores the max-age header value.  It indicates that the user is willing to read a value from the intermediate cache if that value was read from the DB server fewer than `max-age` seconds ago.  (The DB server just gives back the most recent value w.r.t. the timestamp, regardless of whether it satisfies the `max-age` requirement.)
+
 * **no-cache**: Forces cache to send a request to the DB server to retrieve the requested value.  The result cannot just be returned from cache.
 
 An example of usage is below:
@@ -118,11 +119,17 @@ An example of usage is below:
     GET /[table_id_string]/[key_string] HTTP/1.1
     Cache-Control: max-age=3, no-cache
 
-In addition, we use the following custom HTTP header: 
+In addition, we use the following custom HTTP headers: 
 
 * **Read-TxClock**: Contains the user's specified read\_timestamp.  The value returned by the DB server will be the most recent value older than the specified read\_timestamp value.  Note that Read-TxClock is an long (64 bits).
 
 Read-TxClock is specified in microseconds to clarify that it should **not** be *manipulated* as a date.  While applications may display Read-TxClock to users in Date format for clarity, the application must internally maintain Read-TxClock as a long (64 bits) to avoid rounding to seconds. 
+
+* **Value-TxClock**: Contains the value of the entry.  
+
+* **Condition-TxClock**: Included with batch write requests.  All entries included in the batch write must be unchanged since the Condition-TxClock timestamp.
+
+* **Transaction**: The Transaction header includes the `id` and `item` directives, which support [pipelined](#Pipelining) batch writes.  The `id` directive represents the Transaction the message is a component of, and the `item` directive specifies the position of the message contents in the entire batch write (e.g., message 2/3).
 
 Additionally, note that max-age and no-cache are existing HTTP Caching headers specified in [RFC7234](http://tools.ietf.org/html/rfc7234#section-5.2.1), while the read\_timestamp is sent through the Read-TxClock header, a custom HTTP header.
 
@@ -150,9 +157,11 @@ Here is an example of an HTTP read request:
 
 The user is requesting the value of key "star-wars" in the table "movie".  Since this key's value may have changed over time, the user gives a time range for the value they want.  
 
-Specifically, the user wants a value that was written to the DB by time 1421236153024853 microseconds (where time 0 is some arbitrary starting point in the past).  However, the user does not want a value that was written to the DB more than 300 seconds before time 1421236153024853.  Thus, the time range is 
+Specifically, the user wants a value that was written by time 1421236153024853 microseconds (where time 0 is the Unix Epoch).  However, the user does not want a cached value that was read from the DB more than 300 seconds before time 1421236153024853.  Thus, the user is willing to accept a *cached* value in the following time range:
 
     [1421236153024853 - 300, 1421236153024853].  
+
+Otherwise, the user wants the most recent value that was written by time 1421236153024853 microseconds directly from the DB server, not from a cache.
 
 Finally, the "no-cache" indicates that the cache *must* send a read request to the DB server to retrieve this value, even if the cache already has a value satisfying the user's requirements.
 
@@ -164,6 +173,7 @@ The HTTP request for write should be similar to the following:
 
     PUT /table_id_string/key_string HTTP/1.1
     Condition-TxClock: [condition_timestamp_in_milliseconds]
+
     {
         [JSON_value]
     }
@@ -172,6 +182,7 @@ Here is an example of the HTTP write request:
 
     PUT /movie/star-wars HTTP/1.1
     Condition-TxClock: 1368151663681367
+
     {   "title": "Star Wars",
         "cast": [
             { "actor": "Mark Hamill", "role": "Luke Skywalker" },
@@ -193,21 +204,22 @@ Simply wrap the multiple write requests in a JSON array, as shown below.
 
 The rest of the HTTP request remains as described above.
 
+<a name="Pipelining"></a>
 ##### Request Pipelining
 
 Send each item in the batch write to the server as a separate HTTP request.  We indicate in the requests that they are part of a batch write with the item header as shown below in the example two-part batch write:
 
     PUT /movie/star-wars HTTP/1.1
-    X-Item: 1/2
+    Transaction: id=X, item=1/2
 
     { /* movie object */ }
 
     DELETE /movie/stars-war HTTP/1.1
-    X-Item: 2/2
+    Transaction: id=X, item=2/2
 
 Unlike the JSON array batch write method, this Request Pipelining method will allow intermediate HTTP proxies to see that their cache entries for each item in the batch write are invalid.
 
-* **Question(1)**: I don't think Item is a real HTTP header (at least, not in Wikipedia...).  Can we just define a custom header as something like above?
+The `Transaction` header has two directives: `id` and `item`.  The `id` refers to the transaction id which this batch write item is a part of, and `item` refers to the position of this message in the sequence of batch write messages.  Both directive are optional; the server will fill in an arbitrary `id` if one is not specified and set `item` to `1/1` if it is not specified.
 
 ### Responses
 As with the Requests section, please see more information in [OMVCC and Caching](https://forum.treode.com/t/omvcc-and-http-caching/62).
@@ -224,6 +236,7 @@ In the success case, HTTP response for read should be similar to the following:
     Read-TxClock: 1421236153024853
     Value-TxClock: 1368151663681367
     Vary: Request-TxClock
+
     {   "title": "Star Wars",
         "cast": [
             { "actor": "Mark Hamill", "role": "Luke Skywalker" },
@@ -231,7 +244,9 @@ In the success case, HTTP response for read should be similar to the following:
 
 There are several cases in which the HTTP response does not include the JSON-formatted requested value.  Here are those cases:
 
-- **HTTP/1.1 304 Not Modified**: The requested value has not changed since the last request.  Note this response is still valuable to the cache, as it allows the cache to update the read time (R_t) for this entry to the read\_timestamp of this request.  (Between when the value was written and this read\_timestamp, we know the value has not changed.)
+- **HTTP/1.1 304 Not Modified**: This status can occur only if the request includes Condition-TxClock.  On a write, Condition-TxClock means write if the entries have not changed since the given Condition-TxClock, and a 304 status occurs when one of more of the entries have changed.  On a read, Condition-TxClock means read if and only if the specified value(s) have changed since Condition-TxClock, and a 304 status occurs when the value(s) has not changed.  
+
+Note this response is still valuable to the cache, as it allows the cache to update the read time (R_t) for this entry to the read\_timestamp of this request.  (Between when the value was written and this read\_timestamp, we know the value has not changed.)
 
 - **HTTP/1.1 404 Not Found**: The requested value is not in the table.  This response is also valuable to the cache, as the cache can store None (in Python, possibly null in other languages) in the JSON entry for this entry at the given read\_timestamp.  Then future requests see the key had no value at this time without going to the DB server.
 
@@ -255,23 +270,20 @@ In this case, the the client should retry the transaction with a smaller value f
 
 - Parameters: 
     1. cache: Cache (required)
-    2. read\_timestamp: long (64 bits) (read\_timestamp=None)
+    2. read\_timestamp: long (64 bits) (read\_timestamp=current_time)
     3. max\_age: int (max\_age=None)
     4. no\_cache: bool (no\_cache=False)
 - Public Methods: 
-    1. read(table: string, key: string, max\_age=None, no\_cache=False) returns value (JSON) or None
+    1. read(table: string, key: string, max\_age=None, no\_cache=False) returns value (JSON) or None, throws StaleException(Rt, Vt)
     2. write(table: string, key: string, value: JSON) returns None (always succeeds)
     3. delete(table: string, key: string) returns None
-    4. commit() returns None, throws StaleException
+    4. commit() returns None, throws StaleException(Rt, Vt)
 - Internal Objects: 
     1. min\_Rt: int (The minimum read time the Transaction has seen so far, based on values read)
     2. max\_Vt: int (The maximum value time the Transaction has seen so far, based on values read)
-    3. view: map of type table:key -> (op, value)  (All the operations performed by the user during the Transaction)
+    3. view: map of type (table,key) -> (op, value)  (All the operations performed by the user during the Transaction)
 - Exceptions: 
-    1. StaleException
-    2. StaleException(Value_time: int)
-
-* **Question (2)**: I made many of the values above ints, but should they actually be longs (64 bit) to store values derived from the read\_timestamp?
+    1. StaleException(Read_time: int, Value_time: int)
 
 ## Transaction Internal Structure Description
 
@@ -281,7 +293,7 @@ Specifically, every entry in a snapshot of the Treode database has both read and
 
 Then, by the invariant established previously that each entry is guaranteed to be the value in the DB between [V\_t, R\_t], it follows that there was a point in time when the DB contained all the values in the snapshot simultaneously.
 
-The Transaction uses min\_Rt and max\_Vt to maintain this invariant and avoid wasting network time sending commits to the DB server guaranteed to be rejected.  If any Transaction read causes (max\_Vt > min\_Rt), the read method throws a StaleException(Vt), including the value time that caused the violation.  
+The Transaction uses min\_Rt and max\_Vt to maintain this invariant and avoid wasting network time sending commits to the DB server guaranteed to be rejected.  If any Transaction read causes (max\_Vt > min\_Rt), the read method throws a StaleException(Rt, Vt), including the value time that caused the violation and the read time Rt of that entry.  
 
 Note that only bad value times can cause Stale Exceptions.  We prevent bad read times by setting max-age=0, thereby requiring we get the current value.
 
@@ -310,33 +322,34 @@ Since the max age is at most `read_timestamp - max_Vt` for all values read so fa
 
 The Transaction maintains the maximum value time it has seen so far.  On every read, if the value time is greater than max\_Vt, we update max\_Vt.
 
-Note that updating max\_Vt can cause the invariant violation described above, causing the Transaction read method to throw StaleException(Vt).  Intuitively, when reading an entry from the DB, we have no idea when it was last updated until we actually read it.  As a result, we cannot avoid the possibility of violating our consistent snapshot invariant.
+Note that updating max\_Vt can cause the invariant violation described above, causing the Transaction read method to throw StaleException(Rt, Vt).  Intuitively, when reading an entry from the DB, we have no idea when it was last updated until we actually read it.  As a result, we cannot avoid the possibility of violating our consistent snapshot invariant.
 
+<a name="view"></a>
 ### view 
 
-The view maintains the map of operations performed throughout the Transaction.  This map has type table:key -> (op, value).  When the user commits the transactions, each updated value in the view is sent to the cache, which writes the changes through to the DB server via batch write.  (If the view's values are out-of-date with the DB, write will throw a StaleException.)
+The view maintains the map of operations performed throughout the Transaction.  This map has type (table, key) -> (op, value).  When the user commits the transactions, each updated value in the view is sent to the cache, which writes the changes through to the DB server via batch write.  (If the view's values are out-of-date with the DB, write will throw a StaleException.)
 
 Note that every value read from the cache during the Transaction is stored in this map.  Even values that do not change within the Transaction are stored in the map with the *hold* operation, as we explain below.
 
 Unlike the Cache, the Transaction does not maintain a history of values.  Rather, it stores the user's operations on each entry.
 
 Consider an arbitrary entry in the DB of the form 
-    table:key -> (op, value)  
+    (table, key) -> (op, value)  
 The possible ops in the map are the following:
 
 #### create
 Add a new entry to the DB with key *key* and value *value*.
 
 #### hold
-Maintain the current value in the DB.  The *hold* operation does not require a value, i.e., `table:key -> (hold, None)`, because we are not changing the value.
+Maintain the current value in the DB.  The *hold* operation maintains the current value of the DB, as `(table, key) -> (hold, old_value)`.
 
-The hold operation exists because the computed output of our Transaction may be dependent on any value that we read from Cache during the Transaction.  Therefore, the success of the Transaction depends on these values having NOT changed in the DB between the time we read and commit them.  If these value have changed, the Transaction is stale and should throw a StaleException.  The *hold* operation allows us to maintain this invariant.
+The hold operation exists because the computed output of our Transaction may be dependent on any value that we read from Cache during the Transaction.  Therefore, the success of the Transaction depends on these values having NOT changed in the DB between the time we read and commit them.  If these value have changed, the Transaction is stale and should throw a StaleException(Rt, Vt).  The *hold* operation allows us to maintain this invariant.
 
 #### update
 Replace the given key's old value with the new value provided.
 
 #### delete
-Remove the given key from the database.  The *delete* operation does not require a value, i.e., `table:key -> (delete, None)`, because we are not changing the value.
+Remove the given key from the database.  The *delete* operation does not require a value, i.e., `(table, key) -> (delete, None)`, because we are not changing the value.
 
 ## Transaction Public Methods
 
@@ -347,9 +360,11 @@ Here is the hierarchy of cache-lookup on a user request.  Each of the methods be
         table: string, 
         key: string, 
         max_age=None, 
-        no_cache=False) returns value (JSON) or None
+        no_cache=False) returns value (JSON) or None, throws StaleException(Rt, Vt)
 
 The read method first attempts to read the specified key from the view, then from cache, and finally from the DB server.  If read finds the requested value, it stores it in the view; otherwise, it returns None and stores the key had no value (in Python, None) for that read_timestamp satisfying the given parameters.
+
+If read finds a value with value time V_t > R_t any previous read time of any entry involved in the Transaction, it throws a StaleException(Rt, Vt), including the value time which caused the exception and the read time of the corresponding entry.
 
 Note that all Transaction reads have the same read timestamp, which is specified in the constructor (unlike the Cache read method).
 
@@ -359,11 +374,11 @@ Note that all Transaction reads have the same read timestamp, which is specified
         key: string, 
         value: JSON) returns None (always succeeds)
 
-The write method updates the Transaction view to reflect the specified write.  (They key immediately has its "updated" status set to True.)  Note that writes never immediately fail (are never immediately rejected) because they are only reflected in the view until we commit the Transaction.
+The write method updates the Transaction view to reflect the specified write.  (The transaction view operation is set to *update* to reflect this change.)  Note that writes never immediately fail (are never immediately rejected) because they are only reflected in the view until we commit the Transaction.
 
-Write adds the new value to a map of type table:key -> (op, value).  In this case, the op is *write*, and the value is whatever the user provides.
+Write adds the new value to a map of type (table, key) -> (op, value).  In this case, the ops are *write* and *update*, and the value is whatever the user provides.  (We can simply add two operation entries in the view, one for the *write* and a second for the *update*.)
 
-When the user eventually commits the Transaction, we pass this map to the Cache write method.  The Cache's write method iterates through the values in the map and sends a batch write operation to the DB server, where the batch write is generally a list of the form [(table, key, op, value)].  (Note that some operations, such as delete, do not require values.)
+When the user eventually commits the Transaction, we pass this map to the Cache write method.
 
 ### delete
     delete(
@@ -373,8 +388,8 @@ When the user eventually commits the Transaction, we pass this map to the Cache 
 If the key exists in the Transaction view, set its "deleted" boolean to True.  Otherwise, add the key to the view with "deleted" set to True and the value None.
 
 ### commit
-    commit() returns None, throws StaleException
+    commit() returns None, throws StaleException(Rt, Vt)
 
-As described above, the view maintains a map of type table:key -> (op, value), which stores all operations the user performs on the DB via the Transaction. 
+As described above, the view maintains a map of type (table, key) -> (op, value), which stores all operations the user performs on the DB via the Transaction. 
 
 To commit, we simply pass this map to the Cache write method, which iterates through the map entries and constructs a batch write composed of all its entries.  Finally, it sends this batch write to the DB server.
