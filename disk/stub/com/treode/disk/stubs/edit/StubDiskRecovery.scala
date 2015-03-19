@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-package com.treode.disk
+package com.treode.disk.stubs.edit
 
-import java.nio.file.{OpenOption, Path}
+import com.treode.async.Async
+import com.treode.disk.{DiskLaunch, DiskRecovery}
+import com.treode.disk.stubs.StubDiskDrive
 
-import com.treode.async.Scheduler
-import com.treode.async.io.File
+trait StubDiskRecovery extends DiskRecovery {
 
-/** Something that we can stub for testing. */
-private trait FileSystem {
-
-  /** See `File.open`. */
-  def open (path: Path, opts: OpenOption*) (implicit scheduler: Scheduler): File
+  def reattach (disk: StubDiskDrive): Async [DiskLaunch]
 }

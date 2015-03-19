@@ -19,104 +19,172 @@ package com.treode.disk
 import java.nio.file.Path
 import com.treode.async.{Async, Callback, Scheduler}
 
-/** The Disk System.
+/** ==The Disk System==
   *
-  * The disk system provides a write log and write-once pages. It runs checkpoints to reclaim log
-  * space. It runs a segment cleaner to compact useful pages and collect garbage.
+  * The disk system provides a write log and write-once pages. Records in the write log are
+  * replayed at system restart, and pages can be read at anytime after restart. The disk system
+  * runs checkpoints to reclaim log space, and it coordinates compactors to defragment and reclaim
+  * page space.
   *
-  * ## Overview
+  * ==Overview==
   *
   * The log provides a fast mechanism to record short entries on disk. The pages provide a
   * mechanism to save larger items. You use the two together to implement a persistent store.
   *
-  * Consider a table with get and put. The table can keep the most recent values in memory. When a
-  * new value is put, the table can record it to memory and to the log. When recovering the system,
-  * the log will be replayed. If the log were never truncated, the table could recover its entire
-  * memory image during log replay. However, disks have limits and the log cannot grow without
-  * bound.
+  * Consider a table with get and put. Although we speak of ''tables'' here, documentation
+  * throughout the rest of the disk system uses the more generic term ''object''. The table keeps
+  * the most recent values in memory. When a new value is put, the table records it to memory and
+  * to the log (see [[#record Disk.record]]). When restarting the system, the log will be replayed
+  * so that the table can recover its values in memory (see
+  * [[DiskRecovery#replay DiskRecovery.replay]]).
   *
-  * When the log gets long, the disk system will run a checkpoint before dropping old log entries.
-  * At that time, the table should write a snapshot of its memory image to a page. The table can
-  * partially rebuild its image during replay. After that, the table can fetch the most recent
-  * snapshot from the page, then it can apply the partial rebuild. Now the memory image has been
-  * recovered. The table must register a checkpont method for this process.
+  * The log cannot grow without bound. To truncate it, the disk system will run a checkpoint, and
+  * then it will drop old log entries. Druing checkpoint, the table will write a snapshot of its
+  * memory to a page (see [[DiskLaunch#checkpoint DiskLaunch.checkpoint]]), and record the page's
+  * location to the log. To recover during a later log replay, the table will construct recent
+  * values in memory and the position of the snapshot.
   *
-  * After many pages have been written, the cleaner will probe the table to learn which pages are
-  * in use. It will then decide to reclaim disk space. That space may contain some garbage pages
-  * and some live pages. The cleaner will ask the table to compact its live pages, at which time
-  * the table must rewrite them to a new location. The table must register a [[PageHandler]] for
-  * this process.
+  * The table will build many snapshots overtime. To find a key, it will need to scan them linearly
+  * until it finds the snapshot that contains that key. To keep the list of snapshots short, the
+  * table will want to periodically merge snapshots, write the merged data to new pages, and
+  * release the old pages (see [[#release Disk.release]]). This process is called compaction.
   *
-  * That is, broadly speaking, how a persistent store interacts with the log, its checkpointer,
-  * the write-once pages, and their cleaner.
+  * This disk system coordinates compactors so that only one runs at a time. The table may schedule
+  * itself for compaction (see [[Disk#compact Disk.compact]]). The disk system may also schedule
+  * compaction when it wants to defragment disk space. Either way, when the disk system is ready
+  * to compact the table, it will invoke the registered compactor (see
+  * [[DiskLaunch#compact DiskLaunch.compact]]).
   *
-  * ## Recovery
+  * Individual pages are identified by their [[Position]]; groups of pages are identified by a
+  * [[TypeId]], [[ObjectId]] and generation (long). The [[#write write method]] returns the
+  * position at which the page was written, and the [[#read read method]] uses that to return the
+  * page. The compactor does not identify individual pages; instead, it identifies groups of pages
+  * that belong to a generation. A table will manage generations as it sees fit, but generally
+  * each checkpoint will be a new generation, and each compaction will be a new generation.
   *
-  * Disk recovery follows something a bit like the builder pattern, however it proceeds in phases,
-  * so there are multiple builders. In the recovery phase, you first register log replayers, and
-  * then reattach one or more disks. The system replays the logs from those disks, and then it
-  * yields a launcher. In the launch phase you register checkpointers and page handlers, and then
-  * launch the disk system. At that time, the system starts the checkpointer and cleaner.
+  * ==Recovery==
   *
-  * ## Allocation and Reclaimation
+  * Recovering the disk uses a two-phase builder pattern. To create an instance of the `Disk`
+  * class
+  *
+  * 1. Create a [[DiskRecovery]] using [[Disk#recover Disk.recover]].
+  *
+  * 2. Register methods to replay log entries (see [[DiskRecovery#replay DiskRecovery.replay]]).
+  *
+  * 3. Reattach one or more disk drives (see [[DiskRecovery#reattach DiskRecovery.reattach]]). This
+  * replays log entries, and then yields a [[DiskLaunch]].
+  *
+  * You must register all replayers before reattaching any disks. An instance of `Disk` is inside
+  * `DiskLaunch`. At this time the disk system is ready to [[#record record]] log entries, and to
+  * [[#read read]]) and [[#write write]] pages. It is not yet ready to checkpoint or compact
+  * objects.
+  *
+  * 4. Register methods to checkpoint and compact objects (see
+  * [[DiskLaunch#checkpoint DiskLaunch.checkpoint]] and [[DiskLaunch#compact DiskLaunch.compact]]).
+  * Also, claim pages (see [[DiskLaunch#claim DiskLaunch.claim]]).
+  *
+  * Your objects must claim generations of pages; unclaimed generations will be reclaimed by the
+  * disk system; that is, they will be reused and overwritten. Why this step? The object may be
+  * in the middle of writing a generation when the system crashes. The disk system may have a
+  * record of those writes, yet the object may not. This step exists to identify pages which the
+  * disk system knows about, yet the user structures do not, because of a system crash.
+  *
+  * 5. Launch the disk system (see [[DiskLaunch#launch DiskLaunch.launch]]). The disk system will
+  * now run checkpointers and compactors.
+  *
+  * You must complete this last step, or disk space will never be reclaimed.
+  *
+  * ==Allocation and Reclaimation==
   *
   * The disk system divdes a disk drive into segments. The log writer and page writer each
   * allocate a segment for themselves. They write until the segment is full, and then request
   * another segment. The size of a segment is configured per disk; see [[DriveGeometry]].
   *
-  * The checkpointer runs periodically; see [[Disk.Config]]. The checkpointer marks the current
+  * The checkpointer runs periodically; see [[DiskConfig]]. The checkpointer marks the current
   * log position, then invokes every registered checkpoint method, and then drops entries upto
   * the marked position. When the checkpointer has dropped all log entries in the segment, it frees
   * the segment.
   *
-  * The segment cleaner runs periodically; see [[Disk.Config]]. It probes the pages of allocated
-  * segments to estimate the number of live bytes in each. It chooses the segments with the least
-  * number of live bytes and compacts the live pages on them, which copies the live data to
-  * someplace else. Finally, it the frees the segment. The cleaner uses registered [[PageHandler]]s
-  * to assist probing and compacting.
+  * The compactor runs periodically; see [[DiskConfig]]. It probes the pages of allocated segments
+  * to estimate the number of live bytes in each. It chooses the segments with the least number of
+  * live bytes and compacts the live pages on them; that copies the live data somewhere else.
+  * As the objects compact themselves, they invoke [[#release release]]. When all pages on a
+  * segment have been released, it will be scheduled for reclaimation.
   *
-  * Readers may have obtain pointers to live pages before the compactor begins, and they may hold
-  * those pointers while they data is copied elsewhere. However, those readers remain unaware of
-  * the relocation. To prevent the compactor from freeing the formerly live pages while readers
-  * still hold pointers, the readers join a release epoch, and they leave that epoch when they
-  * are done. The compactor adds reclaimation tasks to the release epoch, and those tasks are
-  * delayed until all readers have left the epoch.
-  *
-  * ## Usage
-  *
-  * To work with the write log, you use a descriptor to write entries, and to register a replayer
-  * during recovery. You must also register a checkpoint method during launch. The checkpoint
-  * method must persist data to pages so that log entries can be dropped.
-  *
-  * To work with the write-once pages, you use a descriptor to write a page, and to read it
-  * afterward. You must register a page handler during launch. The page handler must estimate live
-  * bytes, and it must compact pages when requested.
+  * The segment will not be reclaimed, reused and overwritten immediately, since there may be
+  * readers in the system that acquired pointers (`Position`) to pages in that segment before the
+  * object compacted and released them. Readers join a release epoch (see [[#join Disk.join]]) to
+  * prevent reclaimation of pages until they complete.
   */
 trait Disk {
 
-  /** See [[RecordDescriptor#record]]. */
+  /** Record an entry into the write log.
+    *
+    * '''Durability''': When the async completes, the entry has reached disk, and it will be
+    * replayed during system recovery. However, checkpoints clean old entries from the log.
+    *
+    * '''Checkpoints''': Most entries logged before the most recent checkpoint will not be
+    * replayed, but a few may. All entries logged after the most recent checkpoint will be
+    * replayed. Typically, an object includes a generation number in the log entry; that number
+    * allows the replayer to determine if log entry came before or after a checkpoint.
+    *
+    * '''Ordering''': When the async of a first log entry has completed before record has been
+    * invoked with a second log entry, the first will be replayed before the second. When the
+    * async of a first log entry has yet to complete and record is invoked with a second, the
+    * second may be replayed before the first. Typically, an object uses locks to prevent
+    * conflicting updates, so this semi-predictable replay order is sufficient.
+    *
+    * @param desc The descriptor for the record.
+    * @param entry The entry to record.
+    */
   def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit]
 
-  /** See [[PageDescriptor#read]]. */
+  /** Read a page.
+    *
+    * @param desc The descriptor for the page.
+    * @param pos The position to read from.
+    */
   def read [P] (desc: PageDescriptor [P], pos: Position): Async [P]
 
-  /** See [[PageDescriptor#write]]. */
+  /** Write a page.
+    *
+    * The disk system uses `(desc.id, obj, gen)` to track allocation, and to manage compaction.
+    *
+    * @param desc The descriptor for the page.
+    * @param obj The ID of the object.
+    * @param gen The generation of the page.
+    * @param page The data.
+    */
   def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position]
 
-  /** See [[PageDescriptor#compact]]. */
+  /** Schedule an object for compaction.
+    *
+    * An object should not spontaneously compact itself; it should invoke this method. The disk
+    * system will eventually invoke the compact method registered during launch (see
+    * [[DiskLaunch#compact DiskLaunch.compact]]).  This achieves two things: the disk system can
+    * control the number of compactions that are in flight at the same time, and the disk system
+    * can combine compaction desired by the object with that desired by the disk system.
+    *
+    * @param desc The descriptor for the object.
+    * @param obj The ID of the object to compact.
+    */
   def compact (desc: PageDescriptor [_], obj: ObjectId): Unit
 
-  /** Join a release epoch, and leave it when the async task completes. Pages which are live at the
-    * beginning of the epoch will remain available, even if they should become unreachable during
-    * the epoch. The cleaner may discover that pages are unreachable during the epoch, but will not
-    * release them until every party that joined the epoch has left it.
+  /** Release the pages held by the object's generations.
     *
-    * The task may directly have disk positiions ([[Position]]), for example in a local variable of
-    * a method or in a member field of an object. It may also indirectly have disk positions, for
-    * example it may directly have the position of the root of an index tree. All these pages are
-    * effectively reachable from the task. While a part of the release epoch, the task may safely
-    * read all pages that is has directly and indirectly. They will not be reclaimed and
-    * overwritten until the task as left the epoch.
+    * @param desc The descriptor for the object.
+    * @param obj The ID of the object.
+    * @param gens The generations to release.
+    */
+  def release (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit
+
+  /** Join a release epoch, and leave it when the async task completes. Pages which are live at the
+    * beginning of the epoch will remain available, even if they scheduled for release during the
+    * epoch.
+    *
+    * The task may have disk pointers to pages ([[Position]]), for example in a local variable of
+    * a method or in a member field of an object. It may also indirectly have pointers, for example
+    * through a tree of index nodes. All these pages will remain available until the task completes.
     */
   def join [A] (task: Async [A]): Async [A]
 }
@@ -147,7 +215,7 @@ object Disk {
     *
     * Setup the disk system with one or more disks; all disks get the same geometry. This does
     * not yield a [[Disk]] system to use immediately. It only writes superblocks and metadata
-    * for disk recovery. After initializing the disks, call [[#recover]].
+    * for disk recovery. After initializing the disks, call [[Disk#recover Disk.recover]].
     *
     * The superblock bits provided to this initialization must also be supplied to recovery.
     *
