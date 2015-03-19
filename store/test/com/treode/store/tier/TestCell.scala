@@ -18,6 +18,7 @@ package com.treode.store.tier
 
 import com.treode.store.Cell
 
+/** Convert the production `Cell` to something that's easier to handle in testing. */
 private class TestCell (val key: Int, val value: Option [Int]) {
 
   def this (cell: Cell) = this (cell.key.int, cell.value map (_.int))

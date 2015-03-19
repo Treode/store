@@ -24,6 +24,7 @@ import com.treode.store.{Bytes, StoreConfig, TableId, TxClock}
 import Async.supply
 import TestTable.{checkpoint, compact, delete, descriptor, put}
 
+/** Wrap the production `SynthMedic` with something that's easier to handle in testing. */
 private class TestMedic (
     id: TableId
 ) (implicit
@@ -32,7 +33,7 @@ private class TestMedic (
     config: StoreConfig
 ) extends TestTable.Medic {
 
-  val medic = TierMedic (descriptor, id.id)
+  val medic = new SynthMedic (descriptor, id.id)
 
   put.replay { case (gen, key, value) =>
     medic.put (gen, Bytes (key), TxClock.MinValue, Bytes (value))

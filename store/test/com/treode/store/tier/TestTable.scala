@@ -24,8 +24,8 @@ import com.treode.store.{Bytes, Residents, StorePicklers, TxClock}
 
 import Async.{guard, when}
 
-private class TestTable (table: TierTable) (implicit disk: Disk)
-extends PageHandler {
+/** Wrap the production `SynthTable` with something that's easier to handle in testing. */
+private class TestTable (table: SynthTable) (implicit disk: Disk) extends PageHandler {
 
   def get (key: Int): Async [Option [Int]] = guard {
     for (cell <- table.get (Bytes (key), TxClock.MaxValue))

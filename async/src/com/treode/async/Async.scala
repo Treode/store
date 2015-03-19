@@ -296,6 +296,10 @@ object Async {
       case t: Throwable => _fail (t)
     }
 
+  /** Run `f` simultaneously `n` times. Simultaneously launch `n` instances of the asynchrnous
+    * operation `f`, and complete this asynchronous operation after the `n` instances of `f` have
+    * all completed. Ignore the results from each instance.
+    */
   def count [A] (n: Int) (f: => Async [A]): Async [Unit] =
     async { cb =>
       val latch = new CountingLatch [A] (cb)
@@ -304,6 +308,10 @@ object Async {
         f run (latch)
     }
 
+  /** Run `f` simultaneously `n` times. Simultaneously launch `n` instances of the asynchrnous
+    * operation `f`, and complete this asynchronous operation after the `n` instances of `f` have
+    * all completed. Collect the result from each instance in the order that they finish.
+    */
   def collect [A] (n: Int) (f: => Async [A]) (implicit m: Manifest [A]): Async [Seq [A]] =
     async { cb =>
       val latch = new CasualLatch (cb)
@@ -312,6 +320,10 @@ object Async {
         f run (latch)
     }
 
+  /** Run `f` simultaneously `n` times. Simultaneously launch `n` instances of the asynchrnous
+    * operation `f`, and complete this asynchronous operation after the `n` instances of `f` have
+    * all completed. Collect the result from each instance in the order that they were launched.
+    */
   def collate [A] (n: Int) (f: Int => Async [A]) (implicit m: Manifest [A]): Async [Seq [A]] =
     async { cb =>
       val latch = new ArrayLatch (cb)

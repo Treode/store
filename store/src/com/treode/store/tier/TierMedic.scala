@@ -30,8 +30,6 @@ private [store] trait TierMedic {
 
   def compact (meta: TierTable.Compaction)
 
-  def checkpoint (meta: TierTable.Meta)
-
   def checkpoint (meta: TierTable.Checkpoint)
 
   def close () (implicit launch: DiskLaunch): TierTable
