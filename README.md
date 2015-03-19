@@ -28,7 +28,7 @@ resolvers += Resolver.url (
     "treode-oss",
     new URL ("https://oss.treode.com/ivy")) (Resolver.ivyStylePatterns)
 
-libraryDependencies += 
+libraryDependencies +=
     "com.treode" %% "store" % "0.2.0" % "compile;test->stubs"
 ```
 
@@ -37,14 +37,14 @@ libraryDependencies +=
 
 - [User Docs][user-docs]
 - [API Docs][api-docs]
-- [Presentation at Box, Dec 8 2014][presentation-2014-12-08]
+- [Presentation for the SF Bay Chapter of the ACM, Mar 18 2015][presentation-2015-03-18]
 
 
 ## Getting in Touch
 
 - [Online Forum][forum] on Discourse
 - [Chat Room][online-chat] on HipChat
-- \#treode on StackOverflow: 
+- \#treode on StackOverflow:
   [Browse questions asked][stackoverflow-read] or [post a new one][stackoverflow-ask]
 - [Email](mailto:questions@treode.com)
 
@@ -111,7 +111,7 @@ See the [Contributor Category][forum-contributor] of the [Online Forum][forum] f
 
 [online-chat]: http://www.hipchat.com/giwb5oIkz "Chat Room for Treode Users and Developers"
 
-[presentation-2014-12-08]: http://goo.gl/HwZ81X "Presentation at Box, Dec 8 2014"
+[presentation-2015-03-18]: http://goo.gl/le0rjT "Presentation at for the SF Bay Chapter of the ACM, Mar 18 2015"
 
 [stackoverflow-read]: http://stackoverflow.com/questions/tagged/treode "Read questions on Stack Overflow tagged with treode"
 
