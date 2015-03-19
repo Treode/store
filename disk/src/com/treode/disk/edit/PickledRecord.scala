@@ -18,9 +18,10 @@ package com.treode.disk.edit
 
 import com.treode.async.Callback
 import com.treode.buffer.Output
-import com.treode.disk.RecordDescriptor
+import com.treode.disk.{RecordDescriptor,TypeId}
 
 private abstract class PickledRecord (
+    val tid: TypeId,
     val cb: Callback [Unit]
 ) {
   def byteSize: Int
@@ -34,7 +35,7 @@ private object PickledRecord {
       entry: R,
       cb: Callback [Unit]
   ): PickledRecord =
-    new PickledRecord (cb) {
+    new PickledRecord (desc.id, cb) {
       def byteSize = desc.prec.byteSize (entry)
       def write (out: Output) = desc.prec.pickle (entry, out)
       override def toString = s"PickledRecord($entry)"
