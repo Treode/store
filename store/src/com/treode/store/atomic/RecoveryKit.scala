@@ -31,7 +31,7 @@ import com.treode.store.tier.TierMedic
 import Async.{latch, supply}
 import Callback.ignore
 import JavaConversions._
-import TimedStore.{checkpoint, checkpointV0, compact, receive}
+import TimedStore.{checkpoint, compact, receive}
 import WriteDeputy._
 
 private class RecoveryKit (implicit
@@ -80,10 +80,6 @@ private class RecoveryKit (implicit
 
   compact.replay { case (tab, meta) =>
     tstore.compact (tab, meta)
-  }
-
-  checkpointV0.replay { case (tab, meta) =>
-    tstore.checkpoint (tab, meta)
   }
 
   checkpoint.replay { case (tab, meta) =>

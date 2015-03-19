@@ -177,11 +177,6 @@ private object TimedStore {
     RecordDescriptor (0x4B5391ACA26DD90BL, tuple (tableId, tierCompaction))
   }
 
-  val checkpointV0 = {
-    import AtomicPicklers._
-    RecordDescriptor (0x1DB0E46F7FD15C5DL, tuple (tableId, tierMeta))
-  }
-
   val checkpoint = {
     import AtomicPicklers._
     RecordDescriptor (0xDEA0D8CAC3405C79L, tuple (tableId, tierCheckpoint))

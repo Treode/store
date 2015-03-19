@@ -105,11 +105,6 @@ private object Acceptors {
     RecordDescriptor (0x26A32F6C3BB8E697L, tierCompaction)
   }
 
-  val checkpointV0 = {
-    import PaxosPicklers._
-    RecordDescriptor (0x42A17DC354412E17L, tierMeta)
-  }
-
   val checkpoint = {
     import PaxosPicklers._
     RecordDescriptor (0x6D77917031E5416CL, tierCheckpoint)

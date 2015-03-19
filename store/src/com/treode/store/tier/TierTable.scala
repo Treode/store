@@ -54,8 +54,6 @@ import TierTable.{Checkpoint, Compaction}
   */
 private [store] trait TierTable {
 
-  def typ: TypeId
-
   def id: TableId
 
   def get (key: Bytes, time: TxClock): Async [Cell]
@@ -91,10 +89,15 @@ private [store] trait TierTable {
 
   def probe (gens: Set [Long]): Async [Set [Long]]
 
+  /** Schedule the table for compaction. */
   def compact()
 
+  /** Compact the table, compacting at least the given generations, and preserving only the
+    * resident keys.
+    */
   def compact (gens: Set [Long], residents: Residents): Async [Option [Compaction]]
 
+  /** Checkpoint the table, preserving only the resident keys. */
   def checkpoint (residents: Residents): Async [Checkpoint]
 
   def digest: TableDigest
@@ -145,26 +148,6 @@ private [store] object TierTable {
       import StorePicklers._
       wrap (long, Tiers.pickler)
       .build (v => new Checkpoint (v._1, v._2))
-      .inspect (v => (v.gen, v.tiers))
-    }}
-
-  // TODO: Remove after release of 0.2.0.
-  // Meta remains to replay logs from a pre 0.2.0 database.
-  class Meta (
-    private [tier] val gen: Long,
-    private [tier] val tiers: Tiers
-  ) {
-
-    override def toString: String =
-      s"TierTable.Meta($gen, $tiers)"
-  }
-
-  object Meta {
-
-    val pickler = {
-      import StorePicklers._
-      wrap (ulong, Tiers.pickler)
-      .build (v => new Meta (v._1, v._2))
       .inspect (v => (v.gen, v.tiers))
     }}
 

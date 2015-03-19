@@ -64,6 +64,7 @@ class Atlas private (
   def moving: Boolean =
     cohorts exists (_.moving)
 
+  /** Determine which cohorts reside on the given host. */
   private [store] def residents (host: HostId): Residents = {
     val nums = for ((c, i) <- cohorts.zipWithIndex; if c.hosts contains host) yield i
     new Residents (nums.toSet, cohorts.size - 1)

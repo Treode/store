@@ -23,7 +23,7 @@ import com.treode.disk.{DiskLaunch, Position}
 import com.treode.store.{Bytes, Cell, Key, StoreConfig, TableId, TxClock}
 
 import SynthTable.{genStepBits, genStepMask, genStepSize}
-import TierTable.{Checkpoint, Compaction, Meta}
+import TierTable.{Checkpoint, Compaction}
 
 private class SynthMedic (
     desc: TierDescriptor,
@@ -125,24 +125,6 @@ private class SynthMedic (
       writeLock.unlock()
     }}
 
-  def checkpoint (meta: Meta) {
-    writeLock.lock()
-    try {
-      val mg = meta.gen >> genStepBits
-      val tg = this.gen >> genStepBits
-      if (mg == tg - 1) {
-        secondary = newMemTier
-      } else if (mg >= tg) {
-        gen = (mg+1) << genStepBits
-        primary = newMemTier
-        secondary = newMemTier
-      }
-      if (meta.gen > tiers.maxGen || meta.tiers > tiers)
-        tiers = meta.tiers
-    } finally {
-      writeLock.unlock()
-    }}
-
   def checkpoint (meta: Checkpoint) {
     writeLock.lock()
     try {
@@ -160,7 +142,7 @@ private class SynthMedic (
       writeLock.unlock()
     }}
 
-  def close () (implicit launch: DiskLaunch): TierTable = {
+  def close () (implicit launch: DiskLaunch): SynthTable = {
     import launch.disk
 
     writeLock.lock()

@@ -27,7 +27,7 @@ import com.treode.store.{Bytes, Library, StoreConfig, TxClock}
 import com.treode.store.tier.TierMedic
 
 import Async.supply
-import Acceptors.{checkpoint, checkpointV0, compact, receive}
+import Acceptors.{checkpoint, compact, receive}
 import Acceptor.{accept, close, grant, open, reaccept}
 import JavaConversions._
 
@@ -77,10 +77,6 @@ private class RecoveryKit (implicit
 
   compact.replay { meta =>
     archive.compact (meta)
-  }
-
-  checkpointV0.replay { meta =>
-    archive.checkpoint (meta)
   }
 
   checkpoint.replay { meta =>
