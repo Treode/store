@@ -16,12 +16,14 @@
 
 package com.treode.store.tier
 
+import scala.language.existentials
+
 import com.treode.async.{Async, Callback, Scheduler}
-import com.treode.disk.{Disk, TypeId}
+import com.treode.disk.{Disk, PageDescriptor, TypeId, ObjectId}
 import com.treode.store._
 
 import Async.async
-import TierTable.{Checkpoint, Compaction}
+import TierTable.{Checkpoint, Compaction, Release}
 
 /** A log structured merge tree.
   *
@@ -95,7 +97,7 @@ private [store] trait TierTable {
   /** Compact the table, compacting at least the given generations, and preserving only the
     * resident keys.
     */
-  def compact (gens: Set [Long], residents: Residents): Async [Option [Compaction]]
+  def compact (gens: Set [Long], residents: Residents): Async [Option [(Compaction, Release)]]
 
   /** Checkpoint the table, preserving only the resident keys. */
   def checkpoint (residents: Residents): Async [Checkpoint]
@@ -104,6 +106,8 @@ private [store] trait TierTable {
 }
 
 private [store] object TierTable {
+
+  case class Release (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long])
 
   /** Records a compaction in the write log.
     *

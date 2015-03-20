@@ -18,14 +18,14 @@ package com.treode.store.tier
 
 import com.treode.async.{Async, BatchIterator}
 import com.treode.async.stubs.StubScheduler
-import com.treode.async.stubs.implicits._
 import com.treode.disk.{Disk, DiskLaunch, ObjectId, PageHandler, RecordDescriptor}
-import com.treode.store.{Bytes, Residents, StorePicklers, TxClock}
+import com.treode.store.{Bytes, Residents, StorePicklers, TableId, TxClock}
 
 import Async.{guard, when}
 
 /** Wrap the production `SynthTable` with something that's easier to handle in testing. */
-private class TestTable (table: SynthTable) (implicit disk: Disk) extends PageHandler {
+private class TestTable (id: TableId, table: SynthTable) (implicit disk: Disk)
+extends PageHandler {
 
   def get (key: Int): Async [Option [Int]] = guard {
     for (cell <- table.get (Bytes (key), TxClock.MaxValue))
@@ -35,12 +35,13 @@ private class TestTable (table: SynthTable) (implicit disk: Disk) extends PageHa
   def iterator: BatchIterator [TestCell] =
     table.iterator (Residents.all) .map (new TestCell (_))
 
-  def toSeq  (implicit scheduler: StubScheduler): Seq [(Int, Int)] =
-    for (c <- iterator.toSeq.expectPass(); if c.value.isDefined)
-      yield (c.key, c.value.get)
+  def toSeq: Async [Seq [(Int, Int)]] =
+    for (cs <- iterator.toSeq) yield
+      for (c <- cs; if c.value.isDefined)
+        yield (c.key, c.value.get)
 
-  def toMap (implicit scheduler: StubScheduler): Map [Int, Int] =
-    toSeq.toMap
+  def toMap: Async [Map [Int, Int]] =
+    toSeq map (_.toMap)
 
   def put (key: Int, value: Int): Async [Unit] = guard {
     val gen = table.put (Bytes (key), TxClock.MinValue, Bytes (value))
@@ -56,10 +57,17 @@ private class TestTable (table: SynthTable) (implicit disk: Disk) extends PageHa
     table.probe (gens)
   }
 
+  def gens: Set [Long] =
+    table.gens
+
   def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] = guard {
+    assert (obj.id == id.id)
     for {
-      meta <- table.compact (gens, Residents.all)
-      _ <- when (meta) (TestTable.compact.record (_))
+      result <- table.compact (gens, Residents.all)
+      _ <- when (result) { case (compaction, release) =>
+        for (_ <- TestTable.compact.record (compaction))
+          yield disk.release (release.desc, release.obj, release.gens)
+      }
     } yield ()
   }
 

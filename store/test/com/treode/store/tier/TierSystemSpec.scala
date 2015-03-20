@@ -18,81 +18,97 @@ package com.treode.store.tier
 
 import scala.util.Random
 
-import com.treode.async.Async
+import com.treode.async.{Async, Scheduler}, Async.{async, supply}
 import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
-import com.treode.async.stubs.implicits._
-import com.treode.disk.stubs.{CrashChecks, StubDisk, StubDiskDrive}
-import com.treode.store.{Bytes, StoreTestConfig}
+import com.treode.disk.{DiskLaunch, DiskRecovery}
+import com.treode.disk.stubs.edit.{StubDisk, StubDiskChecks}
+import com.treode.store.{Bytes, StoreConfig, StoreTestConfig, TableId}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
-import Async.async
 import TierTestTools._
 
-class TierSystemSpec extends FreeSpec with CrashChecks {
+class TierSystemSpec extends FreeSpec with StubDiskChecks {
 
-  val ID = 0xC8
+  private class TableTracker (id: TableId, nkeys: Int) (implicit config: StoreConfig)
+  extends Tracker {
 
-  def crashAndRecover (
-      nkeys: Int,
-      nputs: Int,
-      nbatches: Int
-  ) (implicit
-      random: Random,
-      config: StoreTestConfig
-  ) = {
-    import config._
+    type Medic = TestMedic
+    type Struct = TestTable
 
-    val tracker = new TableTracker
-    val diskDrive = new StubDiskDrive
+    private var attempted = Map.empty [Int, Option [Int]] .withDefaultValue (None)
+    private var accepted = Map.empty [Int, Option [Int]] .withDefaultValue (None)
 
-    crash.info (s"crashAndRecover ($nkeys, $nputs, $nbatches, $config)")
+    def recover () (implicit random: Random, scheduler: Scheduler, recovery: DiskRecovery): Medic =
+      new TestMedic (id)
 
-    .setup { implicit scheduler =>
-      implicit val recovery = StubDisk.recover()
-      val medic = new TestMedic (ID)
-      val launch = recovery.reattach (diskDrive) .expectPass()
-      val rawtable = medic.launch (launch) .expectPass()
-      launch.launch()
-      val table = new TrackedTable (rawtable, tracker)
-      for (_ <- (0 until nbatches) .async)
-        table.putAll (random.nextPut (nkeys, nputs): _*)
+    def launch (medic: Medic) (implicit launch: DiskLaunch): Async [Struct] =
+      medic.launch (launch)
+
+    def put (table: TestTable, key: Int, value: Int): Async [Unit] = {
+      attempted += key -> Some (value)
+      for {
+        _ <- table.put (key, value)
+      } yield {
+        accepted += key -> Some (value)
+      }}
+
+    def batch (table: TestTable, kvs: (Int, Int)*): Async [Unit] = {
+      for ((key, value) <- kvs.latch)
+        put (table, key, value)
     }
 
-    .recover { implicit scheduler =>
-      implicit val recovery = StubDisk.recover()
-      val medic = new TestMedic (ID)
-      val launch = recovery.reattach (diskDrive) .expectPass()
-      val table = medic.launch (launch) .expectPass()
-      launch.launch()
-      tracker.check (table.toMap)
-    }}
+    def batches (
+      table: TestTable,
+      nbatches: Int,
+      nputs: Int
+    ) (implicit
+      random: Random,
+      scheduler: Scheduler
+    ): Async [Unit] =
+      for (_ <- (0 until nbatches).async)
+        batch (table, random.nextPut (nkeys, nputs): _*)
 
-  "The TierTable when" - {
+    def verify (crashed: Boolean, table: Struct) (implicit scheduler: Scheduler): Async [Unit] =
+      for {
+        recovered <- table.toMap
+      } yield {
+        for (k <- accepted.keySet)
+          assert (
+            recovered.contains (k) || attempted (k) == None,
+            s"Expected $k to be recovered")
+        for ((k, v) <- recovered) {
+          val expected = attempted (k) .toSet ++ accepted (k) .toSet
+          assert (expected contains v,
+              s"Expected $k to be ${expected mkString " or "}, found $v")
+        }}
 
-    for { (name, checkpoint) <- Seq (
-        "not checkpointed at all"   -> 0.0,
-        "checkpointed occasionally" -> 0.01,
-        "checkpointed frequently"   -> 0.1)
-    } s"$name and" - {
+    override def toString = s"new TableTracker (${id.id}, $nkeys)"
+  }
 
-      for { (name, compaction) <- Seq (
-          "not compacted at all"   -> 0.0,
-          "compacted occasionally" -> 0.01,
-          "compacted frequently"   -> 0.1)
-    } s"$name should" - {
+  private class TablePhase (nbatches: Int, nputs: Int) extends Effect [TableTracker] {
 
-      implicit val storeConfig = StoreTestConfig (
-          checkpointProbability = checkpoint,
-          compactionProbability = compaction)
+    def start (
+      tracker: TableTracker,
+      table: TestTable
+    ) (implicit
+      random: Random,
+      scheduler: Scheduler,
+      disk: StubDisk
+    ): Async [Unit] =
+      tracker.batches (table, nbatches, nputs)
 
-      for { (name, (nkeys, nputs, nbatches)) <- Seq (
-          "recover with lots of writes"     -> (10000, 3, 100),
-          "recover with lots of overwrites" -> (30, 3, 100))
-      } name taggedAs (Intensive, Periodic) in {
+    override def toString = s"new TablePhase ($nbatches, $nputs)"
+  }
 
-        forAllCrashes { implicit random =>
-          crashAndRecover (nkeys, nputs, nbatches)
-        }}}}}}
+  "The TierTable should" - {
+
+    for { (name, (nkeys, nputs, nbatches)) <- Seq (
+        "recover with lots of writes"     -> (10000, 3, 100),
+        "recover with lots of overwrites" -> (30, 3, 100))
+    } name taggedAs (Intensive, Periodic) in {
+      implicit val config = StoreTestConfig.storeConfig()
+      manyScenarios (new TableTracker (0xC8, nkeys), new TablePhase (nbatches, nputs))
+    }}}

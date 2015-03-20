@@ -29,7 +29,7 @@ import Callback.ignore
 import JavaConversions._
 import Scheduler.toRunnable
 import SynthTable.{genStepMask, genStepSize}
-import TierTable.{Checkpoint, Compaction}
+import TierTable.{Checkpoint, Compaction, Release}
 
 private class SynthTable (
 
@@ -69,6 +69,16 @@ private class SynthTable (
   var queue = List.empty [Runnable]
 
   def typ = desc.id
+
+  def gens: Set [Long] = {
+    readLock.lock()
+    val (tiers) = try {
+      (this.tiers)
+    } finally {
+      readLock.unlock()
+    }
+    tiers.gens
+  }
 
   def get (key: Bytes, time: TxClock): Async [Cell] = disk.join {
 
@@ -217,7 +227,8 @@ private class SynthTable (
     count
   }
 
-  def compact (gen: Long, chosen: Tiers, residents: Residents): Async [Option [Compaction]] = guard {
+  def compact (gen: Long, chosen: Tiers, residents: Residents):
+      Async [Option [(Compaction, Release)]] = guard {
 
     // Write the new tier. When the write has completed, update the tiers and return the new tier.
     val iter = TierIterator .merge (desc, chosen) .clean (desc, id, residents)
@@ -229,14 +240,17 @@ private class SynthTable (
       val meta = try {
         val g = chosen.minGen
         tiers = tiers.compact (g, tier)
-        new Some (new Compaction (g, tier))
+        val c = new Compaction (g, tier)
+        val r = new Release (desc.pager, id.id, chosen.gens)
+        new Some ((c, r))
       } finally {
         writeLock.unlock()
       }
       meta
     }}
 
-  def compact (gens: Set [Long], residents: Residents): Async [Option [Compaction]] = async { cb =>
+  def compact (gens: Set [Long], residents: Residents):
+      Async [Option [(Compaction, Release)]] = async { cb =>
 
     // Choose which tiers to compact, accounting for which generations the disk cleaner needs moved,
     // and accounting for tier sizes. There may be no work to do.

@@ -57,7 +57,8 @@ private class StubLaunchAgent (
       compactors.add (desc) (f)
     }
 
-  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit = ???
+  // The old disk system uses this; the new one can ignore it.
+  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit = ()
 
   def launch (crashed: Boolean): Unit =
     synchronized {
