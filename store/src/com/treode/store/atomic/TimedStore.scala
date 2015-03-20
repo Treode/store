@@ -134,7 +134,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler {
       val residents = library.residents
       for {
         meta <- getTable (id) .compact (groups, residents)
-        _ <- when (meta.isDefined) (TimedStore.compact.record (id, meta.get))
+        _ <- when (meta) (TimedStore.compact.record (id, _))
       } yield ()
     }
 

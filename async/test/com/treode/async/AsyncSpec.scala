@@ -380,7 +380,7 @@ class AsyncSpec extends FlatSpec {
       supply (supply (())) .run (exceptional)
     }}
 
-  "Async.when" should "invoke the body when the condition is true" in {
+  "Async.when on a predicate" should "invoke the body when the condition is true" in {
     implicit val scheduler = StubScheduler.random()
     var flag = false
     when (true) (supply (flag = true)) .expectPass()
@@ -407,4 +407,33 @@ class AsyncSpec extends FlatSpec {
   it should "throw an exception from the callback when the condition is false" in {
     intercept [DistinguishedException] {
       when (false) (supply (())) .run (exceptional)
+    }}
+
+  "Async.when on an option" should "invoke the body when the option is defined" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    when (Some (1)) (_ => supply (flag = true)) .expectPass()
+    assertResult (true) (flag)
+  }
+
+  it should "skip the body when the option is empty" in {
+    implicit val scheduler = StubScheduler.random()
+    var flag = false
+    when (None) (_ => supply (flag = true)) .expectPass()
+    assertResult (false) (flag)
+  }
+
+  it should "pass an exception from the body to the callback" in {
+    implicit val scheduler = StubScheduler.random()
+    when (Some (1)) (_ => throw new DistinguishedException) .fail [DistinguishedException]
+  }
+
+  it should "throw an exception from the callback when the condition is true" in {
+    intercept [DistinguishedException] {
+      when (None) (_ => supply (())) .run (exceptional)
+    }}
+
+  it should "throw an exception from the callback when the condition is false" in {
+    intercept [DistinguishedException] {
+      when (None) (_ => supply (())) .run (exceptional)
     }}}

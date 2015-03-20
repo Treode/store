@@ -59,7 +59,7 @@ extends PageHandler {
   def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] = guard {
     for {
       meta <- table.compact (gens, Residents.all)
-      _ <- when (meta.isDefined) (TestTable.compact.record (meta.get))
+      _ <- when (meta) (TestTable.compact.record (_))
     } yield ()
   }
 
