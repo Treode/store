@@ -28,35 +28,6 @@ class PaxosSequentialSpec extends FreeSpec with PaxosBehaviors {
 
   "The paxos implementation should" - {
 
-    "recover from a crash when" - {
-
-      for { (name, checkpoint) <- Seq (
-          "not checkpointed at all"   -> 0.0,
-          "checkpointed occasionally" -> 0.01,
-          "checkpointed frequently"   -> 0.1)
-      } s"$name and" - {
-
-        for { (name, compaction) <- Seq (
-            "not compacted at all"   -> 0.0,
-            "compacted occasionally" -> 0.01,
-            "compacted frequently"   -> 0.1)
-            if checkpoint >= compaction
-      } s"$name with" - {
-
-        implicit val config = StoreTestConfig (
-            checkpointProbability = checkpoint,
-            compactionProbability = compaction)
-
-        for { (name, (nbatch, nputs)) <- Seq (
-            "some batches"     -> (10, 10),
-            "lots of batches"  -> (100, 10),
-            "some big batches" -> (10, 100))
-        } name taggedAs (Intensive, Periodic) in {
-
-          forAllCrashes { implicit random =>
-            crashAndRecover (nbatch, nputs)
-          }}}}}
-
     "achieve consensus with" - {
 
       implicit val config = StoreTestConfig()

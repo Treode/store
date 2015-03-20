@@ -80,6 +80,8 @@ private class Acceptors (kit: PaxosKit) extends PageHandler {
 
     launch.checkpoint (checkpoint())
 
+    Acceptors.archive.compact (c => compact (c.obj, c.gens))
+
     Acceptors.archive.handle (this)
 
     ask.listen { case ((version, key, time, ballot, default), c) =>

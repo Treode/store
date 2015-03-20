@@ -57,9 +57,6 @@ extends PageHandler {
     table.probe (gens)
   }
 
-  def gens: Set [Long] =
-    table.gens
-
   def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] = guard {
     assert (obj.id == id.id)
     for {
