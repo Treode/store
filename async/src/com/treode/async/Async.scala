@@ -268,9 +268,21 @@ object Async {
     _async (cb => s.delay (millis) (cb (Success (()))))
 
   /** Perform the asynchronous operation `f` only when the predicate `p` is true. */
-  def when [A] (p: => Boolean) (f: => Async [A]): Async [Unit] =
+  def when [U] (p: => Boolean) (f: => Async [U]): Async [Unit] =
     try {
       if (p) f map (_ => ()) else _pass (())
+    } catch {
+      case t: NonLocalReturnControl [_] => _fail (new ReturnException)
+      case t: Throwable => _fail (t)
+    }
+
+  /** Perform the asynchronous operation `f` only when `v` is defined. */
+  def when [A, U] (v: Option [A]) (f: A => Async [U]): Async [Unit] =
+    try {
+      v match {
+        case Some (v) => f (v) map (_ => ())
+        case None => _pass (())
+      }
     } catch {
       case t: NonLocalReturnControl [_] => _fail (new ReturnException)
       case t: Throwable => _fail (t)

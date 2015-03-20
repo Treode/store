@@ -59,7 +59,7 @@ private class Acceptors (kit: PaxosKit) extends PageHandler {
     guard {
       for {
         meta <- archive.compact (groups, library.residents)
-        _ <- when (meta.isDefined) (Acceptors.compact.record (meta.get))
+        _ <- when (meta) (Acceptors.compact.record (_))
       } yield ()
     }
 
