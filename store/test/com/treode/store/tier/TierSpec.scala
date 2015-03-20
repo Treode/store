@@ -24,7 +24,8 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.disk.{Disk, Position}
-import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
+import com.treode.disk.stubs.StubDiskDrive
+import com.treode.disk.stubs.edit.StubDisk
 import com.treode.pickle.Picklers
 import com.treode.store._
 import org.scalatest.WordSpec
@@ -36,18 +37,14 @@ import TierTestTools._
 class TierSpec extends WordSpec {
 
   private def setup (targetPageBytes: Int = 1 << 20): (StubScheduler, Disk, StoreConfig) = {
-    val config = StoreTestConfig (
-        checkpointProbability = 0.0,
-        compactionProbability = 0.0,
-        targetPageBytes = targetPageBytes)
-    import config._
+    implicit val config = StoreTestConfig.storeConfig (targetPageBytes = targetPageBytes)
     implicit val random = new Random (0)
     implicit val scheduler = StubScheduler.random (random)
     implicit val recovery = StubDisk.recover()
     val diskDrive = new StubDiskDrive
     val launch = recovery.reattach (diskDrive) .expectPass()
     launch.launch()
-    (scheduler, launch.disk, config.storeConfig)
+    (scheduler, launch.disk, config)
   }
 
   private def newBuilder (est: Long) (

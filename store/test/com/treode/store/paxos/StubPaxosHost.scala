@@ -23,7 +23,8 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubCluster, StubNetwork}
 import com.treode.disk.Disk
-import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
+import com.treode.disk.stubs.StubDiskDrive
+import com.treode.disk.stubs.edit.StubDisk
 import com.treode.store._
 import com.treode.store.catalog.Catalogs
 import com.treode.store.tier.TierTable

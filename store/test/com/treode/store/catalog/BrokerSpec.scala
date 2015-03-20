@@ -22,7 +22,8 @@ import com.treode.async.stubs.{AsyncChecks, StubScheduler}
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
-import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
+import com.treode.disk.stubs.StubDiskDrive
+import com.treode.disk.stubs.edit.StubDisk
 import com.treode.pickle.{Pickler, Picklers}
 import com.treode.store._
 import com.treode.tags.{Intensive, Periodic}
@@ -59,9 +60,6 @@ object BrokerBehaviors extends FreeSpec {
     }}
 
   private class RichBroker (implicit random: Random, scheduler: StubScheduler) {
-
-    val config = StoreTestConfig()
-    import config._
 
     val diskDrive = new StubDiskDrive
 

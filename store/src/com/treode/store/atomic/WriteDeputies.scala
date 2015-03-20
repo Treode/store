@@ -63,6 +63,8 @@ private class WriteDeputies (kit: AtomicKit) {
 
     TimedStore.table.handle (tstore)
 
+    TimedStore.table.compact (c => tstore.compact (c.obj, c.gens))
+
     prepare.listen { case ((version, xid, ct, ops), from) =>
       if (atlas.version - 1 <= version && version <= atlas.version + 1)
         get (xid) .prepare (ct, ops)

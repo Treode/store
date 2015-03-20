@@ -24,7 +24,8 @@ import org.scalatest.FreeSpec
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
-import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
+import com.treode.disk.stubs.StubDiskDrive
+import com.treode.disk.stubs.edit.StubDisk
 import com.treode.pickle.Picklers
 import com.treode.store.{Bytes, CatalogId, StoreTestConfig, StoreTestTools}
 
@@ -52,8 +53,6 @@ class HandlerSpec extends FreeSpec {
     }}
 
   private def newCatalog (issues: Int): Handler = {
-    val config = StoreTestConfig()
-    import config._
     implicit val random = new Random (0)
     val diskDrive = new StubDiskDrive
     implicit val scheduler = StubScheduler.random (random)
