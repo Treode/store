@@ -164,5 +164,8 @@ private class SynthMedic (
       tiers = tiers.compact (meta.keep, meta.tier)
     if (gen <= tiers.maxGen)
       gen = (tiers.maxGen + genStepSize) & ~genStepMask
-    new SynthTable (desc, id, lock, gen, secondary, newMemTier, tiers)
+
+    val table = new SynthTable (desc, id, lock, gen, secondary, newMemTier, tiers)
+    desc.claim (id.id, tiers.gens)
+    table
   }}

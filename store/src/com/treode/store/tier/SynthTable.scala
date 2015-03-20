@@ -70,16 +70,6 @@ private class SynthTable (
 
   def typ = desc.id
 
-  def gens: Set [Long] = {
-    readLock.lock()
-    val (tiers) = try {
-      (this.tiers)
-    } finally {
-      readLock.unlock()
-    }
-    tiers.gens
-  }
-
   def get (key: Bytes, time: TxClock): Async [Cell] = disk.join {
 
     val mkey = Key (key, time)

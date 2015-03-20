@@ -54,7 +54,6 @@ private class TestMedic (
     import launch.disk
     val table = new TestTable (id, medic.close())
     launch.checkpoint (table.checkpoint())
-    launch.claim (descriptor.pager, id.id, table.gens)
     launch.compact (descriptor.pager) (c => table.compact (c.obj, c.gens))
     descriptor.handle (table)
     table
