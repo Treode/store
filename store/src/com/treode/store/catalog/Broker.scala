@@ -144,8 +144,10 @@ private class Broker (
     Broker.ping.listen { (values, from) =>
       val task = for {
         updates <- ping (values)
-        if !updates.isEmpty
-      } yield Broker.sync (updates) (from)
+      } yield {
+        if (!updates.isEmpty)
+          Broker.sync (updates) (from)
+      }
       task run (ignore)
     }
 

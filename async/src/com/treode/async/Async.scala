@@ -123,7 +123,7 @@ trait Async [A] {
         case Success (v) =>
           Try (p (v)) match {
             case Success (true) => cb (Success (v))
-            case Success (false) => ()
+            case Success (false) => cb (Failure (new NoSuchElementException))
             case Failure (t) => cb (Failure (t))
           }
         case Failure (t) => cb (Failure (t))
@@ -315,7 +315,4 @@ object Async {
       a run latch.cbA
       b run latch.cbB
       c run latch.cbC
-    }
-
-
-  }
+    }}
