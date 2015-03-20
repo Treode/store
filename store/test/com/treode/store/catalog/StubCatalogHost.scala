@@ -24,7 +24,8 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubCluster, StubHost, StubNetwork}
-import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
+import com.treode.disk.stubs.StubDiskDrive
+import com.treode.disk.stubs.edit.StubDisk
 import com.treode.store._
 import org.scalatest.Assertions
 

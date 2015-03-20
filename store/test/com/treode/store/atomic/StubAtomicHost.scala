@@ -25,7 +25,8 @@ import com.treode.async.stubs.implicits._
 import com.treode.cluster.{Cluster, HostId, Peer}
 import com.treode.cluster.stubs.{StubCluster, StubNetwork}
 import com.treode.disk.Disk
-import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
+import com.treode.disk.stubs.StubDiskDrive
+import com.treode.disk.stubs.edit.StubDisk
 import com.treode.store._
 import com.treode.store.catalog.Catalogs
 import com.treode.store.paxos.Paxos

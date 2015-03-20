@@ -26,7 +26,8 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.disk.{ObjectId, PageHandler}
-import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
+import com.treode.disk.stubs.StubDiskDrive
+import com.treode.disk.stubs.edit.StubDisk
 import com.treode.store.{Fruits, Residents, StoreTestConfig}
 import com.treode.pickle.Picklers
 import org.scalatest.FreeSpec
@@ -66,6 +67,7 @@ class SynthTableSpec extends FreeSpec {
     implicit val launch = recovery.reattach (diskDrive) .expectPass()
     import launch.disk
     val table = SynthTable (tier, 0x62)
+    launch.compact (tier.pager) (c => table.compact (c.gens, Residents.all) .unit)
     tier.handle (new TierHandler (table))
     launch.launch()
     table
