@@ -27,6 +27,10 @@ class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
 
   private class SegmentLedgerTracker (nobjects: Int, npages: Int) extends Tracker {
 
+    type Medic = SegmentLedgerMedic
+
+    type Struct = SegmentLedger
+
     class UserObject (id: ObjectId, private var page: Int) {
 
       private val tracker = SegmentLedgerTracker.this
@@ -52,21 +56,11 @@ class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
     private var allocating = Map.empty [(ObjectId, Long), Int] .withDefaultValue (0)
     private var allocated = Map.empty [(ObjectId, Long), Int] .withDefaultValue (0)
 
-    private var medic: SegmentLedgerMedic = null
-    private var ledger: SegmentLedger = null
+    def recover () (implicit scheduler: Scheduler, recovery: DiskRecovery): Medic =
+      new SegmentLedgerMedic (recovery)
 
-    def recover () (implicit scheduler: Scheduler, recovery: DiskRecovery) {
-      ledger = null
-      medic = new SegmentLedgerMedic (recovery)
-    }
-
-    def launch () (implicit scheduler: Scheduler, launch: DiskLaunch): Async [Unit] =
-      for {
-        ledger <- medic.close() .map (_._1)
-      } yield {
-        medic = null
-        this.ledger = ledger
-      }
+    def launch (medic: Medic) (implicit scheduler: Scheduler, launch: DiskLaunch): Async [Struct] =
+      medic.close() .map (_._1)
 
     def getObject (id: ObjectId) (implicit random: Random): UserObject =
       objects.get (id) match {
@@ -94,7 +88,8 @@ class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
 
     def batches (
       nbatches: Int,
-      nallocs: Int
+      nallocs: Int,
+      ledger: SegmentLedger
     ) (implicit
       random: Random,
       scheduler: Scheduler
@@ -105,7 +100,7 @@ class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
         Async.count (nallocs) (randomObject().alloc (ledger))
       }}
 
-    def verify (crashed: Boolean) (implicit scheduler: Scheduler): Async [Unit] =
+    def verify (crashed: Boolean, ledger: Struct) (implicit scheduler: Scheduler): Async [Unit] =
       supply {
         val docket = ledger.docket
         for ((page, bytes) <- docket; id = (page.obj, page.gen))
@@ -121,13 +116,14 @@ class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
   extends Effect [SegmentLedgerTracker] {
 
     def start (
-      tracker: SegmentLedgerTracker
+      tracker: SegmentLedgerTracker,
+      ledger: SegmentLedger
     ) (implicit
       random: Random,
       scheduler: Scheduler,
       disk: StubDisk
     ): Async [Unit] =
-      tracker.batches (nbatches, nallocs)
+      tracker.batches (nbatches, nallocs, ledger)
 
     override def toString = s"new SegmentLedgerPhase ($nbatches, $nallocs)"
   }

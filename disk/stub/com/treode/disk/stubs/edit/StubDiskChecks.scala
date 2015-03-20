@@ -39,32 +39,42 @@ trait StubDiskChecks extends AsyncChecks {
     */
   trait Tracker {
 
+    /** The type of medic that recovers the structure. */
+    type Medic
+
+    /** The type of the structure under test. */
+    type Struct
+
     /** Invoked on each recovery of the structure under test. The tracker should register replay
       * methods and setup a medic, which is an object to recover the structure under test.
+      * @return The medic to recover the structure.
       */
-    def recover () (implicit scheduler: Scheduler, recovery: DiskRecovery)
+    def recover () (implicit scheduler: Scheduler, recovery: DiskRecovery): Medic
 
     /** Invoked on each launch of the structure under test. The tracker should close out the medic,
       * register checkpointers and compactors, and setup the strucutre under test.
+      * @param medic The medic to recover the structure.
+      * @return The structure under test.
       */
-    def launch () (implicit scheduler: Scheduler, launch: DiskLaunch): Async [Unit]
+    def launch (medic: Medic) (implicit scheduler: Scheduler, launch: DiskLaunch): Async [Struct]
 
     /** Invoked at the end of the scenario. The tracker should check that the structure is
       * consistent with records the tracker has kept across the scenario.
       * @param crashed True if any phase simulated a crash.
-      * @param structure The structure under test.
+      * @param struct The structure under test.
       */
-    def verify (crashed: Boolean) (implicit scheduler: Scheduler): Async [Unit]
+    def verify (crashed: Boolean, struct: Struct) (implicit scheduler: Scheduler): Async [Unit]
   }
 
   /** An abstract command (see [[http://en.wikipedia.org/wiki/Command_pattern Command Pattern]] to
     * to run during a scenario. StubDiskChecks introduces effects for checkpointing and draining.
     * Component tests add effects for loading the component.
     */
-  abstract class Effect [-T] {
+  abstract class Effect [-T <: Tracker] {
 
     def start (
-      tracker: T
+      tracker: T,
+      struct: T#Struct
     ) (implicit
       random: Random,
       scheduler: Scheduler,
@@ -73,10 +83,11 @@ trait StubDiskChecks extends AsyncChecks {
   }
 
   /** Checkpoint `count` times. */
-  case class Checkpoint (count: Int) extends Effect [Any] {
+  case class Checkpoint (count: Int) extends Effect [Tracker] {
 
     def start (
-      tracker: Any
+      tracker: Tracker,
+      struct: Tracker#Struct
     ) (implicit
       random: Random,
       scheduler: Scheduler,
@@ -92,10 +103,11 @@ trait StubDiskChecks extends AsyncChecks {
   }
 
   /** Drain some random generations. */
-  case object Drain extends Effect [Any] {
+  case object Drain extends Effect [Tracker] {
 
     def start (
-      tracker: Any
+      tracker: Tracker,
+      struct: Tracker#Struct
     ) (implicit
       random: Random,
       scheduler: Scheduler,
@@ -117,16 +129,16 @@ trait StubDiskChecks extends AsyncChecks {
   ): (Int, Boolean) = {
     implicit val scheduler = StubScheduler.random (random)
     implicit val recovery = StubDisk.recover()
-    tracker.recover()
+    val medic = tracker.recover()
     implicit val launch = recovery.reattach (drive) .expectPass() .asInstanceOf [StubLaunchAgent]
     implicit val disk = launch.disk.asInstanceOf [StubDisk]
-    tracker.launch().expectPass()
+    val struct = tracker.launch (medic) .expectPass()
     launch.launch (lastCrashed)
     var cbs = Seq.empty [CallbackCaptor [Unit]]
     var count = 0
     var crashed = true
     for ((effect, target) <- effects) {
-      cbs :+= effect.start (tracker) .capture()
+      cbs :+= effect.start (tracker, struct) .capture()
       count = scheduler.run (count = target)
       crashed = (target != Int.MaxValue)
       if (crashed && count != target)
@@ -151,12 +163,12 @@ trait StubDiskChecks extends AsyncChecks {
   ) {
     implicit val scheduler = StubScheduler.random (random)
     implicit val recovery = StubDisk.recover()
-    tracker.recover()
+    val medic = tracker.recover()
     implicit val launch = recovery.reattach (drive) .expectPass() .asInstanceOf [StubLaunchAgent]
     implicit val disk = launch.disk.asInstanceOf [StubDisk]
-    tracker.launch().expectPass()
+    val struct = tracker.launch (medic) .expectPass()
     launch.launch (crashed)
-    tracker.verify (crashed) .expectPass()
+    tracker.verify (crashed, struct) .expectPass()
   }
 
   /** Run a one phase scenario---two phases if you count the verify phase. For each effect, this
