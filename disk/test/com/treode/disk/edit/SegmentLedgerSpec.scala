@@ -56,10 +56,10 @@ class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
     private var allocating = Map.empty [(ObjectId, Long), Int] .withDefaultValue (0)
     private var allocated = Map.empty [(ObjectId, Long), Int] .withDefaultValue (0)
 
-    def recover () (implicit scheduler: Scheduler, recovery: DiskRecovery): Medic =
+    def recover () (implicit random: Random, scheduler: Scheduler, recovery: DiskRecovery): Medic =
       new SegmentLedgerMedic (recovery)
 
-    def launch (medic: Medic) (implicit scheduler: Scheduler, launch: DiskLaunch): Async [Struct] =
+    def launch (medic: Medic) (implicit launch: DiskLaunch): Async [Struct] =
       medic.close() .map (_._1)
 
     def getObject (id: ObjectId) (implicit random: Random): UserObject =

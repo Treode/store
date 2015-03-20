@@ -49,14 +49,14 @@ trait StubDiskChecks extends AsyncChecks {
       * methods and setup a medic, which is an object to recover the structure under test.
       * @return The medic to recover the structure.
       */
-    def recover () (implicit scheduler: Scheduler, recovery: DiskRecovery): Medic
+    def recover () (implicit random: Random, scheduler: Scheduler, recovery: DiskRecovery): Medic
 
     /** Invoked on each launch of the structure under test. The tracker should close out the medic,
       * register checkpointers and compactors, and setup the strucutre under test.
       * @param medic The medic to recover the structure.
       * @return The structure under test.
       */
-    def launch (medic: Medic) (implicit scheduler: Scheduler, launch: DiskLaunch): Async [Struct]
+    def launch (medic: Medic) (implicit launch: DiskLaunch): Async [Struct]
 
     /** Invoked at the end of the scenario. The tracker should check that the structure is
       * consistent with records the tracker has kept across the scenario.
@@ -72,6 +72,10 @@ trait StubDiskChecks extends AsyncChecks {
     */
   abstract class Effect [-T <: Tracker] {
 
+    /** Invoked druing a scenario.
+      * @param tracker The tracker for the scenario.
+      * @param struct The structure under test.
+      */
     def start (
       tracker: T,
       struct: T#Struct
