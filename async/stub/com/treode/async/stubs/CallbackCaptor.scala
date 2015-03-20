@@ -58,7 +58,7 @@ class CallbackCaptor [A] private extends (Try [A] => Unit) {
 
   /** True if the callback was invoked with [[$Success Success]]. */
   def hasPassed: Boolean = synchronized {
-    _v != null
+    _invokation != null && _t == null
   }
 
   /** True if the callback was invoked with [[$Failure Failure]]. */
