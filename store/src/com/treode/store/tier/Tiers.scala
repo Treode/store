@@ -39,8 +39,8 @@ import com.treode.store.{Residents, StoreConfig, StorePicklers, TableDigest, Win
   def minGen: Long =
     if (tiers.isEmpty) Long.MaxValue else tiers.last.gen
 
-  def gens: Seq [Long] =
-    tiers map (_.gen)
+  def gens: Set [Long] =
+    tiers.map (_.gen) .toSet
 
   /** Estimate how many keys remain on this host after a move. */
   def estimate (other: Residents): Long =

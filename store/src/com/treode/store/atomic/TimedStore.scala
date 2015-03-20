@@ -133,8 +133,11 @@ private class TimedStore (kit: AtomicKit) extends PageHandler {
       val id = TableId (obj.id)
       val residents = library.residents
       for {
-        meta <- getTable (id) .compact (groups, residents)
-        _ <- when (meta) (TimedStore.compact.record (id, _))
+        result <- getTable (id) .compact (groups, residents)
+        _ <- when (result) { case (compaction, release) =>
+          for (_ <- TimedStore.compact.record (id, compaction))
+            yield disk.release (release.desc, release.obj, release.gens)
+        }
       } yield ()
     }
 

@@ -58,8 +58,11 @@ private class Acceptors (kit: PaxosKit) extends PageHandler {
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
       for {
-        meta <- archive.compact (groups, library.residents)
-        _ <- when (meta) (Acceptors.compact.record (_))
+        result <- archive.compact (groups, library.residents)
+        _ <- when (result) { case (compaction, release) =>
+          for (_ <- Acceptors.compact.record (compaction))
+            yield disk.release (release.desc, release.obj, release.gens)
+        }
       } yield ()
     }
 
