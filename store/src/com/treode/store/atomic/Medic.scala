@@ -67,9 +67,9 @@ private class Medic (val xid: TxId, kit: RecoveryKit)  {
       case Open =>
         supply (())
       case Prepared (ct, ops) =>
-        w.prepare (ct, ops) .map (_ => ())
+        w.prepare (ct, ops) .unit
       case Preparing (ct, ops) =>
-        w.prepare (ct, ops) .map (_ => ())
+        w.prepare (ct, ops) .unit
     }
 
   def close (kit: AtomicKit): Async [Unit] = {

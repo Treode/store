@@ -151,6 +151,14 @@ trait Async [A] {
   def rescue (f: PartialFunction [Throwable, Try [A]]): Async [A] =
     _async (cb => run (cb rescue f))
 
+  /** Ignore the result of the asynchronous operation. */
+  def unit: Async [Unit] =
+    _async { cb =>
+      run {
+        case Success (_) => cb (Success (()))
+        case Failure (t) => cb (Failure (t))
+      }}
+
   /** Block the current thread until the (formerly asynchronous) operation completes. */
   def await(): A = {
     val q = new OnceQueue [Try [A]]
@@ -270,7 +278,7 @@ object Async {
   /** Perform the asynchronous operation `f` only when the predicate `p` is true. */
   def when [U] (p: => Boolean) (f: => Async [U]): Async [Unit] =
     try {
-      if (p) f map (_ => ()) else _pass (())
+      if (p) f.unit else _pass (())
     } catch {
       case t: NonLocalReturnControl [_] => _fail (new ReturnException)
       case t: Throwable => _fail (t)
@@ -280,7 +288,7 @@ object Async {
   def when [A, U] (v: Option [A]) (f: A => Async [U]): Async [Unit] =
     try {
       v match {
-        case Some (v) => f (v) map (_ => ())
+        case Some (v) => f (v) .unit
         case None => _pass (())
       }
     } catch {
