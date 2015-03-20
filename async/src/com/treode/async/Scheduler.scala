@@ -62,9 +62,9 @@ trait Scheduler extends Executor {
   def fail [A] (cb: Callback [A], t: Throwable): Unit =
     execute (cb, Failure (t))
 
-  def whilst [A] (p: => Boolean) (f: => Async [Unit]): Async [Unit] =
+  def whilst [U] (p: => Boolean) (f: => Async [U]): Async [Unit] =
     async { cb =>
-      val loop = Callback.fix [Unit] { loop => {
+      val loop = Callback.fix [U] { loop => {
         case Success (v) =>
           execute {
             try {
@@ -78,7 +78,7 @@ trait Scheduler extends Executor {
           }
         case Failure (t) => fail (cb, t)
       }}
-      loop.pass (())
+      loop.pass (null.asInstanceOf [U])
     }
 
   /** Implements what is needed by AsynchronousFileChannel. */
