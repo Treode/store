@@ -36,9 +36,10 @@ class TierSystemSpec extends FreeSpec with StubDiskChecks {
   extends Tracker {
 
     type Medic = TestMedic
+
     type Struct = TestTable
 
-    private var attempted = Map.empty [Int, Option [Int]] .withDefaultValue (None)
+    private var attempted = Map.empty [Int, Set [Int]] .withDefaultValue (Set.empty)
     private var accepted = Map.empty [Int, Option [Int]] .withDefaultValue (None)
 
     def recover () (implicit random: Random, scheduler: Scheduler, recovery: DiskRecovery): Medic =
@@ -48,10 +49,11 @@ class TierSystemSpec extends FreeSpec with StubDiskChecks {
       medic.launch (launch)
 
     def put (table: TestTable, key: Int, value: Int): Async [Unit] = {
-      attempted += key -> Some (value)
+      attempted += key -> (attempted (key) + value)
       for {
         _ <- table.put (key, value)
       } yield {
+        attempted += key -> (attempted (key) - value)
         accepted += key -> Some (value)
       }}
 
