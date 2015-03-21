@@ -23,7 +23,6 @@ import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{StubGlobals, StubScheduler}
 import com.treode.async.stubs.implicits._
-import com.treode.disk.stubs.CrashChecks
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 import org.scalatest.time.SpanSugar

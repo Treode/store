@@ -24,7 +24,6 @@ import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{AsyncCaptor, StubScheduler, StubGlobals}
 import com.treode.async.stubs.implicits._
-import com.treode.disk.stubs.CrashChecks
 import com.treode.pickle.{InvalidTagException, Picklers}
 import com.treode.tags.Periodic
 import org.scalatest.FlatSpec

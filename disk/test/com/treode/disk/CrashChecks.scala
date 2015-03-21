@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.treode.disk.stubs
+package com.treode.disk
 
 import scala.util.Random
 
