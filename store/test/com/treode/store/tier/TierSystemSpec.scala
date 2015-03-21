@@ -23,7 +23,7 @@ import com.treode.async.implicits._
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
 import com.treode.disk.{DiskLaunch, DiskRecovery}
-import com.treode.disk.stubs.edit.{StubDisk, StubDiskChecks}
+import com.treode.disk.stubs.{StubDisk, StubDiskChecks}
 import com.treode.store.{Bytes, StoreConfig, StoreTestConfig, TableId}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec

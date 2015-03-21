@@ -14,11 +14,10 @@
  * limitations under the License.
  */
 
-package com.treode.disk.stubs.edit
+package com.treode.disk.stubs
 
 import com.treode.async.Async
 import com.treode.disk.{DiskLaunch, DiskRecovery}
-import com.treode.disk.stubs.StubDiskDrive
 
 trait StubDiskRecovery extends DiskRecovery {
 

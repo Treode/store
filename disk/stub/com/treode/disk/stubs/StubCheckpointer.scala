@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package com.treode.disk.stubs.edit
+package com.treode.disk.stubs
 
 import java.util.ArrayList
 
 import com.treode.async.{Async, AsyncQueue, Callback, Fiber, Scheduler}
 import com.treode.disk.CheckpointerRegistry
-import com.treode.disk.stubs.StubDiskDrive
 
 private class StubCheckpointer (
   drive: StubDiskDrive

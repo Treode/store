@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.treode.disk.stubs.edit
+package com.treode.disk.stubs
 
 import java.nio.file.{Path, Paths}
 import scala.util.Random
@@ -23,7 +23,6 @@ import com.treode.async.{Async, Callback, Scheduler}, Async.{guard, supply}, Cal
 import com.treode.async.io.File
 import com.treode.async.misc.EpochReleaser
 import com.treode.disk.{DiskEvents, DiskLaunch, RecordDescriptor, RecordRegistry}
-import com.treode.disk.stubs.StubDiskDrive
 
 private class StubRecoveryAgent (implicit
   random: Random,
