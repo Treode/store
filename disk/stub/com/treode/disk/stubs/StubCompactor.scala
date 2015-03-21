@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package com.treode.disk.stubs.edit
+package com.treode.disk.stubs
 
 import scala.collection.mutable.Queue
 
 import com.treode.async.{Async, AsyncQueue, Fiber, Scheduler}, Async.supply
 import com.treode.async.misc.EpochReleaser
-import com.treode.disk.{Compaction, CompactorRegistry, GenerationDocket, ObjectId, TypeId},
-  GenerationDocket.DocketId
+import com.treode.disk._, GenerationDocket.DocketId
 
 private class StubCompactor (implicit scheduler: Scheduler) {
 

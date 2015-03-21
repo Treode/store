@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package com.treode.disk.stubs.edit
+package com.treode.disk.stubs
 
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.disk.Disk
-import com.treode.disk.stubs.StubDiskEvents
 
 trait StubDisk extends Disk {
 

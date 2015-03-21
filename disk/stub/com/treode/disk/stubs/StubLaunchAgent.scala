@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-package com.treode.disk.stubs.edit
+package com.treode.disk.stubs
 
 import scala.collection.mutable.HashMap
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.misc.EpochReleaser
-import com.treode.disk.{CheckpointerRegistry, CompactorRegistry, Compaction, DiskController,
-  DiskEvents, DiskLaunch, GenerationDocket, ObjectId, PageDescriptor, PageHandler, SystemId, TypeId}
-import com.treode.disk.stubs.StubDiskDrive
+import com.treode.disk._
 
 private class StubLaunchAgent (
   drive: StubDiskDrive,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.treode.disk.stubs.edit
+package com.treode.disk.stubs
 
 import org.scalatest.Assertions, Assertions.fail
 

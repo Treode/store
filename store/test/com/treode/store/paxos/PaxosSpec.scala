@@ -23,7 +23,7 @@ import com.treode.async.implicits._
 import com.treode.cluster.HostId
 import com.treode.cluster.stubs.{StubCluster, StubNetwork}
 import com.treode.disk.{DiskLaunch, DiskRecovery}
-import com.treode.disk.stubs.edit.{StubDisk, StubDiskChecks}
+import com.treode.disk.stubs.{StubDisk, StubDiskChecks}
 import com.treode.store.{ChildScheduler, StoreConfig, StoreTestConfig, TimeoutException}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec

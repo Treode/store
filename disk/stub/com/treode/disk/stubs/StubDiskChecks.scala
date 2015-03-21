@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.treode.disk.stubs.edit
+package com.treode.disk.stubs
 
 import scala.util.Random
 
@@ -22,7 +22,6 @@ import com.treode.async.{Async, Scheduler}, Async.supply
 import com.treode.async.stubs.{AsyncChecks, CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.disk.{Disk, DiskLaunch, DiskRecovery}
-import com.treode.disk.stubs.StubDiskDrive
 import org.scalatest.{Informing, Suite}
 
 trait StubDiskChecks extends AsyncChecks {
@@ -253,7 +252,7 @@ trait StubDiskChecks extends AsyncChecks {
     *
     * See the notes for [[#onePhase]] on counting steps between effects, then double the problem.
     */
-  private [edit] def twoPhases [T <: Tracker] (
+  private def twoPhases [T <: Tracker] (
     setup: => T,
     seed: Long,
     counter: Counter [Effect [T]]
