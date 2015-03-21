@@ -21,6 +21,7 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}, Async.supply
 import com.treode.disk.{Disk, DiskLaunch, DiskRecovery, ObjectId, TypeId}
 import com.treode.disk.stubs.edit.{StubDisk, StubDiskChecks}
+import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
 class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
@@ -130,20 +131,16 @@ class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
 
   "The SegmentLedger should record and recover" - {
 
-    /*"in" in {
-      twoPhases (new SegmentLedgerTracker (1, 3), 0x6A43A56B21F58B4FL) ((new SegmentLedgerPhase (3, 1),2), (Checkpoint (1),7), (Drain,7)) ((new SegmentLedgerPhase (3, 1),2147483647))
-    }*/
-
     for {
       nbatches <- Seq (0, 1, 2, 3)
       nallocs <- Seq (0, 1, 2, 3)
       if (nbatches != 0 && nallocs != 0 || nbatches == nallocs)
-    } s"for $nbatches batches of $nallocs allocations" in {
+    } s"for $nbatches batches of $nallocs allocations" taggedAs (Intensive, Periodic) in {
       manyScenarios (new SegmentLedgerTracker (1, 3), new SegmentLedgerPhase (nbatches, nallocs))
     }
 
     for {
       (nbatches, nallocs, nobjects) <- Seq ((7, 7, 10), (20, 20, 40), (20, 100, 10))
-    } s"for $nbatches batches of $nallocs allocations" in {
+    } s"for $nbatches batches of $nallocs allocations" taggedAs (Intensive, Periodic) in {
       manyScenarios (new SegmentLedgerTracker (nobjects, 7), new SegmentLedgerPhase (nbatches, nallocs))
     }}}
