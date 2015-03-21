@@ -141,19 +141,20 @@ class PaxosSpec extends FreeSpec with StubDiskChecks {
     override def toString = s"new PaxosPhase ($nbatches, $nputs)"
   }
 
-
   "The paxos implementation should recover from a crash with" - {
 
-    /*"this" taggedAs (Intensive) in {
+    for {
+      nbatches <- Seq (0, 1, 2, 3)
+      nputs <- Seq (0, 1, 2, 3)
+      if (nbatches != 0 && nputs != 0 || nbatches == nputs)
+    } s"for $nbatches batches of $nputs puts" taggedAs (Intensive, Periodic) in {
       implicit val config = StoreTestConfig.storeConfig()
-      onePhase (new PaxosTracker (18), 0xEE05699FCE49C81BL) ((new PaxosPhase (1, 1),2147483647))
-    }*/
+      manyScenarios (new PaxosTracker (0x12), new PaxosPhase (nbatches, nputs))
+    }
 
-    for { (name, (nbatches, nputs)) <- Seq (
-        "some small batches"     -> (3, 3),
-        "many small batches"  -> (10, 3),
-        "some big batches" -> (3, 100))
-    } name taggedAs (Intensive, Periodic) in {
+    for {
+      (nbatches, nputs) <- Seq ((7, 7))
+    } s"for $nbatches batches of $nputs puts" taggedAs (Intensive, Periodic) in {
       implicit val config = StoreTestConfig.storeConfig()
       manyScenarios (new PaxosTracker (0x12), new PaxosPhase (nbatches, nputs))
     }}}

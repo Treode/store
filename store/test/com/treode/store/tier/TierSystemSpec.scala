@@ -107,10 +107,18 @@ class TierSystemSpec extends FreeSpec with StubDiskChecks {
 
   "The TierTable should" - {
 
-    for { (name, (nkeys, nputs, nbatches)) <- Seq (
-        "recover with lots of writes"     -> (10000, 3, 100),
-        "recover with lots of overwrites" -> (30, 3, 100))
-    } name taggedAs (Intensive, Periodic) in {
+    for {
+      nbatches <- Seq (0, 1, 2, 3)
+      nputs <- Seq (0, 1, 2, 3)
+      if (nbatches != 0 && nputs != 0 || nbatches == nputs)
+    } s"for $nbatches batches of $nputs puts" taggedAs (Intensive, Periodic) in {
+      implicit val config = StoreTestConfig.storeConfig()
+      manyScenarios (new TableTracker (0xC8, 100), new TablePhase (nbatches, nputs))
+    }
+
+    for {
+      (nputs, nbatches, nkeys) <- Seq ((7, 7, 10))
+    } s"for $nbatches batches of $nputs puts" taggedAs (Intensive, Periodic) in {
       implicit val config = StoreTestConfig.storeConfig()
       manyScenarios (new TableTracker (0xC8, nkeys), new TablePhase (nbatches, nputs))
     }}}
