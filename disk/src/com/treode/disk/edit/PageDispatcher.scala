@@ -16,22 +16,14 @@
 
 package com.treode.disk.edit
 
-import com.treode.async.Async
-import com.treode.async.io.File
-import com.treode.buffer.PagedBuffer
-import com.treode.disk.{PageDescriptor, Position}
+import com.treode.async.{Async, Scheduler}, Async.async
+import com.treode.disk.{Dispatcher, ObjectId, PageDescriptor, PickledPage, Position}
 
-private class PageReader (file: File) {
+/**	Schedules page writes to be written by a `PageWriter`. */
+private class PageDispatcher (implicit scheduler: Scheduler) extends Dispatcher [PickledPage] {
 
-  private val bits = 10
-  private val buffer = PagedBuffer (bits)
-
-  /** See [[com.treode.disk.Disk#read Disk.read]]. */
-  def read [P] (pd : PageDescriptor [P], pos: Position): Async [P] = {
-    buffer.clear()
-    assert(pos.disk == 0)
-    for {
-      _ <- file.fill (buffer, pos.offset, pos.length)
-    } yield {
-      pd.ppag.unpickle(buffer)
-    }}}
+	/** See [[com.treode.disk.Disk#write Disk.write]]. */
+	def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
+		async { cb =>
+			send (PickledPage (desc, obj, gen, page, cb))
+		}}
