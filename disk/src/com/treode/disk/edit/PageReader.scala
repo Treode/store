@@ -19,6 +19,8 @@ package com.treode.disk.edit
 import com.treode.async.io.File
 import com.treode.async.Async
 import com.treode.buffer.PagedBuffer
+import com.treode.disk.PageDescriptor
+import com.treode.disk.Position
 
 private class PageReader (
   val file: File
@@ -27,16 +29,18 @@ private class PageReader (
   val bits = 10
   val buffer = PagedBuffer (bits)
 
-  /**
-   * Returns (if successful) the string of length `length` at `pos` in the
-   * file asynchronously, using a read buffer.
+  /*
+      We read a P-type object from the location at pos using the 
+      Pickler embedded in the PageDescriptor to unpickle the object  
    */
-  def readString (pos: Long, length: Int) : Async [String] = {
+  def read [P] (pd : PageDescriptor[P], pos: Position): Async[P] = {
     buffer.clear()
+    assert(pos.disk == 0)
     for {
-      _ <- file.fill (buffer, pos, length)
+      _ <- file.fill (buffer, pos.offset, pos.length) 
     } yield {
-      buffer.readString ()
+      pd.ppag.unpickle(buffer)
     }
   }
+
 }
