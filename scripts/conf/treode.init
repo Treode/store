@@ -28,8 +28,7 @@
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 
-#JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
-JAVA_HOME=/usr/lib/jvm/default-java
+JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
 DESC=treode            
 NAME=treode            
 DAEMON="$JAVA_HOME/bin/java"
@@ -58,30 +57,28 @@ SCRIPTNAME=/etc/init.d/$NAME
 #
 do_start()
 {
-# Create 3KV_DB if does not exist
+    # Create 3KV_DB if does not exist
     if [ ! -f $TREODEKV_DB ]; then
-	TREODEKV_HOST=`hostname -i | sed -e 's/\./ /g'|xargs printf '%02X'`
-	echo "Initialize Treode KV Store for host $TREODEKV_HOST"
-	$DAEMON -jar /opt/treode/lib/finagle-server-0.2.0.jar init -host=0x$TREODEKV_HOST -cell=0x$TREODEKV_HOST $TREODEKV_DB
+        TREODEKV_HOST=`hostname -i | sed -e 's/\./ /g'|xargs printf '%02X'`
+        echo "Initialize Treode KV Store for host $TREODEKV_HOST"
+        $DAEMON -jar /opt/treode/lib/finagle-server-0.2.0.jar init -host=0x$TREODEKV_HOST -cell=0x$TREODEKV_HOST $TREODEKV_DB
     fi
 
-	# Return
-	#   0 if daemon has been started
-	#   1 if daemon was already running
-	#   2 if daemon could not be started
-	start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
-		|| return 1
-	start-stop-daemon --start --pidfile $PIDFILE --make-pidfile \
-	    --exec $DAEMON \
-	    --background -- \
-	    $DAEMON_ARGS \
-		|| return 2
+    # Return
+    #   0 if daemon has been started
+    #   1 if daemon was already running
+    #   2 if daemon could not be started
+    start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
+        || return 1
+    start-stop-daemon --start --pidfile $PIDFILE --make-pidfile \
+        --exec $DAEMON \
+        --background -- \
+        $DAEMON_ARGS \
+        || return 2
 
-#	    --startas /bin/sh -- -c "exec $DAEMON $DAEMON_ARGS > /opt/treode/logs/treode.log 2>&1" \
-
-	# Add code here, if necessary, that waits for the process to be ready
-	# to handle requests from services started subsequently which depend
-	# on this one.  As a last resort, sleep for some time.
+    # Add code here, if necessary, that waits for the process to be ready
+    # to handle requests from services started subsequently which depend
+    # on this one.  As a last resort, sleep for some time.
 }
 
 #
@@ -89,73 +86,73 @@ do_start()
 #
 do_stop()
 {
-	# Return
-	#   0 if daemon has been stopped
-	#   1 if daemon was already stopped
-	#   2 if daemon could not be stopped
-	#   other if a failure occurred
-	start-stop-daemon --stop -v --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name java 
-	RETVAL="$?"
-	[ "$RETVAL" = 2 ] && return 2
-	# Wait for children to finish too if this is a daemon that forks
-	# and if the daemon is only ever run from this initscript.
-	# If the above conditions are not satisfied then add some other code
-	# that waits for the process to drop all resources that could be
-	# needed by services started subsequently.  A last resort is to
-	# sleep for some time.
-	start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $DAEMON
-	[ "$?" = 2 ] && return 2
-	# Many daemons don't delete their pidfiles when they exit.
-	rm -f $PIDFILE
-	return "$RETVAL"
+    # Return
+    #   0 if daemon has been stopped
+    #   1 if daemon was already stopped
+    #   2 if daemon could not be stopped
+    #   other if a failure occurred
+    start-stop-daemon --stop -v --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name java 
+    RETVAL="$?"
+    [ "$RETVAL" = 2 ] && return 2
+    # Wait for children to finish too if this is a daemon that forks
+    # and if the daemon is only ever run from this initscript.
+    # If the above conditions are not satisfied then add some other code
+    # that waits for the process to drop all resources that could be
+    # needed by services started subsequently.  A last resort is to
+    # sleep for some time.
+    start-stop-daemon --stop --quiet --oknodo --retry=0/30/KILL/5 --exec $DAEMON
+    [ "$?" = 2 ] && return 2
+    # Many daemons don't delete their pidfiles when they exit.
+    rm -f $PIDFILE
+    return "$RETVAL"
 }
 
 case "$1" in
-  start)
-    [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC " "$NAME"
-    do_start
-    case "$?" in
-		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
-	esac
-  ;;
-  stop)
-	[ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
-	do_stop
-	case "$?" in
-		0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
-		2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
-	esac
-	;;
-  status)
-       status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
-       ;;
-  restart)
-	#
-	# If the "reload" option is implemented then remove the
-	# 'force-reload' alias
-	#
-	log_daemon_msg "Restarting $DESC" "$NAME"
-	do_stop
-	case "$?" in
-	  0|1)
-		do_start
-		case "$?" in
-			0) log_end_msg 0 ;;
-			1) log_end_msg 1 ;; # Old process is still running
-			*) log_end_msg 1 ;; # Failed to start
-		esac
-		;;
-	  *)
-	  	# Failed to stop
-		log_end_msg 1
-		;;
-	esac
-	;;
-  *)
-	echo "Usage: $SCRIPTNAME {start|stop|status|restart}" >&2
-	exit 3
-	;;
+    start)
+        [ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC " "$NAME"
+        do_start
+        case "$?" in
+            0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+            2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+        esac
+        ;;
+    stop)
+        [ "$VERBOSE" != no ] && log_daemon_msg "Stopping $DESC" "$NAME"
+        do_stop
+        case "$?" in
+            0|1) [ "$VERBOSE" != no ] && log_end_msg 0 ;;
+            2) [ "$VERBOSE" != no ] && log_end_msg 1 ;;
+        esac
+        ;;
+    status)
+        status_of_proc "$DAEMON" "$NAME" && exit 0 || exit $?
+        ;;
+    restart)
+        #
+        # If the "reload" option is implemented then remove the
+        # 'force-reload' alias
+        #
+        log_daemon_msg "Restarting $DESC" "$NAME"
+        do_stop
+        case "$?" in
+            0|1)
+                do_start
+                case "$?" in
+                    0) log_end_msg 0 ;;
+                    1) log_end_msg 1 ;; # Old process is still running
+                    *) log_end_msg 1 ;; # Failed to start
+                esac
+                ;;
+            *)
+                # Failed to stop
+                log_end_msg 1
+                ;;
+        esac
+        ;;
+    *)
+        echo "Usage: $SCRIPTNAME {start|stop|status|restart}" >&2
+        exit 3
+        ;;
 esac
 
 :
