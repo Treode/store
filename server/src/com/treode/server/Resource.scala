@@ -16,7 +16,7 @@
 
 package com.treode.server
 
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.treode.async.Async, Async.supply
 import com.treode.cluster.HostId
 import com.treode.store._
@@ -26,6 +26,9 @@ import com.twitter.finagle.Service
 import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.finagle.http.path._
 import com.twitter.util.Future
+
+import scala.concurrent.duration._
+import scala.concurrent._
 
 class Resource (host: HostId, store: SchematicStore) extends Service [Request, Response] {
 
@@ -97,7 +100,32 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
         respond (req, Status.PreconditionFailed)
     }}
 
+  def batch_write (req: Request): Async [Response] = {
+    val tx = req.transactionId (host)
+    val ct = req.conditionTxClock (TxClock.MinValue)
+    val mapper = new ObjectMapper
+    val node = mapper.readTree(req.getContentString)
+    store.batch_write(tx, ct, node)
+    .map [Response] { vt =>
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.headerMap.add ("Value-TxClock", vt.toString)
+      rsp
+    }
+    .recover {
+      case _: StaleException =>
+        respond (req, Status.PreconditionFailed)
+    }
+  }
+
   def apply (req: Request): Future [Response] = {
+
+    if (req.method == Method.Post) {
+
+      batch_write (req) .toTwitterFuture
+      
+    } else {
+
     Path (req.path) :? req.params match {
 
       case Root / "table" / tab :? KeyParam (key) =>
@@ -131,4 +159,6 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
       case _ =>
         Future.value (respond (req, Status.NotFound))
     }}
+      //ret .onSuccess { v => println(v.toString)}
+  }
 }
