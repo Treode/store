@@ -20,12 +20,17 @@ import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}, Async.supply
 import com.treode.disk.{Disk, DiskLaunch, DiskRecovery, ObjectId, TypeId}
-import com.treode.disk.stubs.edit.{StubDisk, StubDiskChecks}
+import com.treode.disk.stubs.{StubDisk, StubDiskChecks}
+import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 
 class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
 
   private class SegmentLedgerTracker (nobjects: Int, npages: Int) extends Tracker {
+
+    type Medic = SegmentLedgerMedic
+
+    type Struct = SegmentLedger
 
     class UserObject (id: ObjectId, private var page: Int) {
 
@@ -52,21 +57,11 @@ class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
     private var allocating = Map.empty [(ObjectId, Long), Int] .withDefaultValue (0)
     private var allocated = Map.empty [(ObjectId, Long), Int] .withDefaultValue (0)
 
-    private var medic: SegmentLedgerMedic = null
-    private var ledger: SegmentLedger = null
+    def recover () (implicit random: Random, scheduler: Scheduler, recovery: DiskRecovery): Medic =
+      new SegmentLedgerMedic (recovery)
 
-    def recover () (implicit scheduler: Scheduler, recovery: DiskRecovery) {
-      ledger = null
-      medic = new SegmentLedgerMedic (recovery)
-    }
-
-    def launch () (implicit scheduler: Scheduler, launch: DiskLaunch): Async [Unit] =
-      for {
-        ledger <- medic.close() .map (_._1)
-      } yield {
-        medic = null
-        this.ledger = ledger
-      }
+    def launch (medic: Medic) (implicit launch: DiskLaunch): Async [Struct] =
+      medic.close() .map (_._1)
 
     def getObject (id: ObjectId) (implicit random: Random): UserObject =
       objects.get (id) match {
@@ -94,7 +89,8 @@ class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
 
     def batches (
       nbatches: Int,
-      nallocs: Int
+      nallocs: Int,
+      ledger: SegmentLedger
     ) (implicit
       random: Random,
       scheduler: Scheduler
@@ -105,7 +101,7 @@ class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
         Async.count (nallocs) (randomObject().alloc (ledger))
       }}
 
-    def verify (crashed: Boolean) (implicit scheduler: Scheduler): Async [Unit] =
+    def verify (crashed: Boolean, ledger: Struct) (implicit scheduler: Scheduler): Async [Unit] =
       supply {
         val docket = ledger.docket
         for ((page, bytes) <- docket; id = (page.obj, page.gen))
@@ -121,33 +117,30 @@ class SegmentLedgerSpec extends FreeSpec with StubDiskChecks {
   extends Effect [SegmentLedgerTracker] {
 
     def start (
-      tracker: SegmentLedgerTracker
+      tracker: SegmentLedgerTracker,
+      ledger: SegmentLedger
     ) (implicit
       random: Random,
       scheduler: Scheduler,
       disk: StubDisk
     ): Async [Unit] =
-      tracker.batches (nbatches, nallocs)
+      tracker.batches (nbatches, nallocs, ledger)
 
     override def toString = s"new SegmentLedgerPhase ($nbatches, $nallocs)"
   }
 
   "The SegmentLedger should record and recover" - {
 
-    /*"in" in {
-      twoPhases (new SegmentLedgerTracker (1, 3), 0x6A43A56B21F58B4FL) ((new SegmentLedgerPhase (3, 1),2), (Checkpoint (1),7), (Drain,7)) ((new SegmentLedgerPhase (3, 1),2147483647))
-    }*/
-
     for {
       nbatches <- Seq (0, 1, 2, 3)
       nallocs <- Seq (0, 1, 2, 3)
       if (nbatches != 0 && nallocs != 0 || nbatches == nallocs)
-    } s"for $nbatches batches of $nallocs allocations" in {
+    } s"for $nbatches batches of $nallocs allocations" taggedAs (Intensive, Periodic) in {
       manyScenarios (new SegmentLedgerTracker (1, 3), new SegmentLedgerPhase (nbatches, nallocs))
     }
 
     for {
       (nbatches, nallocs, nobjects) <- Seq ((7, 7, 10), (20, 20, 40), (20, 100, 10))
-    } s"for $nbatches batches of $nallocs allocations" in {
+    } s"for $nbatches batches of $nallocs allocations" taggedAs (Intensive, Periodic) in {
       manyScenarios (new SegmentLedgerTracker (nobjects, 7), new SegmentLedgerPhase (nbatches, nallocs))
     }}}

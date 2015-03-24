@@ -16,120 +16,60 @@
 
 package com.treode.disk.stubs
 
-import scala.util.{Failure, Random, Success}
+import scala.collection.mutable.Queue
 
-import com.treode.async.{Async, Fiber, Callback, Scheduler}
-import com.treode.async.implicits._
+import com.treode.async.{Async, AsyncQueue, Fiber, Scheduler}, Async.supply
 import com.treode.async.misc.EpochReleaser
-import com.treode.disk._
+import com.treode.disk._, GenerationDocket.DocketId
 
-import Async.{async, guard}
-import Callback.ignore
-import PageLedger.Groups
+private class StubCompactor (implicit scheduler: Scheduler) {
 
-private class StubCompactor (
-    releaser: EpochReleaser
- ) (implicit
-     random: Random,
-     scheduler: Scheduler,
-     disk: StubDiskDrive,
-     config: StubDiskConfig
-) {
+  private var compactors: CompactorRegistry = null
 
-  val fiber = new Fiber
-  var pages: StubPageRegistry = null
-  var cleanq = Set.empty [(TypeId, ObjectId)]
-  var compactq = Set.empty [(TypeId, ObjectId)]
-  var book = Map.empty [(TypeId, ObjectId), (Set [Long], List [Callback [Unit]])]
-  var cleanreq = false
-  var entries = 0
-  var engaged = true
+  private val fiber = new Fiber
+  private val queue = new AsyncQueue (fiber) (reengage _)
+  private val docket = new GenerationDocket
+  private var arrival = new Queue [DocketId]
+
+  queue.launch()
 
   private def reengage() {
-    if (cleanreq) {
-      cleanreq = false
-      probeForClean()
-    } else if (!cleanq.isEmpty) {
-      compactObject (cleanq.head)
-    } else if (!compactq.isEmpty) {
-      compactObject (compactq.head)
-    } else {
-      book = Map.empty
-      entries = 0
-      engaged = false
+    if (compactors == null)
+      ()
+    else if (!arrival.isEmpty)
+      _compact()
+    else
+      assert (docket.isEmpty)
+  }
+
+  private def _compact() {
+    queue.begin {
+      val id = arrival.dequeue()
+      val gens = docket.remove (id)
+      compactors.compact (id.typ, id.obj, gens)
     }}
 
-  private def compacted (latches: Seq [Callback [Unit]]): Callback [Unit] = {
-    case Success (v) =>
-      val cb = Callback.fanout (latches)
-      fiber.execute (reengage())
-      cb.pass (v)
-    case Failure (t) =>
-      throw t
+  private def add (id: DocketId, gens: Set [Long]) {
+    if (!(docket contains id))
+      arrival.enqueue (id)
+    docket.add (id, gens)
   }
 
-  private def compactObject (id: (TypeId, ObjectId)) {
-    val (typ, obj) = id
-    val (groups, latches) = book (typ, obj)
-    cleanq -= id
-    compactq -= id
-    book -= id
-    engaged = true
-    pages.compact (typ, obj, groups) .run (compacted  (latches))
-  }
-
-  private def probed: Callback [Unit] = {
-    case Success (v) =>
-      fiber.execute (reengage())
-    case Failure (t) =>
-      throw t
-  }
-
-  private def probeForClean(): Unit =
-    guard {
-      engaged = true
-      for {
-        (groups, segments) <- pages.probe (disk.cleanable())
-      } yield compact (groups, segments)
-    } run (probed)
-
-  private def compact (id: (TypeId, ObjectId), gens: Set [Long]): Async [Unit] =
-    async { cb =>
-      book.get (id) match {
-        case Some ((gens0, cbs0)) =>
-          book += id -> ((gens0 ++ gens, cb :: cbs0))
-        case None =>
-          book += id -> ((gens, cb :: Nil))
-      }}
-
-  private def compact (groups: Groups, segments: Seq [Long]): Unit =
+  def launch (compactors: CompactorRegistry): Unit =
     fiber.execute {
-      (for ((id, gs) <- groups.latch) {
-        cleanq += id
-        compact (id, gs)
-      })
-      .map (_ => releaser.release (disk.free (segments)))
-      .run (ignore)
-    }
-
-  def launch (pages: StubPageRegistry): Unit =
-    fiber.execute {
-      this.pages = pages
-      reengage()
-    }
-
-  def tally(): Unit =
-    fiber.execute {
-      entries += 1
-      if (!engaged && config.compact (entries))
-        probeForClean()
+      this.compactors = compactors
+      queue.engage()
     }
 
   def compact (typ: TypeId, obj: ObjectId): Unit =
     fiber.execute {
-      val id = (typ, obj)
-      compactq += id
-      compact (id, Set.empty [Long]) run (ignore)
-      if (!engaged)
-        reengage()
+      add (DocketId (typ, obj), Set.empty)
+      queue.engage()
+    }
+
+  def compact (drains: GenerationDocket): Unit =
+    fiber.execute {
+      for ((id, gens) <- drains)
+        add (id, gens)
+      queue.engage()
     }}

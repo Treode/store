@@ -16,63 +16,57 @@
 
 package com.treode.disk.stubs
 
-import scala.collection.immutable.Queue
-import scala.util.Random
+import java.util.ArrayList
 
-import com.treode.async.{Async, Callback, Fiber, Scheduler}
-import com.treode.async.implicits._
+import com.treode.async.{Async, AsyncQueue, Callback, Fiber, Scheduler}
 import com.treode.disk.CheckpointerRegistry
 
-import Callback.{fanout, ignore}
-
-private class StubCheckpointer (implicit
-    random: Random,
-    scheduler: Scheduler,
-    disk: StubDiskDrive,
-    config: StubDiskConfig
+private class StubCheckpointer (
+  drive: StubDiskDrive
+) (implicit
+  scheduler: Scheduler
 ) {
 
-  val fiber = new Fiber
-  var checkpointers: CheckpointerRegistry = null
-  var entries = 0
-  var checkreqs = List.empty [Callback [Unit]]
-  var engaged = true
+  private var checkpointers: CheckpointerRegistry = null
+
+  private val fiber = new Fiber
+  private val queue = new AsyncQueue (fiber) (reengage _)
+  private var requests = List.empty [Callback [Unit]]
+  private var running = List.empty [Callback [Unit]]
+
+  queue.launch()
 
   private def reengage() {
-    fanout (checkreqs) .pass (())
-    checkreqs = List.empty
-    entries = 0
-    engaged = false
+    if (checkpointers == null)
+      ()
+    else if (!requests.isEmpty)
+      _checkpoint()
   }
 
-  private def _checkpoint() {
-    engaged = true
-    val mark = disk.mark()
-    checkpointers .checkpoint() .map { _ =>
-      disk.checkpoint (mark)
-      fiber.execute (reengage())
-    } .run (ignore)
-  }
+  private def _checkpoint(): Unit =
+    queue.begin {
+      assert (running.isEmpty)
+      running = requests
+      requests = List.empty
+      val mark = drive.mark()
+      for {
+        _ <- checkpointers.checkpoint()
+      } yield {
+        drive.checkpoint (mark)
+        assert (!running.isEmpty)
+        for (cb <- running)
+          scheduler.pass (cb, ())
+        running = List.empty
+      }}
 
   def launch (checkpointers: CheckpointerRegistry): Unit =
     fiber.execute {
       this.checkpointers = checkpointers
-      if (!checkreqs.isEmpty || config.checkpoint (entries))
-        _checkpoint()
-      else
-        engaged = false
+      queue.engage()
     }
 
   def checkpoint(): Async [Unit] =
     fiber.async { cb =>
-      checkreqs ::= cb
-      if (!engaged)
-        _checkpoint()
-    }
-
-  def tally(): Unit =
-    fiber.execute {
-      entries += 1
-      if (!engaged && config.checkpoint (entries))
-        _checkpoint()
+      requests ::= cb
+      queue.engage()
     }}

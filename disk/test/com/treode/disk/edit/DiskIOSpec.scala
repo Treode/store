@@ -19,61 +19,88 @@ package com.treode.disk.edit
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.DiskTestConfig
+import com.treode.disk.{PageDescriptor, Position}
+import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec
 
 class DiskIOSpec extends FlatSpec {
 
-  implicit val config = DiskTestConfig()
-
-  "The PageReader" should "be able to read the string the PageWriter wrote" in {
+  "The PageReader" should "read the item the PageWriter wrote" in {
     implicit val scheduler = StubScheduler.random()
-    val a = "this is a string"
+    val a = "this is "
+    val b = "a string!"
     val readPos = 0
     val f = StubFile (1 << 20, 0)
-
-    val dw = new PageWriter (f)
+    val dsp = new PageDispatcher
+    val dw = new PageWriter (dsp, f)
     val dr = new PageReader (f)
-    val (pos, len) = dw.write (a) .expectPass()
-    val readString = dr.readString (readPos, len) .expectPass()
-    assert (a.equals (readString))
+    val pDesc = PageDescriptor (0x25, Picklers.string)
+    val posA = dsp.write (pDesc, 0, 0, a) .expectPass()
+    val posB= dsp.write (pDesc, 0, 0, b) .expectPass()
+    dr.read (pDesc, posA) .expectPass (a)
+    dr.read (pDesc, posB) .expectPass (b)
   }
 
-  it should "write and read multiple times to disk" in {
+  it should "read multiple items written one at a time" in {
     implicit val scheduler = StubScheduler.random()
     val a = "abcdef"
     val b = "123456789"
     val startPos = 0
     val f = StubFile (1 << 20, 0)
-
-    val dw = new PageWriter (f)
+    val dsp = new PageDispatcher
+    val dw = new PageWriter (dsp,f)
     val dr = new PageReader (f)
-    val (posA, lenA) = dw.write (a) .expectPass()
-    val (posB, lenB) = dw.write (b) .expectPass()
-    val readA = dr.readString (startPos, lenA) .expectPass()
-    val readB = dr.readString (posA,     lenB) .expectPass()
-    assert (a.equals (readA))
-    assert (b.equals (readB))
-    assert (posA == startPos + lenA)
-    assert (posB == posA + lenB)
+    val pDesc = PageDescriptor (0x25, Picklers.string)
+    val posA = dsp.write (pDesc, 0, 0, a) .expectPass()
+    val posB = dsp.write (pDesc, 0, 0, b) .expectPass()
+    dr.read (pDesc, posA) .expectPass(a)
+    dr.read (pDesc, posB) .expectPass(b)
+    assert (posA.offset == 0)
+    assert (posB.offset == a.length + 1)
   }
 
-  it should "write and read correctly out of order" in {
+  it should "read multiple items written one at a time out of order" in {
     implicit val scheduler = StubScheduler.random()
     val a = "abcdef"
     val b = "123456789"
     val startPos = 0
     val f = StubFile (1 << 20, 0)
-
-    val dw = new PageWriter (f)
+    val dsp = new PageDispatcher
+    val dw = new PageWriter (dsp,f)
     val dr = new PageReader (f)
-    val (posA, lenA) = dw.write (a) .expectPass()
-    val (posB, lenB) = dw.write (b) .expectPass()
-    val readB = dr.readString (posA,     lenB) .expectPass()
-    val readA = dr.readString (startPos, lenA) .expectPass()
-    assert (a.equals (readA))
-    assert (b.equals (readB))
-    assert (posA == startPos + lenA)
-    assert (posB == posA + lenB)
+    val pDesc = PageDescriptor (0x25, Picklers.string)
+    val posB = dsp.write (pDesc, 0, 0, b) .expectPass()
+    val posA = dsp.write (pDesc, 0, 0, a) .expectPass()
+    dr.read (pDesc, posA) .expectPass (a)
+    dr.read (pDesc, posB) .expectPass (b)
+    assert (posA.offset == b.length + 1)
+    assert (posB.offset == 0)
   }
-}
+
+  it should "read multiple items written as a batch" in {
+    implicit val scheduler = StubScheduler.random()
+    val stringPickler = {
+      import Picklers._
+      wrap (string, string)
+      .build (x => (x._1, x._2))
+      .inspect (x => (x._1, x._2))
+    }
+    val f = StubFile (1 << 20, 0)
+    val a = "lorem "
+    val b = "ipsum "
+    val c = "dolor "
+    val d = "sit "
+    val dsp = new PageDispatcher
+    val pDesc = PageDescriptor (0x25, stringPickler)
+    //the following are purposely done out of order
+    val ad_callback = dsp.write (pDesc, 0, 0, (a,d)) .capture()
+    val bc_callback = dsp.write (pDesc, 0, 0, (b,c)) .capture()
+    val dw = new PageWriter (dsp, f)
+    val posAD = ad_callback.expectPass()
+    val posBC = bc_callback.expectPass()
+    val dr = new PageReader (f)
+    dr.read (pDesc, posBC) .expectPass ((b,c))
+    dr.read (pDesc, posAD) .expectPass ((a,d))
+    assert ((posAD.disk, posAD.offset, posAD.length)  == (0, 0, 12))
+    assert ((posBC.disk, posBC.offset, posBC.length)  == (0, 12, 14))
+  }}

@@ -19,17 +19,21 @@ package com.treode.store
 import com.treode.cluster.HostId
 import com.treode.pickle.Pickler
 
-class Residents private [store] (
+/** The cohorts that reside on a host. */
+private class Residents (
     private val nums: Set [Int],
     private val mask: Int
 ) {
 
+  /** Should the host house the given id? */
   def contains (id: Int): Boolean =
     nums contains (id & mask)
 
+  /** Should the host house the given item? */
   def contains [A] (p: Pickler [A], v: A): Boolean =
     contains (p.murmur32 (v) & mask)
 
+  /** What percentage of cohorts in this set are also in the other set? */
   def stability (other: Residents): Double = {
     val adjust =
       if (mask == other.mask)
@@ -44,13 +48,14 @@ class Residents private [store] (
       (adjust intersect other.nums).size.toDouble / adjust.size.toDouble
   }
 
+  /** Have enough cohorts left this set that we have an exodus? */
   def exodus (other: Residents) (implicit config: StoreConfig): Boolean =
     1 - stability (other) > config.exodusThreshold
 
   override def toString = s"Residents($nums, $mask)"
 }
 
-object Residents {
+private object Residents {
 
   val all = new Residents (Set (0), 0)
 

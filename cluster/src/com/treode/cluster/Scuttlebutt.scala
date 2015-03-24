@@ -109,8 +109,10 @@ private class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit sched
     Scuttlebutt.ping.listen { (hosts, from) =>
       val task = for {
         updates <- ping (hosts)
-        if !updates.isEmpty
-      } yield Scuttlebutt.sync (updates) (from)
+      } yield {
+        if (!updates.isEmpty)
+          Scuttlebutt.sync (updates) (from)
+      }
       task run (ignore)
     }
 

@@ -16,14 +16,14 @@
 
 package com.treode.disk.edit
 
-import com.treode.async.{Async, Callback, Scheduler}, Async.async
-import com.treode.disk.Dispatcher
+import com.treode.async.{Async, Scheduler}, Async.async
+import com.treode.disk.{Dispatcher, RecordDescriptor}
 
 private class LogDispatcher (implicit scheduler: Scheduler)
-extends Dispatcher [(String, Callback [Unit])] {
+extends Dispatcher [PickledRecord] {
 
-  def record (log: String): Async [Unit] =
+  def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit] =
     async { cb =>
-      send ((log, cb))
+      send (PickledRecord(desc, entry, cb))
     }
 }

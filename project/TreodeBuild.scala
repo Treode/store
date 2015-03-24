@@ -189,38 +189,24 @@ object TreodeBuild extends Build {
     commonPortion ++
     stubPortion
 
-  // Both the async and pickle projects depend on buffers, but someday someone may want the async
-  // package without the picklers or vice  versa, so we have isolated the buffers into their own
-  // project.
-  lazy val buffer = Project ("buffer", file ("buffer"))
+  // Separated because it helped development.
+  lazy val core = Project ("core", file ("core"))
     .configs (IntensiveTest, PeriodicTest, Perf)
-    .settings (standardSettings: _*)
-
-  // Separated because this may be useful on its own.
-  lazy val pickle = Project ("pickle", file ("pickle"))
-    .configs (IntensiveTest, PeriodicTest, Perf)
-    .dependsOn (buffer)
-    .settings (standardSettings: _*)
-
-  // Separated because this may be useful on its own.
-  lazy val async = Project ("async", file ("async"))
-    .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
-    .dependsOn (buffer, pickle % "test")
     .settings (stubSettings: _*)
 
   // Separated because it helped development.
   lazy val cluster = Project ("cluster", file ("cluster"))
     .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
-    .dependsOn (async % "compile;stub->stub", pickle)
+    .dependsOn (core % "compile;stub->stub")
     .settings (stubSettings: _*)
 
   // Separated because it helped development.
   lazy val disk = Project ("disk", file ("disk"))
     .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
-    .dependsOn (async % "compile;stub->stub", pickle)
+    .dependsOn (core % "compile;stub->stub")
     .settings (stubSettings: _*)
 
-  // The main component that this build provides.
+  // The main library that this build provides.
   lazy val store = Project ("store", file ("store"))
     .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
     .dependsOn (cluster % "compile;stub->stub", disk % "compile;stub->stub")
@@ -238,7 +224,7 @@ object TreodeBuild extends Build {
           "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.4"))
 
   // Separated because not everyone wants it and its dependencies.
-  lazy val twitterServer = Project ("twitter-server", file ("twitter-server"))
+  lazy val twitter = Project ("twitter", file ("twitter"))
     .configs (IntensiveTest, PeriodicTest, Perf)
     .dependsOn (store, jackson)
     .settings (standardSettings: _*)
@@ -250,10 +236,10 @@ object TreodeBuild extends Build {
           "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
           "com.twitter" %% "twitter-server" % "1.9.0"))
 
-  // Our key-value server.
+  // The main server that this build provides.
   lazy val server = Project ("server", file ("server"))
     .configs (IntensiveTest, PeriodicTest, Perf)
-    .dependsOn (twitterServer, store % "compile;test->stub")
+    .dependsOn (store % "compile;test->stub", twitter)
     .settings (standardSettings: _*)
     .settings (assemblySettings: _*)
     .settings (
@@ -288,9 +274,9 @@ object TreodeBuild extends Build {
 
   lazy val copyDocAssetsTask = taskKey [Unit] ("Copy doc assets")
 
-  // The doc project includes everything.
+  // The doc project includes everything that's a library.
   lazy val doc = Project ("doc", file ("doc"))
-    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterServer)
+    .aggregate (core, cluster, disk, store, jackson, twitter)
     .settings (versionInfo: _*)
     .settings (unidocSettings: _*)
     .settings (
@@ -321,7 +307,7 @@ object TreodeBuild extends Build {
 
   // The root project includes everything.
   lazy val root = Project ("root", file ("."))
-    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterServer, server)
+    .aggregate (core, cluster, disk, store, jackson, twitter, server)
     .settings (versionInfo: _*)
     .settings (
 

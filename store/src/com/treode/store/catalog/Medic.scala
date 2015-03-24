@@ -83,7 +83,7 @@ private class Medic (id: CatalogId) {
   def close() (implicit disk: Disk): Async [Handler] =
     guard {
       for {
-        _ <- when (saved.isDefined) (patch (saved.get))
+        _ <- when (saved) (patch (_))
       } yield {
         new Handler (id, version, bytes.murmur32, bytes, history, saved)
       }}

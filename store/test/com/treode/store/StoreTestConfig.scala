@@ -20,21 +20,16 @@ import scala.language.postfixOps
 
 import com.treode.async.Backoff
 import com.treode.async.misc.RichInt
-import com.treode.disk.stubs.StubDiskConfig
 
 class StoreTestConfig (
     val messageFlakiness: Double
 ) (implicit
-    val stubDiskConfig: StubDiskConfig,
     val storeConfig: StoreConfig
 ) {
 
   override def toString = {
-    import stubDiskConfig._
     import storeConfig._
     val s = new StringBuilder
-    s ++= s"checkpointProbability = $checkpointProbability, "
-    s ++= s"compactionProbability = $compactionProbability, "
     s ++= s"closedLifetime = $closedLifetime, "
     s ++= s"deliberatingTimeout = $deliberatingTimeout, "
     s ++= s"exodusThreshold = $exodusThreshold, "
@@ -55,6 +50,41 @@ class StoreTestConfig (
   }}
 
 object StoreTestConfig {
+
+  def storeConfig (
+      closedLifetime: Int = 2 seconds,
+      deliberatingTimeout: Int = 2 seconds,
+      exodusThreshold: Double = 0.2D,
+      falsePositiveProbability: Double = 0.01,
+      lockSpaceBits: Int = 4,
+      messageFlakiness: Double = 0.1,
+      moveBatchBackoff: Backoff = Backoff (2 seconds, 1 seconds, 1 minutes, 7),
+      moveBatchBytes: Int = Int.MaxValue,
+      moveBatchEntries: Int = Int.MaxValue,
+      prepareBackoff: Backoff = Backoff (100, 100, 1 seconds, 7),
+      preparingTimeout: Int = 5 seconds,
+      proposingBackoff: Backoff = Backoff (100, 100, 1 seconds, 7),
+      readBackoff: Backoff = Backoff (100, 100, 1 seconds, 7),
+      retention: Retention = Retention.UnixEpoch,
+      scanBatchBackoff: Backoff = Backoff (700, 300, 10 seconds, 7),
+      targetPageBytes: Int = 1<<10
+  ): StoreConfig =
+    StoreConfig (
+        closedLifetime = closedLifetime,
+        deliberatingTimeout = deliberatingTimeout,
+        exodusThreshold = exodusThreshold,
+        falsePositiveProbability = falsePositiveProbability,
+        lockSpaceBits = lockSpaceBits,
+        moveBatchBackoff = moveBatchBackoff,
+        moveBatchBytes = moveBatchBytes,
+        moveBatchEntries = moveBatchEntries,
+        prepareBackoff = prepareBackoff,
+        preparingTimeout = preparingTimeout,
+        proposingBackoff = proposingBackoff,
+        readBackoff = readBackoff,
+        retention = retention,
+        scanBatchBackoff = scanBatchBackoff,
+        targetPageBytes = targetPageBytes)
 
   def apply (
       checkpointProbability: Double = 0.1,
@@ -79,9 +109,6 @@ object StoreTestConfig {
     new StoreTestConfig (
         messageFlakiness = messageFlakiness
     ) (
-        stubDiskConfig = StubDiskConfig (
-            checkpointProbability = checkpointProbability,
-            compactionProbability = compactionProbability),
         storeConfig = StoreConfig (
             closedLifetime = closedLifetime,
             deliberatingTimeout = deliberatingTimeout,

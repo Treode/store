@@ -32,6 +32,9 @@ private class RecordRegistry {
 
   def read (id: Long, buf: PagedBuffer, len: Int): Unit => Any =
     records.unpickle (id, buf, len)
+
+  def read (buf: PagedBuffer, len: Int, n: Int): Seq [Unit => Any] =
+    records.unpickle (buf, len, n)
 }
 
 private object RecordRegistry {

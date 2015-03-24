@@ -85,7 +85,7 @@ private class PaxosMover (kit: PaxosKit) {
     latch (
         when (!novel.isEmpty) (Acceptors.receive.record (gen, novel)),
         releaser.release()
-    ) .map (_ => ())
+    ) .unit
   }
 
   private class Sender (version: Int, cells: Seq [Cell], hosts: Set [Peer], cb: Callback [Unit]) {

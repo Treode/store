@@ -49,7 +49,7 @@ private class StubAtomicHost (
 ) extends StoreClusterChecks.Host {
 
   val librarian = Librarian { atlas =>
-    latch (paxos.rebalance (atlas), atomic.rebalance (atlas)) .map (_ => ())
+    latch (paxos.rebalance (atlas), atomic.rebalance (atlas)) .unit
   }
 
   cluster.startup()
