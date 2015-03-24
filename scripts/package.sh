@@ -23,13 +23,13 @@ create_debian_package () {
     STAGEDIR=${STAGEDIR0}/treode-${PKGVER}
     mkdir -p ${STAGEDIR}
 
-    cp ${SCRIPT_DIR}/conf/treode.init ${STAGEDIR}
+    sed -e "s/#TREODEPKGVERSION#/${PKGVER}/" ${SCRIPT_DIR}/conf/treode.init >  ${STAGEDIR}/treode.init
     cd ${STAGEDIR}
 
     if [[ $WGETFILE == 1 ]]; then
-        wget https://oss.treode.com/examples/finagle/0.2.0/finagle-server-0.2.0.jar
+        wget https://oss.treode.com/examples/finagle/${PKGVER}/finagle-server-${PKGVER}.jar
     else
-	echo COPY $JARFILE to `pwd`
+        echo COPY $JARFILE to `pwd`
         cp $JARFILE .
     fi
 
@@ -54,12 +54,27 @@ create_debian_package () {
     # If successful, copy .deb to $SCRIPT_DIR/o
     if [ -e ${STAGEDIR}/../*.deb ]; then
         mv ${STAGEDIR}/../*.deb ${TREODE_STAGEDIR}
-        rm -rf ${STAGEDIR}
+        echo "Removing stagedir ${STAGEDIR0}"
+        rm -rf ${STAGEDIR0}
     else
         echo "THERE WAS AN ERROR CREATING .DEB PACKAGE"
         echo "STAGE DIR ${STAGEDIR}"
     fi
 
+}
+
+print_usage() {
+    cat << EOF 
+Usage: $0 [-t <packagetype>][-V <packageversion>][-o <stagedir>][-j <jarfile to package>]
+
+Examples:
+Package finagle example in debian pkg format after building finagle-server-0.3.0-SNAPSHOT.jar
+$0 -t debian -V 0.3.0-SNAPSHOT -j stagedir/finagle-server-0.3.0-SNAPSHOT.jar -o stagedir
+
+Package 0.2.0 release finagle example in debian pkg format from Ivy OSS.
+$0 -t debian -V 0.2.0 
+
+EOF
 }
 
 PKGTYPE=
@@ -82,10 +97,16 @@ do
         o)
             TREODE_STAGEDIR=`readlink -f $OPTARG`
             ;;
+        *)
+            print_usage
+            exit
+            ;;
     esac
 done
 
-if [[ -z $PKGTYPE ]] || [[ -z $PKGVER ]] || [[ -z $TREODE_STAGEDIR ]] ; then
+SCRIPT_DIR=$(dirname $(readlink -f $0))
+
+if [[ -z $PKGTYPE ]] || [[ -z $PKGVER ]]; then
     echo "Please provide package type and version using -t and -V options"
     exit 1
 fi
@@ -94,9 +115,12 @@ if [[ -z $JARFILE ]] ; then
     WGETFILE=1
     JARFILE="https://oss.treode.com/examples/finagle/${PKGVER}/finagle-server-${PKGVER}.jar"
     echo "Using $JARFILE"
+    TREODE_STAGEDIR=$SCRIPT_DIR
+else
+    if [[ -z $TREODE_STAGEDIR ]] ; then
+        echo "Please provide build stagedir using -o option"
+    fi
 fi
-
-SCRIPT_DIR=$(dirname $(readlink -f $0))
 
 case $PKGTYPE in
     debian)
