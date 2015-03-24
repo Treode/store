@@ -100,7 +100,14 @@ package object server {
 
     def toBytes: Bytes =
       Bytes (binaryJson.writeValueAsBytes (node))
-  }
+
+    def getAttribute (attr: String): JsonNode = {
+      val va = node.get (attr)
+      if (va == null)
+        throw new BadRequestException (s"There is no attribute called '$attr'")
+      else
+        va
+    }}
 
   implicit class RichString (s: String) {
 
