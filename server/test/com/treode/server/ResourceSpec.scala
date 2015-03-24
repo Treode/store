@@ -36,11 +36,11 @@ class ResourceSpec extends FreeSpec {
   def served (test: (Int, SchematicStubStore) => Any) {
     val store = StubStore ()
     val port = Random.nextInt (65535 - 49152) + 49152
-	val map = new HashMap [String, Long]();
-	map += ("table1" -> 0x1);
-	map += ("table2" -> 0x2);
-	map += ("table3" -> 0x3);
-	map += ("table4" -> 0x4);
+    val map = new HashMap [String, Long]();
+    map += ("table1" -> 0x1);
+    map += ("table2" -> 0x2);
+    map += ("table3" -> 0x3);
+    map += ("table4" -> 0x4);
     val schematicStore = new SchematicStubStore (store, new Schema (map))
     val server = Http.serve (
       s":$port",
@@ -633,4 +633,88 @@ class ResourceSpec extends FreeSpec {
             .body (equalTo ("The slice must be between 0 (inclusive) and the number of slices (exclusive)."))
           .when
             .get ("/table/table1")
-        }}}}}
+        }}}}
+
+  "When post request contains batch-writes" - {
+
+    "and gives proper uris" - {
+
+      "POST [{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}] should yield Ok" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("[{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}]")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("")
+        }}
+
+      "POST [{\"op\":\"DELETE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}] should yield Ok" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("[{\"op\":\"DELETE\",\"table\":\"table1\",\"key\":\"orange\"}]")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("")
+        }}
+
+      "POST [{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}," +
+             "{\"op\":\"UPDATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}] should yield Ok" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("[{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}},"
+                  + "{\"op\":\"UPDATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}]")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("")
+        }}
+
+      "POST [{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}," +
+             "{\"op\":\"DELETE\",\"table\":\"table1\",\"key\":\"orange\"}] should yield Ok" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("[{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}},"
+                  + "{\"op\":\"DELETE\",\"table\":\"table1\",\"key\":\"orange\"}]")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("")
+        }}}
+
+    "and gives improper uris" - {
+
+      "POST [{\"op\":\"CREATE\",\"tble\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}] should yield bad request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("[{\"op\":\"CREATE\",\"tble\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}]")
+          .expect
+            .statusCode (400)
+          .when
+            .post ("")
+        }}
+
+      "POST [{\"op\":\"CREAE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}] should yield bad request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("[{\"op\":\"CREATE\",\"tble\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}]")
+          .expect
+            .statusCode (400)
+          .when
+            .post ("")
+        }}
+    }
+  }}
