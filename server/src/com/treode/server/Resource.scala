@@ -16,7 +16,7 @@
 
 package com.treode.server
 
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.treode.async.Async, Async.supply
 import com.treode.cluster.HostId
 import com.treode.store._
@@ -97,7 +97,23 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
         respond (req, Status.PreconditionFailed)
     }}
 
+  def batch (req: Request): Async [Response] = {
+    val tx = req.transactionId (host)
+    val ct = req.conditionTxClock (TxClock.now)
+    val node = textJson.readTree (req.getContentString)
+    store.batch (tx, ct, node)
+    .map [Response] { vt =>
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.headerMap.add ("Value-TxClock", vt.toString)
+      rsp
+    } .recover {
+      case _: StaleException =>
+        respond (req, Status.PreconditionFailed)
+    }}
+
   def apply (req: Request): Future [Response] = {
+
     Path (req.path) :? req.params match {
 
       case Root / "table" / tab :? KeyParam (key) =>
@@ -128,7 +144,14 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
             Future.value (respond (req, Status.MethodNotAllowed))
         }
 
+      case Root / "batch-write" :? _ =>
+        req.method match {
+          case Method.Post =>
+            batch (req) .toTwitterFuture
+          case _ =>
+            Future.value (respond (req, Status.MethodNotAllowed))
+        }
+
       case _ =>
         Future.value (respond (req, Status.NotFound))
-    }}
-}
+    }}}
