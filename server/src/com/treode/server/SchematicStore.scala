@@ -1,9 +1,14 @@
 package com.treode.server
 
+import com.twitter.util.Future
+import com.twitter.finagle.http.{Method, Request, Response, Status}
+import com.treode.twitter.finagle.http.BadRequestException
 import com.treode.store._
 import com.treode.async.Async
 import com.treode.async.BatchIterator
-import com.fasterxml.jackson.databind.JsonNode
+import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
+import scala.collection.JavaConversions._
+import scala.collection.mutable.HashSet
 
 class SchematicStore (store: Store, schema: Schema) {
 
@@ -19,6 +24,50 @@ class SchematicStore (store: Store, schema: Schema) {
 
   def delete (name: String, key: String, tx: TxId, ct: TxClock): Async [TxClock] = {
     val ops = Seq (WriteOp.Delete (schema.getTableId (name), Bytes (key)))
+    store.write (tx, ct, ops:_*)
+  }
+
+  private def getAttrFromJsonNode (oper: JsonNode, attr: String): JsonNode = {
+    val va = oper.get (attr)
+    if (va == null) {
+      val errMsg = "There is not attribute called '" + attr + "'"
+      throw new BadRequestException (errMsg)
+    } else {
+      va
+    }
+  }
+
+  def batchWrite(tx: TxId, ct: TxClock, node: JsonNode): Async [TxClock] = {
+    val it = node.iterator
+    var ops = Seq [WriteOp] ()
+    val pairs = new HashSet [(String, String)]
+    for (operation <- it) {
+      val table = getAttrFromJsonNode (operation, "table") .textValue
+      val key = getAttrFromJsonNode (operation, "key") .textValue
+      val op = getAttrFromJsonNode (operation, "op") .textValue
+      if (pairs.contains((table, key))) {
+        throw new BadRequestException ("Multiple (Table, key) pairs found")
+      } else {
+        pairs += ((table, key))
+        op .toLowerCase match {
+          case "update" => {
+            val obj = getAttrFromJsonNode (operation, "obj")
+            ops = ops :+ WriteOp.Update (schema.getTableId (table), Bytes (key), obj.toBytes)
+          }
+          case "delete" => {
+            ops = ops :+ WriteOp.Delete (schema.getTableId (table), Bytes (key))
+          }
+          case "create" => {
+            val obj = getAttrFromJsonNode (operation, "obj")
+            ops = ops :+ WriteOp.Create (schema.getTableId (table), Bytes (key), obj.toBytes)
+          }
+          case "hold" => {
+            ops = ops :+ WriteOp.Hold (schema.getTableId (table), Bytes (key))
+          }
+          case _ => {
+            throw new BadRequestException ("Unsupported operation")
+          }
+      }}}
     store.write (tx, ct, ops:_*)
   }
 
