@@ -122,7 +122,7 @@ echo-do mv doc/target/scala-2.11/unidoc stage/docs/scala/store/${version}
 # Create debian package
 STAGE_DEB=stage/pkgs/debian
 echo-do mkdir -p ${STAGE_DEB}
-./package.sh -t debian -V ${version} -j ${STAGE_FINAGLE}/finagle-server-${version}.jar -o ${STAGE_DEB}
+echo-do ${DIR}/scripts/package.sh -t debian -V ${version} -j ${STAGE_FINAGLE}/finagle-server-${version}.jar -o ${STAGE_DEB}
 
 #
 # Done
