@@ -97,61 +97,29 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
         respond (req, Status.PreconditionFailed)
     }}
 
-  def batch_write (req: Request, ops: Seq [Ops]): Async [Response] = {
+  def batch_write (req: Request): Async [Response] = {
     val tx = req.transactionId (host)
-    val ct = req.conditionTxClock (TxClock.MinValue)
-    store.batch_write(tx, ct, ops)
-    .map [Response] { vt =>
-      val rsp = req.response
-      rsp.status = Status.Ok
-      rsp.headerMap.add ("Value-TxClock", vt.toString)
-      rsp
-    }
-    .recover {
-      case _: StaleException =>
-        respond (req, Status.PreconditionFailed)
-    }
-  }
-
-  def apply (req: Request): Future [Response] = {
-
-    if (req.method == Method.Post) {
-
-      var ops = Seq [Ops] ()
-      val mapper = new ObjectMapper
-      val node = mapper.readTree(req.getContentString)
-
-      val it = node.iterator
-      while (it.hasNext) {
-
-        val request = it.next
-        val table_obj = request.get("table")
-        val key_obj = request.get("key")
-        val op_obj = request.get("op")
-        val node = request.get("obj")
-        
-        if (table_obj == null || key_obj == null || op_obj == null) {
-          return Future.value (respond (req, Status.BadRequest))
-        } else {
-
-          var table = table_obj .toString
-          table = table .substring (1, table.length-1)
-          var key = key_obj .toString
-          key = key .substring (1,key.length-1)
-          var op = op_obj .toString
-          op = op .substring (1, op.length-1)
-
-          if(op != "UPDATE" && op != "DELETE" && op != "CREATE" && op != "HOLD") {
-            return Future.value (respond (req, Status.BadRequest))
-          } else {
-            ops = ops :+ Ops(table, key, op, node) 
-          }
-
+    val ct = req.conditionTxClock (TxClock.now)
+    try {
+      store.batch_write(tx, ct, req)
+      .map [Response] { vt =>
+        val rsp = req.response
+        rsp.status = Status.Ok
+        rsp.headerMap.add ("Value-TxClock", vt.toString)
+        rsp
+      }
+      .recover {
+        case _: StaleException => {
+          respond (req, Status.PreconditionFailed)
         }
       }
-      batch_write (req, ops) .toTwitterFuture
-      
-    } else {
+    } catch {
+      case v: Throwable => {
+        Future.value (respond (req, Status.BadRequest)).toAsync
+      }
+    }}
+
+  def apply (req: Request): Future [Response] = {
 
     Path (req.path) :? req.params match {
 
@@ -183,6 +151,14 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
             Future.value (respond (req, Status.MethodNotAllowed))
         }
 
+      case Root / "batch-write" :? _ =>
+        req.method match {
+          case Method.Post =>
+            batch_write (req) .toTwitterFuture
+          case _ =>
+            Future.value (respond (req, Status.MethodNotAllowed))
+        }
+
       case _ =>
         Future.value (respond (req, Status.NotFound))
-    }}}}
+    }}}

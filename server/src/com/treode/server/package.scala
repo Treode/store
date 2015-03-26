@@ -32,7 +32,9 @@ import com.twitter.logging.Logger
 
 package object server {
 
-  case class Ops (table: String, key: String, op: String, obj: JsonNode = null)
+  class OperationNotFoundException extends Exception
+
+  class DuplicatePairsException extends Exception
 
   implicit val textJson = new ObjectMapper with ScalaObjectMapper
   textJson.registerModule (DefaultScalaModule)

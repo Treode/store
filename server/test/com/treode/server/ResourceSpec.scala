@@ -91,9 +91,9 @@ class ResourceSpec extends FreeSpec {
   def matchesJson (expected: String): Matcher [String] =
     new JsonMatcher (expected)
 
-  def update (store: SchematicStubStore, ct: TxClock, key: String, value: String): TxClock =
+  def update (store: SchematicStubStore, ct: TxClock, key: String, value: String, table: String = "table1"): TxClock =
     store.update (
-      "table1",
+      table,
       key,
       value.fromJson [JsonNode],
       TxId (Bytes (Random.nextInt), 0),
@@ -637,84 +637,174 @@ class ResourceSpec extends FreeSpec {
 
   "When post request contains batch-writes" - {
 
+    def addData (table: String, store: SchematicStubStore, key: String, value: String): TxClock =
+      update (store, TxClock.MinValue, key, value, table)
+
+    def updateData (table: String, store: SchematicStubStore, key: String, value: String): TxClock =
+      update (store, TxClock.now, key, value, table)
+
     "and gives proper uris" - {
 
-      "POST [{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}] should yield Ok" in {
+      val body = "{\"v\":\"ant\"}"
+      val body2 = "{\"v\":\"ant2\"}"
+      val body3 = "{\"v\":\"ant3\"}"
+      val body4 = "{\"v\":\"ant4\"}"
+      val key = "\"abc\""
+      val key2 = "\"abc2\""
+      val key3 = "\"abc3\""
+      val key4 = "\"abc4\""
+
+      "POST /batch-write [{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}}] should yield Ok" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("[{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}]")
+            .body ("[{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}}]")
           .expect
             .statusCode (200)
           .when
-            .post ("")
+            .post ("/batch-write")
+          val valueTxClock = rsp.valueTxClock
+          assertSeq (cell ("abc", valueTxClock, body)) (store.scan ("table1"))
         }}
 
-      "POST [{\"op\":\"DELETE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}] should yield Ok" in {
+      "POST /batch-write [{\"op\":\"UPDATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant2\"}}] should yield Ok" in {
         served { case (port, store) =>
+          val ts1 = addData ("table1", store, "abc", body)
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("[{\"op\":\"DELETE\",\"table\":\"table1\",\"key\":\"orange\"}]")
+            .body ("[{\"op\":\"UPDATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant2\"}}]")
           .expect
             .statusCode (200)
           .when
-            .post ("")
+            .post ("/batch-write")
+          val ts2 = rsp.valueTxClock
+          assertSeq (cell ("abc", ts2, body2), cell ("abc", ts1, body)) (store.scan ("table1"))
         }}
 
-      "POST [{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}," +
-             "{\"op\":\"UPDATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}] should yield Ok" in {
+      "POST /batch-write [{\"op\":\"HOLD\",\"table\":\"table1\",\"key\":\"abc\"}] should yield Ok" in {
         served { case (port, store) =>
+          val ts1 = addData ("table1", store, "abc", body)
+          val ts2 = updateData ("table1", store, "abc", body2)
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("[{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}},"
-                  + "{\"op\":\"UPDATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}]")
+            .header ("Condition-TxClock", ts2 .toString)
+            .body ("[{\"op\":\"HOLD\",\"table\":\"table1\",\"key\":\"abc\"}]")
           .expect
             .statusCode (200)
           .when
-            .post ("")
+            .post ("/batch-write")
         }}
 
-      "POST [{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}," +
-             "{\"op\":\"DELETE\",\"table\":\"table1\",\"key\":\"orange\"}] should yield Ok" in {
+      "POST /batch-write [{\"op\":\"DELETE\",\"table\":\"table1\",\"key\":\"abc\"}] should yield Ok" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("[{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}},"
-                  + "{\"op\":\"DELETE\",\"table\":\"table1\",\"key\":\"orange\"}]")
+            .body ("[{\"op\":\"DELETE\",\"table\":\"table1\",\"key\":\"abc\"}]")
           .expect
             .statusCode (200)
           .when
-            .post ("")
-        }}}
+            .post ("/batch-write")
+          val valueTxClock = rsp.valueTxClock
+          assertSeq (cell ("abc", valueTxClock)) (store.scan ("table1"))
+        }}
+
+      "POST /batch-write [{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}}," +
+            "{\"op\":\"UPDATE\",\"table\":\"table2\",\"key\":\"abc2\",\"obj\":{\"v\":\"ant2\"}}," + 
+            "{\"op\":\"HOLD\",\"table\":\"table3\",\"key\":\"abc3\"}," + 
+            "{\"op\":\"DELETE\",\"table\":\"table4\",\"key\":\"abc3\"}] should yeild Ok" in {
+        served { case (port, store) =>
+          val ts1 = addData ("table2", store, "abc2", body)
+          val ts3 = addData ("table3", store, "abc3", body)
+          val ts4 = updateData ("table3", store, "abc3", body)
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .header ("Condition-TxClock", ts4 .toString)
+            .body ("[{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}}," +
+            "{\"op\":\"UPDATE\",\"table\":\"table2\",\"key\":\"abc2\",\"obj\":{\"v\":\"ant2\"}}," +
+            "{\"op\":\"HOLD\",\"table\":\"table3\",\"key\":\"abc3\"}," +
+            "{\"op\":\"DELETE\",\"table\":\"table4\",\"key\":\"abc4\"}]")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("/batch-write")
+          val ts2 = rsp.valueTxClock
+          assertSeq (cell ("abc", ts2, body)) (store.scan ("table1"))
+          assertSeq (cell ("abc2", ts2, body2), cell ("abc2", ts1, body)) (store.scan ("table2"))
+          assertSeq (cell ("abc4", ts2)) (store.scan ("table4"))
+        }}
+      }
 
     "and gives improper uris" - {
 
-      "POST [{\"op\":\"CREATE\",\"tble\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}] should yield bad request" in {
+      "POST /batch-write [{\"op\":\"CREATE\",\"tble\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}}] has fields missing and should yield bad request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("[{\"op\":\"CREATE\",\"tble\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}]")
+            .body ("[{\"op\":\"CREATE\",\"tble\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}}]")
           .expect
             .statusCode (400)
           .when
-            .post ("")
+            .post ("/batch-write")
         }}
 
-      "POST [{\"op\":\"CREAE\",\"table\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}] should yield bad request" in {
+      "PUT /batch-write [{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}}] specifies wrong request and should yield Method Not Allowed" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("[{\"op\":\"CREATE\",\"tble\":\"table1\",\"key\":\"orange\",\"obj\":{\"v\":\"ant\"}}]")
+            .body ("[{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}}]")
+          .expect
+            .statusCode (405)
+          .when
+            .put ("/batch-write")
+        }}
+
+      "POST /batch-write [{\"op\":\"CREATE\",\"table\":\"table5\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}}] has unspecified table and should yield bad request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("[{\"op\":\"CREATE\",\"table\":\"table5\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}}]")
           .expect
             .statusCode (400)
           .when
-            .post ("")
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write [{\"op\":\"HOLD\",\"table\":\"table1\",\"key\":\"abc\"}] should yield Precondition Failed" in {
+        served { case (port, store) =>
+          val ts1 = addData ("table1", store, "abc", "{\"v\":\"ant\"}")
+          val ts2 = updateData ("table1", store, "abc", "{\"v\":\"ant2\"}")
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .header ("Condition-TxClock", ts1 .toString)
+            .body ("[{\"op\":\"HOLD\",\"table\":\"table1\",\"key\":\"abc\"}]")
+          .expect
+            .statusCode (412)
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write [{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}}," +
+             "{\"op\":\"UPDATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant2\"}}] operates on same cell and should yeild bad request" in {
+        served { case (port, store) =>
+          val body = "{\"v\":\"ant2\"}"
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("[{\"op\":\"CREATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant\"}},"
+                  + "{\"op\":\"UPDATE\",\"table\":\"table1\",\"key\":\"abc\",\"obj\":{\"v\":\"ant2\"}}]")
+          .expect
+            .statusCode (400)
+          .when
+            .post ("/batch-write")
         }}
     }
   }}
