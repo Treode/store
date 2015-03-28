@@ -27,38 +27,28 @@ class SchematicStore (store: Store, schema: Schema) {
     store.write (tx, ct, ops:_*)
   }
 
-  private def getAttrFromJsonNode (oper: JsonNode, attr: String): JsonNode = {
-    val va = oper.get (attr)
-    if (va == null) {
-      val errMsg = "There is not attribute called '" + attr + "'"
-      throw new BadRequestException (errMsg)
-    } else {
-      va
-    }
-  }
-
   def batchWrite(tx: TxId, ct: TxClock, node: JsonNode): Async [TxClock] = {
     val it = node.iterator
     var ops = Seq [WriteOp] ()
     val pairs = new HashSet [(String, String)]
     for (operation <- it) {
-      val table = getAttrFromJsonNode (operation, "table") .textValue
-      val key = getAttrFromJsonNode (operation, "key") .textValue
-      val op = getAttrFromJsonNode (operation, "op") .textValue
+      val table = operation.getAttribute ("table") .textValue
+      val key = operation.getAttribute ("key") .textValue
+      val op = operation.getAttribute ("op") .textValue
       if (pairs.contains((table, key))) {
         throw new BadRequestException ("Multiple (Table, key) pairs found")
       } else {
         pairs += ((table, key))
         op .toLowerCase match {
           case "update" => {
-            val obj = getAttrFromJsonNode (operation, "obj")
+            val obj = operation.getAttribute ("obj")
             ops = ops :+ WriteOp.Update (schema.getTableId (table), Bytes (key), obj.toBytes)
           }
           case "delete" => {
             ops = ops :+ WriteOp.Delete (schema.getTableId (table), Bytes (key))
           }
           case "create" => {
-            val obj = getAttrFromJsonNode (operation, "obj")
+            val obj = operation.getAttribute ("obj")
             ops = ops :+ WriteOp.Create (schema.getTableId (table), Bytes (key), obj.toBytes)
           }
           case "hold" => {

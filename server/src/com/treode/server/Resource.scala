@@ -101,19 +101,18 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
     val tx = req.transactionId (host)
     val ct = req.conditionTxClock (TxClock.now)
     val node = textJson.readTree(req.getContentString)
-      store.batchWrite(tx, ct, node)
-      .map [Response] { vt =>
-        val rsp = req.response
-        rsp.status = Status.Ok
-        rsp.headerMap.add ("Value-TxClock", vt.toString)
-        rsp
-      }
-      .recover {
-        case _: StaleException => {
-          respond (req, Status.PreconditionFailed)
-        }
-      }
+    store.batchWrite(tx, ct, node)
+    .map [Response] { vt =>
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.headerMap.add ("Value-TxClock", vt.toString)
+      rsp
     }
+    .recover {
+      case _: StaleException => {
+        respond (req, Status.PreconditionFailed)
+      }
+    }}
 
   def apply (req: Request): Future [Response] = {
 
