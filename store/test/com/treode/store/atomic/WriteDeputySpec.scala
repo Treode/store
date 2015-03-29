@@ -109,9 +109,9 @@ class WriteDeputySpec extends FreeSpec {
   val v1 = 0xFB0FF6B8
   val v2 = 0xFD10F8D9
 
-  val beforeTx = 0
-  val writeTx = 1
-  val afterTx = 2
+  val beforeTx = new TxClock (0)
+  val writeTx = new TxClock (1)
+  val afterTx = new TxClock (2)
 
   private def setup() = {
     implicit val (random, scheduler, network) = newKit()
@@ -137,7 +137,7 @@ class WriteDeputySpec extends FreeSpec {
         val drive = new StubDiskDrive
         val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
-        h.write (xid3, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx: TxClock)
+        h.write (xid3, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx)
         h.prepare (xid2, writeTx, Update (t1, k1, v1)) .expectPass (Prepared (writeTx))
         val cb = h.prepare (xid1, ct, Update (t1, k1, v1)) .capture()
         cb.expectNotInvoked()
@@ -225,7 +225,7 @@ class WriteDeputySpec extends FreeSpec {
         val drive = new StubDiskDrive
         val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
-        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx: TxClock)
+        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx)
         drive.stop = true
         val cb = h.prepare (xid1, ct, Update (t1, k1, v1)) .capture()
         cb.expectNotInvoked()
@@ -286,7 +286,7 @@ class WriteDeputySpec extends FreeSpec {
         val drive = new StubDiskDrive
         val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
-        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx: TxClock)
+        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx)
         h.prepare (xid1, writeTx, Update (t1, k1, v1)) .expectPass (Prepared (writeTx))
         h.assertPrepared (xid1)
         h
@@ -329,7 +329,7 @@ class WriteDeputySpec extends FreeSpec {
         val drive = new StubDiskDrive
         val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
-        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx: TxClock)
+        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx)
         h.prepare (xid1, beforeTx, Update (t1, k1, v1)) .expectPass (Advance (writeTx))
         h.assertDeliberating (xid1)
         h
@@ -372,7 +372,7 @@ class WriteDeputySpec extends FreeSpec {
         val drive = new StubDiskDrive
         val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
-        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx: TxClock)
+        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx)
         val cb = h.commit (xid1, afterTx) .capture()
         cb.expectNotInvoked()
         h.assertTardy (xid1)
