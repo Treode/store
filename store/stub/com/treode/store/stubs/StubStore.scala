@@ -92,7 +92,7 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
           val vt = results.filterNot (_._1) .map (_._2) .fold (TxClock.MinValue) (TxClock.max _)
           val wt = TxClock.max (vt, locks.ft) + 1
           if (ct < vt)
-            throw new StaleException
+            throw new StaleException (vt)
           if (!collisions.isEmpty)
             throw new CollisionException (collisions)
           if (xacts.putIfAbsent (xid, TxStatus.Committed (wt)) != null)

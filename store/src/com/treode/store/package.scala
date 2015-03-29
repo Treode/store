@@ -27,7 +27,7 @@ package store {
 
   class CollisionException (val indexes: Seq [Int]) extends Exception
 
-  class StaleException extends Exception
+  class StaleException (val time: TxClock) extends Exception
 
   class TimeoutException extends JTimeoutException
 

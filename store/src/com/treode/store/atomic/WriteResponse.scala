@@ -24,7 +24,7 @@ private object WriteResponse {
 
   case class Prepared (ft: TxClock) extends WriteResponse
   case class Collisions (ks: Set [Int]) extends WriteResponse
-  case object Advance extends WriteResponse
+  case class Advance (time: TxClock) extends WriteResponse
   case object Committed extends WriteResponse
   case object Aborted extends WriteResponse
   case object Failed extends WriteResponse
@@ -34,7 +34,7 @@ private object WriteResponse {
     tagged [WriteResponse] (
         0x1 -> wrap (txClock) .build (Prepared.apply _) .inspect (_.ft),
         0x2 -> wrap (set (uint)) .build (Collisions.apply _) .inspect (_.ks),
-        0x3 -> const (Advance),
+        0x3 -> wrap (txClock) .build (Advance.apply _) .inspect (_.time),
         0x4 -> const (Committed),
         0x5 -> const (Aborted),
         0x6 -> const (Failed))
