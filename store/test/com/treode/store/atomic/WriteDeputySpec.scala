@@ -170,7 +170,7 @@ class WriteDeputySpec extends FreeSpec {
         implicit val (random, scheduler, network, config) = setup()
         val (h, cb) = boot (0)
         h.abort (xid2) .expectPass (Aborted)
-        cb.expectPass (Advance)
+        cb.expectPass (Advance (1))
         h.assertDeliberating (xid1)
       }
 
@@ -186,7 +186,7 @@ class WriteDeputySpec extends FreeSpec {
         implicit val (random, scheduler, network, config) = setup()
         val (h, cb) = boot (1)
         h.commit (xid2, 2) .expectPass (Committed)
-        cb.expectPass (Advance)
+        cb.expectPass (Advance (2))
         h.assertDeliberating (xid1)
       }
 
@@ -326,7 +326,7 @@ class WriteDeputySpec extends FreeSpec {
         val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
         h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
-        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance)
+        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance (1))
         h.assertDeliberating (xid1)
         h
       }
@@ -334,7 +334,7 @@ class WriteDeputySpec extends FreeSpec {
       "prepare" in {
         implicit val (random, scheduler, network, config) = setup()
         val h = boot()
-        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance)
+        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance (1))
         h.assertDeliberating (xid1)
       }
 
@@ -356,7 +356,7 @@ class WriteDeputySpec extends FreeSpec {
         implicit val (random, scheduler, network, config) = setup()
         var h = boot()
         h = reboot (h)
-        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance)
+        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance (1))
         h.assertDeliberating (xid1)
       }}
 
