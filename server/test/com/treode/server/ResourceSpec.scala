@@ -712,6 +712,20 @@ class ResourceSpec extends FreeSpec {
           assertSeq (cell ("abc", valueTxClock)) (store.scan ("table1"))
         }}
 
+      "POST /batch-write with mixed case operations should yield Ok" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op":"CrEaTe","table":"table1","key":"abc","obj":{"v":"ant"}}]""")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("/batch-write")
+          val valueTxClock = rsp.valueTxClock
+          assertSeq (cell ("abc", valueTxClock, body)) (store.scan ("table1"))
+        }}
+
       "POST /batch-write with multiple operations should yeild Ok" in {
         served { case (port, store) =>
           val ts1 = addData ("table2", store, "abc2", body)
@@ -737,7 +751,7 @@ class ResourceSpec extends FreeSpec {
 
     "and has improper/failing uris" - {
 
-      "POST /batch-write with bad json format body should yield bad request" in {
+      "POST /batch-write with bad json format body should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -749,7 +763,7 @@ class ResourceSpec extends FreeSpec {
             .post ("/batch-write")
         }}
 
-      "POST /batch-write with necessary fields missing should yield bad request" in {
+      "POST /batch-write with necessary fields missing should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -757,6 +771,20 @@ class ResourceSpec extends FreeSpec {
             .body ("""[{"op":"CREATE","tble":"table1","key":"abc","obj":{"v":"ant"}}]""")
           .expect
             .statusCode (400)
+            .body (equalTo ("There is no attribute called 'table'"))
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write with undefined operation should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op":"SCAN","table":"table1","key":"abc","obj":{"v":"ant"}}]""")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("Unsupported operation: SCAN"))
           .when
             .post ("/batch-write")
         }}
@@ -773,7 +801,7 @@ class ResourceSpec extends FreeSpec {
             .put ("/batch-write")
         }}
 
-      "POST /batch-write with unspecified table name should yield bad request" in {
+      "POST /batch-write with unspecified table name should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -781,6 +809,7 @@ class ResourceSpec extends FreeSpec {
             .body ("""[{"op":"CREATE","table":"table5","key":"abc","obj":{"v":"ant"}}]""")
           .expect
             .statusCode (400)
+            .body (equalTo ("Bad table ID: table5"))
           .when
             .post ("/batch-write")
         }}
@@ -800,7 +829,7 @@ class ResourceSpec extends FreeSpec {
             .post ("/batch-write")
         }}
 
-      "POST /batch-write has 2 operations on the same table and key should yeild bad request" in {
+      "POST /batch-write has 2 operations on the same table and key should yeild Bad Request" in {
         served { case (port, store) =>
           val body = """{"v":"ant2"}"""
           val rsp = given
@@ -810,6 +839,7 @@ class ResourceSpec extends FreeSpec {
                   + """{"op":"UPDATE","table":"table1","key":"abc","obj":{"v":"ant2"}}]""")
           .expect
             .statusCode (400)
+            .body (equalTo ("Multiple (Table, key) pairs found"))
           .when
             .post ("/batch-write")
     }}}}}

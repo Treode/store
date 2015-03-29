@@ -55,7 +55,7 @@ class SchematicStore (store: Store, schema: Schema) {
             ops = ops :+ WriteOp.Hold (schema.getTableId (table), Bytes (key))
           }
           case _ => {
-            throw new BadRequestException ("Unsupported operation")
+            throw new BadRequestException (s"Unsupported operation: $op")
           }
       }}}
     store.write (tx, ct, ops:_*)

@@ -104,8 +104,7 @@ package object server {
     def getAttribute (attr: String): JsonNode = {
       val va = node.get (attr)
       if (va == null) {
-        val errMsg = "There is not attribute called '" + attr + "'"
-        throw new BadRequestException (errMsg)
+        throw new BadRequestException (s"There is no attribute called '$attr'")
       } else {
         va
     }}
