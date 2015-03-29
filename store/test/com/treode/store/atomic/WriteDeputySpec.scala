@@ -109,6 +109,10 @@ class WriteDeputySpec extends FreeSpec {
   val v1 = 0xFB0FF6B8
   val v2 = 0xFD10F8D9
 
+  val beforeTx = new TxClock (0)
+  val writeTx = new TxClock (1)
+  val afterTx = new TxClock (2)
+
   private def setup() = {
     implicit val (random, scheduler, network) = newKit()
     implicit val config = StoreTestConfig()
@@ -133,8 +137,8 @@ class WriteDeputySpec extends FreeSpec {
         val drive = new StubDiskDrive
         val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
-        h.write (xid3, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
-        h.prepare (xid2, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
+        h.write (xid3, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx)
+        h.prepare (xid2, writeTx, Update (t1, k1, v1)) .expectPass (Prepared (writeTx))
         val cb = h.prepare (xid1, ct, Update (t1, k1, v1)) .capture()
         cb.expectNotInvoked()
         h.assertPreparing (xid1)
@@ -143,8 +147,8 @@ class WriteDeputySpec extends FreeSpec {
 
       "ignore a subsequent prepare" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, cb1) = boot (1)
-        val cb2 = h.prepare (xid1, 1, Update (t1, k1, v1)) .capture()
+        val (h, cb1) = boot (writeTx)
+        val cb2 = h.prepare (xid1, writeTx, Update (t1, k1, v1)) .capture()
         cb1.expectNotInvoked()
         cb2.expectNotInvoked()
         h.assertPreparing (xid1)
@@ -152,61 +156,61 @@ class WriteDeputySpec extends FreeSpec {
 
       "ignore a subsequent prepare on the blocking write" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, cb) = boot (1)
-        h.prepare (xid2, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
+        val (h, cb) = boot (writeTx)
+        h.prepare (xid2, writeTx, Update (t1, k1, v1)) .expectPass (Prepared (writeTx))
         cb.expectNotInvoked()
         h.assertPreparing (xid1)
       }
 
       "prepare after the blocking write aborts" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, cb) = boot (1)
+        val (h, cb) = boot (writeTx)
         h.abort (xid2) .expectPass (Aborted)
-        cb.expectPass (Prepared (1))
+        cb.expectPass (Prepared (writeTx))
         h.assertPrepared (xid1)
       }
 
       "advance after the blocking write aborts" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, cb) = boot (0)
+        val (h, cb) = boot (beforeTx)
         h.abort (xid2) .expectPass (Aborted)
-        cb.expectPass (Advance (1))
+        cb.expectPass (Advance (writeTx))
         h.assertDeliberating (xid1)
       }
 
       "prepare after the blocking write commits" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, cb) = boot (2)
-        h.commit (xid2, 2) .expectPass (Committed)
-        cb.expectPass (Prepared (2))
+        val (h, cb) = boot (afterTx)
+        h.commit (xid2, afterTx) .expectPass (Committed)
+        cb.expectPass (Prepared (afterTx))
         h.assertPrepared (xid1)
       }
 
       "advance after the blocking write commits" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, cb) = boot (1)
-        h.commit (xid2, 2) .expectPass (Committed)
-        cb.expectPass (Advance (2))
+        val (h, cb) = boot (writeTx)
+        h.commit (xid2, afterTx) .expectPass (Committed)
+        cb.expectPass (Advance (afterTx))
         h.assertDeliberating (xid1)
       }
 
       "commit" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, cb) = boot (1)
-        h.commit (xid1, 2) .expectPass (Committed)
+        val (h, cb) = boot (writeTx)
+        h.commit (xid1, afterTx) .expectPass (Committed)
         h.assertCommitted (xid1)
       }
 
       "abort" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, cb) = boot (1)
+        val (h, cb) = boot (writeTx)
         h.abort (xid1) .expectPass (Aborted)
         h.assertAborted (xid1)
       }
 
       "recover to open" in {
         implicit val (random, scheduler, network, config) = setup()
-        var (h, cb) = boot (1)
+        var (h, cb) = boot (writeTx)
         h = reboot (h)
         h.assertOpen (xid1)
       }}
@@ -221,7 +225,7 @@ class WriteDeputySpec extends FreeSpec {
         val drive = new StubDiskDrive
         val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
-        h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
+        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx)
         drive.stop = true
         val cb = h.prepare (xid1, ct, Update (t1, k1, v1)) .capture()
         cb.expectNotInvoked()
@@ -232,8 +236,8 @@ class WriteDeputySpec extends FreeSpec {
 
       "ignore a subsequent prepare" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, cb1) = boot (1)
-        val cb2 = h.prepare (xid1, 1, Update (t1, k1, v1)) .capture()
+        val (h, cb1) = boot (writeTx)
+        val cb2 = h.prepare (xid1, writeTx, Update (t1, k1, v1)) .capture()
         cb1.expectNotInvoked()
         cb2.expectNotInvoked()
         h.assertRecording (xid1)
@@ -241,16 +245,16 @@ class WriteDeputySpec extends FreeSpec {
 
       "prepare after the log entry is recorded" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, cb) = boot (1)
+        val (h, cb) = boot (writeTx)
         h.drive.last.pass (())
-        cb.expectPass (Prepared (1))
+        cb.expectPass (Prepared (writeTx))
         h.assertPrepared (xid1)
       }
 
       "commit" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, _) = boot (1)
-        val cb = h.commit (xid1, 2) .capture()
+        val (h, _) = boot (writeTx)
+        val cb = h.commit (xid1, afterTx) .capture()
         cb.expectNotInvoked()
         h.drive.last.pass (())
         cb.expectPass (Committed)
@@ -259,7 +263,7 @@ class WriteDeputySpec extends FreeSpec {
 
       "abort" in {
         implicit val (random, scheduler, network, config) = setup()
-        val (h, _) = boot (1)
+        val (h, _) = boot (writeTx)
         val cb = h.abort (xid1) .capture()
         cb.expectNotInvoked()
         h.drive.last.pass (())
@@ -269,7 +273,7 @@ class WriteDeputySpec extends FreeSpec {
 
       "recover to open" in {
         implicit val (random, scheduler, network, config) = setup()
-        var (h, cb) = boot (1)
+        var (h, cb) = boot (writeTx)
         h = reboot (h)
         h.assertOpen (xid1)
       }}
@@ -282,8 +286,8 @@ class WriteDeputySpec extends FreeSpec {
         val drive = new StubDiskDrive
         val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
-        h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
-        h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
+        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx)
+        h.prepare (xid1, writeTx, Update (t1, k1, v1)) .expectPass (Prepared (writeTx))
         h.assertPrepared (xid1)
         h
       }
@@ -291,14 +295,14 @@ class WriteDeputySpec extends FreeSpec {
       "prepare" in {
         implicit val (random, scheduler, network, config) = setup()
         val h = boot()
-        h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
+        h.prepare (xid1, writeTx, Update (t1, k1, v1)) .expectPass (Prepared (writeTx))
         h.assertPrepared (xid1)
       }
 
       "commit" in {
         implicit val (random, scheduler, network, config) = setup()
         val h = boot()
-        h.commit (xid1, 2) .expectPass (Committed)
+        h.commit (xid1, afterTx) .expectPass (Committed)
         h.assertCommitted (xid1)
       }
 
@@ -313,7 +317,7 @@ class WriteDeputySpec extends FreeSpec {
         implicit val (random, scheduler, network, config) = setup()
         var h = boot()
         h = reboot (h)
-        h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Prepared (1))
+        h.prepare (xid1, writeTx, Update (t1, k1, v1)) .expectPass (Prepared (writeTx))
         h.assertPrepared (xid1)
       }}
 
@@ -325,8 +329,8 @@ class WriteDeputySpec extends FreeSpec {
         val drive = new StubDiskDrive
         val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
-        h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
-        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance (1))
+        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx)
+        h.prepare (xid1, beforeTx, Update (t1, k1, v1)) .expectPass (Advance (writeTx))
         h.assertDeliberating (xid1)
         h
       }
@@ -334,14 +338,14 @@ class WriteDeputySpec extends FreeSpec {
       "prepare" in {
         implicit val (random, scheduler, network, config) = setup()
         val h = boot()
-        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance (1))
+        h.prepare (xid1, beforeTx, Update (t1, k1, v1)) .expectPass (Advance (writeTx))
         h.assertDeliberating (xid1)
       }
 
       "commit" in {
         implicit val (random, scheduler, network, config) = setup()
         val h = boot()
-        h.commit (xid1, 2) .expectPass (Committed)
+        h.commit (xid1, afterTx) .expectPass (Committed)
         h.assertCommitted (xid1)
       }
 
@@ -356,7 +360,7 @@ class WriteDeputySpec extends FreeSpec {
         implicit val (random, scheduler, network, config) = setup()
         var h = boot()
         h = reboot (h)
-        h.prepare (xid1, 0, Update (t1, k1, v1)) .expectPass (Advance (1))
+        h.prepare (xid1, beforeTx, Update (t1, k1, v1)) .expectPass (Advance (writeTx))
         h.assertDeliberating (xid1)
       }}
 
@@ -368,8 +372,8 @@ class WriteDeputySpec extends FreeSpec {
         val drive = new StubDiskDrive
         val h = StubAtomicHost.boot (h1, drive) .expectPass()
         h.setAtlas (settled (h))
-        h.write (xid2, 0, Update (t1, k1, v1)) .expectPass (1: TxClock)
-        val cb = h.commit (xid1, 2) .capture()
+        h.write (xid2, beforeTx, Update (t1, k1, v1)) .expectPass (writeTx)
+        val cb = h.commit (xid1, afterTx) .capture()
         cb.expectNotInvoked()
         h.assertTardy (xid1)
         (h, cb)
@@ -378,14 +382,14 @@ class WriteDeputySpec extends FreeSpec {
       "prepare" in {
         implicit val (random, scheduler, network, config) = setup()
         val (h, cb) = boot()
-        h.prepare (xid1, 1, Update (t1, k1, v1)) .expectPass (Committed)
+        h.prepare (xid1, writeTx, Update (t1, k1, v1)) .expectPass (Committed)
         h.assertCommitted (xid1)
       }
 
       "ignore a subsequent commit" in {
         implicit val (random, scheduler, network, config) = setup()
         val (h, cb1) = boot()
-        val cb2 = h.commit (xid1, 2) .capture()
+        val cb2 = h.commit (xid1, afterTx) .capture()
         cb1.expectNotInvoked()
         cb2.expectNotInvoked()
         h.assertTardy (xid1)
