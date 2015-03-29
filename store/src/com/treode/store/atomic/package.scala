@@ -27,7 +27,7 @@ package atomic {
   private object PrepareResult {
     case class Prepared (vt: TxClock, locks: LockSet) extends PrepareResult
     case class Collided (ks: Seq [Int]) extends PrepareResult
-    case object Stale extends PrepareResult
+    case class Stale (time: TxClock) extends PrepareResult
   }}
 
 package object atomic {

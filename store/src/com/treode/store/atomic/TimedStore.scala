@@ -89,7 +89,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler {
         Collided (collisions)
       } else if (ct < vt) {
         locks.release()
-        Stale
+        Stale (vt)
       } else {
         Prepared (TxClock.max (vt, locks.ft), locks)
       }}}

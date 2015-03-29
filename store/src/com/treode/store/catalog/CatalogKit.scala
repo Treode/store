@@ -49,5 +49,5 @@ private class CatalogKit (val broker: Broker) (implicit
       _ <- broker.patch (desc.id, chosen)
     } yield {
       if (patch.checksum != chosen.checksum)
-        throw new StaleException
+        throw new StaleException (TxClock.MinValue)
     }}}

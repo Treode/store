@@ -23,7 +23,7 @@ import com.nothome.delta.{Delta, GDiffPatcher}
 import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disk, PageDescriptor, Position, RecordDescriptor}
-import com.treode.store.{Bytes, CatalogId, StaleException}
+import com.treode.store.{Bytes, CatalogId, StaleException, TxClock}
 
 import Async.{guard, when}
 import Callback.ignore
@@ -49,7 +49,7 @@ private class Chronicle (
 
   def diff (version: Int, bytes: Bytes): Patch = {
     if (version != this.version + 1)
-      throw new StaleException
+      throw new StaleException (TxClock.MinValue)
     Patch (version, bytes.murmur32, Seq (Patch.diff (this.bytes, bytes)))
   }
 
