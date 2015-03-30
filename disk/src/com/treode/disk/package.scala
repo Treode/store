@@ -26,6 +26,8 @@ import com.treode.async.{Async, Scheduler}
 import com.treode.async.io.File
 import org.apache.commons.lang3.StringEscapeUtils.escapeJava
 
+import com.treode.notify.Notification
+
 package disk {
 
   case class Compaction (obj: ObjectId, gens: Set [Long])
@@ -128,7 +130,8 @@ package object disk {
     val logger = Logger.getLogger ("com.treode.disk")
 
     def attachedDrives (paths: Set [Path]): Unit =
-      logger.log (INFO, s"Attached drives ${paths mkString ", "}")
+      logger.log (INFO, s"Attached drives ${paths mkString ", "}");
+      ()
 
     def detachedDrives (paths: Set [Path]): Unit =
       logger.log (INFO, s"Detached drives ${paths mkString ", "}")

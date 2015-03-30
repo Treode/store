@@ -27,6 +27,8 @@ import com.treode.async.misc.RichOption
 import com.treode.buffer.PagedBuffer
 import com.treode.disk.{Disk, DiskConfig, DisksClosedException, DiskEvents, DriveChange, DriveDigest,
   DriveGeometry, FileSystem, ObjectId, Position, SegmentBounds, TypeId, quote}
+import com.treode.notify.Notification
+import com.treode.disk.messages._
 
 import DriveGroup._
 
@@ -72,7 +74,7 @@ private class DriveGroup (
   private var detaches = List.empty [Drive]
 
   /** Callbacks for when the next superblock is written. */
-  private var changers = List.empty [Callback [Unit]]
+  private var changers = List.empty [Callback [Notification]]
 
   /** Callback for when the next superblock is written, and this completes a checkpoint. */
   private var checkpoint = Option.empty [Callback [Unit]]
@@ -165,7 +167,7 @@ private class DriveGroup (
         for (drive <- drains)
           drive.awaitDrainStarted() run (driveDrainStarted)
         for (cb <- changers)
-          scheduler.pass (cb, ())
+          scheduler.pass (cb, new Notification)
         for (cb <- checkpoint)
           scheduler.pass (cb, ())
 
@@ -198,9 +200,11 @@ private class DriveGroup (
     }
 
   /** Enqueue user changes to the set of disk drives. */
-  def change (change: DriveChange): Async [Unit] =
+  def change (change: DriveChange): Async [Notification] =
     fiber.async { cb =>
       requireNotClosed()
+
+      val errors = new Notification
 
       // The paths that are already attached.
       val attached = (for (d <- drives.values) yield d.path).toSet
@@ -221,16 +225,21 @@ private class DriveGroup (
       // - make the drive, and
       // - add it to the list of new attaches.
       for (a <- change.attaches) {
-        if (attached contains a.path)
-          throw new IllegalArgumentException (s"Already attached ${quote (a.path)}")
-        if (attaching contains a.path)
-          throw new IllegalArgumentException (s"Already attaching ${quote (a.path)}")
-        attaching += a.path
-        val file = files.open (a.path, READ, WRITE)
-        val drive = new Drive (file, a.geometry, false, dno, a.path)
-        dno += 1
-        newAttaches ::= drive
+        if (attached contains a.path) {
+          errors.add (AlreadyAttached(a.path))
+        } else if (attaching contains a.path) {
+          errors.add (AlreadyAttaching(a.path))
+        } else {
+          attaching += a.path
+          val file = files.open (a.path, READ, WRITE)
+          val drive = new Drive (file, a.geometry, false, dno, a.path)
+          dno += 1
+          newAttaches ::= drive
+        }
       }
+      // TODO - close files if there was an error
+
+      // TODO - do we want to abort early if there are drive attachment errors?
 
       // The paths that are already queued draining.
       var draining = (for (d <- drains) yield d.path).toSet
@@ -250,6 +259,8 @@ private class DriveGroup (
           throw new IllegalArgumentException (s"Aready draining ${quote (d)}")
         drains ::= drive
       }
+
+      // TODO - how do I integrate Notification with cb?
 
       // If we get here, then all went well, so we can merge our new changes into the queued
       // changes.

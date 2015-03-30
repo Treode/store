@@ -21,6 +21,8 @@ import com.treode.async.Async, Async.supply
 import com.treode.store.{Store, StoreController}
 import org.scalatest.FlatSpec
 
+import com.treode.notify.Notification
+
 class DrivesAttachHandlerSpec extends FlatSpec with SpecTools {
 
   def handler (controller: StoreController) =
@@ -28,7 +30,7 @@ class DrivesAttachHandlerSpec extends FlatSpec with SpecTools {
 
   "The DrivesAttachHandler" should "handle POST" in
     served { case (port, controller) =>
-      (controller.attach _) .expects (Seq.empty) .returning (supply (()))
+      (controller.attach _) .expects (Seq.empty) .returning (supply ((new Notification)))
       given
         .port (port)
         .body ("[]")

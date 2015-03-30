@@ -14,23 +14,8 @@
  * limitations under the License.
  */
 
-package com.treode.disk
+package com.treode.notify
 
-import java.nio.file.Path
-import com.treode.async.Async
-import com.treode.notify.Notification
-
-private class ControllerAgent (kit: DiskKit, val disk: Disk) extends DiskController  {
-
-  def drives: Async [Seq [DriveDigest]] =
-    kit.drives.digest
-
-  def attach (items: DriveAttachment*): Async [Notification] =
-    kit.drives.attach (items)
-
-  def drain (items: Path*): Async [Notification] =
-    kit.drives.drain (items)
-
-  def shutdown(): Async [Unit] =
-    kit.close()
+trait Message {
+  val en: String
 }

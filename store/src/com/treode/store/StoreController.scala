@@ -23,6 +23,8 @@ import com.treode.async.Async
 import com.treode.cluster.{CellId, HostId, Peer, RumorDescriptor}
 import com.treode.disk.{DriveAttachment, DriveDigest}
 
+import com.treode.notify.Notification
+
 trait StoreController {
 
   implicit def store: Store
@@ -53,9 +55,9 @@ trait StoreController {
 
   def drives: Async [Seq [DriveDigest]]
 
-  def attach (items: DriveAttachment*): Async [Unit]
+  def attach (items: DriveAttachment*): Async [Notification]
 
-  def drain (paths: Path*): Async [Unit]
+  def drain (paths: Path*): Async [Notification]
 
   def cellId: CellId
 

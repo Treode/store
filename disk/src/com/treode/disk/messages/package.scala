@@ -15,22 +15,28 @@
  */
 
 package com.treode.disk
-
 import java.nio.file.Path
-import com.treode.async.Async
-import com.treode.notify.Notification
 
-private class ControllerAgent (kit: DiskKit, val disk: Disk) extends DiskController  {
+import com.treode.notify.Message
 
-  def drives: Async [Seq [DriveDigest]] =
-    kit.drives.digest
+/*
+ * A collection of errors that are specific to the Disk package.
+ */
 
-  def attach (items: DriveAttachment*): Async [Notification] =
-    kit.drives.attach (items)
+package messages {
+  case class AlreadyAttached (path: Path) extends Message {
+    val en = "Aleady attached: " + (quote (path));
+  }
 
-  def drain (items: Path*): Async [Notification] =
-    kit.drives.drain (items)
+  case class AlreadyAttaching (path: Path) extends Message {
+    val en = "Aleady attaching: " + quote(path);
+  }
 
-  def shutdown(): Async [Unit] =
-    kit.close()
+  case class NotAttached (drive: Path) extends Message {
+    val en = "Not attached: " + quote(drive);
+  }
+
+  case class AlreadyDraining (drive: Path) extends Message {
+    val en = "Aleady draining: " + quote(drive);
+  }
 }

@@ -29,6 +29,7 @@ import com.treode.async.stubs.implicits._
 import com.treode.async.implicits._
 import org.scalatest.Assertions
 
+import com.treode.notify.Notification
 import Assertions.assertResult
 
 private object DiskTestTools {
@@ -52,10 +53,10 @@ private object DiskTestTools {
     def assertDraining (paths: String*): Unit =
       disk.assertDraining (paths: _*)
 
-    def attachAndWait (items: AttachItem*): Async [Unit] =
+    def attachAndWait (items: AttachItem*): Async [Notification] =
       disk.attachAndWait (items: _*)
 
-    def attachAndCapture (items: AttachItem*): CallbackCaptor [Unit] =
+    def attachAndCapture (items: AttachItem*): CallbackCaptor [Notification] =
       attachAndWait (items: _*) .capture
 
     def attachAndPass (items: AttachItem*) (implicit scheduler: StubScheduler) {
@@ -63,10 +64,10 @@ private object DiskTestTools {
       disk.assertReady()
     }
 
-    def drainAndWait (items: Path*): Async [Unit] =
+    def drainAndWait (items: Path*): Async [Notification] =
       agent.drain (items: _*)
 
-    def drainAndCapture (items: Path*): CallbackCaptor [Unit] =
+    def drainAndCapture (items: Path*): CallbackCaptor [Notification] =
       drainAndWait (items: _*) .capture()
 
     def drainAndPass (items: Path*) (implicit scheduler: StubScheduler) {
@@ -79,7 +80,7 @@ private object DiskTestTools {
     val agent = disk.asInstanceOf [DiskAgent]
     import agent.kit.{drives, checkpointer, compactor, config, logd, paged}
 
-    def attachAndWait (items: AttachItem*): Async [Unit] =
+    def attachAndWait (items: AttachItem*): Async [Notification] =
       drives._attach (items)
 
     def assertDisks (paths: String*) {
