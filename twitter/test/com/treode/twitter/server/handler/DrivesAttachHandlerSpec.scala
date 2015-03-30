@@ -18,6 +18,7 @@ package com.treode.twitter.server.handler
 
 import com.jayway.restassured.RestAssured.given
 import com.treode.async.Async, Async.supply
+import com.treode.notify.Notification
 import com.treode.store.{Store, StoreController}
 import org.scalatest.FlatSpec
 
@@ -28,7 +29,7 @@ class DrivesAttachHandlerSpec extends FlatSpec with SpecTools {
 
   "The DrivesAttachHandler" should "handle POST" in
     served { case (port, controller) =>
-      (controller.attach _) .expects (Seq.empty) .returning (supply (()))
+      (controller.attach _) .expects (Seq.empty) .returning (supply ((new Notification)))
       given
         .port (port)
         .body ("[]")

@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package com.treode.disk
+package com.treode.notify
 
-import java.nio.file.Path
-import com.treode.async.Async
-import com.treode.notify.Notification
+/** Accumulate errors and to report them. An alternative to throwing an
+  * exception on the first mistake, and forcing the caller to resolve errors
+  * one-by-one.
+  *
+  * Inspired by [[http://martinfowler.com/articles/replaceThrowWithNotification.html Martin Fowler]].
+  */
 
-private class ControllerAgent (kit: DiskKit, val disk: Disk) extends DiskController  {
+class Notification {
+  var list: List[Message] = List.empty;
 
-  def drives: Async [Seq [DriveDigest]] =
-    kit.drives.digest
+  /** Add message to the list. */
+  def add (message: Message) =
+    list = list :+ message
 
-  def attach (items: DriveAttachment*): Async [Notification] =
-    kit.drives.attach (items)
-
-  def drain (items: Path*): Async [Notification] =
-    kit.drives.drain (items)
-
-  def shutdown(): Async [Unit] =
-    kit.close()
+  /** Check if errors have been added. */
+  def hasErrors =
+    list.nonEmpty
 }

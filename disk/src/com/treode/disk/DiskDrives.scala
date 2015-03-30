@@ -21,20 +21,20 @@ import scala.collection.immutable.Queue
 import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncQueue, Callback, Fiber}
+import com.treode.async.{Async, AsyncQueue, Callback, Fiber},
+  Async.{async, guard, supply},
+  Callback.{fanout, ignore}
 import com.treode.async.implicits._
 import com.treode.async.io.File
-
-import Async.{async, guard, supply}
-import Callback.{fanout, ignore}
+import com.treode.notify.Notification
 
 private class DiskDrives (kit: DiskKit) {
   import kit.{checkpointer, compactor, config, scheduler, sysid}
 
   type AttachItem = (Path, File, DriveGeometry)
-  type AttachRequest = (Seq [AttachItem], Callback [Unit])
+  type AttachRequest = (Seq [AttachItem], Callback [Notification])
   type CloseRequest = Callback [Unit]
-  type DrainRequest = (Seq [Path], Callback [Unit])
+  type DrainRequest = (Seq [Path], Callback [Notification])
   type DetachRequest = DiskDrive
   type CheckpointRequest = (Map [Int, Long], Callback [Unit])
 
@@ -110,7 +110,7 @@ private class DiskDrives (kit: DiskKit) {
       _digests
     }
 
-  private def _attach (items: Seq [AttachItem], cb: Callback [Unit]): Unit =
+  private def _attach (items: Seq [AttachItem], cb: Callback [Notification]): Unit =
     queue.run (cb) {
 
       val priorDisks = drives.values
@@ -137,9 +137,10 @@ private class DiskDrives (kit: DiskKit) {
         this.number = number
         newDisks foreach (_.added())
         log.attachedDrives (newDisks.setBy (_.path))
+        new Notification // currently just stand-in to pass type
       }}
 
-  def _attach (items: Seq [AttachItem]): Async [Unit] = {
+  def _attach (items: Seq [AttachItem]): Async [Notification] = {
     queue.async { cb =>
       val attaching = items.setBy (_._1)
       if (items.isEmpty)
@@ -150,7 +151,7 @@ private class DiskDrives (kit: DiskKit) {
       attachreqs = attachreqs.enqueue (items, cb)
     }}
 
-  def attach (items: Seq [DriveAttachment]): Async [Unit] =
+  def attach (items: Seq [DriveAttachment]): Async [Notification] =
     guard {
       val files =
         for (item <- items)
@@ -182,7 +183,7 @@ private class DiskDrives (kit: DiskKit) {
       detachreqs ::= disk
     }
 
-  private def _drain (items: Seq [Path], cb: Callback [Unit]): Unit =
+  private def _drain (items: Seq [Path], cb: Callback [Notification]): Unit =
     queue.run (cb) {
 
       val byPath = drives.values.mapBy (_.path)
@@ -205,9 +206,10 @@ private class DiskDrives (kit: DiskKit) {
             .ensure (compactor.drain (segs.flatten))
             .run (ignore)
         log.drainingDrives (drainPaths)
+        new Notification // currently just stand-in to pass type
       }}
 
-  def drain (items: Seq [Path]): Async [Unit] =
+  def drain (items: Seq [Path]): Async [Notification] =
     queue.async { cb =>
       if (items.isEmpty)
         throw new ControllerException ("Must list at least one file or device to drain.")
