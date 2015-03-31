@@ -36,11 +36,11 @@ class ResourceSpec extends FreeSpec {
   def served (test: (Int, SchematicStubStore) => Any) {
     val store = StubStore ()
     val port = Random.nextInt (65535 - 49152) + 49152
-	val map = new HashMap [String, Long]();
-	map += ("table1" -> 0x1);
-	map += ("table2" -> 0x2);
-	map += ("table3" -> 0x3);
-	map += ("table4" -> 0x4);
+    val map = new HashMap [String, Long]();
+    map += ("table1" -> 0x1);
+    map += ("table2" -> 0x2);
+    map += ("table3" -> 0x3);
+    map += ("table4" -> 0x4);
     val schematicStore = new SchematicStubStore (store, new Schema (map))
     val server = Http.serve (
       s":$port",
@@ -91,9 +91,9 @@ class ResourceSpec extends FreeSpec {
   def matchesJson (expected: String): Matcher [String] =
     new JsonMatcher (expected)
 
-  def update (store: SchematicStubStore, ct: TxClock, key: String, value: String): TxClock =
+  def update (store: SchematicStubStore, ct: TxClock, key: String, value: String, table: String = "table1"): TxClock =
     store.update (
-      "table1",
+      table,
       key,
       value.fromJson [JsonNode],
       TxId (Bytes (Random.nextInt), 0),
@@ -633,4 +633,210 @@ class ResourceSpec extends FreeSpec {
             .body (equalTo ("The slice must be between 0 (inclusive) and the number of slices (exclusive)."))
           .when
             .get ("/table/table1")
-        }}}}}
+        }}}}
+
+  "When post request contains batch-writes" - {
+
+    def addData (table: String, store: SchematicStubStore, key: String, value: String): TxClock =
+      update (store, TxClock.MinValue, key, value, table)
+
+    def updateData (table: String, store: SchematicStubStore, key: String, value: String): TxClock =
+      update (store, TxClock.now, key, value, table)
+
+    "and has proper uris" - {
+
+      val v1 = "\"v1\""
+      val v2 = "\"v2\""
+      val v3 = "\"v3\""
+
+      "POST /batch-write with one CREATE should yield Ok" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"}]""")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("/batch-write")
+          val valueTxClock = rsp.valueTxClock
+          assertSeq (cell ("abc", valueTxClock, v1)) (store.scan ("table1"))
+        }}
+
+      "POST /batch-write with one UPDATE should yield Ok" in {
+        served { case (port, store) =>
+          val ts1 = addData ("table1", store, "abc", v1)
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "UPDATE", "table": "table1", "key": "abc", "obj": "v2"}]""")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("/batch-write")
+          val ts2 = rsp.valueTxClock
+          assertSeq (cell ("abc", ts2, v2), cell ("abc", ts1, v1)) (store.scan ("table1"))
+        }}
+
+      "POST /batch-write with one HOLD should yield Ok" in {
+        served { case (port, store) =>
+          val ts1 = addData ("table1", store, "abc", v1)
+          val ts2 = updateData ("table1", store, "abc", v2)
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .header ("Condition-TxClock", ts2 .toString)
+            .body ("""[{"op": "HOLD", "table": "table1", "key": "abc"}]""")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write with one delete should yield Ok" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "DELETE", "table": "table1", "key": "abc"}]""")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("/batch-write")
+          val valueTxClock = rsp.valueTxClock
+          assertSeq (cell ("abc", valueTxClock)) (store.scan ("table1"))
+        }}
+
+      "POST /batch-write with mixed case operations should yield Ok" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "CrEaTe", "table": "table1", "key": "abc", "obj": "v1"}]""")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("/batch-write")
+          val valueTxClock = rsp.valueTxClock
+          assertSeq (cell ("abc", valueTxClock, v1)) (store.scan ("table1"))
+        }}
+
+      "POST /batch-write with multiple operations should yeild Ok" in {
+        served { case (port, store) =>
+          val ts1 = addData ("table2", store, "abc2", v1)
+          val ts3 = addData ("table3", store, "abc3", v1)
+          val ts4 = updateData ("table3", store, "abc3", v1)
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .header ("Condition-TxClock", ts4 .toString)
+            .body ("""
+                [ {"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"},
+                  {"op": "UPDATE", "table": "table2", "key": "abc2", "obj": "v3"},
+                  {"op": "HOLD", "table": "table3", "key": "abc3"},
+                  {"op": "DELETE", "table": "table4", "key": "abc4"} ]""")
+          .expect
+            .statusCode (200)
+          .when
+            .post ("/batch-write")
+          val ts2 = rsp.valueTxClock
+          assertSeq (cell ("abc", ts2, v1)) (store.scan ("table1"))
+          assertSeq (cell ("abc2", ts2, v3), cell ("abc2", ts1, v1)) (store.scan ("table2"))
+          assertSeq (cell ("abc4", ts2)) (store.scan ("table4"))
+      }}}
+
+    "and has improper/failing uris" - {
+
+      "POST /batch-write with bad json format body should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""["op": "CREATE", "tble": "table1", "key": "abc", "obj": "v1"}]""")
+          .expect
+            .statusCode (400)
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write with necessary fields missing should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "CREATE", "tble": "table1", "key":"abc", "obj": "v1"}]""")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("There is no attribute called 'table'"))
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write with undefined operation should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "SCAN", "table": "table1", "key": "abc", "obj": "v1"}]""")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("Unsupported operation: SCAN"))
+          .when
+            .post ("/batch-write")
+        }}
+
+      "PUT /batch-write with wrong request method (PUT) should yield Method Not Allowed" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"}]""")
+          .expect
+            .statusCode (405)
+          .when
+            .put ("/batch-write")
+        }}
+
+      "POST /batch-write with unspecified table name should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "CREATE", "table": "table5", "key": "abc", "obj": "v1"}]""")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("Bad table ID: table5"))
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write requesting HOLD after another client's write should yield Precondition Failed" in {
+        served { case (port, store) =>
+          val ts1 = addData ("table1", store, "abc", """{"v":"ant"}""")
+          val ts2 = updateData ("table1", store, "abc", """{"v":"ant2"}""")
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .header ("Condition-TxClock", ts1 .toString)
+            .body ("""[{"op": "HOLD", "table": "table1", "key": "abc"}]""")
+          .expect
+            .statusCode (412)
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write has 2 operations on the same table and key should yield Bad Request" in {
+        served { case (port, store) =>
+          val body = """{"v":"ant2"}"""
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body (
+              """[{"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"},""" +
+              """{"op": "UPDATE", "table": "table1", "key": "abc", "obj": "v2"}]""")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("Multiple (Table, key) pairs found"))
+          .when
+            .post ("/batch-write")
+    }}}}}
