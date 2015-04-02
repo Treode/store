@@ -109,13 +109,13 @@ class FiberSpec extends FlatSpec {
     implicit val s = StubScheduler.random()
     val f = new Fiber
     def method(): Async [Int] = f.async (_ => return null)
-    method() .fail [ReturnException]
+    method().expectFail [ReturnException]
   }
 
   it should "report an exception through the callback" in {
     implicit val s = StubScheduler.random()
     val f = new Fiber
-    f.async [Unit] (cb => throw new DistinguishedException) .fail [DistinguishedException]
+    f.async [Unit] (cb => throw new DistinguishedException) .expectFail [DistinguishedException]
   }
 
   "Fiber.supply" should "invoke the callback" in {
@@ -130,11 +130,11 @@ class FiberSpec extends FlatSpec {
     implicit val s = StubScheduler.random()
     val f = new Fiber
     def method(): Async [Int] = f.supply {return null}
-    method() .fail [ReturnException]
+    method().expectFail [ReturnException]
   }
 
   it should "report an exception through the callback" in {
     implicit val s = StubScheduler.random()
     val f = new Fiber
-    f.supply (throw new DistinguishedException) .fail [DistinguishedException]
+    f.supply (throw new DistinguishedException) .expectFail [DistinguishedException]
   }}

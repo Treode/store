@@ -160,7 +160,7 @@ class LogSpec extends FlatSpec with CrashChecks {
       implicit val scheduler = StubScheduler.random()
       file = StubFile (file.data, geom.blockBits)
       implicit val recovery = Disk.recover()
-      recovery.reattachAndWait (("a", file)) .fail [InvalidTagException]
+      recovery.reattachAndWait (("a", file)) .expectFail [InvalidTagException]
     }}
 
   it should "report an error from a replay function" in {
@@ -180,7 +180,7 @@ class LogSpec extends FlatSpec with CrashChecks {
       file = StubFile (file.data, geom.blockBits)
       implicit val recovery = Disk.recover()
       records.str.replay (_ => throw new DistinguishedException)
-      recovery.reattachAndWait (("a", file)) .fail [DistinguishedException]
+      recovery.reattachAndWait (("a", file)) .expectFail [DistinguishedException]
     }}
 
   it should "reject an oversized record" in {
@@ -190,7 +190,7 @@ class LogSpec extends FlatSpec with CrashChecks {
       val file = StubFile (1<<20, geom.blockBits)
       implicit val recovery = Disk.recover()
       implicit val disk = recovery.attachAndLaunch (("a", file, geom))
-      records.stuff.record (Stuff (0, 1000)) .fail [OversizedRecordException]
+      records.stuff.record (Stuff (0, 1000)) .expectFail [OversizedRecordException]
     }}
 
 

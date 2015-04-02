@@ -47,7 +47,7 @@ class SuperBlockSpec extends FlatSpec {
     file.flush (buf, 0) .expectPass()
 
     // Check that the write throws an exception.
-    SuperBlock.write (superb, file) (config) .fail [SuperblockOverflowException]
+    SuperBlock.write (superb, file) (config) .expectFail [SuperblockOverflowException]
 
     // Check that the file has not been overwritten.
     buf.clear()

@@ -83,7 +83,7 @@ object AsyncIteratorTestTools {
   def assertSeq [A] (expected: Seq [A]): AssertSeq [A] = new AssertSeq [A] (expected)
 
   def assertFail [E] (iter: BatchIterator [_]) (implicit s: StubScheduler, m: Manifest [E]): Unit =
-    iter.foreach (_ => supply (())) .fail [E]
+    iter.foreach (_ => supply (())) .expectFail [E]
 
   def isOdd (x: Int): Boolean = (x & 1) == 0
 }

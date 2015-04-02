@@ -52,7 +52,7 @@ class AsyncIteratorSpec extends FreeSpec {
       guard {
         for (x <- flatten (items))
           when (x == 3) (throw new DistinguishedException)
-      } .fail [DistinguishedException]
+      } .expectFail [DistinguishedException]
     }}
 
   "map should" - {
@@ -129,7 +129,7 @@ class AsyncIteratorSpec extends FreeSpec {
             throw new DistinguishedException
           else
             x
-      iter.whilst (_ < 5) (x => supply (seen += x)) .fail [DistinguishedException]
+      iter.whilst (_ < 5) (x => supply (seen += x)) .expectFail [DistinguishedException]
       assertResult (Set.empty) (seen)
     }
 
@@ -142,7 +142,7 @@ class AsyncIteratorSpec extends FreeSpec {
         x < 5
       } { x =>
         supply (seen += x)
-      } .fail [DistinguishedException]
+      } .expectFail [DistinguishedException]
       assertResult (Set (1, 2)) (seen)
     }
 
@@ -152,6 +152,6 @@ class AsyncIteratorSpec extends FreeSpec {
       whilst (items) (_ < 5) { x =>
         if (x == 3) throw new DistinguishedException
         supply (seen += x)
-      } .fail [DistinguishedException]
+      } .expectFail [DistinguishedException]
       assertResult (Set (1, 2)) (seen)
     }}}
