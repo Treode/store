@@ -230,23 +230,23 @@ trait StoreBehaviors {
 
           "reject create Apple##ts-1" in {
             implicit val (random, scheduler, s, ts) = setup()
-            val exn = s.write (random.nextTxId, ts-1, Create (T1, Apple, 1)) .fail [CollisionException]
+            val exn = s.write (random.nextTxId, ts-1, Create (T1, Apple, 1)) .expectFail [CollisionException]
             assertResult (Seq (0)) (exn.indexes)
           }
 
           "reject hold Apple##ts-1" in {
             implicit val (random, scheduler, s, ts) = setup()
-            s.write (random.nextTxId, ts-1, Hold (T1, Apple)) .fail [StaleException]
+            s.write (random.nextTxId, ts-1, Hold (T1, Apple)) .expectFail [StaleException]
           }
 
           "reject update Apple##ts-1" in {
             implicit val (random, scheduler, s, ts) = setup()
-            s.write (random.nextTxId, ts-1, Update (T1, Apple, 1)) .fail [StaleException]
+            s.write (random.nextTxId, ts-1, Update (T1, Apple, 1)) .expectFail [StaleException]
           }
 
           "reject delete Apple##ts-1" in {
             implicit val (random, scheduler, s, ts) = setup()
-            s.write (random.nextTxId, ts-1, Delete (T1, Apple)) .fail [StaleException]
+            s.write (random.nextTxId, ts-1, Delete (T1, Apple)) .expectFail [StaleException]
           }
 
           "allow hold Apple at ts+1" in {

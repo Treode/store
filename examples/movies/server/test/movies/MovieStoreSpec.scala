@@ -163,7 +163,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
 
     val exn = movies.create (random.nextXid, t0, """ {
         "cast": []
-    } """ .fromJson [DM.Movie]) .fail [BadRequestException]
+    } """ .fromJson [DM.Movie]) .expectFail [BadRequestException]
     println (exn)
 
     store.expectCells (PM.MovieTable) ()
@@ -179,7 +179,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     movies.create (random.nextXid, t0, """ {
         "title": "Star Wars",
         "cast": [ { "actor": "Mark Hamill" } ]
-    } """ .fromJson [DM.Movie]) .fail [BadRequestException]
+    } """ .fromJson [DM.Movie]) .expectFail [BadRequestException]
 
     store.expectCells (PM.MovieTable) ()
     store.expectCells (PM.CastTable) ()
@@ -194,7 +194,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     movies.create (random.nextXid, t0, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": "1" } ]
-    } """ .fromJson [DM.Movie]) .fail [BadRequestException]
+    } """ .fromJson [DM.Movie]) .expectFail [BadRequestException]
 
     store.expectCells (PM.MovieTable) ()
     store.expectCells (PM.CastTable) ()
@@ -881,7 +881,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     movies.create (random.nextXid, t0, """ {
         "name": "Mark Hamill",
         "roles": [ { "title": "Star Wars" } ]
-    } """ .fromJson [DM.Actor]) .fail [BadRequestException]
+    } """ .fromJson [DM.Actor]) .expectFail [BadRequestException]
 
     store.expectCells (PM.MovieTable) ()
     store.expectCells (PM.CastTable) ()
@@ -896,7 +896,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
     movies.create (random.nextXid, t0, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": "1" } ]
-    } """ .fromJson [DM.Actor]) .fail [BadRequestException]
+    } """ .fromJson [DM.Actor]) .expectFail [BadRequestException]
 
     store.expectCells (PM.MovieTable) ()
     store.expectCells (PM.CastTable) ()
