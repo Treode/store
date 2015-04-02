@@ -237,9 +237,14 @@ private class DriveGroup (
           newAttaches ::= drive
         }
       }
-      // TODO - close files if there was an error
 
-      // TODO - do we want to abort early if there are drive attachment errors?
+      // If there are attachment errors, close all opened files and pass errors.
+      if (errors.hasErrors) {
+        scheduler.pass (cb, errors)
+        for (drive <- newAttaches) {
+          drive.close()
+        }
+      }
 
       // The paths that are already queued draining.
       var draining = (for (d <- drains) yield d.path).toSet
@@ -259,8 +264,6 @@ private class DriveGroup (
           throw new IllegalArgumentException (s"Aready draining ${quote (d)}")
         drains ::= drive
       }
-
-      // TODO - how do I integrate Notification with cb?
 
       // If we get here, then all went well, so we can merge our new changes into the queued
       // changes.
