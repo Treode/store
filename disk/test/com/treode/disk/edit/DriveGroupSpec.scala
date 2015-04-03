@@ -20,7 +20,11 @@ import java.nio.file.{Path, Paths}
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}, Async.supply
-import com.treode.disk.{DiskLaunch, DiskTestConfig, DriveGeometry}
+import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.implicits._
+import com.treode.disk.{DiskController, DiskLaunch, DiskTestConfig, DriveAttachment, DriveChange,
+  DriveGeometry, StubFileSystem}
+import com.treode.disk.stubs.StubDiskEvents
 import com.treode.pickle.Picklers
 import com.treode.tags.Periodic
 import org.scalatest.FlatSpec
@@ -82,8 +86,36 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     override def toString = "DriveGroupPhase"
   }
 
+  /** Convenient methods for testing. */
+  implicit class RichDiskController (controller: DiskController) {
+
+    // TODO: Move this into the DiskController trait.
+    def attach (attaches: DriveAttachment*): Async [Unit] =
+      controller.asInstanceOf [DiskAgent] .change (DriveChange (attaches, Seq.empty))
+
+    // TODO: Move this into the DiskController trait.
+    def attach (geom: DriveGeometry, paths: Path*): Async [Unit] =
+      attach (paths map (DriveAttachment (_, geom)): _*)
+
+    // NOT TODO: This is for testing only.
+    def attach (paths: String*) (implicit geom: DriveGeometry): Async [Unit] =
+      attach (geom, paths map (Paths.get (_)): _*)
+  }
+
+  implicit val config = DiskTestConfig()
+  implicit val events = new StubDiskEvents
+  implicit val geom = DriveGeometry (8, 6, 1 << 14)
+
+  "DriveGroup.change" should "reject duplicated paths" in {
+    implicit val files = new StubFileSystem
+    implicit val scheduler = StubScheduler.random()
+    implicit val recovery = new RecoveryAgent
+    val launch = recovery.reattach().expectPass()
+    val controller = launch.controller
+    val e = controller.attach ("a", "a") .expectFail [IllegalArgumentException]
+    assertResult ("requirement failed: File a does not exist.") (e.getMessage)
+  }
+
   "The DriveGroup" should "recover attached disks" taggedAs (Periodic) in {
-    implicit val config = DiskTestConfig()
-    implicit val geom = DriveGeometry (8, 6, 1 << 14)
     manyScenarios (new DriveGroupTracker, DriveGroupPhase)
   }}
