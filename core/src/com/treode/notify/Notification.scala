@@ -30,7 +30,7 @@ class Notification {
 
   /* Add message to the list. */
   def add (message: Message) =
-    list :+ message
+    list = list :+ message
 
   /* Check if errors have been added. */
   def hasErrors =
