@@ -36,12 +36,8 @@ class ResourceSpec extends FreeSpec {
   def served (test: (Int, SchematicStubStore) => Any) {
     val store = StubStore ()
     val port = Random.nextInt (65535 - 49152) + 49152
-    val map = new HashMap [String, Long]();
-    map += ("table1" -> 0x1);
-    map += ("table2" -> 0x2);
-    map += ("table3" -> 0x3);
-    map += ("table4" -> 0x4);
-    val schematicStore = new SchematicStubStore (store, new Schema (map))
+    val newSchema = SchemaParser.getSchema ("table1 { id : 0x1 } table2 { id : 0x2 } table3 { id : 0x3 } table4 { id : 0x4 }");
+    val schematicStore = new SchematicStubStore (store, newSchema)
     val server = Http.serve (
       s":$port",
       NettyToFinagle andThen
