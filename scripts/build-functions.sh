@@ -78,6 +78,7 @@ log() {
 clean() {
   if [ -z "$SKIP_CLEAN" ] ; then
     echo-do git clean -dfx
+    rm -rf "${DIR}/.ivy/local"
   fi
 }
 

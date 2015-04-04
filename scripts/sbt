@@ -8,6 +8,7 @@ java \
     -Xms128M \
     -Xmx512M \
     -Xss1M \
+    -Divy.home="${DIR}/.ivy" \
     -Djava.util.logging.config.file="$DIR/logging.properties" \
     -Dsbt.log.noformat=true \
     -jar "${HOME}/.sbt/sbt-launch-0.13.7.jar" \

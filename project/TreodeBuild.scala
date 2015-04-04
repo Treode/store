@@ -246,7 +246,7 @@ object TreodeBuild extends Build {
 
       name := "server",
 
-      mainClass in assembly := Some ("com.treode.server"),
+      mainClass in assembly := Some ("com.treode.server.Main"),
 
       test in assembly := {},
 

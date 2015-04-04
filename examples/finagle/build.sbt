@@ -15,7 +15,7 @@ libraryDependencies ++= Seq (
   "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
   "com.treode" %% "jackson" % "0.3.0-SNAPSHOT",
   "com.treode" %% "store" % "0.3.0-SNAPSHOT" % "compile;test->stub",
-  "com.treode" %% "twitter-server" % "0.3.0-SNAPSHOT",
+  "com.treode" %% "twitter" % "0.3.0-SNAPSHOT",
   "com.twitter" %% "finagle-http" % "6.24.0",
   "org.scalatest" %% "scalatest" % "2.2.4" % "test")
 
