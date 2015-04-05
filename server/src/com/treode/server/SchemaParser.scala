@@ -1,58 +1,48 @@
 package com.treode.server
 
 import com.treode.twitter.finagle.http.{BadRequestException}
+import com.treode.async.misc.parseUnsignedLong
 import scala.util.parsing.combinator._
 import scala.collection.mutable.HashMap
 
 object SchemaParser extends RegexParsers {
 
-  class Fields () {
-  	var idField: Option [Long] = None
-    def id: Option [Long] = idField
-    def id_= (idVal: Long): Unit = { idField = Some(idVal) }
-  }
   case class Table (name: String, id: Long)
+
+  private def toId (s: String): Long = {
+    parseUnsignedLong (s) match {
+      case Some (v) => v
+      case None => throw new BadRequestException (s"Bad table ID: $s")
+    }}
   
-  def keywordTable: Parser [String] = """table""".r ^^ { _.toString }
-  def keywordId: Parser [String] = """id""".r ^^ { _.toString }                          
-  def colon: Parser [String] = """[:]""".r ^^ { _.toString }
-
-  def identifier: Parser [String] = """[a-zA-Z][a-zA-Z0-9]*""".r ^^ { _.toString }                       
-  def number: Parser [Long] = """((0[xX][0-9])|[0-9])[0-9]*""".r ^^ { _.toId }
-  def openBrace: Parser [String] = """[{]""".r ^^ { _.toString }
-  def closeBrace: Parser [String] = """[}]""".r ^^ { _.toString }
-
-  def idField (tableFields: Fields) = keywordId ~ colon ~ number ^^ { 
-  	case id ~ co ~ num => tableFields.id = num 
-    case _ => throw new BadRequestException ("Bad table ID")
-  }
-  def field (tableFields: Fields) = idField(tableFields) 
-  def fields (tableFields: Fields) = field(tableFields)*
-
-  def tableDefinition: Parser [Table] = {
-    var tableFields = new Fields ()
-  	identifier ~ openBrace ~ fields (tableFields) ~ closeBrace ^^ { 
-  	  case id ~ ob ~ fi ~ cb => Table(id, tableFields.id match { 
-  		case Some(v) => v; 
-  	  	case _ => throw new BadRequestException ("Bad table ID")
-  	  })
-  	  case _ => throw new BadRequestException ("Bad table ID")
+  def identifier: Parser [String] = """[a-zA-Z][a-zA-Z0-9_-]*""".r ^^ { _.toString }                       
+  def number: Parser [Long] = """((0[xX][0-9a-fA-F]+)|([0-9]+))""".r ^^ { toId(_) }
+  
+  def idField = identifier ~ (":" ~> number) ^^ { 
+    case "id" ~ num => num 
     }
-  }
+  
+  def tableDefinition: Parser [Table] = {
+    (identifier ~ identifier <~ "{") ~ (idField <~ "}") ^^ { 
+  	  case "table" ~ id ~ fi => Table(id, fi)
+    }}
 
-  def tableDefinitions = tableDefinition* 
+  def tableDefinitions = tableDefinition*
 
   def getSchema (schema: String): Schema = {
   	
-  	val tableList = parse (tableDefinitions, schema).get
-  	val map = new HashMap [String, Long]()
+    val tableList = parseAll (tableDefinitions, schema) match {
+      case Success (matched, _) => matched
+      case Failure (msg, _) => throw new BadRequestException (msg)
+      case Error (msg, _) => throw new BadRequestException (msg)
+    }
+    val map = new HashMap [String, Long]()
 
-  	for (table <- tableList) {
-  		table match {
-  			case Table (name, id) =>  map += (name -> id)
-
-  		}
-  	}
+    for (table <- tableList) {
+      table match {
+  	    case Table (name, id) =>  map += (name -> id)
+  	  }}
+  	
   	new Schema(map)
 
   }}

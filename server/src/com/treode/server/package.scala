@@ -29,7 +29,6 @@ import com.twitter.finagle.http.{Request, Response, Status}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import com.twitter.finagle.http.filter.{CommonLogFormatter, LoggingFilter}
 import com.twitter.logging.Logger
-import com.treode.async.misc.parseUnsignedLong
 
 package object server {
 
@@ -115,13 +114,6 @@ package object server {
     def getTableId: TableId =
       TableId.parse (s) .getOrThrow (new BadRequestException (s"Bad table ID: $s"))
 
-    def toId: Long = {
-      parseUnsignedLong (s) match {
-        case Some (v) => v
-        case None => throw new BadRequestException (s"Bad table ID: $s")
-      }
-    }
-    
     def fromJson [A: Manifest]: A =
       textJson.readValue [A] (s)
   }}
