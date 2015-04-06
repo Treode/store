@@ -26,7 +26,7 @@ package com.treode.notify
  */
 
 class Notification {
-  val list: List[Message] = List.empty;
+  var list: List[Message] = List.empty;
 
   /* Add message to the list. */
   def add (message: Message) =

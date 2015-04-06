@@ -25,18 +25,18 @@ import com.treode.notify.Message
 
 package messages {
   case class AlreadyAttached (path: Path) extends Message {
-    val en = "Aleady attached: " + (quote (path));
+    val en = "Already attached: " + quote (path);
   }
 
   case class AlreadyAttaching (path: Path) extends Message {
-    val en = "Aleady attaching: " + quote(path);
+    val en = "Already attaching: " + quote (path);
   }
 
   case class NotAttached (drive: Path) extends Message {
-    val en = "Not attached: " + quote(drive);
+    val en = "Not attached: " + quote (drive);
   }
 
   case class AlreadyDraining (drive: Path) extends Message {
-    val en = "Aleady draining: " + quote(drive);
+    val en = "Already draining: " + quote (drive);
   }
 }

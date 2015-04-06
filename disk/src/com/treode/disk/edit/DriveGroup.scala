@@ -226,9 +226,9 @@ private class DriveGroup (
       // - add it to the list of new attaches.
       for (a <- change.attaches) {
         if (attached contains a.path) {
-          errors.add (AlreadyAttached(a.path))
+          errors.add (AlreadyAttached (a.path))
         } else if (attaching contains a.path) {
-          errors.add (AlreadyAttaching(a.path))
+          errors.add (AlreadyAttaching (a.path))
         } else {
           attaching += a.path
           val file = files.open (a.path, READ, WRITE)
@@ -256,21 +256,28 @@ private class DriveGroup (
         // - add it to the list of new drains.
         for (d <- change.drains) {
           val drive = drives.values.find (_.path == d) match {
-            case Some (drive) => drive
-            case None => throw new IllegalArgumentException (s"Drive ${quote (d)} not attached")
+            case Some (drive) =>
+              if (drive.draining || (draining contains d) || (newDrains contains drive)) {
+                errors.add (AlreadyDraining (d))
+              } else {
+                newDrains ::= drive
+              }
+            case None =>
+              errors.add (NotAttached (d))
           }
-          if (drive.draining || (draining contains d))
-            throw new IllegalArgumentException (s"Aready draining ${quote (d)}")
-          drains ::= drive
         }
 
-        // If we get here, then all went well, so we can merge our new changes into the queued
-        // changes.
-        this.dno = dno
-        attaches :::= newAttaches
-        drains :::= newDrains
-        changers ::= cb
-        queue.engage()
+        if (errors.hasErrors) {
+          scheduler.pass (cb, errors)
+        } else {
+          // If we get here, then all went well, so we can merge our new changes into the queued
+          // changes.
+          this.dno = dno
+          attaches :::= newAttaches
+          drains :::= newDrains
+          changers ::= cb
+          queue.engage()
+        }
       }
     }
 

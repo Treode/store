@@ -27,6 +27,7 @@ import com.treode.disk.{DiskController, DiskLaunch, DiskTestConfig, DriveAttachm
 import com.treode.disk.stubs.StubDiskEvents
 import com.treode.pickle.Picklers
 import com.treode.tags.Periodic
+import com.treode.notify.Notification
 import org.scalatest.FlatSpec
 
 class DriveGroupSpec extends FlatSpec with DiskChecks {
@@ -90,30 +91,94 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
   implicit class RichDiskController (controller: DiskController) {
 
     // TODO: Move this into the DiskController trait.
-    def attach (attaches: DriveAttachment*): Async [Unit] =
+    def attach (attaches: DriveAttachment*): Async [Notification] =
       controller.asInstanceOf [DiskAgent] .change (DriveChange (attaches, Seq.empty))
 
     // TODO: Move this into the DiskController trait.
-    def attach (geom: DriveGeometry, paths: Path*): Async [Unit] =
+    def attach (geom: DriveGeometry, paths: Path*): Async [Notification] =
       attach (paths map (DriveAttachment (_, geom)): _*)
 
     // NOT TODO: This is for testing only.
-    def attach (paths: String*) (implicit geom: DriveGeometry): Async [Unit] =
+    def attach (paths: String*) (implicit geom: DriveGeometry): Async [Notification] =
       attach (geom, paths map (Paths.get (_)): _*)
+
+    def drain (paths: Path*): Async [Notification] =
+      controller.asInstanceOf [DiskAgent] .change (DriveChange (Seq.empty, paths))
+
+    def drain (paths: String*) (implicit geom: DriveGeometry): Async [Notification] =
+      drain (paths map (Paths.get (_)): _*)
   }
 
   implicit val config = DiskTestConfig()
   implicit val events = new StubDiskEvents
   implicit val geom = DriveGeometry (8, 6, 1 << 14)
 
-  "DriveGroup.change" should "reject duplicated paths" in {
+  "DriveGroup.change" should "reject nonexistant files" in {
     implicit val files = new StubFileSystem
     implicit val scheduler = StubScheduler.random()
     implicit val recovery = new RecoveryAgent
     val launch = recovery.reattach().expectPass()
+    launch.launch()
     val controller = launch.controller
-    val e = controller.attach ("a", "a") .expectFail [IllegalArgumentException]
+    val e = controller.attach ("a") .expectFail [IllegalArgumentException]
     assertResult ("requirement failed: File a does not exist.") (e.getMessage)
+  }
+
+  it should "reject duplicate filenames (at the same time)" in {
+    implicit val files = new StubFileSystem
+    implicit val scheduler = StubScheduler.random()
+    implicit val recovery = new RecoveryAgent
+    files.create(Seq ("f1", "f2", "f3") map (Paths.get (_)), 0, 1 << 14)
+    val launch = recovery.reattach().expectPass()
+    launch.launch()
+    val controller = launch.controller
+    val e = controller.attach ("f1", "f1").expectPass()
+    scheduler.run()
+    assert (e.list(0).en == "Already attaching: \"f1\"")
+  }
+
+  it should "reject duplicate filenames (different times)" in {
+    implicit val files = new StubFileSystem
+    implicit val scheduler = StubScheduler.random()
+    implicit val recovery = new RecoveryAgent
+    files.create(Seq ("f1", "f2", "f3") map (Paths.get (_)), 0, 1 << 14)
+    val launch = recovery.reattach().expectPass()
+    launch.launch()
+    val controller = launch.controller
+    val e1 = controller.attach ("f1").expectPass()
+    scheduler.run()
+    val e2 = controller.attach ("f1").expectPass()
+    scheduler.run()
+    assert (e1.list.length == 0)
+    assert (e2.list(0).en == "Already attached: \"f1\"")
+  }
+
+  it should "reject draining the same file" in {
+    implicit val files = new StubFileSystem
+    implicit val scheduler = StubScheduler.random()
+    implicit val recovery = new RecoveryAgent
+    files.create(Seq ("f1", "f2", "f3") map (Paths.get (_)), 0, 1 << 14)
+    val launch = recovery.reattach().expectPass()
+    launch.launch()
+    val controller = launch.controller
+    val e1 = controller.attach ("f1").expectPass()
+    val e2 = controller.drain ("f1", "f1").expectPass()
+    scheduler.run()
+    assert (e1.list.length == 0)
+    assert (e2.list(0).en == "Already draining: \"f1\"")
+  }
+
+  it should "reject draining unattached files" in {
+    implicit val files = new StubFileSystem
+    implicit val scheduler = StubScheduler.random()
+    implicit val recovery = new RecoveryAgent
+    files.create(Seq ("f1", "f2", "f3") map (Paths.get (_)), 0, 1 << 14)
+    val launch = recovery.reattach().expectPass()
+    launch.launch()
+    val controller = launch.controller
+    val e1 = controller.drain ("f1").expectPass()
+    scheduler.run()
+    assert (e1.list(0).en == "Not attached: \"f1\"")
   }
 
   "The DriveGroup" should "recover attached disks" taggedAs (Periodic) in {
