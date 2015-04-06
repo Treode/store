@@ -55,6 +55,13 @@ package object example {
       rsp
     }
 
+    def stale (req: Request, time: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.PreconditionFailed
+      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp
+    }
+
     def json (req: Request, value: Any): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok

@@ -80,8 +80,8 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
       rsp
     }
     .recover {
-      case _: StaleException =>
-        respond (req, Status.PreconditionFailed)
+      case exn: StaleException =>
+        respond.stale (req, exn.time)
     }}
 
   def delete (req: Request, table: TableId, key: String): Async [Response] = {
