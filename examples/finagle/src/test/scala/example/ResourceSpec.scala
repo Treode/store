@@ -241,6 +241,8 @@ class ResourceSpec extends FreeSpec {
           .statusCode (412)
         .when
           .put ("/table/123?key=abc")
+        val ts2 = rsp.valueTxClock
+        assert (ts2 == ts1)
         assertSeq (cell ("abc", ts1, entity)) (store.scan (123))
       }
 
