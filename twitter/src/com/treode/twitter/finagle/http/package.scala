@@ -164,7 +164,7 @@ package object http {
       optTxClockHeader ("Condition-TxClock") getOrElse (default)
 
     def requestTxClock: TxClock =
-      optTxClockHeader ("Request-TxClock") getOrElse (TxClock.now)
+      optTxClockHeader ("Read-TxClock") getOrElse (TxClock.now)
 
     def slice: Slice = {
       val slice = optIntParam ("slice")

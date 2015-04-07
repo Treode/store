@@ -185,24 +185,24 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/table1?key=abc")
       }
 
-    "GET /table/table1?key=abc with Request-TxClock:0 should respond Not Found" in
+    "GET /table/table1?key=abc with Read-TxClock:0 should respond Not Found" in
       served { case (port, store) =>
         val ts = addData (store)
         given
           .port (port)
-          .header ("Request-TxClock", "0")
+          .header ("Read-TxClock", "0")
         .expect
           .statusCode (404)
         .when
           .get ("/table/table1?key=abc")
       }
 
-    "GET /table/table1?key=abc with Request-TxClock:1 should respond Ok" in
+    "GET /table/table1?key=abc with Read-TxClock:1 should respond Ok" in
       served { case (port, store) =>
         val ts = addData (store)
         given
           .port (port)
-          .header ("Request-TxClock", "1")
+          .header ("Read-TxClock", "1")
         .expect
           .statusCode (200)
           .body (equalTo (entity))
@@ -320,12 +320,12 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/table1")
       }}
 
-    "GET /table/table1 with Request-TxClock:4 should work" in {
+    "GET /table/table1 with Read-TxClock:4 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Request-TxClock", "4")
+          .header ("Read-TxClock", "4")
         .expect
           .statusCode (200)
           .body (matchesJson ("""[
@@ -404,12 +404,12 @@ class ResourceSpec extends FreeSpec {
           .get ("/history/table1")
       }}
 
-    "GET /history/table1 with Request-TxClock:3 should work" in {
+    "GET /history/table1 with Read-TxClock:3 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Request-TxClock", "3")
+          .header ("Read-TxClock", "3")
         .expect
           .statusCode (200)
           .body (matchesJson ("""[
@@ -520,14 +520,14 @@ class ResourceSpec extends FreeSpec {
 
     "and gives bad clock values" - {
 
-      "GET /table/table1 with Request-TxClock:abc should yield Bad Request" in {
+      "GET /table/table1 with Read-TxClock:abc should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
-            .header ("Request-TxClock", "abc")
+            .header ("Read-TxClock", "abc")
           .expect
             .statusCode (400)
-            .body (equalTo ("Bad time for Request-TxClock: abc"))
+            .body (equalTo ("Bad time for Read-TxClock: abc"))
           .when
             .get ("/table/table1")
         }}

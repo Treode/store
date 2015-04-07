@@ -70,7 +70,7 @@ package object server {
       rsp.lastModified = time
       rsp.readTxClock = req.requestTxClock
       rsp.valueTxClock = time
-      rsp.vary = "Request-TxClock"
+      rsp.vary = "Read-TxClock"
       rsp.json = value
       rsp
     }

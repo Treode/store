@@ -171,24 +171,24 @@ class MovieResourceSpec extends FreeSpec with SpecTools {
           .get ("/movie/1")
       }
 
-    "GET /movie/1 with Request-TxClock:(r1.valueTxClock-1) should respond Not Found" in
+    "GET /movie/1 with Read-TxClock:(r1.valueTxClock-1) should respond Not Found" in
       served { (port, store) => implicit movies =>
         val r1 = addStarWars (port)
         given
           .port (port)
-          .header ("Request-TxClock", (r1.valueTxClock-1).time.toString)
+          .header ("Read-TxClock", (r1.valueTxClock-1).time.toString)
         .expect
           .statusCode (404)
         .when
           .get ("/movie/1")
       }
 
-    "GET /movie/1 with Request-TxClock:(r1.valueTxClock) should respond Ok" in
+    "GET /movie/1 with Read-TxClock:(r1.valueTxClock) should respond Ok" in
       served { (port, store) => implicit movies =>
         val r1 = addStarWars (port)
         given
           .port (port)
-          .header ("Request-TxClock", (r1.valueTxClock).time.toString)
+          .header ("Read-TxClock", (r1.valueTxClock).time.toString)
         .expect
           .valueTxClock (r1.valueTxClock)
           .body (matchesJson (starWars))
