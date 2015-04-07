@@ -71,9 +71,9 @@ package object movies {
       rsp
     }
 
-    def time (req: Request, time: TxClock, status: HttpResponseStatus = Status.Ok): Response = {
+    def stale (req: Request, time: TxClock): Response = {
       val rsp = req.response
-      rsp.status = status
+      rsp.status = Status.PreconditionFailed
       rsp.headerMap.add ("Value-TxClock", time.toString)
       rsp
     }

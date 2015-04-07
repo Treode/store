@@ -79,7 +79,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
     }
     .recover {
       case exn: StaleException =>
-        respond.time (req, exn.time, Status.PreconditionFailed)
+        respond.stale (req, exn.time)
     }}
 
   def delete (req: Request, table: String, key: String): Async [Response] = {
@@ -94,7 +94,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
     }
     .recover {
       case exn: StaleException =>
-        respond.time (req, exn.time, Status.PreconditionFailed)
+        respond.stale (req, exn.time)
     }}
 
   def batch (req: Request): Async [Response] = {
@@ -108,8 +108,8 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
       rsp.headerMap.add ("Value-TxClock", vt.toString)
       rsp
     } .recover {
-      case _: StaleException =>
-        respond (req, Status.PreconditionFailed)
+      case exn: StaleException =>
+        respond.stale (req, exn.time)
     }}
 
   def apply (req: Request): Future [Response] = {

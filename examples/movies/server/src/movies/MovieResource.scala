@@ -61,7 +61,7 @@ object MovieResource {
         respond.created (request, vt, s"/movie/$id")
       }) .recover {
         case exn: StaleException =>
-          respond.time (request, exn.time, Status.PreconditionFailed)
+          respond.stale (request, exn.time)
       }}
 
     def put (request: Request, id: String): Async [Response] = {
@@ -74,7 +74,7 @@ object MovieResource {
         respond.ok (request, vt)
       }) .recover {
         case exn: StaleException =>
-          respond.time (request, exn.time, Status.PreconditionFailed)
+          respond.stale (request, exn.time)
       }}
 
     router.register ("/movie/") { request =>
