@@ -224,14 +224,14 @@ class FileSpec extends FlatSpec {
     implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
     input.writeInt (0)
-    val e = file.fill (input, 0, 8, 5) .fail [IllegalArgumentException]
+    val e = file.fill (input, 0, 8, 5) .expectFail [IllegalArgumentException]
     assertResult ("requirement failed: Buffer writePos must be aligned.") (e.getMessage)
   }
 
   it should "reject an undersized buffer" in {
     implicit val (scheduler, async, file) = mkFile
     val input = PagedBuffer (5)
-    val e = file.fill (input, 0, 4, 12) .fail [IllegalArgumentException]
+    val e = file.fill (input, 0, 4, 12) .expectFail [IllegalArgumentException]
     assertResult ("requirement failed: Buffer page size must accomodate alignment.") (e.getMessage)
   }
 
@@ -276,7 +276,7 @@ class FileSpec extends FlatSpec {
     buffer.writePos = end
     file.flush (buffer, 0) .expectPass()
     buffer.clear()
-    file.deframe (Hashing.crc32, buffer, 0) .fail [HashMismatchException]
+    file.deframe (Hashing.crc32, buffer, 0) .expectFail [HashMismatchException]
   }
 
   it should "flush and fill" in {

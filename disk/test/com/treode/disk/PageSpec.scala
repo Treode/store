@@ -116,7 +116,7 @@ class PageSpec extends FreeSpec {
         implicit val scheduler = StubScheduler.random()
         val file = StubFile (1<<20, geom.blockBits)
         implicit val disk = setup (file)
-        pagers.stuff.write (0, 0, Stuff (0, 1000)) .fail [OversizedPageException]
+        pagers.stuff.write (0, 0, Stuff (0, 1000)) .expectFail [OversizedPageException]
       }}}
 
   "The compactor should" - {

@@ -54,7 +54,7 @@ class AsyncSpec extends FlatSpec {
     var flag = false
     async [Int] (_ => throw new DistinguishedException)
         .map (_ => flag = true)
-        .fail [DistinguishedException]
+        .expectFail [DistinguishedException]
     assert (!flag)
   }
 
@@ -63,7 +63,7 @@ class AsyncSpec extends FlatSpec {
     var flag = false
     async [Int] (_.fail (new DistinguishedException))
         .map (_ => flag = true)
-        .fail [DistinguishedException]
+        .expectFail [DistinguishedException]
     assert (!flag)
   }
 
@@ -72,7 +72,7 @@ class AsyncSpec extends FlatSpec {
     async [Int] (_.pass (1))
         .on (scheduler)
         .map (_ => throw new DistinguishedException)
-        .fail [DistinguishedException]
+        .expectFail [DistinguishedException]
   }
 
   it should "throw an exception thrown from the callback" in {
@@ -90,7 +90,7 @@ class AsyncSpec extends FlatSpec {
     var flag = false
     async [Int] (_ => throw new DistinguishedException)
         .flatMap (_ => supply (flag = true))
-        .fail [DistinguishedException]
+        .expectFail [DistinguishedException]
     assert (!flag)
   }
 
@@ -99,7 +99,7 @@ class AsyncSpec extends FlatSpec {
     var flag = false
     async [Int] (_.fail (new DistinguishedException))
         .flatMap (_ => supply (flag = true))
-        .fail [DistinguishedException]
+        .expectFail [DistinguishedException]
     assert (!flag)
   }
 
@@ -108,7 +108,7 @@ class AsyncSpec extends FlatSpec {
     async [Int] (_.pass (1))
         .on (scheduler)
         .flatMap (_ => throw new DistinguishedException)
-        .fail [DistinguishedException]
+        .expectFail [DistinguishedException]
   }
 
   it should "pass an exception returned from the function to the callback" in {
@@ -116,7 +116,7 @@ class AsyncSpec extends FlatSpec {
     async [Int] (_.pass (1))
         .on (scheduler)
         .flatMap (_ => guard [Int] (throw new DistinguishedException))
-        .fail [DistinguishedException]
+        .expectFail [DistinguishedException]
   }
 
   it should "throw an exception thrown from the callback" in {
@@ -133,21 +133,21 @@ class AsyncSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     async [Int] (_.pass (1))
       .filter (_ != 1)
-      .fail [NoSuchElementException]
+      .expectFail [NoSuchElementException]
   }
 
   it should "stop when an exception is given" in {
     implicit val scheduler = StubScheduler.random()
     async [Int] (_.fail (new DistinguishedException))
         .filter (_ == 1)
-        .fail [DistinguishedException]
+        .expectFail [DistinguishedException]
   }
 
   it should "pass an exception thrown from the predicate to the callback" in {
     implicit val scheduler = StubScheduler.random()
     async [Int] (_.pass (1))
         .filter (_ => throw new DistinguishedException)
-        .fail [DistinguishedException]
+        .expectFail [DistinguishedException]
   }
 
   it should "throw an exception thrown from the callback" in {
@@ -167,7 +167,7 @@ class AsyncSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     var flag = false
     val a = guard [Int] (throw new DistinguishedException) .ensure (flag = true)
-    a.fail [DistinguishedException]
+    a.expectFail [DistinguishedException]
     assertResult (true) (flag)
   }
 
@@ -194,7 +194,7 @@ class AsyncSpec extends FlatSpec {
     val a = guard [Int] (throw new Exception) .recover {
       case _ => throw new DistinguishedException
     }
-    a.fail [DistinguishedException]
+    a.expectFail [DistinguishedException]
   }
 
   "Async.rescue" should "ignore the body on pass" in {
@@ -220,7 +220,7 @@ class AsyncSpec extends FlatSpec {
     val a = guard [Int] (throw new Exception) .rescue {
       case _ => throw new DistinguishedException
     }
-    a.fail [DistinguishedException]
+    a.expectFail [DistinguishedException]
   }
 
   it should "report an exception returned from the body through the callback" in {
@@ -228,7 +228,7 @@ class AsyncSpec extends FlatSpec {
     val a = guard [Int] (throw new Exception) .rescue {
       case _ => Failure (new DistinguishedException)
     }
-    a.fail [DistinguishedException]
+    a.expectFail [DistinguishedException]
   }
 
   "Async.await" should "invoke the async" in {
@@ -290,12 +290,12 @@ class AsyncSpec extends FlatSpec {
   it should "reject the return keyword" in {
     implicit val scheduler = StubScheduler.random()
     def method(): Async [Int] = async (_ => return null)
-    method() .fail [ReturnException]
+    method() .expectFail [ReturnException]
   }
 
   it should "pass an exception from the body to the callback" in {
     implicit val scheduler = StubScheduler.random()
-    async [Unit] (_ => throw new DistinguishedException) .fail [DistinguishedException]
+    async [Unit] (_ => throw new DistinguishedException) .expectFail [DistinguishedException]
   }
 
   it should "throw an exception from the callback" in {
@@ -334,7 +334,7 @@ class AsyncSpec extends FlatSpec {
   it should "return the return keyword" in {
     implicit val scheduler = StubScheduler.random()
     def method(): Async [Int] = guard (return supply (0))
-    method() .fail [ReturnException]
+    method() .expectFail [ReturnException]
   }
 
   it should "should pass an async from the body to the callback" in {
@@ -344,7 +344,7 @@ class AsyncSpec extends FlatSpec {
 
   it should "pass an exception from the body to the callback" in {
     implicit val scheduler = StubScheduler.random()
-    guard (throw new DistinguishedException) .fail [DistinguishedException]
+    guard (throw new DistinguishedException) .expectFail [DistinguishedException]
   }
 
   it should "throw an exception from the callback" in {
@@ -362,7 +362,7 @@ class AsyncSpec extends FlatSpec {
   it should "reject the return keyword" in {
     implicit val scheduler = StubScheduler.random()
     def method(): Async [Int] = supply {return null}
-    method() .fail [ReturnException]
+    method().expectFail [ReturnException]
   }
 
   it should "should pass data from the body to the callback" in {
@@ -372,7 +372,7 @@ class AsyncSpec extends FlatSpec {
 
   it should "pass an exception from the body to the callback" in {
     implicit val scheduler = StubScheduler.random()
-    supply (throw new DistinguishedException) .fail [DistinguishedException]
+    supply (throw new DistinguishedException) .expectFail [DistinguishedException]
   }
 
   it should "throw an exception from the callback" in {
@@ -396,7 +396,7 @@ class AsyncSpec extends FlatSpec {
 
   it should "pass an exception from the body to the callback" in {
     implicit val scheduler = StubScheduler.random()
-    when (true) (throw new DistinguishedException) .fail [DistinguishedException]
+    when (true) (throw new DistinguishedException) .expectFail [DistinguishedException]
   }
 
   it should "throw an exception from the callback when the condition is true" in {
@@ -425,7 +425,7 @@ class AsyncSpec extends FlatSpec {
 
   it should "pass an exception from the body to the callback" in {
     implicit val scheduler = StubScheduler.random()
-    when (Some (1)) (_ => throw new DistinguishedException) .fail [DistinguishedException]
+    when (Some (1)) (_ => throw new DistinguishedException) .expectFail [DistinguishedException]
   }
 
   it should "throw an exception from the callback when the condition is true" in {
