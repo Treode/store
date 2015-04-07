@@ -47,9 +47,9 @@ package object example {
       rsp
     }
 
-    def apply (req: Request, status: HttpResponseStatus, time: TxClock): Response = {
+    def state (req: Request, time: TxClock): Response = {
       val rsp = req.response
-      rsp.status = status
+      rsp.status = Status.PreconditionFailed
       rsp.headerMap.add ("Value-TxClock", time.toString)
       rsp
     }

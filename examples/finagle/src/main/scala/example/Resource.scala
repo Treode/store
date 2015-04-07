@@ -81,7 +81,7 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     }
     .recover {
       case writefailed: StaleException =>
-        respond (req, Status.PreconditionFailed, writefailed.time)
+        respond.state (req, writefailed.time)
     }}
 
   def delete (req: Request, table: TableId, key: String): Async [Response] = {
