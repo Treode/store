@@ -16,6 +16,7 @@
 
 package com.treode.disk.stubs
 
+import scala.collection.mutable.HashMap
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
@@ -23,40 +24,53 @@ import com.treode.async.misc.EpochReleaser
 import com.treode.disk._
 
 private class StubLaunchAgent (
-    releaser: EpochReleaser,
-    val disk: StubDisk
+  drive: StubDiskDrive,
+  val disk: StubDiskAgent
 ) (implicit
-    random: Random,
-    scheduler: Scheduler,
-    drive: StubDiskDrive,
-    config: StubDiskConfig
+  random: Random,
+  scheduler: Scheduler,
+  events: DiskEvents
 ) extends DiskLaunch {
 
-  private val roots = new CheckpointRegistry
-  private val pages = new StubPageRegistry (releaser)
+  private val checkpointers = new CheckpointerRegistry.Builder
+  private val compactors = new CompactorRegistry.Builder
+  private val claims = new GenerationDocket
   private var open = true
-
-  def requireOpen(): Unit =
-    require (open, "Disk have already launched.")
 
   def checkpoint (f: => Async [Unit]): Unit =
     synchronized {
-      requireOpen()
-      roots.checkpoint (f)
+      require (open, "Must add checkpointer before launching.")
+      checkpointers.add (f)
     }
 
-  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit =
-    pages.handle (desc, handler)
+  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit =
+    synchronized {
+      require (open, "Must claim pages before launching.")
+      claims.add (desc.id, obj, gens)
+    }
+
+  def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit]): Unit =
+    synchronized {
+      require (open, "Must register compactors before launching.")
+      compactors.add (desc) (f)
+    }
+
+  // The old disk system uses this; the new one can ignore it.
+  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit = ()
+
+  def launch (crashed: Boolean): Unit =
+    synchronized {
+      require (open, "The StubDisk has already launched.")
+      open = false
+      drive.claim (crashed, claims)
+      disk.launch (checkpointers.result, compactors.result)
+    }
 
   def launch(): Unit =
-    synchronized {
-      requireOpen()
-      open = false
-      disk.launch (roots, pages)
-    }
+    launch (true)
 
   def controller: DiskController =
-    throw new UnsupportedOperationException ("The StubDisk do not provide a controller.")
+    throw new UnsupportedOperationException ("The StubDisk does not provide a controller.")
 
   val sysid = SystemId (0, 0)
 }

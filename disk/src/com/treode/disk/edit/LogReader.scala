@@ -19,33 +19,34 @@ package com.treode.disk.edit
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.disk.DriveGeometry
+import com.treode.disk.{DriveGeometry, RecordRegistry}
 
 class LogReader (
   file: File,
-  geom: DriveGeometry
+  geom: DriveGeometry,
+  reg: RecordRegistry
 ) (implicit
   scheduler: Scheduler
 ) {
 
-  var buf = PagedBuffer (12)
-  var pos = 0L
+  private var buf = PagedBuffer (12)
+  private var pos = 0L
 
-  def read(): Async [Seq [String]] = {
-    val builder = Seq.newBuilder [String]
+  def read(): Async [Seq [Unit => Any]] = {
+    val builder = Seq.newBuilder [Unit => Any]
     var continue = true
     scheduler.whilst (continue) {
       for {
         _ <- file.fill (buf, pos, 8)
-        // get byte length of batch
+        // Get byte length of batch
         length = buf.readInt()
-        // get batch count of items in batch
+        // Get batch count of items in batch
         count = buf.readInt()
-        // read lengt` bytes
+        // Read length bytes
         _ <- file.fill (buf, pos+8, length)
       } yield {
-        for (i <- 1 to count)
-          builder += buf.readString()
+        // Read the batch
+        builder ++= reg.read (buf, length, count)
 
         pos += 8 + length
         if (buf.readByte() == 0)

@@ -84,9 +84,11 @@ private case class Tier (
           cb.fail (t)
       }}
 
+  /** Do any keys in this tier fall in the window? */
   def overlaps (window: Window): Boolean =
     window.overlaps (latest, earliest)
 
+  /** Estimate how many keys remain on this host after a move. */
   def estimate (other: Residents): Long =
     (keys.toDouble * residents.stability (other) * 1.1).toLong
 

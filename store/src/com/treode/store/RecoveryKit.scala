@@ -50,7 +50,7 @@ private class RecoveryKit (implicit
     } yield {
 
       val librarian = Librarian { atlas =>
-        latch (paxos.rebalance (atlas), atomic.rebalance (atlas)) .map (_ => ())
+        latch (paxos.rebalance (atlas), atomic.rebalance (atlas)) .unit
       } (scheduler, cluster, catalogs, library)
 
       new SimpleController (cluster, launch.controller, library, librarian, catalogs, atomic)

@@ -24,6 +24,6 @@ import com.treode.async.io.File
 /** Something that we can stub for testing. */
 private trait FileSystem {
 
-  /** See [[com.treode.async.io.File#open File.open]]. */
+  /** See `File.open`. */
   def open (path: Path, opts: OpenOption*) (implicit scheduler: Scheduler): File
 }

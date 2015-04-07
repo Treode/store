@@ -18,13 +18,13 @@ package com.treode
 
 import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService
-import java.util.logging.{Level, Logger}
+import java.util.logging.{Level, Logger}, Level.INFO
+import scala.collection.mutable
 
 import com.google.common.hash.Hashing
-import com.treode.async.Scheduler
+import com.treode.async.{Async, Scheduler}
 import com.treode.async.io.File
-
-import Level.INFO
+import org.apache.commons.lang3.StringEscapeUtils.escapeJava
 
 package disk {
 
@@ -86,6 +86,12 @@ package object disk {
   private [disk] type PageDispatcher = Dispatcher [PickledPage]
 
   private [disk] val checksum = Hashing.murmur3_32
+
+  private [disk] def quote (path: Path): String =
+    "\"" + escapeJava (path.toString) + "\""
+
+  private [disk] def quote (paths: Iterable [Path]): String =
+    paths map (quote _) mkString ", "
 
   private [disk] def openFile (path: Path, geom: DriveGeometry) (implicit scheduler: Scheduler) = {
     import StandardOpenOption.{CREATE, READ, WRITE}

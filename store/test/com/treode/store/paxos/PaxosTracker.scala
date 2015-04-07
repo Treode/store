@@ -62,7 +62,7 @@ class PaxosTracker {
   def batch (nputs: Int, hs: StubPaxosHost*) (implicit random: Random): Async [Unit] = {
     val khs = for (k <- random.nextKeys (nputs); h <- hs) yield (k, h)
     for ((k, h) <- khs.latch)
-      propose (h, k, random.nextInt (1<<20))
+      propose (h, k, random.nextInt (1 << 20))
   }
 
   def batches (nbatches: Int, nputs: Int, hs: StubPaxosHost*) (

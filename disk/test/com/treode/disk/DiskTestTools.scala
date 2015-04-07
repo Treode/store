@@ -94,7 +94,7 @@ private object DiskTestTools {
     }
 
     def assertLaunched() {
-      assert (checkpointer.checkpoints != null, "Expected checkpointer to have a registry.")
+      assert (checkpointer.checkpointers != null, "Expected checkpointer to have a registry.")
       assert (compactor.pages != null, "Expected compactor to have a page registry.")
       assertReady()
     }

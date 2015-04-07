@@ -89,7 +89,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler {
         Collided (collisions)
       } else if (ct < vt) {
         locks.release()
-        Stale
+        Stale (vt)
       } else {
         Prepared (TxClock.max (vt, locks.ft), locks)
       }}}
@@ -133,8 +133,11 @@ private class TimedStore (kit: AtomicKit) extends PageHandler {
       val id = TableId (obj.id)
       val residents = library.residents
       for {
-        meta <- getTable (id) .compact (groups, residents)
-        _ <- when (meta.isDefined) (TimedStore.compact.record (id, meta.get))
+        result <- getTable (id) .compact (groups, residents)
+        _ <- when (result) { case (compaction, release) =>
+          for (_ <- TimedStore.compact.record (id, compaction))
+            yield disk.release (release.desc, release.obj, release.gens)
+        }
       } yield ()
     }
 
@@ -175,11 +178,6 @@ private object TimedStore {
   val compact = {
     import AtomicPicklers._
     RecordDescriptor (0x4B5391ACA26DD90BL, tuple (tableId, tierCompaction))
-  }
-
-  val checkpointV0 = {
-    import AtomicPicklers._
-    RecordDescriptor (0x1DB0E46F7FD15C5DL, tuple (tableId, tierMeta))
   }
 
   val checkpoint = {

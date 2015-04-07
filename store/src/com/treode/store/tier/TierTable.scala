@@ -16,12 +16,14 @@
 
 package com.treode.store.tier
 
+import scala.language.existentials
+
 import com.treode.async.{Async, Callback, Scheduler}
-import com.treode.disk.{Disk, TypeId}
+import com.treode.disk.{Disk, PageDescriptor, TypeId, ObjectId}
 import com.treode.store._
 
 import Async.async
-import TierTable.{Checkpoint, Compaction}
+import TierTable.{Checkpoint, Compaction, Release}
 
 /** A log structured merge tree.
   *
@@ -53,8 +55,6 @@ import TierTable.{Checkpoint, Compaction}
   * is actually removed from disk during a compaction.
   */
 private [store] trait TierTable {
-
-  def typ: TypeId
 
   def id: TableId
 
@@ -91,16 +91,23 @@ private [store] trait TierTable {
 
   def probe (gens: Set [Long]): Async [Set [Long]]
 
+  /** Schedule the table for compaction. */
   def compact()
 
-  def compact (gens: Set [Long], residents: Residents): Async [Option [Compaction]]
+  /** Compact the table, compacting at least the given generations, and preserving only the
+    * resident keys.
+    */
+  def compact (gens: Set [Long], residents: Residents): Async [Option [(Compaction, Release)]]
 
+  /** Checkpoint the table, preserving only the resident keys. */
   def checkpoint (residents: Residents): Async [Checkpoint]
 
   def digest: TableDigest
 }
 
 private [store] object TierTable {
+
+  case class Release (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long])
 
   /** Records a compaction in the write log.
     *
@@ -145,26 +152,6 @@ private [store] object TierTable {
       import StorePicklers._
       wrap (long, Tiers.pickler)
       .build (v => new Checkpoint (v._1, v._2))
-      .inspect (v => (v.gen, v.tiers))
-    }}
-
-  // TODO: Remove after release of 0.2.0.
-  // Meta remains to replay logs from a pre 0.2.0 database.
-  class Meta (
-    private [tier] val gen: Long,
-    private [tier] val tiers: Tiers
-  ) {
-
-    override def toString: String =
-      s"TierTable.Meta($gen, $tiers)"
-  }
-
-  object Meta {
-
-    val pickler = {
-      import StorePicklers._
-      wrap (ulong, Tiers.pickler)
-      .build (v => new Meta (v._1, v._2))
       .inspect (v => (v.gen, v.tiers))
     }}
 

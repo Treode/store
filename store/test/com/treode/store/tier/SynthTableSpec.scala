@@ -66,6 +66,7 @@ class SynthTableSpec extends FreeSpec {
     implicit val launch = recovery.reattach (diskDrive) .expectPass()
     import launch.disk
     val table = SynthTable (tier, 0x62)
+    launch.compact (tier.pager) (c => table.compact (c.gens, Residents.all) .unit)
     tier.handle (new TierHandler (table))
     launch.launch()
     table

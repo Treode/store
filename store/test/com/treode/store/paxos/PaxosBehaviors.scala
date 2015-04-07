@@ -19,52 +19,14 @@ package com.treode.store.paxos
 import scala.util.Random
 
 import com.treode.async.{Async, BatchIterator, Scheduler}
-import com.treode.async.stubs.StubScheduler
-import com.treode.async.stubs.implicits._
-import com.treode.cluster.stubs.StubNetwork
-import com.treode.disk.stubs.{CrashChecks, StubDiskDrive}
 import com.treode.store._
 import org.scalatest.FreeSpec
 
-import Async.supply
-import PaxosTestTools._
-
-trait PaxosBehaviors extends CrashChecks with StoreClusterChecks {
+trait PaxosBehaviors extends StoreClusterChecks {
   this: FreeSpec =>
 
   private def scan (hosts: Seq [StubPaxosHost]) (implicit scheduler: Scheduler): Async [Seq [Cell]] =
     BatchIterator.merge (hosts map (_.audit)) .toSeq
-
-  private [paxos] def crashAndRecover (
-      nbatch: Int,
-      nputs: Int
-  ) (implicit
-      random: Random,
-      config: StoreTestConfig
-  ) = {
-
-    val tracker = new PaxosTracker
-    val disk = new StubDiskDrive
-
-    crash
-    .info (s"$config")
-    .info (s"crashAndRecover ($nbatch, $nputs)")
-
-    .setup { implicit scheduler =>
-      implicit val network = StubNetwork (random)
-      for {
-        host <- StubPaxosHost.boot (H1, disk)
-        _ = host.setAtlas (settled (host))
-        _ <- tracker.batches (nbatch, nputs, host)
-      } yield ()
-    }
-
-    .recover { implicit scheduler =>
-      implicit val network = StubNetwork (random)
-      val host = StubPaxosHost.boot (H1, disk) .expectPass()
-      host.setAtlas (settled (host))
-      tracker.check (host) .expectPass()
-    }}
 
   private [paxos] def achieveConsensus (nbatches: Int, nputs: Int) (implicit random: Random) = {
 

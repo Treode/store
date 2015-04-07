@@ -58,8 +58,11 @@ private class Acceptors (kit: PaxosKit) extends PageHandler {
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
       for {
-        meta <- archive.compact (groups, library.residents)
-        _ <- when (meta.isDefined) (Acceptors.compact.record (meta.get))
+        result <- archive.compact (groups, library.residents)
+        _ <- when (result) { case (compaction, release) =>
+          for (_ <- Acceptors.compact.record (compaction))
+            yield disk.release (release.desc, release.obj, release.gens)
+        }
       } yield ()
     }
 
@@ -76,6 +79,8 @@ private class Acceptors (kit: PaxosKit) extends PageHandler {
     import Acceptor.{ask, choose, propose}
 
     launch.checkpoint (checkpoint())
+
+    Acceptors.archive.compact (c => compact (c.obj, c.gens))
 
     Acceptors.archive.handle (this)
 
@@ -103,11 +108,6 @@ private object Acceptors {
   val compact = {
     import PaxosPicklers._
     RecordDescriptor (0x26A32F6C3BB8E697L, tierCompaction)
-  }
-
-  val checkpointV0 = {
-    import PaxosPicklers._
-    RecordDescriptor (0x42A17DC354412E17L, tierMeta)
   }
 
   val checkpoint = {

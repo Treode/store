@@ -60,9 +60,6 @@ object BrokerBehaviors extends FreeSpec {
 
   private class RichBroker (implicit random: Random, scheduler: StubScheduler) {
 
-    val config = StoreTestConfig()
-    import config._
-
     val diskDrive = new StubDiskDrive
 
     implicit val recovery = StubDisk.recover()

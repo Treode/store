@@ -21,15 +21,13 @@ import scala.util.Random
 
 import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.implicits._
-import com.treode.cluster.stubs.StubNetwork
-import com.treode.disk.stubs.{CrashChecks, StubDiskDrive}
 import com.treode.store._
 import org.scalatest.FreeSpec
 
 import Async.supply
 import AtomicTracker._
 
-trait AtomicBehaviors extends CrashChecks with StoreClusterChecks {
+trait AtomicBehaviors extends StoreClusterChecks {
   this: FreeSpec =>
 
   private def scan (ntables: Int, nslices: Int, host: StubAtomicHost) (implicit scheduler: Scheduler) = {

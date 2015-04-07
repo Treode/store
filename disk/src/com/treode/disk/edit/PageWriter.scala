@@ -16,31 +16,55 @@
 
 package com.treode.disk.edit
 
+import scala.collection.mutable.UnrolledBuffer
+
+import com.treode.async.{Async, Callback}, Callback.ignore
+import com.treode.async.implicits._
 import com.treode.async.io.File
-import com.treode.async.Async
 import com.treode.buffer.PagedBuffer
+import com.treode.disk.{PickledPage, Position}
 
-private class PageWriter (
-  val file: File
-) {
+/** Receives items from a PageDispatcher and writes them to a file. */
+private class PageWriter (dsp: PageDispatcher, file: File) {
 
-  val bits = 10
-  val buffer = PagedBuffer (bits)
-  var pos : Long = 0
+  private val bits = 10
+  private val buffer = PagedBuffer (bits)
 
-  /**
-   * Write `data` into the file asynchronously, using a write buffer. Returns
-   * the position of the writer and length written, if successful.
-   */
-  def write (data: String) : Async [(Long, Int)] = {
-    buffer.writeString (data)
-    val len = buffer.writePos
+  // We maintain an internal pointer into the file for where to write in order to preserve
+  // consistency between writes.
+  private var pos = 0L
+
+  // We consistently check to see if we have anything to write.
+  listen() run (ignore)
+
+  /** Polls the dispatcher for items to write. */
+  def listen(): Async [Unit] =
     for {
-      _ <- file.flush (buffer, pos)
+      (_, dataBuffers) <- dsp.receive()
+      _ <- write (dataBuffers)
     } yield {
-      pos += buffer.writePos
-      buffer.clear ()
-      (pos, len)
+      listen() run (ignore)
     }
-  }
-}
+
+    /* Write the PickledPages to the file, then pass the positions to the callbacks inside the
+     * PickledPages.
+     */
+   def write (data: UnrolledBuffer [PickledPage]): Async [Unit] = {
+
+    var writePositions = new Array [Position] (0)
+    var beforeAnyWrites = pos
+    for (s <- data) {
+      val beforeEachWritePos = buffer.writePos
+      s.write (buffer)
+      val writeLen = (buffer.writePos - beforeEachWritePos).toLong
+      writePositions :+= (Position (0, pos.toLong, writeLen.toInt)) //only focus on one disk for now
+      pos += writeLen
+    }
+
+    for {
+      _ <- file.flush (buffer, beforeAnyWrites)
+    } yield {
+      buffer.clear()
+      for ((s, p) <- data zip writePositions)
+        s.cb.pass (p)
+    }}}

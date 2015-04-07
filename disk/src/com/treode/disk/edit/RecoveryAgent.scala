@@ -19,7 +19,8 @@ package com.treode.disk.edit
 import java.nio.file.{Path, StandardOpenOption}, StandardOpenOption._
 
 import com.treode.async._
-import com.treode.disk.{Disk, DiskRecovery, DiskConfig, DiskLaunch, FileSystem, RecordDescriptor, RecordRegistry}
+import com.treode.disk.{Disk, DiskRecovery, DiskConfig, DiskEvents, DiskLaunch, FileSystem,
+  RecordDescriptor, RecordRegistry}
 
 /** The first phase of building the live Disk system. Implements the user trait Recovery.
   *
