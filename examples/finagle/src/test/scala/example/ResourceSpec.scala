@@ -239,6 +239,7 @@ class ResourceSpec extends FreeSpec {
           .body (entity2)
         .expect
           .statusCode (412)
+          .header ("Value-TxClock", ts1.toString)
         .when
           .put ("/table/123?key=abc")
         assertSeq (cell ("abc", ts1, entity)) (store.scan (123))

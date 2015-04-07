@@ -47,6 +47,13 @@ package object example {
       rsp
     }
 
+    def state (req: Request, time: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.PreconditionFailed
+      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp
+    }
+
     def clear (req: Request, status: HttpResponseStatus = Status.Ok): Response  = {
       val rsp = req.response
       rsp.status = status
