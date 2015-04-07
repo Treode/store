@@ -71,6 +71,13 @@ package object movies {
       rsp
     }
 
+    def stale (req: Request, time: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.PreconditionFailed
+      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp
+    }
+
     def ok (req: Request, time: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.Ok

@@ -249,16 +249,17 @@ class ActorResourceSpec extends FreeSpec with SpecTools {
       served { (port, store) => implicit movies =>
 
         val r1 = addMarkHamill (port)
+        val t1 = r1.valueTxClock
         val r2 = given
           .port (port)
           .header ("Condition-TxClock", "0")
           .body (markHammer)
         .expect
           .statusCode (412)
+          .header ("Value-TxClock", t1.toString)
         .when
           .put ("/actor/1")
 
-        val t1 = r1.valueTxClock
         store.expectCells (PM.MovieTable) ()
         store.expectCells (PM.CastTable) ()
         store.expectCells (PM.ActorTable) (

@@ -60,8 +60,8 @@ object ActorResource {
       } yield {
         respond.created (request, vt, s"/actor/$id")
       }) .recover {
-        case _: StaleException =>
-          respond (request, Status.PreconditionFailed)
+        case exn: StaleException =>
+          respond.stale (request, exn.time)
       }}
 
     def put (request: Request, id: String): Async [Response] = {
@@ -73,8 +73,8 @@ object ActorResource {
       } yield {
         respond.ok (request, vt)
       }) .recover {
-        case _: StaleException =>
-          respond (request, Status.PreconditionFailed)
+        case exn: StaleException =>
+          respond.stale (request, exn.time)
       }}
 
     router.register ("/actor/") { request =>
