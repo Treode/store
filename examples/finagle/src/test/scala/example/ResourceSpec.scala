@@ -58,19 +58,13 @@ class ResourceSpec extends FreeSpec {
 
   implicit class RichResposne (rsp: RestAssuredResponse) {
 
-	def valueTxClock: TxClock = {
+	  def valueTxClock: TxClock = {
       val string = rsp.getHeader ("Value-TxClock")
       assert (string != null, "Expected response to have a Value-TxClock.")
       val parse = TxClock.parse (string)
       assert (parse.isDefined, s"""Could not parse Value-TxClock "$string" as a TxClock""")
       parse.get
     }}
-
-  implicit class RichResponseSpecification (rsp: ResponseSpecification) {
-
-    def valueTxClock (ts: TxClock): Unit =
-      rsp.header ("Value-TxClock", ts.toString)
-  }
 
   class JsonMatcher (expected: String) extends TypeSafeMatcher [String] {
 
@@ -215,7 +209,7 @@ class ResourceSpec extends FreeSpec {
         assertSeq (cell ("abc", ts2, entity2), cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "PUT /table/123?key=abc with If-Unmodified-Since:1 should respond Ok with a valueTxClock" in
+    "PUT /table/123?key=abc with Condition-TxClock:1 should respond Ok with a valueTxClock" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -230,7 +224,7 @@ class ResourceSpec extends FreeSpec {
         assertSeq (cell ("abc", ts2, entity2), cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "PUT /table/123?key=abc with If-Unmodified-Since:0 should respond Precondition Failed" in
+    "PUT /table/123?key=abc with Condition-TxClock:0 should respond Precondition Failed" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -258,7 +252,7 @@ class ResourceSpec extends FreeSpec {
         assertSeq (cell ("abc", ts2), cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "DELETE /table/123?key=abc with If-Unmodified-Since:1 should respond Ok with a valueTxClock" in
+    "DELETE /table/123?key=abc with Condition-TxClock:1 should respond Ok with a valueTxClock" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -272,7 +266,7 @@ class ResourceSpec extends FreeSpec {
         assertSeq (cell ("abc", ts2), cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "DELETE /table/123?key=abc with If-Unmodified-Since:0 should respond Precondition Failed" in
+    "DELETE /table/123?key=abc with Condition-TxClock:0 should respond Precondition Failed" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -280,6 +274,7 @@ class ResourceSpec extends FreeSpec {
           .header ("Condition-TxClock", "0")
         .expect
           .statusCode (412)
+          .header ("Value-TxClock", ts1.toString)
         .when
           .delete ("/table/123?key=abc")
         assertSeq (cell ("abc", ts1, entity)) (store.scan (123))
@@ -536,7 +531,7 @@ class ResourceSpec extends FreeSpec {
             .get ("/table/123")
         }}
 
-      "DELETE /table/123?key=abc with If-Unmodified-Since:abc should yield Bad Request" in {
+      "DELETE /table/123?key=abc with Condition-TxClock:abc should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)

@@ -47,17 +47,9 @@ package object example {
       rsp
     }
 
-    def clear (req: Request, status: HttpResponseStatus = Status.Ok): Response  = {
+    def time (req: Request, time: TxClock, status: HttpResponseStatus = Status.Ok): Response = {
       val rsp = req.response
       rsp.status = status
-      rsp.clearContent()
-      rsp.contentLength = 0
-      rsp
-    }
-
-    def stale (req: Request, time: TxClock): Response = {
-      val rsp = req.response
-      rsp.status = Status.PreconditionFailed
       rsp.headerMap.add ("Value-TxClock", time.toString)
       rsp
     }

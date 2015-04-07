@@ -64,12 +64,6 @@ class ResourceSpec extends FreeSpec {
       parse.get
     }}
 
-  implicit class RichResponseSpecification (rsp: ResponseSpecification) {
-
-    def valueTxClock (ts: TxClock): Unit =
-      rsp.header ("Value-TxClock", ts.toString)
-  }
-
   class JsonMatcher (expected: String) extends TypeSafeMatcher [String] {
 
     def matchesSafely (actual: String): Boolean =

@@ -74,14 +74,11 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     val ops = Seq (WriteOp.Update (table, Bytes (key), value.toBytes))
     store.write (tx, ct, ops:_*)
     .map [Response] { vt =>
-      val rsp = req.response
-      rsp.status = Status.Ok
-      rsp.headerMap.add ("Value-TxClock", vt.toString)
-      rsp
+      respond.time (req, vt)
     }
     .recover {
       case exn: StaleException =>
-        respond.stale (req, exn.time)
+        respond.time (req, exn.time, Status.PreconditionFailed)
     }}
 
   def delete (req: Request, table: TableId, key: String): Async [Response] = {
@@ -90,14 +87,11 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     val ops = Seq (WriteOp.Delete (table, Bytes (key)))
     store.write (tx, ct, ops:_*)
     .map [Response] { vt =>
-      val rsp = req.response
-      rsp.status = Status.Ok
-      rsp.headerMap.add ("Value-TxClock", vt.toString)
-      rsp
+      respond.time (req, vt)
     }
     .recover {
-      case _: StaleException =>
-        respond (req, Status.PreconditionFailed)
+      case exn: StaleException =>
+        respond.time (req, exn.time, Status.PreconditionFailed)
     }}
 
   def apply (req: Request): Future [Response] = {
