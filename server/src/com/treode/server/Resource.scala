@@ -78,8 +78,8 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
       rsp
     }
     .recover {
-      case _: StaleException =>
-        respond (req, Status.PreconditionFailed)
+      case exn: StaleException =>
+        respond.time (req, exn.time, Status.PreconditionFailed)
     }}
 
   def delete (req: Request, table: String, key: String): Async [Response] = {
@@ -93,8 +93,8 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
       rsp
     }
     .recover {
-      case _: StaleException =>
-        respond (req, Status.PreconditionFailed)
+      case exn: StaleException =>
+        respond.time (req, exn.time, Status.PreconditionFailed)
     }}
 
   def batch (req: Request): Async [Response] = {

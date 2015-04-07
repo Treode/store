@@ -60,8 +60,8 @@ object MovieResource {
       } yield {
         respond.created (request, vt, s"/movie/$id")
       }) .recover {
-        case _: StaleException =>
-          respond (request, Status.PreconditionFailed)
+        case exn: StaleException =>
+          respond.time (request, exn.time, Status.PreconditionFailed)
       }}
 
     def put (request: Request, id: String): Async [Response] = {
@@ -73,8 +73,8 @@ object MovieResource {
       } yield {
         respond.ok (request, vt)
       }) .recover {
-        case _: StaleException =>
-          respond (request, Status.PreconditionFailed)
+        case exn: StaleException =>
+          respond.time (request, exn.time, Status.PreconditionFailed)
       }}
 
     router.register ("/movie/") { request =>

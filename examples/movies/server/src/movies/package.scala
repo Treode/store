@@ -71,6 +71,13 @@ package object movies {
       rsp
     }
 
+    def time (req: Request, time: TxClock, status: HttpResponseStatus = Status.Ok): Response = {
+      val rsp = req.response
+      rsp.status = status
+      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp
+    }
+
     def ok (req: Request, time: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.Ok

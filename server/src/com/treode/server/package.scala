@@ -48,6 +48,13 @@ package object server {
       rsp
     }
 
+    def time (req: Request, time: TxClock, status: HttpResponseStatus = Status.Ok): Response = {
+      val rsp = req.response
+      rsp.status = status
+      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp
+    }
+
     def clear (req: Request, status: HttpResponseStatus = Status.Ok): Response  = {
       val rsp = req.response
       rsp.status = status
