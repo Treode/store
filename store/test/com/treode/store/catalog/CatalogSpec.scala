@@ -151,7 +151,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       implicit val (scheduler, hs, h1, h2) = setup()
       h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
       scheduler.run (timers = true, count = 500)
-      h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [StaleException]
+      h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .expectFail [StaleException]
       scheduler.run (timers = true, count = 500)
       for (h <- hs)
         assertResult (0x658C1274DE7CFA8EL) (h.v1)
@@ -161,7 +161,7 @@ class CatalogSpec extends FreeSpec with AsyncChecks {
       implicit val (scheduler, hs, h1, h2) = setup()
       h1.catalogs.issue (cat1) (1, 0x658C1274DE7CFA8EL) .expectPass()
       scheduler.run (timers = true, count = 500)
-      h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .fail [StaleException]
+      h2.catalogs.issue (cat1) (1, 0x1195296671067D1AL) .expectFail [StaleException]
       scheduler.run (timers = true, count = 500)
       for (h <- hs)
         assertResult (0x658C1274DE7CFA8EL) (h.v1)

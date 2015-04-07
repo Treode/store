@@ -43,7 +43,7 @@ package object implicits {
       * [[$Success Success]] and return the result.
       */
     def expectPass () (implicit scheduler: StubScheduler): A =
-      capture() .expectPass()
+      capture().expectPass()
 
     /** Run until the asynchronous operation completes, then assert that it yielded
       * [[$Failure Failure]] and assert that the result is as expected.
@@ -55,12 +55,11 @@ package object implicits {
       * [[$Success Success]] and assert that the [[$Seq Seq]] result is as expected.
       */
     def expectSeq [B] (xs: B*) (implicit s: StubScheduler, w: A <:< Seq [B]): Unit =
-      capture() .expectSeq (xs: _*)
+      capture().expectSeq (xs: _*)
 
-    // TODO: rename to expectFail
     /** Run until the asynchronous operation completes, then assert that it yielded
       * [[$Failure Failure]] and return the exception.
       */
-    def fail [E] (implicit scheduler: StubScheduler, m: Manifest [E]): E =
-      capture() .expectFail [E]
+    def expectFail [E] (implicit scheduler: StubScheduler, m: Manifest [E]): E =
+      capture().expectFail [E]
   }}

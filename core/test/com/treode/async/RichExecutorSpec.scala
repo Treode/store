@@ -55,7 +55,7 @@ class RichExecutorSpec extends FlatSpec {
       if (count == 3)
         throw new DistinguishedException
       true
-    } (supply (count += 1)) .fail [DistinguishedException]
+    } (supply (count += 1)) .expectFail [DistinguishedException]
     assertResult (3) (count)
   }
 
@@ -68,7 +68,7 @@ class RichExecutorSpec extends FlatSpec {
         if (count == 3)
           throw new DistinguishedException
       }
-    } .fail [DistinguishedException]
+    } .expectFail [DistinguishedException]
     assertResult (3) (count)
   }
 
@@ -79,6 +79,6 @@ class RichExecutorSpec extends FlatSpec {
       if (count == 3)
         throw new DistinguishedException
       supply (count += 1)
-    } .fail [DistinguishedException]
+    } .expectFail [DistinguishedException]
     assertResult (3) (count)
   }}

@@ -22,6 +22,15 @@
 : ${NPM:='npm'}
 : ${SBT:=${DIR}'/scripts/sbt'}
 
+# If $WORKSPACE is defined, then we are building under jenkins, and we want to use an Ivy directory
+# per job. Otherwise we just use the default Ivy directory. For the one per job, we put it where
+# git clean won't remove the cache, and we explicitly remove the local portion.
+if [ -n "${WORKSPACE}" ] ; then
+  export IVY2="$(cd "${WORKSPACE}/.." && pwd)/.ivy2"
+else
+  export IVY2=${HOME}/.ivy2
+fi
+
 #
 # Common Functions
 #
@@ -78,6 +87,7 @@ log() {
 clean() {
   if [ -z "$SKIP_CLEAN" ] ; then
     echo-do git clean -dfx
+    echo-do rm -rf "${IVY2}/local"
   fi
 }
 

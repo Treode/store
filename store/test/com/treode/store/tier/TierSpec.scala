@@ -124,14 +124,14 @@ class TierSpec extends WordSpec {
       implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (2)
       builder.add (Cell (Apple, 0, None)) .expectPass()
-      builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
+      builder.add (Cell (Apple, 0, None)) .expectFail [IllegalArgumentException]
     }
 
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (2)
       builder.add (Cell (Orange, 0, None)) .expectPass()
-      builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
+      builder.add (Cell (Apple, 0, None)) .expectFail [IllegalArgumentException]
     }
 
     "allow properly sorted entries" in {
