@@ -204,6 +204,7 @@ private class DriveGroup (
     fiber.async { cb =>
       requireNotClosed()
 
+      // Accumulate errors rather than aborting with Exceptions.
       val errors = new Notification
 
       // The paths that are already attached.
@@ -246,8 +247,10 @@ private class DriveGroup (
       var newDrains = List.empty [Drive]
 
       // Process each of the drains:
-      // - check that the path is not already draining or queued to start draining, and
-      // - add it to the list of new drains.
+      // - ensure each drive
+      //   - is attached to the DriveGroup, and
+      //   - is not already draining or queued to start draining
+      // - and add it to the list of new drains.
       for (d <- change.drains) {
         val drive = drives.values.find (_.path == d) match {
           case Some (drive) =>
@@ -262,13 +265,14 @@ private class DriveGroup (
       }
 
       if (errors.hasErrors) {
+        // If there are errors, close files that have been opened, do not
+        // finalize changes.
         for (drive <- newAttaches) {
           drive.close()
         }
         scheduler.pass (cb, errors)
       } else {
-        // If we get here, then all went well, so we can merge our new changes into the queued
-        // changes.
+        // Otherwise, we can merge our new changes into the queued changes.
         this.dno = dno
         attaches :::= newAttaches
         drains :::= newDrains
