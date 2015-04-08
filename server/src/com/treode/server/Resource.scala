@@ -32,7 +32,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
   object KeyParam extends ParamMatcher ("key")
 
   def read (req: Request, tab: String, key: String): Async [Response] = {
-    val rt = req.requestTxClock
+    val rt = req.readTxClock
     val ct = req.conditionTxClock (TxClock.MinValue)
     store.read (tab, key, rt) .map { vs =>
       val v = vs.head
@@ -46,7 +46,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
       }}}
 
   def scan (req: Request, table: String): Async [Response] = {
-    val rt = req.requestTxClock
+    val rt = req.readTxClock
     val ct = req.conditionTxClock (TxClock.MinValue)
     val window = Window.Latest (rt, true, ct, false)
     val slice = req.slice
@@ -58,7 +58,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
 
   def history (req: Request, table: String): Async [Response] = {
     val start = Bound.Inclusive (Key.MinValue)
-    val rt = req.requestTxClock
+    val rt = req.readTxClock
     val ct = req.conditionTxClock (TxClock.MinValue)
     val window = Window.Between (rt, true, ct, false)
     val slice = req.slice

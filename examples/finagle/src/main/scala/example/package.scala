@@ -64,9 +64,9 @@ package object example {
     def json (req: Request, time: TxClock, value: Any): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.date = req.requestTxClock
+      rsp.date = req.readTxClock
       rsp.lastModified = time
-      rsp.readTxClock = req.requestTxClock
+      rsp.readTxClock = req.readTxClock
       rsp.valueTxClock = time
       rsp.vary = "Read-TxClock"
       rsp.json = value

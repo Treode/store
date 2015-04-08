@@ -163,7 +163,7 @@ package object http {
     def conditionTxClock(default: TxClock): TxClock =
       optTxClockHeader ("Condition-TxClock") getOrElse (default)
 
-    def requestTxClock: TxClock =
+    def readTxClock: TxClock =
       optTxClockHeader ("Read-TxClock") getOrElse (TxClock.now)
 
     def slice: Slice = {

@@ -28,7 +28,7 @@ object MovieResource {
   def apply (host: HostId, movies: MovieStore, router: Router) {
 
     def get (request: Request, id: String): Async [Response] = {
-      val rt = request.requestTxClock
+      val rt = request.readTxClock
       val ct = request.conditionTxClock (TxClock.MinValue)
       for {
         (vt, movie) <- movies.readMovie (rt, id)
@@ -43,7 +43,7 @@ object MovieResource {
         }}}
 
     def query (request: Request): Async [Response] = {
-      val rt = request.requestTxClock
+      val rt = request.readTxClock
       val q = request.query
       for {
         result <- movies.query (rt, q, true, false)
