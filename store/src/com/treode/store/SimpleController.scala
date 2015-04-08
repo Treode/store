@@ -26,6 +26,8 @@ import com.treode.disk.{Disk, DiskController, DriveAttachment, DriveDigest, Driv
 import com.treode.store.atomic.Atomic
 import com.treode.store.catalog.Catalogs
 
+import com.treode.notify.Notification
+
 import Async.supply
 
 private class SimpleController (
@@ -64,10 +66,10 @@ private class SimpleController (
   def drives: Async [Seq [DriveDigest]] =
     disk.drives
 
-  def attach (items: DriveAttachment*): Async [Unit] =
+  def attach (items: DriveAttachment*): Async [Notification] =
     disk.attach (items: _*)
 
-  def drain (paths: Path*): Async [Unit] =
+  def drain (paths: Path*): Async [Notification] =
     disk.drain (paths: _*)
 
   def cellId: CellId =

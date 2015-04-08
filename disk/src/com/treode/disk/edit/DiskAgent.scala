@@ -21,6 +21,7 @@ import java.nio.file.Path
 import com.treode.async.Async, Async.supply
 import com.treode.disk.{Disk, DiskController, DiskSystemDigest, DriveAttachment, DriveChange,
   DriveDigest, DriveGeometry, ObjectId, PageDescriptor, Position, RecordDescriptor}
+import com.treode.notify.Notification
 
 /** The live Disk system. Implements the user and admin traits, Disk and DiskController, by
   * delegating to the appropriate components.
@@ -35,16 +36,16 @@ private class DiskAgent (
   def launch(): Unit =
     group.launch()
 
-  def change (change: DriveChange): Async [Unit] =
+  def change (change: DriveChange): Async [Notification] =
     group.change (change)
 
-  def attach (attaches: DriveAttachment*): Async [Unit] =
+  def attach (attaches: DriveAttachment*): Async [Notification] =
     change (DriveChange (attaches, Seq.empty))
 
-  def attach (path: Path, geom: DriveGeometry): Async [Unit] =
+  def attach (path: Path, geom: DriveGeometry): Async [Notification] =
     attach (DriveAttachment (path, geom))
 
-  def drain (drains: Path*): Async [Unit] =
+  def drain (drains: Path*): Async [Notification] =
     change (DriveChange (Seq.empty, drains))
 
   /** Schedule a checkpoint. Normally logging thresholds trigger a checkpooint; this method allows
