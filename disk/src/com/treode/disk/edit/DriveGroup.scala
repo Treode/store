@@ -239,45 +239,41 @@ private class DriveGroup (
       }
 
       // If there are attachment errors, close all opened files and pass errors.
+      // The paths that are already queued draining.
+      var draining = (for (d <- drains) yield d.path).toSet
+
+      // Drives we will queue to drain; we build this up below.
+      var newDrains = List.empty [Drive]
+
+      // Process each of the drains:
+      // - check that the path is not already draining or queued to start draining, and
+      // - add it to the list of new drains.
+      for (d <- change.drains) {
+        val drive = drives.values.find (_.path == d) match {
+          case Some (drive) =>
+            if (drive.draining || (draining contains d) || (newDrains contains drive)) {
+              errors.add (AlreadyDraining (d))
+            } else {
+              newDrains ::= drive
+            }
+          case None =>
+            errors.add (NotAttached (d))
+        }
+      }
+
       if (errors.hasErrors) {
         for (drive <- newAttaches) {
           drive.close()
         }
         scheduler.pass (cb, errors)
       } else {
-        // The paths that are already queued draining.
-        var draining = (for (d <- drains) yield d.path).toSet
-
-        // Drives we will queue to drain; we build this up below.
-        var newDrains = List.empty [Drive]
-
-        // Process each of the drains:
-        // - check that the path is not already draining or queued to start draining, and
-        // - add it to the list of new drains.
-        for (d <- change.drains) {
-          val drive = drives.values.find (_.path == d) match {
-            case Some (drive) =>
-              if (drive.draining || (draining contains d) || (newDrains contains drive)) {
-                errors.add (AlreadyDraining (d))
-              } else {
-                newDrains ::= drive
-              }
-            case None =>
-              errors.add (NotAttached (d))
-          }
-        }
-
-        if (errors.hasErrors) {
-          scheduler.pass (cb, errors)
-        } else {
-          // If we get here, then all went well, so we can merge our new changes into the queued
-          // changes.
-          this.dno = dno
-          attaches :::= newAttaches
-          drains :::= newDrains
-          changers ::= cb
-          queue.engage()
-        }
+        // If we get here, then all went well, so we can merge our new changes into the queued
+        // changes.
+        this.dno = dno
+        attaches :::= newAttaches
+        drains :::= newDrains
+        changers ::= cb
+        queue.engage()
       }
     }
 

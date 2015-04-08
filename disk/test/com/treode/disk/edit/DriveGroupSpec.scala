@@ -98,7 +98,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     def attach (geom: DriveGeometry, paths: Path*): Async [Notification] =
       attach (paths map (DriveAttachment (_, geom)): _*)
 
-    // NOT TODO: This is for testing only.
+    // NOT TODO: These is for testing only.
     def attach (paths: String*) (implicit geom: DriveGeometry): Async [Notification] =
       attach (geom, paths map (Paths.get (_)): _*)
 
@@ -107,6 +107,22 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
 
     def drain (paths: String*) (implicit geom: DriveGeometry): Async [Notification] =
       drain (paths map (Paths.get (_)): _*)
+
+    def change (attach: Seq [String], drain: Seq [String]) (
+          implicit geom: DriveGeometry): Async [Notification] = {
+      val attachPaths = (attach map (Paths.get(_))) map (DriveAttachment (_, geom))
+      val drainPaths = (drain map (Paths.get(_)))
+      controller.asInstanceOf [DiskAgent] .change (DriveChange (attachPaths, drainPaths))
+    }
+  }
+
+  def setup (paths: String*) (implicit scheduler: StubScheduler): RichDiskController = {
+    implicit val files = new StubFileSystem
+    implicit val recovery = new RecoveryAgent
+    files.create(paths map (Paths.get (_)), 0, 1 << 14)
+    val launch = recovery.reattach().expectPass()
+    launch.launch()
+    launch.controller
   }
 
   implicit val config = DiskTestConfig()
@@ -114,37 +130,23 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
   implicit val geom = DriveGeometry (8, 6, 1 << 14)
 
   "DriveGroup.change" should "reject nonexistant files" in {
-    implicit val files = new StubFileSystem
     implicit val scheduler = StubScheduler.random()
-    implicit val recovery = new RecoveryAgent
-    val launch = recovery.reattach().expectPass()
-    launch.launch()
-    val controller = launch.controller
+    val controller = setup("f1", "f2", "f3")
     val e = controller.attach ("a") .expectFail [IllegalArgumentException]
     assertResult ("requirement failed: File a does not exist.") (e.getMessage)
   }
 
-  it should "reject duplicate filenames (at the same time)" in {
-    implicit val files = new StubFileSystem
+  it should "reject duplicate filenames (same operation)" in {
     implicit val scheduler = StubScheduler.random()
-    implicit val recovery = new RecoveryAgent
-    files.create(Seq ("f1", "f2", "f3") map (Paths.get (_)), 0, 1 << 14)
-    val launch = recovery.reattach().expectPass()
-    launch.launch()
-    val controller = launch.controller
+    val controller = setup("f1", "f2", "f3")
     val e = controller.attach ("f1", "f1").expectPass()
     scheduler.run()
     assert (e.list(0).en == "Already attaching: \"f1\"")
   }
 
-  it should "reject duplicate filenames (different times)" in {
-    implicit val files = new StubFileSystem
+  it should "reject duplicate filenames (different operation)" in {
     implicit val scheduler = StubScheduler.random()
-    implicit val recovery = new RecoveryAgent
-    files.create(Seq ("f1", "f2", "f3") map (Paths.get (_)), 0, 1 << 14)
-    val launch = recovery.reattach().expectPass()
-    launch.launch()
-    val controller = launch.controller
+    val controller = setup("f1", "f2", "f3")
     val e1 = controller.attach ("f1").expectPass()
     scheduler.run()
     val e2 = controller.attach ("f1").expectPass()
@@ -153,14 +155,9 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     assert (e2.list(0).en == "Already attached: \"f1\"")
   }
 
-  it should "reject draining the same file" in {
-    implicit val files = new StubFileSystem
+  it should "reject duplicate draining of the same file" in {
     implicit val scheduler = StubScheduler.random()
-    implicit val recovery = new RecoveryAgent
-    files.create(Seq ("f1", "f2", "f3") map (Paths.get (_)), 0, 1 << 14)
-    val launch = recovery.reattach().expectPass()
-    launch.launch()
-    val controller = launch.controller
+    val controller = setup("f1", "f2", "f3")
     val e1 = controller.attach ("f1").expectPass()
     val e2 = controller.drain ("f1", "f1").expectPass()
     scheduler.run()
@@ -169,14 +166,17 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
   }
 
   it should "reject draining unattached files" in {
-    implicit val files = new StubFileSystem
     implicit val scheduler = StubScheduler.random()
-    implicit val recovery = new RecoveryAgent
-    files.create(Seq ("f1", "f2", "f3") map (Paths.get (_)), 0, 1 << 14)
-    val launch = recovery.reattach().expectPass()
-    launch.launch()
-    val controller = launch.controller
+    val controller = setup("f1", "f2", "f3")
     val e1 = controller.drain ("f1").expectPass()
+    scheduler.run()
+    assert (e1.list(0).en == "Not attached: \"f1\"")
+  }
+
+  it should "reject attaching and draining a file in the same operation" in {
+    implicit val scheduler = StubScheduler.random()
+    val controller = setup("f1", "f2", "f3")
+    val e1 = controller.change (Seq ("f1"), Seq ("f1")).expectPass()
     scheduler.run()
     assert (e1.list(0).en == "Not attached: \"f1\"")
   }
