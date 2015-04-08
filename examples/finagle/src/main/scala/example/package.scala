@@ -115,9 +115,6 @@ package object example {
 
   implicit class RichString (s: String) {
 
-    def getTableId: TableId =
-      TableId.parse (s) .getOrThrow (new BadRequestException (s"Bad table ID: $s"))
-
     def fromJson [A: Manifest]: A =
       textJson.readValue [A] (s)
   }}

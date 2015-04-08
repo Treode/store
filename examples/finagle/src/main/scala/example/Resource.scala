@@ -18,6 +18,7 @@ package example
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.treode.async.Async, Async.supply
+import com.treode.async.misc.parseUnsignedLong
 import com.treode.cluster.HostId
 import com.treode.store._
 import com.treode.twitter.finagle.http.RichRequest
@@ -27,9 +28,9 @@ import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.finagle.http.path._
 import com.twitter.util.Future
 
-class Resource (host: HostId, store: Store) extends Service [Request, Response] {
+import Resource.{Row, Table, Unmatched, route}
 
-  object KeyParam extends ParamMatcher ("key")
+class Resource (host: HostId, store: Store) extends Service [Request, Response] {
 
   def read (req: Request, tab: TableId, key: String): Async [Response] = {
     val rt = req.readTxClock
@@ -84,30 +85,56 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
         respond.stale (req, exn.time)
     }}
 
-  def apply (req: Request): Future [Response] = {
-    Path (req.path) :? req.params match {
+  def apply (req: Request): Future [Response] =
+    route (req.path) match {
 
-      case Root / "table" / tab :? KeyParam (key) =>
+      case Row (tab, key) =>
         req.method match {
           case Method.Get =>
-            read (req, tab.getTableId, key) .toTwitterFuture
+            read (req, tab, key) .toTwitterFuture
           case Method.Put =>
-            put (req, tab.getTableId, key) .toTwitterFuture
+            put (req, tab, key) .toTwitterFuture
           case Method.Delete =>
-            delete (req, tab.getTableId, key) .toTwitterFuture
+            delete (req, tab, key) .toTwitterFuture
           case _ =>
             Future.value (respond (req, Status.MethodNotAllowed))
         }
 
-      case Root / "table" / tab :? _ =>
+      case Table (tab) =>
         req.method match {
           case Method.Get =>
-            scan (req, tab.getTableId) .toTwitterFuture
+            scan (req, tab) .toTwitterFuture
           case _ =>
             Future.value (respond (req, Status.MethodNotAllowed))
         }
 
-      case _ =>
+      case Unmatched =>
         Future.value (respond (req, Status.NotFound))
     }}
-}
+
+object Resource {
+
+  private val _route = """/(([1-9][0-9]*)|(0[0-7]*)|((#|0x)([0-9a-fA-F]+)))(/(.+)?)?""".r
+
+  sealed abstract class Route
+  case class Table (id: TableId) extends Route
+  case class Row (id: TableId, key: String) extends Route
+  case object Unmatched extends Route
+
+  def route (path: String): Route =
+    path match {
+      case _route (_, dec, null, _, _, null, _, null) =>
+        parseUnsignedLong (dec, 10) .map (Table (_)) .getOrElse (Unmatched)
+      case _route (_, null, oct, _, _, null, _, null) =>
+        parseUnsignedLong (oct, 8) .map (Table (_)) .getOrElse (Unmatched)
+      case _route (_, null, null, _, _, hex, _, null) =>
+        parseUnsignedLong (hex, 16) .map (Table (_)) .getOrElse (Unmatched)
+      case _route (_, dec, null, _, _, null, _, key) =>
+        parseUnsignedLong (dec, 10) .map (Row (_, key)) .getOrElse (Unmatched)
+      case _route (_, null, oct, _, _, null, _, key) =>
+        parseUnsignedLong (oct, 8) .map (Row (_, key)) .getOrElse (Unmatched)
+      case _route (_, null, null, _, _, hex, _, key) =>
+        parseUnsignedLong (hex, 16) .map (Row (_, key)) .getOrElse (Unmatched)
+      case _ =>
+        Unmatched
+    }}
