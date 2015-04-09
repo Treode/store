@@ -307,33 +307,17 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/123")
       }}
 
-    "GET /table/123 with Read-TxClock:4 should work" in {
+    "GET /table/123?until=4 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Read-TxClock", "4")
+          .param ("until", "4")
         .expect
           .statusCode (200)
           .body (matchesJson ("""[
             {"key": "a", "time": 2, "value": "a2"},
             {"key": "b", "time": 4, "value": "b2"}
-          ]"""))
-        .when
-          .get ("/table/123")
-      }}
-
-    "GET /table/123 with Condition-TxClock:3 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .header ("Condition-TxClock", "3")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "c", "time": 6, "value": "c2"}
           ]"""))
         .when
           .get ("/table/123")
@@ -353,76 +337,6 @@ class ResourceSpec extends FreeSpec {
           ]"""))
         .when
           .get ("/table/123")
-      }}
-
-    "GET /history/123 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "a", "time": 2, "value": "a2"},
-            {"key": "a", "time": 1, "value": "a1"},
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "b", "time": 3, "value": "b1"},
-            {"key": "c", "time": 6, "value": "c2"},
-            {"key": "c", "time": 5, "value": "c1"}
-          ]"""))
-        .when
-          .get ("/history/123")
-      }}
-
-    "GET /history/123 with Read-TxClock:3 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .header ("Read-TxClock", "3")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "a", "time": 2, "value": "a2"},
-            {"key": "a", "time": 1, "value": "a1"},
-            {"key": "b", "time": 3, "value": "b1"}
-          ]"""))
-        .when
-          .get ("/history/123")
-      }}
-
-    "GET /history/123 with Condition-TxClock:3 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .header ("Condition-TxClock", "3")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "c", "time": 6, "value": "c2"},
-            {"key": "c", "time": 5, "value": "c1"}
-          ]"""))
-        .when
-          .get ("/history/123")
-      }}
-
-    "GET /history/123?slice=0&nslices=2 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .param ("slice", "0")
-          .param ("nslices", "2")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "a", "time": 2, "value": "a2"},
-            {"key": "a", "time": 1, "value": "a1"}
-          ]"""))
-        .when
-          .get ("/history/123")
       }}}
 
   "When the user is cantankerous" - {
@@ -437,16 +351,6 @@ class ResourceSpec extends FreeSpec {
             .statusCode (404)
           .when
             .get ("/table")
-        }}
-
-      "GET /history should yield Not Found" in {
-        served { case (port, store) =>
-          val rsp = given
-            .port (port)
-          .expect
-            .statusCode (404)
-          .when
-            .get ("/history")
         }}
 
       "PUT /table/123 should yield Method Not Allowed" in {
@@ -508,7 +412,7 @@ class ResourceSpec extends FreeSpec {
             .delete ("/table/123")
         }}}
 
-    "and gives bad slice numbers" - {
+    "and gives a bad slice" - {
 
       "GET /table/123?slice=abc&nslices=2 should yield Bad Request" in {
         served { case (port, store) =>
@@ -519,6 +423,20 @@ class ResourceSpec extends FreeSpec {
           .expect
             .statusCode (400)
             .body (equalTo ("Bad integer for slice: abc"))
+          .when
+            .get ("/table/123")
+        }}}
+
+    "and gives a bad window" - {
+
+      "GET /table/123?pick=foobar should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .param ("pick", "foobar")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("Pick must be latest, between or through."))
           .when
             .get ("/table/123")
         }}}}}

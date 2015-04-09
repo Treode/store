@@ -48,21 +48,11 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
   def scan (req: Request, table: String): Async [Response] = {
     val rt = req.readTxClock
     val ct = req.conditionTxClock (TxClock.MinValue)
-    val window = Window.Latest (rt, true, ct, false)
+    val window = req.window
     val slice = req.slice
     val iter = store
         .scan (table, Bound.firstKey, window, slice)
         .filter (_.value.isDefined)
-    supply (respond.json (req, iter))
-  }
-
-  def history (req: Request, table: String): Async [Response] = {
-    val start = Bound.Inclusive (Key.MinValue)
-    val rt = req.readTxClock
-    val ct = req.conditionTxClock (TxClock.MinValue)
-    val window = Window.Between (rt, true, ct, false)
-    val slice = req.slice
-    val iter = store.scan (table, Bound.firstKey, window, slice)
     supply (respond.json (req, iter))
   }
 
@@ -132,14 +122,6 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
         req.method match {
           case Method.Get =>
             scan (req, tab) .toTwitterFuture
-          case _ =>
-            Future.value (respond (req, Status.MethodNotAllowed))
-        }
-
-      case Root / "history" / tab :? _ =>
-        req.method match {
-          case Method.Get =>
-            history (req, tab) .toTwitterFuture
           case _ =>
             Future.value (respond (req, Status.MethodNotAllowed))
         }

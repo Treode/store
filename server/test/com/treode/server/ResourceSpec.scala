@@ -65,19 +65,13 @@ class ResourceSpec extends FreeSpec {
 
   implicit class RichResposne (rsp: RestAssuredResponse) {
 
-	def valueTxClock: TxClock = {
+	  def valueTxClock: TxClock = {
       val string = rsp.getHeader ("Value-TxClock")
       assert (string != null, "Expected response to have a Value-TxClock.")
       val parse = TxClock.parse (string)
       assert (parse.isDefined, s"""Could not parse Value-TxClock "$string" as a TxClock""")
       parse.get
     }}
-
-  implicit class RichResponseSpecification (rsp: ResponseSpecification) {
-
-    def valueTxClock (ts: TxClock): Unit =
-      rsp.header ("Value-TxClock", ts.toString)
-  }
 
   class JsonMatcher (expected: String) extends TypeSafeMatcher [String] {
 
@@ -320,33 +314,17 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/table1")
       }}
 
-    "GET /table/table1 with Read-TxClock:4 should work" in {
+    "GET /table/table1?until=4 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Read-TxClock", "4")
+          .param ("until", "4")
         .expect
           .statusCode (200)
           .body (matchesJson ("""[
             {"key": "a", "time": 2, "value": "a2"},
             {"key": "b", "time": 4, "value": "b2"}
-          ]"""))
-        .when
-          .get ("/table/table1")
-      }}
-
-    "GET /table/table1 with Condition-TxClock:3 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .header ("Condition-TxClock", "3")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "c", "time": 6, "value": "c2"}
           ]"""))
         .when
           .get ("/table/table1")
@@ -366,76 +344,6 @@ class ResourceSpec extends FreeSpec {
           ]"""))
         .when
           .get ("/table/table1")
-      }}
-
-    "GET /history/table1 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "a", "time": 2, "value": "a2"},
-            {"key": "a", "time": 1, "value": "a1"},
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "b", "time": 3, "value": "b1"},
-            {"key": "c", "time": 6, "value": "c2"},
-            {"key": "c", "time": 5, "value": "c1"}
-          ]"""))
-        .when
-          .get ("/history/table1")
-      }}
-
-    "GET /history/table1 with Read-TxClock:3 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .header ("Read-TxClock", "3")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "a", "time": 2, "value": "a2"},
-            {"key": "a", "time": 1, "value": "a1"},
-            {"key": "b", "time": 3, "value": "b1"}
-          ]"""))
-        .when
-          .get ("/history/table1")
-      }}
-
-    "GET /history/table1 with Condition-TxClock:3 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .header ("Condition-TxClock", "3")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "c", "time": 6, "value": "c2"},
-            {"key": "c", "time": 5, "value": "c1"}
-          ]"""))
-        .when
-          .get ("/history/table1")
-      }}
-
-    "GET /history/table1?slice=0&nslices=2 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .param ("slice", "0")
-          .param ("nslices", "2")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "a", "time": 2, "value": "a2"},
-            {"key": "a", "time": 1, "value": "a1"}
-          ]"""))
-        .when
-          .get ("/history/table1")
       }}}
 
   "When the user is cantankerous" - {
@@ -521,7 +429,7 @@ class ResourceSpec extends FreeSpec {
             .delete ("/table/table1")
         }}}
 
-    "and gives bad slice numbers" - {
+    "and gives a bad slice" - {
 
       "GET /table/table1?slice=abc&nslices=2 should yield Bad Request" in {
         served { case (port, store) =>
@@ -534,6 +442,20 @@ class ResourceSpec extends FreeSpec {
             .body (equalTo ("Bad integer for slice: abc"))
           .when
             .get ("/table/table1")
+        }}}
+
+    "and gives a bad window" - {
+
+      "GET /table/123?pick=foobar should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .param ("pick", "foobar")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("Pick must be latest, between or through."))
+          .when
+            .get ("/table/123")
         }}}}
 
   "When post request contains batch-writes" - {
