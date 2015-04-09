@@ -64,11 +64,11 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     val ops = Seq (WriteOp.Update (table, Bytes (key), value.toBytes))
     store.write (tx, ct, ops:_*)
     .map [Response] { vt =>
-      respond.time (req, vt)
+      respond.ok (req, vt)
     }
     .recover {
       case exn: StaleException =>
-        respond.time (req, exn.time, Status.PreconditionFailed)
+        respond.stale (req, exn.time)
     }}
 
   def delete (req: Request, table: TableId, key: String): Async [Response] = {
@@ -77,11 +77,11 @@ class Resource (host: HostId, store: Store) extends Service [Request, Response] 
     val ops = Seq (WriteOp.Delete (table, Bytes (key)))
     store.write (tx, ct, ops:_*)
     .map [Response] { vt =>
-      respond.time (req, vt)
+      respond.ok (req, vt)
     }
     .recover {
       case exn: StaleException =>
-        respond.time (req, exn.time, Status.PreconditionFailed)
+        respond.stale (req, exn.time)
     }}
 
   def apply (req: Request): Future [Response] = {
