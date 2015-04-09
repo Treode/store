@@ -166,6 +166,9 @@ package object http {
     def readTxClock: TxClock =
       optTxClockHeader ("Read-TxClock") getOrElse (TxClock.now)
 
+    /** Get slice from `slice` and `nslices` query parameters. If the query contains no slice
+      * parameters, the default will be `Slice.all`.
+      */
     def slice: Slice = {
       val slice = optIntParam ("slice")
       val nslices = optIntParam ("nslices")
@@ -176,7 +179,7 @@ package object http {
           throw new BadRequestException ("The slice must be between 0 (inclusive) and the number of slices (exclusive).")
         Slice (slice.get, nslices.get)
       } else if (slice.isDefined || nslices.isDefined) {
-        throw new BadRequestException ("Both slice and nslices are needed together")
+        throw new BadRequestException ("Both slice and nslices are needed together.")
       } else {
         Slice.all
       }}

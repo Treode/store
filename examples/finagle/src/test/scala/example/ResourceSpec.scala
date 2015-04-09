@@ -355,23 +355,6 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/123")
       }}
 
-    "GET /table/123?slice=1&nslices=2 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .param ("slice", "1")
-          .param ("nslices", "2")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "c", "time": 6, "value": "c2"}
-          ]"""))
-        .when
-          .get ("/table/123")
-      }}
-
     "GET /history/123 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
@@ -437,25 +420,6 @@ class ResourceSpec extends FreeSpec {
           .body (matchesJson ("""[
             {"key": "a", "time": 2, "value": "a2"},
             {"key": "a", "time": 1, "value": "a1"}
-          ]"""))
-        .when
-          .get ("/history/123")
-      }}
-
-    "GET /history/123?slice=1&nslices=2 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .param ("slice", "1")
-          .param ("nslices", "2")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "b", "time": 3, "value": "b1"},
-            {"key": "c", "time": 6, "value": "c2"},
-            {"key": "c", "time": 5, "value": "c1"}
           ]"""))
         .when
           .get ("/history/123")
@@ -555,69 +519,6 @@ class ResourceSpec extends FreeSpec {
           .expect
             .statusCode (400)
             .body (equalTo ("Bad integer for slice: abc"))
-          .when
-            .get ("/table/123")
-        }}
-
-      "GET /table/123?slice=0&nslices=abc should yield Bad Request" in {
-        served { case (port, store) =>
-          val rsp = given
-            .port (port)
-            .param ("slice", "2")
-            .param ("nslices", "abc")
-          .expect
-            .statusCode (400)
-            .body (equalTo ("Bad integer for nslices: abc"))
-          .when
-            .get ("/table/123")
-        }}
-
-      "GET /table/123?slice=0 should yield Bad Request" in {
-        served { case (port, store) =>
-          val rsp = given
-            .port (port)
-            .param ("slice", "0")
-          .expect
-            .statusCode (400)
-            .body (equalTo ("Both slice and nslices are needed together"))
-          .when
-            .get ("/table/123")
-        }}
-
-      "GET /table/123?nslices=0 should yield Bad Request" in {
-        served { case (port, store) =>
-          val rsp = given
-            .port (port)
-            .param ("slice", "0")
-          .expect
-            .statusCode (400)
-            .body (equalTo ("Both slice and nslices are needed together"))
-          .when
-            .get ("/table/123")
-        }}
-
-      "GET /table/123?slice=0&nslices=5 should yield Bad Request" in {
-        served { case (port, store) =>
-          val rsp = given
-            .port (port)
-            .param ("slice", "0")
-            .param ("nslices", "5")
-          .expect
-            .statusCode (400)
-            .body (equalTo ("Number of slices must be a power of two and at least one."))
-          .when
-            .get ("/table/123")
-        }}
-
-      "GET /table/123?slice=2&nslices=2 should yield Bad Request" in {
-        served { case (port, store) =>
-          val rsp = given
-            .port (port)
-            .param ("slice", "2")
-            .param ("nslices", "2")
-          .expect
-            .statusCode (400)
-            .body (equalTo ("The slice must be between 0 (inclusive) and the number of slices (exclusive)."))
           .when
             .get ("/table/123")
         }}}}}
