@@ -242,6 +242,7 @@ class ResourceSpec extends FreeSpec {
           .body (entity2)
         .expect
           .statusCode (412)
+          .header ("Value-TxClock", ts1.toString)
         .when
           .put ("/table/table1?key=abc")
         assertSeq (cell ("abc", ts1, entity)) (store.scan ("table1"))
@@ -282,6 +283,7 @@ class ResourceSpec extends FreeSpec {
           .header ("Condition-TxClock", "0")
         .expect
           .statusCode (412)
+          .header ("Value-TxClock", ts1.toString)
         .when
           .delete ("/table/table1?key=abc")
         assertSeq (cell ("abc", ts1, entity)) (store.scan ("table1"))
@@ -644,6 +646,7 @@ class ResourceSpec extends FreeSpec {
             .body ("""[{"op": "HOLD", "table": "table1", "key": "abc"}]""")
           .expect
             .statusCode (412)
+            .header ("Value-TxClock", ts2.toString)
           .when
             .post ("/batch-write")
         }}
