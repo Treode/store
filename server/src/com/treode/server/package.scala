@@ -42,17 +42,23 @@ package object server {
 
   object respond {
 
-    def apply (req: Request, status: HttpResponseStatus = Status.Ok): Response = {
+    def apply (req: Request, status: HttpResponseStatus): Response = {
       val rsp = req.response
       rsp.status = status
       rsp
     }
 
-    def clear (req: Request, status: HttpResponseStatus = Status.Ok): Response  = {
+    def ok (req: Request, time: TxClock): Response = {
       val rsp = req.response
-      rsp.status = status
-      rsp.clearContent()
-      rsp.contentLength = 0
+      rsp.status = Status.Ok
+      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp
+    }
+
+    def stale (req: Request, time: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.PreconditionFailed
+      rsp.headerMap.add ("Value-TxClock", time.toString)
       rsp
     }
 

@@ -62,14 +62,11 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
     val value = req.readJson [JsonNode]
     store.update (table, key, value, tx, ct)
     .map [Response] { vt =>
-      val rsp = req.response
-      rsp.status = Status.Ok
-      rsp.headerMap.add ("Value-TxClock", vt.toString)
-      rsp
+      respond.ok (req, vt)
     }
     .recover {
-      case _: StaleException =>
-        respond (req, Status.PreconditionFailed)
+      case exn: StaleException =>
+        respond.stale (req, exn.time)
     }}
 
   def delete (req: Request, table: String, key: String): Async [Response] = {
@@ -77,14 +74,11 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
     val ct = req.conditionTxClock (TxClock.now)
     store.delete (table, key, tx, ct)
     .map [Response] { vt =>
-      val rsp = req.response
-      rsp.status = Status.Ok
-      rsp.headerMap.add ("Value-TxClock", vt.toString)
-      rsp
+      respond.ok (req, vt)
     }
     .recover {
-      case _: StaleException =>
-        respond (req, Status.PreconditionFailed)
+      case exn: StaleException =>
+        respond.stale (req, exn.time)
     }}
 
   def batch (req: Request): Async [Response] = {
@@ -93,13 +87,10 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
     val node = textJson.readTree (req.getContentString)
     store.batch (tx, ct, node)
     .map [Response] { vt =>
-      val rsp = req.response
-      rsp.status = Status.Ok
-      rsp.headerMap.add ("Value-TxClock", vt.toString)
-      rsp
+      respond.ok (req, vt)
     } .recover {
-      case _: StaleException =>
-        respond (req, Status.PreconditionFailed)
+      case exn: StaleException =>
+        respond.stale (req, exn.time)
     }}
 
   def apply (req: Request): Future [Response] = {
