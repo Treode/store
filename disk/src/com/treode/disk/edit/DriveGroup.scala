@@ -206,7 +206,7 @@ private class DriveGroup (
       requireNotClosed()
 
       // Accumulate errors rather than aborting with Exceptions.
-      val errors = Notification.builder
+      val errors = Notification.newBuilder
 
       // The paths that are already attached.
       val attached = (for (d <- drives.values) yield d.path).toSet

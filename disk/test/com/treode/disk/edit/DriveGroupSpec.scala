@@ -143,7 +143,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     val controller = setup("f1", "f2", "f3")
     val e = controller.attach ("f1", "f1").expectPass()
     scheduler.run()
-    assertEqNotification (List("Already attaching: \"f1\""), e)
+    assertEqNotification ("Already attaching: \"f1\"")(e)
   }
 
   it should "reject duplicate filenames (different operation)" in {
@@ -153,8 +153,8 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     scheduler.run()
     val e2 = controller.attach ("d1").expectPass()
     scheduler.run()
-    assertEqNotification (List(), e1)
-    assertEqNotification (List("Already attached: \"d1\""), e2)
+    assertEqNotification ()(e1)
+    assertEqNotification ("Already attached: \"d1\"")(e2)
   }
 
   it should "reject duplicate draining of the same file" in {
@@ -163,8 +163,8 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     val e1 = controller.attach ("f1").expectPass()
     val e2 = controller.drain ("f1", "f1").expectPass()
     scheduler.run()
-    assertEqNotification (List(), e1)
-    assertEqNotification (List("Already draining: \"f1\""), e2)
+    assertEqNotification ()(e1)
+    assertEqNotification ("Already draining: \"f1\"")(e2)
   }
 
   it should "reject draining unattached files" in {
@@ -172,7 +172,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     val controller = setup("f1", "f2", "f3")
     val e1 = controller.drain ("f1").expectPass()
     scheduler.run()
-    assertEqNotification (List("Not attached: \"f1\""), e1)
+    assertEqNotification ("Not attached: \"f1\"")(e1)
   }
 
   it should "reject attaching and draining a file in the same operation" in {
@@ -180,7 +180,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     val controller = setup("f1", "f2", "f3")
     val e1 = controller.change (Seq ("f1"), Seq ("f1")).expectPass()
     scheduler.run()
-    assertEqNotification (List("Not attached: \"f1\""), e1)
+    assertEqNotification ("Not attached: \"f1\"")(e1)
   }
 
   "The DriveGroup" should "recover attached disks" taggedAs (Periodic) in {

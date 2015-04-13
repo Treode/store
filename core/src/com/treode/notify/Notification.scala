@@ -25,7 +25,7 @@ package com.treode.notify
 
 sealed abstract class Notification
 object Notification {
-  class NotificationBuilder {
+  class Builder {
     var list: List[Message] = List.empty
 
     /** Add message to the list. */
@@ -45,5 +45,5 @@ object Notification {
   case class NoErrors () extends Notification
 
   def empty : Notification = NoErrors ()
-  def builder : NotificationBuilder = new NotificationBuilder
+  def newBuilder : Builder = new Builder
 }

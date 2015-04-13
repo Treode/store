@@ -41,7 +41,7 @@ private object DiskTestTools {
 
   val sysid = SystemId (0, 0)
 
-  def assertEqNotification (msgs: List[String], notif: Notification) {
+  def assertEqNotification (msgs: String*) (notif: Notification) {
     notif match {
       case NoErrors () => assert (msgs.length == 0)
       case Errors (list) =>
