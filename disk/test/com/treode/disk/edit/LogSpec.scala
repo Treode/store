@@ -1,3 +1,19 @@
+/*
+ * Copyright 2014 Treode, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.treode.disk.edit
 
 import java.nio.file.{Path, Paths}
@@ -142,6 +158,27 @@ class LogSpec extends FreeSpec with DiskChecks {
       onePhase (setup, seed, counter) (addA1)
       onePhase (setup, seed, counter) (addA1, phs1)
       onePhase (setup, seed, counter) (addA1, phs1, chkpt)
+      onePhase (setup, seed, counter) (addA1, phs1, chkpt, addB1)
+      onePhase (setup, seed, counter) (addA1, phs1, addB1)
+      onePhase (setup, seed, counter) (addA1, phs1, addB1, chkpt)
+      onePhase (setup, seed, counter) (addA1, phs1, addB1, addC1)
+      onePhase (setup, seed, counter) (addA1, phs1, addB2)
+      onePhase (setup, seed, counter) (addA1, phs1, addB3)
+
+      onePhase (setup, seed, counter) (addA2)
+      onePhase (setup, seed, counter) (addA2, phs1)
+      onePhase (setup, seed, counter) (addA2, phs1, addB1)
+
+      onePhase (setup, seed, counter) (addA3)
+      onePhase (setup, seed, counter) (addA3, phs1)
+
+      twoPhases (setup, seed, counter) (addA1) (phs1)
+      twoPhases (setup, seed, counter) (addA1, phs1) (phs1)
+      twoPhases (setup, seed, counter) (addA1, phs1, chkpt) (phs1)
+      twoPhases (setup, seed, counter) (addA1, phs1, addB1) (phs1)
+
+      twoPhases (setup, seed, counter) (addA2, phs1) (phs1)
+      twoPhases (setup, seed, counter) (addA2) (phs1)
     } catch {
       case t: Throwable =>
         info (f"implicit val config = $config")
@@ -160,10 +197,9 @@ class LogSpec extends FreeSpec with DiskChecks {
 
   "The Log should replay acknowledged records in semi-order" - {
 
-    // TODO: Gradually add logging features until we can record more.
     for {
-      nbatches <- Seq (1, 2) // Seq (1, 2, 3)
-      nwrites <- Seq (1, 2) // Seq (1, 2, 3)
+      nbatches <- Seq (1, 2, 3)
+      nwrites <- Seq (1, 2, 3)
       if (nbatches != 0 && nwrites != 0 || nbatches == nwrites)
     } s"for $nbatches batches of $nwrites writes" in {
       implicit val config = DiskTestConfig()
@@ -171,7 +207,7 @@ class LogSpec extends FreeSpec with DiskChecks {
       logScenarios (new LogTracker, LogBatch (nbatches, nwrites))
     }
 
-    /*for {
+    for {
       (nbatches, nwrites) <- Seq ((7, 7), (16, 16))
     } s"for $nbatches batches of $nwrites writes" in {
       implicit val config = DiskTestConfig()
@@ -185,4 +221,4 @@ class LogSpec extends FreeSpec with DiskChecks {
       implicit val config = DiskTestConfig()
       implicit val geom = DriveGeometry (8, 6, 1 << 18)
       logScenarios (new LogTracker, LogBatch (nbatches, nwrites))
-    }*/}}
+    }}}

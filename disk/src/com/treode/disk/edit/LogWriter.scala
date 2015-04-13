@@ -16,78 +16,198 @@
 
 package com.treode.disk.edit
 
+import java.nio.file.Path
+import java.util.{ArrayDeque, ArrayList}
+import java.util.concurrent.atomic.AtomicLong
+
+import scala.collection.JavaConversions._
 import scala.collection.mutable.UnrolledBuffer
+import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, Callback, Scheduler}, Callback.ignore
-import com.treode.async.implicits._
+import com.treode.async.{Async, Callback, Scheduler}, Async.{async, guard, supply}
 import com.treode.async.io.File
-import com.treode.disk.DriveGeometry
 import com.treode.buffer.PagedBuffer
+import com.treode.disk.{DriveGeometry, SegmentBounds}
 
-class LogWriter (
+private class LogWriter (
+  path: Path,
   file: File,
   geom: DriveGeometry,
-  dsp: LogDispatcher
+  dispatcher: LogDispatcher,
+  alloc: SegmentAllocator,
+
+  // We pickle records into this buffer. We discard it page by page as we flush it to disk. The
+  // first page retains the data from the previous flush so that the next flush can remain aligned
+  // a block boundary.
+  buf: PagedBuffer,
+
+  private var segs: ArrayDeque [Int],
+
+  // The current position in the current segment. This corresponds to position 0 in buffer, and we
+  // increment it when we discard pages from the buffer.
+  private var pos: Long,
+
+  // The limit of the current segment, exclusive.
+  private var limit: Long,
+
+  // The position of the latest batch that was written when a checkpoint started, and that
+  // checkpoint has completed. This is the last flushed batch before a completed checkpoint had
+  // begun. The log replay of the next årecovery starts at this point.
+  private var checkpointed: Long
 ) (implicit
   scheduler: Scheduler
 ) {
 
-  private var pos = 1 << 12 // TODO: replace by allocating a segment
-  private val buf = PagedBuffer (12)
+  import LogControl._
+  import geom.{blockBits, blockAlignDown, blockAlignUp}
 
-  private def listen(): Async [Unit] =
-    for {
-      (_, records) <- dsp.receive()
-      _ <- record (records)
-    } yield {
-      listen() run (ignore)
-    }
+  // The position of the latest batch that was written.
+  private var _flushed = pos
+
+  // The position of the latest batch that was written when a checkpoint started. This is the last
+  // flushed batch when a checkpoint began, but that checkpoint may not have completed.
+  private var marked = _flushed
+
+  // Things awaiting draining to complete.
+  private var drains = List.empty [Callback [Unit]]
+
+  private def isDrained: Boolean =
+    checkpointed == _flushed
+
+  private def run [A] (task: Async [A]) {
+    task run {
+      case Success (_) => ()
+      case Failure (t) => throw t
+    }}
 
   def launch(): Unit =
-    listen() run (ignore)
+    run {
+      for {
+        (batch, records) <- dispatcher.receive()
+        _ <- flush (batch, records)
+      } yield {
+        launch()
+      }}
 
-  /*
-   * Write a batch of records of varying type to the log file.
-   *
-   * Each batch has format [length] [count] [records].
-   *
-   * The file will have an 0x1 byte between batches, and end with an 0x0 byte when
-   * there are no more batch to read.
-   */
-  def record (batch: UnrolledBuffer [PickledRecord]): Async [Unit] = {
-    // If there's previous data, re-mark the end to show continuation
-    if (buf.writePos > 0)
-      buf.writeByte (1)
+  private def flush (batch: Long, records: UnrolledBuffer [PickledRecord]): Async [Unit] =
+    guard {
 
-    val start = buf.writePos
-    buf.writeInt (0)  // reserve space for length of batch
-    buf.writeInt (batch.length) // write count
+      // Compute how many bytes we can write without overflowing the segment. We need to allow
+      // enough for the marker for the next batch and the alloc marker after it.
+      val bytes = limit - pos - LogEntriesSpace - LogAllocSpace
 
-    // Write all batch into the PagedBuffer
-    for (v <- batch)
-      v.write (buf)
-    val end = buf.writePos // remember where the log ends
+      // Remember where we started, and leave space for the marker between batches.
+      val start = buf.writePos
+      buf.writePos = start + LogEntriesSpace
 
-    // Go back to beginning and fill in the proper length
-    buf.writePos = start
-    buf.writeInt (end - start - 8)  // subtract the length and count of batch
+      // Fit as many records as possible into the remainder of this segment; track which fit
+      // (callbacks) and which to do not fit (putbacks).
+      val callbacks = new ArrayList [Callback [Unit]] (records.size)
+      val putbacks = new UnrolledBuffer [PickledRecord]
+      for (item <- records) {
+        if (buf.readableBytes + item.byteSize < bytes) {
+          item.write (buf)
+          callbacks.add (item.cb)
+        } else {
+          putbacks += item
+        }}
 
-    // Mark the end with a 0 byte
-    buf.writePos = end
-    buf.writeByte (0)
+      // Double check to avoid writing over the segment boundary.
+      assert (buf.readableBytes + pos <= limit)
 
-    // Move up to the next block boundary; must write full block to disk
-    buf.writePos = geom.blockAlignUp (buf.writePos)
+      // Remember where we parked.
+      val end = buf.writePos
 
-    for {
-      _ <- file.flush (buf, pos)
-    } yield {
-      // Discard all blocks in the PagedBuffer that have been filled and
-      // written to disk
-      buf.readPos = geom.blockAlignDown (end)
-      buf.writePos = end
-      pos += buf.discard (buf.readPos)
-      // done flushing, call each entry's callback
-      for (v <- batch)
-        v.cb.pass(())
-    }}}
+      val alloc: Option [SegmentBounds] =
+
+        // If all the records did fit into the segment.
+        if (putbacks.isEmpty) {
+
+          // Record the end of this segment.
+          buf.writeLong (EndTag)
+          None
+
+        // If some records did not fit into the segment.
+        } else {
+
+          // Return the mis-fits to be flushed latter.
+          dispatcher.send (putbacks)
+
+          // Allocate a new segment and record it in the log.
+          val seg = this.alloc.alloc()
+          buf.writeLong (AllocTag)
+          buf.writeInt (seg.num)
+          Some (seg)
+        }
+
+      // Return to the start to write the tag, byte count and record count.
+      buf.writePos = start
+      buf.writeLong (EntriesTag)
+      buf.writeLong (batch)
+      val length = end - start - LogEntriesSpace
+      buf.writeInt (length)
+      buf.writeInt (callbacks.size)
+
+      // Advance the end to align on a block.
+      if (alloc.isDefined)
+        buf.writePos = blockAlignUp (end + LogAllocSpace)
+      else
+        buf.writePos = blockAlignUp (end + LogEndSpace)
+
+      for {
+        _ <- file.flush (buf, pos)
+      } yield {
+
+        // Setup for the next batch.
+        alloc match {
+
+          case Some (seg) =>
+
+            // Start fresh for the new segment. Write the log segment marker.
+            segs.add (seg.num)
+            limit = seg.limit
+            pos = seg.base
+            buf.clear()
+            buf.writeLong (SegmentTag)
+
+            synchronized (_flushed = pos)
+
+          case None =>
+
+            synchronized (_flushed = pos + end)
+
+            // Reset the buffer to use this segment for the next batch.
+            val next = blockAlignDown (end)
+            buf.readPos = next
+            buf.writePos = end
+            pos += buf.discard (next)
+        }
+
+        // Acknowledge the writes.
+        for (cb <- callbacks)
+          scheduler.pass (cb, ())
+      }}
+
+  def startCheckpoint(): Unit =
+    synchronized (marked = _flushed)
+
+  def getCheckpoint (finish: Boolean): Long =
+    synchronized {
+      if (finish) {
+        checkpointed = marked
+        val head = geom.segmentNum (checkpointed)
+        while (segs.peek != head && segs.size > 1)
+          alloc.free (segs.remove())
+        if (!drains.isEmpty && isDrained) {
+          if (checkpointed != 0L) {
+            while (!segs.isEmpty)
+              alloc.free (segs.remove())
+            _flushed = 0L
+            marked = _flushed
+            checkpointed = _flushed
+          }
+          for (cb <- drains)  scheduler.pass (cb, ())
+          drains = List.empty
+        }}
+      checkpointed
+    }}

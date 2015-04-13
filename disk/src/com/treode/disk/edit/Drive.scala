@@ -44,9 +44,10 @@ private class Drive (
       logwrtr.launch()
     }}
 
-  def writeSuperblock (common: Common): Async [Unit] =
+  def writeSuperblock (common: Common, finish: Boolean): Async [Unit] =
     guard {
-      val superb = SuperBlock (id, geom, _draining, common)
+      val head = logwrtr.getCheckpoint (finish)
+      val superb = SuperBlock (id, geom, _draining, head, common)
       SuperBlock.write (file, superb)
     }
 

@@ -31,6 +31,7 @@ import com.treode.disk.messages._
 import com.treode.notify.Notification
 
 import DriveGroup._
+import LogControl._
 
 /** All the disk drives in the disk system.
   *
@@ -161,7 +162,7 @@ private class DriveGroup (
 
       for {
         _ <- drains.latch (_.startDraining())
-        _ <- drives.latch (_._2.writeSuperblock (common))
+        _ <- drives.latch (_._2.writeSuperblock (common, checkpoint.isDefined))
       } yield {
 
         for (drive <- attaches)
@@ -203,6 +204,25 @@ private class DriveGroup (
       queue.engage()
     }
 
+  private def _openDrive (id: Int, path: Path, geom: DriveGeometry): Drive = {
+
+    val file = files.open (path, READ, WRITE)
+
+    val alloc = new SegmentAllocator (geom)
+
+    val logbuf = PagedBuffer (geom.blockBits)
+    logbuf.writeLong (SegmentTag)
+
+    val logsegs = new ArrayDeque [Int]
+    val logseg = alloc.alloc()
+    logsegs.add (logseg.num)
+
+    val logwrtr = new LogWriter (
+      path, file, geom, logdsp, alloc, logbuf, logsegs, logseg.base, logseg.limit, logseg.base)
+
+    new Drive (file, geom, logwrtr, false, id, path)
+  }
+
   /** Enqueue user changes to the set of disk drives. */
   def change (change: DriveChange): Async [Notification] =
     fiber.async { cb =>
@@ -236,13 +256,10 @@ private class DriveGroup (
           errors.add (AlreadyAttaching (a.path))
         } else {
           attaching += a.path
-          val file = files.open (a.path, READ, WRITE)
-          val logwrtr = new LogWriter (file, a.geometry, logdsp)
-          val drive = new Drive (file, a.geometry, logwrtr, false, dno, a.path)
+          val drive = _openDrive (dno, a.path, a.geometry)
           dno += 1
           newAttaches ::= drive
-        }
-      }
+        }}
 
       // If there are attachment errors, close all opened files and pass errors.
       // The paths that are already queued draining.

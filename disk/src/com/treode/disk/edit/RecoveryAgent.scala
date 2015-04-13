@@ -18,7 +18,8 @@ package com.treode.disk.edit
 
 import java.nio.file.{Path, StandardOpenOption}, StandardOpenOption._
 
-import com.treode.async._
+import com.treode.async.{Async, AsyncQueue, BatchIterator, Callback, Fiber, Scheduler}
+import com.treode.async.implicits._
 import com.treode.disk.{Disk, DiskRecovery, DiskConfig, DiskEvents, DiskLaunch, FileSystem,
   RecordDescriptor, RecordRegistry}
 
@@ -49,8 +50,8 @@ private class RecoveryAgent (implicit
   /** Failures encountered while trying to open any paths. */
   private var failures = Seq.empty [ReattachFailure]
 
-  /** Drives that we have successfully opened. */
-  private var drives = Map.empty [Int, Drive]
+  /** Readers that we have successfully opened. */
+  private var readers = Seq.empty [LogReader]
 
   /** The latest superblock we've read from a drive so far. */
   private var common = SuperBlock.Common.empty
@@ -60,6 +61,9 @@ private class RecoveryAgent (implicit
 
   /** The record registry we are building before beginning replay. */
   private val records = new RecordRegistry
+
+  /** The replayer for this recovery. */
+  private val replayer = new LogReplayer
 
   /** The LogDispatcher for the final system. */
   private val logdsp = new LogDispatcher
@@ -73,13 +77,13 @@ private class RecoveryAgent (implicit
       _recover()
   }
 
-  /** We successfully opened a path, read its superblock and made a drive. */
-  private def _reattach (path: Path, common: SuperBlock.Common, drive: Drive): Unit =
+  /** We successfully opened a path, read its superblock and made a reader. */
+  private def _reattach (path: Path, common: SuperBlock.Common, reader: LogReader): Unit =
     fiber.execute {
       reattaching -= path
       reattached += path
       reattachments ++= (common.paths -- reattached)
-      drives += drive.id -> drive
+      readers +:= reader
       if (this.common.gen < common.gen) this.common = common
       queue.engage()
     }
@@ -92,23 +96,18 @@ private class RecoveryAgent (implicit
       queue.engage()
     }
 
-  /** Open the next queued path, read its superblock and make a drive. */
+  /** Open the next queued path, read its superblock and make a reader. */
   private def _reattach() {
     val path = reattachments.head
     reattachments = reattachments.tail
     reattaching += path
     queue.begin {
       val file = files.open (path, READ, WRITE)
-      (for {
-        superblock <- SuperBlock.read (file)
-        reader = new LogReader (file, superblock.geom, records)
-        records <- reader.read()
-      } yield {
-        records foreach (_(()))
-        val logwrtr = new LogWriter (file, superblock.geom, logdsp)
-        val drive = new Drive (file, superblock.geom, logwrtr, superblock.draining, superblock.id, path)
-        _reattach (path, superblock.common, drive)
-      })
+      SuperBlock.read (file)
+      .map { superb =>
+        val reader = new LogReader (path, file, superb, records, replayer, logdsp)
+        _reattach (path, superb.common, reader)
+      }
       .recover { case thrown =>
         file.close()
         _reattach (path, thrown)
@@ -120,10 +119,17 @@ private class RecoveryAgent (implicit
     recovery = null
     if (failures.isEmpty) {
       events.reattachingDisks (reattached)
-      val group = new DriveGroup (logdsp, drives, common.gen, common.dno)
-      val agent = new DiskAgent (logdsp, group)
-      val launch = new LaunchAgent () (scheduler, group, events, agent)
-      scheduler.pass (cb, launch)
+      (for {
+        _ <- BatchIterator.merge (readers) .batch (replayer.replay _)
+        launch = {
+          logdsp.batch = replayer.batch
+          val drives = new DriveGroup (logdsp, replayer.drives, common.gen, common.dno)
+          val agent = new DiskAgent (logdsp, drives)
+          new LaunchAgent () (scheduler, drives, events, agent)
+        }
+      } yield {
+        launch
+      }) .run (cb on scheduler)
     } else {
       scheduler.fail (cb, failures.head.thrown) //new ReattachException (failures))
     }}
