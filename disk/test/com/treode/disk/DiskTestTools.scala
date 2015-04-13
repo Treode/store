@@ -41,12 +41,12 @@ private object DiskTestTools {
 
   val sysid = SystemId (0, 0)
 
-  def assertEqNotification (msgs: Message*) (notif: Notification) {
-    if (notif.isEmpty) {
-      assert (msgs.length == 0)
+  def assertEqNotification (expected: Message*) (actual: Notification) {
+    if (actual.isEmpty) {
+      assert (expected.length == 0)
     } else {
-      assert (msgs == notif.messages)
-      assert (msgs.length == notif.messages.length)
+      assert (expected == actual.messages)
+      assert (expected.length == actual.messages.length)
     }
   }
 
