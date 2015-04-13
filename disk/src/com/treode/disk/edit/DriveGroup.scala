@@ -265,14 +265,12 @@ private class DriveGroup (
         }
       }
 
-      val errorlist = errors.result
-
       errors.result match {
-        case Errors (list) =>
+        case list @ Errors (_) =>
           for (drive <- newAttaches) {
             drive.close()
           }
-          scheduler.pass (cb, errorlist)
+          scheduler.pass (cb, list)
         case NoErrors () =>
           // Otherwise, we can merge our new changes into the queued changes.
           this.dno = dno

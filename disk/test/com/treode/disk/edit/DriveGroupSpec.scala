@@ -24,10 +24,11 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.disk.{DiskController, DiskLaunch, DiskTestConfig, DriveAttachment, DriveChange,
   DriveGeometry, StubFileSystem}
-import com.treode.disk.DiskTestTools.assertEqNotification
+import com.treode.disk.DiskTestTools._
 import com.treode.disk.stubs.StubDiskEvents
 import com.treode.notify.Notification
 import com.treode.notify.Notification.{Errors,NoErrors}
+import com.treode.disk.messages._
 import com.treode.pickle.Picklers
 import com.treode.tags.Periodic
 import org.scalatest.FlatSpec
@@ -143,7 +144,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     val controller = setup("f1", "f2", "f3")
     val e = controller.attach ("f1", "f1").expectPass()
     scheduler.run()
-    assertEqNotification ("Already attaching: \"f1\"")(e)
+    assertEqNotification (AlreadyAttaching("f1"))(e)
   }
 
   it should "reject duplicate filenames (different operation)" in {
@@ -154,7 +155,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     val e2 = controller.attach ("d1").expectPass()
     scheduler.run()
     assertEqNotification ()(e1)
-    assertEqNotification ("Already attached: \"d1\"")(e2)
+    assertEqNotification (AlreadyAttached("d1"))(e2)
   }
 
   it should "reject duplicate draining of the same file" in {
@@ -164,7 +165,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     val e2 = controller.drain ("f1", "f1").expectPass()
     scheduler.run()
     assertEqNotification ()(e1)
-    assertEqNotification ("Already draining: \"f1\"")(e2)
+    assertEqNotification (AlreadyDraining("f1"))(e2)
   }
 
   it should "reject draining unattached files" in {
@@ -172,7 +173,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     val controller = setup("f1", "f2", "f3")
     val e1 = controller.drain ("f1").expectPass()
     scheduler.run()
-    assertEqNotification ("Not attached: \"f1\"")(e1)
+    assertEqNotification (NotAttached("f1"))(e1)
   }
 
   it should "reject attaching and draining a file in the same operation" in {
@@ -180,7 +181,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     val controller = setup("f1", "f2", "f3")
     val e1 = controller.change (Seq ("f1"), Seq ("f1")).expectPass()
     scheduler.run()
-    assertEqNotification ("Not attached: \"f1\"")(e1)
+    assertEqNotification (NotAttached("f1"))(e1)
   }
 
   "The DriveGroup" should "recover attached disks" taggedAs (Periodic) in {

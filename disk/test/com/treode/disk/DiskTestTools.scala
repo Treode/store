@@ -27,7 +27,7 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.async.implicits._
-import com.treode.notify.Notification
+import com.treode.notify._
 import com.treode.notify.Notification._
 import org.scalatest.Assertions
 
@@ -41,14 +41,12 @@ private object DiskTestTools {
 
   val sysid = SystemId (0, 0)
 
-  def assertEqNotification (msgs: String*) (notif: Notification) {
-    notif match {
-      case NoErrors () => assert (msgs.length == 0)
-      case Errors (list) =>
-        for ((n, m) <- list zip msgs) {
-          assert (n.en == m)
-        }
-        assert (list.length == msgs.length)
+  def assertEqNotification (msgs: Message*) (notif: Notification) {
+    if (notif.isEmpty) {
+      assert (msgs.length == 0)
+    } else {
+      assert (msgs == notif.messages)
+      assert (msgs.length == notif.messages.length)
     }
   }
 
