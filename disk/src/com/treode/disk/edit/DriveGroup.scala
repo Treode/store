@@ -168,7 +168,7 @@ private class DriveGroup (
         for (drive <- drains)
           drive.awaitDrainStarted() run (driveDrainStarted)
         for (cb <- changers)
-          scheduler.pass (cb, Notification.result)
+          scheduler.pass (cb, Notification.empty)
         for (cb <- checkpoint)
           scheduler.pass (cb, ())
 
@@ -205,6 +205,9 @@ private class DriveGroup (
     fiber.async { cb =>
       requireNotClosed()
 
+      // Accumulate errors rather than aborting with Exceptions.
+      val errors = Notification.builder
+
       // The paths that are already attached.
       val attached = (for (d <- drives.values) yield d.path).toSet
 
@@ -225,9 +228,9 @@ private class DriveGroup (
       // - add it to the list of new attaches.
       for (a <- change.attaches) {
         if (attached contains a.path) {
-          Notification.add (AlreadyAttached (a.path))
+          errors.add (AlreadyAttached (a.path))
         } else if (attaching contains a.path) {
-          Notification.add (AlreadyAttaching (a.path))
+          errors.add (AlreadyAttaching (a.path))
         } else {
           attaching += a.path
           val file = files.open (a.path, READ, WRITE)
@@ -253,24 +256,23 @@ private class DriveGroup (
         val drive = drives.values.find (_.path == d) match {
           case Some (drive) =>
             if (drive.draining || (draining contains d) || (newDrains contains drive)) {
-              Notification.add (AlreadyDraining (d))
+              errors.add (AlreadyDraining (d))
             } else {
               newDrains ::= drive
             }
           case None =>
-            Notification.add (NotAttached (d))
+            errors.add (NotAttached (d))
         }
       }
 
-      // Accumulate errors rather than aborting with Exceptions.
-      val errors = Notification.result
+      val errorlist = errors.result
 
-      errors match {
+      errors.result match {
         case Errors (list) =>
           for (drive <- newAttaches) {
             drive.close()
           }
-          scheduler.pass (cb, errors)
+          scheduler.pass (cb, errorlist)
         case NoErrors () =>
           // Otherwise, we can merge our new changes into the queued changes.
           this.dno = dno

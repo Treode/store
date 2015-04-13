@@ -16,19 +16,24 @@
 
 package com.treode.notify
 
-/** Accumulate errors and to report them. An alternative to throwing an
-  * exception on the first mistake, and forcing the caller to resolve errors
-  * one-by-one.
-  *
-  * Inspired by [[http://martinfowler.com/articles/replaceThrowWithNotification.html Martin Fowler]].
+import com.treode.notify.Notification._
+
+/** Builds up Notifications with a builder object, which collects errors
+ *  as they are discovered by the program. When prompted, it will return an
+ *  appropriate Notification case class.
   */
+class NotificationBuilder {
+  var list: List[Message] = List.empty
 
-sealed abstract class Notification
-object Notification {
-  case class Errors (messages: List [Message]) extends Notification
-  case class NoErrors () extends Notification
+  /** Add message to the list. */
+  def add (message: Message) =
+    list = list :+ message
 
-  def empty : Notification = NoErrors ()
-
-  def builder : NotificationBuilder = new NotificationBuilder
+  /** Returns NoError or Errors Notification object. */
+  def result : Notification =
+    if (list.length == 0) {
+      return NoErrors ()
+    } else {
+      return Errors (list)
+    }
 }
