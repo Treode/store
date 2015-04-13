@@ -137,7 +137,7 @@ private class DiskDrives (kit: DiskKit) {
         this.number = number
         newDisks foreach (_.added())
         log.attachedDrives (newDisks.setBy (_.path))
-        new Notification // currently just stand-in to pass type
+        Notification.result // currently just stand-in to pass type
       }}
 
   def _attach (items: Seq [AttachItem]): Async [Notification] = {
@@ -206,7 +206,7 @@ private class DiskDrives (kit: DiskKit) {
             .ensure (compactor.drain (segs.flatten))
             .run (ignore)
         log.drainingDrives (drainPaths)
-        new Notification // currently just stand-in to pass type
+        Notification.result // currently just stand-in to pass type
       }}
 
   def drain (items: Seq [Path]): Async [Notification] =

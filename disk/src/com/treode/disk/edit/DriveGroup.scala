@@ -29,6 +29,7 @@ import com.treode.disk.{Disk, DiskConfig, DisksClosedException, DiskEvents, Driv
   DriveGeometry, FileSystem, ObjectId, Position, SegmentBounds, TypeId, quote}
 import com.treode.disk.messages._
 import com.treode.notify.Notification
+import com.treode.notify.Notification._
 
 import DriveGroup._
 
@@ -167,7 +168,7 @@ private class DriveGroup (
         for (drive <- drains)
           drive.awaitDrainStarted() run (driveDrainStarted)
         for (cb <- changers)
-          scheduler.pass (cb, new Notification)
+          scheduler.pass (cb, Notification.result)
         for (cb <- checkpoint)
           scheduler.pass (cb, ())
 
@@ -204,9 +205,6 @@ private class DriveGroup (
     fiber.async { cb =>
       requireNotClosed()
 
-      // Accumulate errors rather than aborting with Exceptions.
-      val errors = new Notification
-
       // The paths that are already attached.
       val attached = (for (d <- drives.values) yield d.path).toSet
 
@@ -227,9 +225,9 @@ private class DriveGroup (
       // - add it to the list of new attaches.
       for (a <- change.attaches) {
         if (attached contains a.path) {
-          errors.add (AlreadyAttached (a.path))
+          Notification.add (AlreadyAttached (a.path))
         } else if (attaching contains a.path) {
-          errors.add (AlreadyAttaching (a.path))
+          Notification.add (AlreadyAttaching (a.path))
         } else {
           attaching += a.path
           val file = files.open (a.path, READ, WRITE)
@@ -255,29 +253,31 @@ private class DriveGroup (
         val drive = drives.values.find (_.path == d) match {
           case Some (drive) =>
             if (drive.draining || (draining contains d) || (newDrains contains drive)) {
-              errors.add (AlreadyDraining (d))
+              Notification.add (AlreadyDraining (d))
             } else {
               newDrains ::= drive
             }
           case None =>
-            errors.add (NotAttached (d))
+            Notification.add (NotAttached (d))
         }
       }
 
-      if (errors.hasErrors) {
-        // If there are errors, close files that have been opened, do not
-        // finalize changes.
-        for (drive <- newAttaches) {
-          drive.close()
-        }
-        scheduler.pass (cb, errors)
-      } else {
-        // Otherwise, we can merge our new changes into the queued changes.
-        this.dno = dno
-        attaches :::= newAttaches
-        drains :::= newDrains
-        changers ::= cb
-        queue.engage()
+      // Accumulate errors rather than aborting with Exceptions.
+      val errors = Notification.result
+
+      errors match {
+        case Errors (list) =>
+          for (drive <- newAttaches) {
+            drive.close()
+          }
+          scheduler.pass (cb, errors)
+        case NoErrors () =>
+          // Otherwise, we can merge our new changes into the queued changes.
+          this.dno = dno
+          attaches :::= newAttaches
+          drains :::= newDrains
+          changers ::= cb
+          queue.engage()
       }
     }
 

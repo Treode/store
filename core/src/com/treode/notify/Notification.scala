@@ -23,14 +23,24 @@ package com.treode.notify
   * Inspired by [[http://martinfowler.com/articles/replaceThrowWithNotification.html Martin Fowler]].
   */
 
-class Notification {
-  var list: List[Message] = List.empty;
+sealed abstract class Notification
+object Notification {
+  case class Errors (messages: List [Message]) extends Notification
+  case class NoErrors () extends Notification
+
+  var list: List[Message] = List.empty
 
   /** Add message to the list. */
   def add (message: Message) =
     list = list :+ message
 
   /** Check if errors have been added. */
-  def hasErrors =
-    list.nonEmpty
+  def result : Notification =
+    if (list.length == 0) {
+      return NoErrors ()
+    } else {
+      val e = Errors (list)
+      list = List.empty [Message]
+      return e
+    }
 }
