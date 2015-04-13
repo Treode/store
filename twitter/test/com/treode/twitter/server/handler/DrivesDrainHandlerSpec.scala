@@ -29,7 +29,7 @@ class DrivesDrainHandlerSpec extends FlatSpec with SpecTools {
 
   "The DrivesDrainHandler" should "handle POST" in
     served { case (port, controller) =>
-      (controller.drain _) .expects (Seq.empty) .returning (supply ((new Notification)))
+      (controller.drain _) .expects (Seq.empty) .returning (supply ((Notification.empty)))
       given
         .port (port)
         .body ("[]")
