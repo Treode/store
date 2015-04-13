@@ -27,7 +27,7 @@ import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.async.implicits._
-import com.treode.notify.Notification
+import com.treode.notify.{Message, Notification}
 import org.scalatest.Assertions
 
 import Assertions.assertResult
@@ -39,6 +39,10 @@ private object DiskTestTools {
   type ReattachItem = (Path, StubFile)
 
   val sysid = SystemId (0, 0)
+
+  def assertEqNotification (expected: Message*) (actual: Notification) {
+    assert (expected == actual.messages)
+  }
 
   implicit def stringToPath (path: String): Path =
     Paths.get (path)

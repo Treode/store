@@ -28,7 +28,7 @@ import com.treode.buffer.PagedBuffer
 import com.treode.disk.{Disk, DiskConfig, DisksClosedException, DiskEvents, DriveChange, DriveDigest,
   DriveGeometry, FileSystem, ObjectId, Position, SegmentBounds, TypeId, quote}
 import com.treode.disk.messages._
-import com.treode.notify.Notification
+import com.treode.notify.Notification, Notification.{Errors, NoErrors}
 
 import DriveGroup._
 import LogControl._
@@ -173,7 +173,7 @@ private class DriveGroup (
         for (drive <- drains)
           drive.awaitDrainStarted() run (driveDrainStarted)
         for (cb <- changers)
-          scheduler.pass (cb, new Notification)
+          scheduler.pass (cb, Notification.empty)
         for (cb <- checkpoint)
           scheduler.pass (cb, ())
 
@@ -242,7 +242,7 @@ private class DriveGroup (
       requireNotClosed()
 
       // Accumulate errors rather than aborting with Exceptions.
-      val errors = new Notification
+      val errors = Notification.newBuilder
 
       // The paths that are already attached.
       val attached = (for (d <- drives.values) yield d.path).toSet
@@ -299,20 +299,19 @@ private class DriveGroup (
         }
       }
 
-      if (errors.hasErrors) {
-        // If there are errors, close files that have been opened, do not
-        // finalize changes.
-        for (drive <- newAttaches) {
-          drive.close()
-        }
-        scheduler.pass (cb, errors)
-      } else {
-        // Otherwise, we can merge our new changes into the queued changes.
-        this.dno = dno
-        attaches :::= newAttaches
-        drains :::= newDrains
-        changers ::= cb
-        queue.engage()
+      errors.result match {
+        case list @ Errors (_) =>
+          for (drive <- newAttaches) {
+            drive.close()
+          }
+          scheduler.pass (cb, list)
+        case NoErrors () =>
+          // Otherwise, we can merge our new changes into the queued changes.
+          this.dno = dno
+          attaches :::= newAttaches
+          drains :::= newDrains
+          changers ::= cb
+          queue.engage()
       }
     }
 
