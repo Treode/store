@@ -25,10 +25,25 @@ package com.treode.notify
 
 sealed abstract class Notification
 object Notification {
+  class NotificationBuilder {
+    var list: List[Message] = List.empty
+
+    /** Add message to the list. */
+    def add (message: Message) =
+      list = list :+ message
+
+    /** Returns NoError or Errors Notification object. */
+    def result : Notification =
+      if (list.length == 0) {
+        return NoErrors ()
+      } else {
+        return Errors (list)
+      }
+  }
+
   case class Errors (messages: List [Message]) extends Notification
   case class NoErrors () extends Notification
 
   def empty : Notification = NoErrors ()
-
   def builder : NotificationBuilder = new NotificationBuilder
 }
