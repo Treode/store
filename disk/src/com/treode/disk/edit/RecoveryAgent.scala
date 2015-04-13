@@ -58,6 +58,12 @@ private class RecoveryAgent (implicit
   /** The callback for when recovery completes. */
   private var recovery = Option.empty [Callback [DiskLaunch]]
 
+  /** The record registry we are building before beginning replay. */
+  private val records = new RecordRegistry
+
+  /** The LogDispatcher for the final system. */
+  private val logdsp = new LogDispatcher
+
   queue.launch()
 
   private def reengage() {
@@ -82,7 +88,7 @@ private class RecoveryAgent (implicit
   private def _reattach (path: Path, thrown: Throwable): Unit =
     fiber.execute {
       reattaching -= path
-      failures +:= ReattachFailure (path, thrown.getMessage)
+      failures +:= ReattachFailure (path, thrown)
       queue.engage()
     }
 
@@ -93,11 +99,17 @@ private class RecoveryAgent (implicit
     reattaching += path
     queue.begin {
       val file = files.open (path, READ, WRITE)
-      SuperBlock.read (file)
-      .map { superblock =>
-        val drive = new Drive (file, superblock.geom, superblock.draining, superblock.id, path)
+      (for {
+        superblock <- SuperBlock.read (file)
+        reader = new LogReader (file, superblock.geom, records)
+        records <- reader.read()
+      } yield {
+        records foreach (_(()))
+        val logwrtr = new LogWriter (file, superblock.geom, logdsp)
+        val drive = new Drive (file, superblock.geom, logwrtr, superblock.draining, superblock.id, path)
         _reattach (path, superblock.common, drive)
-      } .recover { case thrown =>
+      })
+      .recover { case thrown =>
         file.close()
         _reattach (path, thrown)
       }}}
@@ -108,16 +120,22 @@ private class RecoveryAgent (implicit
     recovery = null
     if (failures.isEmpty) {
       events.reattachingDisks (reattached)
-      val group = new DriveGroup (drives, common.gen, common.dno)
-      val agent = new DiskAgent (group)
+      val group = new DriveGroup (logdsp, drives, common.gen, common.dno)
+      val agent = new DiskAgent (logdsp, group)
       val launch = new LaunchAgent () (scheduler, group, events, agent)
       scheduler.pass (cb, launch)
     } else {
-      scheduler.fail (cb, new ReattachException (failures))
+      scheduler.fail (cb, failures.head.thrown) //new ReattachException (failures))
     }}
 
   private def requireNotStarted (message: String): Unit =
     require (recovery != null && recovery.isEmpty, message)
+
+  def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
+    fiber.execute {
+      requireNotStarted ("Must register replayers before starting recovery.")
+      records.replay (desc) (f)
+    }
 
   def reattach (paths: Path*): Async [DiskLaunch] =
     fiber.async { cb =>
@@ -125,8 +143,4 @@ private class RecoveryAgent (implicit
       reattachments ++= paths
       recovery = Some (cb)
       queue.engage()
-    }
-
-  // TODO
-  def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit = ???
-}
+    }}

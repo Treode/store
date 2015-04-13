@@ -18,25 +18,29 @@ package com.treode.disk.edit
 
 import com.treode.async.Callback
 import com.treode.buffer.Output
-import com.treode.disk.{RecordDescriptor,TypeId}
+import com.treode.disk.RecordDescriptor
 
 private abstract class PickledRecord (
-    val tid: TypeId,
-    val cb: Callback [Unit]
-) {
+  val cb: Callback [Unit]
+)  {
+
   def byteSize: Int
-  def write (out: Output)
+  def write (buf: Output)
 }
 
 private object PickledRecord {
 
-  def apply [R] (
-      desc: RecordDescriptor [R],
-      entry: R,
-      cb: Callback [Unit]
-  ): PickledRecord =
-    new PickledRecord (desc.id, cb) {
-      def byteSize = desc.prec.byteSize (entry)
-      def write (out: Output) = desc.prec.pickle (entry, out)
-      override def toString = s"PickledRecord($entry)"
+  def apply [R] (desc: RecordDescriptor [R], entry: R, cb: Callback [Unit]): PickledRecord =
+    new PickledRecord (cb) {
+
+      // We will need this at least once, so compute it eagerly.
+      val byteSize = desc.prec.byteSize (entry) + 8
+
+      def write (buf: Output) {
+        buf.writeLong (desc.id.id)
+        desc.prec.pickle (entry, buf)
+      }
+
+      override def toString =
+        s"PickledRecord(${desc.id}, $entry)"
     }}

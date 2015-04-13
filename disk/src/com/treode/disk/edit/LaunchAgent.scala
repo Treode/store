@@ -45,8 +45,8 @@ private class LaunchAgent (implicit
   def handle (desc: PageDescriptor [_], handler: PageHandler): Unit = ()
 
   // TODO
-  def checkpoint (f: => Async [Unit]): Unit = ???
-  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ???
-  def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit]) = ???
+  def checkpoint (f: => Async [Unit]): Unit = ()
+  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ()
+  def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit]): Unit = ()
   def sysid: SystemId  = ???
 }

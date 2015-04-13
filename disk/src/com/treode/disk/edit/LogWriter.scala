@@ -32,19 +32,19 @@ class LogWriter (
   scheduler: Scheduler
 ) {
 
-  private var pos = 0L
+  private var pos = 1 << 12 // TODO: replace by allocating a segment
   private val buf = PagedBuffer (12)
 
-  // constantly listens for the next batch from the dispatcher
-  listen() run (ignore)
-
-  def listen(): Async [Unit] =
+  private def listen(): Async [Unit] =
     for {
       (_, records) <- dsp.receive()
       _ <- record (records)
     } yield {
       listen() run (ignore)
     }
+
+  def launch(): Unit =
+    listen() run (ignore)
 
   /*
    * Write a batch of records of varying type to the log file.
@@ -64,12 +64,8 @@ class LogWriter (
     buf.writeInt (batch.length) // write count
 
     // Write all batch into the PagedBuffer
-    for (v <- batch) {
-      // Write TypeId of this record
-      buf.writeLong (v.tid.id)
-      // Write record
+    for (v <- batch)
       v.write (buf)
-    }
     val end = buf.writePos // remember where the log ends
 
     // Go back to beginning and fill in the proper length

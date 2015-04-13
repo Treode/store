@@ -28,6 +28,7 @@ import SuperBlock.Common
 private class Drive (
   file: File,
   geom: DriveGeometry,
+  logwrtr: LogWriter,
   private var _draining: Boolean,
   val id: Int,
   val path: Path
@@ -38,7 +39,10 @@ private class Drive (
   def draining = _draining
 
   /** Called when launch completes. */
-  def launch(): Unit = ()
+  def launch() {
+    if (!draining) {
+      logwrtr.launch()
+    }}
 
   def writeSuperblock (common: Common): Async [Unit] =
     guard {

@@ -23,10 +23,15 @@ import com.treode.buffer.PagedBuffer
 
 package edit {
 
-  case class ReattachFailure (path: Path, message: String) {
-    override def toString = s"Could not reattach ${quote (path)}: $message"
+  case class ReattachFailure (path: Path, thrown: Throwable) {
+    override def toString = s"Could not reattach ${quote (path)}: $thrown"
   }
 
   class ReattachException (failures: Seq [ReattachFailure]) extends Exception {
     override def getMessage() = failures mkString "; "
   }}
+
+package object edit {
+
+  private [edit] type LogDispatcher = Dispatcher [PickledRecord]
+}

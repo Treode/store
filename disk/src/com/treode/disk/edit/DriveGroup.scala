@@ -39,6 +39,9 @@ import DriveGroup._
   * superblock at a time. If changes arrive while the superblock is being written, then they are
   * queued until the superblock is completely written.
   *
+  * @param logdsp
+  * The LogDispatcher for the disk system. Used to create new drives.
+  *
   * @param drives
   * The initial set of disk drives. Null after the disk system has closed.
   *
@@ -50,6 +53,7 @@ import DriveGroup._
   * and the new drive, so we never reuse drive IDs.
   */
 private class DriveGroup (
+  logdsp: LogDispatcher,
   private var drives: Map [Int, Drive],
   private var gen: Int,
   private var dno: Int
@@ -233,7 +237,8 @@ private class DriveGroup (
         } else {
           attaching += a.path
           val file = files.open (a.path, READ, WRITE)
-          val drive = new Drive (file, a.geometry, false, dno, a.path)
+          val logwrtr = new LogWriter (file, a.geometry, logdsp)
+          val drive = new Drive (file, a.geometry, logwrtr, false, dno, a.path)
           dno += 1
           newAttaches ::= drive
         }

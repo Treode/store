@@ -29,8 +29,8 @@ class LogReader (
   scheduler: Scheduler
 ) {
 
+  private var pos = 1 << 12 // TODO: replace by reading head from superblock
   private var buf = PagedBuffer (12)
-  private var pos = 0L
 
   def read(): Async [Seq [Unit => Any]] = {
     val builder = Seq.newBuilder [Unit => Any]

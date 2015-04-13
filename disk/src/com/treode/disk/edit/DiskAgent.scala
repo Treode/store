@@ -18,23 +18,37 @@ package com.treode.disk.edit
 
 import java.nio.file.Path
 
-import com.treode.async.Async, Async.supply
-import com.treode.disk.{Disk, DiskController, DiskSystemDigest, DriveAttachment, DriveChange,
-  DriveDigest, DriveGeometry, ObjectId, PageDescriptor, Position, RecordDescriptor}
+import com.treode.async.Async, Async.{async, supply}
+import com.treode.disk.{Disk, DiskConfig, DiskController, DiskSystemDigest, DriveAttachment,
+  DriveChange, DriveDigest, DriveGeometry, ObjectId, OversizedRecordException, PageDescriptor,
+  Position, RecordDescriptor}
 import com.treode.notify.Notification
 
 /** The live Disk system. Implements the user and admin traits, Disk and DiskController, by
   * delegating to the appropriate components.
   */
 private class DiskAgent (
+  logdsp: LogDispatcher,
   group: DriveGroup
+) (
+  implicit config: DiskConfig
 ) extends Disk with DiskController {
+
+  import config.maximumRecordBytes
 
   implicit val disk = this
 
   /** Called by the LaunchAgent when launch completes. */
   def launch(): Unit =
     group.launch()
+
+  def record [R] (desc: RecordDescriptor [R], record: R): Async [Unit] =
+    async { cb =>
+      val p = PickledRecord (desc, record, cb)
+      if (p.byteSize > maximumRecordBytes)
+        throw new OversizedRecordException (maximumRecordBytes, p.byteSize)
+      logdsp.send (p)
+    }
 
   def change (change: DriveChange): Async [Notification] =
     group.change (change)
@@ -65,7 +79,6 @@ private class DiskAgent (
     group.close()
 
   // TODO
-  def record [R] (desc: RecordDescriptor [R], record: R): Async [Unit] = ???
   def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] = ???
   def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] = ???
   def compact (desc: PageDescriptor [_], obj: ObjectId): Unit = ???
