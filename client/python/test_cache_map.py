@@ -34,11 +34,11 @@ class TestCacheMap(object):
         assert(len(value_list) == max_size)
 
         # Check entries maintained
-        rt = 213423423142134 
-        vt = 202132312413123 
+        rt = 2 
+        vt = 1 
         cache_map = CacheMap(max_size) 
-        cache_map.put(rt, vt, 0, 0, 42)
-        assert(cache_map.get(0, 0, read_time=213423423142132).value == 42)
+        cache_map.put(rt, vt, 0, 0, "apple")
+        assert(cache_map.get(0, 0, read_time=rt).value == "apple")
 
         print "PASSED!"
         
@@ -48,38 +48,38 @@ class TestCacheMap(object):
         max_size = 2
         cache_map = CacheMap(max_size)
         # Add entry, verify we can read it
-        rt = 213423423142134
-        vt = 202132312413123  
-        cache_map.put(rt, vt, 0, 0, 42)
-        assert(cache_map.get(0, 0, read_time=213423423142134).value == 42)
+        rt = 6
+        vt = 5  
+        cache_map.put(rt, vt, 0, 0, "apple")
+        assert(cache_map.get(0, 0, read_time=rt).value == "apple")
 
         # Read multiple entries
-        rt = 342523453425 
-        vt = 324523452345 
-        cache_map.put(rt, vt, 0, 1, 43)
-        assert(cache_map.get(0, 1, read_time=342523453425).value == 43)        
+        rt = 4 
+        vt = 3 
+        cache_map.put(rt, vt, 0, 1, "banana")
+        assert(cache_map.get(0, 1, read_time=rt).value == "banana")        
 
-        # Test eviction
-        rt = 234234 
-        vt = 231324 
-        cache_map.put(rt, vt, 0, 2, 44)
-        assert(cache_map.get(0, 2, read_time=234234).value == 44) 
-        assert(cache_map.get(0, 1, read_time=342523453425).value == 43)  
-        assert(cache_map.get(0, 0, read_time=213423423142134) == None)    
+        # Test eviction 
+        rt = 2
+        vt = 1
+        cache_map.put(rt, vt, 0, 2, "cherry")
+        assert(cache_map.get(0, 2, read_time=rt).value == "cherry") 
+        assert(cache_map.get(0, 1, read_time=4).value == "banana")  
+        assert(cache_map.get(0, 0, read_time=6) == None)    
 
         # Test entry updates
-        rt = 213423423142134
-        vt = 202132312413123
-        cache_map.put(rt, vt, 0, 0, 45)
-        assert(cache_map.get(0, 0, read_time=213423423142134).value == 45)
-        assert(cache_map.get(0, 1, read_time=342523453425).value == 43) 
+        rt = 6
+        vt = 5
+        cache_map.put(rt, vt, 0, 0, "date")
+        assert(cache_map.get(0, 0, read_time=rt).value == "date")
+        assert(cache_map.get(0, 1, read_time=342523453425).value == "banana") 
         assert(cache_map.get(0, 2, read_time=234234) == None)
 
-        rt = 232342342342342
-        vt = 213423423142135
-        cache_map.put(rt, vt, 0, 0, 46)
-        assert(cache_map.get(0, 0, read_time=rt).value == 46)   
-        assert(cache_map.get(0, 1, read_time=342523453425).value == 43) 
+        rt = 8
+        vt = 7
+        cache_map.put(rt, vt, 0, 0, "eggfruit")
+        assert(cache_map.get(0, 0, read_time=rt).value == "eggfruit")   
+        assert(cache_map.get(0, 1, read_time=342523453425).value == "banana") 
         assert(cache_map.get(0, 2, read_time=234234) == None) 
         
         print "PASSED!"
