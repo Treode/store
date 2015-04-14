@@ -29,7 +29,7 @@ class DrivesAttachHandlerSpec extends FlatSpec with SpecTools {
 
   "The DrivesAttachHandler" should "handle POST" in
     served { case (port, controller) =>
-      (controller.attach _) .expects (Seq.empty) .returning (supply ((new Notification)))
+      (controller.attach _) .expects (Seq.empty) .returning (supply ((Notification.empty)))
       given
         .port (port)
         .body ("[]")
