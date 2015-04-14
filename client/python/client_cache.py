@@ -135,13 +135,19 @@ class ClientCache(object):
         for key in ops_map:
             (table_id, key_id) = key
             (op, value) = ops_map[key]
-            read_time = TxClock(time.time())
-            value_time = TxClock(time.time())
             if (op == "add" or op == "update"):
+                read_time = TxClock(time.time())
+                value_time = TxClock(time.time())
                 self.cache_map.put(
                     read_time, value_time, table_id, key_id, value)
-            elif (op == "hold" or op == "delete"):
-                # Value already in cache or 
+            elif (op == "hold"):
+                # Value already in cache 
+                read_time = TxClock(time.time())
+                cache_result = self.cache_map.get(table_id, key_id)
+                if (cache_result != None):
+                    # Update the cache entry with a new cache time
+                    cache_result.cached_time = read_time
+            elif (op == "delete"):
                 # Value will eventually be evicted from cache
                 pass
 
@@ -167,7 +173,6 @@ class ClientCache(object):
             value_txclock = response.headers["Value-TxClock"]
             raise StaleException(value_txclock)
 
-        print self.cache_map
 
     def __repr__(self):
         builder = []

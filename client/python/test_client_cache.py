@@ -163,7 +163,10 @@ class TestClientCache(object):
 
         cache.write(condition_time, ops_dict)
 
-        print cache.pool.urlopen.call_args
+        cache.pool.urlopen.assert_called_with(
+            'POST', '/batch-write', 
+            body='[{"table": "table2", "value": null, "key": "key2", "op": "hold"}, {"table": "table1", "value": 42, "key": "key1", "op": "add"}, {"table": "table4", "value": 54, "key": "key4", "op": "update"}, {"table": "table3", "value": 79, "key": "key3", "op": "delete"}]', 
+            headers={'If-Modified-Since': 0, 'Condition-TxClock': 5})
         print "PASSED!"
         
     def test_all(self):
