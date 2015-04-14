@@ -55,6 +55,7 @@ import LogControl._
   */
 private class DriveGroup (
   logdsp: LogDispatcher,
+  pagdsp: PageDispatcher,
   private var drives: Map [Int, Drive],
   private var gen: Int,
   private var dno: Int
@@ -220,8 +221,19 @@ private class DriveGroup (
     val logwrtr = new LogWriter (
       path, file, geom, logdsp, alloc, logbuf, logsegs, logseg.base, logseg.limit, logseg.base)
 
-    new Drive (file, geom, logwrtr, false, id, path)
+    val pagwrtr = new PageWriter (id, file, geom, pagdsp, alloc)
+
+    new Drive (file, geom, logwrtr, pagwrtr, false, id, path)
   }
+
+  def read (pos: Position): Async [PagedBuffer] =
+    for {
+      drives <- fiber.supply (this.drives)
+      drive = drives (pos.disk)
+      buffer <- drive.read (pos.offset, pos.length)
+    } yield {
+      buffer
+    }
 
   /** Enqueue user changes to the set of disk drives. */
   def change (change: DriveChange): Async [Notification] =

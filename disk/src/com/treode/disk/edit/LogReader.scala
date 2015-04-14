@@ -37,13 +37,14 @@ private class LogReader (
   superb: SuperBlock,
   records: RecordRegistry,
   replayer: LogReplayer,
-  logdsp: LogDispatcher
+  logdsp: LogDispatcher,
+  pagdsp: PageDispatcher
 ) (implicit
   scheduler: Scheduler,
   config: DiskConfig
 ) extends BatchIterator [LogEntries] {
 
-  import superb.{geom, draining, logHead}
+  import superb.{draining, id, geom, logHead}
   import superb.geom.{blockAlignDown, blockBits, blockBytes}
 
   class Batch (f: Iterable [LogEntries] => Async [Unit], var cb: Callback [Unit]) {
@@ -158,7 +159,8 @@ private class LogReader (
 
     private def _close() {
       val logwrtr = new LogWriter (path, file, geom, logdsp, alloc, buf, segs, pos, seg.limit, logHead)
-      val drive = new Drive (file, geom, logwrtr, draining, superb.id, path)
+      val pagwrtr = new PageWriter (id, file, geom, pagdsp, alloc)
+      val drive = new Drive (file, geom, logwrtr, pagwrtr, draining, id, path)
       replayer.reattach (drive)
       val cb = this.cb
       this.cb = null

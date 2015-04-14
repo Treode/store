@@ -20,8 +20,8 @@ import java.nio.file.Path
 
 import com.treode.async.Async, Async.{async, supply}
 import com.treode.disk.{Disk, DiskConfig, DiskController, DiskSystemDigest, DriveAttachment,
-  DriveChange, DriveDigest, DriveGeometry, ObjectId, OversizedRecordException, PageDescriptor,
-  Position, RecordDescriptor}
+  DriveChange, DriveDigest, DriveGeometry, ObjectId, OversizedPageException,
+  OversizedRecordException, PageDescriptor, PickledPage, Position, RecordDescriptor}
 import com.treode.notify.Notification
 
 /** The live Disk system. Implements the user and admin traits, Disk and DiskController, by
@@ -29,12 +29,13 @@ import com.treode.notify.Notification
   */
 private class DiskAgent (
   logdsp: LogDispatcher,
+  pagdsp: PageDispatcher,
   group: DriveGroup
 ) (
   implicit config: DiskConfig
 ) extends Disk with DiskController {
 
-  import config.maximumRecordBytes
+  import config.{maximumPageBytes, maximumRecordBytes}
 
   implicit val disk = this
 
@@ -48,6 +49,21 @@ private class DiskAgent (
       if (p.byteSize > maximumRecordBytes)
         throw new OversizedRecordException (maximumRecordBytes, p.byteSize)
       logdsp.send (p)
+    }
+
+  def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
+    for {
+      buf <- group.read (pos)
+    } yield {
+      desc.ppag.unpickle (buf)
+    }
+
+  def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
+    async { cb =>
+      val p = PickledPage (desc, obj, gen, page, cb)
+      if (p.byteSize > maximumPageBytes)
+        throw new OversizedPageException (maximumPageBytes, p.byteSize)
+      pagdsp.send (p)
     }
 
   def change (change: DriveChange): Async [Notification] =
@@ -79,8 +95,6 @@ private class DiskAgent (
     group.close()
 
   // TODO
-  def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] = ???
-  def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] = ???
   def compact (desc: PageDescriptor [_], obj: ObjectId): Unit = ???
   def release (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ???
   def join [A] (task:  Async[A]): Async[A] = ???

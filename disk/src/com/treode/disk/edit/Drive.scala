@@ -29,6 +29,7 @@ private class Drive (
   file: File,
   geom: DriveGeometry,
   logwrtr: LogWriter,
+  pagwrtr: PageWriter,
   private var _draining: Boolean,
   val id: Int,
   val path: Path
@@ -42,7 +43,17 @@ private class Drive (
   def launch() {
     if (!draining) {
       logwrtr.launch()
+      pagwrtr.launch()
     }}
+
+  def read (offset: Long, length: Int): Async [PagedBuffer] =
+    guard {
+      val buf = PagedBuffer (12)
+      for {
+        _ <- file.fill (buf, offset, length)
+      } yield {
+        buf
+      }}
 
   def writeSuperblock (common: Common, finish: Boolean): Async [Unit] =
     guard {

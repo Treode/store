@@ -34,4 +34,6 @@ package edit {
 package object edit {
 
   private [edit] type LogDispatcher = Dispatcher [PickledRecord]
+
+  private [edit] type PageDispatcher = Dispatcher [PickledPage]
 }

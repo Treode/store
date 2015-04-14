@@ -68,6 +68,9 @@ private class RecoveryAgent (implicit
   /** The LogDispatcher for the final system. */
   private val logdsp = new LogDispatcher
 
+  /** The PageDispatcher for the final system. */
+  private val pagdsp = new PageDispatcher
+
   queue.launch()
 
   private def reengage() {
@@ -105,7 +108,7 @@ private class RecoveryAgent (implicit
       val file = files.open (path, READ, WRITE)
       SuperBlock.read (file)
       .map { superb =>
-        val reader = new LogReader (path, file, superb, records, replayer, logdsp)
+        val reader = new LogReader (path, file, superb, records, replayer, logdsp, pagdsp)
         _reattach (path, superb.common, reader)
       }
       .recover { case thrown =>
@@ -123,8 +126,8 @@ private class RecoveryAgent (implicit
         _ <- BatchIterator.merge (readers) .batch (replayer.replay _)
         launch = {
           logdsp.batch = replayer.batch
-          val drives = new DriveGroup (logdsp, replayer.drives, common.gen, common.dno)
-          val agent = new DiskAgent (logdsp, drives)
+          val drives = new DriveGroup (logdsp, pagdsp, replayer.drives, common.gen, common.dno)
+          val agent = new DiskAgent (logdsp, pagdsp, drives)
           new LaunchAgent () (scheduler, drives, events, agent)
         }
       } yield {
