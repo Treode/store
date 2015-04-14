@@ -55,6 +55,9 @@ private class Drive (
         buf
       }}
 
+  def startCheckpoint(): Unit =
+    logwrtr.startCheckpoint()
+
   def writeSuperblock (common: Common, finish: Boolean): Async [Unit] =
     guard {
       val head = logwrtr.getCheckpoint (finish)

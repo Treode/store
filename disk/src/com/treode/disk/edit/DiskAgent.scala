@@ -18,7 +18,7 @@ package com.treode.disk.edit
 
 import java.nio.file.Path
 
-import com.treode.async.Async, Async.{async, supply}
+import com.treode.async.Async, Async.async
 import com.treode.disk.{Disk, DiskConfig, DiskController, DiskSystemDigest, DriveAttachment,
   DriveChange, DriveDigest, DriveGeometry, ObjectId, OversizedPageException,
   OversizedRecordException, PageDescriptor, PickledPage, Position, RecordDescriptor}
@@ -37,11 +37,15 @@ private class DiskAgent (
 
   import config.{maximumPageBytes, maximumRecordBytes}
 
+  private var checkpointer: Checkpointer = null
+
   implicit val disk = this
 
   /** Called by the LaunchAgent when launch completes. */
-  def launch(): Unit =
+  def launch (checkpointer: Checkpointer) {
+    this.checkpointer = checkpointer
     group.launch()
+  }
 
   def record [R] (desc: RecordDescriptor [R], record: R): Async [Unit] =
     async { cb =>
@@ -82,7 +86,7 @@ private class DiskAgent (
     * test to explicitly trigger ones.
     */
   def checkpoint(): Async [Unit] =
-    supply (())
+    checkpointer.checkpoint()
 
   def digest: Async [DiskSystemDigest] =
     for {

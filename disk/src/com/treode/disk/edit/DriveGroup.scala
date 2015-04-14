@@ -183,7 +183,7 @@ private class DriveGroup (
           draining = SortedSet.empty [Path] ++ drains.map (_.path))
       }}
 
-  def launch (): Unit =
+  def launch(): Unit =
     fiber.execute {
       state = Open
       for (drive <- drives.values)
@@ -195,6 +195,7 @@ private class DriveGroup (
     fiber.supply {
       assert (state != Checkpointing && checkpoint.isEmpty)
       state = Checkpointing
+      drives foreach (_._2.startCheckpoint())
     }
 
   def finishCheckpoint(): Async [Unit] =
