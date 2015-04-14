@@ -11,14 +11,15 @@ class TestClientCache(object):
             self.test_client_cache_connection,
             self.test_client_cache_read]
 
-    # Test that we can create a ClientCache instance sucacheessfully
+    # Test that we can create a ClientCache instance successfully
     # Amazing ... 
     def test_client_cache_init(self):
         print "test_client_cache_init",
 
         # TODO Update to actually test Treode
         server = "www.google.com"
-        max_age = 500
+        # TODO 500 -> 10
+        max_age = 10
 
         # Default headers
         cache_default = ClientCache(server)
@@ -45,7 +46,8 @@ class TestClientCache(object):
         print "test_client_cache_connection",
 
         server = "www.google.com"
-        max_age = 1000
+        # TODO 1000 -> 10
+        max_age = 10
 
         cache = ClientCache(server, 
             max_age=max_age)
@@ -65,14 +67,14 @@ class TestClientCache(object):
         headers = {
             "Date": "Wed, 14 Jan 2015 11:49:13 GMT",
             "Last-Modified": "Fri, 10 May 2013 02:07:43 GMT",
-            "Read-TxClock": "1421236153024853",
-            "Value-TxClock": "1368151663681367",
+            "Read-TxClock": "10",
+            "Value-TxClock": "5",
             "Vary": "Request-TxClock"
         }
-        body = """{   "title": "Star Wars",
-    "cast": [
-        { "actor": "Mark Hamill", "role": "Luke Skywalker" },
-        { "actor": "Carrie Fisher", "role": "Princess Leia Organa" } ] }"""
+        body = """{   "title": "Fruits",
+    "types": [
+        { "fruit": "apple", "flavor": "sour" },
+        { "fruit": "banana", "flavor": "mushy" } ] }"""
         status = 200
         response = urllib3.response.HTTPResponse(body=body, headers=headers, status=status)
 
@@ -85,40 +87,44 @@ class TestClientCache(object):
         print "PASSED!"
 
     def test_client_cache_read_with_no_headers(self, cache):
-        read_time = 500
+        # TODO 500 -> 10
+        read_time = 10
         table = "table1"
         key = "key1"
         jsonResult = cache.read(read_time, table, key)
     
-        cache.pool.request.assert_called_with("GET", "/table1/key1", fields={'Read-TxClock': 500})
+        cache.pool.request.assert_called_with("GET", "/table1/key1", fields={'Read-TxClock': 10})
 
-        assert(jsonResult["title"] == "Star Wars")
-        assert(jsonResult["cast"] == [
-            { "actor": "Mark Hamill", "role": "Luke Skywalker" },
-            { "actor": "Carrie Fisher", "role": "Princess Leia Organa" } ])
+        assert(jsonResult["title"] == "Fruits")
+        assert(jsonResult["types"] == [
+            { "fruit": "apple", "flavor": "sour" },
+            { "fruit": "banana", "flavor": "mushy" } ])
 
     def test_client_cache_read_with_headers(self, cache):
-        read_time = 500
+        # TODO 500 -> 10
+        read_time = 10
         
         # With cache and max age
         table = "table1"
         key = "key2"
-        max_age = 234
+        # TODO: 20 -> 8
+        max_age = 8
         no_cache = True
-        condition_time = 12312342344333453234235
+        # TODO 12312342344333453234235 -> 10
+        condition_time = 10000000
         jsonResult = cache.read(read_time, table, key, 
             max_age=max_age, no_cache=no_cache, condition_time=condition_time)
 
         cache.pool.request.assert_called_with("GET", "/table1/key2", 
-            fields={'Cache-Control': 'max-age=234,no-cache', 
-                    'Read-TxClock': 500, 
-                    'Condition-TxClock': 12312342344333453234235L, 
-                    'If-Modified-Since': 12312342344333453L})
+            fields={'Cache-Control': 'max-age=8,no-cache', 
+                    'Read-TxClock': 10, 
+                    'Condition-TxClock': 10000000, 
+                    'If-Modified-Since': 10})
         
-        assert(jsonResult["title"] == "Star Wars")
-        assert(jsonResult["cast"] == [
-            { "actor": "Mark Hamill", "role": "Luke Skywalker" },
-            { "actor": "Carrie Fisher", "role": "Princess Leia Organa" } ])
+        assert(jsonResult["title"] == "Fruits")
+        assert(jsonResult["types"] == [
+            { "fruit": "apple", "flavor": "sour" },
+            { "fruit": "banana", "flavor": "mushy" } ])
 
         # Without cache but max age
         table = "table2"
@@ -127,15 +133,15 @@ class TestClientCache(object):
             max_age=max_age, condition_time=condition_time)
 
         cache.pool.request.assert_called_with("GET", "/table2/key42",
-            fields={'Cache-Control': 'max-age=234', 
-                    'Read-TxClock': 500, 
-                    'Condition-TxClock': 12312342344333453234235L, 
-                    'If-Modified-Since': 12312342344333453L})
+            fields={'Cache-Control': 'max-age=8', 
+                    'Read-TxClock': 10, 
+                    'Condition-TxClock': 10000000, 
+                    'If-Modified-Since': 10})
 
-        assert(jsonResult["title"] == "Star Wars")
-        assert(jsonResult["cast"] == [
-            { "actor": "Mark Hamill", "role": "Luke Skywalker" },
-            { "actor": "Carrie Fisher", "role": "Princess Leia Organa" } ])
+        assert(jsonResult["title"] == "Fruits")
+        assert(jsonResult["types"] == [
+            { "fruit": "apple", "flavor": "sour" },
+            { "fruit": "banana", "flavor": "mushy" } ])
 
     def test_all(self):
         for test in self.tests:

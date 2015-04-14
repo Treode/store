@@ -19,7 +19,7 @@ class ClientCache(object):
         self.pool = pool
 
         # Initialize the cache value store.
-        self.cacheMap = CacheMap(ClientCache.MAX_CACHE_SIZE)
+        self.cache_map = CacheMap(ClientCache.MAX_CACHE_SIZE)
 
     def micro_to_sec(self, time):
         us_per_sec = 10**6
@@ -76,7 +76,13 @@ class ClientCache(object):
         return "/%s/%s" % (table, key)
 
     def read(self, read_time, table, key, max_age=None, no_cache=False, condition_time=None):
-        # Create the read request
+        # If the value is in cache, just return it.
+        cache_result = self.cache_map.get(table, key, read_time)
+        if (cache_result) != None:
+            json_value = cache_result.value
+            return json_value
+
+        # Otherwise, create the read request
         request_path = self.construct_request_path(table, key)
         header_dict = self.construct_header_dict(
             read_time, max_age, no_cache, condition_time)
@@ -86,21 +92,27 @@ class ClientCache(object):
             fields=header_dict)
 
         # Evaluate the response
+        if (response.status != 200):
+            # If the read failed, don't give the user a value.
+            # TODO Remove
+            print response.status
+            # We know the DB had no value at this instant.
+            # TODO Correct?
+            value_time = read_time
+            json_value = None
+        else:
+            # If the read succeeded, parse the response
+            headers = response.getheaders()
+            read_time = headers["Read-TxClock"]
+            value_time = headers["Value-TxClock"]
+            body = response.data
+            json_value = json.loads(body)
 
         # Store the new result in cache regardless of success
-        # TODO update cache
-
-        # If the read failed, don't give the user a value.
-        if (response.status != 200):
-            print response.status
-            return None
-
-        # If the read succeeded, parse the response
-        body = response.data
-        jsonBody = json.loads(body)
+        self.cache_map.put(read_time, value_time, table, key, json_value)
 
         # Return the JSON response to the user
-        return jsonBody
+        return json_value
 
     def write(self, condition_time, op_list):
         pass
