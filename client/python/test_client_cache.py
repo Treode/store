@@ -9,16 +9,14 @@ class TestClientCache(object):
         self.tests = [
             self.test_client_cache_init,
             self.test_client_cache_connection,
-            self.test_client_cache_read]
+            self.test_client_cache_read,
+            self.test_client_cache_write]
 
     # Test that we can create a ClientCache instance successfully
-    # Amazing ... 
     def test_client_cache_init(self):
         print "test_client_cache_init",
 
-        # TODO Update to actually test Treode
         server = "www.google.com"
-        # TODO 500 -> 10
         max_age = 10
 
         # Default headers
@@ -46,7 +44,6 @@ class TestClientCache(object):
         print "test_client_cache_connection",
 
         server = "www.google.com"
-        # TODO 1000 -> 10
         max_age = 10
 
         cache = ClientCache(server, 
@@ -87,33 +84,31 @@ class TestClientCache(object):
         print "PASSED!"
 
     def test_client_cache_read_with_no_headers(self, cache):
-        # TODO 500 -> 10
         read_time = 10
         table = "table1"
         key = "key1"
-        jsonResult = cache.read(read_time, table, key)
+        cache_result = cache.read(read_time, table, key)
+        json_result = cache_result.value
     
         cache.pool.request.assert_called_with("GET", "/table1/key1", fields={'Read-TxClock': 10})
 
-        assert(jsonResult["title"] == "Fruits")
-        assert(jsonResult["types"] == [
+        assert(json_result["title"] == "Fruits")
+        assert(json_result["types"] == [
             { "fruit": "apple", "flavor": "sour" },
             { "fruit": "banana", "flavor": "mushy" } ])
 
     def test_client_cache_read_with_headers(self, cache):
-        # TODO 500 -> 10
         read_time = 10
         
         # With cache and max age
         table = "table1"
         key = "key2"
-        # TODO: 20 -> 8
         max_age = 8
         no_cache = True
-        # TODO 12312342344333453234235 -> 10
         condition_time = 10000000
-        jsonResult = cache.read(read_time, table, key, 
+        cache_result = cache.read(read_time, table, key, 
             max_age=max_age, no_cache=no_cache, condition_time=condition_time)
+        json_result = cache_result.value
 
         cache.pool.request.assert_called_with("GET", "/table1/key2", 
             fields={'Cache-Control': 'max-age=8,no-cache', 
@@ -121,16 +116,17 @@ class TestClientCache(object):
                     'Condition-TxClock': 10000000, 
                     'If-Modified-Since': 10})
         
-        assert(jsonResult["title"] == "Fruits")
-        assert(jsonResult["types"] == [
+        assert(json_result["title"] == "Fruits")
+        assert(json_result["types"] == [
             { "fruit": "apple", "flavor": "sour" },
             { "fruit": "banana", "flavor": "mushy" } ])
 
         # Without cache but max age
         table = "table2"
         key = "key42"
-        jsonResult = cache.read(read_time, table, key, 
+        cache_result = cache.read(read_time, table, key, 
             max_age=max_age, condition_time=condition_time)
+        json_result = cache_result.value
 
         cache.pool.request.assert_called_with("GET", "/table2/key42",
             fields={'Cache-Control': 'max-age=8', 
@@ -138,11 +134,38 @@ class TestClientCache(object):
                     'Condition-TxClock': 10000000, 
                     'If-Modified-Since': 10})
 
-        assert(jsonResult["title"] == "Fruits")
-        assert(jsonResult["types"] == [
+        assert(json_result["title"] == "Fruits")
+        assert(json_result["types"] == [
             { "fruit": "apple", "flavor": "sour" },
             { "fruit": "banana", "flavor": "mushy" } ])
 
+    def test_client_cache_write(self):
+        print "test_client_cache_write ", 
+
+        server = "www.google.com"
+        max_age = 10
+        cache = ClientCache(server, 
+            max_age=max_age)
+
+        # Mock the request method
+        status = 200
+        response = urllib3.response.HTTPResponse(status=status)
+        cache.pool = Mock()
+        cache.pool.urlopen = Mock(return_value=response)
+
+        condition_time = 5
+        ops_dict = {
+            ("table1", "key1"): ("add", 42),
+            ("table2", "key2"): ("hold", None),
+            ("table3", "key3"): ("delete", 79),
+            ("table4", "key4"): ("update", 54) 
+        }
+
+        cache.write(condition_time, ops_dict)
+
+        print cache.pool.urlopen.call_args
+        print "PASSED!"
+        
     def test_all(self):
         for test in self.tests:
             test()

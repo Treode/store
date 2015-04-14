@@ -1,6 +1,8 @@
 import time
+from llist import *
+from tx_clock import *
 
-class _CacheObject(object):
+class _InternalCacheObject(object):
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
@@ -10,20 +12,26 @@ class _CacheObject(object):
     def __repr__(self):
         return type(self).__name__ + str(self.__dict__)
 
-class CacheResult(_CacheObject):
+"""
+object returned by get method; type of cache_map values
+"""
+class CacheResult(_InternalCacheObject):
     def __init__(self, value_time, cached_time, value):
         self.value_time = value_time
         self.cached_time = cached_time
         self.value = value
 
+"""
+dictionary of cache entries implementing LRU cache
+"""
 class CacheMap(object):
 
-    class _CacheKey(_CacheObject):
+    class _CacheKey(_InternalCacheObject):
         def __init__(self, table_id, key_id):
             self.table_id = table_id
             self.key_id = key_id
 
-    class _CacheEntry(_CacheObject):
+    class _CacheEntry(_InternalCacheObject):
         def __init__(self, cache_key, cache_result):
             self.cache_key = cache_key
             self.cache_result = cache_result
@@ -39,22 +47,24 @@ class CacheMap(object):
         # Track the order of entries added to / accessed in 
         # cache to maintain LRU policy
         # [ (table_id, key_id) ]
-        self.lru_list = []
+        # TODO Remove self.lru_list = []
+        self.lru_list = dllist()
 
     def _lru_add(self, entry):
-        self.lru_list.append(entry)
+        self.lru_list.appendleft(entry)
         self._lru_evict()
 
     def _lru_refresh(self, arg):
         if (type(arg) == int):
             i = arg
             lru_list = self.lru_list
-            self.lru_list = lru_list[:i] + lru_list[i+1:] + [lru_list[i]]
+            lru_list.appendleft(lru_list.remove(lru_list.nodeat(i)))
+            self.lru_list = lru_list
         elif (type(arg) == self._CacheEntry):
             entry = arg
             lru_list = self.lru_list
             for i in xrange(len(lru_list)):
-                current_entry = lru_list[i]
+                current_entry = lru_list.nodeat(i).value
                 if (current_entry == entry):
                     self._lru_refresh(i)
                     break
@@ -63,27 +73,35 @@ class CacheMap(object):
         cache_map = self.cache_map
         lru_list = self.lru_list
         max_size = self.max_size
-        # Remove evicted entries from the cache_map
-        remove_index = max(0, len(lru_list)-max_size)
-        entries_to_remove = lru_list[:remove_index]
-        for entry in entries_to_remove:
+        remove_index = len(lru_list) - max(0, len(lru_list)-max_size)
+        for i in xrange(remove_index, len(lru_list)):
+            # Remove evicted entries from the cache_map
+            node = lru_list.nodeat(i)
+            entry = node.value
             cache_key = entry.cache_key
             cache_result = entry.cache_result
             if (cache_key in cache_map):
                 cache_values = cache_map[cache_key]
                 cache_values.remove(cache_result)
-        # Reset the lru_list
-        lru_list = lru_list[remove_index:]
+            # Reset the lru_list
+            lru_list.remove(node)
         self.lru_list = lru_list
 
-    # TODO: Use a doubly-linked list
     def _lru_remove(self, entries): 
         lru_list = self.lru_list
-        for entry in entries:
-            if (entry in lru_list):
-                lru_list.remove(entry)
+        for node in lru_list:
+            if (node.value in entries):
+                lru_list.remove(node)
 
+    """
+    add entry to cache cache_map
+    """
     def put(self, read_time, value_time, table_id, key_id, value):
+        if (type(read_time) != TxClock):
+            read_time = TxClock(read_time)
+        if (type(value_time) != TxClock):
+            value_time = TxClock(value_time)
+
         # Add the entry to the cache
         key = self._CacheKey(table_id, key_id)
         value = CacheResult(value_time, read_time, value)
@@ -96,6 +114,10 @@ class CacheMap(object):
                 current_result = current_results[i]
                 other_vt = current_result.value_time
                 other_ct = current_result.cached_time
+                if (type(other_vt) != TxClock):
+                    raise TypeError("%s is not a TxClock instance" % other_vt)
+                if (type(other_ct) != TxClock):
+                    raise TypeError("%s is not a TxClock instance" % other_ct)
                 if (value_time == other_vt):
                     # Update the cached time of an existing entry
                     current_result.cached_time = max(other_ct, read_time)
@@ -115,10 +137,14 @@ class CacheMap(object):
             self.cache_map[key] = [value]
             self._lru_add(entry)
 
+    """
+    lookup entry in cache cache_map
+    """
     def get(self, table_id, key_id, read_time=None):
-        # TODO: Define TxClock type for time, make sure actually using longs
         if (read_time == None):
-            read_time = time.time()
+            read_time = TxClock(time.time())
+        elif (type(read_time) != TxClock):
+            read_time = TxClock(read_time)
 
         cache_map = self.cache_map
         key = self._CacheKey(table_id, key_id)
@@ -128,9 +154,12 @@ class CacheMap(object):
             if (cache_key == key):
                 cache_results = cache_map[key]
                 for result in cache_results:
-                    if (result.value_time <= read_time and 
+                    value_time = result.value_time
+                    if (type(value_time) != TxClock):
+                        raise TypeError("%s is not a TxClock instance" % value_time)
+                    if (value_time <= read_time and 
                         (most_recent_time == None or 
-                         result.value_time > most_recent_time)):
+                         value_time > most_recent_time)):
                         most_recent_time = result.value_time
                         most_recent_result = result
         # Update LRU list with entry just accessed
@@ -139,3 +168,7 @@ class CacheMap(object):
             self._lru_refresh(entry)
         # Give back CacheResult
         return most_recent_result
+
+    def __str__(self):
+        return str(self.cache_map)
+        
