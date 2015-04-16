@@ -1,20 +1,7 @@
-upstream moviedb {
-  server 127.0.0.1:7070 fail_timeout=0;
-}
-
 server {
-  listen 80 default_server;
-  listen [::]:80 default_server ipv6only=on;
-
-  root /path-to-root;
-  index index.html index.htm;
-
-  location / {
-    try_files $uri $uri/ =404;
-  }
-
-  location /db/ {
-    rewrite /db/(.+) /$1 break;
-    proxy_pass http://moviedb;
-  }
+       root /var/lib/treode/www;
+       location /db/ {
+             rewrite /db/(.+) /$1 break;
+             proxy_pass http://localhost:7070;
+       }
 }
