@@ -25,10 +25,10 @@ private class ControllerAgent (kit: DiskKit, val disk: Disk) extends DiskControl
   def drives: Async [Seq [DriveDigest]] =
     kit.drives.digest
 
-  def attach (items: DriveAttachment*): Async [Notification] =
+  def attach (items: DriveAttachment*): Async [Notification [Unit]] =
     kit.drives.attach (items)
 
-  def drain (items: Path*): Async [Notification] =
+  def drain (items: Path*): Async [Notification [Unit]] =
     kit.drives.drain (items)
 
   def shutdown(): Async [Unit] =

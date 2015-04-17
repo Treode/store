@@ -22,7 +22,7 @@ package com.treode.notify
   *
   * Inspired by [[http://martinfowler.com/articles/replaceThrowWithNotification.html Martin Fowler]].
   */
-sealed abstract class Notification {
+sealed abstract class Notification [+A] {
 
   def isEmpty: Boolean
   def messages: Seq [Message]
@@ -30,7 +30,8 @@ sealed abstract class Notification {
 
 object Notification {
 
-  class Builder {
+  /** Collects errors, if any, and yields `Errors` or `NoErrors` accordingly. */
+  class Builder [+A] {
 
     private var list = List.empty [Message]
 
@@ -38,27 +39,33 @@ object Notification {
     def add (message: Message): Unit =
       list ::= message
 
-    /** Returns NoError or Errors Notification object. */
-    def result: Notification =
+    /** Returns the appropriate case class. */
+    def result: Notification [Unit] =
       if (list.length == 0) {
-        return NoErrors ()
+        return NoErrors (())
       } else {
         return Errors (list)
       }
   }
 
-  case class Errors (messages: Seq [Message]) extends Notification {
+  /** A collection of error messages. */
+  case class Errors (messages: Seq [Message]) extends Notification [Nothing] {
 
     def isEmpty = false
   }
 
-  case class NoErrors () extends Notification {
+  /** No error messages; a successful result. */
+  case class NoErrors [A] (result: A) extends Notification [A] {
 
     def isEmpty = true
     def messages = List.empty
   }
 
-  def empty: Notification = NoErrors ()
+  /** Easily create NoErrors with the given `result`. */
+  def empty [A] (result: A): Notification [A] = NoErrors (result)
 
-  def newBuilder: Builder = new Builder
+  /** Easily create NoErrors with Unit. */
+  def empty: Notification [Unit] = NoErrors (())
+
+  def newBuilder: Builder [Unit] = new Builder ()
 }

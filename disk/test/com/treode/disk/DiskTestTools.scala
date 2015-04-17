@@ -40,7 +40,7 @@ private object DiskTestTools {
 
   val sysid = SystemId (0, 0)
 
-  def assertEqNotification (expected: Message*) (actual: Notification) {
+  def assertEqNotification (expected: Message*) (actual: Notification [Unit]) {
     assert (expected == actual.messages)
   }
 
@@ -57,10 +57,10 @@ private object DiskTestTools {
     def assertDraining (paths: String*): Unit =
       disk.assertDraining (paths: _*)
 
-    def attachAndWait (items: AttachItem*): Async [Notification] =
+    def attachAndWait (items: AttachItem*): Async [Notification [Unit]] =
       disk.attachAndWait (items: _*)
 
-    def attachAndCapture (items: AttachItem*): CallbackCaptor [Notification] =
+    def attachAndCapture (items: AttachItem*): CallbackCaptor [Notification [Unit]] =
       attachAndWait (items: _*) .capture
 
     def attachAndPass (items: AttachItem*) (implicit scheduler: StubScheduler) {
@@ -68,10 +68,10 @@ private object DiskTestTools {
       disk.assertReady()
     }
 
-    def drainAndWait (items: Path*): Async [Notification] =
+    def drainAndWait (items: Path*): Async [Notification [Unit]] =
       agent.drain (items: _*)
 
-    def drainAndCapture (items: Path*): CallbackCaptor [Notification] =
+    def drainAndCapture (items: Path*): CallbackCaptor [Notification [Unit]] =
       drainAndWait (items: _*) .capture()
 
     def drainAndPass (items: Path*) (implicit scheduler: StubScheduler) {
@@ -84,7 +84,7 @@ private object DiskTestTools {
     val agent = disk.asInstanceOf [DiskAgent]
     import agent.kit.{drives, checkpointer, compactor, config, logd, paged}
 
-    def attachAndWait (items: AttachItem*): Async [Notification] =
+    def attachAndWait (items: AttachItem*): Async [Notification [Unit]] =
       drives._attach (items)
 
     def assertDisks (paths: String*) {
