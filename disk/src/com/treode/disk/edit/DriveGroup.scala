@@ -27,8 +27,8 @@ import com.treode.async.misc.RichOption
 import com.treode.buffer.PagedBuffer
 import com.treode.disk.{Disk, DiskConfig, DisksClosedException, DiskEvents, DriveChange, DriveDigest,
   DriveGeometry, FileSystem, ObjectId, Position, SegmentBounds, TypeId, quote}
-import com.treode.disk.messages._
 import com.treode.notify.Notification, Notification.{Errors, NoErrors}
+import com.treode.disk.messages._
 
 import DriveGroup._
 import LogControl._
@@ -80,7 +80,7 @@ private class DriveGroup (
   private var detaches = List.empty [Drive]
 
   /** Callbacks for when the next superblock is written. */
-  private var changers = List.empty [Callback [Notification]]
+  private var changers = List.empty [Callback [Notification [Unit]]]
 
   /** Callback for when the next superblock is written, and this completes a checkpoint. */
   private var checkpoint = Option.empty [Callback [Unit]]
@@ -237,7 +237,7 @@ private class DriveGroup (
     }
 
   /** Enqueue user changes to the set of disk drives. */
-  def change (change: DriveChange): Async [Notification] =
+  def change (change: DriveChange): Async [Notification [Unit]] =
     fiber.async { cb =>
       requireNotClosed()
 
@@ -305,7 +305,7 @@ private class DriveGroup (
             drive.close()
           }
           scheduler.pass (cb, list)
-        case NoErrors () =>
+        case NoErrors (_) =>
           // Otherwise, we can merge our new changes into the queued changes.
           this.dno = dno
           attaches :::= newAttaches

@@ -70,16 +70,16 @@ private class DiskAgent (
       pagdsp.send (p)
     }
 
-  def change (change: DriveChange): Async [Notification] =
+  def change (change: DriveChange): Async [Notification [Unit]] =
     group.change (change)
 
-  def attach (attaches: DriveAttachment*): Async [Notification] =
+  def attach (attaches: DriveAttachment*): Async [Notification [Unit]] =
     change (DriveChange (attaches, Seq.empty))
 
-  def attach (path: Path, geom: DriveGeometry): Async [Notification] =
+  def attach (path: Path, geom: DriveGeometry): Async [Notification [Unit]] =
     attach (DriveAttachment (path, geom))
 
-  def drain (drains: Path*): Async [Notification] =
+  def drain (drains: Path*): Async [Notification [Unit]] =
     change (DriveChange (Seq.empty, drains))
 
   /** Schedule a checkpoint. Normally logging thresholds trigger a checkpooint; this method allows

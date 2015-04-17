@@ -55,10 +55,10 @@ private class ExtendedController (
   def drives: Async [Seq [DriveDigest]] =
     disk.drives
 
-  def attach (items: DriveAttachment*): Async [Notification] =
+  def attach (items: DriveAttachment*): Async [Notification [Unit]] =
     disk.attach (items:_*)
 
-  def drain (paths: Path*): Async [Notification] =
+  def drain (paths: Path*): Async [Notification [Unit]] =
     disk.drain (paths: _*)
 
   def cellId: CellId =
