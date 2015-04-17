@@ -4,7 +4,9 @@ from tx_clock import *
 
 class _InternalCacheObject(object):
     def __eq__(self, other):
-        return self.__dict__ == other.__dict__
+        if (isinstance(other, _InternalCacheObject)):
+            return self.__dict__ == other.__dict__
+        return False
 
     def __hash__(self):
         return hash(repr(self))

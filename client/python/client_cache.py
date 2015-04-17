@@ -26,12 +26,6 @@ class ClientCache(object):
         # Initialize the cache value store.
         self.cache_map = CacheMap(ClientCache.MAX_CACHE_SIZE)
 
-    def _micro_to_sec(self, time):
-        us_per_sec = 10**6
-        # We don't care about integer division since the second
-        # resolution is imprecise anyway.
-        return time / us_per_sec
-
     def _get_most_restrictive_headers(self, max_age, no_cache):
         # Most restrictive constraint for max_age
         if (max_age != None and self.max_age == None):
@@ -66,15 +60,17 @@ class ClientCache(object):
         header_dict = {}
         # Custom Read-TxClock header: Value_time of entry must be earlier
         if (read_time != None):
-            header_dict["Read-TxClock"] = read_time
+        #    print "construct header dict read time: ", read_time.time
+            header_dict["Read-TxClock"] = read_time.time
         if (max_age != None or no_cache == True):
             header_dict["Cache-Control"] = self._get_cache_control_string(max_age, no_cache)
         # condition_time: only send back update if entry modified since condition_time
         if (condition_time != None):
-            header_dict["Condition-TxClock"] = condition_time
+        #    print "construct header dict condition time: ", condition_time.time
+            header_dict["Condition-TxClock"] = condition_time.time
         # Less precise condition_time header for intermediate proxy caches.
         if (condition_time != None):
-            header_dict["If-Modified-Since"] = self._micro_to_sec(condition_time)
+            header_dict["If-Modified-Since"] = condition_time.to_seconds()
         return header_dict
 
     def _construct_request_path(self, table="", key="", batch_write=False):
@@ -84,9 +80,13 @@ class ClientCache(object):
             return "/%s/%s" % (table, key)
 
     """
-    lookup entry in cache
+    lookup entry in cache or request from database
     """
-    def read(self, read_time, table, key, max_age=None, no_cache=False, condition_time=None):
+    def read(self, read_time, table, key, max_age=None, no_cache=False):
+        if ((read_time != None and type(read_time) != TxClock) or 
+            (condition_time != None and type(condition_time) != TxClock)):
+            raise TypeError("read_time and condition_time must be TxClock")
+
         # If the value is in cache, just return it.
         cache_result = self.cache_map.get(table, key, read_time)
         if (cache_result) != None:
@@ -111,8 +111,10 @@ class ClientCache(object):
         else:
             # If the read succeeded, parse the response
             headers = response.getheaders()
-            read_time = headers["Read-TxClock"]
-            value_time = headers["Value-TxClock"]
+            read_time = TxClock(long(headers["Read-TxClock"]), 
+                input_in_usecs=True)
+            value_time = TxClock(long(headers["Value-TxClock"]),
+                input_in_usecs=True)
             body = response.data
             json_value = json.loads(body)
 
@@ -127,7 +129,8 @@ class ClientCache(object):
         for key in ops_map:
             (table_id, key_id) = key
             (op, value) = ops_map[key]
-            entry = { "op": op, "table": table_id, "key": key_id, "value": value }
+            entry = { "op": op, "table": table_id, 
+                "key": key_id, "value": value }
             json_list += [entry]
         return json.dumps(json_list)
 
@@ -135,18 +138,14 @@ class ClientCache(object):
         for key in ops_map:
             (table_id, key_id) = key
             (op, value) = ops_map[key]
-            if (op == "add" or op == "update"):
+            if (op == "create" or op == "hold" or op == "update"):
+                # TODO correct?
                 read_time = TxClock(time.time())
-                value_time = TxClock(time.time())
-                self.cache_map.put(
-                    read_time, value_time, table_id, key_id, value)
-            elif (op == "hold"):
-                # Value already in cache 
-                read_time = TxClock(time.time())
-                cache_result = self.cache_map.get(table_id, key_id)
-                if (cache_result != None):
-                    # Update the cache entry with a new cache time
-                    cache_result.cached_time = read_time
+                cache_result = self.read(
+                    read_time, table_id, key_id, no_cache=True)
+                if (cache_result == None):
+                    raise ValueError("DB does not contain entry %s, which was supposedly just added", 
+                        str(value))
             elif (op == "delete"):
                 # Value will eventually be evicted from cache
                 pass
@@ -155,23 +154,28 @@ class ClientCache(object):
     add entry to cache
     """
     def write(self, condition_time, ops_map):
+        # Verify input type
+        if (condition_time != None and type(condition_time) != TxClock):
+            raise TypeError("condition_time must be TxClock")
+
         # Create the write request
         request_path = self._construct_request_path(batch_write=True)
         header_dict = self._construct_header_dict(
             None, None, None, condition_time)
         body = self._construct_json_list(ops_map)
 
-        # Send the request to the DB server and received response
+        # Send the request to the DB server and receive response
         response = self.pool.urlopen('POST', request_path, 
             headers=header_dict, body=body)
 
-        # Successful batch write
         if (response.status == 200):
-            # Update the cache
+            # Successful batch write; update the cache
             self._update_cache_from_ops_map(ops_map)
-        else:
+        else: 
+            # Otherwise, status == 412, precondition failed
             value_txclock = response.headers["Value-TxClock"]
-            raise StaleException(value_txclock)
+            # TODO: read_txclock?
+            raise StaleException(read_txclock=None, value_txclock=value_txclock)
 
 
     def __repr__(self):
