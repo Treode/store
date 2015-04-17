@@ -2,6 +2,7 @@ from mock import *
 from client_cache import *
 
 import urllib3
+from tx_clock import *
 
 class TestClientCache(object):
 
@@ -16,7 +17,7 @@ class TestClientCache(object):
     def test_client_cache_init(self):
         print "test_client_cache_init",
 
-        server = "www.google.com"
+        server = "www.bbc.com"
         max_age = 10
 
         # Default headers
@@ -43,7 +44,7 @@ class TestClientCache(object):
     def test_client_cache_connection(self):
         print "test_client_cache_connection",
 
-        server = "www.google.com"
+        server = "www.bbc.com"
         max_age = 10
 
         cache = ClientCache(server, 
@@ -57,7 +58,7 @@ class TestClientCache(object):
     def test_client_cache_read(self):
         print "test_client_cache_read",
 
-        server = "www.google.com"
+        server = "www.bbc.com"
         cache = ClientCache(server)
 
         # Mock the request method
@@ -84,13 +85,13 @@ class TestClientCache(object):
         print "PASSED!"
 
     def test_client_cache_read_with_no_headers(self, cache):
-        read_time = 10
+        read_time = TxClock(10)
         table = "table1"
         key = "key1"
         cache_result = cache.read(read_time, table, key)
         json_result = cache_result.value
     
-        cache.pool.request.assert_called_with("GET", "/table1/key1", fields={'Read-TxClock': 10})
+        cache.pool.request.assert_called_with("GET", "/table1/key1", fields={'Read-TxClock': 10000000L})
 
         assert(json_result["title"] == "Fruits")
         assert(json_result["types"] == [
@@ -98,23 +99,23 @@ class TestClientCache(object):
             { "fruit": "banana", "flavor": "mushy" } ])
 
     def test_client_cache_read_with_headers(self, cache):
-        read_time = 10
+        read_time = TxClock(10)
         
         # With cache and max age
         table = "table1"
         key = "key2"
         max_age = 8
         no_cache = True
-        condition_time = 10000000
+        condition_time = TxClock(10)
         cache_result = cache.read(read_time, table, key, 
             max_age=max_age, no_cache=no_cache, condition_time=condition_time)
         json_result = cache_result.value
 
         cache.pool.request.assert_called_with("GET", "/table1/key2", 
             fields={'Cache-Control': 'max-age=8,no-cache', 
-                    'Read-TxClock': 10, 
-                    'Condition-TxClock': 10000000, 
-                    'If-Modified-Since': 10})
+                    'Read-TxClock': 10000000L, 
+                    'Condition-TxClock': 10000000L, 
+                    'If-Modified-Since': 10L})
         
         assert(json_result["title"] == "Fruits")
         assert(json_result["types"] == [
@@ -130,9 +131,9 @@ class TestClientCache(object):
 
         cache.pool.request.assert_called_with("GET", "/table2/key42",
             fields={'Cache-Control': 'max-age=8', 
-                    'Read-TxClock': 10, 
-                    'Condition-TxClock': 10000000, 
-                    'If-Modified-Since': 10})
+                    'Read-TxClock': 10000000L, 
+                    'Condition-TxClock': 10000000L, 
+                    'If-Modified-Since': 10L})
 
         assert(json_result["title"] == "Fruits")
         assert(json_result["types"] == [
@@ -142,33 +143,61 @@ class TestClientCache(object):
     def test_client_cache_write(self):
         print "test_client_cache_write ", 
 
-        server = "www.google.com"
+        server = "www.bbc.com"
         max_age = 10
         cache = ClientCache(server, 
             max_age=max_age)
 
+        self.test_client_cache_write_success(cache)
+        self.test_client_cache_write_failure(cache)
+
+        print "PASSED!"
+    
+    def test_client_cache_write_success(self, cache):
         # Mock the request method
         status = 200
         response = urllib3.response.HTTPResponse(status=status)
         cache.pool = Mock()
         cache.pool.urlopen = Mock(return_value=response)
 
-        condition_time = 5
+        condition_time = TxClock(5)
         ops_dict = {
-            ("table1", "key1"): ("add", 42),
+            ("table1", "key1"): ("create", 42),
             ("table2", "key2"): ("hold", None),
-            ("table3", "key3"): ("delete", 79),
-            ("table4", "key4"): ("update", 54) 
+            ("table3", "key3"): ("update", 54), 
+            ("table4", "key4"): ("delete", 79)
         }
-
         cache.write(condition_time, ops_dict)
 
         cache.pool.urlopen.assert_called_with(
             'POST', '/batch-write', 
-            body='[{"table": "table2", "value": null, "key": "key2", "op": "hold"}, {"table": "table1", "value": 42, "key": "key1", "op": "add"}, {"table": "table4", "value": 54, "key": "key4", "op": "update"}, {"table": "table3", "value": 79, "key": "key3", "op": "delete"}]', 
-            headers={'If-Modified-Since': 0, 'Condition-TxClock': 5})
-        print "PASSED!"
-        
+            body='[{"table": "table2", "value": null, "key": "key2", "op": "hold"}, \
+{"table": "table1", "value": 42, "key": "key1", "op": "create"}, \
+{"table": "table4", "value": 79, "key": "key4", "op": "delete"}, \
+{"table": "table3", "value": 54, "key": "key3", "op": "update"}]',
+            headers={'If-Modified-Since': 5L, 'Condition-TxClock': 5000000L})
+
+    def test_client_cache_write_failure(self, cache):
+        # Mock the request method
+        status = 412
+        response = urllib3.response.HTTPResponse(status=status, 
+            headers={"Value-TxClock": "992"})
+        cache.pool = Mock()
+        cache.pool.urlopen = Mock(return_value=response)
+
+        condition_time = TxClock(5)
+        ops_dict = {
+            ("table1", "key1"): ("update", 112)
+        }
+
+        try:
+            cache.write(condition_time, ops_dict)
+            # The write should fail
+            assert(False)
+        except StaleException as exn:
+            # You failed.  Good job!
+            assert(str(exn) == "992")
+
     def test_all(self):
         for test in self.tests:
             test()
