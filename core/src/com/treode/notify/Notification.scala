@@ -35,7 +35,7 @@ object Notification {
    *  default value of type A, which is passed to NoError if no messages are
    *  added to the Builder.
    */
-  class Builder [+A] (default: A) {
+  class Builder [+A] () {
 
     private var list = List.empty [Message]
 
@@ -44,9 +44,9 @@ object Notification {
       list ::= message
 
     /** Returns the appropriate Notification case class. */
-    def result: Notification [A] =
+    def result: Notification [Unit] =
       if (list.length == 0) {
-        return NoErrors (default)
+        return NoErrors (())
       } else {
         return Errors (list)
       }
@@ -71,10 +71,6 @@ object Notification {
   /** Convenience function for type Unit. */
   def empty (): Notification [Unit] = NoErrors (())
 
-  /** Generate a Builder to collect errors, holding a default `result` in case
-   *  no errors are thrown. */
-  def newBuilder [A] (result: A): Builder [A] = new Builder (result)
-
   /** Convenience function for type Unit. */
-  def newBuilder (): Builder [Unit] = new Builder (())
+  def newBuilder (): Builder [Unit] = new Builder ()
 }
