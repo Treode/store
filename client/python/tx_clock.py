@@ -32,8 +32,7 @@ class TxClock(object):
         return self.time / (10**self.u_factor)
         
     def _almostEqual(self, x, y):
-        # TODO Appropriate epsilon value?
-        epsilon = 0.5
+        epsilon = sys.float_info.epsilon
         return (abs(x - y) < epsilon)
 
     # Make TxClock instances comparable

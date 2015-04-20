@@ -5,3 +5,6 @@ class StaleException(Exception):
 
     def __str__(self):
         return str((self.read_txclock, self.value_txclock))
+
+    def toTuple(self):
+        return (self.read_txclock, self.value_txclock)
