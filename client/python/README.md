@@ -8,9 +8,15 @@ Users can also leverage intermediate HTTP caches.
 
 # Dependencies
 
-Library: urllib3, llist, functools
+## Library: urllib3, llist, functools
 
-Tests: mock
+- pip install urllib3
+- pip install llist
+- pip install functools
+
+## Tests: mock
+
+- pip install mock
 
 # Testing
 

@@ -117,3 +117,7 @@ class TestTransaction(object):
 
 test_transaction = TestTransaction()
 test_transaction.test_all()
+
+if __name__ == "__main__":
+    pass
+    

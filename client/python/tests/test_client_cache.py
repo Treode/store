@@ -6,7 +6,9 @@ from tx_clock import *
 
 class TestClientCache(object):
 
-    def __init__(self):
+    def __init__(self, server, port=80):
+        self.server = server
+        self.port = port
         self.tests = [
             self.test_client_cache_init,
             self.test_client_cache_connection,
@@ -17,7 +19,7 @@ class TestClientCache(object):
     def test_client_cache_init(self):
         print "test_client_cache_init",
 
-        server = "www.bbc.com"
+        server = self.server
         max_age = 10
 
         # Default headers
@@ -44,7 +46,7 @@ class TestClientCache(object):
     def test_client_cache_connection(self):
         print "test_client_cache_connection",
 
-        server = "www.bbc.com"
+        server = self.server
         max_age = 10
 
         cache = ClientCache(server, 
@@ -58,7 +60,7 @@ class TestClientCache(object):
     def test_client_cache_read(self):
         print "test_client_cache_read",
 
-        server = "www.bbc.com"
+        server = self.server
         cache = ClientCache(server)
 
         # Mock the request method
@@ -108,14 +110,12 @@ class TestClientCache(object):
         no_cache = True
         condition_time = TxClock(10)
         cache_result = cache.read(read_time, table, key, 
-            max_age=max_age, no_cache=no_cache, condition_time=condition_time)
+            max_age=max_age, no_cache=no_cache)
         json_result = cache_result.value
 
         cache.pool.request.assert_called_with("GET", "/table1/key2", 
             fields={'Cache-Control': 'max-age=8,no-cache', 
-                    'Read-TxClock': 10000000L, 
-                    'Condition-TxClock': 10000000L, 
-                    'If-Modified-Since': 10L})
+                    'Read-TxClock': 10000000L})
         
         assert(json_result["title"] == "Fruits")
         assert(json_result["types"] == [
@@ -126,14 +126,12 @@ class TestClientCache(object):
         table = "table2"
         key = "key42"
         cache_result = cache.read(read_time, table, key, 
-            max_age=max_age, condition_time=condition_time)
+            max_age=max_age)
         json_result = cache_result.value
 
         cache.pool.request.assert_called_with("GET", "/table2/key42",
             fields={'Cache-Control': 'max-age=8', 
-                    'Read-TxClock': 10000000L, 
-                    'Condition-TxClock': 10000000L, 
-                    'If-Modified-Since': 10L})
+                    'Read-TxClock': 10000000L})
 
         assert(json_result["title"] == "Fruits")
         assert(json_result["types"] == [
@@ -143,7 +141,7 @@ class TestClientCache(object):
     def test_client_cache_write(self):
         print "test_client_cache_write ", 
 
-        server = "www.bbc.com"
+        server = self.server
         max_age = 10
         cache = ClientCache(server, 
             max_age=max_age)
@@ -167,7 +165,11 @@ class TestClientCache(object):
             ("table3", "key3"): ("update", 54), 
             ("table4", "key4"): ("delete", 79)
         }
-        cache.write(condition_time, ops_dict)
+        try:
+            cache.write(condition_time, ops_dict)
+        except (ValueError):
+            # Expected, since we are not running a real DB in this test
+            pass
 
         cache.pool.urlopen.assert_called_with(
             'POST', '/batch-write', 
@@ -196,11 +198,16 @@ class TestClientCache(object):
             assert(False)
         except StaleException as exn:
             # You failed.  Good job!
-            assert(str(exn) == "992")
+            (read_time, value_time) = exn.toTuple()
+            assert(str(value_time) == "992")
 
     def test_all(self):
         for test in self.tests:
             test()
 
-test_instance = TestClientCache()
+test_instance = TestClientCache("www.bbc.com")
 test_instance.test_all()
+
+if __name__ == "__main__":
+    pass
+    

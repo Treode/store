@@ -90,3 +90,6 @@ class TestCacheMap(object):
 
 test_cache_map = TestCacheMap()
 test_cache_map.test_all()
+
+if __name__ == "__main__":
+    pass
