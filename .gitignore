@@ -17,4 +17,4 @@
 /project/project
 /stage
 /stage-*.tgz
-.pyc
+*.pyc
