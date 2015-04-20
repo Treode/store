@@ -37,7 +37,7 @@ trait DiskController {
     *
     * When this method returns, the drives are a part of the disk system.
     */
-  def attach (items: DriveAttachment*): Async [Notification]
+  def attach (items: DriveAttachment*): Async [Notification [Unit]]
 
   /** Drain attached drives.
     *
@@ -45,7 +45,7 @@ trait DiskController {
     * method returns, the drain has begun, but it may not complete until later. When they have
     * drained, the disk system will detach the drives and log a message.
     */
-  def drain (items: Path*): Async [Notification]
+  def drain (items: Path*): Async [Notification [Unit]]
 
   def shutdown(): Async [Unit]
 }

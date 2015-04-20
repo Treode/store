@@ -93,25 +93,25 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
   implicit class RichDiskController (controller: DiskController) {
 
     // TODO: Move this into the DiskController trait.
-    def attach (attaches: DriveAttachment*): Async [Notification] =
+    def attach (attaches: DriveAttachment*): Async [Notification [Unit]] =
       controller.asInstanceOf [DiskAgent] .change (DriveChange (attaches, Seq.empty))
 
     // TODO: Move this into the DiskController trait.
-    def attach (geom: DriveGeometry, paths: Path*): Async [Notification] =
+    def attach (geom: DriveGeometry, paths: Path*): Async [Notification [Unit]] =
       attach (paths map (DriveAttachment (_, geom)): _*)
 
     // NOT TODO: These is for testing only.
-    def attach (paths: String*) (implicit geom: DriveGeometry): Async [Notification] =
+    def attach (paths: String*) (implicit geom: DriveGeometry): Async [Notification [Unit]] =
       attach (geom, paths map (Paths.get (_)): _*)
 
-    def drain (paths: Path*): Async [Notification] =
+    def drain (paths: Path*): Async [Notification [Unit]] =
       controller.asInstanceOf [DiskAgent] .change (DriveChange (Seq.empty, paths))
 
-    def drain (paths: String*) (implicit geom: DriveGeometry): Async [Notification] =
+    def drain (paths: String*) (implicit geom: DriveGeometry): Async [Notification [Unit]] =
       drain (paths map (Paths.get (_)): _*)
 
     def change (attach: Seq [String], drain: Seq [String]) (
-          implicit geom: DriveGeometry): Async [Notification] = {
+          implicit geom: DriveGeometry): Async [Notification [Unit]] = {
       val attachPaths = (attach map (Paths.get(_))) map (DriveAttachment (_, geom))
       val drainPaths = (drain map (Paths.get(_)))
       controller.asInstanceOf [DiskAgent] .change (DriveChange (attachPaths, drainPaths))

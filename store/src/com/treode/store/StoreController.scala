@@ -54,9 +54,9 @@ trait StoreController {
 
   def drives: Async [Seq [DriveDigest]]
 
-  def attach (items: DriveAttachment*): Async [Notification]
+  def attach (items: DriveAttachment*): Async [Notification [Unit]]
 
-  def drain (paths: Path*): Async [Notification]
+  def drain (paths: Path*): Async [Notification [Unit]]
 
   def cellId: CellId
 

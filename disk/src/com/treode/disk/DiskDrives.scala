@@ -32,9 +32,9 @@ private class DiskDrives (kit: DiskKit) {
   import kit.{checkpointer, compactor, config, scheduler, sysid}
 
   type AttachItem = (Path, File, DriveGeometry)
-  type AttachRequest = (Seq [AttachItem], Callback [Notification])
+  type AttachRequest = (Seq [AttachItem], Callback [Notification [Unit]])
   type CloseRequest = Callback [Unit]
-  type DrainRequest = (Seq [Path], Callback [Notification])
+  type DrainRequest = (Seq [Path], Callback [Notification [Unit]])
   type DetachRequest = DiskDrive
   type CheckpointRequest = (Map [Int, Long], Callback [Unit])
 
@@ -110,7 +110,7 @@ private class DiskDrives (kit: DiskKit) {
       _digests
     }
 
-  private def _attach (items: Seq [AttachItem], cb: Callback [Notification]): Unit =
+  private def _attach (items: Seq [AttachItem], cb: Callback [Notification [Unit]]): Unit =
     queue.run (cb) {
 
       val priorDisks = drives.values
@@ -140,7 +140,7 @@ private class DiskDrives (kit: DiskKit) {
         Notification.empty // currently just stand-in to pass type
       }}
 
-  def _attach (items: Seq [AttachItem]): Async [Notification] = {
+  def _attach (items: Seq [AttachItem]): Async [Notification [Unit]] = {
     queue.async { cb =>
       val attaching = items.setBy (_._1)
       if (items.isEmpty)
@@ -151,7 +151,7 @@ private class DiskDrives (kit: DiskKit) {
       attachreqs = attachreqs.enqueue (items, cb)
     }}
 
-  def attach (items: Seq [DriveAttachment]): Async [Notification] =
+  def attach (items: Seq [DriveAttachment]): Async [Notification [Unit]] =
     guard {
       val files =
         for (item <- items)
@@ -183,7 +183,7 @@ private class DiskDrives (kit: DiskKit) {
       detachreqs ::= disk
     }
 
-  private def _drain (items: Seq [Path], cb: Callback [Notification]): Unit =
+  private def _drain (items: Seq [Path], cb: Callback [Notification [Unit]]): Unit =
     queue.run (cb) {
 
       val byPath = drives.values.mapBy (_.path)
@@ -209,7 +209,7 @@ private class DiskDrives (kit: DiskKit) {
         Notification.empty // currently just stand-in to pass type
       }}
 
-  def drain (items: Seq [Path]): Async [Notification] =
+  def drain (items: Seq [Path]): Async [Notification [Unit]] =
     queue.async { cb =>
       if (items.isEmpty)
         throw new ControllerException ("Must list at least one file or device to drain.")
