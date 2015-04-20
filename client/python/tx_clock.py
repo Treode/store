@@ -21,11 +21,11 @@ class TxClock(object):
             time = time.time()
 
         # Convert time to microseconds if needed
+        self.u_factor = 6
         if (self._input_in_usecs):
             self.time = long(time) % TxClock.MaxValue
         else:
-            self.u_factor = 6
-            self.time = long(time * 10**self.u_factor) % TxClock.MaxValue
+            self.time = long(time * 10**self.u_factor) % (TxClock.MaxValue + 1)
 
     def to_seconds(self):
         # Times are ints, not floats
@@ -45,7 +45,7 @@ class TxClock(object):
 
     def __gt__(self, other):
         if (type(other) == TxClock):
-            return self.time > other.time and not self.__eq__(self, other)
+            return self.time > other.time and not self.__eq__(other)
         elif (other == None):
             return True
         else:
