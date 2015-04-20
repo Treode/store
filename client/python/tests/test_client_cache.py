@@ -154,7 +154,7 @@ class TestClientCache(object):
         print "PASSED!"
     
     def test_client_cache_write_success(self, cache):
-        # Mock the request method
+        # Mock the urlopen method
         status = 200
         response = urllib3.response.HTTPResponse(status=status)
         cache.pool = Mock()

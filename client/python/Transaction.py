@@ -22,31 +22,31 @@ class Transaction(object):
 
         # Maintain min read time and max value time seen in transaction
         # (Track consistency of transaction)
-        self.min_rt = TxClock.MinValue
-        self.max_vt = TxClock.MaxValue
+        self.min_rt = TxClock(time=TxClock.MaxValue)
+        self.max_vt = TxClock(time=TxClock.MinValue)
         
         # Maintain Transaction View of all operations
         # view: dict of (table,key) -> (op,value)
         self.view = {}
 
-    def _update_min_rt_max_vt(cached_time, value_time):
-        if (cached_time < min_rt):
-            min_rt = cached_time
-        if (value_time > max_vt):
-            max_vt = value_time
+    def _update_min_rt_max_vt(self, cached_time, value_time):
+        if (cached_time < self.min_rt):
+            self.min_rt = cached_time
+        if (value_time > self.max_vt):
+            self.max_vt = value_time
         # Raise exception if this update makes the transaction inconsistent
-        if (max_vt > min_rt):
-            raise StaleException(read_txclock=min_rt, value_txclock=max_vt)
+        if (self.max_vt > self.min_rt):
+            raise StaleException(read_txclock=self.min_rt, value_txclock=self.max_vt)
 
     def read(self, table, key, max_age=None, no_cache=False): # raises StaleException
         # Derive most restrictive read parameters
         max_age = min(max_age, self.max_age)
         no_cache = no_cache or self.no_cache
         # Attempt to read value from cache
-        cache_result = self.cache.read(read_timestamp, table, key, max_age, no_cache)
+        cache_result = self.cache.read(self.read_timestamp, table, key, max_age, no_cache)
         if (cache_result == None):
             # TODO: value tx clock?
-            raise StaleException(read_txclock=read_timestamp, None)
+            raise StaleException(read_txclock=read_timestamp, value_txclock=None)
         else:
             # Mark this value as a dependency of the transaction in the view
             self.view[(table, key)] = ("hold", None)
@@ -58,7 +58,7 @@ class Transaction(object):
             self._update_min_rt_max_vt(cached_time, value_time)
             return value
 
-    def write(table, key, value):
+    def write(self, table, key, value):
         # Note value is JSON
         try:
             current_entry = self.read(table, key)
@@ -70,15 +70,12 @@ class Transaction(object):
             else:
                 self.view[(table, key)] = ("create", value)
 
-    def delete(table, key):
+    def delete(self, table, key):
         self.view[(table, key)] = ("delete", None)
 
-    def commit(): # raises StaleExcpetion 
+    def commit(self): # raises StaleExcpetion 
         # Perform the commit provided no values have changed in the DB
         # since the min read time, i.e. oldest value we read is still fresh
         # TODO: Correct to use min_rt as condition time?
         condition_time = self.min_rt
         return self.cache.write(condition_time, self.view)
-
-
-# TODO: Check min_rt and max_vt for consistency and throw StaleException as needed
