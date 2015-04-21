@@ -9,23 +9,21 @@ import scala.reflect.ClassTag
  */
 private class DirectDeque [M] (init_capacity: Int = 16) (implicit
    mtag: ClassTag[M]
-) {
+) extends Traversable[M] {
   private var front = 0
   private var back = front
 
   private var array = new Array[M](init_capacity)
 
-  def size = {
-    if (front == back) {
-      0
-    } else if (front < back) {
+  override def size = {
+    if (front <= back) {
       back-front
     } else {
       (array.length-front)+back
     }
   }
 
-  def isEmpty() : Boolean = {
+  override def isEmpty() : Boolean = {
     front == back
   }
 
@@ -35,10 +33,14 @@ private class DirectDeque [M] (init_capacity: Int = 16) (implicit
   def enqueue (element: M) {
     array(back) = element
 
-    if ((back+1)%array.length == front) {
+    var len = array.length
+    var next = (back+1)%len
+    if (next == front) {
       array = resize()
+      front = 0
+      back = len
     } else {
-      back = (back+1)%array.length
+      back = next
     }
   }
 
@@ -72,6 +74,12 @@ private class DirectDeque [M] (init_capacity: Int = 16) (implicit
     array((front+n)%array.length)
   }
 
+  def foreach[U](f: M => U) {
+    for (i <- 0 to size-1) {
+      f(get(i))
+    }
+  }
+
   /**
    * Returns a new array of double the size of the original array
    * with the original elements copied into it
@@ -87,9 +95,6 @@ private class DirectDeque [M] (init_capacity: Int = 16) (implicit
        // copy the front elements from original array to end of newarray
       System.arraycopy(array, 0, newarray, prevlen-front, front)    
     }
-
-    front = 0
-    back = prevlen
 
     newarray
   }}
