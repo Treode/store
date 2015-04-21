@@ -23,7 +23,7 @@ private class DirectDeque [M] (init_capacity: Int = 16) (implicit
     }
   }
 
-  override def isEmpty() : Boolean = {
+  override def isEmpty = {
     front == back
   }
 
@@ -50,7 +50,7 @@ private class DirectDeque [M] (init_capacity: Int = 16) (implicit
    * throws NoSuchElementException if there are no elements
    */
   def dequeue() : M = {
-    if (isEmpty()) {
+    if (isEmpty) {
       throw new NoSuchElementException()
     }
 

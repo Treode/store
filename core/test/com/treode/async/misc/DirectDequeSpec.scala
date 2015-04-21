@@ -6,7 +6,7 @@ class DirectDequeSpec extends FlatSpec {
 
   def assertElements (es: Int*) (deque: DirectDeque[Int]) {
     if (es.isEmpty) {
-      assert (deque.isEmpty())
+      assert (deque.isEmpty)
 
       intercept[NoSuchElementException] { deque.get(0) }
       intercept[NoSuchElementException] { deque.dequeue() }
