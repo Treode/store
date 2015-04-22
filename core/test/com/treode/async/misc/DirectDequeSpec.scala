@@ -22,7 +22,7 @@ class DirectDequeSpec extends FlatSpec {
   "DirectDeque" should "nq more than the deque initial capacity" in {
     val capacity = 3
     val deque = new DirectDeque[Int](capacity)
-    // enqueue more than the initial capacity
+
     for (i <- 1 to capacity+1) {
       deque.enqueue(i)
     }
@@ -32,32 +32,27 @@ class DirectDequeSpec extends FlatSpec {
   it should "err, nq, dq, err" in {
     val deque = new DirectDeque[Int](1)
     assertElements () (deque)
-    // enqueue one element
+
     deque.enqueue(1)
     assertElements (1) (deque)
-    // dequeue that one element
-    var element = deque.dequeue()
-    assert (element == 1)
+
+    assert (deque.dequeue() == 1)
     assertElements () (deque)
   }
   
   it should "nq, nq, dq, dq, err" in {
     val deque = new DirectDeque[Int](2)
-    // enqueue two elements
+
     deque.enqueue(1)
     assertElements (1) (deque)
 
     deque.enqueue(2)
     assertElements (1, 2) (deque)
 
-    // dequeue the two elements
-    //  - should return in the order they were added to the deque
-    var element = deque.dequeue()
-    assert (element == 1)
+    assert (deque.dequeue() == 1)
     assertElements (2) (deque)
 
-    element = deque.dequeue()
-    assert (element == 2)
+    assert (deque.dequeue() == 2)
     assertElements () (deque)
   }
 
@@ -67,15 +62,13 @@ class DirectDequeSpec extends FlatSpec {
     deque.enqueue(1)
     assertElements (1) (deque)
 
-    var element = deque.dequeue()
-    assert (element == 1)
+    assert (deque.dequeue() == 1)
     assertElements () (deque)
 
     deque.enqueue(2)
     assertElements (2) (deque)
 
-    element = deque.dequeue()
-    assert (element == 2)
+    assert (deque.dequeue() == 2)
     assertElements () (deque)
   }
 
@@ -85,8 +78,7 @@ class DirectDequeSpec extends FlatSpec {
     deque.enqueue(1)
     assertElements (1) (deque)
 
-    var element = deque.dequeue()
-    assert (element == 1)
+    assert (deque.dequeue() == 1)
     assertElements () (deque)
 
     deque.enqueue(1)
@@ -95,18 +87,16 @@ class DirectDequeSpec extends FlatSpec {
     deque.enqueue(2)
     assertElements (1, 2) (deque)  
 
-    element = deque.dequeue()
-    assert (element == 1)
+    assert (deque.dequeue() == 1)
     assertElements (2) (deque)
 
-    element = deque.dequeue()
-    assert (element == 2)
+    assert (deque.dequeue() == 2)
     assertElements () (deque)
   }
 
   it should "nq, nq, nq, dq, dq, dq, err, nq, dq, err" in {
     val deque = new DirectDeque[Int](3)
-    // enqueue two elements
+
     deque.enqueue(1)
     assertElements (1) (deque)
 
@@ -116,24 +106,18 @@ class DirectDequeSpec extends FlatSpec {
     deque.enqueue(3)
     assertElements (1, 2, 3) (deque)
 
-    // dequeue the three elements
-    //  - should return in the order they were added to the deque
-    var element = deque.dequeue()
-    assert (element == 1)
+    assert (deque.dequeue() == 1)
     assertElements (2, 3) (deque)
 
-    element = deque.dequeue()
-    assert (element == 2)
+    assert (deque.dequeue() == 2)
     assertElements (3) (deque)
 
-    element = deque.dequeue()
-    assert (element == 3)
+    assert (deque.dequeue() == 3)
     assertElements () (deque)
 
     deque.enqueue(1)
     assertElements (1) (deque)
 
-    element = deque.dequeue()
-    assert (element == 1)
+    assert (deque.dequeue() == 1)
     assertElements () (deque)
   }}
