@@ -18,6 +18,7 @@ package com.treode.twitter.server.handler
 
 import com.jayway.restassured.RestAssured.given
 import com.treode.async.Async, Async.supply
+import com.treode.disk.messages._
 import com.treode.notify.Notification
 import com.treode.store.{Store, StoreController}
 import org.scalatest.FlatSpec
@@ -47,4 +48,21 @@ class DrivesAttachHandlerSpec extends FlatSpec with SpecTools {
         .statusCode (405)
       .when
         .get ("/")
+    }
+
+  it should "handle errors by returning a JSON array" in
+    served { case (port, controller) =>
+      val notification = Notification.buildErrors(AlreadyAttached("f1"), AlreadyAttached("f2"))
+      (controller.attach _) .expects (Seq.empty) .returning (supply (notification))
+      given
+        .port (port)
+        .body ("[]")
+      .expect
+        .statusCode (400)
+        .body (matchesJson ("""[
+          "Already attached: \"f1\"",
+          "Already attached: \"f2\""
+          ]"""))
+      .when
+        .post ("/")
     }}

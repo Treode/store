@@ -24,9 +24,9 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import com.treode.disk.{DiskController, DiskLaunch, DiskTestConfig, DriveAttachment, DriveChange,
   DriveGeometry, StubFileSystem}
-import com.treode.disk.DiskTestTools._
+import com.treode.disk.DiskTestTools.assertEqNotification
 import com.treode.disk.stubs.StubDiskEvents
-import com.treode.notify.Notification, Notification.{Errors, NoErrors}
+import com.treode.notify.Notification
 import com.treode.disk.messages._
 import com.treode.pickle.Picklers
 import com.treode.tags.Periodic

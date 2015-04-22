@@ -16,7 +16,8 @@
 
 package com.treode.disk
 
-import java.nio.file.Path
+import java.nio.file.{Path, Paths}
+import scala.language.implicitConversions
 
 import com.treode.notify.Message
 
@@ -38,3 +39,9 @@ package messages {
   case class AlreadyDraining (drive: Path) extends Message {
     def en = s"Already draining: ${quote (drive)}"
   }}
+
+package object messages {
+
+  implicit def stringToPath (path: String): Path =
+    Paths.get (path)
+}

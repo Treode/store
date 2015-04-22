@@ -16,9 +16,14 @@
 
 package com.treode.twitter.server
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
+import com.treode.notify.Notification, Notification._
 import com.treode.twitter.finagle.http.{RichResponse, mapper}
 import com.twitter.finagle.http.{Request, Response, Status}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
+
 
 package object handler {
 
@@ -27,6 +32,20 @@ package object handler {
     def apply (req: Request, status: HttpResponseStatus = Status.Ok): Response = {
       val rsp = req.response
       rsp.status = status
+      rsp
+    }
+
+    def apply (req: Request, notifications: Notification [Unit]): Response = {
+      val rsp = req.response
+      notifications match {
+        case errors @ Errors (_) =>
+          val mapper = new ObjectMapper() with ScalaObjectMapper
+          mapper.registerModule (DefaultScalaModule)
+          rsp.write(mapper.writeValueAsString(errors.strings))
+          rsp.status = Status.BadRequest
+        case NoErrors (_) =>
+          rsp.status = Status.Ok
+      }
       rsp
     }
 
