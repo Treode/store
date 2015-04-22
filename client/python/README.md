@@ -12,7 +12,6 @@ Users can also leverage intermediate HTTP caches.
 
 - pip install urllib3
 - pip install llist
-- pip install functools
 
 ## Tests: mock
 
