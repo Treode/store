@@ -16,6 +16,7 @@
 
 package com.treode.twitter.server
 
+import com.treode.notify.Notification, Notification._
 import com.treode.twitter.finagle.http.{RichResponse, mapper}
 import com.twitter.finagle.http.{Request, Response, Status}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
@@ -27,6 +28,18 @@ package object handler {
     def apply (req: Request, status: HttpResponseStatus = Status.Ok): Response = {
       val rsp = req.response
       rsp.status = status
+      rsp
+    }
+
+    def apply (req: Request, notifications: Notification [Unit]): Response = {
+      val rsp = req.response
+      notifications match {
+        case errors @ Errors (_) =>
+          rsp.write(mapper.writeValueAsString(notifications))
+          rsp.status = Status.BadRequest
+        case NoErrors (_) =>
+          rsp.status = Status.Ok
+      }
       rsp
     }
 

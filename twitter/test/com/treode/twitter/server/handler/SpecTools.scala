@@ -16,6 +16,8 @@
 
 package com.treode.twitter.server.handler
 
+import java.nio.file.{Path, Paths}
+import scala.language.implicitConversions
 import scala.util.Random
 
 import com.fasterxml.jackson.databind.JsonNode
@@ -29,8 +31,12 @@ import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Suite
 
+
 trait SpecTools extends MockFactory {
   this: Suite =>
+
+  implicit def stringToPath (path: String): Path =
+    Paths.get (path)
 
   def handler (controller: StoreController): Service [Request, Response]
 

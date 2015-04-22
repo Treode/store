@@ -64,7 +64,7 @@ class DrivesAttachHandler (controller: StoreController) extends Service [Request
       case Method.Post =>
         val drives = req.readJson [Seq [DriveAttachment]]
         controller.attach (drives: _*)
-          .map (_ => respond (req, Status.Ok))
+          .map (respond (req, _))
           .toTwitterFuture
 
       case _ =>
@@ -79,7 +79,7 @@ class DrivesDrainHandler (controller: StoreController) extends Service [Request,
       case Method.Post =>
         val paths = req.readJson [Seq [Path]]
         controller.drain (paths: _*)
-          .map (_ => respond (req, Status.Ok))
+          .map (respond (req, _))
           .toTwitterFuture
 
       case _ =>

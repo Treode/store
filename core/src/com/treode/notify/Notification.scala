@@ -16,7 +16,7 @@
 
 package com.treode.notify
 
-/** Accumulate errors and to report them. An alternative to throwing an
+/** Accumulate errors to report them. An alternative to throwing an
   * exception on the first mistake, and forcing the caller to resolve errors
   * one-by-one.
   *
@@ -31,7 +31,7 @@ sealed abstract class Notification [+A] {
 object Notification {
 
   /** Collects errors, if any, and yields `Errors` or `NoErrors` accordingly. */
-  class Builder [+A] {
+  class Builder {
 
     private var list = List.empty [Message]
 
@@ -61,11 +61,16 @@ object Notification {
     def messages = List.empty
   }
 
-  /** Easily create NoErrors with the given `result`. */
-  def empty [A] (result: A): Notification [A] = NoErrors (result)
+  /** Build Errors with varargs. */
+  def apply (messages: Message*): Notification [Unit] =
+    if (messages.length == 0)
+      empty
+    else
+      Errors (messages)
 
   /** Easily create NoErrors with Unit. */
   def empty: Notification [Unit] = NoErrors (())
 
-  def newBuilder: Builder [Unit] = new Builder ()
+  /** Generate a new Builder object for Notifications */
+  def newBuilder: Builder = new Builder
 }
