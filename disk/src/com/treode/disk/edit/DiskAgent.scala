@@ -38,12 +38,14 @@ private class DiskAgent (
   import config.{maximumPageBytes, maximumRecordBytes}
 
   private var checkpointer: Checkpointer = null
+  private var compactor: Compactor = null
 
   implicit val disk = this
 
   /** Called by the LaunchAgent when launch completes. */
-  def launch (checkpointer: Checkpointer) {
+  def launch (checkpointer: Checkpointer, compactor: Compactor) {
     this.checkpointer = checkpointer
+    this.compactor = compactor
     group.launch()
   }
 
@@ -69,6 +71,9 @@ private class DiskAgent (
         throw new OversizedPageException (maximumPageBytes, p.byteSize)
       pagdsp.send (p)
     }
+
+  def compact (desc: PageDescriptor[_], obj: ObjectId): Unit =
+    compactor.compact (desc.id, obj)
 
   def change (change: DriveChange): Async [Notification [Unit]] =
     group.change (change)
@@ -99,7 +104,6 @@ private class DiskAgent (
     group.close()
 
   // TODO
-  def compact (desc: PageDescriptor [_], obj: ObjectId): Unit = ???
   def release (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ???
   def join [A] (task:  Async[A]): Async[A] = ???
   def drives: Async [Seq [DriveDigest]] = ???
