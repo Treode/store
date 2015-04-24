@@ -17,7 +17,7 @@ Caches and Transactions mediate between client operations and HTTP requests.
 
 There are multiple caches between the user of TreodeDB and the DB itself: the client cache and HTTP caches. These two caching mechanisms interact: when the client cache sends an HTTP request, it may be handled by an intermediate HTTP cache. This document describes the behavior of the cache that is part of a TreodeDB client library, and it describes how the client cache uses HTTP directives to control the HTTP caches.
 
-![Client and proxy caches.](img/figure1.png)
+![Client and proxy caches.](img/caches.png)
 
 ### HTTP Dates vs TxClocks
 
@@ -337,20 +337,19 @@ We propose two possible designs for implementing the cache; the preferable of th
     get (read_time: TxClock, table: String, key: String): CacheResult
     put (read_time: TxClock, value_time: TxClock, table: String, key: string, value: JSON)
 
-#### Hash Table of Lists
+#### Hash Table of Arrays
 
-The cache may be a hash table of lists (or arrays):
+![Client and proxy caches.](img/hashtable.png)
 
-    // (table, key) -> List (value_time, cached_time, value)
-    (string, string) -> List (TxClock, TxClock, JSON)
+The cache may be a doubly-linked list of entries, plus a hash table of arrays (or lists) of those entries.
 
-In Python, the top-level map is a standard Python dictionary, and the inner map is simply an array of tuples. The `(table, key)` keys are composed by concatenating the table name and key.  Each `(table, key)` maps to an array with entries of `(value_time, cached_time, value)`. Note that the value may be None to indicate that there is no value for duration.
+In Python, the hashtable is a standard Python dictionary. The `table:key` keys are composed by concatenating the table name and key.  Each `table:key` maps to an array of references to nodes in the LRU list. And each node of the LRU list contains the value, its timestamps and the LRU’s previous and next pointers.
 
-To `get` an item as of a given `read_time`, we lookup the list for `table:key`, and then we search that list for the *most recent* `value_time` on or before the given `read_time`. We return the tuple `(value_time, cached_time, JSON value)`
+To `get` an item as of a given `read_time`, we lookup the array for `table:key`, and then we search that list for the *most recent* `value_time` on or before the given `read_time`. We return the tuple `(value_time, cached_time, JSON value)`
 
-To `put` an item with a given `value_time`, we lookup the list for `table:key`, search that list for a tuple with the *same* `value_time`. If we find one, we set the `cached_time` of that tuple to the greater of the given `read_time` or the `cached_time` already recorded in the tuple. If we do not find an entry with the *same* `value_time`, we add a new tuple and we may need to remove the least recently used tuple in the cache.
+To `put` an item with a given `value_time`, we lookup the array for `table:key`, search that array for a tuple with the *same* `value_time`. If we find one, we set the `cached_time` of that tuple to the greater of the given `read_time` or the `cached_time` already recorded in the tuple. If we do not find an entry with the *same* `value_time`, we add a new tuple and we may need to remove the least recently used tuple in the cache.
 
-If the lists (or arrays) are unsorted, then `add` is *O*(1), and `find` (floor), `replace`, and `remove` are each *O*(n).  If the lists are sorted, then all the operations are *O*(n). We expect the most frequent operations to be `find`, `replace` and `remove`; sorting would not improve the asymptotic runtimes of these operations. Furthermore, we expect the lists to be small, so the effort of sorting would be moot.
+If the arrays (or lists) are unsorted, then `add` is *O*(1), and `find` (floor), `replace`, and `remove` are each *O*(n).  If the lists are sorted, then all the operations are *O*(n). We expect the most frequent operations to be `find`, `replace` and `remove`; sorting would not improve the asymptotic runtimes of these operations. Furthermore, we expect the lists to be small, so the effort of sorting would be moot.
 
 #### Skiplist of Tuples
 
