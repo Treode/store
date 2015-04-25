@@ -10,6 +10,7 @@ Caches and Transactions mediate between client operations and HTTP requests.
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 - Parameters: 
     1. server: string (required)
     2. port: string (port=80)
@@ -30,6 +31,9 @@ Caches and Transactions mediate between client operations and HTTP requests.
 =======
 ## Background
 >>>>>>> 5f93eb3... Reorganization, diagrams and wordsmithing for client design.
+=======
+## Background
+>>>>>>> c89a70c3274533c8a0747d34a7055fb0354a9440
 
 **Alert**: There are multiple caches and multiple timestamps. This is done to ensure that laypeople don't fiddle with our code. We clarify the multiplicities here.
 
@@ -86,6 +90,7 @@ Conceptually, a cache is a table such as the prototypical one here. Operationall
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 If the arraylists are unsorted, then `add` is *O(1)*, and `find` (floor), `replace`, and `remove` are each *O(n)*, where `n` is the length of the arraylist.  If the arraylists are sorted (which takes *O(nlogn)*), all the operations are *O(n)*.  Thus, the arraylists do not need to be sorted, as sorting would not improve the asymptotic runtimes of these operations.
 =======
 If the arraylists are unsorted, then `add` is *O(1)*, and `find` (floor), `replace`, and `remove` are each *O(n)*, where `n` is the length of the arraylist.  If the arraylists are sorted (which takes *O(n log n)*), all the operations are *O(n)*.  Thus, the arraylists do not need to be sorted, as sorting would not improve the asymptotic runtimes of these operations.
@@ -93,6 +98,9 @@ If the arraylists are unsorted, then `add` is *O(1)*, and `find` (floor), `repla
 =======
 ### Conditional Write Batches
 >>>>>>> 5f93eb3... Reorganization, diagrams and wordsmithing for client design.
+=======
+### Conditional Write Batches
+>>>>>>> c89a70c3274533c8a0747d34a7055fb0354a9440
 
 The standard HTTP protocol permits updating one value per request; fortunately the HTTP specification leaves room for extensions. To implement transactions, we must have the ability to update multiple values as an atomic unit, that is all or nothing. TreodeDB supports multiple mechanisms for bundling updates into a batch.
 
@@ -134,6 +142,7 @@ In a POST, PUT or DELETE request header, this specifies that the DB should apply
 POST, PUT and DELETE requests may be part of a write batch. POST requests to “/multi” will contain a write batch inside. All entries included in the write batch must be unchanged since the Condition-TxClock timestamp.
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ## HTTP Message Formatting
 <<<<<<< HEAD
 First, we specify the default and custom headers our HTTP messages utilize.  Then we describe the expected forms of requests/responses between the cache and TreodeDB server.
@@ -155,6 +164,13 @@ In our use of HTTP directives, the term *age* refers to time since the user-spec
 =======
 - Directive **item**: An item number and total count, e.g. `2/3`.
 >>>>>>> 5f93eb3... Reorganization, diagrams and wordsmithing for client design.
+=======
+### Custom Header: Transaction
+
+- Directive **id**: An arbitrary identifier represented in base64, hexadecimal, decimal or octal.
+
+- Directive **item**: An item number and total count, e.g. `2/3`.
+>>>>>>> c89a70c3274533c8a0747d34a7055fb0354a9440
 
 The transaction ID must be globally unique, and the application is responsible for ensuring that.
 
@@ -340,7 +356,10 @@ The the client should retry the transaction with a smaller value for the max-age
 
 When the client pipelines requests, the server provides the response multiple times, once for each request.
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> c89a70c3274533c8a0747d34a7055fb0354a9440
 <a name="cache"></a>
 # Cache
 
@@ -443,7 +462,10 @@ These max\_age and no\_cache values also appear in cache read method, though use
 
 The write method sends the [transaction’s view](#tx-view) to the DB server as a conditional batch write. If the server accepts the batch write, the write method also updates the cache to reflect the newly written values. Otherwise, the write method throws a stale exception, including the value timestamp in the DB that caused the write reject if it is available.
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> c89a70c3274533c8a0747d34a7055fb0354a9440
 <a name="transaction"></a>
 # Transaction
 
@@ -583,6 +605,7 @@ Commit passes the map to the cache’s write method, which iterates through the 
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 To commit, we simply pass this map to the Cache write method, which iterates through the map entries and constructs a batch write composed of all its entries.  Finally, it sends this batch write to the DB server.
 =======
 To commit, we simply pass this map to the Cache write method, which iterates through the map entries and constructs a batch write composed of all its entries.  Finally, it sends this batch write to the DB server.
@@ -590,3 +613,6 @@ To commit, we simply pass this map to the Cache write method, which iterates thr
 =======
 [rfc7234-5.2.1]: http://tools.ietf.org/html/rfc7234#section-5.2.1 "Request Cache-Control Directives"
 >>>>>>> 5f93eb3... Reorganization, diagrams and wordsmithing for client design.
+=======
+[rfc7234-5.2.1]: http://tools.ietf.org/html/rfc7234#section-5.2.1 "Request Cache-Control Directives"
+>>>>>>> c89a70c3274533c8a0747d34a7055fb0354a9440
