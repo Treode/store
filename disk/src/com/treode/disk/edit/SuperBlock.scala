@@ -30,6 +30,7 @@ private case class SuperBlock (
   id: Int,
   geom: DriveGeometry,
   draining: Boolean,
+  logHead: Long,
   common: Common
 )
 
@@ -53,9 +54,9 @@ private object SuperBlock {
   val pickler = {
     import DiskPicklers._
     val common = Common.pickler
-    wrap (int, driveGeometry, boolean, common)
+    wrap (int, driveGeometry, boolean, long, common)
     .build ((SuperBlock.apply _).tupled)
-    .inspect (v => (v.id, v.geom, v.draining, v.common))
+    .inspect (v => (v.id, v.geom, v.draining, v.logHead, v.common))
   }
 
   /** Read and unpickle the superblock. */

@@ -263,7 +263,7 @@ trait DiskChecks extends AsyncChecks {
     if (!crashed)
       for ((cb, (effect, target)) <- cbs zip effects)
         if (cb.hasFailed [Throwable])
-          fail (s"$effect failed: ${cb.assertFailed [Throwable]}")
+          throw cb.assertFailed [Throwable]
         else if (!cb.hasPassed)
           fail (s"$effect did not complete $cb")
     (count, crashed)

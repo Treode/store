@@ -28,7 +28,7 @@ object MovieResource {
   def apply (host: HostId, movies: MovieStore, router: Router) {
 
     def get (request: Request, id: String): Async [Response] = {
-      val rt = request.requestTxClock
+      val rt = request.readTxClock
       val ct = request.conditionTxClock (TxClock.MinValue)
       for {
         (vt, movie) <- movies.readMovie (rt, id)
@@ -43,7 +43,7 @@ object MovieResource {
         }}}
 
     def query (request: Request): Async [Response] = {
-      val rt = request.requestTxClock
+      val rt = request.readTxClock
       val q = request.query
       for {
         result <- movies.query (rt, q, true, false)
@@ -60,8 +60,8 @@ object MovieResource {
       } yield {
         respond.created (request, vt, s"/movie/$id")
       }) .recover {
-        case _: StaleException =>
-          respond (request, Status.PreconditionFailed)
+        case exn: StaleException =>
+          respond.stale (request, exn.time)
       }}
 
     def put (request: Request, id: String): Async [Response] = {
@@ -73,8 +73,8 @@ object MovieResource {
       } yield {
         respond.ok (request, vt)
       }) .recover {
-        case _: StaleException =>
-          respond (request, Status.PreconditionFailed)
+        case exn: StaleException =>
+          respond.stale (request, exn.time)
       }}
 
     router.register ("/movie/") { request =>

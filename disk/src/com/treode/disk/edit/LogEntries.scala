@@ -16,14 +16,18 @@
 
 package com.treode.disk.edit
 
-import com.treode.async.{Async, Scheduler}, Async.async
-import com.treode.disk.{Dispatcher, RecordDescriptor}
+import com.treode.async.Async, Async.supply
 
-private class LogDispatcher (implicit scheduler: Scheduler)
-extends Dispatcher [PickledRecord] {
+case class LogEntries (batch: Long, entries: Seq [Unit => Any]) extends Ordered [LogEntries] {
 
-  def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit] =
-    async { cb =>
-      send (PickledRecord(desc, entry, cb))
-    }
+  def compare (that: LogEntries): Int  =
+    this.batch compare that.batch
+}
+
+object LogEntries extends Ordering [LogEntries] {
+
+  val empty = LogEntries (0, Seq.empty)
+
+  def compare (x: LogEntries, y: LogEntries): Int =
+    x compare y
 }

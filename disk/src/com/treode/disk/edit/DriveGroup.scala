@@ -27,8 +27,11 @@ import com.treode.async.misc.RichOption
 import com.treode.buffer.PagedBuffer
 import com.treode.disk.{Disk, DiskConfig, DisksClosedException, DiskEvents, DriveChange, DriveDigest,
   DriveGeometry, FileSystem, ObjectId, Position, SegmentBounds, TypeId, quote}
+import com.treode.notify.Notification, Notification.{Errors, NoErrors}
+import com.treode.disk.messages._
 
 import DriveGroup._
+import LogControl._
 
 /** All the disk drives in the disk system.
   *
@@ -36,6 +39,9 @@ import DriveGroup._
   * requires a write to the superblock. The DriveGroup ensures there is only one active write to
   * superblock at a time. If changes arrive while the superblock is being written, then they are
   * queued until the superblock is completely written.
+  *
+  * @param logdsp
+  * The LogDispatcher for the disk system. Used to create new drives.
   *
   * @param drives
   * The initial set of disk drives. Null after the disk system has closed.
@@ -48,6 +54,8 @@ import DriveGroup._
   * and the new drive, so we never reuse drive IDs.
   */
 private class DriveGroup (
+  logdsp: LogDispatcher,
+  pagdsp: PageDispatcher,
   private var drives: Map [Int, Drive],
   private var gen: Int,
   private var dno: Int
@@ -72,7 +80,7 @@ private class DriveGroup (
   private var detaches = List.empty [Drive]
 
   /** Callbacks for when the next superblock is written. */
-  private var changers = List.empty [Callback [Unit]]
+  private var changers = List.empty [Callback [Notification [Unit]]]
 
   /** Callback for when the next superblock is written, and this completes a checkpoint. */
   private var checkpoint = Option.empty [Callback [Unit]]
@@ -155,7 +163,7 @@ private class DriveGroup (
 
       for {
         _ <- drains.latch (_.startDraining())
-        _ <- drives.latch (_._2.writeSuperblock (common))
+        _ <- drives.latch (_._2.writeSuperblock (common, checkpoint.isDefined))
       } yield {
 
         for (drive <- attaches)
@@ -165,7 +173,7 @@ private class DriveGroup (
         for (drive <- drains)
           drive.awaitDrainStarted() run (driveDrainStarted)
         for (cb <- changers)
-          scheduler.pass (cb, ())
+          scheduler.pass (cb, Notification.empty)
         for (cb <- checkpoint)
           scheduler.pass (cb, ())
 
@@ -175,7 +183,7 @@ private class DriveGroup (
           draining = SortedSet.empty [Path] ++ drains.map (_.path))
       }}
 
-  def launch (): Unit =
+  def launch(): Unit =
     fiber.execute {
       state = Open
       for (drive <- drives.values)
@@ -187,6 +195,7 @@ private class DriveGroup (
     fiber.supply {
       assert (state != Checkpointing && checkpoint.isEmpty)
       state = Checkpointing
+      drives foreach (_._2.startCheckpoint())
     }
 
   def finishCheckpoint(): Async [Unit] =
@@ -197,10 +206,43 @@ private class DriveGroup (
       queue.engage()
     }
 
+  private def _openDrive (id: Int, path: Path, geom: DriveGeometry): Drive = {
+
+    val file = files.open (path, READ, WRITE)
+
+    val alloc = new SegmentAllocator (geom)
+
+    val logbuf = PagedBuffer (geom.blockBits)
+    logbuf.writeLong (SegmentTag)
+
+    val logsegs = new ArrayDeque [Int]
+    val logseg = alloc.alloc()
+    logsegs.add (logseg.num)
+
+    val logwrtr = new LogWriter (
+      path, file, geom, logdsp, alloc, logbuf, logsegs, logseg.base, logseg.limit, logseg.base)
+
+    val pagwrtr = new PageWriter (id, file, geom, pagdsp, alloc)
+
+    new Drive (file, geom, logwrtr, pagwrtr, false, id, path)
+  }
+
+  def read (pos: Position): Async [PagedBuffer] =
+    for {
+      drives <- fiber.supply (this.drives)
+      drive = drives (pos.disk)
+      buffer <- drive.read (pos.offset, pos.length)
+    } yield {
+      buffer
+    }
+
   /** Enqueue user changes to the set of disk drives. */
-  def change (change: DriveChange): Async [Unit] =
+  def change (change: DriveChange): Async [Notification [Unit]] =
     fiber.async { cb =>
       requireNotClosed()
+
+      // Accumulate errors rather than aborting with Exceptions.
+      val errors = Notification.newBuilder
 
       // The paths that are already attached.
       val attached = (for (d <- drives.values) yield d.path).toSet
@@ -221,17 +263,18 @@ private class DriveGroup (
       // - make the drive, and
       // - add it to the list of new attaches.
       for (a <- change.attaches) {
-        if (attached contains a.path)
-          throw new IllegalArgumentException (s"Already attached ${quote (a.path)}")
-        if (attaching contains a.path)
-          throw new IllegalArgumentException (s"Already attaching ${quote (a.path)}")
-        attaching += a.path
-        val file = files.open (a.path, READ, WRITE)
-        val drive = new Drive (file, a.geometry, false, dno, a.path)
-        dno += 1
-        newAttaches ::= drive
-      }
+        if (attached contains a.path) {
+          errors.add (AlreadyAttached (a.path))
+        } else if (attaching contains a.path) {
+          errors.add (AlreadyAttaching (a.path))
+        } else {
+          attaching += a.path
+          val drive = _openDrive (dno, a.path, a.geometry)
+          dno += 1
+          newAttaches ::= drive
+        }}
 
+      // If there are attachment errors, close all opened files and pass errors.
       // The paths that are already queued draining.
       var draining = (for (d <- drains) yield d.path).toSet
 
@@ -239,25 +282,37 @@ private class DriveGroup (
       var newDrains = List.empty [Drive]
 
       // Process each of the drains:
-      // - check that the path is not already draining or queued to start draining, and
-      // - add it to the list of new drains.
+      // - ensure each drive
+      //   - is attached to the DriveGroup, and
+      //   - is not already draining or queued to start draining
+      // - and add it to the list of new drains.
       for (d <- change.drains) {
         val drive = drives.values.find (_.path == d) match {
-          case Some (drive) => drive
-          case None => throw new IllegalArgumentException (s"Drive ${quote (d)} not attached")
+          case Some (drive) =>
+            if (drive.draining || (draining contains d) || (newDrains contains drive)) {
+              errors.add (AlreadyDraining (d))
+            } else {
+              newDrains ::= drive
+            }
+          case None =>
+            errors.add (NotAttached (d))
         }
-        if (drive.draining || (draining contains d))
-          throw new IllegalArgumentException (s"Aready draining ${quote (d)}")
-        drains ::= drive
       }
 
-      // If we get here, then all went well, so we can merge our new changes into the queued
-      // changes.
-      this.dno = dno
-      attaches :::= newAttaches
-      drains :::= newDrains
-      changers ::= cb
-      queue.engage()
+      errors.result match {
+        case list @ Errors (_) =>
+          for (drive <- newAttaches) {
+            drive.close()
+          }
+          scheduler.pass (cb, list)
+        case NoErrors (_) =>
+          // Otherwise, we can merge our new changes into the queued changes.
+          this.dno = dno
+          attaches :::= newAttaches
+          drains :::= newDrains
+          changers ::= cb
+          queue.engage()
+      }
     }
 
   /** Enqueue internal changes to the set of disk drives. */

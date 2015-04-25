@@ -42,17 +42,23 @@ package object server {
 
   object respond {
 
-    def apply (req: Request, status: HttpResponseStatus = Status.Ok): Response = {
+    def apply (req: Request, status: HttpResponseStatus): Response = {
       val rsp = req.response
       rsp.status = status
       rsp
     }
 
-    def clear (req: Request, status: HttpResponseStatus = Status.Ok): Response  = {
+    def ok (req: Request, time: TxClock): Response = {
       val rsp = req.response
-      rsp.status = status
-      rsp.clearContent()
-      rsp.contentLength = 0
+      rsp.status = Status.Ok
+      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp
+    }
+
+    def stale (req: Request, time: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.PreconditionFailed
+      rsp.headerMap.add ("Value-TxClock", time.toString)
       rsp
     }
 
@@ -66,11 +72,11 @@ package object server {
     def json (req: Request, time: TxClock, value: Any): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.date = req.requestTxClock
+      rsp.date = req.readTxClock
       rsp.lastModified = time
-      rsp.readTxClock = req.requestTxClock
+      rsp.readTxClock = req.readTxClock
       rsp.valueTxClock = time
-      rsp.vary = "Request-TxClock"
+      rsp.vary = "Read-TxClock"
       rsp.json = value
       rsp
     }

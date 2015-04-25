@@ -37,7 +37,7 @@ libraryDependencies +=
 
 - [User Docs][user-docs]
 - [API Docs][api-docs]
-- [Presentation for the SF Bay Chapter of the ACM, Mar 18 2015][presentation-2015-03-18]
+- Presentation: [slides][presentation-slides], [video][presentation-video]
 
 
 ## Getting in Touch
@@ -69,10 +69,6 @@ Next
 - Server with RESTful JSON API
 - Performance and stress testing
 - Improved documentation
-
-Future
-
-- Full text search
 
 
 ## Getting Involved
@@ -111,7 +107,9 @@ See the [Contributor Category][forum-contributor] of the [Online Forum][forum] f
 
 [online-chat]: http://www.hipchat.com/giwb5oIkz "Chat Room for Treode Users and Developers"
 
-[presentation-2015-03-18]: http://goo.gl/le0rjT "Presentation at for the SF Bay Chapter of the ACM, Mar 18 2015"
+[presentation-slides]: http://goo.gl/le0rjT "Slides, SF Bay Chapter of the ACM, Mar 18 2015"
+
+[presentation-video]: https://www.youtube.com/watch?v=sI8vtAjO7x4&list=PL87GtQd0bfJyd9_TEKLbuTTdLFCedM-yw "Video, SF Bay Chapter of the ACM, Mar 18 2015"
 
 [stackoverflow-read]: http://stackoverflow.com/questions/tagged/treode "Read questions on Stack Overflow tagged with treode"
 

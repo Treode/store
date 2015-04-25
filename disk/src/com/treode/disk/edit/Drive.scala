@@ -28,6 +28,8 @@ import SuperBlock.Common
 private class Drive (
   file: File,
   geom: DriveGeometry,
+  logwrtr: LogWriter,
+  pagwrtr: PageWriter,
   private var _draining: Boolean,
   val id: Int,
   val path: Path
@@ -38,11 +40,28 @@ private class Drive (
   def draining = _draining
 
   /** Called when launch completes. */
-  def launch(): Unit = ()
+  def launch() {
+    if (!draining) {
+      logwrtr.launch()
+      pagwrtr.launch()
+    }}
 
-  def writeSuperblock (common: Common): Async [Unit] =
+  def read (offset: Long, length: Int): Async [PagedBuffer] =
     guard {
-      val superb = SuperBlock (id, geom, _draining, common)
+      val buf = PagedBuffer (12)
+      for {
+        _ <- file.fill (buf, offset, length)
+      } yield {
+        buf
+      }}
+
+  def startCheckpoint(): Unit =
+    logwrtr.startCheckpoint()
+
+  def writeSuperblock (common: Common, finish: Boolean): Async [Unit] =
+    guard {
+      val head = logwrtr.getCheckpoint (finish)
+      val superb = SuperBlock (id, geom, _draining, head, common)
       SuperBlock.write (file, superb)
     }
 

@@ -171,24 +171,24 @@ class MovieResourceSpec extends FreeSpec with SpecTools {
           .get ("/movie/1")
       }
 
-    "GET /movie/1 with Request-TxClock:(r1.valueTxClock-1) should respond Not Found" in
+    "GET /movie/1 with Read-TxClock:(r1.valueTxClock-1) should respond Not Found" in
       served { (port, store) => implicit movies =>
         val r1 = addStarWars (port)
         given
           .port (port)
-          .header ("Request-TxClock", (r1.valueTxClock-1).time.toString)
+          .header ("Read-TxClock", (r1.valueTxClock-1).time.toString)
         .expect
           .statusCode (404)
         .when
           .get ("/movie/1")
       }
 
-    "GET /movie/1 with Request-TxClock:(r1.valueTxClock) should respond Ok" in
+    "GET /movie/1 with Read-TxClock:(r1.valueTxClock) should respond Ok" in
       served { (port, store) => implicit movies =>
         val r1 = addStarWars (port)
         given
           .port (port)
-          .header ("Request-TxClock", (r1.valueTxClock).time.toString)
+          .header ("Read-TxClock", (r1.valueTxClock).time.toString)
         .expect
           .valueTxClock (r1.valueTxClock)
           .body (matchesJson (starWars))
@@ -249,16 +249,17 @@ class MovieResourceSpec extends FreeSpec with SpecTools {
       served { (port, store) => implicit movies =>
 
         val r1 = addStarWars (port)
+        val t1 = r1.valueTxClock
         val r2 = given
           .port (port)
           .header ("Condition-TxClock", "0")
           .body (aNewHope)
         .expect
           .statusCode (412)
+          .header ("Value-TxClock", t1.toString)
         .when
           .put ("/movie/1")
 
-        val t1 = r1.valueTxClock
         store.expectCells (PM.MovieTable) (
             ("1", t1, PO.starWars))
         store.expectCells (PM.CastTable) (

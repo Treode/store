@@ -18,22 +18,23 @@ package com.treode.disk
 
 import java.nio.file.Path
 
-import com.treode.async.{Async, Scheduler}, Async.async
-import com.treode.buffer.PagedBuffer
+import com.treode.notify.Message
 
-package edit {
+/** Error messages that are specific to the Disk package. */
+package messages {
 
-  case class ReattachFailure (path: Path, thrown: Throwable) {
-    override def toString = s"Could not reattach ${quote (path)}: $thrown"
+  case class AlreadyAttached (path: Path) extends Message {
+    def en = s"Already attached: ${quote (path)}"
   }
 
-  class ReattachException (failures: Seq [ReattachFailure]) extends Exception {
-    override def getMessage() = failures mkString "; "
+  case class AlreadyAttaching (path: Path) extends Message {
+    def en = s"Already attaching: ${quote (path)}"
+  }
+
+  case class NotAttached (drive: Path) extends Message {
+    def en = s"Not attached: ${quote (drive)}"
+  }
+
+  case class AlreadyDraining (drive: Path) extends Message {
+    def en = s"Already draining: ${quote (drive)}"
   }}
-
-package object edit {
-
-  private [edit] type LogDispatcher = Dispatcher [PickledRecord]
-
-  private [edit] type PageDispatcher = Dispatcher [PickledPage]
-}
