@@ -20,7 +20,7 @@ import com.googlecode.javaewah.{EWAHCompressedBitmap => Bitmap}
 import com.treode.async.{Async, Callback, Scheduler}, Async.async
 import com.treode.disk.{Disk, DiskConfig, DiskFullException, DriveGeometry, SegmentBounds}
 
-import SegmentAllocator.{bitmapOf, bitmapRange, segmentBounds}
+import SegmentAllocator.{bitmapOf, bitmapRange}
 
 /** Track free segments and allocate them. */
 private class SegmentAllocator (
@@ -54,12 +54,12 @@ private class SegmentAllocator (
       _free = _free andNot (bitmapOf (n))
       n
     }
-    segmentBounds (n, geom, config)
+    SegmentBounds (n, geom, config)
   }
 
   def alloc (n: Int): SegmentBounds = {
     synchronized (_free = _free andNot (bitmapOf (n)))
-    segmentBounds (n, geom, config)
+    SegmentBounds (n, geom, config)
   }
 
   def alloc (ns: Set [Int]): Unit =
@@ -108,14 +108,4 @@ private object SegmentAllocator {
     val lower = new Bitmap
     lower.setSizeInBits (from, true)
     upper andNot lower
-  }
-
-  def segmentBounds (num: Int, geom: DriveGeometry, config: DiskConfig): SegmentBounds = {
-    require (0 <= num && num < geom.segmentCount)
-    val start = num.toLong << geom.segmentBits
-    val end = (num.toLong + 1) << geom.segmentBits
-    val pos = if (start < geom.blockBytes) geom.blockBytes else start
-    val limit = if (end > geom.diskBytes) geom.diskBytes else end
-    assert (pos < limit)
-    SegmentBounds (num, pos, limit)
   }}
