@@ -40,7 +40,7 @@ class EpochReleaser {
   private class Epoch (var parties: Int, val action: Runnable)
 
   /** Past epochs. */
-  private var epochs = Map.empty [Int, Epoch]
+  private var epochs = new DirectDeque[Epoch]
 
   /** The current epoch; advanced by one when a new action is registered. */
   private var epoch = 0
@@ -48,27 +48,47 @@ class EpochReleaser {
   /** The number of parties that have joined the current epoch. */
   private var parties = 0
 
-  /** Leave the given epoch, building a list of actions to perform now. */
-  private def leave (epoch: Int, builder: Builder [Runnable, _]) {
+  /** Leave an epoch. If this is the last party to leave the epoch, then all actions registered
+    * during that epoch will be reclaimed.
+    * @param epoch The epoch number from `join`. 
+    */
+  def leave (epoch: Int) {
+    // base - the number of epochs that have been left
+    var base = this.epoch - epochs.size
+
+    // check that epoch is between base and base + epochs.size
+    if (epoch < base || epoch > this.epoch)
+      throw new IllegalArgumentException("Party left forgotten epoch")
+
     if (epoch == this.epoch) {
       // Leave the current epoch.
+      if (parties == 0) {
+        throw new AssertionError("epoch has no parties already")
+      }
       parties -= 1
     } else {
       // Leave a past epoch.
-      epochs.get (epoch) match {
-        case Some (past) =>
-          // Leave the past epoch.
-          past.parties -= 1
-          if (past.parties == 0) {
-            // If this is the last party to the epoch, perform its actions. Also, leave the next
-            // epoch, because epoch N includes epoch N-1 as a party.
-            epochs -= epoch
-            builder += past.action
-            leave (epoch+1, builder)
+      var past = epochs.get (epoch-base)
+      if (past.parties == 0) {
+        throw new AssertionError("epoch has no parties already")
+      }
+      past.parties -= 1
+
+      if (epoch == base) {
+        while (past.parties == 0) {
+          // If this is the last party to the epoch, perform its actions. Leave the next
+          // epochs if they have no parties
+          past.action.run()
+          epochs.dequeue()
+
+          if (epochs.isEmpty) {
+            return
           }
-        case None =>
-          throw new AssertionError ("Party left forgotten epoch")
-      }}}
+          // get updated front element
+          past = epochs.get (0)
+        }
+      }
+    }}
 
   /** Register an action to perform when all parties have left the current epoch.
     * @param action The action to perform.
@@ -80,9 +100,9 @@ class EpochReleaser {
         true
       } else {
         // There are parties in the current epoch. Queue the action for later.
-        epochs += epoch -> new Epoch (parties, action)
+        epochs.enqueue(new Epoch (parties, action))
         epoch += 1
-        parties = 1
+        parties = 0
         false
       }}
     if (now)
@@ -110,19 +130,6 @@ class EpochReleaser {
   def join(): Int = synchronized {
     parties += 1
     epoch
-  }
-
-  /** Leave an epoch. If this is the last party to leave the epoch, then all actions registered
-    * during that epoch will be reclaimed.
-    * @param epoch The epoch number from `join`.
-    */
-  def leave (epoch: Int) {
-    val actions = synchronized {
-      val builder = Seq.newBuilder [Runnable]
-      leave (epoch, builder)
-      builder.result
-    }
-    actions foreach (_.run())
   }
 
   /** Join and automatically leave an epoch. Join the current epoch, and leave it when the callback
