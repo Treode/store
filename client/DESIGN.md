@@ -6,8 +6,9 @@ Caches store key-value pairs retrieved from the server, as well as the associate
 
 Transactions allow users to locally perform a sequence of database operations, and then optimistically commit the result to the server by writing through the cache.
 
-Caches and Transactions mediate between client operations and HTTP requests.
+Caches and Transactions mediate between client operations and HTTP requests. They compose several other components, illustrated briefly here and explained in detail throughout this document.
 
+![Client and proxy caches.](img/overview.png)
 
 ## Background
 
@@ -343,7 +344,7 @@ We propose two possible designs for implementing the cache; the preferable of th
 
 The cache may be a doubly-linked list of entries, plus a hash table of arrays (or lists) of those entries.
 
-In Python, the hashtable is a standard Python dictionary. The `table:key` keys are composed by concatenating the table name and key.  Each `table:key` maps to an array of references to nodes in the LRU list. And each node of the LRU list contains the value, its timestamps and the LRU’s previous and next pointers.
+In Python, the hashtable is a standard Python dictionary. The `table:key` keys are composed by concatenating the table name and key.  Each `table:key` maps to an array of references to nodes in the LRU list. Each node of the LRU list contains the table, key, value, its timestamps and the LRU’s previous and next pointers. Note that the value may be None to indicate that there is no value for duration.
 
 To `get` an item as of a given `read_time`, we lookup the array for `table:key`, and then we search that list for the *most recent* `value_time` on or before the given `read_time`. We return the tuple `(value_time, cached_time, JSON value)`
 
@@ -351,14 +352,11 @@ To `put` an item with a given `value_time`, we lookup the array for `table:key`,
 
 If the arrays (or lists) are unsorted, then `add` is *O*(1), and `find` (floor), `replace`, and `remove` are each *O*(n).  If the lists are sorted, then all the operations are *O*(n). We expect the most frequent operations to be `find`, `replace` and `remove`; sorting would not improve the asymptotic runtimes of these operations. Furthermore, we expect the lists to be small, so the effort of sorting would be moot.
 
-#### Skiplist of Tuples
+#### Skiplist
 
-If a skiplist that supports floor and ceiling operations is available, then the cache can be implemented using it. The cache is a skiplist of tuples:
+![Client and proxy caches.](img/skiplist.png)
 
-    // (table, key, (Long.Max - value_time)) -> (cached_time, value)
-    (string, string, long) -> (TxClock, JSON)
-
-Each `(table, key, reverse_time)` maps to a tuple of `(cached_time, value)`. The skiplist is effectively sorted in reverse chronological order. Note that the value may be None to indicate that there is no value for duration.
+If a skiplist that supports floor and ceiling operations is available, then the cache can be implemented using it. Each `(table, key, reverse_time)` maps to a node in the LRU list. Each node of the LRU list contains the table, key, value, its timestamps and the LRU’s previous and next pointers. The skiplist is effectively sorted in reverse chronological order. Note that the value may be None to indicate that there is no value for duration.
 
 To `get` an item as of a given `read_time`, we lookup the *ceiling* entry for `(table, key, (Long.Max - read_time))`, and then we return the tuple `(value_time, cached_time, JSON value)`.
 
@@ -392,7 +390,7 @@ These max\_age and no\_cache values also appear in cache read method, though use
 
     write (
         condition_time: TxClock,
-        ops_map: (table, key) -> (op, value)
+        tx_view: (table, key) -> (op, value)
     ): TxClock, throws StaleException
 
 The write method sends the [transaction’s view](#tx-view) to the DB server as a conditional batch write. If the server accepts the batch write, the write method also updates the cache to reflect the newly written values. Otherwise, the write method throws a stale exception, including the value timestamp in the DB that caused the write reject if it is available.
@@ -458,7 +456,7 @@ Since the max\_age is at most `read_timestamp - max_vt` for all values read so f
 <a name="tx-view"></a>
 ### view
 
-The view maintains the map of operations performed throughout the transaction.  This map has type (table, key) -> (op, value).  When the user commits the transaction, the view is handed to the cache, which writes the changes through to the DB server via batch write. If the view's entries are out-of-date with the DB, write will throw a StaleException.
+The view maintains the map of operations performed throughout the transaction.  This map has type `(table, key) -> (op, value)`.  When the user commits the transaction, the view is handed to the cache, which writes the changes through to the DB server via batch write. If the view's entries are out-of-date with the DB, write will throw a StaleException.
 
 Every value read from the cache during the transaction is stored in this map, including values that do not change within the transaction; those are stored in the view with the *hold* operation, as we explain below.
 
