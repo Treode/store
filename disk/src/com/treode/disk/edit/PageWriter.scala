@@ -21,7 +21,7 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.UnrolledBuffer
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, Callback, Scheduler}, Async.guard, Callback.ignore
+import com.treode.async.{Async, Callback, Scheduler}, Async.{guard, supply}, Callback.ignore
 import com.treode.async.implicits._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
@@ -33,6 +33,7 @@ private class PageWriter (
   file: File,
   geom: DriveGeometry,
   dispatcher: PageDispatcher,
+  detacher: Detacher,
   alloc: SegmentAllocator
 ) (implicit
   scheduler: Scheduler
@@ -56,76 +57,84 @@ private class PageWriter (
     run {
       for {
         (_, pages) <- dispatcher.receive()
-        _ <- flush (pages)
+        enroll <- flush (pages)
       } yield {
-        launch()
+        if (enroll)
+          launch()
       }}
 
-  private def flush (pages: UnrolledBuffer [PickledPage]): Async [Unit] =
+  private def flush (pages: UnrolledBuffer [PickledPage]): Async [Boolean] =
     guard {
 
-      // Compute how many bytes we can write without overflowing the segment.
-      val bytes = seg.limit - pos
+      if (!detacher.startFlush()) {
+        dispatcher.send (pages)
+        supply (false)
+      } else {
 
-      // Fit as many page as possible into the remainder of this segment; track which fit
-      // (callbacks) and which to do not fit (putbacks).
-      val buf = PagedBuffer (blockBits)
-      val tally = new PageTally
-      val callbacks = new ArrayList [Callback [Unit]] (pages.size)
-      val putbacks = new UnrolledBuffer [PickledPage]
-      for (item <- pages) {
-        if (buf.readableBytes + item.byteSize < bytes) {
-          val start = buf.writePos
-          item.write (buf)
-          buf.writePos = blockAlignUp (buf.writePos)
-          val pagePos = Position (id, pos + start, buf.writePos - start)
-          tally.alloc (item, pagePos.length)
-          callbacks.add (item.cb map (_ => pagePos))
-        } else {
-          putbacks += item
-        }}
+        // Compute how many bytes we can write without overflowing the segment.
+        val bytes = seg.limit - pos
 
-      // Double check to avoid writing over the segment boundary.
-      assert (buf.readableBytes + pos <= seg.limit)
+        // Fit as many page as possible into the remainder of this segment; track which fit
+        // (callbacks) and which to do not fit (putbacks).
+        val buf = PagedBuffer (blockBits)
+        val tally = new PageTally
+        val callbacks = new ArrayList [Callback [Unit]] (pages.size)
+        val putbacks = new UnrolledBuffer [PickledPage]
+        for (item <- pages) {
+          if (buf.readableBytes + item.byteSize < bytes) {
+            val start = buf.writePos
+            item.write (buf)
+            buf.writePos = blockAlignUp (buf.writePos)
+            val pagePos = Position (id, pos + start, buf.writePos - start)
+            tally.alloc (item, pagePos.length)
+            callbacks.add (item.cb map (_ => pagePos))
+          } else {
+            putbacks += item
+          }}
 
-      val alloc: Option [SegmentBounds] =
+        // Double check to avoid writing over the segment boundary.
+        assert (buf.readableBytes + pos <= seg.limit)
 
-        // If all pages fit with room to spare.
-        if (putbacks.isEmpty && buf.writePos < bytes) {
+        val alloc: Option [SegmentBounds] =
 
-          None
+          // If all pages fit with room to spare.
+          if (putbacks.isEmpty && buf.writePos < bytes) {
 
-        // If pages filled or overflowed this segment.
-        } else {
+            None
 
-          // Return the mis-fits to be flushed latter.
-          dispatcher.send (putbacks)
+          // If pages filled or overflowed this segment.
+          } else {
 
-          // Allocate a new segment.
-          Some (this.alloc.alloc())
-        }
+            // Return the mis-fits to be flushed latter.
+            dispatcher.send (putbacks)
 
-      for {
-        _ <- file.flush (buf, pos)
-      } yield {
+            // Allocate a new segment.
+            Some (this.alloc.alloc())
+          }
 
-        // Setup for the next batch.
-        alloc match {
+        for {
+          _ <- file.flush (buf, pos)
+        } yield {
 
-          case Some (seg) =>
+          // Setup for the next batch.
+          alloc match {
 
-            // Start fresh for the new segment.
-            this.seg = seg
-            pos = seg.base
+            case Some (seg) =>
 
-          case None =>
+              // Start fresh for the new segment.
+              this.seg = seg
+              pos = seg.base
 
-            // Advance the position in this segment for the next batch.
-            pos += buf.writePos
-        }
+            case None =>
 
-        // Acknowledge the writes.
-        for (cb <- callbacks)
-          scheduler.pass (cb, ())
-      }}}
+              // Advance the position in this segment for the next batch.
+              pos += buf.writePos
+          }
 
+          // Acknowledge the writes.
+          for (cb <- callbacks)
+            scheduler.pass (cb, ())
+
+          // Can we enroll for another batch?
+          detacher.finishFlush()
+      }}}}

@@ -34,6 +34,7 @@ private class LogWriter (
   file: File,
   geom: DriveGeometry,
   dispatcher: LogDispatcher,
+  detacher: Detacher,
   alloc: SegmentAllocator,
 
   // We pickle records into this buffer. We discard it page by page as we flush it to disk. The
@@ -84,109 +85,119 @@ private class LogWriter (
     run {
       for {
         (batch, records) <- dispatcher.receive()
-        _ <- flush (batch, records)
+        enroll <- flush (batch, records)
       } yield {
-        launch()
+        if (enroll)
+          launch()
       }}
 
-  private def flush (batch: Long, records: UnrolledBuffer [PickledRecord]): Async [Unit] =
+  private def flush (batch: Long, records: UnrolledBuffer [PickledRecord]): Async [Boolean] =
     guard {
 
-      // Compute how many bytes we can write without overflowing the segment. We need to allow
-      // enough for the marker for the next batch and the alloc marker after it.
-      val bytes = limit - pos - LogEntriesSpace - LogAllocSpace
+      if (!detacher.startFlush()) {
+        dispatcher.send (records)
+        supply (false)
+      } else {
 
-      // Remember where we started, and leave space for the marker between batches.
-      val start = buf.writePos
-      buf.writePos = start + LogEntriesSpace
 
-      // Fit as many records as possible into the remainder of this segment; track which fit
-      // (callbacks) and which to do not fit (putbacks).
-      val callbacks = new ArrayList [Callback [Unit]] (records.size)
-      val putbacks = new UnrolledBuffer [PickledRecord]
-      for (item <- records) {
-        if (buf.readableBytes + item.byteSize < bytes) {
-          item.write (buf)
-          callbacks.add (item.cb)
-        } else {
-          putbacks += item
-        }}
+        // Compute how many bytes we can write without overflowing the segment. We need to allow
+        // enough for the marker for the next batch and the alloc marker after it.
+        val bytes = limit - pos - LogEntriesSpace - LogAllocSpace
 
-      // Double check to avoid writing over the segment boundary.
-      assert (buf.readableBytes + pos <= limit)
+        // Remember where we started, and leave space for the marker between batches.
+        val start = buf.writePos
+        buf.writePos = start + LogEntriesSpace
 
-      // Remember where we parked.
-      val end = buf.writePos
+        // Fit as many records as possible into the remainder of this segment; track which fit
+        // (callbacks) and which to do not fit (putbacks).
+        val callbacks = new ArrayList [Callback [Unit]] (records.size)
+        val putbacks = new UnrolledBuffer [PickledRecord]
+        for (item <- records) {
+          if (buf.readableBytes + item.byteSize < bytes) {
+            item.write (buf)
+            callbacks.add (item.cb)
+          } else {
+            putbacks += item
+          }}
 
-      val alloc: Option [SegmentBounds] =
+        // Double check to avoid writing over the segment boundary.
+        assert (buf.readableBytes + pos <= limit)
 
-        // If all the records did fit into the segment.
-        if (putbacks.isEmpty) {
+        // Remember where we parked.
+        val end = buf.writePos
 
-          // Record the end of this segment.
-          buf.writeLong (EndTag)
-          None
+        val alloc: Option [SegmentBounds] =
 
-        // If some records did not fit into the segment.
-        } else {
+          // If all the records did fit into the segment.
+          if (putbacks.isEmpty) {
 
-          // Return the mis-fits to be flushed latter.
-          dispatcher.send (putbacks)
+            // Record the end of this segment.
+            buf.writeLong (EndTag)
+            None
 
-          // Allocate a new segment and record it in the log.
-          val seg = this.alloc.alloc()
-          buf.writeLong (AllocTag)
-          buf.writeInt (seg.num)
-          Some (seg)
-        }
+          // If some records did not fit into the segment.
+          } else {
 
-      // Return to the start to write the tag, byte count and record count.
-      buf.writePos = start
-      buf.writeLong (EntriesTag)
-      buf.writeLong (batch)
-      val length = end - start - LogEntriesSpace
-      buf.writeInt (length)
-      buf.writeInt (callbacks.size)
+            // Return the mis-fits to be flushed latter.
+            dispatcher.send (putbacks)
 
-      // Advance the end to align on a block.
-      if (alloc.isDefined)
-        buf.writePos = blockAlignUp (end + LogAllocSpace)
-      else
-        buf.writePos = blockAlignUp (end + LogEndSpace)
+            // Allocate a new segment and record it in the log.
+            val seg = this.alloc.alloc()
+            buf.writeLong (AllocTag)
+            buf.writeInt (seg.num)
+            Some (seg)
+          }
 
-      for {
-        _ <- file.flush (buf, pos)
-      } yield {
+        // Return to the start to write the tag, byte count and record count.
+        buf.writePos = start
+        buf.writeLong (EntriesTag)
+        buf.writeLong (batch)
+        val length = end - start - LogEntriesSpace
+        buf.writeInt (length)
+        buf.writeInt (callbacks.size)
 
-        // Setup for the next batch.
-        alloc match {
+        // Advance the end to align on a block.
+        if (alloc.isDefined)
+          buf.writePos = blockAlignUp (end + LogAllocSpace)
+        else
+          buf.writePos = blockAlignUp (end + LogEndSpace)
 
-          case Some (seg) =>
+        for {
+          _ <- file.flush (buf, pos)
+        } yield {
 
-            // Start fresh for the new segment. Write the log segment marker.
-            segs.add (seg.num)
-            limit = seg.limit
-            pos = seg.base
-            buf.clear()
-            buf.writeLong (SegmentTag)
+          // Setup for the next batch.
+          alloc match {
 
-            synchronized (_flushed = pos)
+            case Some (seg) =>
 
-          case None =>
+              // Start fresh for the new segment. Write the log segment marker.
+              segs.add (seg.num)
+              limit = seg.limit
+              pos = seg.base
+              buf.clear()
+              buf.writeLong (SegmentTag)
 
-            synchronized (_flushed = pos + end)
+              synchronized (_flushed = pos)
 
-            // Reset the buffer to use this segment for the next batch.
-            val next = blockAlignDown (end)
-            buf.readPos = next
-            buf.writePos = end
-            pos += buf.discard (next)
-        }
+            case None =>
 
-        // Acknowledge the writes.
-        for (cb <- callbacks)
-          scheduler.pass (cb, ())
-      }}
+              synchronized (_flushed = pos + end)
+
+              // Reset the buffer to use this segment for the next batch.
+              val next = blockAlignDown (end)
+              buf.readPos = next
+              buf.writePos = end
+              pos += buf.discard (next)
+          }
+
+          // Acknowledge the writes.
+          for (cb <- callbacks)
+            scheduler.pass (cb, ())
+
+          // Can we enroll for another batch?
+          detacher.finishFlush()
+        }}}
 
   def startCheckpoint(): Unit =
     synchronized (marked = _flushed)
