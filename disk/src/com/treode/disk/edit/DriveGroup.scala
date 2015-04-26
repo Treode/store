@@ -276,7 +276,6 @@ private class DriveGroup (
           newAttaches ::= drive
         }}
 
-      // If there are attachment errors, close all opened files and pass errors.
       // The paths that are already queued draining.
       var draining = (for (d <- drains) yield d.path).toSet
 
@@ -291,16 +290,15 @@ private class DriveGroup (
       for (d <- change.drains) {
         val drive = drives.values.find (_.path == d) match {
           case Some (drive) =>
-            if (drive.draining || (draining contains d) || (newDrains contains drive)) {
+            if (drive.draining || (draining contains d) || (newDrains contains drive))
               errors.add (AlreadyDraining (d))
-            } else {
+            else
               newDrains ::= drive
-            }
           case None =>
             errors.add (NotAttached (d))
-        }
-      }
+        }}
 
+      // If there are attachment errors, close all opened files and pass errors.
       errors.result match {
         case list @ Errors (_) =>
           for (drive <- newAttaches) {
@@ -314,8 +312,7 @@ private class DriveGroup (
           drains :::= newDrains
           changers ::= cb
           queue.engage()
-      }
-    }
+      }}
 
   /** Enqueue internal changes to the set of disk drives. */
   def detach (drive: Drive): Unit =

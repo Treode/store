@@ -29,6 +29,8 @@ import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.disk.{DriveGeometry, SegmentBounds}
 
+import LogControl._
+
 private class LogWriter (
   path: Path,
   file: File,
@@ -59,21 +61,20 @@ private class LogWriter (
   scheduler: Scheduler
 ) {
 
-  import LogControl._
   import geom.{blockBits, blockAlignDown, blockAlignUp}
 
   // The position of the latest batch that was written.
-  private var _flushed = pos
+  private var flushed = pos
 
   // The position of the latest batch that was written when a checkpoint started. This is the last
   // flushed batch when a checkpoint began, but that checkpoint may not have completed.
-  private var marked = _flushed
+  private var marked = flushed
 
   // Things awaiting draining to complete.
   private var drains = List.empty [Callback [Unit]]
 
   private def isDrained: Boolean =
-    checkpointed == _flushed
+    checkpointed == flushed
 
   private def run [A] (task: Async [A]) {
     task run {
@@ -178,11 +179,11 @@ private class LogWriter (
               buf.clear()
               buf.writeLong (SegmentTag)
 
-              synchronized (_flushed = pos)
+              synchronized (flushed = pos)
 
             case None =>
 
-              synchronized (_flushed = pos + end)
+              synchronized (flushed = pos + end)
 
               // Reset the buffer to use this segment for the next batch.
               val next = blockAlignDown (end)
@@ -200,7 +201,7 @@ private class LogWriter (
         }}}
 
   def startCheckpoint(): Unit =
-    synchronized (marked = _flushed)
+    synchronized (marked = flushed)
 
   def getCheckpoint (finish: Boolean): Long =
     synchronized {
@@ -213,9 +214,9 @@ private class LogWriter (
           if (checkpointed != 0L) {
             while (!segs.isEmpty)
               alloc.free (segs.remove())
-            _flushed = 0L
-            marked = _flushed
-            checkpointed = _flushed
+            flushed = 0L
+            marked = flushed
+            checkpointed = flushed
           }
           for (cb <- drains)  scheduler.pass (cb, ())
           drains = List.empty

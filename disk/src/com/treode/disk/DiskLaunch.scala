@@ -38,7 +38,7 @@ trait DiskLaunch {
   def checkpoint (f: => Async [Unit])
 
   /** Claim generations before launch, or the disk blocks will be released. */
-  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit
+  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long])
 
   /** Register a compactor. */
   def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit])

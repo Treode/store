@@ -17,14 +17,10 @@
 package com.treode.disk.edit
 
 import java.util.ArrayList
-import scala.collection.JavaConversions._
 
 import com.treode.async.{Async, Callback}, Async.async
-import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{Compaction, DiskConfig, DiskController, DiskLaunch, DiskTestTools,
-  DriveGeometry, ObjectId, PageDescriptor, StubFileSystem}, DiskTestTools._
 import com.treode.disk.stubs.StubDiskEvents
 import com.treode.notify.Notification
 import com.treode.pickle.Picklers

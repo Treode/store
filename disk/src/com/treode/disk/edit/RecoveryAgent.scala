@@ -134,7 +134,7 @@ private class RecoveryAgent (implicit
         launch
       }) .run (cb on scheduler)
     } else {
-      scheduler.fail (cb, failures.head.thrown) //new ReattachException (failures))
+      scheduler.fail (cb, new ReattachException (failures))
     }}
 
   private def requireNotStarted (message: String): Unit =
