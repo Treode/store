@@ -20,9 +20,15 @@ class LCSSyntaxAnalyzer extends SchemaParserStdLexical {
     def message: String
     override def toString = (message + "\n" + "at line " + pos.line + ", column " + pos.column + "\n" + pos.longString)
   }
-  case class NotFoundMessage (pos: Position, message: String) extends Message
-  case class FoundAlternateMessage (pos: Position, message: String) extends Message
-  case class UnexpectedFoundMessage (pos: Position, message: String) extends Message
+  case class ExpectedTokenMessage (pos: Position, expToken: String) extends Message {
+    def message = s"Expected $expToken but not found"	
+  }		
+  case class FoundAlternateTokenMessage (pos: Position, expToken: String, foundToken: String) extends Message {
+    def message = s"Expected '$expToken' , but found $foundToken"
+  }
+  case class UnexpectedTokenMessage (pos: Position, foundToken: String) extends Message {
+    def message = s"Unexpected '$foundToken' found"
+  }
 
   trait SyntaxAnalyzerResult
   case class SyntaxAnalyzerSuccess (tokenPositions: ArrayBuffer [TokenPosition]) extends SyntaxAnalyzerResult
@@ -131,24 +137,21 @@ class LCSSyntaxAnalyzer extends SchemaParserStdLexical {
 
         val tok = tokenPositions (index1).token
         val pos = tokenPositions (index1).pos
-        val errorMsg = "Expected \"" + expToken + "\", but found " + tok
-        FoundAlternateMessage (pos, errorMsg) +=: errors
+        FoundAlternateTokenMessage (pos, expToken, gotToken) +=: errors
         index2 = index2 + 1
         index1 = index1 + 1
       }
       while (index2 < endIndex2) {
         val expToken = mapSequnceNumber (expected (index2))
-        val errorMsg = "Expected " + expToken + " but not found" 
         val pos = tokenPositions (index1).pos
-        NotFoundMessage (pos, errorMsg) +=: errors
+        ExpectedTokenMessage (pos, expToken) +=: errors
         index2 = index2 + 1
       }
       while (index1 < endIndex1) {
         val gotToken = mapSequnceNumber (actual (index1))
         val tok = tokenPositions (index1).token
         val pos = tokenPositions (index1).pos
-        val errorMsg = "Unexpected \"" + tok + "\" found"
-        UnexpectedFoundMessage (pos, errorMsg) +=: errors
+        UnexpectedTokenMessage (pos, gotToken) +=: errors
         index1 = index1 + 1
       }
       index1 = index1 + 1

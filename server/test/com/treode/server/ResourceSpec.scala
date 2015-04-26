@@ -39,7 +39,7 @@ class ResourceSpec extends FreeSpec {
     val compilerResult = parse ("table table1 { id : 0x1 } table table2 { id : 0x2 } table table3 { id : 0x3 } table table4 { id : 0x4 }") 
     val newSchema = compilerResult match {
       case CompilerSuccess (schema) => schema
-      case CompilerFailure (errors) => new Schema (new HashMap [String, Long])
+      case CompilerFailure (errors) => Schema (new HashMap [String, Long])
     }
     val schematicStore = new SchematicStubStore (store, newSchema)
     val server = Http.serve (
