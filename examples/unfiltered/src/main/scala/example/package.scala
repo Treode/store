@@ -46,9 +46,9 @@ package object example {
 
   type Response = ResponseFunction [HttpResponse]
 
-  object ValueTxClock extends HeaderName ("Value-TxClock")
-
   object ReadTxClock extends HeaderName ("Read-TxClock")
+
+  object ValueTxClock extends HeaderName ("Value-TxClock")
 
   implicit class RichAny (v: Any) {
 
@@ -90,8 +90,8 @@ package object example {
     def conditionTxClock (default: TxClock): TxClock =
       optTxClockHeader ("Condition-TxClock") getOrElse (default)
 
-    def requestTxClock: TxClock =
-      optTxClockHeader ("Request-TxClock") getOrElse (TxClock.now)
+    def readTxClock: TxClock =
+      optTxClockHeader ("Read-TxClock") getOrElse (TxClock.now)
 
     def getSlice: Slice = {
       val slice = optIntParam ("slice")

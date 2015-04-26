@@ -96,6 +96,9 @@ package object implicits {
       */
     def rescue (f: PartialFunction [Throwable, Try [A]]): Callback [A] =
       (v => cb (v recoverWith f))
+
+    def map [B] (f: B => A): Callback [B] =
+      (v => cb (v map f))
   }
 
   implicit class RichIterable [A] (iter: Iterable [A]) {

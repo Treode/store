@@ -163,9 +163,12 @@ package object http {
     def conditionTxClock(default: TxClock): TxClock =
       optTxClockHeader ("Condition-TxClock") getOrElse (default)
 
-    def requestTxClock: TxClock =
-      optTxClockHeader ("Request-TxClock") getOrElse (TxClock.now)
+    def readTxClock: TxClock =
+      optTxClockHeader ("Read-TxClock") getOrElse (TxClock.now)
 
+    /** Get slice from `slice` and `nslices` query parameters. If the query contains no slice
+      * parameters, the default will be `Slice.all`.
+      */
     def slice: Slice = {
       val slice = optIntParam ("slice")
       val nslices = optIntParam ("nslices")
@@ -176,26 +179,25 @@ package object http {
           throw new BadRequestException ("The slice must be between 0 (inclusive) and the number of slices (exclusive).")
         Slice (slice.get, nslices.get)
       } else if (slice.isDefined || nslices.isDefined) {
-        throw new BadRequestException ("Both slice and nslices are needed together")
+        throw new BadRequestException ("Both slice and nslices are needed together.")
       } else {
         Slice.all
       }}
 
-    /** Get window from `since` and `until` query parameters. Window will be `Latest` from `since`
-      * exclusive to `until` inclusive. If the query contains no window parameters, the default is
-      * `Latest` from 0 to now inclusive.
+    /** Get window from `since`, `until` and `pick` query parameters. Window will be `pick` from
+      * `since` exclusive to `until` inclusive. If the query contains no window parameters, the
+      * default is `Latest` from 0 inclusive to now inclusive.
       */
     def window: Window = {
-      val since = optTxClockParam ("since")
-      val until = optTxClockParam ("until")
-      if (since.isDefined && until.isDefined) {
-        if (since.get > until.get)
-          throw new BadRequestException ("Since must preceed until.")
-        Window.Latest (until.get, true, since.get, false)
-      } else if (since.isDefined || until.isDefined) {
-        throw new BadRequestException ("Both since and until are needed together")
-      } else {
-        Window.Latest (TxClock.now, true, TxClock.MinValue, true)
+      val since = optTxClockParam ("since") getOrElse (TxClock.MinValue)
+      val until = optTxClockParam ("until") getOrElse (TxClock.now)
+      if (since > until)
+        throw new BadRequestException ("Since must preceed until.")
+      request.getParam ("pick", "latest") .toLowerCase match {
+        case "latest" => Window.Latest (until, true, since, false)
+        case "between" => Window.Between (until, true, since, false)
+        case "through" => Window.Through (until, true, since)
+        case _ => throw new BadRequestException ("Pick must be latest, between or through.")
       }}
 
     def transactionId (host: HostId): TxId =

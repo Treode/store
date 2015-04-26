@@ -30,23 +30,39 @@ private class LaunchAgent (implicit
   val agent: DiskAgent
 ) extends DiskLaunch {
 
+  private val checkpoints = new ArrayList [Unit => Async [Unit]]
+  private val compactors = new HashMap [TypeId, Compaction => Async [Unit]]
+
   private var launching = true
 
   implicit val disk: Disk = agent
   implicit val controller: DiskController = agent
 
+  def checkpoint (f: => Async [Unit]): Unit =
+    synchronized {
+      require (launching, "Must add checkpoint before launching.")
+      checkpoints.add (_ => f)
+    }
+
+  def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit]): Unit =
+    synchronized {
+      val typ = desc.id
+      require (!(compactors containsKey typ), s"Compactor already registered for $typ")
+      compactors.put (typ, f)
+    }
+
   def launch() {
     require (launching, "Disks already launched.")
     launching = false
-    agent.launch()
+    val checkpointer = new Checkpointer (drives, checkpoints)
+    val compactor = new Compactor (compactors)
+    agent.launch (checkpointer, compactor)
   }
 
   // The old disk system used this; this new disk system uses claim and compact instead.
   def handle (desc: PageDescriptor [_], handler: PageHandler): Unit = ()
 
   // TODO
-  def checkpoint (f: => Async [Unit]): Unit = ???
-  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ???
-  def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit]) = ???
+  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ()
   def sysid: SystemId  = ???
 }

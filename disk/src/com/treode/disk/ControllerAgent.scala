@@ -18,16 +18,17 @@ package com.treode.disk
 
 import java.nio.file.Path
 import com.treode.async.Async
+import com.treode.notify.Notification
 
 private class ControllerAgent (kit: DiskKit, val disk: Disk) extends DiskController  {
 
   def drives: Async [Seq [DriveDigest]] =
     kit.drives.digest
 
-  def attach (items: DriveAttachment*): Async [Unit] =
+  def attach (items: DriveAttachment*): Async [Notification [Unit]] =
     kit.drives.attach (items)
 
-  def drain (items: Path*): Async [Unit] =
+  def drain (items: Path*): Async [Notification [Unit]] =
     kit.drives.drain (items)
 
   def shutdown(): Async [Unit] =

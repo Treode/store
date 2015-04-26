@@ -65,19 +65,13 @@ class ResourceSpec extends FreeSpec {
 
   implicit class RichResposne (rsp: RestAssuredResponse) {
 
-	def valueTxClock: TxClock = {
+	  def valueTxClock: TxClock = {
       val string = rsp.getHeader ("Value-TxClock")
       assert (string != null, "Expected response to have a Value-TxClock.")
       val parse = TxClock.parse (string)
       assert (parse.isDefined, s"""Could not parse Value-TxClock "$string" as a TxClock""")
       parse.get
     }}
-
-  implicit class RichResponseSpecification (rsp: ResponseSpecification) {
-
-    def valueTxClock (ts: TxClock): Unit =
-      rsp.header ("Value-TxClock", ts.toString)
-  }
 
   class JsonMatcher (expected: String) extends TypeSafeMatcher [String] {
 
@@ -185,24 +179,24 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/table1?key=abc")
       }
 
-    "GET /table/table1?key=abc with Request-TxClock:0 should respond Not Found" in
+    "GET /table/table1?key=abc with Read-TxClock:0 should respond Not Found" in
       served { case (port, store) =>
         val ts = addData (store)
         given
           .port (port)
-          .header ("Request-TxClock", "0")
+          .header ("Read-TxClock", "0")
         .expect
           .statusCode (404)
         .when
           .get ("/table/table1?key=abc")
       }
 
-    "GET /table/table1?key=abc with Request-TxClock:1 should respond Ok" in
+    "GET /table/table1?key=abc with Read-TxClock:1 should respond Ok" in
       served { case (port, store) =>
         val ts = addData (store)
         given
           .port (port)
-          .header ("Request-TxClock", "1")
+          .header ("Read-TxClock", "1")
         .expect
           .statusCode (200)
           .body (equalTo (entity))
@@ -248,6 +242,7 @@ class ResourceSpec extends FreeSpec {
           .body (entity2)
         .expect
           .statusCode (412)
+          .header ("Value-TxClock", ts1.toString)
         .when
           .put ("/table/table1?key=abc")
         assertSeq (cell ("abc", ts1, entity)) (store.scan ("table1"))
@@ -288,6 +283,7 @@ class ResourceSpec extends FreeSpec {
           .header ("Condition-TxClock", "0")
         .expect
           .statusCode (412)
+          .header ("Value-TxClock", ts1.toString)
         .when
           .delete ("/table/table1?key=abc")
         assertSeq (cell ("abc", ts1, entity)) (store.scan ("table1"))
@@ -320,33 +316,17 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/table1")
       }}
 
-    "GET /table/table1 with Request-TxClock:4 should work" in {
+    "GET /table/table1?until=4 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Request-TxClock", "4")
+          .param ("until", "4")
         .expect
           .statusCode (200)
           .body (matchesJson ("""[
             {"key": "a", "time": 2, "value": "a2"},
             {"key": "b", "time": 4, "value": "b2"}
-          ]"""))
-        .when
-          .get ("/table/table1")
-      }}
-
-    "GET /table/table1 with Condition-TxClock:3 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .header ("Condition-TxClock", "3")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "c", "time": 6, "value": "c2"}
           ]"""))
         .when
           .get ("/table/table1")
@@ -366,112 +346,6 @@ class ResourceSpec extends FreeSpec {
           ]"""))
         .when
           .get ("/table/table1")
-      }}
-
-    "GET /table/table1?slice=1&nslices=2 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .param ("slice", "1")
-          .param ("nslices", "2")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "c", "time": 6, "value": "c2"}
-          ]"""))
-        .when
-          .get ("/table/table1")
-      }}
-
-    "GET /history/table1 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "a", "time": 2, "value": "a2"},
-            {"key": "a", "time": 1, "value": "a1"},
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "b", "time": 3, "value": "b1"},
-            {"key": "c", "time": 6, "value": "c2"},
-            {"key": "c", "time": 5, "value": "c1"}
-          ]"""))
-        .when
-          .get ("/history/table1")
-      }}
-
-    "GET /history/table1 with Request-TxClock:3 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .header ("Request-TxClock", "3")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "a", "time": 2, "value": "a2"},
-            {"key": "a", "time": 1, "value": "a1"},
-            {"key": "b", "time": 3, "value": "b1"}
-          ]"""))
-        .when
-          .get ("/history/table1")
-      }}
-
-    "GET /history/table1 with Condition-TxClock:3 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .header ("Condition-TxClock", "3")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "c", "time": 6, "value": "c2"},
-            {"key": "c", "time": 5, "value": "c1"}
-          ]"""))
-        .when
-          .get ("/history/table1")
-      }}
-
-    "GET /history/table1?slice=0&nslices=2 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .param ("slice", "0")
-          .param ("nslices", "2")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "a", "time": 2, "value": "a2"},
-            {"key": "a", "time": 1, "value": "a1"}
-          ]"""))
-        .when
-          .get ("/history/table1")
-      }}
-
-    "GET /history/table1?slice=1&nslices=2 should work" in {
-      served { case (port, store) =>
-        val ts1 = addData (store)
-        val rsp = given
-          .port (port)
-          .param ("slice", "1")
-          .param ("nslices", "2")
-        .expect
-          .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "b", "time": 3, "value": "b1"},
-            {"key": "c", "time": 6, "value": "c2"},
-            {"key": "c", "time": 5, "value": "c1"}
-          ]"""))
-        .when
-          .get ("/history/table1")
       }}}
 
   "When the user is cantankerous" - {
@@ -520,14 +394,14 @@ class ResourceSpec extends FreeSpec {
 
     "and gives bad clock values" - {
 
-      "GET /table/table1 with Request-TxClock:abc should yield Bad Request" in {
+      "GET /table/table1 with Read-TxClock:abc should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
-            .header ("Request-TxClock", "abc")
+            .header ("Read-TxClock", "abc")
           .expect
             .statusCode (400)
-            .body (equalTo ("Bad time for Request-TxClock: abc"))
+            .body (equalTo ("Bad time for Read-TxClock: abc"))
           .when
             .get ("/table/table1")
         }}
@@ -557,7 +431,7 @@ class ResourceSpec extends FreeSpec {
             .delete ("/table/table1")
         }}}
 
-    "and gives bad slice numbers" - {
+    "and gives a bad slice" - {
 
       "GET /table/table1?slice=abc&nslices=2 should yield Bad Request" in {
         served { case (port, store) =>
@@ -570,69 +444,20 @@ class ResourceSpec extends FreeSpec {
             .body (equalTo ("Bad integer for slice: abc"))
           .when
             .get ("/table/table1")
-        }}
+        }}}
 
-      "GET /table/table1?slice=0&nslices=abc should yield Bad Request" in {
+    "and gives a bad window" - {
+
+      "GET /table/123?pick=foobar should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
-            .param ("slice", "2")
-            .param ("nslices", "abc")
+            .param ("pick", "foobar")
           .expect
             .statusCode (400)
-            .body (equalTo ("Bad integer for nslices: abc"))
+            .body (equalTo ("Pick must be latest, between or through."))
           .when
-            .get ("/table/table1")
-        }}
-
-      "GET /table/table1?slice=0 should yield Bad Request" in {
-        served { case (port, store) =>
-          val rsp = given
-            .port (port)
-            .param ("slice", "0")
-          .expect
-            .statusCode (400)
-            .body (equalTo ("Both slice and nslices are needed together"))
-          .when
-            .get ("/table/table1")
-        }}
-
-      "GET /table/table1?nslices=0 should yield Bad Request" in {
-        served { case (port, store) =>
-          val rsp = given
-            .port (port)
-            .param ("slice", "0")
-          .expect
-            .statusCode (400)
-            .body (equalTo ("Both slice and nslices are needed together"))
-          .when
-            .get ("/table/table1")
-        }}
-
-      "GET /table/table1?slice=0&nslices=5 should yield Bad Request" in {
-        served { case (port, store) =>
-          val rsp = given
-            .port (port)
-            .param ("slice", "0")
-            .param ("nslices", "5")
-          .expect
-            .statusCode (400)
-            .body (equalTo ("Number of slices must be a power of two and at least one."))
-          .when
-            .get ("/table/table1")
-        }}
-
-      "GET /table/table1?slice=2&nslices=2 should yield Bad Request" in {
-        served { case (port, store) =>
-          val rsp = given
-            .port (port)
-            .param ("slice", "2")
-            .param ("nslices", "2")
-          .expect
-            .statusCode (400)
-            .body (equalTo ("The slice must be between 0 (inclusive) and the number of slices (exclusive)."))
-          .when
-            .get ("/table/table1")
+            .get ("/table/123")
         }}}}
 
   "When post request contains batch-writes" - {
@@ -821,6 +646,7 @@ class ResourceSpec extends FreeSpec {
             .body ("""[{"op": "HOLD", "table": "table1", "key": "abc"}]""")
           .expect
             .statusCode (412)
+            .header ("Value-TxClock", ts2.toString)
           .when
             .post ("/batch-write")
         }}

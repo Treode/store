@@ -1,12 +1,14 @@
 # Treode Client Library
 
-The two major components of the Treode client library are the [Cache](#cache) and the [Transaction](#transaction).  
+The two major components of the Treode client library are the [Cache](#cache) and the [Transaction](#transaction).
 
 Caches store key-value pairs retrieved from the server, as well as the associated read and value timestamps that Treode provided.  Caches also maintain a connection to the DB server.
 
 Transactions allow users to locally perform a sequence of database operations, and then optimistically commit the result to the server by writing through the cache.
 
-Caches and Transactions mediate between client operations and HTTP requests.
+Caches and Transactions mediate between client operations and HTTP requests. They compose several other components, illustrated briefly here and explained in detail throughout this document.
+
+![Client and proxy caches.](img/overview.png)
 
 ## Background
 
@@ -16,7 +18,7 @@ Caches and Transactions mediate between client operations and HTTP requests.
 
 There are multiple caches between the user of TreodeDB and the DB itself: the client cache and HTTP caches. These two caching mechanisms interact: when the client cache sends an HTTP request, it may be handled by an intermediate HTTP cache. This document describes the behavior of the cache that is part of a TreodeDB client library, and it describes how the client cache uses HTTP directives to control the HTTP caches.
 
-![Client and proxy caches.](img/figure1.png)
+![Client and proxy caches.](img/caches.png)
 
 ### HTTP Dates vs TxClocks
 
@@ -33,7 +35,7 @@ Both kinds of timestamps are seen in this prototypical GET request and response:
   Last-Modified: Fri, 10 May 2013 02:07:43 GMT
   Read-TxClock: 1421236153024853
   Value-TxClock: 1368151663681367
- 
+
   {   "title": "Star Wars",
       "cast": [
          { "actor": "Mark Hamill", "role": "Luke Skywalker" },
@@ -42,7 +44,7 @@ Both kinds of timestamps are seen in this prototypical GET request and response:
 
 ### Read vs Cached vs Value Timestamps
 
-TreodeDB and the caches keep multiple timestamps for an item: the time that the item was last written, its *value timestamp*, and the time that the item was read, its *cached timestamp*. Every entry in a cache keeps both timestamps. 
+TreodeDB and the caches keep multiple timestamps for an item: the time that the item was last written, its *value timestamp*, and the time that the item was read, its *cached timestamp*. Every entry in a cache keeps both timestamps.
 
 Also, a request is made as of a *read timestamp*. The term *age* refers to duration between the read time of a cached value, and the read time of a request accessing that value.
 
@@ -151,7 +153,7 @@ An example of usage is below:
 
 We give examples of HTTP requests below.
 
-### Read Requests  
+### Read Requests
 
 The request to the DB includes the table ID, the desired key, and headers restricting the timestamps of the value.
 
@@ -175,7 +177,7 @@ The client is requesting the value of key "star-wars" in the table "movie".  Sin
 
 The client will accept a value from an intermediate cache, only if that cache read the DB less than 300 seconds before the request. Otherwise, the client wants the value directly from the DB server. Finally, the client could have used  the `no-cache` directive to **force** the cache to forward the request to the DB server, even if the cache already has a value satisfying the other requirements.
 
-### Write Requests  
+### Write Requests
 
 The client message to the DB includes the table ID and a list of operations to perform on the table. The operations should be sent to the DB server as a conditional batch write.
 
@@ -200,7 +202,7 @@ Here is an example of the HTTP write request of one item:
         "cast": [
             { "actor": "Mark Hamill", "role": "Luke Skywalker" },
             { "actor": "Carrie Fisher", "role": "Princess Leia Organa" },
-            { "actor": "Harrison Ford", "role": "Han Solo" } ] 
+            { "actor": "Harrison Ford", "role": "Han Solo" } ]
     }
 
 TreodeDB writes the given JSON content to key "star-wars" in table "movie", provided that the current value associated with the "star-wars" key has remained unchanged since the time 1368151663681367 &micro;s.
@@ -242,7 +244,7 @@ The client may send each item in the batch write as a separate HTTP request. The
     If-Unmodified-Since: Fri, 10 May 2013 02:07:43 GMT
     Transaction: id=0x48F67CEFC11894639F3B8853BB247F01C1865406B3548DD2, item=2/2
     Condition-TxClock: 1368151663681367
-    
+
 Unlike the batch write method that posts a JSON array to `/batch-write`, this pipelining method allows intermediate HTTP caches to see that they should invalidate their cached values.
 
 ## Responses
@@ -251,7 +253,7 @@ As with the Requests section, please see more information in [OMVCC and Caching]
 
 ### Read Response
 
-The DB will respond to read requests with a message containing the desired value or an indication the value does not exist in the table. 
+The DB will respond to read requests with a message containing the desired value or an indication the value does not exist in the table.
 
 When the item is in the database, HTTP response will resemble the following:
 
@@ -260,7 +262,7 @@ When the item is in the database, HTTP response will resemble the following:
     Last-Modified: Fri, 10 May 2013 02:07:43 GMT
     Read-TxClock: 1421236153024853
     Value-TxClock: 1368151663681367
-    Vary: Request-TxClock
+    Vary: Read-TxClock
 
     {   "title": "Star Wars",
         "cast": [
@@ -273,7 +275,7 @@ There are several cases in which the HTTP response does not include the JSON val
 
   Note this response is still valuable to the cache, as it allows the cache to update the read timestamp (rt) for this entry to the read timestamp of this request&mdash;the client has just learned that the value has not changed between when the value was last read and this read read.
 
-- **HTTP/1.1 404 Not Found**: The requested value is not in the table. 
+- **HTTP/1.1 404 Not Found**: The requested value is not in the table.
 
   This response is also valuable to the cache, as the it can store that the key had no value as of that read time. In Python for example, we may store None instead of a JSON object. Then future requests can see that without going to the DB server.
 
@@ -288,7 +290,7 @@ The HTTP response for a successful PUT to an individual item, or a POST to `/bat
 
 However, it is also possible the DB server will reject the write because another client has written some of the values in the meantime.  In this case, the HTTP write response will be:
 
-    HTTP/1.1 412 Precondition Failed 
+    HTTP/1.1 412 Precondition Failed
 
 The the client should retry the transaction with a smaller value for the max-age header (e.g., min-age=0) to ensure the values it receives from the client cache and intermediate caches are not stale.
 
@@ -299,26 +301,26 @@ When the client pipelines requests, the server provides the response multiple ti
 
 We provide an overview of the Cache class, including its internal data structure, and its public methods.
 
-- Constructor Parameters: 
+- Constructor Parameters:
     1. server: required string, e.g. “www.example.com”
     2. port: int, default 80
     3. max\_age: int, default None
     4. no\_cache: bool, default False
 
-- Public Methods: 
+- Public Methods:
     1. read (read\_time: TxClock, table: String, key: String, max\_age: int, no\_cache: bool): JSON value
     2. write (condition\_time: TxClock, op\_list: TxView): TxClock, throws StaleException
 
-- Internal Objects: 
+- Internal Objects:
     1. HTTP connection to server
     2. Map for maintaining the cache
 
-- Exceptions: 
+- Exceptions:
     1. StaleException (read\_time: TxClock, value\_time: TxClock)
 
 ## Cache Structure
 
-The cache internally maintains a connection to the DB server, and a map of cache entries.  
+The cache internally maintains a connection to the DB server, and a map of cache entries.
 
 ### Database Connection
 
@@ -329,35 +331,31 @@ The cache should use an HTTP Request/Response library to establish a connection 
 We propose two possible designs for implementing the cache; the preferable of the two designs depends largely on the existing libraries available in the client language. The cache performs two operations on this map:
 
     type TxClock (time: Long)
-    
+
     type CacheResult (value_time: TxClock, cached_time: TxClock, value: JSON)
-    
+
     get (read_time: TxClock, table: String, key: String): CacheResult
     put (read_time: TxClock, value_time: TxClock, table: String, key: string, value: JSON)
 
-#### Hash Table of Lists
+#### Hash Table of Arrays
 
-The cache may be a hash table of lists (or arrays):
- 
-    // (table, key) -> List (value_time, cached_time, value)
-    (string, string) -> List (TxClock, TxClock, JSON)
+![Client and proxy caches.](img/hashtable.png)
 
-In Python, the top-level map is a standard Python dictionary, and the inner map is simply an array of tuples. The `(table, key)` keys are composed by concatenating the table name and key.  Each `(table, key)` maps to an array with entries of `(value_time, cached_time, value)`. Note that the value may be None to indicate that there is no value for duration.
+The cache may be a doubly-linked list of entries, plus a hash table of arrays (or lists) of those entries.
 
-To `get` an item as of a given `read_time`, we lookup the list for `table:key`, and then we search that list for the *most recent* `value_time` on or before the given `read_time`. We return the tuple `(value_time, cached_time, JSON value)`
+In Python, the hashtable is a standard Python dictionary. The `table:key` keys are composed by concatenating the table name and key.  Each `table:key` maps to an array of references to nodes in the LRU list. Each node of the LRU list contains the table, key, value, its timestamps and the LRU’s previous and next pointers. Note that the value may be None to indicate that there is no value for duration.
 
-To `put` an item with a given `value_time`, we lookup the list for `table:key`, search that list for a tuple with the *same* `value_time`. If we find one, we set the `cached_time` of that tuple to the greater of the given `read_time` or the `cached_time` already recorded in the tuple. If we do not find an entry with the *same* `value_time`, we add a new tuple and we may need to remove the least recently used tuple in the cache. 
+To `get` an item as of a given `read_time`, we lookup the array for `table:key`, and then we search that list for the *most recent* `value_time` on or before the given `read_time`. We return the tuple `(value_time, cached_time, JSON value)`
 
-If the lists (or arrays) are unsorted, then `add` is *O*(1), and `find` (floor), `replace`, and `remove` are each *O*(n).  If the lists are sorted, then all the operations are *O*(n). We expect the most frequent operations to be `find`, `replace` and `remove`; sorting would not improve the asymptotic runtimes of these operations. Furthermore, we expect the lists to be small, so the effort of sorting would be moot.
+To `put` an item with a given `value_time`, we lookup the array for `table:key`, search that array for a tuple with the *same* `value_time`. If we find one, we set the `cached_time` of that tuple to the greater of the given `read_time` or the `cached_time` already recorded in the tuple. If we do not find an entry with the *same* `value_time`, we add a new tuple and we may need to remove the least recently used tuple in the cache.
 
-#### Skiplist of Tuples
+If the arrays (or lists) are unsorted, then `add` is *O*(1), and `find` (floor), `replace`, and `remove` are each *O*(n).  If the lists are sorted, then all the operations are *O*(n). We expect the most frequent operations to be `find`, `replace` and `remove`; sorting would not improve the asymptotic runtimes of these operations. Furthermore, we expect the lists to be small, so the effort of sorting would be moot.
 
-If a skiplist that supports floor and ceiling operations is available, then the cache can be implemented using it. The cache is a skiplist of tuples:
+#### Skiplist
 
-    // (table, key, (Long.Max - value_time)) -> (cached_time, value)
-    (string, string, long) -> (TxClock, JSON)
+![Client and proxy caches.](img/skiplist.png)
 
-Each `(table, key, reverse_time)` maps to a tuple of `(cached_time, value)`. The skiplist is effectively sorted in reverse chronological order. Note that the value may be None to indicate that there is no value for duration.
+If a skiplist that supports floor and ceiling operations is available, then the cache can be implemented using it. Each `(table, key, reverse_time)` maps to a node in the LRU list. Each node of the LRU list contains the table, key, value, its timestamps and the LRU’s previous and next pointers. The skiplist is effectively sorted in reverse chronological order. Note that the value may be None to indicate that there is no value for duration.
 
 To `get` an item as of a given `read_time`, we lookup the *ceiling* entry for `(table, key, (Long.Max - read_time))`, and then we return the tuple `(value_time, cached_time, JSON value)`.
 
@@ -371,11 +369,11 @@ All operations should be *O* (*n* lg *n*).
 
     read (
         read_time: TxClock,
-        table: string, 
+        table: string,
         key: string,
-        max_age: int (seconds, default None), 
+        max_age: int (seconds, default None),
         no_cache: bool (default False)
-    ): JSON value 
+    ): JSON value
 
 The read method first checks the cache.  If the entry is missing, or if it has been too long since we read that entry, it sends a read request to the DB for the given table and key, along with the specified cache parameters. Whether TreodeDB provides `200 Ok` and a value or `404 Not Found`, we update our cache to record the value and duration.
 
@@ -390,16 +388,16 @@ These max\_age and no\_cache values also appear in cache read method, though use
 ### write
 
     write (
-        condition_time: TxClock, 
-        ops_map: (table, key) -> (op, value)
-    ): TxClock, throws StaleException  
+        condition_time: TxClock,
+        tx_view: (table, key) -> (op, value)
+    ): TxClock, throws StaleException
 
 The write method sends the [transaction’s view](#tx-view) to the DB server as a conditional batch write. If the server accepts the batch write, the write method also updates the cache to reflect the newly written values. Otherwise, the write method throws a stale exception, including the value timestamp in the DB that caused the write reject if it is available.
 
 <a name="transaction"></a>
 # Transaction
 
-- Constructor Parameters: 
+- Constructor Parameters:
 
     1. cache: Cache
     2. read\_timestamp: TxClock, default now
@@ -407,27 +405,27 @@ The write method sends the [transaction’s view](#tx-view) to the DB server as 
     4. no\_cache: bool, default False
 
 - Public Methods:
- 
+
     1. read (table: string, key: string, max\_age=None, no\_cache=False): JSON, throws StaleException
     2. write (table: string, key: string, value: JSON)
     3. delete (table: string, key: string)
     4. commit(): TxClock, throws StaleException
 
-- Internal Objects: 
+- Internal Objects:
 
     1. min\_rt: TxClock = TxClock.MaxValue
-       
+
        The minimum read time the transaction has seen so far, based on values read.
-       
+
     2. max\_vt: TxClock = TxClock.MinValue
-       
+
        The maximum value time the transaction has seen so far, based on values read.
 
     3. view: Map of `(table, key) -> (op, value)`
 
         All the operations performed by the user during the transaction.
 
-- Exceptions: 
+- Exceptions:
 
     1. StaleException (read\_time: int, value\_time: int)
 
@@ -438,7 +436,7 @@ First, we must understand the purpose of the transaction's min\_rt and max\_vt. 
 The transaction uses min\_rt and max\_rt to check this invariant on each read. If a new read causes the invariant to be violated, that is if it retrieves a value that was written after some earlier value was read, then read will throw a StaleException immediately, so that the client can stop this work immediately, and retry its operation with fresher data.
 
 <a name="tx-minrt"></a>
-### min\_rt 
+### min\_rt
 
 The transaction maintains the minimum cached time it has seen so far.  On every read from the cache, if the cached time is less than min\_rt, we update min\_rt. The cached time is the most recent time that we verified the entry as current in the database. It depends on when we most recently read the value from the source database and placed it into the cache.
 
@@ -454,9 +452,9 @@ Since the max\_age is at most `read_timestamp - max_vt` for all values read so f
 
 
 <a name="tx-view"></a>
-### view 
+### view
 
-The view maintains the map of operations performed throughout the transaction.  This map has type (table, key) -> (op, value).  When the user commits the transaction, the view is handed to the cache, which writes the changes through to the DB server via batch write. If the view's entries are out-of-date with the DB, write will throw a StaleException.
+The view maintains the map of operations performed throughout the transaction.  This map has type `(table, key) -> (op, value)`.  When the user commits the transaction, the view is handed to the cache, which writes the changes through to the DB server via batch write. If the view's entries are out-of-date with the DB, write will throw a StaleException.
 
 Every value read from the cache during the transaction is stored in this map, including values that do not change within the transaction; those are stored in the view with the *hold* operation, as we explain below.
 
@@ -487,9 +485,9 @@ The possible ops in the map are the following
 ### read
 
     read (
-        table: string, 
-        key: string, 
-        max_age: int (default None), 
+        table: string,
+        key: string,
+        max_age: int (default None),
         no_cache: bool (default False)
     ): JSON, throws StaleException
 

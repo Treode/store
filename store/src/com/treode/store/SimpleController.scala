@@ -20,13 +20,12 @@ import java.net.SocketAddress
 import java.nio.file.Path
 import java.util.concurrent.ExecutorService
 
-import com.treode.async.Async
+import com.treode.async.Async, Async.supply
 import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
 import com.treode.disk.{Disk, DiskController, DriveAttachment, DriveDigest, DriveGeometry}
+import com.treode.notify.Notification
 import com.treode.store.atomic.Atomic
 import com.treode.store.catalog.Catalogs
-
-import Async.supply
 
 private class SimpleController (
     cluster: Cluster,
@@ -64,10 +63,10 @@ private class SimpleController (
   def drives: Async [Seq [DriveDigest]] =
     disk.drives
 
-  def attach (items: DriveAttachment*): Async [Unit] =
+  def attach (items: DriveAttachment*): Async [Notification [Unit]] =
     disk.attach (items: _*)
 
-  def drain (paths: Path*): Async [Unit] =
+  def drain (paths: Path*): Async [Notification [Unit]] =
     disk.drain (paths: _*)
 
   def cellId: CellId =

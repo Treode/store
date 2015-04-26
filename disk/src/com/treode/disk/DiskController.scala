@@ -19,6 +19,7 @@ package com.treode.disk
 import java.nio.file.Path
 
 import com.treode.async.Async
+import com.treode.notify.Notification
 
 /** The disk controller.
   *
@@ -36,7 +37,7 @@ trait DiskController {
     *
     * When this method returns, the drives are a part of the disk system.
     */
-  def attach (items: DriveAttachment*): Async [Unit]
+  def attach (items: DriveAttachment*): Async [Notification [Unit]]
 
   /** Drain attached drives.
     *
@@ -44,7 +45,7 @@ trait DiskController {
     * method returns, the drain has begun, but it may not complete until later. When they have
     * drained, the disk system will detach the drives and log a message.
     */
-  def drain (items: Path*): Async [Unit]
+  def drain (items: Path*): Async [Notification [Unit]]
 
   def shutdown(): Async [Unit]
 }

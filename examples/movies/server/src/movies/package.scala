@@ -71,6 +71,13 @@ package object movies {
       rsp
     }
 
+    def stale (req: Request, time: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.PreconditionFailed
+      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp
+    }
+
     def ok (req: Request, time: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.Ok
@@ -98,11 +105,11 @@ package object movies {
       implicit val mapper = if (req.pretty) prettyJson else textJson
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.date = req.requestTxClock
+      rsp.date = req.readTxClock
       rsp.lastModified = time
-      rsp.readTxClock = req.requestTxClock
+      rsp.readTxClock = req.readTxClock
       rsp.valueTxClock = time
-      rsp.vary = "Request-TxClock"
+      rsp.vary = "Read-TxClock"
       rsp.json = value
       rsp
     }

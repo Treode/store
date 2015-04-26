@@ -14,24 +14,9 @@
  * limitations under the License.
  */
 
-package com.treode.disk.edit
+package com.treode.notify
 
-import com.treode.async.Async
-import com.treode.async.io.File
-import com.treode.buffer.PagedBuffer
-import com.treode.disk.{PageDescriptor, Position}
+trait Message {
 
-private class PageReader (file: File) {
-
-  private val bits = 10
-  private val buffer = PagedBuffer (bits)
-
-  /** See [[com.treode.disk.Disk#read Disk.read]]. */
-  def read [P] (pd : PageDescriptor [P], pos: Position): Async [P] = {
-    buffer.clear()
-    assert(pos.disk == 0)
-    for {
-      _ <- file.fill (buffer, pos.offset, pos.length)
-    } yield {
-      pd.ppag.unpickle(buffer)
-    }}}
+  def en: String
+}
