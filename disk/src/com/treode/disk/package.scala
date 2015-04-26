@@ -18,17 +18,23 @@ package com.treode
 
 import java.nio.file.{Path, StandardOpenOption}
 import java.util.concurrent.ExecutorService
-import java.util.logging.{Level, Logger}
+import java.util.logging.{Level, Logger}, Level.INFO
+import scala.collection.mutable
 
 import com.google.common.hash.Hashing
-import com.treode.async.{AsyncIterator, Scheduler}
+import com.treode.async.{Async, Scheduler}
 import com.treode.async.io.File
-
-import Level.INFO
+import org.apache.commons.lang3.StringEscapeUtils.escapeJava
 
 package disk {
 
+  case class Compaction (obj: ObjectId, gens: Set [Long])
+
+  case class DiskSystemDigest (drives: Seq [DriveDigest])
+
   case class DriveAttachment (path: Path, geometry: DriveGeometry)
+
+  case class DriveChange (attaches: Seq [DriveAttachment], drains: Seq [Path])
 
   case class DriveDigest (path: Path, geometry: DriveGeometry, allocated: Int, draining: Boolean)
 
@@ -36,6 +42,10 @@ package disk {
 
   class DiskFullException extends Exception {
     override def getMessage = "Disk full."
+  }
+
+  class DisksClosedException extends IllegalStateException {
+    override def getMessage = "The disk system is closed."
   }
 
   class ExtraDisksException (val paths: Seq [Path]) extends IllegalArgumentException {
@@ -74,9 +84,14 @@ package object disk {
 
   private [disk] type LogDispatcher = Dispatcher [PickledRecord]
   private [disk] type PageDispatcher = Dispatcher [PickledPage]
-  private [disk] type ReplayIterator = AsyncIterator [(Long, Unit => Any)]
 
   private [disk] val checksum = Hashing.murmur3_32
+
+  private [disk] def quote (path: Path): String =
+    "\"" + escapeJava (path.toString) + "\""
+
+  private [disk] def quote (paths: Iterable [Path]): String =
+    paths map (quote _) mkString ", "
 
   private [disk] def openFile (path: Path, geom: DriveGeometry) (implicit scheduler: Scheduler) = {
     import StandardOpenOption.{CREATE, READ, WRITE}

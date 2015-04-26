@@ -26,43 +26,41 @@
 # 3) Builds and tests the examples using the locally published libraries.
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-: ${SBT:=${DIR}'/scripts/sbt'}
-: ${GRUNT:='grunt'}
-LOG=$DIR/build.log
-
 . $DIR/scripts/build-functions.sh
 
-# Really clean everything.
-echo-do git clean -dfx
+# Number of seeds for pseudo-random tests.
+export NSEEDS=10
 
-# SBT has had trouble compiling, testing and assembling in one go. So we have broken the steps
-# into separate commands.
-echo-do ${SBT} +test:compile
-echo-do ${SBT} +test
-echo-do ${SBT} +intensive:test
+clean
 
-# Finatra and Twitter Server are available for Scala 2.10.4 only. The can be compiled and tested
-# in one go.
-echo-do ${SBT} ++2.10.4 finatra/test twitter-server/test
+#
+# Compile.
+#
 
-# Publish the Ivy artifacts to the local Ivy directory so that we can build and test the examples.
-echo-do ${SBT} publish-local
-echo-do ${SBT} ++2.10.4 publish-local finatra/publish-local twitter-server/publish-local
+# Compile, and also publish locally for the examples below.
+echo-do ${SBT} +test:compile +publish-local
 
-# Build the Finatra example, which includes only a server.
-(cd examples/finatra; echo-do ${SBT} test assembly); expect-status 0
+# Skeleton examples.
+(cd examples/finagle; echo-do ${SBT} test:compile); expect-status 0
+(cd examples/unfiltered; echo-do ${SBT} test:compile); expect-status 0
 
-# Build the Unfiltered example, which includes only a server.
-(cd examples/unfiltered; echo-do ${SBT} test assembly); expect-status 0
-
-# Build the Movies example, which includes a server, Spark connector, and web UI.
-(cd examples/movies; echo-do ${SBT} test assembly); expect-status 0
-(cd examples/movies/webui; echo-do npm install --save); expect-status 0
+# Movies example; it has multiple components.
+(cd examples/movies; echo-do ${SBT} test:compile); expect-status 0
+(cd examples/movies/webui; echo-do ${NPM} install --save); expect-status 0
 (cd examples/movies/webui; echo-do ${GRUNT} dist); expect-status 0
 
-# Sometimes tests fail and yet SBT exits with a good status.
-egrep 'ABORTED|FAILED' build.log
-expect-status 1 "Failures found in build.log"
+#
+# Test
+#
 
-echo "Build successful"
-exit 0
+echo-do ${SBT} test intensive:test
+
+(cd examples/finagle; echo-do ${SBT} test); expect-status 0
+(cd examples/unfiltered; echo-do ${SBT} test); expect-status 0
+(cd examples/movies; echo-do ${SBT} test); expect-status 0
+
+#
+# Done.
+#
+
+wrapup

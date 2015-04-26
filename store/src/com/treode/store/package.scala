@@ -20,14 +20,14 @@ import java.net.SocketAddress
 import java.util.concurrent.{TimeoutException => JTimeoutException}
 import java.util.logging.{Level, Logger}, Level.WARNING
 
-import com.treode.async.{Async, AsyncIterator, BatchIterator}
+import com.treode.async.{Async, BatchIterator}
 import com.treode.cluster.{RemoteException => CRemoteException, HostId, PortId}
 
 package store {
 
   class CollisionException (val indexes: Seq [Int]) extends Exception
 
-  class StaleException extends Exception
+  class StaleException (val time: TxClock) extends Exception
 
   class TimeoutException extends JTimeoutException
 
@@ -62,35 +62,27 @@ package store {
 
 package object store {
 
-  type CellIterator = AsyncIterator [Cell]
+  type CellIterator = BatchIterator [Cell]
 
-  type CellIterator2 = BatchIterator [Cell]
+  private [store] implicit class RichCellIterator (iter: CellIterator) {
 
-  @deprecated ("Use Retention", "0.2.0")
-  type PriorValueEpoch = Retention
-
-  @deprecated ("Use Retention", "0.2.0")
-  val PriorValueEpoch = Retention
-
-  private [store] implicit class RichCellIterator (iter: CellIterator2) {
-
-    def rebatch (count: Int, bytes: Int): Async [(Seq [Cell], Option [Cell])] = {
-      @volatile var _count = count
-      @volatile var _bytes = bytes
+    def rebatch (batch: Batch): Async [(Seq [Cell], Option [Cell])] = {
+      @volatile var entries = batch.entries
+      @volatile var bytes = batch.bytes
       iter.toSeqWhile { cell =>
-        _bytes -= cell.byteSize
-        val r = _count > 0 && (_bytes > 0 || _count == count)
-        _count -= 1
+        bytes -= cell.byteSize
+        val r = entries > 0 && (bytes > 0 || entries == batch.entries)
+        entries -= 1
         r
       }}
 
-    def dedupe: CellIterator2 =
+    def dedupe: CellIterator =
       iter.filter (Filters.dedupe)
 
-    def retire (limit: TxClock): CellIterator2 =
+    def retire (limit: TxClock): CellIterator =
       iter.filter (Filters.retire (limit))
 
-    def slice (table: TableId, slice: Slice): CellIterator2 =
+    def slice (table: TableId, slice: Slice): CellIterator =
       iter.filter (c => slice.contains (Cell.locator, (table, c.key)))
 
     def window (window: Window) =

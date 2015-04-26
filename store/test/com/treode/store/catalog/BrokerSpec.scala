@@ -60,13 +60,10 @@ object BrokerBehaviors extends FreeSpec {
 
   private class RichBroker (implicit random: Random, scheduler: StubScheduler) {
 
-    val config = StoreTestConfig()
-    import config._
-
     val diskDrive = new StubDiskDrive
 
     implicit val recovery = StubDisk.recover()
-    implicit val launch = recovery.attach (diskDrive) .expectPass()
+    implicit val launch = recovery.reattach (diskDrive) .expectPass()
     implicit val disk = launch.disk
     launch.launch()
 
@@ -263,11 +260,11 @@ class BrokerProperties extends PropSpec with AsyncChecks {
     }}
 
   property ("The broker should distribute catalogs", Intensive, Periodic) {
-    forAllSeeds { random =>
+    forAllRandoms { random =>
       checkUnity (random, 0.0)
     }}
 
   property ("The broker should distribute catalogs with a flakey network", Intensive, Periodic) {
-    forAllSeeds { random =>
+    forAllRandoms { random =>
       checkUnity (random, 0.1)
     }}}

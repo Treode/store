@@ -27,9 +27,9 @@ private trait DiskPicklers extends Picklers {
   def intSet = IntSet.pickler
   def geometry = DriveGeometry.pickler
   def objectId = ObjectId.pickler
-  def pageGroup = PageGroup.pickler
   def pageLedger = PageLedger.Zipped.pickler
   def pos = Position.pickler
+  def systemId = SystemId.pickler
   def typeId = TypeId.pickler
 }
 

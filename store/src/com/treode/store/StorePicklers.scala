@@ -32,6 +32,7 @@ private trait StorePicklers extends Picklers {
 
   def atlas = Atlas.pickler
   def ballotNumber = BallotNumber.pickler
+  def batch = Batch.pickler
   def bytes = Bytes.pickler
   def catId = CatalogId.pickler
   def cell = Cell.pickler
@@ -47,7 +48,6 @@ private trait StorePicklers extends Picklers {
   def tableId = TableId.pickler
   def tierCheckpoint = TierTable.Checkpoint.pickler
   def tierCompaction = TierTable.Compaction.pickler
-  def tierMeta = TierTable.Meta.pickler
   def txClock = TxClock.pickler
   def txId = TxId.pickler
   def txStatus = TxStatus.pickler

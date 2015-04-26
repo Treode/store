@@ -36,11 +36,11 @@ private class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit sched
     ports.loopback (desc.pmsg, desc.id.id, msg)
 
   def unpickle (id: RumorId, msg: Array [Byte]): Handler =
-    ports.unpickle (id.id, ArrayBuffer (msg))
+    ports.unpickle (id.id, msg)
 
   def listen [M] (desc: RumorDescriptor [M]) (f: (M, Peer) => Any): Unit =
     fiber.execute {
-      ports.register (desc.pmsg, desc.id.id) (f.curried)
+      ports.register (desc.id.id, desc.pmsg) (f.curried)
       for {
         (host, state) <- universe
         (msg, _) <- state get (desc.id)
@@ -109,8 +109,10 @@ private class Scuttlebutt (localId: HostId, peers: PeerRegistry) (implicit sched
     Scuttlebutt.ping.listen { (hosts, from) =>
       val task = for {
         updates <- ping (hosts)
-        if !updates.isEmpty
-      } yield Scuttlebutt.sync (updates) (from)
+      } yield {
+        if (!updates.isEmpty)
+          Scuttlebutt.sync (updates) (from)
+      }
       task run (ignore)
     }
 

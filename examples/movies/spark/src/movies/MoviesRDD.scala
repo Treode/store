@@ -16,47 +16,37 @@
 
 package movies
 
+import java.lang.Integer.highestOneBit
 import java.net.{URI, URL}
 import scala.reflect.ClassTag
 
 import com.fasterxml.jackson.databind.JsonNode
 import org.apache.spark.{Partition => SparkPartition, SparkContext, TaskContext}
 import org.apache.spark.rdd.RDD
-import movies.{AnalyticsModel => AM}
 
 private class MoviesRDD [T: ClassTag] (
   sc: SparkContext,
-  url: URL,
+  uri: URI,
   nslices: Int
 ) extends RDD [T] (sc, Nil) {
 
+  require (nslices == highestOneBit (nslices), "Number of slices must be a power of two.")
+
+  private val clazz = implicitly [ClassTag [T]] .wrap.runtimeClass
+
+  def url (slice: Int): URL =
+    urlOfPartition (uri, slice, nslices)
+
   def compute (split: SparkPartition, context: TaskContext): Iterator [T] = {
-    val clazz = implicitly [ClassTag [T]] .wrap.runtimeClass
-    val array = textJson.readValue (url, clazz) .asInstanceOf [Array [T]]
+    val slice = split.asInstanceOf [MoviesPartition] .index
+    val array = textJson.readValue (url (slice), clazz) .asInstanceOf [Array [T]]
     array.iterator
   }
 
   protected def getPartitions: Array [SparkPartition] =
     Array.tabulate (nslices) (MoviesPartition (_))
-}
 
-object MoviesRDD {
-
-  def movies (sc: SparkContext, host: URI, nslices: Int): RDD [AM.Movie] =
-    new MoviesRDD (sc, host.resolve ("rdd/movies").toURL, nslices)
-
-  def movies (sc: SparkContext, host: String, nslices: Int): RDD [AM.Movie] =
-    movies (sc, new URI (host), nslices)
-
-  def actors (sc: SparkContext, host: URI, nslices: Int): RDD [AM.Actor] =
-    new MoviesRDD (sc, host.resolve ("rdd/actors").toURL, nslices)
-
-  def actors (sc: SparkContext, host: String, nslices: Int): RDD [AM.Actor] =
-    actors (sc, new URI (host), nslices)
-
-  def roles (sc: SparkContext, host: URI, nslices: Int): RDD [AM.Role] =
-    new MoviesRDD (sc, host.resolve ("rdd/movies").toURL, nslices)
-
-  def roles (sc: SparkContext, host: String, nslices: Int): RDD [AM.Role] =
-    roles (sc, new URI (host), nslices)
+  // TODO: Use the /hosts URI to get the preferred locations.
+  override protected def getPreferredLocations (split: SparkPartition): Seq [String] =
+    super.getPreferredLocations (split)
 }

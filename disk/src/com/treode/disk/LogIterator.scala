@@ -20,7 +20,7 @@ import java.nio.file.Path
 import java.util.ArrayDeque
 import scala.util.{Failure, Success}
 
-import com.treode.async.{Async, AsyncIterator, BatchIterator, Callback, Scheduler}
+import com.treode.async.{Async, BatchIterator, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
@@ -31,6 +31,7 @@ import SuperBlocks.chooseSuperBlock
 
 private class LogIterator private (
     records: RecordRegistry,
+    kit: DiskKit,
     path: Path,
     file: File,
     logBuf: PagedBuffer,
@@ -40,9 +41,10 @@ private class LogIterator private (
     private var logSeg: SegmentBounds
 ) (implicit
     scheduler: Scheduler,
-    config: Disk.Config
+    config: DiskConfig
 ) extends BatchIterator [(Long, Unit => Any)] {
 
+  import kit.{checkpointer, compactor}
   import superb.{geometry => geom, id}
   import superb.geometry.{blockAlignDown, blockBits, segmentNum}
 
@@ -51,7 +53,7 @@ private class LogIterator private (
   private var pagePos = Option.empty [Long]
   private var pageLedger = new PageLedger
 
-  class Batch (f: Iterator [(Long, Unit => Any)] => Async [Unit], cb: Callback [Unit]) {
+  class Batch (f: Iterable [(Long, Unit => Any)] => Async [Unit], cb: Callback [Unit]) {
 
     val _read: Callback [Int] = {
       case Success (v) => cb.defer (read (v))
@@ -78,7 +80,13 @@ private class LogIterator private (
           scheduler.pass (cb, ())
 
         case LogAlloc (next) =>
-          logSeg = alloc.alloc (next, geom, config)
+          // Using logSegVal to avoid shadowing logSeg
+          val (logSegVal, alreadyAlloced) = alloc.alloc (next, geom, config)
+          logSeg = logSegVal
+          if (!alreadyAlloced) {
+            // Only counting new locations, not already alloced locations
+            compactor.tally (1);
+          }
           logSegs.add (logSeg.num)
           logPos = logSeg.base
           logBuf.clear()
@@ -86,30 +94,44 @@ private class LogIterator private (
 
         case PageWrite (pos, _ledger) =>
           val num = segmentNum (pos)
-          alloc.alloc (num, geom, config)
+          val (_, alreadyAlloced) = alloc.alloc (num, geom, config)
+          if (!alreadyAlloced) {
+            compactor.tally (1)
+          }
           pagePos = Some (pos)
           pageLedger.add (_ledger)
           logPos += len + 4
+          // Counting updates to the log position (logPos)
+          checkpointer.tally(len + 4, 1)
           file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case PageClose (num) =>
-          alloc.alloc (num, superb.geometry, config)
+          val (_, alreadyAlloced) = alloc.alloc (num, superb.geometry, config)
+          if (!alreadyAlloced) {
+            compactor.tally (1)
+          }
           pagePos = None
           pageLedger = new PageLedger
           logPos += len + 4
+          checkpointer.tally(len + 4, 1)
           file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case SegmentFree (nums) =>
           alloc.free (nums)
           logPos += len + 4
+          checkpointer.tally(len + 4, 1)
           file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case Checkpoint (pos, _ledger) =>
           val num = segmentNum (pos - 1)
-          alloc.alloc (num, superb.geometry, config)
+          val (_, alreadyAlloced) = alloc.alloc (num, superb.geometry, config)
+          if (!alreadyAlloced) {
+            compactor.tally (1)
+          }
           pagePos = Some (pos)
           pageLedger = _ledger.unzip
           logPos += len + 4
+          checkpointer.tally(len + 4, 1)
           file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case DiskDrain (num) =>
@@ -117,20 +139,23 @@ private class LogIterator private (
           pagePos = None
           pageLedger = new PageLedger
           logPos += len + 4
+          checkpointer.tally(len + 4, 1)
           file.deframe (logBuf, logPos, blockBits) run (_read)
 
         case Entry (batch, id) =>
           val end = logBuf.readPos
           val entry = records.read (id.id, logBuf, len - end + start)
+          logBuf.discard (logBuf.readPos)
           logPos += len + 4
-          f (Iterator ((batch, entry))) run (_next)
+          checkpointer.tally(len + 4, 1)
+          f (Iterable ((batch, entry))) run (_next)
       }}
 
     def next() {
       file.deframe (logBuf, logPos, blockBits) run (_read)
     }}
 
-  def batch (f: Iterator [(Long, Unit => Any)] => Async [Unit]): Async [Unit] =
+  def batch (f: Iterable [(Long, Unit => Any)] => Async [Unit]): Async [Unit] =
     async (new Batch (f, _) .next())
 
   def pages(): (SegmentBounds, Long, PageLedger, Boolean) =
@@ -140,10 +165,14 @@ private class LogIterator private (
         (seg, -1L, new PageLedger, false)
       case Some (pos) =>
         val num = segmentNum (pos - 1)
-        val seg = alloc.alloc (num, geom, config)
+        val (seg, alreadyAlloced) = alloc.alloc (num, geom, config)
+        if (!alreadyAlloced) {
+          compactor.tally(1)
+        }
         (seg, pos, pageLedger, true)
       case None =>
         val seg = alloc.alloc (geom, config)
+        compactor.tally(1)
         (seg, seg.limit, pageLedger, true)
     }
 
@@ -162,10 +191,11 @@ private object LogIterator {
   def apply (
       useGen0: Boolean,
       read: SuperBlocks,
-      records: RecordRegistry
+      records: RecordRegistry,
+      kit: DiskKit
   ) (implicit
       scheduler: Scheduler,
-      config: Disk.Config
+      config: DiskConfig
   ): Async [(Int, LogIterator)] = {
 
     val path = read.path
@@ -174,7 +204,7 @@ private object LogIterator {
     val geom = superb.geometry
     val alloc = Allocator (superb.free)
     val num = geom.segmentNum (superb.logHead)
-    val logSeg = alloc.alloc (num, geom, config)
+    val (logSeg, _) = alloc.alloc (num, geom, config)
     val logSegs = new ArrayDeque [Int]
     logSegs.add (logSeg.num)
     val buf = PagedBuffer (geom.blockBits)
@@ -185,7 +215,7 @@ private object LogIterator {
     } yield {
       buf.readPos = (superb.logHead - logBase).toInt
       val iter =
-          new LogIterator (records, path, file, buf, superb, alloc, logSegs, logSeg)
+          new LogIterator (records, kit, path, file, buf, superb, alloc, logSegs, logSeg)
       (superb.id, iter)
     }}
 
@@ -194,7 +224,7 @@ private object LogIterator {
       records: RecordRegistry
   ) (implicit
       scheduler: Scheduler,
-      config: Disk.Config
+      config: DiskConfig
   ): Async [DiskKit] = {
 
     val ordering = Ordering.by [(Long, Unit => Any), Long] (_._1)
@@ -208,11 +238,12 @@ private object LogIterator {
       entry (())
     }
 
+    var kit = new DiskKit (boot.sysid, logBatch)
     for {
-      logs <- reads.latch.map foreach (apply (useGen0, _, records))
+      // Using DiskKit in LogIterator to tally with Checkpointer and Compactor
+      logs <- reads.latch.collate (apply (useGen0, _, records, kit))
       iter = BatchIterator.merge (logs.values.toSeq) (ordering, scheduler)
       _ <- iter.foreach (replay _)
-      kit = new DiskKit (boot.sysid, logBatch)
       drives =
         for (read <- reads) yield {
           val superb = read.superb (useGen0)

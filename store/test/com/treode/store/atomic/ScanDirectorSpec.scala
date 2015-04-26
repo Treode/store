@@ -30,6 +30,7 @@ import org.scalatest.FreeSpec
 
 import AtomicTestTools._
 import Fruits.AllFruits
+import StubScanDeputy.fruitsId
 
 class ScanDirectorSpec extends FreeSpec with AsyncChecks {
 
@@ -38,7 +39,7 @@ class ScanDirectorSpec extends FreeSpec with AsyncChecks {
     /** Scan the fruits table, yield only the keys. */
     def scanFruits () (implicit s: StubScheduler): Seq [Bytes] =
       host
-        .scan (StubScanDeputy.fruitsId, Bound.firstKey, Window.Latest (0, true), Slice.all)
+        .scan (fruitsId, 0, Bound.firstKey, Window.all, Slice.all, Batch.suggested)
         .map (_.key)
         .toSeq
         .expectPass()
@@ -47,7 +48,7 @@ class ScanDirectorSpec extends FreeSpec with AsyncChecks {
   "The ScanDirector should" - {
 
     "scan from one replica" taggedAs (Periodic)  in {
-      forAllSeeds { implicit random =>
+      forAllRandoms { implicit random =>
         implicit val scheduler = StubScheduler.random (random)
         implicit val network = StubNetwork (random)
         val h = StubAtomicHost.install() .expectPass()
@@ -57,7 +58,7 @@ class ScanDirectorSpec extends FreeSpec with AsyncChecks {
       }}
 
     "scan from three replicas" taggedAs (Periodic) in {
-      forAllSeeds { implicit random =>
+      forAllRandoms { implicit random =>
         implicit val scheduler = StubScheduler.random (random)
         implicit val network = StubNetwork (random)
         val h = StubAtomicHost.install() .expectPass()

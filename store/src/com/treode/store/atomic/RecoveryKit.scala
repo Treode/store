@@ -19,27 +19,27 @@ package com.treode.store.atomic
 import scala.collection.JavaConversions
 import scala.util.Random
 
-import com.treode.async.{Async, Callback, Latch, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
-import com.treode.disk.Disk
-import com.treode.store.{Cohort, Library, Store, TxClock, TxId}
+import com.treode.disk.{DiskLaunch, DiskRecovery}
+import com.treode.store.{Cohort, Library, Store, StoreConfig, TxClock, TxId}
 import com.treode.store.paxos.Paxos
 import com.treode.store.tier.TierMedic
 
 import Async.{latch, supply}
 import Callback.ignore
 import JavaConversions._
-import TimedStore.{checkpoint, checkpointV0, compact, receive}
+import TimedStore.{checkpoint, compact, receive}
 import WriteDeputy._
 
 private class RecoveryKit (implicit
     val random: Random,
     val scheduler: Scheduler,
     val library: Library,
-    val recovery: Disk.Recovery,
-    val config: Store.Config
+    val recovery: DiskRecovery,
+    val config: StoreConfig
 ) extends Atomic.Recovery {
 
   val tstore = new TimedMedic (this)
@@ -82,21 +82,17 @@ private class RecoveryKit (implicit
     tstore.compact (tab, meta)
   }
 
-  checkpointV0.replay { case (tab, meta) =>
-    tstore.checkpoint (tab, meta)
-  }
-
   checkpoint.replay { case (tab, meta) =>
     tstore.checkpoint (tab, meta)
   }
 
-  def launch (implicit launch: Disk.Launch, cluster: Cluster, paxos: Paxos): Async [Atomic] = {
+  def launch (implicit launch: DiskLaunch, cluster: Cluster, paxos: Paxos): Async [Atomic] = {
     import launch.disk
     val kit = new AtomicKit()
     kit.tstore.recover (tstore.close())
     val medics = writers.values
     for {
-      _ <- medics.filter (_.isCommitted) .async.foreach (_.close (kit))
+      _ <- medics.filter (_.isCommitted) .latch (_.close (kit))
     } yield {
       medics.filter (_.isPrepared) .foreach (_.close (kit) .run (ignore))
       kit.reader.attach()

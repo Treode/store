@@ -18,8 +18,8 @@ package com.treode.cluster
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.async.io.Socket
-import com.treode.buffer.{Input, PagedBuffer, Output}
-import com.treode.pickle.{InvalidTagException, Pickler, Picklers, PicklerRegistry}
+import com.treode.buffer.PagedBuffer
+import com.treode.pickle.{InvalidTagException, PickledValue, Pickler, PicklerRegistry}
 
 private class PortRegistry {
 
@@ -37,12 +37,15 @@ private class PortRegistry {
   }
 
   private [cluster] def deliver (from: Peer, socket: Socket, buffer: PagedBuffer): Async [Unit] = {
-    for (len <- socket.deframe (buffer))
-      yield ports.unpickle (buffer, len) (from)
-  }
+    for {
+      len <- socket.deframe (buffer)
+    } yield {
+      ports.unpickle (buffer, len) (from)
+      buffer.discard (buffer.readPos)
+    }}
 
   def listen [M] (p: Pickler [M], id: PortId) (f: (M, Peer) => Any): Unit =
-    ports.register (p, id.id) (f.curried)
+    ports.register (id.id, p) (f.curried)
 
   private class EphemeralPortImpl [M] (val id: PortId) extends EphemeralPort [M] {
 
@@ -60,6 +63,6 @@ private class PortRegistry {
 
 private object PortRegistry {
 
-  def frame [M] (p: Pickler [M], id: PortId, msg: M, buf: PagedBuffer): Unit =
-    Picklers.tuple (PortId.pickler, p) .frame ((id, msg), buf)
+  def frame (v: PickledValue, buf: PagedBuffer): Unit =
+    PicklerRegistry.frame (v, buf)
 }

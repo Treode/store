@@ -16,23 +16,23 @@
 
 package com.treode.store.tier
 
-import com.treode.async.Async
-import com.treode.async.stubs.StubScheduler
-import com.treode.disk.Disk
-import com.treode.store.{Bytes, Store, TableId, TxClock}
+import com.treode.async.{Async, Scheduler}
+import com.treode.disk.{DiskLaunch, DiskRecovery}
+import com.treode.store.{Bytes, StoreConfig, TableId, TxClock}
 
 import Async.supply
 import TestTable.{checkpoint, compact, delete, descriptor, put}
 
+/** Wrap the production `SynthMedic` with something that's easier to handle in testing. */
 private class TestMedic (
     id: TableId
 ) (implicit
-    scheduler: StubScheduler,
-    recovery: Disk.Recovery,
-    config: Store.Config
+    scheduler: Scheduler,
+    recovery: DiskRecovery,
+    config: StoreConfig
 ) extends TestTable.Medic {
 
-  val medic = TierMedic (descriptor, id.id)
+  val medic = new SynthMedic (descriptor, id.id)
 
   put.replay { case (gen, key, value) =>
     medic.put (gen, Bytes (key), TxClock.MinValue, Bytes (value))
@@ -50,10 +50,11 @@ private class TestMedic (
     medic.checkpoint (meta)
   }
 
-  def launch (implicit launch: Disk.Launch): Async [TestTable] = supply {
-    import launch.{checkpoint, disk}
-    val table = new TestTable (medic.close())
-    checkpoint (table.checkpoint())
+  def launch (implicit launch: DiskLaunch): Async [TestTable] = supply {
+    import launch.disk
+    val table = new TestTable (id, medic.close())
+    launch.checkpoint (table.checkpoint())
+    launch.compact (descriptor.pager) (c => table.compact (c.obj, c.gens))
     descriptor.handle (table)
     table
   }}

@@ -20,7 +20,7 @@ import com.treode.async.Async
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.cluster.IgnoreRequestException
-import com.treode.disk.Disk
+import com.treode.disk.DiskLaunch
 import com.treode.store.TxId
 
 import Async.guard
@@ -52,16 +52,18 @@ private class WriteDeputies (kit: AtomicKit) {
   def checkpoint(): Async [Unit] =
     guard {
       for {
-        _ <- materialize (deputies.values) .latch.unit foreach (_.checkpoint())
+        _ <- materialize (deputies.values) .latch (_.checkpoint())
         _ <- tstore.checkpoint()
       } yield ()
     }
 
-  def attach () (implicit launch: Disk.Launch) {
+  def attach () (implicit launch: DiskLaunch) {
 
     launch.checkpoint (checkpoint())
 
     TimedStore.table.handle (tstore)
+
+    TimedStore.table.compact (c => tstore.compact (c.obj, c.gens))
 
     prepare.listen { case ((version, xid, ct, ops), from) =>
       if (atlas.version - 1 <= version && version <= atlas.version + 1)

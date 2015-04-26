@@ -26,10 +26,11 @@ import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
+import com.treode.async.implicits._
+import com.treode.notify.{Message, Notification}
 import org.scalatest.Assertions
 
 import Assertions.assertResult
-import Disk.Launch
 
 private object DiskTestTools {
 
@@ -37,12 +38,16 @@ private object DiskTestTools {
 
   type ReattachItem = (Path, StubFile)
 
-  val sysid = new Array [Byte] (0)
+  val sysid = SystemId (0, 0)
+
+  def assertEqNotification (expected: Message*) (actual: Notification [Unit]) {
+    assert (expected == actual.messages)
+  }
 
   implicit def stringToPath (path: String): Path =
     Paths.get (path)
 
-  implicit class RichControllerAgent (controller: Disk.Controller) {
+  implicit class RichControllerAgent (controller: DiskController) {
     val agent = controller.asInstanceOf [ControllerAgent]
     import agent.disk
 
@@ -52,10 +57,10 @@ private object DiskTestTools {
     def assertDraining (paths: String*): Unit =
       disk.assertDraining (paths: _*)
 
-    def attachAndWait (items: AttachItem*): Async [Unit] =
+    def attachAndWait (items: AttachItem*): Async [Notification [Unit]] =
       disk.attachAndWait (items: _*)
 
-    def attachAndCapture (items: AttachItem*): CallbackCaptor [Unit] =
+    def attachAndCapture (items: AttachItem*): CallbackCaptor [Notification [Unit]] =
       attachAndWait (items: _*) .capture
 
     def attachAndPass (items: AttachItem*) (implicit scheduler: StubScheduler) {
@@ -63,10 +68,10 @@ private object DiskTestTools {
       disk.assertReady()
     }
 
-    def drainAndWait (items: Path*): Async [Unit] =
+    def drainAndWait (items: Path*): Async [Notification [Unit]] =
       agent.drain (items: _*)
 
-    def drainAndCapture (items: Path*): CallbackCaptor [Unit] =
+    def drainAndCapture (items: Path*): CallbackCaptor [Notification [Unit]] =
       drainAndWait (items: _*) .capture()
 
     def drainAndPass (items: Path*) (implicit scheduler: StubScheduler) {
@@ -79,7 +84,7 @@ private object DiskTestTools {
     val agent = disk.asInstanceOf [DiskAgent]
     import agent.kit.{drives, checkpointer, compactor, config, logd, paged}
 
-    def attachAndWait (items: AttachItem*): Async [Unit] =
+    def attachAndWait (items: AttachItem*): Async [Notification [Unit]] =
       drives._attach (items)
 
     def assertDisks (paths: String*) {
@@ -94,7 +99,7 @@ private object DiskTestTools {
     }
 
     def assertLaunched() {
-      assert (checkpointer.checkpoints != null, "Expected checkpointer to have a registry.")
+      assert (checkpointer.checkpointers != null, "Expected checkpointer to have a registry.")
       assert (compactor.pages != null, "Expected compactor to have a page registry.")
       assertReady()
     }
@@ -108,22 +113,22 @@ private object DiskTestTools {
       assertResult (nreceivers) (paged.receivers.size)
     }
 
-    def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, grp: PageGroup) (
+    def assertInLedger (pos: Position, typ: TypeId, obj: ObjectId, gen: Long) (
         implicit scheduler: StubScheduler) {
       val drive = drives.drives (pos.disk)
       val num = (pos.offset >> drive.geom.segmentBits).toInt
       if (num == drive.pageSeg.num) {
         val ledger = drive.pageLedger
         assert (
-            ledger.get (typ, obj, grp) > 0,
-            s"Expected ($typ, $obj, $grp) in restored from log.")
+            ledger.get (typ, obj, gen) > 0,
+            s"Expected ($typ, $obj, $gen) in restored from log.")
       } else {
         assert (!drive.alloc.free.contains (num), "Expected segment to be allocated.")
         val seg = drive.geom.segmentBounds (num)
         val ledger = PageLedger.read (drive.file, drive.geom, seg.base) .expectPass()
         assert (
-            ledger.get (typ, obj, grp) > 0,
-            s"Expected ($typ, $obj, $grp) in ledger at ${seg.base} on ${drive.id}.")
+            ledger.get (typ, obj, gen) > 0,
+            s"Expected ($typ, $obj, $gen) in ledger at ${seg.base} on ${drive.id}.")
       }}
 
     // After detaching, closed multiplexers may still reside in the dispatcher's receiver
@@ -131,7 +136,7 @@ private object DiskTestTools {
     private def tickle [M] (dispatcher: Dispatcher [M]) (
         implicit tag: ClassTag [M], scheduler: StubScheduler): Int = {
       while (!dispatcher.receivers.isEmpty)
-        dispatcher.receivers.remove () (0L, new UnrolledBuffer [M])
+        dispatcher.receivers.remove().pass ((0L, new UnrolledBuffer [M]))
       scheduler.run()
     }
 
@@ -154,7 +159,7 @@ private object DiskTestTools {
         blockBits: Int = 6,
         diskBytes: Long = 1<<20
     ) (implicit
-        config: Disk.Config
+        config: DiskConfig
      ): DriveGeometry =
        DriveGeometry (
            segmentBits,
@@ -162,7 +167,7 @@ private object DiskTestTools {
            diskBytes)
   }
 
-  implicit class RichLaunchAgent (launch: Disk.Launch) {
+  implicit class RichLaunchAgent (launch: DiskLaunch) {
     val agent = launch.asInstanceOf [LaunchAgent]
     import agent.disk
 
@@ -174,11 +179,11 @@ private object DiskTestTools {
       disk.assertLaunched()
     }}
 
-  implicit class RichPager [G, P] (pager: PageDescriptor [G, P]) {
+  implicit class RichPager [P] (pager: PageDescriptor [P]) {
 
-    def assertInLedger (pos: Position, obj: ObjectId, grp: G) (
+    def assertInLedger (pos: Position, obj: ObjectId, gen: Long) (
         implicit scheduler: StubScheduler, disk: Disk): Unit =
-      disk.assertInLedger (pos, pager.id, obj, PageGroup (pager.pgrp, grp))
+      disk.assertInLedger (pos, pager.id, obj, gen)
 
     def fetch (pos: Position) (implicit disk: Disk): Async [P] =
       disk.asInstanceOf [DiskAgent] .kit.drives.fetch (pager, pos)
@@ -194,21 +199,20 @@ private object DiskTestTools {
       ks
     }
 
-    def nextGroup(): PageGroup =
-      PageGroup (DiskPicklers.fixedLong, random.nextLong())
+    def nextGroup(): Long = random.nextLong()
   }
 
-  implicit class RichRecovery (recovery: Disk.Recovery) {
+  implicit class RichRecovery (recovery: DiskRecovery) {
     val agent = recovery.asInstanceOf [RecoveryAgent]
 
-    def attachAndWait (items: AttachItem*): Async [Launch] =
+    def attachAndWait (items: AttachItem*): Async [DiskLaunch] =
       agent._attach (sysid, items: _*)
 
-    def attachAndCapture (items: AttachItem*): CallbackCaptor [Launch] =
+    def attachAndCapture (items: AttachItem*): CallbackCaptor [DiskLaunch] =
       attachAndWait (items: _*) .capture()
 
     def attachAndControl (items: AttachItem*)  (
-        implicit scheduler: StubScheduler): Disk.Controller = {
+        implicit scheduler: StubScheduler): DiskController = {
       val launch = attachAndWait (items: _*) .expectPass()
       launch.launchAndPass()
       launch.controller
@@ -220,7 +224,7 @@ private object DiskTestTools {
       launch.disk
     }
 
-    def reattachAndWait (items: ReattachItem*): Async [Launch] =
+    def reattachAndWait (items: ReattachItem*): Async [DiskLaunch] =
       agent._reattach (items: _*)
 
     def reattachAndLaunch (items: ReattachItem*) (implicit scheduler: StubScheduler): Disk = {
@@ -230,14 +234,14 @@ private object DiskTestTools {
     }
 
     def reopenAndWait (paths: Path*) (items: ReattachItem*) (
-        implicit scheduler: StubScheduler, config: Disk.Config): Async [Launch] = {
+        implicit scheduler: StubScheduler, config: DiskConfig): Async [DiskLaunch] = {
       val files = items.toMap
       def superbs (path: Path) = SuperBlocks.read (path, files (path))
       agent._reattach (paths) (superbs _)
     }
 
     def reopenAndLaunch (paths: Path*) (items: ReattachItem*) (
-        implicit scheduler: StubScheduler, config: Disk.Config): Disk = {
+        implicit scheduler: StubScheduler, config: DiskConfig): Disk = {
       val launch = reopenAndWait (paths: _*) (items: _*) .expectPass()
       launch.launchAndPass()
       launch.disk

@@ -21,9 +21,8 @@ import scala.util.Random
 
 import com.treode.async.Async
 import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.{StubGlobals, StubScheduler}
 import com.treode.async.stubs.implicits._
-import com.treode.disk.stubs.CrashChecks
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec
 import org.scalatest.time.SpanSugar
@@ -239,7 +238,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
   "The logger should write more data than disk" - {
 
     "when randomly scheduled" taggedAs (Intensive, Periodic) in {
-      forAllSeeds { implicit random =>
+      forAllRandoms { implicit random =>
 
         implicit val config = DiskTestConfig (
             maximumRecordBytes = 1<<9,
@@ -264,7 +263,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
       }}
 
     "when multithreaded" taggedAs (Intensive, Periodic) in {
-      import StubScheduler.scheduler
+      import StubGlobals.scheduler
 
       implicit val config = DiskTestConfig (
           maximumRecordBytes = 1<<9,
@@ -313,7 +312,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         .recover { implicit scheduler =>
           file = StubFile (file.data, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val disk = recovery.reattachAndLaunch (("a", file))
+          implicit val launch = recovery.reattachAndWait (("a", file)) .expectPass()
+          import launch.disk
+          tracker.attach()
+          launch.launchAndPass()
           tracker.check()
         }}}
 
@@ -343,7 +345,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         .recover { implicit scheduler =>
           file = StubFile (file.data, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val disk = recovery.reattachAndLaunch (("a", file))
+          implicit val launch = recovery.reattachAndWait (("a", file)) .expectPass()
+          import launch.disk
+          tracker.attach()
+          launch.launchAndPass()
           tracker.check()
         }}}
 
@@ -382,10 +387,13 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file2 = StubFile (file2.data, geom.blockBits)
           file3 = StubFile (file3.data, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val disk = recovery.reattachAndLaunch (
+          implicit val launch = recovery.reattachAndWait (
               ("a", file1),
               ("b", file2),
-              ("c", file3))
+              ("c", file3)) .expectPass()
+          import launch.disk
+          tracker.attach()
+          launch.launchAndPass()
           tracker.check()
         }}}
 
@@ -423,7 +431,10 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
           file1 = StubFile (file1.data, geom.blockBits)
           file2 = StubFile (file2.data, geom.blockBits)
           implicit val recovery = Disk.recover()
-          implicit val disk = recovery.reopenAndLaunch ("a") (("a", file1), ("b", file2))
+          implicit val launch = recovery.reopenAndWait ("a") (("a", file1), ("b", file2)) .expectPass()
+          import launch.disk
+          tracker.attach()
+          launch.launchAndPass()
           tracker.check()
         }}}
 
@@ -470,7 +481,7 @@ class DiskSystemSpec extends FreeSpec with CrashChecks {
         }}}
 
     "more data than disk" taggedAs (Intensive, Periodic) in {
-      forAllSeeds { implicit random =>
+      forAllRandoms { implicit random =>
 
         implicit val config = DiskTestConfig (
             maximumRecordBytes = 1<<9,

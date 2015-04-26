@@ -18,13 +18,16 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.treode.async.AsyncIterator
+import com.treode.async.BatchIterator
 import com.treode.async.misc.RichOption
 import com.treode.jackson.DefaultTreodeModule
 import com.treode.store.{Bytes, TableId, TxClock}
-import com.treode.twitter.finagle.http.{RichResponse, BadRequestException}
+import com.treode.twitter.finagle.http.{RichResponse, BadRequestException, RichRequest}
 import com.twitter.finagle.http.{Request, Response, Status}
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
+import com.twitter.finagle.http.filter.{CommonLogFormatter, LoggingFilter}
+import com.twitter.logging.Logger
+
 
 package object example {
 
@@ -38,17 +41,29 @@ package object example {
 
   object respond {
 
-    def apply (req: Request, status: HttpResponseStatus = Status.Ok): Response = {
+    def apply (req: Request, status: HttpResponseStatus): Response = {
       val rsp = req.response
       rsp.status = status
       rsp
     }
 
-    def clear (req: Request, status: HttpResponseStatus = Status.Ok): Response  = {
+    def ok (req: Request): Response = {
       val rsp = req.response
-      rsp.status = status
-      rsp.clearContent()
-      rsp.contentLength = 0
+      rsp.status = Status.Ok
+      rsp
+    }
+
+    def ok (req: Request, time: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp
+    }
+
+    def stale (req: Request, time: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.PreconditionFailed
+      rsp.headerMap.add ("Value-TxClock", time.toString)
       rsp
     }
 
@@ -62,17 +77,23 @@ package object example {
     def json (req: Request, time: TxClock, value: Any): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.etag = time
+      rsp.date = req.readTxClock
+      rsp.lastModified = time
+      rsp.readTxClock = req.readTxClock
+      rsp.valueTxClock = time
+      rsp.vary = "Read-TxClock"
       rsp.json = value
       rsp
     }
 
-    def json [A] (req: Request, iter: AsyncIterator [A]): Response  = {
+    def json [A] (req: Request, iter: BatchIterator [A]): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok
       rsp.json = iter
       rsp
     }}
+
+  object LoggingFilter extends LoggingFilter (Logger ("access"), new CommonLogFormatter)
 
   implicit class RichAny (v: Any) {
 
@@ -93,9 +114,6 @@ package object example {
   }
 
   implicit class RichString (s: String) {
-
-    def getTableId: TableId =
-      TableId.parse (s) .getOrThrow (new BadRequestException (s"Bad table ID: $s"))
 
     def fromJson [A: Manifest]: A =
       textJson.readValue [A] (s)

@@ -26,9 +26,6 @@ private class CellPage (val entries: Array [Cell]) extends TierPage {
   def get (i: Int): Cell =
     entries (i)
 
-  def iterator: Iterator [Cell] =
-    entries.iterator
-
   def ceiling (start: Bound [Key]): Int = {
     val target = Cell (start.bound.key, start.bound.time, None)
     val i = Arrays.binarySearch (entries, target, Cell)

@@ -51,7 +51,7 @@ private class PeerRegistry (localId: HostId, newPeer: HostId => Peer) (implicit 
     }}
 
   def shutdown(): Async [Unit] =
-    peers.values.latch.unit foreach (_.close())
+    peers.values.latch (_.close())
 
   override def toString =
     "PeerRegistry" +
@@ -68,7 +68,7 @@ private object PeerRegistry {
   ) (implicit
       random: Random,
       scheduler: Scheduler,
-      config: Cluster.Config
+      config: ClusterConfig
   ): PeerRegistry = {
 
     def newPeer (remoteId: HostId): Peer =

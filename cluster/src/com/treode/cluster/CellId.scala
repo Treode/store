@@ -22,8 +22,7 @@ import com.google.common.primitives.UnsignedLongs
 import com.treode.async.misc.parseUnsignedLong
 import com.treode.pickle.Picklers
 
-// TODO: Constructor should be private, but that makes Scala 2.10.4 crash.
-class CellId (val id: Long) extends AnyVal with Ordered [CellId] {
+class CellId private (val id: Long) extends AnyVal with Ordered [CellId] {
 
   def compare (that: CellId): Int =
     UnsignedLongs.compare (this.id, that.id)

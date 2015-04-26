@@ -18,10 +18,12 @@ package com.treode.store.locks
 
 import com.treode.store.TxClock
 
+/** A set of locks acquired for a writer. */
 private [store] trait LockSet {
 
+  /** The lower bound for the write timestamp. */
   def ft: TxClock
 
-  /** Releases the acquired locks; only necessary for writes. */
+  /** Release the locks; the writer must call this. */
   def release()
 }

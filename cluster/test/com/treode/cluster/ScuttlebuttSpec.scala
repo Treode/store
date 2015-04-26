@@ -271,11 +271,11 @@ class ScuttlebuttProperties extends PropSpec with AsyncChecks {
   }
 
   property ("Scuttlebutt should spread rumors") {
-    forAllSeeds { implicit random =>
+    forAllRandoms { implicit random =>
       checkUnity (0.0) (random)
     }}
 
   property ("Scuttlebutt should spread rumors with a flakey network") {
-    forAllSeeds { random =>
+    forAllRandoms { random =>
       checkUnity (0.1) (random)
     }}}

@@ -22,7 +22,6 @@ import java.nio.file.Paths
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.implicits._
-import com.treode.disk.stubs.CrashChecks
 import com.treode.tags.Periodic
 import org.scalatest.FreeSpec
 
@@ -116,7 +115,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file2 = StubFile (1<<20, geom.blockBits)
           val recovery = Disk.recover()
           val controller = recovery.attachAndControl (("a", file1, geom))
-          controller.attachAndWait () .fail [IllegalArgumentException]
+          controller.attachAndWait () .expectFail [IllegalArgumentException]
           controller.assertDisks ("a")
         }
 
@@ -142,7 +141,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           val controller = recovery.attachAndControl (("a", file1, geom))
           controller
               .attachAndWait (("b", file2, geom), ("b", file2, geom))
-              .fail [IllegalArgumentException]
+              .expectFail [IllegalArgumentException]
           controller.assertDisks ("a")
         }
 
@@ -164,7 +163,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file = StubFile (1<<20, geom.blockBits)
           val recovery = Disk.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
-          controller.attachAndWait (("a", file, geom)).fail [ControllerException]
+          controller.attachAndWait (("a", file, geom)) .expectFail [ControllerException]
           controller.assertDisks ("a")
         }
 
@@ -250,7 +249,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file = StubFile (1<<20, geom.blockBits)
           val recovery = Disk.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
-          controller.drainAndWait () .fail [IllegalArgumentException]
+          controller.drainAndWait () .expectFail [IllegalArgumentException]
           controller.assertDisks ("a")
           controller.assertDraining ()
         }
@@ -272,7 +271,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file = StubFile (1<<20, geom.blockBits)
           val recovery = Disk.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
-          controller.drainAndWait ("b") .fail [ControllerException]
+          controller.drainAndWait ("b") .expectFail [ControllerException]
           controller.assertDisks ("a")
           controller.assertDraining ()
         }
@@ -294,7 +293,7 @@ class DiskDrivesSpec extends FreeSpec with CrashChecks {
           file = StubFile (1<<20, geom.blockBits)
           val recovery = Disk.recover()
           val controller = recovery.attachAndControl (("a", file, geom))
-          controller.drainAndWait ("a") .fail [ControllerException]
+          controller.drainAndWait ("a") .expectFail [ControllerException]
           controller.assertDisks ("a")
           controller.assertDraining ()
         }

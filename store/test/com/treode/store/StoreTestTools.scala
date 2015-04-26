@@ -20,7 +20,7 @@ import java.nio.file.{Path, Paths}
 import scala.language.implicitConversions
 import scala.util.Random
 
-import com.treode.async.{Async, AsyncIterator, BatchIterator}
+import com.treode.async.{Async, BatchIterator}
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import com.treode.cluster.HostId
@@ -36,12 +36,6 @@ private trait StoreTestTools {
     import StorePicklers._
     tuple (fixedLong, fixedLong)
   }
-
-  val MinStart = Bound.Inclusive (Key.MinValue)
-
-  val AllSlices = Slice (0, 1)
-
-  val AllTimes = Window.Through (Bound.Inclusive (TxClock.MaxValue), TxClock.MinValue)
 
   def Get (id: TableId, key: Bytes): ReadOp =
     ReadOp (id, key)
@@ -73,32 +67,7 @@ private trait StoreTestTools {
   def testStringOf (cells: Seq [Cell]): String =
     cells.map (testStringOf _) .mkString ("[", ", ", "]")
 
-  // Scala uses only the first argument list to disambiguate method references; this works around
-  // that limitation.
-  class AssertCells (expected: Seq [Cell]) {
-
-    def apply (actual: BatchIterator [Cell]) (implicit scheduler: StubScheduler) {
-      val _actual = actual.toSeq.expectPass()
-      if (expected != _actual)
-        fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
-    }
-
-    def apply (actual: AsyncIterator [Cell]) (implicit scheduler: StubScheduler) {
-      val _actual = actual.toSeq.expectPass()
-      if (expected != _actual)
-        fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
-    }}
-
-  /*def assertCells (expected: Cell*): AssertCells =
-    new AssertCells (expected)*/
-
-  def assertCells (expected: Cell*) (actual: AsyncIterator [Cell]) (implicit scheduler: StubScheduler) {
-    val _actual = actual.toSeq.expectPass()
-    if (expected != _actual)
-      fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
-  }
-
-  def assertCellsB (expected: Cell*) (actual: BatchIterator [Cell]) (implicit scheduler: StubScheduler) {
+  def assertCells (expected: Cell*) (actual: BatchIterator [Cell]) (implicit scheduler: StubScheduler) {
     val _actual = actual.toSeq.expectPass()
     if (expected != _actual)
       fail (s"Expected ${testStringOf (expected)}, found ${testStringOf (_actual)}")
@@ -157,7 +126,7 @@ private trait StoreTestTools {
   implicit class RichStore (store: Store) {
 
     def scan (table: TableId): CellIterator =
-      store.scan (table, MinStart, AllTimes, AllSlices)
+      store.scan (table, Bound.firstKey, Window.all, Slice.all)
 
     def expectCells (table: TableId) (expected: Cell*) (implicit scheduler: StubScheduler) =
       assertCells (expected: _*) (store.scan (table))

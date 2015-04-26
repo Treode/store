@@ -31,13 +31,14 @@ private class ScanDirector (
     start: Bound [Key],
     window: Window,
     slice: Slice,
+    batch: Batch,
     kit: AtomicKit
-) extends CellIterator2 {
+) extends CellIterator {
 
   import kit.{cluster, library, random, scheduler}
   import kit.config.scanBatchBackoff
 
-  private class Batch (body: Iterator [Cell] => Async [Unit], cb: Callback [Unit]) {
+  private class Batch (body: Iterable [Cell] => Async [Unit], cb: Callback [Unit]) {
 
     val fiber = new Fiber
 
@@ -78,7 +79,7 @@ private class ScanDirector (
         // The iterator is closed or the timeout is old, so ignore it.
       } else if (backoff.hasNext) {
         val need = atlas.awaiting (have) .map (cluster.peer _)
-        scan (table, mark, window, slice) (need, port)
+        scan (table, mark, window, slice, batch) (need, port)
         fiber.delay (backoff.next) (_rouse (mark, backoff))
       } else {
         pq = null
@@ -105,7 +106,7 @@ private class ScanDirector (
         if (e.xs.hasNext) {
           pq.enqueue (e.copy (x = e.xs.next))
         } else if (!e.end) {
-          scan (table, last, window, slice) (e.from, port)
+          scan (table, last, window, slice, batch) (e.from, port)
           have -= e.from.id
           q = atlas.quorum (have)
         } else {
@@ -120,7 +121,7 @@ private class ScanDirector (
       if (!xs.isEmpty) {
         // We have data to give, and we proactively asked a deputy for new data.
         ready = false
-        scheduler.execute (guard (body (xs.iterator)) run (took _))
+        scheduler.execute (guard (body (xs)) run (took _))
       } else if (taken) {
         // There's nothing to give, no deputies responded while the client body executed.
         val last = this.last
@@ -172,10 +173,10 @@ private class ScanDirector (
         done += from.id
         _next (false)
       } else {
-        scan ((table, last, window, slice)) (from, port)
+        scan (table, last, window, slice, batch) (from, port)
       }}}
 
-  def batch (f: Iterator [Cell] => Async [Unit]): Async [Unit] =
+  def batch (f: Iterable [Cell] => Async [Unit]): Async [Unit] =
     async (new Batch (f, _))
 }
 
@@ -194,7 +195,8 @@ private object ScanDirector {
       start: Bound [Key],
       window: Window,
       slice: Slice,
+      batch: Batch,
       kit: AtomicKit
-  ): CellIterator2 =
-    (new ScanDirector (table, start, window, slice, kit)) .window (window)
+  ): CellIterator =
+    (new ScanDirector (table, start, window, slice, batch, kit)) .window (window)
 }

@@ -52,14 +52,12 @@ class HandlerSpec extends FreeSpec {
     }}
 
   private def newCatalog (issues: Int): Handler = {
-    val config = StoreTestConfig()
-    import config._
     implicit val random = new Random (0)
     val diskDrive = new StubDiskDrive
     implicit val scheduler = StubScheduler.random (random)
     implicit val disk = StubDisk
         .recover()
-        .attach (diskDrive)
+        .reattach (diskDrive)
         .expectPass()
         .disk
     val cat = Handler (0)

@@ -21,20 +21,17 @@ import java.util.concurrent.TimeoutException
 import scala.util.Random
 import scala.language.postfixOps
 
-import com.treode.async.{Async, Backoff, Callback, Fiber, Scheduler}
+import com.treode.async.{Async, Backoff, Callback, Fiber, Scheduler},
+  Async.{async, supply}, Callback.{ignore => disregard}
 import com.treode.async.implicits._
-import com.treode.async.stubs.{AsyncChecks, StubScheduler}
+import com.treode.async.stubs.{AsyncChecks, StubGlobals, StubScheduler}, StubGlobals.scheduler
 import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec
-
-import Async.{async, supply}
-import Callback.{ignore => disregard}
-import StubScheduler.scheduler
 
 class ClusterLiveSpec extends FlatSpec {
 
   implicit val random = Random
-  implicit val config = Cluster.Config.suggested
+  implicit val config = ClusterConfig.suggested
 
   val Cell1 = CellId (0x89)
   val Cell2 = CellId (0x27)

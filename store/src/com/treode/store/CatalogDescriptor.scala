@@ -20,10 +20,10 @@ import com.treode.pickle.Pickler
 
 class CatalogDescriptor [C] (val id: CatalogId, val pcat: Pickler [C]) {
 
-  def listen (f: C => Any) (implicit store: Store.Controller): Unit =
+  def listen (f: C => Any) (implicit store: StoreController): Unit =
     store.listen (this) (f)
 
-  def issue (version: Int, cat: C) (implicit store: Store.Controller): Unit =
+  def issue (version: Int, cat: C) (implicit store: StoreController): Unit =
     store.issue (this) (version, cat)
 
   override def toString = s"CatalogDescriptor($id)"

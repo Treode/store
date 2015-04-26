@@ -21,7 +21,7 @@ import scala.util.Random
 
 import com.treode.async.{Async, Callback}
 import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.StubScheduler
+import com.treode.async.stubs.{AsyncCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
 import org.scalatest.FreeSpec
 
@@ -39,8 +39,8 @@ class PageSpec extends FreeSpec {
 
   object pagers {
     import DiskPicklers._
-    val str = PageDescriptor (0xE9, uint, string)
-    val stuff = PageDescriptor (0x25, uint, Stuff.pickler)
+    val str = PageDescriptor (0xE9, string)
+    val stuff = PageDescriptor (0x25, Stuff.pickler)
   }
 
   "The pager should" - {
@@ -116,7 +116,7 @@ class PageSpec extends FreeSpec {
         implicit val scheduler = StubScheduler.random()
         val file = StubFile (1<<20, geom.blockBits)
         implicit val disk = setup (file)
-        pagers.stuff.write (0, 0, Stuff (0, 1000)) .fail [OversizedPageException]
+        pagers.stuff.write (0, 0, Stuff (0, 1000)) .expectFail [OversizedPageException]
       }}}
 
   "The compactor should" - {
@@ -143,10 +143,10 @@ class PageSpec extends FreeSpec {
       val recovery = Disk.recover()
       implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
       import launch.disk
-      pagers.stuff.handle (new PageHandler [Int] {
-        def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+      pagers.stuff.handle (new PageHandler {
+        def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] =
           throw new DistinguishedException
-        def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+        def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] =
           throw new AssertionError
       })
       launch.launch()
@@ -166,10 +166,10 @@ class PageSpec extends FreeSpec {
       val recovery = Disk.recover()
       implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
       import launch.disk
-      pagers.stuff.handle (new PageHandler [Int] {
-        def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
-          supply (Set (groups.head))
-        def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
+      pagers.stuff.handle (new PageHandler {
+        def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] =
+          supply (Set (gens.head))
+        def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] =
           throw new DistinguishedException
       })
       launch.launch()
@@ -179,4 +179,54 @@ class PageSpec extends FreeSpec {
       disk.clean()
       intercept [DistinguishedException] {
         scheduler.run()
+      }}
+
+
+    "restart a compaction after a crash" in {
+
+      var file: StubFile = null
+
+      // Write enough pages to disk to allocate a couple segments.
+      {
+        implicit val config = DiskTestConfig (cleaningFrequency = 3)
+        implicit val random = new Random (0)
+        implicit val scheduler = StubScheduler.random (random)
+        file = StubFile (1<<20, geom.blockBits)
+        val recovery = Disk.recover()
+        implicit val launch = recovery.attachAndWait (("a", file, geom)) .expectPass()
+        import launch.disk
+        pagers.stuff.handle (new PageHandler {
+          def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+            supply (groups)
+          def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
+            supply (())
+        })
+        launch.launch()
+
+        for (i <- 0 until 20)
+          pagers.stuff.write (0, i, Stuff (random.nextLong)) .expectPass()
+      }
+
+      // Restart with a low threshold, allocations should trigger a compaction.
+      {
+        implicit val random = new Random (0)
+        implicit val scheduler = StubScheduler.random (random)
+        implicit val config = DiskTestConfig (cleaningFrequency = 1)
+        val captor = AsyncCaptor [Set [Long]]
+
+        file = StubFile (file.data, geom.blockBits)
+        val recovery = Disk.recover()
+        implicit val launch = recovery.reattachAndWait (("a", file)) .expectPass()
+        import launch.disk
+        pagers.stuff.handle (new PageHandler {
+          def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+            captor.start()
+          def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
+            supply (())
+        })
+        launch.launch()
+        scheduler.run()
+
+        assertResult (1) (captor.outstanding)
+
       }}}}

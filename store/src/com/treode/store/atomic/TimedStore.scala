@@ -19,7 +19,7 @@ package com.treode.store.atomic
 import java.util.concurrent.ConcurrentHashMap
 import scala.collection.JavaConversions
 
-import com.treode.async.{Async, BatchIterator, Callback, Latch}
+import com.treode.async.{Async, BatchIterator, Callback}
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.disk.{Disk, ObjectId, PageHandler, Position, RecordDescriptor}
@@ -30,7 +30,7 @@ import com.treode.store.tier.{TierDescriptor, TierMedic, TierTable}
 import Async.{async, guard, supply, when}
 import JavaConversions._
 
-private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
+private class TimedStore (kit: AtomicKit) extends PageHandler {
   import kit.{config, disk, library, scheduler}
 
   val space = new LockSpace
@@ -59,8 +59,8 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     for {
       _ <- space.read (rt, ids)
       cells <-
-        for ((op, i) <- ops.zipWithIndex.latch.seq)
-          getTable (op.table) .get (op.key, rt)
+        for ((op, i) <- ops.indexed)
+          yield getTable (op.table) .get (op.key, rt)
     } yield {
       for (Cell (_, time, value) <- cells) yield Value (time, value)
     }
@@ -79,8 +79,8 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     for {
       locks <- space.write (ct, ids)
       cells <-
-        for ((op, i) <- ops.zipWithIndex.latch.seq)
-          getTable (op.table) .get (op.key, TxClock.MaxValue)
+        for ((op, i) <- ops.indexed)
+          yield getTable (op.table) .get (op.key, TxClock.MaxValue)
     } yield {
       val vt = cells.map (_.time) .fold (TxClock.MinValue) (TxClock.max _)
       val collisions = collided (ops, cells)
@@ -89,7 +89,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
         Collided (collisions)
       } else if (ct < vt) {
         locks.release()
-        Stale
+        Stale (vt)
       } else {
         Prepared (TxClock.max (vt, locks.ft), locks)
       }}}
@@ -105,15 +105,12 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
         case op: Delete => t.delete (op.key, wt)
       }}}
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator2 =
+  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
     BatchIterator.make {
       for {
         _ <- space.scan (window.later.bound)
       } yield {
-        getTable (table)
-            .iterator (start, library.residents)
-            .slice (table, slice)
-            .window (window)
+        getTable (table) .iterator (start, window, slice, library.residents)
       }}
 
   def receive (table: TableId, cells: Seq [Cell]): Async [Unit] = {
@@ -121,9 +118,9 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
     when (!novel.isEmpty) (TimedStore.receive.record (table, gen, novel))
   }
 
-  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+  def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] =
     guard {
-      getTable (obj.id) .probe (groups)
+      getTable (obj.id) .probe (gens)
     }
 
   def compact() {
@@ -136,8 +133,11 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
       val id = TableId (obj.id)
       val residents = library.residents
       for {
-        meta <- getTable (id) .compact (groups, residents)
-        _ <- when (meta.isDefined) (TimedStore.compact.record (id, meta.get))
+        result <- getTable (id) .compact (groups, residents)
+        _ <- when (result) { case (compaction, release) =>
+          for (_ <- TimedStore.compact.record (id, compaction))
+            yield disk.release (release.desc, release.obj, release.gens)
+        }
       } yield ()
     }
 
@@ -151,7 +151,7 @@ private class TimedStore (kit: AtomicKit) extends PageHandler [Long] {
 
   def checkpoint(): Async [Unit] = {
     val tables = materialize (this.tables.entrySet)
-    for (e <- tables.latch.unit)
+    for (e <- tables.latch)
       checkpoint (e.getKey, e.getValue)
   }
 
@@ -178,11 +178,6 @@ private object TimedStore {
   val compact = {
     import AtomicPicklers._
     RecordDescriptor (0x4B5391ACA26DD90BL, tuple (tableId, tierCompaction))
-  }
-
-  val checkpointV0 = {
-    import AtomicPicklers._
-    RecordDescriptor (0x1DB0E46F7FD15C5DL, tuple (tableId, tierMeta))
   }
 
   val checkpoint = {

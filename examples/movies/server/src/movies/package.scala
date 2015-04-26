@@ -25,7 +25,7 @@ import com.fasterxml.jackson.dataformat.smile.SmileFactory
 import com.fasterxml.jackson.datatype.joda.JodaModule
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.treode.async.AsyncIterator
+import com.treode.async.BatchIterator
 import com.treode.async.misc
 import com.treode.cluster.HostId
 import com.treode.jackson.DefaultTreodeModule
@@ -33,6 +33,8 @@ import com.treode.store.{Bytes, TxClock}
 import com.treode.store.alt.Froster
 import com.treode.twitter.finagle.http, http.{BadRequestException, RichResponse}
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
+import com.twitter.finagle.http.filter.{CommonLogFormatter, LoggingFilter}
+import com.twitter.logging.Logger
 import org.joda.time.DateTime
 import org.joda.time.format.ISODateTimeFormat
 import org.jboss.netty.handler.codec.http.HttpResponseStatus
@@ -69,17 +71,24 @@ package object movies {
       rsp
     }
 
+    def stale (req: Request, time: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.PreconditionFailed
+      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp
+    }
+
     def ok (req: Request, time: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.etag = time
+      rsp.valueTxClock = time
       rsp
     }
 
     def created (req: Request, time: TxClock, location: String): Response = {
       val rsp = req.response
       rsp.status = Status.Created
-      rsp.etag = time
+      rsp.valueTxClock = time
       rsp.location = location
       rsp
     }
@@ -96,18 +105,24 @@ package object movies {
       implicit val mapper = if (req.pretty) prettyJson else textJson
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.etag = time
+      rsp.date = req.readTxClock
+      rsp.lastModified = time
+      rsp.readTxClock = req.readTxClock
+      rsp.valueTxClock = time
+      rsp.vary = "Read-TxClock"
       rsp.json = value
       rsp
     }
 
-    def json [A] (req: Request, iter: AsyncIterator [A]): Response  = {
+    def json [A] (req: Request, iter: BatchIterator [A]): Response  = {
       implicit val mapper = if (req.pretty) prettyJson else textJson
       val rsp = req.response
       rsp.status = Status.Ok
       rsp.json = iter
       rsp
     }}
+
+  object LoggingFilter extends LoggingFilter (Logger ("access"), new CommonLogFormatter)
 
   def toBase36 (v: Long): String =
     java.lang.Long.toString (v, 36)
@@ -150,10 +165,8 @@ package object movies {
 
   implicit class RichRequest (request: Request) extends http.RichRequest (request) {
 
-    def id (prefix: String): String = {
+    def id (prefix: String): String =
       request.path.substring (prefix.length)
-
-    }
 
     def pretty: Boolean =
       // If the accept header lacks "application/json", then pretty print the response.

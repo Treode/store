@@ -17,10 +17,10 @@
 package movies
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.implicits._
 import com.treode.pickle.Picklers
-import com.treode.store.{Store, TxClock}
+import com.treode.store.{Batch, Bound, Store, TxClock, Window}
 import com.treode.store.alt.{Froster, TableDescriptor, Transaction}
 import com.treode.twitter.finagle.http.BadRequestException
 import org.joda.time.DateTime
@@ -119,9 +119,11 @@ private object PhysicalModel {
             .async()
       } yield ()
 
-    def list (rt: TxClock) (implicit store: Store): AsyncIterator [AM.Movie] =
+    def list (window: Window) (implicit store: Store): BatchIterator [AM.Movie] =
       for {
-        cell <- MovieTable.latest (rt)
+        cell <- MovieTable.scan (
+            window = window,
+            batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
       } yield {
         val movie = cell.value.get
@@ -338,9 +340,11 @@ private object PhysicalModel {
             .async()
       } yield ()
 
-    def list (rt: TxClock) (implicit store: Store): AsyncIterator [AM.Actor] =
+    def list (window: Window) (implicit store: Store): BatchIterator [AM.Actor] =
       for {
-        cell <- ActorTable.latest (rt)
+        cell <- ActorTable.scan (
+            window = window,
+            batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
       } yield {
         val actor = cell.value.get
@@ -445,12 +449,14 @@ private object PhysicalModel {
 
     val empty = Roles (Seq.empty)
 
-    def list (rt: TxClock) (implicit scheduler: Scheduler, store: Store): AsyncIterator [AM.Role] =
+    def list (window: Window) (implicit store: Store): BatchIterator [AM.Role] =
       for {
-        cell <- RolesTable.latest (rt)
+        cell <- RolesTable.scan (
+            window = window,
+            batch = Batch (4000, 1 << 18))
         if cell.value.isDefined
         val actorId = cell.key
-        role <- cell.value.get.roles.async
+        role <- cell.value.get.roles
       } yield {
         AM.Role (actorId, role.movieId, role.role)
       }
@@ -513,27 +519,37 @@ private object PhysicalModel {
       * - The entry counts only if it has movies or actors as selected
       * - Listing at most 10 entries
       */
-    def prefix (tx: Transaction, key: String, movies: Boolean, actors: Boolean): Async [IndexEntry] = {
+    def prefix (
+        tx: Transaction,
+        key: String,
+        movies: Boolean,
+        actors: Boolean
+    ) (implicit
+        store: Store
+    ): Async [IndexEntry] = {
       var count = 10
-      tx.latest (Index, key)
-        .filter (_.value.isDefined)
-        .filter { cell =>
-          val entry = cell.value.get
-          (movies && !entry.movies.isEmpty) || (actors && !entry.actors.isEmpty)
-        }
-        .toSeqWhile { cell =>
-          count -= 1
-          count > 0 && cell.key.startsWith (key)
-        }
-        .map { case (cells, next) =>
-          cells
-            .map { cell =>
-              IndexEntry (
-                if (movies) cell.value.get.movies else Set.empty,
-                if (actors) cell.value.get.actors else Set.empty)
-            }
-            .fold (empty) (_ ++ _)
-        }}}
+      Index.from (
+          start = Bound ((key, TxClock.MaxValue), true),
+          window = tx.latest,
+          batch = Batch (count, 1 << 16))
+      .filter (_.value.isDefined)
+      .filter { cell =>
+        val entry = cell.value.get
+        (movies && !entry.movies.isEmpty) || (actors && !entry.actors.isEmpty)
+      }
+      .toSeqWhile { cell =>
+        count -= 1
+        count > 0 && cell.key.startsWith (key)
+      }
+      .map { case (cells, next) =>
+        cells
+          .map { cell =>
+            IndexEntry (
+              if (movies) cell.value.get.movies else Set.empty,
+              if (actors) cell.value.get.actors else Set.empty)
+          }
+          .fold (empty) (_ ++ _)
+      }}}
 
   val MovieTable =
     TableDescriptor (0xA57FDF4417D46CBCL, Froster.string, Froster.bson [Movie])

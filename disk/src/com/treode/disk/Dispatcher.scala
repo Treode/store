@@ -16,60 +16,104 @@
 
 package com.treode.disk
 
-import java.util.{ArrayDeque}
+import java.util.ArrayDeque
 import scala.collection.mutable.UnrolledBuffer
 import scala.reflect.ClassTag
-import com.treode.async.{Fiber, Scheduler}
+import scala.util.{Failure, Success}
+import com.treode.async.{Async, Callback, Scheduler}, Async.async
 
-private class Dispatcher [M] (
-    private var counter: Long
-) (implicit
-    scheduler: Scheduler,
-    mtag: ClassTag [M]
+/** A queue of messages. Senders (producers) send one or many messages, and receivers (consumers)
+  * take all queue messages if any, or wait for the next message(s) sent. The queue maintains a
+  * batch number that's incremented upon each delivery.
+  */
+private class Dispatcher [M] (implicit
+  scheduler: Scheduler,
+  mtag: ClassTag [M]
 ) {
 
-  private type R = (Long, UnrolledBuffer [M]) => Any
+  private type R = Callback [(Long, UnrolledBuffer [M])]
 
-  private val fiber = new Fiber
-  private var engaged = false
   private var messages = new UnrolledBuffer [M]
+  private var _batch = 0L
 
+  // TODO: visible for testing, make it private
   val receivers = new ArrayDeque [R]
 
   private def singleton (m: M): UnrolledBuffer [M] =
     UnrolledBuffer (m)
 
+  /** Remove all messages from the queue. */
   private def drain(): UnrolledBuffer [M] = {
     val t = messages
     messages = new UnrolledBuffer
     t
   }
 
+  /** Deliver the messages to the receiver. */
   private def engage (receiver: R, messages: UnrolledBuffer [M]) {
-    counter += 1
-    engaged = true
-    scheduler.execute (receiver (counter, messages))
+    _batch += 1
+    scheduler.pass (receiver, (_batch, messages))
   }
 
-  def send (message: M): Unit = fiber.execute {
-    if (engaged || receivers.isEmpty)
-      messages += message
-    else
-      engage (receivers.remove(), singleton (message))
-  }
+  /** True if no messages or receivers are queued.
+    * @return True if no messages or receivers are queued.
+    */
+  def isEmpty: Boolean =
+    synchronized (messages.isEmpty && receivers.isEmpty)
 
-  def receive (receiver: R): Unit = fiber.execute {
-    if (engaged || messages.isEmpty)
-      receivers.add (receiver)
-    else
-      engage (receiver, drain())
-  }
+  /** Peek at the next batch number. */
+  def batch: Long =
+    synchronized (_batch)
 
-  def replace (rejects: UnrolledBuffer [M]): Unit = fiber.execute {
-    rejects.concat (messages)
-    messages = rejects
-    if (!messages.isEmpty && !receivers.isEmpty)
-      engage (receivers.remove(), drain())
-    else
-      engaged = false
-  }}
+  /** Raise the next batch number, if the given value exceeds the current one.
+    * @param batch The new batch number.
+    */
+  def batch_= (batch: Long): Unit =
+    synchronized {
+      if (_batch < batch) _batch = batch
+    }
+
+  /** Send the message. Deliver it with an awaiting receiver, or queue it for the next receiver to
+    * arrive.
+    * @param message The message to send.
+    */
+  def send (message: M): Unit =
+    synchronized {
+      if (receivers.isEmpty)
+        messages += message
+      else
+        engage (receivers.remove(), singleton (message))
+    }
+
+  /** Send the messages. Deliver them to an awaiting receiver, or queue them for the next receiver
+    * to arrive.
+    * @param messages The messages to send; the UnrolledBuffer will be cleared.
+    */
+  def send (messages: UnrolledBuffer [M]): Unit =
+    synchronized {
+      this.messages.concat (messages)
+      if (!this.messages.isEmpty && !receivers.isEmpty)
+        engage (receivers.remove(), drain())
+    }
+
+  /** Deprecated. */
+  def receive (receiver: (Long, UnrolledBuffer [M]) => Any): Unit =
+    receive() run {
+      case Success ((batch, messages)) => receiver (batch, messages)
+      case Failure (thrown) => throw thrown
+    }
+
+  /** Receive all queued messages. The receiver gets all queued messages delivered promptly if any
+    * any are queued, or the receiver gets called later when some sender provides messages. The
+    * receiver also gets the batch number, which the Dispatch increments each time it delivers
+    * messages to a receiver.
+    * @return All messages that had been queued, and the next batch number.
+    */
+  def receive () : Async [(Long, UnrolledBuffer [M])] =
+    async { cb =>
+      synchronized {
+        if(messages.isEmpty)
+        receivers.add (cb)
+      else
+        engage (cb, drain())
+      }}}

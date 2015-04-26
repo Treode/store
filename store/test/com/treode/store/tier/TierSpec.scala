@@ -35,23 +35,19 @@ import TierTestTools._
 
 class TierSpec extends WordSpec {
 
-  private def setup (targetPageBytes: Int = 1 << 20): (StubScheduler, Disk, Store.Config) = {
-    val config = StoreTestConfig (
-        checkpointProbability = 0.0,
-        compactionProbability = 0.0,
-        targetPageBytes = targetPageBytes)
-    import config._
+  private def setup (targetPageBytes: Int = 1 << 20): (StubScheduler, Disk, StoreConfig) = {
+    implicit val config = StoreTestConfig.storeConfig (targetPageBytes = targetPageBytes)
     implicit val random = new Random (0)
     implicit val scheduler = StubScheduler.random (random)
     implicit val recovery = StubDisk.recover()
     val diskDrive = new StubDiskDrive
-    val launch = recovery.attach (diskDrive) .expectPass()
+    val launch = recovery.reattach (diskDrive) .expectPass()
     launch.launch()
-    (scheduler, launch.disk, config.storeConfig)
+    (scheduler, launch.disk, config)
   }
 
   private def newBuilder (est: Long) (
-      implicit scheduler: StubScheduler, disk: Disk, config: Store.Config) =
+      implicit scheduler: StubScheduler, disk: Disk, config: StoreConfig) =
     new TierBuilder (descriptor, 0, 0, Residents.all, BloomFilter (est, config.falsePositiveProbability))
 
   /** Get the depths of ValueBlocks reached from the index entries. */
@@ -83,13 +79,13 @@ class TierSpec extends WordSpec {
     }}
 
   private def buildEmptyTier () (
-      implicit scheduler: StubScheduler, disk: Disk, config: Store.Config): Tier = {
+      implicit scheduler: StubScheduler, disk: Disk, config: StoreConfig): Tier = {
     newBuilder (10) .result.expectPass()
   }
 
   /** Build a tier from fruit. */
   private def buildTier () (
-      implicit scheduler: StubScheduler, disk: Disk, config: Store.Config): Tier = {
+      implicit scheduler: StubScheduler, disk: Disk, config: StoreConfig): Tier = {
     val builder = newBuilder (AllFruits.length)
     AllFruits.async.foreach (v => builder.add (Cell (v, 1, Some (1)))) .expectPass()
     builder.result.expectPass()
@@ -128,14 +124,14 @@ class TierSpec extends WordSpec {
       implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (2)
       builder.add (Cell (Apple, 0, None)) .expectPass()
-      builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
+      builder.add (Cell (Apple, 0, None)) .expectFail [IllegalArgumentException]
     }
 
     "require that added entries are sorted by key" in {
       implicit val (scheduler, disk, config) = setup()
       val builder = newBuilder (2)
       builder.add (Cell (Orange, 0, None)) .expectPass()
-      builder.add (Cell (Apple, 0, None)) .fail [IllegalArgumentException]
+      builder.add (Cell (Apple, 0, None)) .expectFail [IllegalArgumentException]
     }
 
     "allow properly sorted entries" in {

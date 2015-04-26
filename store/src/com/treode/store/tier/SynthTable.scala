@@ -19,7 +19,7 @@ package com.treode.store.tier
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import scala.collection.JavaConversions
 
-import com.treode.async.{Async, AsyncIterator, Callback, Scheduler}
+import com.treode.async.{Async, Callback, Scheduler}
 import com.treode.async.implicits._
 import com.treode.disk.{Disk, PageDescriptor, Position}
 import com.treode.store._
@@ -29,7 +29,7 @@ import Callback.ignore
 import JavaConversions._
 import Scheduler.toRunnable
 import SynthTable.{genStepMask, genStepSize}
-import TierTable.{Checkpoint, Compaction}
+import TierTable.{Checkpoint, Compaction, Release}
 
 private class SynthTable (
 
@@ -59,7 +59,7 @@ private class SynthTable (
 ) (implicit
     scheduler: Scheduler,
     disk: Disk,
-    config: Store.Config
+    config: StoreConfig
 ) extends TierTable {
   import desc.pager
   import scheduler.whilst
@@ -140,7 +140,7 @@ private class SynthTable (
       readLock.unlock()
     }}
 
-  def iterator (residents: Residents): CellIterator2 = {
+  def iterator (residents: Residents): CellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -152,7 +152,7 @@ private class SynthTable (
         .clean (desc, id, residents)
   }
 
-  def iterator (start: Bound [Key], residents: Residents): CellIterator2 = {
+  def iterator (start: Bound [Key], residents: Residents): CellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -162,6 +162,20 @@ private class SynthTable (
     TierIterator
         .merge (desc, start, primary, secondary, tiers)
         .clean (desc, id, residents)
+  }
+
+  def iterator (start: Bound [Key], window: Window, slice: Slice, residents: Residents): CellIterator = {
+    readLock.lock()
+    val (primary, secondary, tiers) = try {
+      (this.primary, this.secondary, this.tiers)
+    } finally {
+      readLock.unlock()
+    }
+    TierIterator
+        .merge (desc, start, primary, secondary, tiers.overlaps (window))
+        .clean (desc, id, residents)
+        .slice (id, slice)
+        .window (window)
   }
 
   def receive (cells: Seq [Cell]): (Long, Seq [Cell]) = {
@@ -179,11 +193,11 @@ private class SynthTable (
       readLock.unlock()
     }}
 
-  def probe (groups: Set [Long]): Async [Set [Long]] = async { cb =>
+  def probe (gens: Set [Long]): Async [Set [Long]] = async { cb =>
     writeLock.lock()
     try {
       if (!secondary.isEmpty)
-        queue ::= toRunnable (probe (groups), cb)
+        queue ::= toRunnable (probe (gens), cb)
       else
         cb.on (scheduler) .pass (tiers.active)
     } finally {
@@ -191,7 +205,7 @@ private class SynthTable (
     }}
 
   def compact(): Unit =
-    pager.compact (id.id) run (ignore)
+    pager.compact (id.id)
 
   def countKeys (tier: MemTier): Long = {
     var count = 0L
@@ -203,7 +217,8 @@ private class SynthTable (
     count
   }
 
-  def compact (gen: Long, chosen: Tiers, residents: Residents): Async [Option [Compaction]] = guard {
+  def compact (gen: Long, chosen: Tiers, residents: Residents):
+      Async [Option [(Compaction, Release)]] = guard {
 
     // Write the new tier. When the write has completed, update the tiers and return the new tier.
     val iter = TierIterator .merge (desc, chosen) .clean (desc, id, residents)
@@ -215,23 +230,26 @@ private class SynthTable (
       val meta = try {
         val g = chosen.minGen
         tiers = tiers.compact (g, tier)
-        new Some (new Compaction (g, tier))
+        val c = new Compaction (g, tier)
+        val r = new Release (desc.pager, id.id, chosen.gens)
+        new Some ((c, r))
       } finally {
         writeLock.unlock()
       }
       meta
     }}
 
-  def compact (groups: Set [Long], residents: Residents): Async [Option [Compaction]] = async { cb =>
+  def compact (gens: Set [Long], residents: Residents):
+      Async [Option [(Compaction, Release)]] = async { cb =>
 
-    // Choose which tiers to compact, accounting for which groups the disk cleaner needs moved,
+    // Choose which tiers to compact, accounting for which generations the disk cleaner needs moved,
     // and accounting for tier sizes. There may be no work to do.
     writeLock.lock()
     try {
       if (!secondary.isEmpty) {
-        queue ::= toRunnable (compact (groups, residents), cb)
+        queue ::= toRunnable (compact (gens, residents), cb)
       } else {
-        val chosen = tiers.choose (groups, residents)
+        val chosen = tiers.choose (gens, residents)
         if (chosen.isEmpty) {
           cb.on (scheduler) .pass (None)
         } else if (primary.isEmpty) {
@@ -311,7 +329,7 @@ private object SynthTable {
   val genStepMask = genStepSize - 1
 
   def apply (desc: TierDescriptor, id: TableId) (
-      implicit scheduler: Scheduler, disk: Disk, config: Store.Config): SynthTable = {
+      implicit scheduler: Scheduler, disk: Disk, config: StoreConfig): SynthTable = {
     val lock = new ReentrantReadWriteLock
     new SynthTable (desc, id, lock, genStepSize, newMemTier, newMemTier, Tiers.empty)
   }}

@@ -17,9 +17,9 @@
 package com.treode.store.stubs
 
 import java.util.concurrent.{ConcurrentHashMap, ConcurrentSkipListMap}
-import scala.collection.JavaConversions
+import scala.collection.JavaConversions._
 
-import com.treode.async.{Async, AsyncIterator, Scheduler}
+import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.implicits._
 import com.treode.async.stubs.StubScheduler
 import com.treode.cluster.HostId
@@ -27,12 +27,11 @@ import com.treode.store._
 import com.treode.store.locks.LockSpace
 
 import Async.{async, guard}
-import JavaConversions._
 
 class StubStore (implicit scheduler: Scheduler) extends Store {
 
   // The stub uses only the lockSpaceBits.
-  private implicit val config = Store.Config.suggested.copy (lockSpaceBits = 4)
+  private implicit val config = StoreConfig.suggested.copy (lockSpaceBits = 4)
 
   private val space = new LockSpace
   private val xacts = new ConcurrentHashMap [TxId, TxStatus]
@@ -93,7 +92,7 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
           val vt = results.filterNot (_._1) .map (_._2) .fold (TxClock.MinValue) (TxClock.max _)
           val wt = TxClock.max (vt, locks.ft) + 1
           if (ct < vt)
-            throw new StaleException
+            throw new StaleException (vt)
           if (!collisions.isEmpty)
             throw new CollisionException (collisions)
           if (xacts.putIfAbsent (xid, TxStatus.Committed (wt)) != null)
@@ -114,20 +113,19 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
         cb.pass (st)
     } .on (scheduler)
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): AsyncIterator [Cell] =
-    AsyncIterator.make {
+  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice, batch: Batch): BatchIterator [Cell] =
+    BatchIterator.make {
       for {
         _ <- space.scan (window.later.bound)
       } yield {
         data
             .tailMap (StubKey (table, start.bound.key, start.bound.time), start.inclusive)
-            .iterator
-            .takeWhile (_._1.table == table)
-            .map {case (key, value) => Cell (key.key, key.time, value)}
+            .headMap (StubKey (table.id + 1, Bytes.empty, TxClock.MaxValue))
+            .entrySet
             .batch
+            .map (e => Cell (e.getKey.key, e.getKey.time, e.getValue))
             .slice (table, slice)
             .window (window)
-            .flatten
       }}
 
   def scan (table: TableId): Seq [Cell] =

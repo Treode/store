@@ -91,7 +91,7 @@ class RecoverySpec extends FreeSpec {
     "reject attaching no items" in {
       implicit val scheduler = StubScheduler.random()
       val recovery = Disk.recover()
-      recovery.attachAndWait() .fail [IllegalArgumentException]
+      recovery.attachAndWait() .expectFail [IllegalArgumentException]
     }
 
     "reject attaching the same path multiply" in {
@@ -100,7 +100,7 @@ class RecoverySpec extends FreeSpec {
       val recovery = Disk.recover()
       recovery
           .attachAndWait (("a", file, geom), ("a", file, geom))
-          .fail [IllegalArgumentException]
+          .expectFail [IllegalArgumentException]
     }
 
     "pass through an exception from DiskDrive.init" in {
@@ -143,7 +143,7 @@ class RecoverySpec extends FreeSpec {
       "reject reattaching no items" in {
         implicit val scheduler = StubScheduler.random()
         val recovery = Disk.recover()
-        recovery.reattachAndWait() .fail [IllegalArgumentException]
+        recovery.reattachAndWait() .expectFail [IllegalArgumentException]
       }
 
       "reject reattaching the same path multiply" in {
@@ -154,14 +154,14 @@ class RecoverySpec extends FreeSpec {
         recovery = Disk.recover()
         recovery
             .reattachAndWait (("a", file), ("a", file))
-            .fail [IllegalArgumentException]
+            .expectFail [IllegalArgumentException]
       }
 
       "pass through an exception from chooseSuperBlock" in {
         implicit val scheduler = StubScheduler.random()
         val file = StubFile (1<<20, geom.blockBits)
         val recovery = Disk.recover()
-        recovery.reattachAndWait (("a", file)) .fail [NoSuperBlocksException]
+        recovery.reattachAndWait (("a", file)) .expectFail [NoSuperBlocksException]
       }
 
       "pass through an exception from verifyReattachment" in {
@@ -171,7 +171,7 @@ class RecoverySpec extends FreeSpec {
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file1, geom), ("b", file2, geom))
         recovery = Disk.recover ()
-        recovery.reattachAndWait (("a", file1)) .fail [MissingDisksException]
+        recovery.reattachAndWait (("a", file1)) .expectFail [MissingDisksException]
 
       }}
 
@@ -184,7 +184,7 @@ class RecoverySpec extends FreeSpec {
         var recovery = Disk.recover()
         recovery.attachAndLaunch (("a", file, geom), ("b", file2, geom))
         recovery = Disk.recover()
-        recovery.reattachAndWait (("a", file)) .fail [MissingDisksException]
+        recovery.reattachAndWait (("a", file)) .expectFail [MissingDisksException]
       }}
 
     "when given unopened paths should" - {
@@ -219,7 +219,7 @@ class RecoverySpec extends FreeSpec {
         recovery = Disk.recover()
         recovery
             .reopenAndWait ("a", "c") (("a", file), ("b", file2), ("c", file3))
-            .fail [InconsistentSuperBlocksException]
+            .expectFail [InconsistentSuperBlocksException]
       }
 
       "fail when given extra initialized items" in {
@@ -234,5 +234,5 @@ class RecoverySpec extends FreeSpec {
         recovery = Disk.recover()
         recovery
             .reopenAndWait ("a", "c") (("a", file), ("b", file2), ("c", file3))
-            .fail [ExtraDisksException]
+            .expectFail [ExtraDisksException]
       }}}}

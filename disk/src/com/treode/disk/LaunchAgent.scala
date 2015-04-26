@@ -20,15 +20,15 @@ import java.util.ArrayList
 
 import com.treode.async.{Async, Callback, Scheduler}
 
-private class LaunchAgent (val kit: DiskKit) extends Disk.Launch {
+private class LaunchAgent (val kit: DiskKit) extends DiskLaunch {
 
-  private val roots = new CheckpointRegistry
+  private val checkpointers = new CheckpointerRegistry.Builder
   private val pages = new PageRegistry (kit)
   private var open = true
 
   implicit val disk: Disk = new DiskAgent (kit)
 
-  implicit val controller: Disk.Controller = new ControllerAgent (kit, disk)
+  implicit val controller: DiskController = new ControllerAgent (kit, disk)
 
   val sysid = kit.sysid
 
@@ -38,10 +38,10 @@ private class LaunchAgent (val kit: DiskKit) extends Disk.Launch {
   def checkpoint (f: => Async [Unit]): Unit =
     synchronized {
       requireOpen()
-      roots.checkpoint (f)
+      checkpointers.add (f)
     }
 
-  def handle [G] (desc: PageDescriptor [G, _], handler: PageHandler [G]): Unit =
+  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit =
     synchronized {
       requireOpen()
       pages.handle (desc, handler)
@@ -51,5 +51,10 @@ private class LaunchAgent (val kit: DiskKit) extends Disk.Launch {
     synchronized {
       requireOpen()
       open = false
-      kit.launch (roots, pages)
-    }}
+      kit.launch (checkpointers.result, pages)
+    }
+
+  // The new disk system uses these; this old disk system uses handle instead.
+  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ()
+  def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit]) = ()
+}

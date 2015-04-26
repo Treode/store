@@ -24,20 +24,20 @@ import Async.guard
 import PageLedger.{Groups, Projector, Zipped, longBytes, varIntBytes, varLongBytes}
 
 private class PageLedger (
-    private var ledger: Map [(TypeId, ObjectId, PageGroup), Long],
+    private var ledger: Map [(TypeId, ObjectId, Long), Long],
     private var objects: Set [(TypeId, ObjectId)],
     private var _byteSize: Int
-) extends Traversable [(TypeId, ObjectId, PageGroup, Long)] {
+) extends Traversable [(TypeId, ObjectId, Long, Long)] {
 
   def this() =
     this (Map.empty, Set.empty, varLongBytes + varIntBytes)
 
-  def foreach [U] (f: ((TypeId, ObjectId, PageGroup, Long)) => U) {
+  def foreach [U] (f: ((TypeId, ObjectId, Long, Long)) => U) {
     for (((typ, obj, group), totalBytes) <- ledger)
       f (typ, obj, group, totalBytes)
   }
 
-  def add (typ: TypeId, obj: ObjectId, group: PageGroup, pageBytes: Long) {
+  def add (typ: TypeId, obj: ObjectId, group: Long, pageBytes: Long) {
 
     val okey = (typ, obj)
 
@@ -52,20 +52,20 @@ private class PageLedger (
         ledger += key -> (totalBytes + pageBytes)
       case None =>
         ledger += key -> pageBytes
-        _byteSize += group.byteSize + longBytes // group, page bytes
+        _byteSize += longBytes + longBytes // group, page bytes
     }}
 
-  def add (other: Traversable [(TypeId, ObjectId, PageGroup, Long)]) {
+  def add (other: Traversable [(TypeId, ObjectId, Long, Long)]) {
     for ((typ, obj, group, totalBytes) <- other)
       add (typ, obj, group, totalBytes)
   }
 
   def byteSize = _byteSize
 
-  def get (typ: TypeId, obj: ObjectId, group: PageGroup): Long =
+  def get (typ: TypeId, obj: ObjectId, group: Long): Long =
     ledger.get ((typ, obj, group)) .getOrElse (0)
 
-  def groups: Map [(TypeId, ObjectId), Set [PageGroup]] =
+  def groups: Map [(TypeId, ObjectId), Set [Long]] =
     ledger.keys.groupBy (e => (e._1, e._2)) .mapValues (_.map (_._3) .toSet)
 
   def liveBytes (liveGroups: Groups): Long = {
@@ -81,7 +81,7 @@ private class PageLedger (
     new Projector (objects, ledger.keySet, _byteSize)
 
   def zip: Zipped = {
-    var builder = Map.empty [(TypeId, ObjectId), Seq [(PageGroup, Long)]]
+    var builder = Map.empty [(TypeId, ObjectId), Seq [(Long, Long)]]
     for (((id, obj, group), totalBytes) <- ledger) {
       builder get (id, obj) match {
         case Some (groups) =>
@@ -104,11 +104,11 @@ private object PageLedger {
   val varLongBytes = 9
   val longBytes = 8
 
-  type Groups = Map [(TypeId, ObjectId), Set [PageGroup]]
+  type Groups = Map [(TypeId, ObjectId), Set [Long]]
 
   class Merger {
 
-    private var _groups = Map.empty [(TypeId, ObjectId), Set [PageGroup]]
+    private var _groups = Map.empty [(TypeId, ObjectId), Set [Long]]
 
     def add (groups: Groups) {
       for (((typ, obj), gs1) <- groups)
@@ -123,13 +123,13 @@ private object PageLedger {
 
   class Projector (
       private var objects: Set [(TypeId, ObjectId)],
-      private var groups: Set [(TypeId, ObjectId, PageGroup)],
+      private var groups: Set [(TypeId, ObjectId, Long)],
       private var _byteSize: Int) {
 
     def this() =
       this (Set.empty, Set.empty, varIntBytes)
 
-    def add (typ: TypeId, obj: ObjectId, group: PageGroup) {
+    def add (typ: TypeId, obj: ObjectId, group: Long) {
       val okey = (typ, obj)
       val gkey = (typ, obj, group)
       if (!(objects contains okey)) {
@@ -138,16 +138,16 @@ private object PageLedger {
       }
       if (!(groups contains gkey)) {
         groups += gkey
-        _byteSize += group.byteSize + longBytes // group, page bytes
+        _byteSize += longBytes + longBytes // group, page bytes
       }}
 
     def byteSize = _byteSize
   }
 
-  class Zipped (private val ledger: Seq [(TypeId, ObjectId, Seq [(PageGroup, Long)])])
-  extends Traversable [(TypeId, ObjectId, PageGroup, Long)] {
+  class Zipped (private val ledger: Seq [(TypeId, ObjectId, Seq [(Long, Long)])])
+  extends Traversable [(TypeId, ObjectId, Long, Long)] {
 
-    def foreach [U] (f: ((TypeId, ObjectId, PageGroup, Long)) => U) {
+    def foreach [U] (f: ((TypeId, ObjectId, Long, Long)) => U) {
       for {
         (typ, obj, groups) <- ledger
         (group, totalBytes) <- groups
@@ -155,13 +155,13 @@ private object PageLedger {
     }
 
     def unzip: PageLedger = {
-      var ledger = Map.empty [(TypeId, ObjectId, PageGroup), Long]
+      var ledger = Map.empty [(TypeId, ObjectId, Long), Long]
       var objects = Set.empty [(TypeId, ObjectId)]
       var byteSize = varIntBytes // entry count
       for ((typ, obj, group, totalBytes) <- this) {
         ledger += (typ, obj, group) -> totalBytes
         objects += ((typ, obj))
-        byteSize += 3*longBytes + group.byteSize // typeId, objectId, group, page bytes
+        byteSize += 4 * longBytes // typeId, objectId, group, page bytes
       }
       new PageLedger (ledger, objects, byteSize)
     }}
@@ -175,7 +175,7 @@ private object PageLedger {
       // Tagged for forwards compatibility.
       tagged [Zipped] (
           0x00863FA19918F4DAL ->
-              wrap (seq (tuple (typeId, objectId, seq (tuple (pageGroup, ulong)))))
+              wrap (seq (tuple (typeId, objectId, seq (tuple (ulong, ulong)))))
                   .build (new Zipped (_))
                   .inspect (_.ledger))
     }}
@@ -188,14 +188,14 @@ private object PageLedger {
 
   def read (file: File, geom: DriveGeometry, pos: Long): Async [PageLedger] =
     guard {
-      val buf = PagedBuffer (12)
+      val buf = PagedBuffer (math.max (12, geom.blockBits))
       for (_ <- file.deframe (checksum, buf, pos, geom.blockBits))
         yield Zipped.pickler.unpickle (buf) .unzip
     }
 
   def write (ledger: Zipped, file: File, geom: DriveGeometry, pos: Long, limit: Long): Async [Unit] =
     guard {
-      val buf = PagedBuffer (12)
+      val buf = PagedBuffer (geom.blockBits)
       Zipped.pickler.frame (checksum, ledger, buf)
       buf.writePos = geom.blockAlignUp (buf.writePos)
       if (buf.writePos > limit - pos)

@@ -35,13 +35,18 @@ object TreodeBuild extends Build {
   // The perf config runs only Scalameter tests.
   lazy val Perf = config ("perf") extend (Test)
 
-  lazy val versionString = "0.2.0-SNAPSHOT"
+  lazy val versionString = "0.3.0-SNAPSHOT"
 
   lazy val versionInfo = Seq (
+
     organization := "com.treode",
     version := versionString,
-    scalaVersion := "2.11.2",
-    crossScalaVersions := Seq ("2.10.4", "2.11.2"))
+    scalaVersion := "2.11.6",
+    crossScalaVersions := Seq ("2.10.5", "2.11.6"),
+
+    // Use a local Scala installation if SCALA_HOME is set. Otherwise, download the Scala tools
+    // per scalaVersion.
+    scalaHome := Option (System.getenv ("SCALA_HOME")) map (file _))
 
   // Settings common to both projects with stubs and without stubs. Squashes the source directory
   // structure. Adds production libraries to the default config. Removes docs from Ivy artifacts in
@@ -54,8 +59,8 @@ object TreodeBuild extends Build {
     scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked"),
 
     scalacOptions <++= scalaVersion map {
-      case "2.10.4" => Seq.empty
-      case "2.11.2" => Seq ("-Ywarn-unused-import")
+      case "2.10.5" => Seq.empty
+      case "2.11.6" => Seq ("-Ywarn-unused-import")
     },
 
     libraryDependencies <+= scalaVersion ("org.scala-lang" % "scala-reflect" % _),
@@ -64,12 +69,13 @@ object TreodeBuild extends Build {
       "com.codahale.metrics" % "metrics-core" % "3.0.2",
       "com.google.code.findbugs" % "jsr305" % "3.0.0",
       "com.google.guava" % "guava" % "18.0",
-      "com.googlecode.javaewah" % "JavaEWAH" % "0.9.0",
+      "com.googlecode.javaewah" % "JavaEWAH" % "1.0.0",
       "com.nothome" % "javaxdelta" % "2.0.1",
-      "joda-time" % "joda-time" % "2.4",
+      "org.apache.commons" % "commons-lang3" % "3.3.2",
+      "joda-time" % "joda-time" % "2.7",
       "org.joda" % "joda-convert" % "1.7",
-      "org.slf4j" % "slf4j-api" % "1.7.7",
-      "org.slf4j" % "slf4j-simple" % "1.7.7"),
+      "org.slf4j" % "slf4j-api" % "1.7.10",
+      "org.slf4j" % "slf4j-simple" % "1.7.10"),
 
     publishArtifact in (Compile, packageDoc) := false,
 
@@ -106,10 +112,10 @@ object TreodeBuild extends Build {
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
-      "org.scalacheck" %% "scalacheck" % "1.11.5" % "test",
+      "org.scalacheck" %% "scalacheck" % "1.12.2" % "test",
       "com.storm-enroute" %% "scalameter" % "0.6" % "perf",
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.4" % "test",
-      "org.scalatest" %% "scalatest" % "2.2.2" % "test"))
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % "test",
+      "org.scalatest" %% "scalatest" % "2.2.4" % "test"))
 
   // Settings for projects without stubs.
   lazy val standardSettings =
@@ -166,10 +172,10 @@ object TreodeBuild extends Build {
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
-      "org.scalacheck" %% "scalacheck" % "1.11.5" % "stub->default",
+      "org.scalacheck" %% "scalacheck" % "1.12.2" % "stub->default",
       "com.storm-enroute" %% "scalameter" % "0.6" % "stub->default",
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.1.4" % "stub->default",
-      "org.scalatest" %% "scalatest" % "2.2.2" % "stub->default"))
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % "stub->default",
+      "org.scalatest" %% "scalatest" % "2.2.4" % "stub->default"))
 
   // Settings for projects with stubs.
   lazy val stubSettings =
@@ -183,38 +189,24 @@ object TreodeBuild extends Build {
     commonPortion ++
     stubPortion
 
-  // Both the async and pickle projects depend on buffers, but someday someone may want the async
-  // package without the picklers or vice  versa, so we have isolated the buffers into their own
-  // project.
-  lazy val buffer = Project ("buffer", file ("buffer"))
+  // Separated because it helped development.
+  lazy val core = Project ("core", file ("core"))
     .configs (IntensiveTest, PeriodicTest, Perf)
-    .settings (standardSettings: _*)
-
-  // Separated because this may be useful on its own.
-  lazy val pickle = Project ("pickle", file ("pickle"))
-    .configs (IntensiveTest, PeriodicTest, Perf)
-    .dependsOn (buffer)
-    .settings (standardSettings: _*)
-
-  // Separated because this may be useful on its own.
-  lazy val async = Project ("async", file ("async"))
-    .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
-    .dependsOn (buffer, pickle % "test")
     .settings (stubSettings: _*)
 
   // Separated because it helped development.
   lazy val cluster = Project ("cluster", file ("cluster"))
     .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
-    .dependsOn (async % "compile;stub->stub", pickle)
+    .dependsOn (core % "compile;stub->stub")
     .settings (stubSettings: _*)
 
   // Separated because it helped development.
   lazy val disk = Project ("disk", file ("disk"))
     .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
-    .dependsOn (async % "compile;stub->stub", pickle)
+    .dependsOn (core % "compile;stub->stub")
     .settings (stubSettings: _*)
 
-  // The main component that this build provides.
+  // The main library that this build provides.
   lazy val store = Project ("store", file ("store"))
     .configs (IntensiveTestWithStub, PeriodicTestWithStub, PerfWithStub)
     .dependsOn (cluster % "compile;stub->stub", disk % "compile;stub->stub")
@@ -228,52 +220,41 @@ object TreodeBuild extends Build {
     .settings (
 
         libraryDependencies ++= Seq (
-          "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.2",
-          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.2"))
+          "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.4",
+          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.4"))
 
   // Separated because not everyone wants it and its dependencies.
-  lazy val twitterUtil = Project ("twitter-util", file ("twitter-util"))
+  lazy val twitter = Project ("twitter", file ("twitter"))
     .configs (IntensiveTest, PeriodicTest, Perf)
-    .dependsOn (store)
+    .dependsOn (store, jackson)
     .settings (standardSettings: _*)
     .settings (
 
         resolvers += "Twitter" at "http://maven.twttr.com",
 
         libraryDependencies ++= Seq (
-          "com.twitter" %% "util-app" % "6.22.1",
-          "com.twitter" %% "util-core" % "6.22.1",
-          "com.twitter" %% "util-logging" % "6.22.1"))
+          "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
+          "com.twitter" %% "twitter-server" % "1.9.0"))
 
-  // Separated because not everyone wants it and its dependencies.
-  lazy val twitterServer = Project ("twitter-server", file ("twitter-server"))
+  // The main server that this build provides.
+  lazy val server = Project ("server", file ("server"))
     .configs (IntensiveTest, PeriodicTest, Perf)
-    .dependsOn (store, jackson, twitterUtil)
+    .dependsOn (store % "compile;test->stub", twitter)
     .settings (standardSettings: _*)
+    .settings (assemblySettings: _*)
     .settings (
 
-        scalaVersion := "2.10.4",
-        crossScalaVersions := Seq.empty,
+      name := "server",
 
-        resolvers += "Twitter" at "http://maven.twttr.com",
+      mainClass in assembly := Some ("com.treode.server.Main"),
 
-        libraryDependencies ++= Seq (
-          "com.jayway.restassured" % "rest-assured" % "2.3.4" % "test",
-          "com.twitter" %% "twitter-server" % "1.8.0"))
+      test in assembly := {},
 
-  // Separated because not everyone wants it and its dependencies.
-  lazy val finatra = Project ("finatra", file ("finatra"))
-    .configs (IntensiveTest, PeriodicTest, Perf)
-    .dependsOn (store, twitterUtil)
-    .settings (standardSettings: _*)
-    .settings (
+      publishLocal := {},
+      publish := {},
 
-        scalaVersion := "2.10.4",
-        crossScalaVersions := Seq.empty,
-
-        resolvers += "Twitter" at "http://maven.twttr.com",
-
-        libraryDependencies ++= Seq ("com.twitter" %% "finatra" % "1.5.4"))
+      libraryDependencies ++= Seq (
+          "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test"))
 
   // A standalone server for system tests.  Separated to keep system testing components out of
   // production code (these components are in the default config in this project).
@@ -293,9 +274,9 @@ object TreodeBuild extends Build {
 
   lazy val copyDocAssetsTask = taskKey [Unit] ("Copy doc assets")
 
-  // The doc project includes everything for unidoc.
+  // The doc project includes everything that's a library.
   lazy val doc = Project ("doc", file ("doc"))
-    .aggregate (buffer, pickle, async, cluster, disk, store, finatra, jackson, twitterUtil, twitterServer)
+    .aggregate (core, cluster, disk, store, jackson, twitter)
     .settings (versionInfo: _*)
     .settings (unidocSettings: _*)
     .settings (
@@ -305,7 +286,7 @@ object TreodeBuild extends Build {
       scalacOptions in (ScalaUnidoc, unidoc) ++= Seq (
         "-diagrams",
         "-doc-title", "TreodeDB " + versionString,
-        "-doc-root-content", baseDirectory.value + "/doc/rootdoc.html"),
+        "-doc-root-content", "doc/rootdoc.html"),
 
       unidocConfigurationFilter in (ScalaUnidoc, unidoc) :=
         inConfigurations (Compile, Stub),
@@ -324,10 +305,9 @@ object TreodeBuild extends Build {
       publishLocal := {},
       publish := {})
 
-  // The root project includes everything that can be built across Scala versions; that is
-  // everything except Finatra and Twitter Server, which can be built in 2.10 only.
+  // The root project includes everything.
   lazy val root = Project ("root", file ("."))
-    .aggregate (buffer, pickle, async, cluster, disk, store, jackson, twitterUtil)
+    .aggregate (core, cluster, disk, store, jackson, twitter, server)
     .settings (versionInfo: _*)
     .settings (
 

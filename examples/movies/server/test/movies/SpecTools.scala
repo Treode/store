@@ -22,7 +22,7 @@ import scala.util.Random
 import com.fasterxml.jackson.databind.JsonNode
 import com.jayway.restassured.response.{Response => RestAssuredResponse}
 import com.jayway.restassured.specification.ResponseSpecification
-import com.treode.async.stubs.StubScheduler, StubScheduler.scheduler
+import com.treode.async.stubs.{StubGlobals, StubScheduler}, StubGlobals.scheduler
 import com.treode.async.stubs.implicits._
 import com.treode.store.{Bytes, Cell, TxClock, TxId}
 import com.treode.store.stubs.StubStore
@@ -96,11 +96,11 @@ trait SpecTools {
 
   implicit class RichResposne (rsp: RestAssuredResponse) {
 
-    def etag: TxClock = {
-      val string = rsp.getHeader ("ETag")
-      assert (string != null, "Expected response to have an ETag.")
+	def valueTxClock: TxClock = {
+      val string = rsp.getHeader ("Value-TxClock")
+      assert (string != null, "Expected response to have a Value-TxClock.")
       val parse = TxClock.parse (string)
-      assert (parse.isDefined, s"""Could not parse ETag "$string" as a TxClock""")
+      assert (parse.isDefined, s"""Could not parse Value-TxClock "$string" as a TxClock""")
       parse.get
     }}
 
@@ -112,8 +112,8 @@ trait SpecTools {
 
   implicit class RichResponseSpecification (rsp: ResponseSpecification) {
 
-    def etag (ts: TxClock): ResponseSpecification =
-      rsp.header ("ETag", ts.toString)
+    def valueTxClock (ts: TxClock): ResponseSpecification =
+      rsp.header ("Value-TxClock", ts.time.toString)
   }
 
   implicit class RichStubStore (store: StubStore) {

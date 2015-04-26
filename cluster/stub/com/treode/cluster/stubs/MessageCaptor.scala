@@ -17,22 +17,20 @@
 package com.treode.cluster.stubs
 
 import java.util.ArrayList
-import scala.collection.JavaConversions
+import scala.collection.JavaConversions._
 import scala.util.Random
 
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.cluster.{HostId, MessageDescriptor, PeerRegistry, PortId, Peer}
 import com.treode.pickle.Pickler
-import org.scalatest.Assertions
-
-import JavaConversions._
+import org.scalatest.Assertions._
 
 class MessageCaptor (
     val localId: HostId
 ) (implicit
     random: Random,
     network: StubNetwork
-) extends StubPeer with Assertions {
+) extends StubPeer {
 
   private val peers: PeerRegistry =
     new PeerRegistry (localId, new StubConnection (_, localId, network))

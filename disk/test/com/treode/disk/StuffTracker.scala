@@ -40,7 +40,7 @@ class StuffTracker (implicit random: Random) {
   def maximum = _maximum
 
   def write() (implicit disk: Disk): Async [Unit] = {
-    var seed = random.nextLong()
+    var seed = random.nextGroup()
     while (written contains seed)
       seed = random.nextLong()
     seeds += seed
@@ -55,33 +55,33 @@ class StuffTracker (implicit random: Random) {
   def batch (nbatches: Int, nwrites: Int) (implicit scheduler: Scheduler, disk: Disk): Async [Unit] =
     for {
       _ <- (0 until nbatches) .async
-      _ <- (0 until nwrites) .latch.unit
+      _ <- (0 until nwrites) .latch
     } {
       write() .flatMap (_ => scheduler.sleep (1))
     }
 
-  def attach () (implicit scheduler: Scheduler, launch: Disk.Launch) {
+  def attach () (implicit scheduler: Scheduler, launch: DiskLaunch) {
     import launch.disk
 
     _probed = false
     _compacted = false
 
-    pager.handle (new PageHandler [Long] {
+    pager.handle (new PageHandler {
 
-      def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
+      def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] =
         supply {
           _probed = true
-          val (keep, remove) = groups partition { s =>
+          val (keep, remove) = gens partition { s =>
             !(written contains s) || random.nextInt (3) == 0
           }
           written --= remove
           keep
         }
 
-      def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] = {
+      def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] = {
         guard {
           _compacted = true
-          for (seed <- groups.latch.unit)
+          for (seed <- gens.latch)
             for (pos <- pager.write (0, seed, Stuff (seed)))
               yield written += seed -> pos
         }}})

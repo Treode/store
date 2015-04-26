@@ -23,11 +23,10 @@ import com.treode.async.implicits._
 import com.treode.async.io.File
 
 import Async.guard
-import Disk.Launch
 import SuperBlocks.{chooseSuperBlock, verifyReattachment}
 
-private class RecoveryAgent (implicit scheduler: Scheduler, config: Disk.Config)
-extends Disk.Recovery {
+private class RecoveryAgent (implicit scheduler: Scheduler, config: DiskConfig)
+extends DiskRecovery {
 
   private val records = new RecordRegistry
   private var open = true
@@ -47,7 +46,7 @@ extends Disk.Recovery {
       open = false
     }
 
-  def _attach (sysid: Array [Byte], items: (Path, File, DriveGeometry)*): Async [Launch] =
+  def _attach (sysid: SystemId, items: (Path, File, DriveGeometry)*): Async [DiskLaunch] =
     guard {
 
       val attaching = items.map (_._1) .toSet
@@ -60,14 +59,14 @@ extends Disk.Recovery {
       val boot = BootBlock.apply (sysid, 0, items.size, attaching)
       for {
         drives <-
-          for (((path, file, geometry), i) <- items.zipWithIndex.latch.seq)
-            DiskDrive.init (i, path, file, geometry, boot, kit)
+          for (((path, file, geometry), i) <- items.indexed)
+            yield DiskDrive.init (i, path, file, geometry, boot, kit)
         _ <- kit.drives.add (drives)
       } yield {
         new LaunchAgent (kit)
       }}
 
-  def attach (sysid: Array [Byte], items: (Path, DriveGeometry)*): Async [Launch] =
+  def attach (sysid: SystemId, items: (Path, DriveGeometry)*): Async [DiskLaunch] =
     guard {
       val files =
         for ((path, geom) <- items)
@@ -76,8 +75,8 @@ extends Disk.Recovery {
     }
 
   def reopen (items: Seq [(Path, File)]): Async [Seq [SuperBlocks]] =
-    for ((path, file) <- items.latch.casual)
-      SuperBlocks.read (path, file)
+    for ((path, file) <- items.latch.collect)
+      yield SuperBlocks.read (path, file)
 
   def reopen (path: Path): Async [SuperBlocks] =
     guard {
@@ -93,7 +92,7 @@ extends Disk.Recovery {
 
     scheduler.whilst (!opening.isEmpty) {
       for {
-        _superbs <- opening.latch.casual foreach (_reopen)
+        _superbs <- opening.latch.collect (_reopen)
       } yield {
         opened ++= _superbs map (_.path)
         superbs ++= _superbs
@@ -106,7 +105,7 @@ extends Disk.Recovery {
       superbs
     }}
 
-  def _reattach (items: (Path, File)*): Async [Launch] =
+  def _reattach (items: (Path, File)*): Async [DiskLaunch] =
     guard {
 
       val reattaching = items.map (_._1) .toSet
@@ -122,7 +121,7 @@ extends Disk.Recovery {
         new LaunchAgent (kit)
       }}
 
-  def _reattach (items: Seq [Path]) (_reopen: Path => Async [SuperBlocks]): Async [Launch] =
+  def _reattach (items: Seq [Path]) (_reopen: Path => Async [SuperBlocks]): Async [DiskLaunch] =
     guard {
       require (!items.isEmpty, "Must list at least one file or device to reaattach.")
       close()
@@ -134,6 +133,6 @@ extends Disk.Recovery {
         new LaunchAgent (kit)
       }}
 
-  def reattach (items: Path*): Async [Launch] =
+  def reattach (items: Path*): Async [DiskLaunch] =
     _reattach (items) (reopen _)
 }

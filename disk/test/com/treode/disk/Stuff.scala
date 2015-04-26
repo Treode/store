@@ -26,7 +26,7 @@ class Stuff (val seed: Long, val items: Seq [Int]) {
       case _ => false
     }
 
-  override def toString = f"Stuff(0x$seed%016X, 0x${items.hashCode}%08X)"
+  override def toString = f"Stuff(0x${seed}%016X, 0x${items.hashCode}%08X)"
 }
 
 object Stuff {
@@ -48,12 +48,10 @@ object Stuff {
 
   val pickler = {
     import DiskPicklers._
-    wrap (fixedLong, seq (int))
+    wrap (ulong, seq (int))
     .build (v => new Stuff (v._1, v._2))
     .inspect (v => (v.seed, v.items))
   }
 
-  val pager = {
-    import DiskPicklers._
-    PageDescriptor (0x26, fixedLong, Stuff.pickler)
-  }}
+  val pager = PageDescriptor (0x26, Stuff.pickler)
+}

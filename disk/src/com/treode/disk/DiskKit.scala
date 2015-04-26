@@ -25,25 +25,26 @@ import Async.{guard, latch}
 import Callback.ignore
 
 private class DiskKit (
-    val sysid: Array [Byte],
+    val sysid: SystemId,
     logBatch: Long
 ) (implicit
     val scheduler: Scheduler,
-    val config: Disk.Config
+    val config: DiskConfig
 ) {
 
-  val logd = new Dispatcher [PickledRecord] (logBatch)
-  val paged = new Dispatcher [PickledPage] (0L)
+  val logd = new Dispatcher [PickledRecord]
+  logd.batch = logBatch
+  val paged = new Dispatcher [PickledPage]
   val drives = new DiskDrives (this)
   val checkpointer = new Checkpointer (this)
   val releaser = new EpochReleaser
   val compactor = new Compactor (this)
 
-  def launch (checkpoints: CheckpointRegistry, pages: PageRegistry): Unit =
+  def launch (checkpointers: CheckpointerRegistry, pages: PageRegistry): Unit =
     guard {
       for {
         _ <- latch (
-            checkpointer.launch (checkpoints),
+            checkpointer.launch (checkpointers),
             compactor.launch (pages))
         _ <- drives.launch()
       } yield ()

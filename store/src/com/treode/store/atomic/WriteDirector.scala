@@ -57,7 +57,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
 
     def collisions (ks: Set [Int], from: Peer) = ()
 
-    def advance (from: Peer) = ()
+    def advance (time: TxClock, from: Peer) = ()
 
     def committed (from: Peer): Unit =
       throw new IllegalStateException
@@ -82,14 +82,14 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
     override def collisions (ks: Set [Int], from: Peer): Unit =
       throw new IllegalStateException
 
-    override def advance (from: Peer): Unit =
+    override def advance (time: TxClock, from: Peer): Unit =
       throw new IllegalStateException
   }
 
   class Preparing (cb: Callback [TxClock]) extends State {
 
     var failure = false
-    var advance = false
+    var advance = TxClock.MinValue
     var ks = Set.empty [Int]
     var ft = pt
 
@@ -98,9 +98,9 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
 
     private def maybeNextState() {
       if (responses.quorum) {
-        if (advance) {
+        if (advance > TxClock.MinValue) {
           state = new Aborting
-          cb.fail (new StaleException)
+          cb.fail (new StaleException (advance))
         } else if (!ks.isEmpty) {
           state = new Aborting
           cb.fail (new CollisionException (ks.toSeq))
@@ -123,9 +123,9 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
       maybeNextState()
     }
 
-    override def advance (from: Peer) {
+    override def advance (time: TxClock, from: Peer) {
       responses += from
-      advance = true
+      this.advance = time
       maybeNextState()
     }
 
@@ -266,7 +266,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
     rsp match {
       case Success (Prepared (ft))   => state.prepared (ft, from)
       case Success (Collisions (ks)) => state.collisions (ks, from)
-      case Success (Advance)         => state.advance (from)
+      case Success (Advance (time))  => state.advance (time, from)
       case Success (Committed)       => state.committed (from)
       case Success (Aborted)         => state.aborted (from)
       case Success (Failed)          => state.failed (from)

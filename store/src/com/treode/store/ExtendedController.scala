@@ -21,15 +21,16 @@ import java.nio.file.Path
 
 import com.treode.async.Async
 import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
-import com.treode.disk.{Disk, DriveAttachment, DriveDigest}
+import com.treode.disk.{DiskController, DriveAttachment, DriveDigest}
+import com.treode.notify.Notification
 
 import Async.guard
 
 private class ExtendedController (
-    disk: Disk.Controller,
+    disk: DiskController,
     cluster: Cluster,
-    controller: Store.Controller
-) extends Store.Controller {
+    controller: StoreController
+) extends StoreController {
 
   implicit val store: Store = controller.store
 
@@ -54,10 +55,10 @@ private class ExtendedController (
   def drives: Async [Seq [DriveDigest]] =
     disk.drives
 
-  def attach (items: DriveAttachment*): Async [Unit] =
+  def attach (items: DriveAttachment*): Async [Notification [Unit]] =
     disk.attach (items:_*)
 
-  def drain (paths: Path*): Async [Unit] =
+  def drain (paths: Path*): Async [Notification [Unit]] =
     disk.drain (paths: _*)
 
   def cellId: CellId =

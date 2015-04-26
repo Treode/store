@@ -16,16 +16,16 @@
 
 package com.treode.store.paxos
 
-import com.treode.async.{Async, Latch}
+import com.treode.async.Async
 import com.treode.async.implicits._
 import com.treode.async.misc.materialize
-import com.treode.disk.{Disk, ObjectId, PageDescriptor, PageHandler, Position, RecordDescriptor}
+import com.treode.disk._
 import com.treode.store.{Bytes, Cell, Residents, TxClock}
 import com.treode.store.tier.{TierDescriptor, TierTable}
 
 import Async.{guard, latch, supply, when}
 
-private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
+private class Acceptors (kit: PaxosKit) extends PageHandler {
   import kit.{archive, cluster, disk, library}
   import kit.library.atlas
 
@@ -58,24 +58,29 @@ private class Acceptors (kit: PaxosKit) extends PageHandler [Long] {
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
       for {
-        meta <- archive.compact (groups, library.residents)
-        _ <- when (meta.isDefined) (Acceptors.compact.record (meta.get))
+        result <- archive.compact (groups, library.residents)
+        _ <- when (result) { case (compaction, release) =>
+          for (_ <- Acceptors.compact.record (compaction))
+            yield disk.release (release.desc, release.obj, release.gens)
+        }
       } yield ()
     }
 
   def checkpoint(): Async [Unit] =
     guard {
       for {
-        _ <- materialize (acceptors.values) .latch.unit foreach (_.checkpoint())
+        _ <- materialize (acceptors.values) .latch (_.checkpoint())
         meta <- archive.checkpoint (library.residents)
         _ <- Acceptors.checkpoint.record (meta)
       } yield ()
     }
 
-  def attach () (implicit launch: Disk.Launch) {
+  def attach () (implicit launch: DiskLaunch) {
     import Acceptor.{ask, choose, propose}
 
     launch.checkpoint (checkpoint())
+
+    Acceptors.archive.compact (c => compact (c.obj, c.gens))
 
     Acceptors.archive.handle (this)
 
@@ -103,11 +108,6 @@ private object Acceptors {
   val compact = {
     import PaxosPicklers._
     RecordDescriptor (0x26A32F6C3BB8E697L, tierCompaction)
-  }
-
-  val checkpointV0 = {
-    import PaxosPicklers._
-    RecordDescriptor (0x42A17DC354412E17L, tierMeta)
   }
 
   val checkpoint = {

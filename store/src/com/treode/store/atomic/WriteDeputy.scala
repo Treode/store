@@ -97,9 +97,10 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
             val rsp = WR.Collisions (ks.toSet)
             state = new Deliberating (ct, ops, epoch, Some (rsp))
             cb.pass (rsp)
-          case Success (Stale) =>
-            state = new Deliberating (ct, ops, epoch, Some (WR.Advance))
-            cb.pass (WR.Advance)
+          case Success (Stale (time)) =>
+            val rsp = WR.Advance (time)
+            state = new Deliberating (ct, ops, epoch, Some (rsp))
+            cb.pass (rsp)
           case Failure (t) =>
             state = new Deliberating (ct, ops, epoch, Some (WR.Failed))
             log.exceptionPreparingWrite (t)
@@ -391,7 +392,7 @@ private class WriteDeputy (xid: TxId, kit: AtomicKit) {
     fiber.async (state.abort (_))
 
   def checkpoint(): Async [Unit] =
-    fiber.guard (state.checkpoint())
+    fiber.async (cb => state.checkpoint() run (cb))
 
   override def toString = state.toString
 }

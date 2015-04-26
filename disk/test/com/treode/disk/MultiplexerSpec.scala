@@ -22,74 +22,69 @@ import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
 import org.scalatest.FlatSpec
 
-import DispatcherTestTools._
+import MultiplexerTestTools._
 
 class MultiplexerSpec extends FlatSpec {
 
   "The Multiplexer" should "relay messages from the dispatcher" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
+    val dsp = new Dispatcher [Int]
     val mplx = new Multiplexer (dsp)
     dsp.send (1)
     mplx.expect (1)
-    mplx.replace (list())
     mplx.expectNone()
   }
 
   it should "return open rejects to the dispatcher" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
+    val dsp = new Dispatcher [Int]
     val mplx = new Multiplexer (dsp)
     dsp.send (1)
     dsp.send (2)
     mplx.expect (1, 2)
-    mplx.replace (list (2))
+    mplx.send (list (2))
     dsp.expect (2)
-    dsp.replace (list())
     mplx.expectNone()
   }
 
   it should "relay exclusive messages when available" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
+    val dsp = new Dispatcher [Int]
     val mplx = new Multiplexer (dsp)
     mplx.send (2)
     mplx.expect (2)
-    mplx.replace (list())
     mplx.expectNone()
   }
 
   it should "recycle exclusive messages rejected by an earlier receptor" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
+    val dsp = new Dispatcher [Int]
     val rcpt1 = dsp.receptor()
     val mplx = new Multiplexer (dsp)
     val rcpt2 = mplx.receptor()
     scheduler.run()
     mplx.send (2)
     rcpt2.expect (2)
-    mplx.replace (list (2))
+    mplx.send (list (2))
     mplx.expect (2)
-    mplx.replace (list())
     rcpt1.expectNone()
   }
 
   it should "recycle exclusive messages rejected by a later receptor" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
+    val dsp = new Dispatcher [Int]
     val rcpt1 = dsp.receptor()
     val mplx = new Multiplexer (dsp)
     mplx.send (2)
     mplx.expect (2)
-    mplx.replace (list (2))
+    mplx.send (list (2))
     mplx.expect (2)
-    mplx.replace (list())
     rcpt1.expectNone()
   }
 
   it should "close immediately when a receiver is waiting" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
+    val dsp = new Dispatcher [Int]
     val mplx = new Multiplexer (dsp)
     val rcpt = mplx.receptor()
     mplx.close() .expectPass()
@@ -100,7 +95,7 @@ class MultiplexerSpec extends FlatSpec {
 
   it should "delay close when a until a receiver is waiting" in {
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
+    val dsp = new Dispatcher [Int]
     val mplx = new Multiplexer (dsp)
     val cb = mplx.close().capture()
     scheduler.run()
@@ -118,7 +113,7 @@ class MultiplexerSpec extends FlatSpec {
   it should "recycle rejects until accepted" in {
 
     implicit val scheduler = StubScheduler.random()
-    val dsp = new Dispatcher [Int] (0)
+    val dsp = new Dispatcher [Int]
 
     var received = Set.empty [Int]
 
@@ -130,7 +125,7 @@ class MultiplexerSpec extends FlatSpec {
       assert (!(msgs exists (received contains _)))
       assert (msgs forall (m => ((m & 0xF) == 0 || (m & 0xF) == i)))
       val (accepts, rejects) = msgs.partition (m => (m & 0xF0) == (i << 4))
-      mplx.replace ((accepts drop 5) ++ rejects)
+      mplx.send ((accepts drop 5) ++ rejects)
       received ++= accepts take 5
       mplx.receive (receive (mplx, i))
     }

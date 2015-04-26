@@ -29,7 +29,7 @@ private class CatalogKit (val broker: Broker) (implicit
     val cluster: Cluster,
     val disk: Disk,
     val library: Library,
-    val config: Store.Config
+    val config: StoreConfig
 ) extends Catalogs {
 
   val acceptors = new Acceptors (this)
@@ -49,5 +49,5 @@ private class CatalogKit (val broker: Broker) (implicit
       _ <- broker.patch (desc.id, chosen)
     } yield {
       if (patch.checksum != chosen.checksum)
-        throw new StaleException
+        throw new StaleException (TxClock.MinValue)
     }}}

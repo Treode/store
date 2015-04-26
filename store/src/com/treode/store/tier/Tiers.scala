@@ -17,7 +17,7 @@
 package com.treode.store.tier
 
 import com.treode.disk.Position
-import com.treode.store.{Residents, Store, StorePicklers, TableDigest}
+import com.treode.store.{Residents, StoreConfig, StorePicklers, TableDigest, Window}
 
  private case class Tiers (tiers: Seq [Tier]) {
 
@@ -30,22 +30,27 @@ import com.treode.store.{Residents, Store, StorePicklers, TableDigest}
   def isEmpty: Boolean =
     tiers.isEmpty
 
+  def overlaps (window: Window): Tiers =
+    Tiers (tiers.filter (_.overlaps (window)))
+
   def maxGen: Long =
     if (tiers.isEmpty) 0 else tiers.head.gen
 
   def minGen: Long =
     if (tiers.isEmpty) Long.MaxValue else tiers.last.gen
 
-  def gens: Seq [Long] =
-    tiers map (_.gen)
+  def gens: Set [Long] =
+    tiers.map (_.gen) .toSet
 
+  /** Estimate how many keys remain on this host after a move. */
   def estimate (other: Residents): Long =
     tiers .map (_.estimate (other)) .sum
 
   def active: Set [Long] =
     tiers .map (_.gen) .toSet
 
-  def choose (gens: Set [Long], residents: Residents) (implicit config: Store.Config): Tiers = {
+  /** Choose which tiers to compact. */
+  def choose (gens: Set [Long], residents: Residents) (implicit config: StoreConfig): Tiers = {
     var selected = -1
     var bytes = 0L
     var i = 0
@@ -77,24 +82,6 @@ import com.treode.store.{Residents, Store, StorePicklers, TableDigest}
     new Tiers (tier +: tiers)
   }
 
-  // TODO: Remove after release of 0.2.0.
-  // This method remains to support replay of TierTable.Meta.
-  def compare (that: Tiers): Int = {
-    val _this = this.gens
-    val _that = that.gens
-    for ((i, j) <- _this zip _that; r = i - j)
-      if (r < 0)
-        return -1
-      else if (r > 0)
-        return 1
-    if (_this.size < _that.size)
-      -1
-    else if (_this.size > _that.size)
-      1
-    else
-      0
-  }
-
   def digest: Seq [TableDigest.Tier] =
     tiers map (_.digest)
 
@@ -102,15 +89,12 @@ import com.treode.store.{Residents, Store, StorePicklers, TableDigest}
     s"Tiers(\n   ${tiers mkString ",\n   "})"
 }
 
-private object Tiers extends Ordering [Tiers] {
+private object Tiers {
 
   val empty: Tiers = new Tiers (Seq.empty)
 
   def apply (tier: Tier): Tiers =
     new Tiers (Array (tier))
-
-  def compare (x: Tiers, y: Tiers): Int =
-    x compare y
 
   val pickler = {
     import StorePicklers._

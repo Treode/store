@@ -49,7 +49,7 @@ private class StubAtomicHost (
 ) extends StoreClusterChecks.Host {
 
   val librarian = Librarian { atlas =>
-    latch (paxos.rebalance (atlas), atomic.rebalance (atlas)) .map (_ => ())
+    latch (paxos.rebalance (atlas), atomic.rebalance (atlas)) .unit
   }
 
   cluster.startup()
@@ -80,12 +80,10 @@ private class StubAtomicHost (
     !atomic.writers.deputies.isEmpty
 
   def audit: BatchIterator [(TableId, Cell)] =
-    for {
-      e <- atomic.tstore.tables.entrySet.batch
-      cell <- e.getValue.iterator (Residents.all)
-    } yield {
-      (e.getKey, cell)
-    }
+    atomic.tstore.tables.entrySet.batch.batchFlatMap { e =>
+      e.getValue.iterator (Residents.all) .map { c =>
+        (e.getKey, c)
+      }}
 
   def read (rt: TxClock, ops: ReadOp*): Async [Seq [Value]] =
     atomic.read (rt, ops:_*)
@@ -96,8 +94,15 @@ private class StubAtomicHost (
   def status (xid: TxId): Async [TxStatus] =
     atomic.status (xid)
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
-    atomic.scan (table, start, window, slice)
+  def scan (
+      table: TableId,
+      x: Int,
+      start: Bound [Key] = Bound.firstKey,
+      window: Window = Window.all,
+      slice: Slice = Slice.all,
+      batch: Batch = Batch.suggested
+  ): CellIterator =
+    atomic.scan (table, start, window, slice, batch)
 
   def putCells (id: TableId, cs: Cell*) (implicit scheduler: StubScheduler): Unit =
     atomic.tstore.receive (id, cs) .expectPass()
@@ -107,8 +112,7 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
 
   def boot (
       id: HostId,
-      drive: StubDiskDrive,
-      init: Boolean
+      drive: StubDiskDrive
   ) (implicit
       random: Random,
       parent: Scheduler,
@@ -127,7 +131,7 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
     val _atomic = Atomic.recover()
 
     for {
-      launch <- if (init) recovery.attach (drive) else recovery.reattach (drive)
+      launch <- recovery.reattach (drive)
       catalogs <- _catalogs.launch (launch, cluster)
       paxos <- _paxos.launch (launch, cluster)
       atomic <- _atomic.launch (launch, cluster, paxos) .map (_.asInstanceOf [AtomicKit])
@@ -138,5 +142,5 @@ private object StubAtomicHost extends StoreClusterChecks.Package [StubAtomicHost
 
   def install () (implicit r: Random, s: StubScheduler, n: StubNetwork): Async [StubAtomicHost] = {
     implicit val config = StoreTestConfig()
-    boot (r.nextLong, new StubDiskDrive, true)
+    boot (r.nextLong, new StubDiskDrive)
   }}

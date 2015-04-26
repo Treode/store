@@ -16,6 +16,7 @@
 
 import sbtassembly.Plugin.AssemblyKeys
 import sbtassembly.Plugin.assemblySettings
+import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 import sbt._
 import sbtassembly.Plugin._
@@ -24,12 +25,13 @@ import Keys._
 
 object MoviesBuild extends Build {
 
-  val versionString = "0.2.0-SNAPSHOT"
+  val versionString = "0.3.0-SNAPSHOT"
 
   val commonSettings = Seq (
 
       version := versionString,
-      scalaVersion := "2.10.4",
+
+      scalaVersion := "2.10.5",
 
       unmanagedSourceDirectories in Compile <<=
         (baseDirectory ((base: File) => Seq (base / "src"))),
@@ -59,18 +61,19 @@ object MoviesBuild extends Build {
     Project ("server", file ("server"))
     .dependsOn (common)
     .settings (assemblySettings: _*)
+    .settings (gitStampSettings: _*)
     .settings (commonSettings: _*)
     .settings (
 
       name := "movies-server",
 
       libraryDependencies ++= Seq (
-        "com.jayway.restassured" % "rest-assured" % "2.3.4" % "test",
-        "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.4.2",
+        "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
+        "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.4.4",
         "com.treode" %% "jackson" % versionString,
         "com.treode" %% "store" % versionString % "compile;test->stub",
-        "com.treode" %% "twitter-server" % versionString,
-        "org.scalatest" %% "scalatest" % "2.2.2" % "test"),
+        "com.treode" %% "twitter" % versionString,
+        "org.scalatest" %% "scalatest" % "2.2.4" % "test"),
 
       jarName in assembly := "movies-server.jar",
 
@@ -79,21 +82,24 @@ object MoviesBuild extends Build {
       test in assembly := {}
     )
 
-  // The Spark connector.
+  // The Spark connector; can be built with Scala 2.10 only.
   lazy val spark =
     Project ("spark", file ("spark"))
     .dependsOn (common)
     .settings (assemblySettings: _*)
+    .settings (gitStampSettings: _*)
     .settings (commonSettings: _*)
     .settings (
 
       name := "movies-spark",
 
       libraryDependencies ++= Seq (
-        "org.apache.spark" %% "spark-core" % "1.1.0" % "provided",
+        "org.apache.spark" %% "spark-core" % "1.2.0" % "provided",
+        "org.apache.spark" %% "spark-streaming" % "1.2.0" % "provided",
         // Use Jackson 2.3.1 because spark-core does.
         "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.3.1",
-        "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.1"),
+        "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.1",
+        "org.scalatest" %% "scalatest" % "2.2.4" % "test"),
 
       jarName in assembly := "movies-spark.jar",
 

@@ -51,13 +51,13 @@ private class PageRegistry (kit: DiskKit) extends AbstractPageRegistry {
 
   def probe (ledger: PageLedger): Async [Long] = {
     val _liveGroups =
-      for (((typ, obj), groups) <- ledger.groups.latch.map)
-        probe (typ, obj, groups)
+      for (((typ, obj), groups) <- ledger.groups.latch.collate)
+        yield probe (typ, obj, groups)
     for (liveGroups <- _liveGroups)
       yield ledger.liveBytes (liveGroups)
   }
 
-  def probeByUtil (iter: Iterator [SegmentPointer], threshold: Int):
+  def probeByUtil (iter: Iterable [SegmentPointer], threshold: Int):
       Async [(Seq [SegmentPointer], Groups)] = {
 
     val candidates =
@@ -86,7 +86,7 @@ private class PageRegistry (kit: DiskKit) extends AbstractPageRegistry {
       (segs, groups)
     }}
 
-  def probeForDrain (iter: Iterator [SegmentPointer]): Async [Groups] = {
+  def probeForDrain (iter: Iterable [SegmentPointer]): Async [Groups] = {
 
     val merger = new Merger
     engaged = true

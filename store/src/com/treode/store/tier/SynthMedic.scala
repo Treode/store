@@ -19,18 +19,18 @@ package com.treode.store.tier
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import com.treode.async.Scheduler
-import com.treode.disk.{Disk, Position}
-import com.treode.store.{Bytes, Cell, Key, Store, TableId, TxClock}
+import com.treode.disk.{DiskLaunch, Position}
+import com.treode.store.{Bytes, Cell, Key, StoreConfig, TableId, TxClock}
 
 import SynthTable.{genStepBits, genStepMask, genStepSize}
-import TierTable.{Checkpoint, Compaction, Meta}
+import TierTable.{Checkpoint, Compaction}
 
 private class SynthMedic (
     desc: TierDescriptor,
     id: TableId
 ) (implicit
     scheduler: Scheduler,
-    config: Store.Config
+    config: StoreConfig
 ) extends TierMedic {
 
   private val lock = new ReentrantReadWriteLock
@@ -125,24 +125,6 @@ private class SynthMedic (
       writeLock.unlock()
     }}
 
-  def checkpoint (meta: Meta) {
-    writeLock.lock()
-    try {
-      val mg = meta.gen >> genStepBits
-      val tg = this.gen >> genStepBits
-      if (mg == tg - 1) {
-        secondary = newMemTier
-      } else if (mg >= tg) {
-        gen = (mg+1) << genStepBits
-        primary = newMemTier
-        secondary = newMemTier
-      }
-      if (meta.gen > tiers.maxGen || meta.tiers > tiers)
-        tiers = meta.tiers
-    } finally {
-      writeLock.unlock()
-    }}
-
   def checkpoint (meta: Checkpoint) {
     writeLock.lock()
     try {
@@ -160,7 +142,7 @@ private class SynthMedic (
       writeLock.unlock()
     }}
 
-  def close () (implicit launch: Disk.Launch): TierTable = {
+  def close () (implicit launch: DiskLaunch): SynthTable = {
     import launch.disk
 
     writeLock.lock()
@@ -182,5 +164,8 @@ private class SynthMedic (
       tiers = tiers.compact (meta.keep, meta.tier)
     if (gen <= tiers.maxGen)
       gen = (tiers.maxGen + genStepSize) & ~genStepMask
-    new SynthTable (desc, id, lock, gen, secondary, newMemTier, tiers)
+
+    val table = new SynthTable (desc, id, lock, gen, secondary, newMemTier, tiers)
+    desc.claim (id.id, tiers.gens)
+    table
   }}

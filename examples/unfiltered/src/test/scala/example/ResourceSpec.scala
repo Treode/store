@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.jayway.restassured.RestAssured.given
 import com.jayway.restassured.response.{Response => RestAssuredResponse}
 import com.jayway.restassured.specification.ResponseSpecification
-import com.treode.async.stubs.StubScheduler, StubScheduler.{scheduler, executionContext}
+import com.treode.async.stubs.{StubGlobals, StubScheduler}, StubGlobals._
 import com.treode.store.{Bytes, Cell, TxClock, TxId, WriteOp}, WriteOp._
 import com.treode.store.stubs.StubStore
 import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}, Matchers._
@@ -56,19 +56,13 @@ class ResourceSpec extends FreeSpec {
 
   implicit class RichResposne (rsp: RestAssuredResponse) {
 
-    def etag: TxClock = {
-      val string = rsp.getHeader ("ETag")
-      assert (string != null, "Expected response to have an ETag.")
+    def valueTxClock: TxClock = {
+      val string = rsp.getHeader ("Value-TxClock")
+      assert (string != null, "Expected response to have an Value-TxClock.")
       val parse = TxClock.parse (string)
-      assert (parse.isDefined, s"""Could not parse ETag "$string" as a TxClock""")
+      assert (parse.isDefined, s"""Could not parse Value-TxClock "$string" as a TxClock""")
       parse.get
     }}
-
-  implicit class RichResponseSpecification (rsp: ResponseSpecification) {
-
-    def etag (ts: TxClock): Unit =
-      rsp.header ("ETag", ts.toString)
-  }
 
   class JsonMatcher (expected: String) extends TypeSafeMatcher [String] {
 
@@ -101,7 +95,7 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/123?key=abc")
       }
 
-    "PUT /table/123?key=abc should respond Ok with an etag" in
+    "PUT /table/123?key=abc should respond Ok with an valueTxClock" in
       served { case (port, store) =>
         val body = "\"i have been stored\""
         val rsp = given
@@ -111,11 +105,11 @@ class ResourceSpec extends FreeSpec {
           .statusCode (200)
         .when
           .put ("/table/123?key=abc")
-        val etag = rsp.etag
-        assertSeq (cell ("abc", etag, body)) (store.scan (123))
+        val valueTxClock = rsp.valueTxClock
+        assertSeq (cell ("abc", valueTxClock, body)) (store.scan (123))
       }
 
-    "DELETE /table/123?key=abc should respond Ok with an etag" in
+    "DELETE /table/123?key=abc should respond Ok with an valueTxClock" in
       served { case (port, store) =>
         val body = "\"i have been stored\""
         val rsp = given
@@ -125,8 +119,8 @@ class ResourceSpec extends FreeSpec {
           .statusCode (200)
         .when
           .delete ("/table/123?key=abc")
-        val etag = rsp.etag
-        assertSeq (cell ("abc", etag)) (store.scan (123))
+        val valueTxClock = rsp.valueTxClock
+        assertSeq (cell ("abc", valueTxClock)) (store.scan (123))
       }}
 
   "When the database has an entry" - {
@@ -149,12 +143,12 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/123?key=abc")
       }
 
-    "GET /table/123?key=abc with If-Modified-Since:0 should respond Ok" in
+    "GET /table/123?key=abc with Condition-TxClock:0 should respond Ok" in
       served { case (port, store) =>
         val ts = addData (store)
         given
           .port (port)
-          .header ("If-Modified-Since", "0")
+          .header ("Condition-TxClock", "0")
         .expect
           .statusCode (200)
           .body (equalTo (entity))
@@ -162,36 +156,36 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/123?key=abc")
       }
 
-    "GET /table/123?key=abc with If-Modified-Since:1 should respond Not Modified" in
+    "GET /table/123?key=abc with Condition-TxClock:1 should respond Not Modified" in
       served { case (port, store) =>
         val ts = addData (store)
         given
           .port (port)
-          .header ("If-Modified-Since", "1")
+          .header ("Condition-TxClock", "1")
         .expect
           .statusCode (304)
         .when
           .get ("/table/123?key=abc")
       }
 
-    "GET /table/123?key=abc with Last-Modification-Before:0 should respond Not Found" in
+    "GET /table/123?key=abc with Read-TxClock:0 should respond Not Found" in
       served { case (port, store) =>
         val ts = addData (store)
         given
           .port (port)
-          .header ("Last-Modification-Before", "0")
+          .header ("Read-TxClock", "0")
         .expect
           .statusCode (404)
         .when
           .get ("/table/123?key=abc")
       }
 
-    "GET /table/123?key=abc with Last-Modification-Before:1 should respond Ok" in
+    "GET /table/123?key=abc with Read-TxClock:1 should respond Ok" in
       served { case (port, store) =>
         val ts = addData (store)
         given
           .port (port)
-          .header ("Last-Modification-Before", "1")
+          .header ("Read-TxClock", "1")
         .expect
           .statusCode (200)
           .body (equalTo (entity))
@@ -199,7 +193,7 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/123?key=abc")
       }
 
-    "PUT /table/123?key=abc should respond Ok with an etag" in
+    "PUT /table/123?key=abc should respond Ok with an valueTxClock" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -209,31 +203,31 @@ class ResourceSpec extends FreeSpec {
           .statusCode (200)
         .when
           .put ("/table/123?key=abc")
-        val ts2 = rsp.etag
+        val ts2 = rsp.valueTxClock
         assertSeq (cell ("abc", ts2, entity2), cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "PUT /table/123?key=abc with If-Unmodified-Since:1 should respond Ok with an etag" in
+    "PUT /table/123?key=abc with Condition-TxClock:1 should respond Ok with an valueTxClock" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("If-Unmodified-Since", "1")
+          .header ("Condition-TxClock", "1")
           .body (entity2)
         .expect
           .statusCode (200)
         .when
           .put ("/table/123?key=abc")
-        val ts2 = rsp.etag
+        val ts2 = rsp.valueTxClock
         assertSeq (cell ("abc", ts2, entity2), cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "PUT /table/123?key=abc with If-Unmodified-Since:0 should respond Precondition Failed" in
+    "PUT /table/123?key=abc with Condition-TxClock:0 should respond Precondition Failed" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("If-Unmodified-Since", "0")
+          .header ("Condition-TxClock", "0")
           .body (entity2)
         .expect
           .statusCode (412)
@@ -242,7 +236,7 @@ class ResourceSpec extends FreeSpec {
         assertSeq (cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "DELETE /table/123?key=abc should respond Ok with an etag" in
+    "DELETE /table/123?key=abc should respond Ok with an valueTxClock" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -251,30 +245,30 @@ class ResourceSpec extends FreeSpec {
           .statusCode (200)
         .when
           .delete ("/table/123?key=abc")
-        val ts2 = rsp.etag
+        val ts2 = rsp.valueTxClock
         assertSeq (cell ("abc", ts2), cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "DELETE /table/123?key=abc with If-Unmodified-Since:1 should respond Ok with an etag" in
+    "DELETE /table/123?key=abc with Condition-TxClock:1 should respond Ok with an valueTxClock" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("If-Unmodified-Since", "1")
+          .header ("Condition-TxClock", "1")
         .expect
           .statusCode (200)
         .when
           .delete ("/table/123?key=abc")
-        val ts2 = rsp.etag
+        val ts2 = rsp.valueTxClock
         assertSeq (cell ("abc", ts2), cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "DELETE /table/123?key=abc with If-Unmodified-Since:0 should respond Precondition Failed" in
+    "DELETE /table/123?key=abc with Condition-TxClock:0 should respond Precondition Failed" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("If-Unmodified-Since", "0")
+          .header ("Condition-TxClock", "0")
         .expect
           .statusCode (412)
         .when
@@ -309,12 +303,12 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/123")
       }}
 
-    "GET /table/123 with Last-Modification-Before:4 should work" in {
+    "GET /table/123 with Read-TxClock:4 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Last-Modification-Before", "4")
+          .header ("Read-TxClock", "4")
         .expect
           .statusCode (200)
           .body (matchesJson ("""[
@@ -325,12 +319,12 @@ class ResourceSpec extends FreeSpec {
           .get ("/table/123")
       }}
 
-    "GET /table/123 with If-Modified-Since:3 should work" in {
+    "GET /table/123 with Condition-TxClock:3 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("If-Modified-Since", "3")
+          .header ("Condition-TxClock", "3")
         .expect
           .statusCode (200)
           .body (matchesJson ("""[
@@ -393,12 +387,12 @@ class ResourceSpec extends FreeSpec {
           .get ("/history/123")
       }}
 
-    "GET /history/123 with Last-Modification-Before:3 should work" in {
+    "GET /history/123 with Read-TxClock:3 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Last-Modification-Before", "3")
+          .header ("Read-TxClock", "3")
         .expect
           .statusCode (200)
           .body (matchesJson ("""[
@@ -410,12 +404,12 @@ class ResourceSpec extends FreeSpec {
           .get ("/history/123")
       }}
 
-    "GET /history/123 with If-Modified-Since:3 should work" in {
+    "GET /history/123 with Condition-TxClock:3 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("If-Modified-Since", "3")
+          .header ("Condition-TxClock", "3")
         .expect
           .statusCode (200)
           .body (matchesJson ("""[
@@ -509,39 +503,39 @@ class ResourceSpec extends FreeSpec {
 
     "and gives bad clock values" - {
 
-      "GET /table/123 with Last-Modification-Before:abc should yield Bad Request" in {
+      "GET /table/123 with Read-TxClock:abc should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
-            .header ("Last-Modification-Before", "abc")
+            .header ("Read-TxClock", "abc")
           .expect
             .statusCode (400)
-            .body (equalTo ("Bad time for Last-Modification-Before: abc"))
+            .body (equalTo ("Bad time for Read-TxClock: abc"))
           .when
             .get ("/table/123")
         }}
 
-      "GET /table/123 with If-Modified-Since:abc should yield Bad Request" in {
+      "GET /table/123 with Condition-TxClock:abc should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
-            .header ("If-Modified-Since", "abc")
+            .header ("Condition-TxClock", "abc")
           .expect
             .statusCode (400)
-            .body (equalTo ("Bad time for If-Modified-Since: abc"))
+            .body (equalTo ("Bad time for Condition-TxClock: abc"))
           .when
             .get ("/table/123")
         }}
 
-      "DELETE /table/123?key=abc with If-Unmodified-Since:abc should yield Bad Request" in {
+      "DELETE /table/123?key=abc with Condition-TxClock:abc should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
             .param ("key", "abc")
-            .header ("If-Unmodified-Since", "abc")
+            .header ("Condition-TxClock", "abc")
           .expect
             .statusCode (400)
-            .body (equalTo ("Bad time for If-Unmodified-Since: abc"))
+            .body (equalTo ("Bad time for Condition-TxClock: abc"))
           .when
             .delete ("/table/123")
         }}}

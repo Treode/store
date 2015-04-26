@@ -20,8 +20,8 @@ import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}
 import com.treode.cluster.Cluster
-import com.treode.disk.Disk
-import com.treode.store.{CatalogDescriptor, Library, Store}
+import com.treode.disk.{DiskLaunch, DiskRecovery}
+import com.treode.store.{CatalogDescriptor, Library, StoreConfig}
 
 private [store] trait Catalogs {
 
@@ -34,15 +34,15 @@ private [store] object Catalogs {
 
   trait Recovery {
 
-    def launch (implicit disk: Disk.Launch, cluster: Cluster): Async [Catalogs]
+    def launch (implicit disk: DiskLaunch, cluster: Cluster): Async [Catalogs]
   }
 
   def recover () (implicit
       random: Random,
       scheduler: Scheduler,
       library: Library,
-      recovery: Disk.Recovery,
-      config: Store.Config
+      recovery: DiskRecovery,
+      config: StoreConfig
   ): Recovery =
     new RecoveryKit
 }
