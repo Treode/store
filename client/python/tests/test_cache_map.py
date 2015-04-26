@@ -27,7 +27,7 @@ class TestCacheMap(object):
                 random.randint(0,MAX_VAL),
                 random.randint(0,MAX_VAL))
         value_list =  [cache_value 
-            for value_list in cache_map.cache_map.values() 
+            for value_list in cache_map.entry_table.values() 
             for cache_value in value_list ]
         # Note this test is randomized, so it may fail periodically...
         # in case of many overlapping values or if TEST_CNT too small
@@ -72,15 +72,15 @@ class TestCacheMap(object):
         vt = 5
         cache_map.put(rt, vt, 0, 0, "date")
         assert(cache_map.get(0, 0, read_time=rt).value == "date")
-        assert(cache_map.get(0, 1, read_time=342523453425).value == "banana") 
-        assert(cache_map.get(0, 2, read_time=234234) == None)
+        assert(cache_map.get(0, 1, read_time=4).value == "banana") 
+        assert(cache_map.get(0, 2, read_time=2) == None)
 
         rt = 8
         vt = 7
         cache_map.put(rt, vt, 0, 0, "eggfruit")
         assert(cache_map.get(0, 0, read_time=rt).value == "eggfruit")   
-        assert(cache_map.get(0, 1, read_time=342523453425).value == "banana") 
-        assert(cache_map.get(0, 2, read_time=234234) == None) 
+        assert(cache_map.get(0, 1, read_time=4).value == "banana") 
+        assert(cache_map.get(0, 2, read_time=2) == None) 
         
         print "PASSED!"
 
