@@ -126,8 +126,8 @@ private class AllocationDocket private (
     * objects.
     */
   def claim (claims: GenerationDocket): Unit = {
-    for ((id, grps) <- claims)
-      claim (id.typ.id, id.obj.id, grps)
+    for ((id, gens) <- claims)
+      claim (id.typ.id, id.obj.id, gens)
     for {
       (typ, objs0) <- pages
       (obj, gens) <- objs0
@@ -154,10 +154,10 @@ private class AllocationDocket private (
     val drains = new GenerationDocket
     for {
       (typ, objs) <- pages
-      (obj, grps) <- objs
-      (grp, disks) <- grps
+      (obj, gens) <- objs
+      (gen, disks) <- gens
       if disks.keys exists (dno contains _)
-    } drains.add (typ, obj, grp)
+    } drains.add (typ, obj, gen)
     drains
   }
 
