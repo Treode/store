@@ -53,6 +53,10 @@ extends Iterable [(Int, Set [Int])] with Traversable [(Int, Set [Int])] {
       case None => ()
     }
 
+  def remove (docket: SegmentDocket): Unit =
+    for ((disk, segs) <- docket)
+      remove (disk, segs)
+
   def iterator = segs.iterator
 
   override def foreach [U] (f: ((Int, Set [Int])) => U) = segs.foreach (f)

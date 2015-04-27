@@ -56,15 +56,15 @@ private class LogWriter (
   // The position of the latest batch that was written when a checkpoint started, and that
   // checkpoint has completed. This is the last flushed batch before a completed checkpoint had
   // begun. The log replay of the next årecovery starts at this point.
-  private var checkpointed: Long
+  private var checkpointed: Long,
+
+  // The position of the latest batch that was written.
+  private var flushed: Long
 ) (implicit
   scheduler: Scheduler
 ) {
 
   import geom.{blockBits, blockAlignDown, blockAlignUp}
-
-  // The position of the latest batch that was written.
-  private var flushed = pos
 
   // The position of the latest batch that was written when a checkpoint started. This is the last
   // flushed batch when a checkpoint began, but that checkpoint may not have completed.
@@ -82,14 +82,14 @@ private class LogWriter (
       case Failure (t) => throw t
     }}
 
-  def launch(): Unit =
+  private def register(): Unit =
     run {
       for {
         (batch, records) <- dispatcher.receive()
         enroll <- flush (batch, records)
       } yield {
         if (enroll)
-          launch()
+          register()
       }}
 
   private def flush (batch: Long, records: UnrolledBuffer [PickledRecord]): Async [Boolean] =
@@ -99,7 +99,6 @@ private class LogWriter (
         dispatcher.send (records)
         supply (false)
       } else {
-
 
         // Compute how many bytes we can write without overflowing the segment. We need to allow
         // enough for the marker for the next batch and the alloc marker after it.
@@ -200,6 +199,9 @@ private class LogWriter (
           detacher.finishFlush()
         }}}
 
+  def launch(): Unit =
+    register()
+
   def startCheckpoint(): Unit =
     synchronized (marked = flushed)
 
@@ -222,4 +224,23 @@ private class LogWriter (
           drains = List.empty
         }}
       checkpointed
-    }}
+    }
+
+  def startDraining(): Async [Unit] =
+    detacher.startDraining()
+
+  def awaitDrained(): Async [Unit] =
+    async { cb =>
+      synchronized {
+        if (isDrained) {
+          if (checkpointed != 0L) {
+            while (!segs.isEmpty)
+              alloc.free (segs.remove())
+            flushed = 0L
+            marked = flushed
+            checkpointed = flushed
+          }
+          scheduler.pass (cb, ())
+        } else {
+          drains ::= cb
+        }}}}

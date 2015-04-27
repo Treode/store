@@ -25,6 +25,7 @@ import com.treode.disk.{Disk, DiskConfig, DiskLaunch, DiskTestConfig, DriveGeome
   PageDescriptor, Position, Stuff}
 import com.treode.disk.stubs.Counter
 import com.treode.pickle.Picklers
+import com.treode.tags.Periodic
 import org.scalatest.FreeSpec
 
 class PageSpec extends FreeSpec with DiskChecks {
@@ -157,80 +158,27 @@ class PageSpec extends FreeSpec with DiskChecks {
     override def toString = s"PageBatch ($nbatches, $nwrites)"
   }
 
-  // TODO: Gradually add paging features until we can run manyScenarios from DiskChecks.
-  private [edit] def pageScenarios [T <: Tracker] (
-    setup: => T,
-    seed: Long,
-    phs1: Effect [T]
-  ) (implicit
-    config: DiskConfig,
-    geom: DriveGeometry
-  ) {
-    try {
-      val counter = new Counter [Effect [T]]
-
-      onePhase (setup, seed, counter) (addA1)
-      onePhase (setup, seed, counter) (addA1, phs1)
-      onePhase (setup, seed, counter) (addA1, phs1, chkpt)
-      onePhase (setup, seed, counter) (addA1, phs1, chkpt, addB1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, chkpt)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, addC1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB2)
-      onePhase (setup, seed, counter) (addA1, phs1, addB3)
-
-      onePhase (setup, seed, counter) (addA2)
-      onePhase (setup, seed, counter) (addA2, phs1)
-      onePhase (setup, seed, counter) (addA2, phs1, addB1)
-
-      onePhase (setup, seed, counter) (addA3)
-      onePhase (setup, seed, counter) (addA3, phs1)
-    } catch {
-      case t: Throwable =>
-        info (f"implicit val config = $config")
-        info (f"implicit val geom = $geom")
-        throw t
-    }}
-
-  private [edit] def pageScenarios [T <: Tracker] (
-    setup: => T,
-    phs1: Effect [T]
-  ) (implicit
-    config: DiskConfig,
-    geom: DriveGeometry
-  ): Unit =
-    forAllSeeds (pageScenarios (setup, _, phs1))
-
   "The Pager should read what was written" - {
 
-    /*"in" in {
-      implicit val config = DiskTestConfig()
-      implicit val geom = DriveGeometry (14, 7, 1 << 20)
-      twoPhases (new PageTracker (3, 7, 7), 0xC2B5163B17B392AFL) ((addA1,2), (PageBatch (1, 1),2147483647)) ((PageBatch (1, 1),2147483647))
-    }*/
+    implicit val config = DiskTestConfig (maximumPageBytes = 1 << 14)
+    implicit val geom = DriveGeometry (14, 7, 1 << 20)
 
     for {
       nbatches <- Seq (0, 1, 2, 3)
       nwrites <- Seq (0, 1, 2, 3)
       if (nbatches != 0 && nwrites != 0 || nbatches == nwrites)
-    } s"for $nbatches batches of $nwrites writes" in {
-      implicit val config = DiskTestConfig()
-      implicit val geom = DriveGeometry (14, 7, 1 << 20)
-      pageScenarios (new PageTracker (3, 7, 7), PageBatch (nbatches, nwrites))
+    } s"for $nbatches batches of $nwrites writes" taggedAs (Periodic) in {
+      manyScenarios (new PageTracker (3, 7, 7), PageBatch (nbatches, nwrites))
     }
 
     for {
       (nbatches, nwrites, nobjects) <- Seq ((7, 7, 7), (16, 16, 20))
-    } s"for $nbatches batches of $nwrites writes" in {
-      implicit val config = DiskTestConfig()
-      implicit val geom = DriveGeometry (14, 7, 1 << 20)
-      pageScenarios (new PageTracker (nobjects, 7, 7), PageBatch (nbatches, nwrites))
+    } s"for $nbatches batches of $nwrites writes" taggedAs (Periodic) in {
+      manyScenarios (new PageTracker (nobjects, 7, 7), PageBatch (nbatches, nwrites))
     }
 
     for {
       (nbatches, nwrites, nobjects) <- Seq ((20, 100, 10))
-    } s"for $nbatches batches of $nwrites writes" in {
-      implicit val config = DiskTestConfig()
-      implicit val geom = DriveGeometry (14, 7, 1 << 20)
-      pageScenarios (new PageTracker (nobjects, 7, 7), PageBatch (nbatches, nwrites))
+    } s"for $nbatches batches of $nwrites writes" taggedAs (Periodic) in {
+      someScenarios (new PageTracker (nobjects, 7, 7), PageBatch (nbatches, nwrites))
     }}}

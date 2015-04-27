@@ -16,6 +16,7 @@
 
 package com.treode.disk.edit
 
+import java.nio.file.Path
 import java.util.ArrayList
 import scala.collection.JavaConversions._
 import scala.collection.mutable.UnrolledBuffer
@@ -30,6 +31,7 @@ import com.treode.disk.{DriveGeometry, PickledPage, Position, SegmentBounds}
 /** Receives items from a PageDispatcher and writes them to a file. */
 private class PageWriter (
   id: Int,
+  path: Path,
   file: File,
   geom: DriveGeometry,
   dispatcher: PageDispatcher,
@@ -47,20 +49,25 @@ private class PageWriter (
   // The position of the latest batch that was written.
   private var pos = 0L
 
+  // Something awaiting a draing to complete.
+  private var drain = Option.empty [Callback [Unit]]
+
+  private var ledger: SegmentLedger = null
+
   private def run [A] (task: Async [A]) {
     task run {
       case Success (_) => ()
       case Failure (t) => throw t
     }}
 
-  def launch(): Unit =
+  private def register(): Unit =
     run {
       for {
         (_, pages) <- dispatcher.receive()
         enroll <- flush (pages)
       } yield {
         if (enroll)
-          launch()
+          register()
       }}
 
   private def flush (pages: UnrolledBuffer [PickledPage]): Async [Boolean] =
@@ -114,6 +121,7 @@ private class PageWriter (
 
         for {
           _ <- file.flush (buf, pos)
+          _ <- ledger.alloc (id, seg.num, pos + buf.writePos, tally)
         } yield {
 
           // Setup for the next batch.
@@ -137,4 +145,29 @@ private class PageWriter (
 
           // Can we enroll for another batch?
           detacher.finishFlush()
-      }}}}
+        }}}
+
+  def launch (ledger: SegmentLedger, pos: Long) {
+    this.ledger = ledger
+    if (geom.isSegmentAligned (pos)) {
+      seg = alloc.alloc()
+      this.pos = seg.base
+    } else {
+      seg = alloc.alloc (geom.segmentNum (pos))
+      this.pos = pos
+    }
+    register()
+  }
+
+  def startDraining(): Async [Unit] =
+    for {
+      _ <- detacher.startDraining()
+    } yield {
+      if (pos == seg.base)
+        alloc.free (seg.num)
+      seg = SegmentBounds (-1, 0, 0)
+    }
+
+  def getSegment(): Int =
+    seg.num
+}

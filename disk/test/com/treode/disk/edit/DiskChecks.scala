@@ -76,10 +76,14 @@ trait DiskChecks extends AsyncChecks {
     /** Intercept logging messages. */
     private implicit val events = new StubDiskEvents {
 
+      override def reattachingDisks (paths: Set [Path]) {
+        assert (_attached subsetOf paths)
+        _attached = paths
+      }
+
       override def changedDisks (attached: Set [Path], detached: Set [Path], draining: Set [Path]) {
         assert (!intersects (attached, _loggedAttach))
         assert (!intersects (detached, _loggedDetach))
-        assert (!intersects (draining, _loggedDraining))
         _attached ++= attached
         _attached --= draining
         _loggedAttach ++= attached
@@ -227,9 +231,12 @@ trait DiskChecks extends AsyncChecks {
     ): Async [Unit] = {
       val drainable = drives.attached
       val drains = paths filter (drainable contains _)
-      drives.startingDraining (drains)
-      drains.latch (agent.drain (_)) .map (_ => drives.startedDraining (drains))
-    }
+      if (drains.size == drainable.size) {
+        supply (())
+      } else {
+        drives.startingDraining (drains)
+        drains.latch (agent.drain (_)) .map (_ => drives.startedDraining (drains))
+      }}
 
     override def toString = name
   }
@@ -285,6 +292,7 @@ trait DiskChecks extends AsyncChecks {
     import launch.agent
     tracker.launch()
     launch.launch()
+    scheduler.run()
     drives.verify (crashed) .expectPass()
     tracker.verify (crashed) .expectPass()
   }

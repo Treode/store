@@ -30,6 +30,12 @@ class DriveGeometry private (
 
   val segmentCount = ((diskBytes + segmentBytes - (blockBytes<<2)) >> segmentBits).toInt
 
+  def isSegmentAligned (pos: Long): Boolean =
+    (pos & ~segmentMask) == 0
+
+  def isBlockAligned (pos: Long): Boolean =
+    (pos & ~blockMask) == 0
+
   def blockAlignDown (pos: Int): Int =
     pos & blockMask
 

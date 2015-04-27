@@ -52,7 +52,8 @@ private class LogReader (
     private val alloc = new SegmentAllocator (geom)
     private val buf = PagedBuffer (blockBits)
     private val segs = new ArrayDeque [Int]
-    private var seg = alloc.alloc (geom.segmentNum (logHead))
+    private var seg = SegmentBounds (geom.segmentNum (logHead), geom, config)
+    private var flushed = logHead
     private var pos = logHead
     private var batch = 0L
 
@@ -60,6 +61,7 @@ private class LogReader (
       for {
         _ <- file.fill (buf, pos, SegmentTagSpace, blockBits)
       } yield {
+        flushed = pos
         val tag = buf.readLong()
         if (tag == SegmentTag) {
           pos += SegmentTagSpace
@@ -101,12 +103,14 @@ private class LogReader (
           } yield {
             if (this.batch < batch) {
               this.batch = batch
+              flushed = pos
               pos += length + LogEntriesSpace
               Some (LogEntries (batch, readRecords (length, count)))
             } else {
               val end = buf.readPos - LogEntriesSpace
               buf.readPos = blockAlignDown (end)
               buf.writePos = end
+              flushed = pos
               pos -= end
               None
             }}
@@ -128,7 +132,7 @@ private class LogReader (
 
         case _ =>
           val tagPos = pos + buf.readPos - LogTagSize
-          throw new AssertionError (s"Unrecognized tag $tag at $tagPos of $path")
+          throw new AssertionError (f"Unrecognized tag $tag%X at $tagPos of $path")
       }
 
     private def readBatch(): Async [Option [LogEntries]] =
@@ -140,7 +144,6 @@ private class LogReader (
       }
 
     private def readFirstBatch(): Async [Option [LogEntries]] = {
-      segs.add (seg.num)
       val start = blockAlignDown (pos)
       val rpos = (pos - start).toInt
       for {
@@ -161,14 +164,14 @@ private class LogReader (
 
       val logdtch = new Detacher (superb.draining)
       val logwrtr =
-        new LogWriter (path, file, geom, logdsp, logdtch, alloc, buf, segs, pos, seg.limit, logHead)
+        new LogWriter (path, file, geom, logdsp, logdtch, alloc, buf, segs, pos, seg.limit, logHead, flushed)
 
       val pagdtch = new Detacher (superb.draining)
-      val pagwrtr = new PageWriter (id, file, geom, pagdsp, pagdtch, alloc)
+      val pagwrtr = new PageWriter (id, path, file, geom, pagdsp, pagdtch, alloc)
 
-      val drive = new Drive (file, geom, logwrtr, pagwrtr, draining, id, path)
-
+      val drive = new Drive (file, geom, alloc, logwrtr, pagwrtr, draining, id, path)
       replayer.reattach (drive)
+
       val cb = this.cb
       this.cb = null
       cb.pass (())
@@ -188,13 +191,19 @@ private class LogReader (
         _fail (t)
     }
 
-    def start(): Unit =
-      if (pos == 0)
+    def start(): Unit = {
+      if (pos == 0) {
         _close()
-      else if (pos == seg.base)
+      } else if (pos == seg.base) {
+        alloc.alloc (seg.num)
+        segs.add (seg.num)
         readSegmentTag() .run (_give)
-      else
+      } else {
+        alloc.alloc (seg.num)
+        segs.add (seg.num)
         readFirstBatch() .run (_give)
+      }
+    }
 
     def next(): Unit =
       if (pos == 0)

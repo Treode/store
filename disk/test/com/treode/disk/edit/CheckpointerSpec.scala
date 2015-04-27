@@ -19,14 +19,17 @@ package com.treode.disk.edit
 import com.treode.async.Async, Async.supply
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{DiskConfig, DiskController, DiskTestTools, StubFileSystem}, DiskTestTools._
+import com.treode.disk.{DiskConfig, DiskController, DiskTestTools, DriveGeometry, StubFileSystem},
+  DiskTestTools._
 import com.treode.disk.stubs.StubDiskEvents
+import com.treode.notify.Notification
 import org.scalatest.FlatSpec
 
 class CheckpointerSpec extends FlatSpec {
 
   implicit val config = DiskConfig.suggested
   implicit val events = new StubDiskEvents
+  val geom = DriveGeometry (8, 6, 1 << 18)
 
   private def setup (f: => Unit) (implicit scheduler: StubScheduler): DiskAgent = {
     implicit val files = new StubFileSystem
@@ -36,7 +39,9 @@ class CheckpointerSpec extends FlatSpec {
     val launch = recovery.reattach().expectPass()
     launch.checkpoint (supply (f))
     launch.launch()
-    launch.controller.asInstanceOf [DiskAgent]
+    val agent = launch.controller.asInstanceOf [DiskAgent]
+    agent.attach ("d1", geom) .expectPass (Notification.empty)
+    agent
   }
 
   "The Checkpointer" should "invoke registered checkpointers" in {

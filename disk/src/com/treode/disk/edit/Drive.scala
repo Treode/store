@@ -18,7 +18,7 @@ package com.treode.disk.edit
 
 import java.nio.file.Path
 
-import com.treode.async.Async, Async.{guard, supply}
+import com.treode.async.Async, Async.{guard, latch, supply}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 import com.treode.disk.{DiskConfig, DriveDigest, DriveGeometry, quote}
@@ -28,6 +28,7 @@ import SuperBlock.Common
 private class Drive (
   file: File,
   geom: DriveGeometry,
+  alloc: SegmentAllocator,
   logwrtr: LogWriter,
   pagwrtr: PageWriter,
   private var _draining: Boolean,
@@ -40,10 +41,11 @@ private class Drive (
   def draining = _draining
 
   /** Called when launch completes. */
-  def launch() {
+  def launch (ledger: SegmentLedger, claimed: Set [Int], pos: Long) {
+    alloc.alloc (claimed)
     if (!draining) {
       logwrtr.launch()
-      pagwrtr.launch()
+      pagwrtr.launch (ledger, pos)
     }}
 
   def read (offset: Long, length: Int): Async [PagedBuffer] =
@@ -54,6 +56,12 @@ private class Drive (
       } yield {
         buf
       }}
+
+  def protect: Set [Int] =
+    Set (pagwrtr.getSegment)
+
+  def free (ns: Set [Int]): Unit =
+    alloc.free (ns)
 
   def startCheckpoint(): Unit =
     logwrtr.startCheckpoint()
@@ -66,17 +74,24 @@ private class Drive (
     }
 
   def startDraining(): Async [Unit] =
-    supply {
+    guard {
       _draining = true
+      latch (
+        logwrtr.startDraining(),
+        pagwrtr.startDraining())
+      .unit
     }
 
-  def awaitDrainStarted(): Async [Drive] =
-    supply {
+  def awaitDrained(): Async [Drive] =
+    for {
+      _ <- logwrtr.awaitDrained()
+      _ <- alloc.awaitDrained()
+    } yield {
       this
     }
 
   def digest: DriveDigest =
-    new DriveDigest (path, geom, 0, draining)
+    new DriveDigest (path, geom, alloc.allocated, draining)
 
   def close(): Unit =
     file.close()

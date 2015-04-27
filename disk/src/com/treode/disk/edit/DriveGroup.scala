@@ -88,11 +88,15 @@ private class DriveGroup (
   /** Callbacks for when the files are closed. */
   private var closing = List.empty [Callback [Unit]]
 
+  private var ledger: SegmentLedger = null
+  private var checkpointer: Checkpointer = null
+  private var compactor: Compactor = null
+
   drives = drives.withDefault (id => throw new IllegalArgumentException (s"Drive $id does not exist"))
 
   queue.launch()
 
-  private val driveDrainStarted: Callback [Drive] = {
+  private val driveDrained: Callback [Drive] = {
     case Success (drive) => detach (drive)
     case Failure (t) => throw t
   }
@@ -167,27 +171,59 @@ private class DriveGroup (
       } yield {
 
         for (drive <- attaches)
-          drive.launch()
+          drive.launch (ledger, Set.empty, 0L)
         for (drive <- detaches)
           drive.close()
         for (drive <- drains)
-          drive.awaitDrainStarted() run (driveDrainStarted)
+          drive.awaitDrained() run (driveDrained)
         for (cb <- changers)
           scheduler.pass (cb, Notification.empty)
         for (cb <- checkpoint)
           scheduler.pass (cb, ())
 
-        events.changedDisks (
-          attached = SortedSet.empty [Path] ++ attaches.map (_.path),
-          detached = SortedSet.empty [Path] ++ detaches.map (_.path),
-          draining = SortedSet.empty [Path] ++ drains.map (_.path))
+        if (!drains.isEmpty) {
+          val ids = drains.map (_.id) .toSet
+          checkpointer.checkpoint() run (ignore)
+          compactor.compact (ledger.docket.drain (ids))
+        }
+
+        if (!attaches.isEmpty || !detaches.isEmpty || !drains.isEmpty)
+          events.changedDisks (
+            attached = SortedSet.empty [Path] ++ attaches.map (_.path),
+            detached = SortedSet.empty [Path] ++ detaches.map (_.path),
+            draining = SortedSet.empty [Path] ++ drains.map (_.path))
       }}
 
-  def launch(): Unit =
+  def launch (
+    ledger: SegmentLedger,
+    writers: Map [Int, Long],
+    checkpointer: Checkpointer,
+    compactor: Compactor
+  ): Unit =
     fiber.execute {
       state = Open
+      this.ledger = ledger
+      this.checkpointer = checkpointer
+      this.compactor = compactor
+
+      val docket = ledger.docket
+      val claimed = docket.claimed
       for (drive <- drives.values)
-        drive.launch()
+        drive.launch (ledger, claimed (drive.id), writers.getOrElse (drive.id, 0L))
+
+      val drains = drives.values.filter (_.draining)
+      for (drive <- drains)
+        drive.awaitDrained() run (driveDrained)
+      if (!drains.isEmpty) {
+        val ids = drains.map (_.id) .toSet
+        checkpointer.checkpoint() run (ignore)
+        compactor.compact (docket.drain (ids))
+        events.changedDisks (
+          attached = SortedSet.empty,
+          detached = SortedSet.empty,
+          draining = SortedSet.empty [Path] ++ drains.map (_.path))
+      }
+
       queue.engage()
     }
 
@@ -206,6 +242,19 @@ private class DriveGroup (
       queue.engage()
     }
 
+  def protect: SegmentDocket = {
+    val docket = new SegmentDocket
+    for (drive <- drives.values)
+      docket.add (drive.id, drive.protect)
+    docket
+  }
+
+  def release (released: SegmentDocket): Unit =
+    fiber.execute {
+      for ((dno, segs) <- released)
+        drives (dno) free (segs)
+    }
+
   private def _openDrive (id: Int, path: Path, geom: DriveGeometry): Drive = {
 
     val file = files.open (path, READ, WRITE)
@@ -221,12 +270,12 @@ private class DriveGroup (
 
     val logdtch = new Detacher (false)
     val logwrtr = new LogWriter (
-      path, file, geom, logdsp, logdtch, alloc, logbuf, logsegs, logseg.base, logseg.limit, logseg.base)
+      path, file, geom, logdsp, logdtch, alloc, logbuf, logsegs, logseg.base, logseg.limit, logseg.base, logseg.base)
 
     val pagdtch = new Detacher (false)
-    val pagwrtr = new PageWriter (id, file, geom, pagdsp, pagdtch, alloc)
+    val pagwrtr = new PageWriter (id, path, file, geom, pagdsp, pagdtch, alloc)
 
-    new Drive (file, geom, logwrtr, pagwrtr, false, id, path)
+    new Drive (file, geom, alloc, logwrtr, pagwrtr, false, id, path)
   }
 
   def read (pos: Position): Async [PagedBuffer] =

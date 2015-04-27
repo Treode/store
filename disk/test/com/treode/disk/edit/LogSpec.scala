@@ -23,6 +23,7 @@ import com.treode.async.{Async, Scheduler}, Async.supply
 import com.treode.disk.{DiskConfig, DiskLaunch, DiskTestConfig, DriveGeometry, RecordDescriptor}
 import com.treode.disk.stubs.Counter
 import com.treode.pickle.Picklers
+import com.treode.tags.Periodic
 import org.scalatest.FreeSpec
 
 class LogSpec extends FreeSpec with DiskChecks {
@@ -143,82 +144,29 @@ class LogSpec extends FreeSpec with DiskChecks {
     override def toString = s"LogBatch ($nbatches, $nwrites)"
   }
 
-  // TODO: Gradually add logging features until we can run manyScenarios from DiskChecks.
-  private [edit] def logScenarios [T <: Tracker] (
-    setup: => T,
-    seed: Long,
-    phs1: Effect [T]
-  ) (implicit
-    config: DiskConfig,
-    geom: DriveGeometry
-  ) {
-    try {
-      val counter = new Counter [Effect [T]]
-
-      onePhase (setup, seed, counter) (addA1)
-      onePhase (setup, seed, counter) (addA1, phs1)
-      onePhase (setup, seed, counter) (addA1, phs1, chkpt)
-      onePhase (setup, seed, counter) (addA1, phs1, chkpt, addB1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, chkpt)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, addC1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB2)
-      onePhase (setup, seed, counter) (addA1, phs1, addB3)
-
-      onePhase (setup, seed, counter) (addA2)
-      onePhase (setup, seed, counter) (addA2, phs1)
-      onePhase (setup, seed, counter) (addA2, phs1, addB1)
-
-      onePhase (setup, seed, counter) (addA3)
-      onePhase (setup, seed, counter) (addA3, phs1)
-
-      twoPhases (setup, seed, counter) (addA1) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1, chkpt) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1, addB1) (phs1)
-
-      twoPhases (setup, seed, counter) (addA2, phs1) (phs1)
-      twoPhases (setup, seed, counter) (addA2) (phs1)
-    } catch {
-      case t: Throwable =>
-        info (f"implicit val config = $config")
-        info (f"implicit val geom = $geom")
-        throw t
-    }}
-
-  private [edit] def logScenarios [T <: Tracker] (
-    setup: => T,
-    phs1: Effect [T]
-  ) (implicit
-    config: DiskConfig,
-    geom: DriveGeometry
-  ): Unit =
-    forAllSeeds (logScenarios (setup, _, phs1))
-
   "The Log should replay acknowledged records in semi-order" - {
+
+    implicit val config = DiskTestConfig()
+    implicit val geom = DriveGeometry (8, 6, 1 << 18)
 
     for {
       nbatches <- Seq (1, 2, 3)
       nwrites <- Seq (1, 2, 3)
       if (nbatches != 0 && nwrites != 0 || nbatches == nwrites)
-    } s"for $nbatches batches of $nwrites writes" in {
+    } s"for $nbatches batches of $nwrites writes" taggedAs (Periodic) in {
       implicit val config = DiskTestConfig()
       implicit val geom = DriveGeometry (8, 6, 1 << 18)
-      logScenarios (new LogTracker, LogBatch (nbatches, nwrites))
+      manyScenarios (new LogTracker, LogBatch (nbatches, nwrites))
     }
 
     for {
       (nbatches, nwrites) <- Seq ((7, 7), (16, 16))
-    } s"for $nbatches batches of $nwrites writes" in {
-      implicit val config = DiskTestConfig()
-      implicit val geom = DriveGeometry (8, 6, 1 << 18)
-      logScenarios (new LogTracker, LogBatch (nbatches, nwrites))
+    } s"for $nbatches batches of $nwrites writes" taggedAs (Periodic) in {
+      manyScenarios (new LogTracker, LogBatch (nbatches, nwrites))
     }
 
     for {
       (nbatches, nwrites) <- Seq ((20, 100))
-    } s"for $nbatches batches of $nwrites writes" in {
-      implicit val config = DiskTestConfig()
-      implicit val geom = DriveGeometry (8, 6, 1 << 18)
-      logScenarios (new LogTracker, LogBatch (nbatches, nwrites))
+    } s"for $nbatches batches of $nwrites writes" taggedAs (Periodic) in {
+      someScenarios (new LogTracker, LogBatch (nbatches, nwrites))
     }}}

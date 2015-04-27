@@ -19,8 +19,8 @@ package com.treode.disk.edit
 import java.util.{ArrayList, HashMap}
 
 import com.treode.async.{Async, Scheduler}
-import com.treode.disk.{Compaction, Disk, DiskController, DiskEvents, DiskLaunch, ObjectId,
-  PageDescriptor, PageHandler, SystemId, TypeId}
+import com.treode.disk.{Compaction, Disk, DiskController, DiskEvents, DiskLaunch, GenerationDocket,
+  ObjectId, PageDescriptor, PageHandler, SystemId, TypeId}
 
 /** The second phase of building the live Disk system. Implements the user trait Launch. */
 private class LaunchAgent (implicit
@@ -33,6 +33,9 @@ private class LaunchAgent (implicit
   private val checkpoints = new ArrayList [Unit => Async [Unit]]
   private val compactors = new HashMap [TypeId, Compaction => Async [Unit]]
 
+  private val claims = new GenerationDocket
+  private var ledger: SegmentLedger = null
+  private var writers: Map [Int, Long] = null
   private var launching = true
 
   implicit val disk: Disk = agent
@@ -44,6 +47,12 @@ private class LaunchAgent (implicit
       checkpoints.add (_ => f)
     }
 
+  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit =
+    synchronized {
+      require (launching, "Must claim pages before launching.")
+      claims.add (desc.id, obj, gens)
+    }
+
   def compact (desc: PageDescriptor [_]) (f: Compaction => Async [Unit]): Unit =
     synchronized {
       val typ = desc.id
@@ -51,18 +60,25 @@ private class LaunchAgent (implicit
       compactors.put (typ, f)
     }
 
+  def recover (ledger: SegmentLedger, writers: Map [Int, Long]): Unit =
+    synchronized {
+      assert (this.ledger == null && this.writers == null)
+      this.ledger = ledger
+      this.writers = writers
+    }
+
   def launch() {
     require (launching, "Disks already launched.")
     launching = false
+    ledger.claim (claims)
     val checkpointer = new Checkpointer (drives, checkpoints)
     val compactor = new Compactor (compactors)
-    agent.launch (checkpointer, compactor)
+    agent.launch (ledger, writers, checkpointer, compactor)
   }
 
   // The old disk system used this; this new disk system uses claim and compact instead.
   def handle (desc: PageDescriptor [_], handler: PageHandler): Unit = ()
 
   // TODO
-  def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ()
   def sysid: SystemId  = ???
 }

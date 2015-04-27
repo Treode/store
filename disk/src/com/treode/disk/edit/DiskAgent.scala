@@ -37,16 +37,23 @@ private class DiskAgent (
 
   import config.{maximumPageBytes, maximumRecordBytes}
 
+  private var ledger: SegmentLedger = null
   private var checkpointer: Checkpointer = null
   private var compactor: Compactor = null
 
   implicit val disk = this
 
   /** Called by the LaunchAgent when launch completes. */
-  def launch (checkpointer: Checkpointer, compactor: Compactor) {
+  def launch (
+    ledger: SegmentLedger,
+    writers: Map [Int, Long],
+    checkpointer: Checkpointer,
+    compactor: Compactor
+  ) {
+    this.ledger = ledger
     this.checkpointer = checkpointer
     this.compactor = compactor
-    group.launch()
+    group.launch (ledger, writers, checkpointer, compactor)
   }
 
   def record [R] (desc: RecordDescriptor [R], record: R): Async [Unit] =
@@ -74,6 +81,12 @@ private class DiskAgent (
 
   def compact (desc: PageDescriptor[_], obj: ObjectId): Unit =
     compactor.compact (desc.id, obj)
+
+  def release (desc: PageDescriptor[_], obj: ObjectId, gens: Set [Long]): Unit = {
+    val docket = ledger.free (desc.id, obj, gens)
+    docket.remove (group.protect)
+    group.release (docket)
+  }
 
   def change (change: DriveChange): Async [Notification [Unit]] =
     group.change (change)
@@ -104,7 +117,6 @@ private class DiskAgent (
     group.close()
 
   // TODO
-  def release (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ???
   def join [A] (task:  Async[A]): Async[A] = ???
   def drives: Async [Seq [DriveDigest]] = ???
 }
