@@ -301,8 +301,11 @@ trait StubDiskChecks extends AsyncChecks {
 
     twoPhases (setup, seed, counter) (phs1) (phs1)
     twoPhases (setup, seed, counter) (phs1, Checkpoint (1)) (phs1)
+    twoPhases (setup, seed, counter) (phs1, Checkpoint (1)) (phs1, Checkpoint (1))
+    twoPhases (setup, seed, counter) (phs1, Checkpoint (1)) (phs1, Drain)
     twoPhases (setup, seed, counter) (phs1, Checkpoint (1), Drain) (phs1)
     twoPhases (setup, seed, counter) (phs1, Drain) (phs1)
+    twoPhases (setup, seed, counter) (phs1, Drain) (phs1, Checkpoint (1))
     twoPhases (setup, seed, counter) (phs1, Drain, Checkpoint (1)) (phs1)
   }
 

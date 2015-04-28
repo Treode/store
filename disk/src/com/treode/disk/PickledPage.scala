@@ -25,6 +25,7 @@ private abstract class PickledPage (
     val gen: Long,
     val cb: Callback [Position]
 ) {
+
   def byteSize: Int
   def write (out: Output)
 }
@@ -39,7 +40,12 @@ private object PickledPage {
       cb: Callback [Position]
   ): PickledPage =
     new PickledPage (desc.id, obj, gen, cb) {
-      def byteSize = desc.ppag.byteSize (page)
+
+      // We will need this at least once, so compute it eagerly.
+      val byteSize = desc.ppag.byteSize (page)
+
       def write (out: Output) = desc.ppag.pickle (page, out)
-      override def toString = s"PickledPage($obj, $gen)"
+
+      override def toString =
+        s"PickledPage(${desc.id}, $obj, $gen)"
     }}

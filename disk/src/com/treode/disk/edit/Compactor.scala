@@ -32,7 +32,7 @@ private class Compactor (
   private val fiber = new Fiber
   private val queue = new AsyncQueue (fiber) (reengage _)
   private val docket = new GenerationDocket
-  private var arrival = new ArrayDeque [DocketId]
+  private val arrival = new ArrayDeque [DocketId]
 
   queue.launch()
 
@@ -46,18 +46,18 @@ private class Compactor (
   private def _compact() {
     queue.begin {
       val id = arrival.remove()
-      val grps = docket.remove (id)
+      val gens = docket.remove (id)
       val cmpctr = compactors.get (id.typ)
       if (cmpctr == null)
         supply (events.noCompactorFor (id.typ))
       else
-        cmpctr (Compaction (id.obj, grps))
+        cmpctr (Compaction (id.obj, gens))
     }}
 
-  private def add (id: DocketId, grps: Set [Long]) {
+  private def add (id: DocketId, gens: Set [Long]) {
     if (!(docket contains id))
       arrival.add (id)
-    docket.add (id, grps)
+    docket.add (id, gens)
   }
 
   def compact (typ: TypeId, obj: ObjectId): Unit =
@@ -68,7 +68,7 @@ private class Compactor (
 
   def compact (drains: GenerationDocket): Unit =
     fiber.execute {
-      for ((id, grps) <- drains)
-        add (id, grps)
+      for ((id, gens) <- drains)
+        add (id, gens)
       queue.engage()
     }}
