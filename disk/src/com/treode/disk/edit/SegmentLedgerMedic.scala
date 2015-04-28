@@ -60,7 +60,7 @@ private class SegmentLedgerMedic (recovery: DiskRecovery) (implicit scheduler: S
       } else if (this.gen < gen) {
         // This applies to a new generation.
         this.gen = gen
-        secondary = primary
+        secondary.alloc (primary)
         primary = new AllocationDocket
         primary.alloc (disk, seg, tally)
       }

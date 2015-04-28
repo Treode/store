@@ -219,10 +219,12 @@ private class DriveGroup (
     val logseg = alloc.alloc()
     logsegs.add (logseg.num)
 
+    val logdtch = new Detacher (false)
     val logwrtr = new LogWriter (
-      path, file, geom, logdsp, alloc, logbuf, logsegs, logseg.base, logseg.limit, logseg.base)
+      path, file, geom, logdsp, logdtch, alloc, logbuf, logsegs, logseg.base, logseg.limit, logseg.base)
 
-    val pagwrtr = new PageWriter (id, file, geom, pagdsp, alloc)
+    val pagdtch = new Detacher (false)
+    val pagwrtr = new PageWriter (id, file, geom, pagdsp, pagdtch, alloc)
 
     new Drive (file, geom, logwrtr, pagwrtr, false, id, path)
   }

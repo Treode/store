@@ -158,9 +158,16 @@ private class LogReader (
     }
 
     private def _close() {
-      val logwrtr = new LogWriter (path, file, geom, logdsp, alloc, buf, segs, pos, seg.limit, logHead)
-      val pagwrtr = new PageWriter (id, file, geom, pagdsp, alloc)
+
+      val logdtch = new Detacher (superb.draining)
+      val logwrtr =
+        new LogWriter (path, file, geom, logdsp, logdtch, alloc, buf, segs, pos, seg.limit, logHead)
+
+      val pagdtch = new Detacher (superb.draining)
+      val pagwrtr = new PageWriter (id, file, geom, pagdsp, pagdtch, alloc)
+
       val drive = new Drive (file, geom, logwrtr, pagwrtr, draining, id, path)
+
       replayer.reattach (drive)
       val cb = this.cb
       this.cb = null
