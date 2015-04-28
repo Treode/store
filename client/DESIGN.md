@@ -296,7 +296,6 @@ The the client should retry the transaction with a smaller value for the max-age
 
 When the client pipelines requests, the server provides the response multiple times, once for each request.
 
-
 <a name="cache"></a>
 # Cache
 
@@ -394,7 +393,6 @@ These max\_age and no\_cache values also appear in cache read method, though use
     ): TxClock, throws StaleException
 
 The write method sends the [transaction’s view](#tx-view) to the DB server as a conditional batch write. If the server accepts the batch write, the write method also updates the cache to reflect the newly written values. Otherwise, the write method throws a stale exception, including the value timestamp in the DB that caused the write reject if it is available.
-
 
 <a name="transaction"></a>
 # Transaction
