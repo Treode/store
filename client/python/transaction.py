@@ -1,13 +1,26 @@
+# Copyright 2014 Treode, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import time
 
 from cache_map import *
 from client_cache import *
 from tx_clock import *
+from tx_view import *
 
 class Transaction(object):
     def __init__(self, cache, read_timestamp=None, max_age=None, no_cache=False):
-        if (type(cache) != ClientCache):
-            raise TypeError("cache must be a ClientCache instance")
         if (read_timestamp != None and type(read_timestamp) != TxClock):
             raise TypeError("read_timestamp must be a TxClock instance")
 
@@ -27,7 +40,7 @@ class Transaction(object):
         
         # Maintain Transaction View of all operations
         # view: dict of (table,key) -> (op,value)
-        self.view = {}
+        self.view = TxView()
 
     def _update_min_rt_max_vt(self, cached_time, value_time):
         if (cached_time < self.min_rt):
@@ -49,7 +62,7 @@ class Transaction(object):
             raise StaleException(read_txclock=read_timestamp, value_txclock=None)
         else:
             # Mark this value as a dependency of the transaction in the view
-            self.view[(table, key)] = ("hold", None)
+            self.view.hold(table, key)
             # Extract the value_time, cached_time, and value
             value_time = cache_result.value_time
             cached_time = cache_result.cached_time
@@ -66,16 +79,16 @@ class Transaction(object):
             current_entry = None
         finally:
             if (current_entry):
-                self.view[(table, key)] = ("update", value)
+                self.view.update(table, key, value)
             else:
-                self.view[(table, key)] = ("create", value)
+                self.view.create(table, key, value)
 
     def delete(self, table, key):
-        self.view[(table, key)] = ("delete", None)
+        self.view.delete(table, key)
 
     def commit(self): # raises StaleExcpetion 
         # Perform the commit provided no values have changed in the DB
         # since the min read time, i.e. oldest value we read is still fresh
         # TODO: Correct to use min_rt as condition time?
         condition_time = self.min_rt
-        return self.cache.write(condition_time, self.view)
+        return self.cache.write(condition_time, self.view.get_view())

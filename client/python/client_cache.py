@@ -1,8 +1,23 @@
+# Copyright 2014 Treode, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import string
 from urllib3 import HTTPConnectionPool
 import json
 
 from cache_map import *
+from http_facade import *
 from tx_clock import *
 from stale_exception import *
 
@@ -19,63 +34,12 @@ class ClientCache(object):
         self.max_age = max_age
         self.no_cache = no_cache
 
-        # Initialize connection to DB server
-        pool = HTTPConnectionPool(self.server, port=self.port)
-        self.pool = pool
+        # Initialize connection to the DB server
+        http_facade = HTTPFacade(server, port)
+        self.http_facade = http_facade
 
         # Initialize the cache value store.
         self.cache_map = CacheMap(ClientCache.MAX_CACHE_SIZE)
-
-    def _get_most_restrictive_headers(self, max_age, no_cache):
-        # Most restrictive constraint for max_age
-        if (max_age != None and self.max_age == None):
-            max_age = max_age
-        elif (max_age == None and self.max_age != None):
-            max_age = self.max_age
-        elif (max_age != None and self.max_age != None):
-            max_age = min(max_age, self.max_age)
-        else:
-            max_age = None
-
-        # Most restrictive constraint for no_cache
-        no_cache = no_cache or self.no_cache
-        return (max_age, no_cache)
-
-    def _get_max_age_directive(self, max_age):
-        return ("max-age=%d" % max_age) if max_age else ""
-
-    def _get_no_cache_directive(self, no_cache):
-        return "no-cache" if no_cache else ""
-
-    def _get_cache_control_string(self, max_age, no_cache):
-        max_age_directive = self._get_max_age_directive(max_age)
-        no_cache_directive = self._get_no_cache_directive(no_cache)
-        cache_control_string = (max_age_directive + 
-            ("," if (max_age_directive and no_cache_directive) else "") + 
-            no_cache_directive)
-        return cache_control_string
-
-    def _construct_header_dict(self, read_time, max_age, no_cache, condition_time):
-        # Generate the header dictionary from the most restrictive headers
-        header_dict = {}
-        # Custom Read-TxClock header: Value_time of entry must be earlier
-        if (read_time != None):
-            header_dict["Read-TxClock"] = read_time.time
-        if (max_age != None or no_cache == True):
-            header_dict["Cache-Control"] = self._get_cache_control_string(max_age, no_cache)
-        # condition_time: only send back update if entry modified since condition_time
-        if (condition_time != None):
-            header_dict["Condition-TxClock"] = condition_time.time
-        # Less precise condition_time header for intermediate proxy caches.
-        if (condition_time != None):
-            header_dict["If-Modified-Since"] = condition_time.to_seconds()
-        return header_dict
-
-    def _construct_request_path(self, table="", key="", batch_write=False):
-        if (batch_write):
-            return "/batch-write"
-        else:
-            return "/%s/%s" % (table, key)
 
     """
     lookup entry in cache or request from database
@@ -90,13 +54,8 @@ class ClientCache(object):
             return cache_result
 
         # Otherwise, create the read request
-        request_path = self._construct_request_path(table=table, key=key)
-        header_dict = self._construct_header_dict(
-            read_time, max_age, no_cache, None)
-
-        # Send the request to the DB server and received response
-        response = self.pool.request('GET', request_path, 
-            fields=header_dict)
+        response = self.http_facade.read(read_time, table, key, 
+            max_age, no_cache)
 
         # Evaluate the response
         if (response.status != 200):
@@ -119,20 +78,10 @@ class ClientCache(object):
         # Return the Cache Result to the user
         return self.cache_map.get(table, key, read_time)
 
-    def _construct_json_list(self, ops_map):
-        json_list = []
-        for key in ops_map:
+    def _update_cache_from_tx_view(self, tx_view):
+        for key in tx_view:
             (table_id, key_id) = key
-            (op, value) = ops_map[key]
-            entry = { "op": op, "table": table_id, 
-                "key": key_id, "value": value }
-            json_list += [entry]
-        return json.dumps(json_list)
-
-    def _update_cache_from_ops_map(self, ops_map):
-        for key in ops_map:
-            (table_id, key_id) = key
-            (op, value) = ops_map[key]
+            (op, value) = tx_view[key]
             if (op == "create" or op == "hold" or op == "update"):
                 # TODO correct?
                 read_time = TxClock(time.time())
@@ -150,25 +99,18 @@ class ClientCache(object):
     """ 
     add entry to cache
     """
-    def write(self, condition_time, ops_map):
+    def write(self, condition_time, tx_view):
         # Verify input type
         if (condition_time != None and type(condition_time) != TxClock):
             raise TypeError("condition_time must be TxClock")
 
-        # Create the write request
-        request_path = self._construct_request_path(batch_write=True)
-        header_dict = self._construct_header_dict(
-            None, None, None, condition_time)
-        body = self._construct_json_list(ops_map)
-
-        # Send the request to the DB server and receive response
-        response = self.pool.urlopen('POST', request_path, 
-            headers=header_dict, body=body)
+        # Create and send write request to DB and receive response
+        response = self.http_facade.write(condition_time, tx_view)
 
         value_txclock_key = "Value-TxClock"
         # Successful batch write; update the cache
         if (response.status == 200):
-            self._update_cache_from_ops_map(ops_map)
+            self._update_cache_from_tx_view(tx_view)
         # Otherwise, status == 412, precondition failed
         elif (value_txclock_key in response.headers):
             value_txclock = response.headers[value_txclock_key]
