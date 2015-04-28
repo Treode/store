@@ -12,38 +12,43 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
+import sys, time
 
 from functools import total_ordering
+from tx_clock import *
 
 @total_ordering
 class TxClock(object):
 
+    __min_micro_seconds = 0
+    __max_micro_seconds = (2**64)*10**6
+
     # Bounds on TxClock values
-    MinValue = 0
+    @staticmethod
+    def min_value():
+        return TxClock(micro_seconds=TxClock.__min_micro_seconds) 
+    
     # In Python, longs are actually unbounded, but we'll give TxClock a max
-    # TODO: How big do we want the max to be?
-    MaxValue = 2**64 - 1
+    @staticmethod
+    def max_value():
+        return TxClock(micro_seconds=TxClock.__max_micro_seconds)
 
-    # REQUIRES: Input time in seconds
-    def __init__(self, time=None, input_in_usecs=False):
-        self._input_in_usecs = input_in_usecs
+    @staticmethod
+    def now():
+        current_time_micro_seconds = long(time.time()**10*6)
+        return TxClock(micro_seconds=current_time_micro_seconds)
 
-        # Default to current time
-        if (time == None):
-            # time in seconds
-            time = long(time.time())
-
-        # Convert time to microseconds if needed
-        self.u_factor = 6
-        if (self._input_in_usecs):
-            self.time = long(time) % TxClock.MaxValue
+    # Input time in micro-seconds!
+    def __init__(self, micro_seconds=None):
+        if (micro_seconds == None):
+            raise ValueError("Please input time in micro-seconds!")
+        # Assume user input time in micro-seconds
         else:
-            self.time = long(time * 10**self.u_factor) % (TxClock.MaxValue + 1)
+            self.time = long(micro_seconds) % (TxClock.__max_micro_seconds + 1)
 
     def to_seconds(self):
         # Times are ints, not floats
-        return self.time / (10**self.u_factor)
+        return self.time / (10**6)
 
     def __repr__(self):
         return "TxClock(%s)" % str(self.time)

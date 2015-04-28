@@ -66,10 +66,8 @@ class ClientCache(object):
         else:
             # If the read succeeded, parse the response
             headers = response.getheaders()
-            read_time = TxClock(long(headers["Read-TxClock"]), 
-                input_in_usecs=True)
-            value_time = TxClock(long(headers["Value-TxClock"]),
-                input_in_usecs=True)
+            read_time = TxClock(micro_seconds=long(headers["Read-TxClock"]))
+            value_time = TxClock(micro_seconds=long(headers["Value-TxClock"]))
             body = response.data
             json_value = json.loads(body)
             # Store the new result in cache regardless of success
@@ -84,7 +82,7 @@ class ClientCache(object):
             (op, value) = tx_view[key]
             if (op == "create" or op == "hold" or op == "update"):
                 # TODO correct?
-                read_time = TxClock(time.time())
+                read_time = TxClock.now()
                 # Reading from the DB updates the cache values as needed
                 cache_result = self.read(
                     read_time, table_id, key_id, no_cache=True)

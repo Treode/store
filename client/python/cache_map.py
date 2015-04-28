@@ -98,10 +98,8 @@ class CacheMap(object):
     add entry to cache cache_map
     """
     def put(self, read_time, value_time, table_name, key, value):
-        if (type(read_time) != TxClock):
-            read_time = TxClock(read_time)
-        if (type(value_time) != TxClock):
-            value_time = TxClock(value_time)
+        if (type(read_time) != TxClock or type(value_time) != TxClock):
+            raise TypeError("input times must be TxClock instances")
 
         # Add the entry to the cache
         entry = self._CacheEntry(table_name, key, value,
@@ -140,9 +138,9 @@ class CacheMap(object):
     """
     def get(self, table_name, key, read_time=None):
         if (read_time == None):
-            read_time = TxClock(time.time())
+            read_time = TxClock.now()
         elif (type(read_time) != TxClock):
-            read_time = TxClock(read_time)
+            raise TypeError("input times must be TxClock instances")
 
         # Lookup by table_name and key in hash table
         entry_table = self.entry_table

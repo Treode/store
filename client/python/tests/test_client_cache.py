@@ -101,7 +101,7 @@ class TestClientCache(object):
         print "PASSED!"
 
     def ClientCache_ReadingWithoutMaxAgeNoCacheParams_Succeeds(self, cache):
-        read_time = TxClock(10)
+        read_time = TxClock(10**10*6)
         table = "table1"
         key = "key1"
         cache_result = cache.read(read_time, table, key)
@@ -113,14 +113,14 @@ class TestClientCache(object):
             { "fruit": "banana", "flavor": "mushy" } ])
 
     def ClientCache_ReadingWithMaxAgeNoCacheParams_Succeeds(self, cache):
-        read_time = TxClock(10)
+        read_time = TxClock(10*10**6)
         
         # With cache and max age
         table = "table1"
         key = "key2"
         max_age = 8
         no_cache = True
-        condition_time = TxClock(10)
+        condition_time = TxClock(10*10**6)
         cache_result = cache.read(read_time, table, key, 
             max_age=max_age, no_cache=no_cache)
         json_result = cache_result.value
@@ -162,7 +162,7 @@ class TestClientCache(object):
         cache.http_facade = Mock()
         cache.http_facade.write = Mock(return_value=response)
 
-        condition_time = TxClock(5)
+        condition_time = TxClock(5*10**6)
         ops_dict = {
             ("table1", "key1"): ("create", 42),
             ("table2", "key2"): ("hold", None),
@@ -184,7 +184,7 @@ class TestClientCache(object):
         cache.http_facade = Mock()
         cache.http_facade.write = Mock(return_value=response)
 
-        condition_time = TxClock(5)
+        condition_time = TxClock(5*10**6)
         ops_dict = {
             ("table1", "key1"): ("update", 112)
         }

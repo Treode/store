@@ -31,8 +31,8 @@ class TestTransaction(object):
         print "test_read",
 
         cache = Mock()
-        value_time = TxClock(5)
-        cached_time = TxClock(10)
+        value_time = TxClock(micro_seconds=5*10**6)
+        cached_time = TxClock(micro_seconds=10*10**6)
         value = 42
         response = CacheResult(value_time, cached_time, value)
         cache.read = Mock(return_value=response)

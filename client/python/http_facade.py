@@ -26,7 +26,7 @@ class HTTPFacade(object):
         self.pool = pool
 
     # Returns (cached_time, value_time, value)
-    def read(self, read_time, table, key, max_age=None, no_cache=None):
+    def read(self, read_time, table, key, max_age, no_cache):
         request_path = self._construct_request_path(table=table, key=key)
         header_dict = self._construct_header_dict(
             read_time, max_age, no_cache, None)
@@ -48,21 +48,6 @@ class HTTPFacade(object):
         response = self.pool.urlopen('POST', request_path, 
             headers=header_dict, body=body)
         return response
-
-    def _get_most_restrictive_headers(self, max_age, no_cache):
-        # Most restrictive constraint for max_age
-        if (max_age != None and self.max_age == None):
-            max_age = max_age
-        elif (max_age == None and self.max_age != None):
-            max_age = self.max_age
-        elif (max_age != None and self.max_age != None):
-            max_age = min(max_age, self.max_age)
-        else:
-            max_age = None
-
-        # Most restrictive constraint for no_cache
-        no_cache = no_cache or self.no_cache
-        return (max_age, no_cache)
 
     def _get_max_age_directive(self, max_age):
         return ("max-age=%d" % max_age) if max_age else ""

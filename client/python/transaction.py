@@ -25,8 +25,7 @@ class Transaction(object):
             raise TypeError("read_timestamp must be a TxClock instance")
 
         if (read_timestamp == None):
-            current_time = time.time()
-            read_timestamp = TxClock(current_time)
+            read_timestamp = TxClock.now()
 
         self.cache = cache
         self.read_timestamp = read_timestamp
@@ -35,8 +34,8 @@ class Transaction(object):
 
         # Maintain min read time and max value time seen in transaction
         # (Track consistency of transaction)
-        self.min_rt = TxClock(time=TxClock.MaxValue)
-        self.max_vt = TxClock(time=TxClock.MinValue)
+        self.min_rt = TxClock.max_value()
+        self.max_vt = TxClock.min_value()
         
         # Maintain Transaction View of all operations
         # view: dict of (table,key) -> (op,value)

@@ -30,13 +30,15 @@ class TestCacheMap(object):
     def test_put(self):
         print "test_put",
 
+        MICRO_SECOND_FACTOR = 10**6
+
         # Check size maintained
         max_size = 100
         cache_map = CacheMap(max_size) 
         for i in xrange(TEST_COUNT):
             cache_map.put(
-                random.randint(0,MAX_VAL),
-                random.randint(0,MAX_VAL),
+                TxClock(micro_seconds=random.randint(0,MAX_VAL)*MICRO_SECOND_FACTOR),
+                TxClock(micro_seconds=random.randint(0,MAX_VAL)*MICRO_SECOND_FACTOR),
                 random.randint(0,MAX_VAL),
                 random.randint(0,MAX_VAL),
                 random.randint(0,MAX_VAL))
@@ -48,8 +50,8 @@ class TestCacheMap(object):
         assert(len(value_list) == max_size)
 
         # Check entries maintained
-        rt = 2 
-        vt = 1 
+        rt = TxClock(2*MICRO_SECOND_FACTOR) 
+        vt = TxClock(1*MICRO_SECOND_FACTOR) 
         cache_map = CacheMap(max_size) 
         cache_map.put(rt, vt, 0, 0, "apple")
         assert(cache_map.get(0, 0, read_time=rt).value == "apple")
@@ -59,42 +61,47 @@ class TestCacheMap(object):
     def test_get(self):
         print  "test_get",
 
+        MICRO_SECOND_FACTOR = 10**6
+
+        def clock(sec):
+            return TxClock(micro_seconds=sec * MICRO_SECOND_FACTOR)
+
         max_size = 2
         cache_map = CacheMap(max_size)
         # Add entry, verify we can read it
-        rt = 6
-        vt = 5  
+        rt = clock(6)
+        vt = clock(5)  
         cache_map.put(rt, vt, 0, 0, "apple")
         assert(cache_map.get(0, 0, read_time=rt).value == "apple")
 
         # Read multiple entries
-        rt = 4 
-        vt = 3 
+        rt = clock(4) 
+        vt = clock(3) 
         cache_map.put(rt, vt, 0, 1, "banana")
         assert(cache_map.get(0, 1, read_time=rt).value == "banana")        
 
         # Test eviction 
-        rt = 2
-        vt = 1
+        rt = clock(2)
+        vt = clock(1)
         cache_map.put(rt, vt, 0, 2, "cherry")
         assert(cache_map.get(0, 2, read_time=rt).value == "cherry") 
-        assert(cache_map.get(0, 1, read_time=4).value == "banana")  
-        assert(cache_map.get(0, 0, read_time=6) == None)    
+        assert(cache_map.get(0, 1, read_time=clock(4)).value == "banana")  
+        assert(cache_map.get(0, 0, read_time=clock(6)) == None)    
 
         # Test entry updates
-        rt = 6
-        vt = 5
+        rt = clock(6)
+        vt = clock(5)
         cache_map.put(rt, vt, 0, 0, "date")
         assert(cache_map.get(0, 0, read_time=rt).value == "date")
-        assert(cache_map.get(0, 1, read_time=4).value == "banana") 
-        assert(cache_map.get(0, 2, read_time=2) == None)
+        assert(cache_map.get(0, 1, read_time=clock(4)).value == "banana") 
+        assert(cache_map.get(0, 2, read_time=clock(2)) == None)
 
-        rt = 8
-        vt = 7
+        rt = clock(8)
+        vt = clock(7)
         cache_map.put(rt, vt, 0, 0, "eggfruit")
         assert(cache_map.get(0, 0, read_time=rt).value == "eggfruit")   
-        assert(cache_map.get(0, 1, read_time=4).value == "banana") 
-        assert(cache_map.get(0, 2, read_time=2) == None) 
+        assert(cache_map.get(0, 1, read_time=clock(4)).value == "banana") 
+        assert(cache_map.get(0, 2, read_time=clock(2)) == None) 
         
         print "PASSED!"
 
