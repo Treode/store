@@ -36,7 +36,7 @@ class ResourceSpec extends FreeSpec {
   def served (test: (Int, SchematicStubStore) => Any) {
     val store = StubStore ()
     val port = Random.nextInt (65535 - 49152) + 49152
-    val compilerResult = parse ("table table1 { id : 0x1 } table table2 { id : 0x2 } table table3 { id : 0x3 } table table4 { id : 0x4 }") 
+    val compilerResult = parse ("table table1 { id : 0x1; }; table table2 { id : 0x2; }; table table3 { id : 0x3; }; table table4 { id : 0x4; };") 
     val newSchema = compilerResult match {
       case CompilerSuccess (schema) => schema
       case CompilerFailure (errors) => Schema (new HashMap [String, Long])

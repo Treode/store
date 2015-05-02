@@ -2,49 +2,46 @@ package com.treode.server
 
 import org.scalatest._
 import scala.collection.mutable.{HashMap}
+import scala.util.parsing.input.OffsetPosition
 import SchemaParser._
 
 class SchemaParserSpec extends FreeSpec with Matchers {
 
-  def assertSuccess (expected: Schema, s: String): Unit = {
+  def assertSuccess (s: String, expected: Schema): Unit = {
     assertResult (CompilerSuccess (expected)) { parse (s) }
   }
 
-  def assertFailure (expected: Seq [Message], s: String): Unit = {
-    assertResult (CompilerFailure (expected)) { parse (s) }
+  def assertFailure (s: String, expected: List [Message]): Unit = {
+    assertResult (CompilerFailure (expected)) { parse (s) } 
   }
 
   "When inputs are correct" - {
     "The parse should parse table names successfully" in {
       var map = new HashMap [String, Long] 
-      map += ("table_1-v" -> 1)
-      assertSuccess (Schema (map) , "table table_1-v { id : \t 1 \n }")
+      map += ("table_1v" -> 1)
+      assertSuccess ("table table_1v { id : \t 1 \n; };", Schema (map))
     }
     "The parse should parse octal, hexadecimal and decimal id successfully" in {
       var map = new HashMap [String, Long] 
       map += ("table1" -> 1)
       map += ("table2" -> 31)
       map += ("table3" -> 25)
-      assertSuccess (Schema (map) , "table table1 { id : \t 1 \n } table table2 {id : 0x1F} \n table table3 {id : 031} \t ")
+      assertSuccess ("table table1 { id : \t 1 \n ;} ; table table2 {id : 0x1F;} ;\n table table3 {id : 031;} ;\t ", Schema (map))
     }
   }
-
-  /*
+  
   "When inputs are incorrect" - {
     "The parser should report one error" in {
-      assertFailure (Seq.empty [Message], "table top {id : }")
-    }}
-    "The parser should report lexical error" in {
-      assertFailure (Seq.empty [Message], "1table top {id : 0z56}")
+      val input = "table top-1\n{  id : 9 ; };"
+      assertFailure (input, List (ParseError ("Bad definition of clause, expected\ntable <tablename> {\n  Field1;Field2;..\n};\nstarting", OffsetPosition (input,0))))
     }
     "The parser should report two errors" in {
-      assertFailure (Seq.empty [Message], "table top {id : } top2 {id: 1}")
+      val input = "tabe top2\n{\n  id: 10 }; table top3 { id: 10 ; ;"
+      assertFailure (input, List (ParseError ("Bad definition of clause, expected\ntable <tablename> {\n  Field1;Field2;..\n};\nstarting", OffsetPosition (input,0)), ParseError ("Bad definition of clause, expected\ntable <tablename> {\n  Field1;Field2;..\n};\nstarting", OffsetPosition (input,25)) )) 
     }
     "The parser should report three errors" in {
-      assertFailure (Seq.empty [Message], "table top id : 5} table top1 {id: 09} table top2 {id 5}")
+      val input = "table top\n{\n  i:9;\n; \ntable top2\n{\n  id:g;\n};\ntable top3 {\n  id  \t 12 ;\n}\n;"
+      assertFailure (input, List (ParseError ("Bad definition of clause, expected\ntable <tablename> {\n  Field1;Field2;..\n};\nstarting", OffsetPosition (input,0)), ParseError ("Expected long", OffsetPosition (input,46)), ParseError ("Id field improper, expected\nid : <long> ;\nbut found\n", OffsetPosition (input,0)) ))
     }
-    "The parser should report four errors" in {
-      assertFailure (Seq.empty [Message], "table top {id : 5} table top1 id: 34 tabe top2 {id : 5}")
-    }}
-  */
   }
+}

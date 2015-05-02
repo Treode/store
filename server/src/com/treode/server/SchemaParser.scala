@@ -1,145 +1,221 @@
 package com.treode.server
-import com.treode.twitter.finagle.http.{BadRequestException}
-import com.treode.async.misc.parseUnsignedLong
-import scala.util.{ Success, Failure }
+import scala.util.{Success, Failure}
+import scala.util.parsing.combinator.lexical._
+import scala.util.parsing.combinator.token._
 import scala.util.parsing.input.CharArrayReader.EofCh
 import scala.collection.mutable.Queue
 import scala.collection.mutable.ArrayBuffer
 import scala.util.parsing.input.Position
 import scala.collection.Iterator
-import scala.collection.mutable.{HashMap, MutableList, Set}
+import scala.collection.mutable.{HashMap, MutableList}
+import scala.util.parsing.combinator._
+import scala.collection.mutable.Builder
+import scala.util.parsing.input.Positional
+import com.treode.async.misc.parseUnsignedLong
 
+object SchemaParser extends RegexParsers {
 
-object SchemaParser extends LCSSyntaxAnalyzer {
+  trait CompilerResult
 
-  case class DuplicateMessage (pos: Position, message: String) extends Message
-  case class Table (name: String, id: Long)
-
-  trait SemanticAnalyzerOutput
-  case class SemanticAnalyzerSuccess (output: Any) extends SemanticAnalyzerOutput
-  case class SemanticAnalyzerFailure (errors: Queue [Message]) extends SemanticAnalyzerOutput
-
-  sealed abstract class CompilerResult
   case class CompilerSuccess (schema: Schema) extends CompilerResult
-  case class CompilerFailure (errors: Seq [Message]) extends CompilerResult
+  case class CompilerFailure (errors: List [Message]) extends CompilerResult
 
-  class SemanticAnalyzer {
-    val idList = Set [Long] ()
-    val tableNameList = Set [String] ()
-    def apply (ast: ASTNode): SemanticAnalyzerOutput = {
-      ast match {
-        case ASTId (lng) => {
-          val errors = Queue [Message] ()
-          parseUnsignedLong (lng.token.chars) match {
-            case Some (v) => { 
-              if (idList.contains (v)) {
-                SemanticAnalyzerFailure (Queue (DuplicateMessage (lng.pos, "Duplicate Id field")))
-              } else {
-                idList += v; SemanticAnalyzerSuccess (v)
-              }
-            }
-            case None => SemanticAnalyzerFailure ((errors :+ DuplicateMessage (lng.pos, "Expected Long, but not found")))
-          }
+  sealed abstract class Message {
+    def message: String
+    def position: Position
+    override def toString = message + " at line " + position.line + "\n" + position.longString
+  }
+
+	case class ParseError (message: String, position: Position) extends Message
+
+  case class Ident (ident: Option [String]) extends Positional {
+    override def toString = ident getOrElse ("Non-identifier")
+  }
+  case class Number (number: Option [String]) extends Positional {
+    override def toString = number getOrElse ("Non-Number")
+  }
+
+  sealed abstract class TableClause extends Positional
+  sealed abstract class ResourceClause extends Positional
+  sealed abstract class TopClause extends Positional
+
+  case class Table (ident: Ident, clauses: List [TableClause]) extends TopClause {
+    override def toString = s"table $ident"
+  }
+
+  case class Resource (regex: String, clauses: List [ResourceClause]) extends TopClause {
+    override def toString = s"resource $regex"
+  }
+
+case class SkippedTopClause (name: String) extends TopClause {
+    override def toString = name
+  def templateDefinition: String = "table <tablename> {\n  Field1;Field2;..\n};\n"
+  }
+
+  case class SkippedTableDirective (what: String) extends TableClause {
+    override def toString = what
+  }
+
+  case class IdDirective (id: Number) extends TableClause {
+    override def toString = s"idDirective $id"
+  }
+
+  def idDirective: Parser [TableClause] = positioned [TableClause] {
+    ("id" ~> ( ":" ~> number <~ ";" ) ) ^^ {
+      case num => {
+        println ("ID is " + num);
+        IdDirective (num)
+      }
+    } |
+    "[^;^}]+[;]?".r ^^ (v => {println ("Skipped id " + v); SkippedTableDirective ("Id field improper, expected\nid : <long> ;\nbut found")})
+  }
+
+  def number: Parser [Number] = positioned [Number] {
+    """((0[xX][0-9a-fA-F]+)|([0-9]+))""".r ^^ { v => Number (Some (v)) } |
+    rep ("""[\p{Alnum}]+""".r) ^^ (_ => {Number (None)}) |
+    success (Number (None))
+  }
+
+  def ident: Parser [Ident] = positioned [Ident] {
+    """\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*""".r ^^ (ident => { println("S "+ident); (Ident (Some (ident)))}) |
+    rep ("""[\p{Alnum}]+""".r) ^^ (v => { println("F "+v); Ident (None)}) |
+    rep ("[^\\t\\n {};]".r) ^^ (v => { println("G "+v); Ident (None)} ) 
+  }
+
+  def string: Parser [String] =
+    ("\""+"""([^"\p{Cntrl}\\]|\\[\\'"bfnrt]|\\u[a-fA-F0-9]{4})*+"""+"\"").r
+
+  def topClause: Parser [TopClause] = positioned [TopClause] {
+    ("table" ~> ident ) ~ ("{" ~> idDirective <~ "}") <~ ";" ^^ {case i~v => {Table (i, List (v))}} |
+    ("resource" ~> string <~ ";") ^^ (Resource (_, List.empty)) |
+    "([^;}]+[;} \\n\\t]*)|([^;}]*[;} \\n\\t]+)" ^^ (v => { println("Baa "+v); SkippedTopClause ("table definition")})
+  }
+
+  def collectErrors (builder: Builder [Message, _], clauses: List [TopClause]): Unit = {
+    for (clause <- clauses) {
+      clause match {
+        case sk: SkippedTopClause => {
+          builder += ParseError ("Bad definition of clause, expected\n" + sk.templateDefinition + "starting", sk.pos)
         }
-        case ASTTable (tableName, id) => {
-          val errors = Queue [Message] ()
-          apply (id) match {
-            case SemanticAnalyzerSuccess (id: Long) => {
-              if (tableNameList.contains (tableName.token.chars)) {
-                SemanticAnalyzerFailure ((errors :+ DuplicateMessage (tableName.pos, "Duplicate table name \"" + tableName.token.chars + "\"")))
-              } else {
-                tableNameList += tableName.token.chars
-                SemanticAnalyzerSuccess (Table (tableName.token.chars, id))
-              }
-            }
-            case SemanticAnalyzerFailure (err) => {
-              if (tableNameList.contains (tableName.token.chars)) {
-                SemanticAnalyzerFailure ((errors :+ DuplicateMessage (tableName.pos, "Duplicate table name \"" + tableName.token.chars + "\"")) ++ err)
-              } else {
-                SemanticAnalyzerFailure (errors ++ err)
-              }
-            }
-          }
+        case Table (name, clauses) => {
+          for (td <- clauses) {
+            td match {
+              case SkippedTableDirective (message) => builder += ParseError (message, td.pos)
+              case IdDirective (id) => {
+                id match {
+                  case Number (None) => builder += ParseError ("Expected long", id.pos)
+                  case _ => ()
+                }}
+              case _ => ()
+            }}}
+        case _ => ()
+      }}}
+
+  trait ParserOutput
+  case class ParserSuccess (clauses: List [TopClause]) extends ParserOutput
+  case class ParserFailure (messages: List [Message]) extends ParserOutput
+  def buildParseTree (input: String): ParserOutput = {
+    val clauses = parseAll (rep (topClause), input)
+    clauses match {
+      case Error (message, next) =>
+        ParserFailure (List (ParseError (message, next.pos)))
+      case Failure (message, next) =>
+        ParserFailure (List (ParseError (message, next.pos)))
+      case Success (clausesList, _) => {
+        val builder = List.newBuilder [Message]
+        collectErrors (builder, clausesList)
+        val errors = builder.result
+        if (errors.size > 0) {
+          ParserFailure (errors)
+        } else {
+          ParserSuccess (clausesList)
         }
-        case ASTTables (tables) => {
-          val tableList = MutableList [Table] ()
-          val errors = Queue [Message] ()
-          for (table <- tables.asInstanceOf [Queue [ASTTable]]) {
-              apply (table) match {
-                case SemanticAnalyzerSuccess (tab: Table) => tableList += tab
-                case SemanticAnalyzerFailure (err) => errors ++= err
-                case _ => {}
-              }
+      }
+    }
+  }
+  trait SemanticAnalysisResult
+  case class SemanticAnalysisSuccess (map: HashMap [String, Long]) extends SemanticAnalysisResult
+  case class SemanticAnalysisFailure (errors: List [Message]) extends SemanticAnalysisResult
+
+  //def semanticAnalysis (clauses: List [TopClause]): SemanticAnalysisResult = {
+  //  semanticAnalysis (clauses)
+  //}
+
+  def semanticAnalysis (clauses: List [TopClause]): SemanticAnalysisResult = {
+    val builder = List.newBuilder [Message]
+    val map = HashMap [String, Long] ()
+    for (clause <- clauses) {
+      clause match {
+        case Table (tableName, directives) => {
+          val name = (tableName.ident match {
+            case Some (name) => name
+            case None => "" //This won't happen as the parse tree builder would have taken care of it
+          })
+          val dupName = map.keySet.contains (name)
+          if (dupName) {
+            builder += ParseError ("Duplicate table name " + name, clause.pos)
           }
-          if (errors.size > 0) {
-            SemanticAnalyzerFailure (errors)
-          } else {
-            val map = HashMap [String, Long]()
-            for (table <- tableList) {
-              table match {
-                case Table (name, id) => {
-                  map += (name -> id)
+          for (directive <- directives) {
+            directive match {
+              case IdDirective (num) => {
+                val id = (num match {
+                  case Number (Some (nu)) => nu
+                  case _ => "" //This won't happen
+                })
+                parseUnsignedLong (id) match {
+                  case Some (v) => {
+                    val dupId = map.exists (_._2 == v)
+                    if (dupId) {
+                      builder += ParseError ("Duplicate id ", directive.pos)
+                    } else if (!dupName) {
+                      map += (name -> v)
+                    }
+                  }
+                  case _ => {
+                    builder += ParseError ("This should be a valid octal (starting with 0), decimal number or hexadecimal number (starting with 0x)", directive.pos)
+                  }
                 }
-                case _ => {}
+              }
+              case _ => {
+                builder += ParseError ("Expected long, not found", directive.pos) 
               }
             }
-            SemanticAnalyzerSuccess (map)
           }
         }
+        case _ => ()
       }
     }
-  }
-
-  trait ASTNode
-  case class ASTId (long: TokenPosition) extends ASTNode
-  case class ASTTable (tableName: TokenPosition, idField: ASTId) extends ASTNode
-  case class ASTTables (tables: Queue [ASTTable]) extends ASTNode
-
-  def getASTId (it: Iterator [TokenPosition]): ASTId = {
-    val idKeyword = it.next
-    val colon = it.next
-    val long = it.next
-    ASTId (long)
-  }
-
-  def getASTTable (it: Iterator [TokenPosition]): ASTTable = {
-    val tableKeyword = it.next
-    val tableName = it.next
-    val lBrace = it.next
-    val idField = getASTId (it)
-    val rBrace = it.next
-    ASTTable (tableName, idField)
-  }
-
-  def getASTTables (it: Iterator [TokenPosition]): ASTTables = {
-    val result = Queue [ASTTable] ()
-    while (it.hasNext) {
-      result += getASTTable (it)
+    val errors = builder.result
+    if (errors.size > 0) {
+      SemanticAnalysisFailure (errors)
+    } else {
+      SemanticAnalysisSuccess (map)
     }
-    ASTTables (result)
-  }
+  } 
 
-  def getAST (tokens: ArrayBuffer [TokenPosition]): ASTNode = {
-    val it = tokens.iterator
-    getASTTables (it)
-  }
-  
   def parse (input: String): CompilerResult = {
-    
-    reserved ++= Set("table","id")
-    val semanticAnalyzer = new SemanticAnalyzer
-    syntaxAnalyze (input) match {
-      case SyntaxAnalyzerSuccess (tokenPositions) => {
-        val ast = getAST (tokenPositions)
-        semanticAnalyzer (ast) match {
-          case SemanticAnalyzerSuccess (map: HashMap [String, Long]) => { CompilerSuccess(new Schema (map)) }
-          case SemanticAnalyzerFailure (errors) => { 
-            CompilerFailure (errors.toSeq)
+    println (input)
+    println ("Blah")
+    buildParseTree (input) match {
+      case ParserSuccess (clauses) => {
+        semanticAnalysis (clauses) match {
+          case SemanticAnalysisSuccess (map) => {
+            println (map)
+            CompilerSuccess (Schema (map))
+          }
+          case SemanticAnalysisFailure (errors) => {
+            for (error <- errors) {
+              println (error)
+            }
+            CompilerFailure (errors)
           }
         }
       }
-      case SyntaxAnalyzerFailure (errors) => {
-        CompilerFailure (errors.toSeq)
+      case ParserFailure (parseErrors) => {
+        for (error <- parseErrors) {
+          println (error)
+        }
+        CompilerFailure (parseErrors)
       }
     }
   }
