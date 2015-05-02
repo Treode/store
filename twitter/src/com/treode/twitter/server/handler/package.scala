@@ -35,13 +35,12 @@ package object handler {
       rsp
     }
 
-    def apply (req: Request, notifications: Notification [Unit]): Response = {
+    def apply (req: Request, notifications: Notification [Unit])
+        (implicit mapper: ObjectMapper): Response = {
       val rsp = req.response
       notifications match {
         case errors @ Errors (_) =>
-          val mapper = new ObjectMapper() with ScalaObjectMapper
-          mapper.registerModule (DefaultScalaModule)
-          rsp.write(mapper.writeValueAsString(errors.strings))
+          rsp.write(mapper.writeValueAsString(notifications))
           rsp.status = Status.BadRequest
         case NoErrors (_) =>
           rsp.status = Status.Ok

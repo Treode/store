@@ -52,7 +52,7 @@ class DrivesDrainHandlerSpec extends FlatSpec with SpecTools {
 
   it should "handle errors by returning a JSON array" in
     served { case (port, controller) =>
-      val notification = Notification.buildErrors(NotAttached("f1"), AlreadyDraining("f2"))
+      val notification = Notification(NotAttached("f1"), AlreadyDraining("f2"))
       (controller.drain _) .expects (Seq.empty) .returning (supply (notification))
       given
         .port (port)

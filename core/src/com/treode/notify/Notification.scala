@@ -26,6 +26,7 @@ sealed abstract class Notification [+A] {
 
   def isEmpty: Boolean
   def messages: Seq [Message]
+  override def toString : String
 }
 
 object Notification {
@@ -52,7 +53,7 @@ object Notification {
   case class Errors (messages: Seq [Message]) extends Notification [Nothing] {
 
     def isEmpty = false
-    def strings = messages map (_.en)
+    override def toString = messages map (_.en) mkString ("; ")
   }
 
   /** No error messages; a successful result. */
@@ -60,14 +61,18 @@ object Notification {
 
     def isEmpty = true
     def messages = List.empty
+    override def toString = ""
   }
 
-  /** Easily create a NoErrors with Unit. */
-  def empty: Notification [Unit] = NoErrors (())
+  /** Build Errors with varargs. */
+  def apply (messages: Message*) : Notification [Unit] =
+    if (messages.length == 0)
+      empty
+    else
+      Errors (messages)
 
-  /** Easily build Errors with varargs. */
-  def buildErrors (messages: Message*) : Notification [Unit] =
-    Errors (messages)
+  /** Easily create NoErrors with Unit. */
+  def empty: Notification [Unit] = NoErrors (())
 
   /** Generate a new Builder object for Notifications */
   def newBuilder: Builder = new Builder ()

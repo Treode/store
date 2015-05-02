@@ -28,9 +28,14 @@ import com.twitter.finagle.http.filter.ExceptionFilter
 import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.Suite
+import scala.language.implicitConversions
+import java.nio.file.{Path, Paths}
 
 trait SpecTools extends MockFactory {
   this: Suite =>
+
+  implicit def stringToPath (path: String): Path =
+    Paths.get (path)
 
   def handler (controller: StoreController): Service [Request, Response]
 
