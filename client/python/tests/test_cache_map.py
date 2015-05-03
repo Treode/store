@@ -30,15 +30,13 @@ class TestCacheMap(object):
     def test_put(self):
         print "test_put",
 
-        MICRO_SECOND_FACTOR = 10**6
-
         # Check size maintained
         max_size = 100
         cache_map = CacheMap(max_size) 
         for i in xrange(TEST_COUNT):
             cache_map.put(
-                TxClock(micro_seconds=random.randint(0,MAX_VAL)*MICRO_SECOND_FACTOR),
-                TxClock(micro_seconds=random.randint(0,MAX_VAL)*MICRO_SECOND_FACTOR),
+                TxClock(micro_seconds=random.randint(0,MAX_VAL)),
+                TxClock(micro_seconds=random.randint(0,MAX_VAL)),
                 random.randint(0,MAX_VAL),
                 random.randint(0,MAX_VAL),
                 random.randint(0,MAX_VAL))
@@ -50,8 +48,8 @@ class TestCacheMap(object):
         assert(len(value_list) == max_size)
 
         # Check entries maintained
-        rt = TxClock(2*MICRO_SECOND_FACTOR) 
-        vt = TxClock(1*MICRO_SECOND_FACTOR) 
+        rt = TxClock(2*10**6) 
+        vt = TxClock(1*10**6) 
         cache_map = CacheMap(max_size) 
         cache_map.put(rt, vt, 0, 0, "apple")
         assert(cache_map.get(0, 0, read_time=rt).value == "apple")
@@ -61,10 +59,8 @@ class TestCacheMap(object):
     def test_get(self):
         print  "test_get",
 
-        MICRO_SECOND_FACTOR = 10**6
-
         def clock(sec):
-            return TxClock(micro_seconds=sec * MICRO_SECOND_FACTOR)
+            return TxClock(micro_seconds=sec * 10**6)
 
         max_size = 2
         cache_map = CacheMap(max_size)

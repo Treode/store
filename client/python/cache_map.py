@@ -78,14 +78,12 @@ class CacheMap(object):
         entry_table = self.entry_table
         lru_list = self.lru_list
         max_size = self.max_size
-        remove_index = len(lru_list) - max(0, len(lru_list)-max_size)
-        for i in xrange(remove_index, len(lru_list)):
+        while (lru_list.size > max_size):
             # Remove evicted entries from the entry_table
-            node = lru_list.nodeat(i)
+            node = lru_list.last
             # Remove node from LRU list
-            lru_list.remove(node)
+            entry = lru_list.popright()
             # Remove node from hash table
-            entry = node.value
             table_name = entry.table_name
             key = entry.key
             if ((table_name, key) in entry_table):

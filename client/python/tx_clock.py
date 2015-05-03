@@ -21,7 +21,7 @@ from tx_clock import *
 class TxClock(object):
 
     __min_micro_seconds = 0
-    __max_micro_seconds = (2**64)*10**6
+    __max_micro_seconds = 2**63 - 1
 
     # Bounds on TxClock values
     @staticmethod
@@ -35,16 +35,19 @@ class TxClock(object):
 
     @staticmethod
     def now():
-        current_time_micro_seconds = long(time.time()**10*6)
+        current_time_micro_seconds = (long(time.time()**10*6) % 
+            (TxClock.__max_micro_seconds + 1)) 
         return TxClock(micro_seconds=current_time_micro_seconds)
 
     # Input time in micro-seconds!
     def __init__(self, micro_seconds=None):
         if (micro_seconds == None):
             raise ValueError("Please input time in micro-seconds!")
+        elif (micro_seconds > TxClock.__max_micro_seconds):
+            raise ValueError("micro_seconds arg > max micro_seconds value")
         # Assume user input time in micro-seconds
         else:
-            self.time = long(micro_seconds) % (TxClock.__max_micro_seconds + 1)
+            self.time = long(micro_seconds)
 
     def to_seconds(self):
         # Times are ints, not floats

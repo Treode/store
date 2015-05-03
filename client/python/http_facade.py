@@ -25,7 +25,7 @@ class HTTPFacade(object):
         pool = HTTPConnectionPool(self.server, port=self.port)
         self.pool = pool
 
-    # Returns (cached_time, value_time, value)
+    """Returns (cached_time, value_time, value)"""
     def read(self, read_time, table, key, max_age, no_cache):
         request_path = self._construct_request_path(table=table, key=key)
         header_dict = self._construct_header_dict(
@@ -35,8 +35,22 @@ class HTTPFacade(object):
         response = self.pool.request('GET', request_path, 
             fields=header_dict)
 
-        return response
+        # Evaluate the response
+        if (response.status != 200):
+            # If the read failed, don't give the user a value.
+            # We know the DB had no value at this instant.
+            # TODO Correct?
+            return
+        # If the read succeeded, parse the response and give the info to user
+        else:
+            headers = response.getheaders()
+            cached_time = TxClock(micro_seconds=long(headers["Read-TxClock"]))
+            value_time = TxClock(micro_seconds=long(headers["Value-TxClock"]))
+            body = response.data
+            json_value = json.loads(body)
+            return (cached_time, value_time, json_value)
 
+    """Returns HTTP response from attempt at optimistic, batched DB write"""
     def write(self, condition_time, tx_view):
         # Create the write request
         request_path = self._construct_request_path(batch_write=True)

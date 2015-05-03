@@ -51,7 +51,12 @@ class Transaction(object):
             raise StaleException(read_txclock=self.min_rt, value_txclock=self.max_vt)
 
     def read(self, table, key, max_age=None, no_cache=False): # raises StaleException
-        # Derive most restrictive read parameters
+        # First, check the transaction's view
+        view = self.view.get_view()
+        if (table, key) in view:
+            (_, value) = view[(table, key)]
+            return value
+        # Second, check the cache.  Derive most restrictive read parameters.
         max_age = min(max_age, self.max_age)
         no_cache = no_cache or self.no_cache
         # Attempt to read value from cache

@@ -89,11 +89,14 @@ class TestClientCache(object):
     "types": [
         { "fruit": "apple", "flavor": "sour" },
         { "fruit": "banana", "flavor": "mushy" } ] }"""
-        status = 200
-        response = urllib3.response.HTTPResponse(body=body, headers=headers, status=status)
+
+        cached_time = TxClock(micro_seconds=long(headers["Read-TxClock"]))
+        value_time = TxClock(micro_seconds=long(headers["Value-TxClock"]))
+        json_value = json.loads(body)
 
         cache.http_facade = Mock()
-        cache.http_facade.read = Mock(return_value=response)
+        result = (cached_time, value_time, json_value)
+        cache.http_facade.read = Mock(return_value=result)
 
         self.ClientCache_ReadingWithoutMaxAgeNoCacheParams_Succeeds(cache)
         self.ClientCache_ReadingWithMaxAgeNoCacheParams_Succeeds(cache)
@@ -172,7 +175,7 @@ class TestClientCache(object):
 
         try:
             cache.write(condition_time, ops_dict)
-        except (ValueError):
+        except:
             # Expected, since we are not running a real DB in this test
             pass
 

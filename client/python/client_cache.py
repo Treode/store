@@ -54,27 +54,17 @@ class ClientCache(object):
             return cache_result
 
         # Otherwise, create the read request
-        response = self.http_facade.read(read_time, table, key, 
-            max_age, no_cache)
-
-        # Evaluate the response
-        if (response.status != 200):
-            # If the read failed, don't give the user a value.
-            # We know the DB had no value at this instant.
-            # TODO Correct?
+        result = self.http_facade.read(
+            read_time, table, key, max_age, no_cache)
+        # Read failed, nothing to store
+        if (result == None):
             return
         else:
-            # If the read succeeded, parse the response
-            headers = response.getheaders()
-            read_time = TxClock(micro_seconds=long(headers["Read-TxClock"]))
-            value_time = TxClock(micro_seconds=long(headers["Value-TxClock"]))
-            body = response.data
-            json_value = json.loads(body)
+            (cached_time, value_time, json_value) = result
             # Store the new result in cache regardless of success
-            self.cache_map.put(read_time, value_time, table, key, json_value)
-
-        # Return the Cache Result to the user
-        return self.cache_map.get(table, key, read_time)
+            self.cache_map.put(cached_time, value_time, table, key, json_value)
+            # Return the Cache Result to the user
+            return self.cache_map.get(table, key, cached_time)
 
     def _update_cache_from_tx_view(self, tx_view):
         for key in tx_view:
