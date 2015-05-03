@@ -37,11 +37,11 @@ class SchemaParserSpec extends FreeSpec with Matchers {
     }
     "The parser should report two errors" in {
       val input = "tabe top2\n{\n  id: 10 }; table top3 { id: 10 ; ;"
-      assertFailure (input, List (ParseError ("Bad definition of clause, expected\ntable <tablename> {\n  Field1;Field2;..\n};\nstarting", OffsetPosition (input,0)), ParseError ("Bad definition of clause, expected\ntable <tablename> {\n  Field1;Field2;..\n};\nstarting", OffsetPosition (input,25)) )) 
+      assertFailure (input, List (ParseError ("Bad definition of clause, expected\ntable <tablename> {\n  Field1;Field2;..\n};\nstarting", OffsetPosition (input,0)), ParseError ("Bad definition of clause, expected\ntable <tablename> {\n  Field1;Field2;..\n};\nstarting", OffsetPosition (input,24)) )) 
     }
     "The parser should report three errors" in {
       val input = "table top\n{\n  i:9;\n; \ntable top2\n{\n  id:g;\n};\ntable top3 {\n  id  \t 12 ;\n}\n;"
-      assertFailure (input, List (ParseError ("Bad definition of clause, expected\ntable <tablename> {\n  Field1;Field2;..\n};\nstarting", OffsetPosition (input,0)), ParseError ("Expected long", OffsetPosition (input,46)), ParseError ("Id field improper, expected\nid : <long> ;\nbut found\n", OffsetPosition (input,0)) ))
+      assertFailure (input, List (ParseError ("Bad definition of clause, expected\ntable <tablename> {\n  Field1;Field2;..\n};\nstarting", OffsetPosition (input,0)), ParseError ("Expected long", OffsetPosition (input,40)), ParseError ("Id field improper, expected\nid : <long> ;\nbut found", OffsetPosition (input,61)) ))
     }
   }
 }

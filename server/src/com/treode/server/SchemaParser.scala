@@ -47,9 +47,9 @@ object SchemaParser extends RegexParsers {
     override def toString = s"resource $regex"
   }
 
-case class SkippedTopClause (name: String) extends TopClause {
+  case class SkippedTopClause (name: String) extends TopClause {
     override def toString = name
-  def templateDefinition: String = "table <tablename> {\n  Field1;Field2;..\n};\n"
+    def templateDefinition: String = "table <tablename> {\n  Field1;Field2;..\n};\n"
   }
 
   case class SkippedTableDirective (what: String) extends TableClause {
@@ -63,11 +63,10 @@ case class SkippedTopClause (name: String) extends TopClause {
   def idDirective: Parser [TableClause] = positioned [TableClause] {
     ("id" ~> ( ":" ~> number <~ ";" ) ) ^^ {
       case num => {
-        println ("ID is " + num);
         IdDirective (num)
       }
     } |
-    "[^;^}]+[;]?".r ^^ (v => {println ("Skipped id " + v); SkippedTableDirective ("Id field improper, expected\nid : <long> ;\nbut found")})
+    "[^;^}]+[;]?".r ^^ (v => { SkippedTableDirective ("Id field improper, expected\nid : <long> ;\nbut found")})
   }
 
   def number: Parser [Number] = positioned [Number] {
@@ -77,9 +76,9 @@ case class SkippedTopClause (name: String) extends TopClause {
   }
 
   def ident: Parser [Ident] = positioned [Ident] {
-    """\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*""".r ^^ (ident => { println("S "+ident); (Ident (Some (ident)))}) |
-    rep ("""[\p{Alnum}]+""".r) ^^ (v => { println("F "+v); Ident (None)}) |
-    rep ("[^\\t\\n {};]".r) ^^ (v => { println("G "+v); Ident (None)} ) 
+    """\p{javaJavaIdentifierStart}\p{javaJavaIdentifierPart}*""".r ^^ (ident => { (Ident (Some (ident)))}) |
+    rep ("""[\p{Alnum}]+""".r) ^^ (v => { Ident (None)}) |
+    rep ("[^\\t\\n {};]".r) ^^ (v => { Ident (None)} ) 
   }
 
   def string: Parser [String] =
@@ -88,7 +87,7 @@ case class SkippedTopClause (name: String) extends TopClause {
   def topClause: Parser [TopClause] = positioned [TopClause] {
     ("table" ~> ident ) ~ ("{" ~> idDirective <~ "}") <~ ";" ^^ {case i~v => {Table (i, List (v))}} |
     ("resource" ~> string <~ ";") ^^ (Resource (_, List.empty)) |
-    "([^;}]+[;} \\n\\t]*)|([^;}]*[;} \\n\\t]+)" ^^ (v => { println("Baa "+v); SkippedTopClause ("table definition")})
+    "([^;}]+[;} \\n\\t]*)|([^;}]*[;} \\n\\t]+)".r ^^ (v => { SkippedTopClause ("table definition")})
   }
 
   def collectErrors (builder: Builder [Message, _], clauses: List [TopClause]): Unit = {
@@ -118,9 +117,9 @@ case class SkippedTopClause (name: String) extends TopClause {
     val clauses = parseAll (rep (topClause), input)
     clauses match {
       case Error (message, next) =>
-        ParserFailure (List (ParseError (message, next.pos)))
+        { ParserFailure (List (ParseError (message, next.pos))) }
       case Failure (message, next) =>
-        ParserFailure (List (ParseError (message, next.pos)))
+        { ParserFailure (List (ParseError (message, next.pos))) }
       case Success (clausesList, _) => {
         val builder = List.newBuilder [Message]
         collectErrors (builder, clausesList)
@@ -129,17 +128,11 @@ case class SkippedTopClause (name: String) extends TopClause {
           ParserFailure (errors)
         } else {
           ParserSuccess (clausesList)
-        }
-      }
-    }
-  }
+        }}}}
+
   trait SemanticAnalysisResult
   case class SemanticAnalysisSuccess (map: HashMap [String, Long]) extends SemanticAnalysisResult
   case class SemanticAnalysisFailure (errors: List [Message]) extends SemanticAnalysisResult
-
-  //def semanticAnalysis (clauses: List [TopClause]): SemanticAnalysisResult = {
-  //  semanticAnalysis (clauses)
-  //}
 
   def semanticAnalysis (clauses: List [TopClause]): SemanticAnalysisResult = {
     val builder = List.newBuilder [Message]
@@ -149,7 +142,7 @@ case class SkippedTopClause (name: String) extends TopClause {
         case Table (tableName, directives) => {
           val name = (tableName.ident match {
             case Some (name) => name
-            case None => "" //This won't happen as the parse tree builder would have taken care of it
+            case None => "" 
           })
           val dupName = map.keySet.contains (name)
           if (dupName) {
@@ -160,7 +153,7 @@ case class SkippedTopClause (name: String) extends TopClause {
               case IdDirective (num) => {
                 val id = (num match {
                   case Number (Some (nu)) => nu
-                  case _ => "" //This won't happen
+                  case _ => "" 
                 })
                 parseUnsignedLong (id) match {
                   case Some (v) => {
@@ -173,18 +166,12 @@ case class SkippedTopClause (name: String) extends TopClause {
                   }
                   case _ => {
                     builder += ParseError ("This should be a valid octal (starting with 0), decimal number or hexadecimal number (starting with 0x)", directive.pos)
-                  }
-                }
-              }
+                  }}}
               case _ => {
                 builder += ParseError ("Expected long, not found", directive.pos) 
-              }
-            }
-          }
-        }
+              }}}}
         case _ => ()
-      }
-    }
+      }}
     val errors = builder.result
     if (errors.size > 0) {
       SemanticAnalysisFailure (errors)
@@ -194,29 +181,17 @@ case class SkippedTopClause (name: String) extends TopClause {
   } 
 
   def parse (input: String): CompilerResult = {
-    println (input)
-    println ("Blah")
+    
     buildParseTree (input) match {
       case ParserSuccess (clauses) => {
         semanticAnalysis (clauses) match {
           case SemanticAnalysisSuccess (map) => {
-            println (map)
             CompilerSuccess (Schema (map))
           }
           case SemanticAnalysisFailure (errors) => {
-            for (error <- errors) {
-              println (error)
-            }
             CompilerFailure (errors)
-          }
-        }
-      }
+          }}}
       case ParserFailure (parseErrors) => {
-        for (error <- parseErrors) {
-          println (error)
-        }
         CompilerFailure (parseErrors)
-      }
-    }
-  }
+      }}}
 }
