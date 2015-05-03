@@ -17,6 +17,7 @@
 package com.treode.server
 
 import scala.collection.mutable.HashMap
+import scala.util.{Success, Failure}
 
 import com.treode.twitter.app.StoreKit
 import com.treode.twitter.finagle.http.filter._
