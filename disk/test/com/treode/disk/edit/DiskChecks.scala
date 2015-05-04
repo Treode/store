@@ -440,6 +440,42 @@ trait DiskChecks extends AsyncChecks {
   val drnA3 = RemoveDisks ("drnA3", da1, da2, da3)
   val chkpt = Checkpoint
 
+  /** Run one phase scenarios with a given PRNG seed. */
+  private [edit] def onePhaseScenarios [T <: Tracker] (
+    setup: => T,
+    seed: Long,
+    phs1: Effect [T]
+  ) (implicit
+    config: DiskConfig,
+    geom: DriveGeometry
+  ) {
+    try {
+      val counter = new Counter [Effect [T]]
+
+      onePhase (setup, seed, counter) (addA1)
+      onePhase (setup, seed, counter) (addA1, phs1)
+      onePhase (setup, seed, counter) (addA1, phs1, chkpt)
+      onePhase (setup, seed, counter) (addA1, phs1, chkpt, addB1)
+      onePhase (setup, seed, counter) (addA1, phs1, addB1)
+      onePhase (setup, seed, counter) (addA1, phs1, addB1, chkpt)
+      onePhase (setup, seed, counter) (addA1, phs1, addB1, drnA1)
+      onePhase (setup, seed, counter) (addA1, phs1, addB1, addC1)
+    } catch {
+      case t: Throwable =>
+        info (f"implicit val geom = $geom")
+        throw t
+    }}
+
+  /** Run one phase scenarios with many PRNG seeds. */
+  private [edit] def onePhaseScenarios [T <: Tracker] (
+    setup: => T,
+    phs1: Effect [T]
+  ) (implicit
+    config: DiskConfig,
+    geom: DriveGeometry
+  ): Unit =
+    forAllSeeds (someScenarios (setup, _, phs1))
+
   /** Run some scenarios with a given PRNG seed. */
   private [edit] def someScenarios [T <: Tracker] (
     setup: => T,

@@ -19,6 +19,7 @@ package com.treode.disk.edit
 import java.nio.file.Path
 
 import com.treode.async.Async, Async.async
+import com.treode.async.misc.EpochReleaser
 import com.treode.disk.{Disk, DiskConfig, DiskController, DiskSystemDigest, DriveAttachment,
   DriveChange, DriveDigest, DriveGeometry, ObjectId, OversizedPageException,
   OversizedRecordException, PageDescriptor, PickledPage, Position, RecordDescriptor}
@@ -36,6 +37,8 @@ private class DiskAgent (
 ) extends Disk with DiskController {
 
   import config.{maximumPageBytes, maximumRecordBytes}
+
+  private val releaser = new EpochReleaser
 
   private var ledger: SegmentLedger = null
   private var checkpointer: Checkpointer = null
@@ -85,8 +88,11 @@ private class DiskAgent (
   def release (desc: PageDescriptor[_], obj: ObjectId, gens: Set [Long]): Unit = {
     val docket = ledger.free (desc.id, obj, gens)
     docket.remove (group.protect)
-    group.release (docket)
+    releaser.release (group.release (docket))
   }
+
+  def join [A] (task:  Async[A]): Async[A] =
+    releaser.join (task)
 
   def change (change: DriveChange): Async [Notification [Unit]] =
     group.change (change)
@@ -117,6 +123,5 @@ private class DiskAgent (
     group.close()
 
   // TODO
-  def join [A] (task:  Async[A]): Async[A] = ???
   def drives: Async [Seq [DriveDigest]] = ???
 }
