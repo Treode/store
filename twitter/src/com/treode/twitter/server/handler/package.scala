@@ -35,8 +35,7 @@ package object handler {
       rsp
     }
 
-    def apply (req: Request, notifications: Notification [Unit])
-        (implicit mapper: ObjectMapper): Response = {
+    def apply (req: Request, notifications: Notification [Unit]): Response = {
       val rsp = req.response
       notifications match {
         case errors @ Errors (_) =>

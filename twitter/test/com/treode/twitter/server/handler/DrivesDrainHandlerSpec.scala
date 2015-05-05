@@ -59,10 +59,13 @@ class DrivesDrainHandlerSpec extends FlatSpec with SpecTools {
         .body ("[]")
       .expect
         .statusCode (400)
-        .body (matchesJson ("""[
-          "Not attached: \"f1\"",
-          "Already draining: \"f2\""
-          ]"""))
+        .body (matchesJson ("""
+          "notifications": [
+            { "message": "Not attached: \"f1\"" },
+            { "message": "Aready draining: \"f2\"" }
+
+          ]
+          """))
       .when
         .post ("/")
     }}

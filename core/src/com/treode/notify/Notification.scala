@@ -26,7 +26,6 @@ sealed abstract class Notification [+A] {
 
   def isEmpty: Boolean
   def messages: Seq [Message]
-  override def toString : String
 }
 
 object Notification {
@@ -53,7 +52,6 @@ object Notification {
   case class Errors (messages: Seq [Message]) extends Notification [Nothing] {
 
     def isEmpty = false
-    override def toString = messages map (_.en) mkString ("; ")
   }
 
   /** No error messages; a successful result. */
@@ -61,7 +59,6 @@ object Notification {
 
     def isEmpty = true
     def messages = List.empty
-    override def toString = ""
   }
 
   /** Build Errors with varargs. */

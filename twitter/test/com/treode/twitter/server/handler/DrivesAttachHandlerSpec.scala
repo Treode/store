@@ -59,10 +59,13 @@ class DrivesAttachHandlerSpec extends FlatSpec with SpecTools {
         .body ("[]")
       .expect
         .statusCode (400)
-        .body (matchesJson ("""[
-          "Already attached: \"f1\"",
-          "Already attached: \"f2\""
-          ]"""))
+        .body (matchesJson ("""
+          "notifications": [
+            { "message": "Already attached: \"f1\"" },
+            { "message": "Already attached: \"f2\"" }
+
+          ]
+          """))
       .when
         .post ("/")
     }}
