@@ -36,7 +36,8 @@ private class PageWriter (
   geom: DriveGeometry,
   dispatcher: PageDispatcher,
   detacher: Detacher,
-  alloc: SegmentAllocator
+  alloc: SegmentAllocator,
+  ledger: SegmentLedger
 ) (implicit
   scheduler: Scheduler
 ) {
@@ -51,8 +52,6 @@ private class PageWriter (
 
   // Something awaiting a draing to complete.
   private var drain = Option.empty [Callback [Unit]]
-
-  private var ledger: SegmentLedger = null
 
   private def run [A] (task: Async [A]) {
     task run {
@@ -147,8 +146,7 @@ private class PageWriter (
           detacher.finishFlush()
         }}}
 
-  def launch (ledger: SegmentLedger, pos: Long) {
-    this.ledger = ledger
+  def launch (pos: Long) {
     if (geom.isSegmentAligned (pos)) {
       seg = alloc.alloc()
       this.pos = seg.base

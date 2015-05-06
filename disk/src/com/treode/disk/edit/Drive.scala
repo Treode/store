@@ -41,11 +41,11 @@ private class Drive (
   def draining = _draining
 
   /** Called when launch completes. */
-  def launch (ledger: SegmentLedger, claimed: Set [Int], pos: Long) {
+  def launch (claimed: Set [Int], pos: Long) {
     alloc.alloc (claimed)
     if (!draining) {
       logwrtr.launch()
-      pagwrtr.launch (ledger, pos)
+      pagwrtr.launch (pos)
     }}
 
   def read (offset: Long, length: Int): Async [PagedBuffer] =

@@ -14,27 +14,22 @@
  * limitations under the License.
  */
 
-package com.treode.disk
+package com.treode.disk.edit
 
-import java.nio.file.Path
-import java.util.{ArrayList, HashMap}
+import scala.collection.mutable.UnrolledBuffer
 
 import com.treode.async.{Async, Scheduler}, Async.async
-import com.treode.buffer.PagedBuffer
+import com.treode.disk.{DiskConfig, Dispatcher, OversizedRecordException, RecordDescriptor}
 
-package edit {
+private class LogDispatcher (implicit scheduler: Scheduler, config: DiskConfig)
+extends Dispatcher [PickledRecord] {
 
-  case class ReattachFailure (path: Path, thrown: Throwable) {
-    override def toString = s"Could not reattach ${quote (path)}: $thrown"
-  }
+  import config.maximumRecordBytes
 
-  class ReattachException (failures: Seq [ReattachFailure]) extends Exception {
-    override def getMessage() = failures mkString "; "
-  }}
-
-package object edit {
-
-  private [edit] type Checkpoints = ArrayList [Unit => Async [Unit]]
-
-  private [edit] type Compactors = HashMap [TypeId, Compaction => Async [Unit]]
-}
+  def record [R] (desc: RecordDescriptor [R], record: R): Async [Unit] =
+    async { cb =>
+      val p = PickledRecord (desc, record, cb)
+      if (p.byteSize > maximumRecordBytes)
+        throw new OversizedRecordException (maximumRecordBytes, p.byteSize)
+      send (p)
+    }}

@@ -56,6 +56,8 @@ import LogControl._
 private class DriveGroup (
   logdsp: LogDispatcher,
   pagdsp: PageDispatcher,
+  compactor: Compactor,
+  ledger: SegmentLedger,
   private var drives: Map [Int, Drive],
   private var gen: Int,
   private var dno: Int
@@ -68,6 +70,7 @@ private class DriveGroup (
 
   private val fiber = new Fiber
   private val queue = new AsyncQueue (fiber) (reengage _)
+
   private var state: State = Opening
 
   /** New drives that are queued to attach. */
@@ -88,9 +91,7 @@ private class DriveGroup (
   /** Callbacks for when the files are closed. */
   private var closing = List.empty [Callback [Unit]]
 
-  private var ledger: SegmentLedger = null
-  private var checkpointer: Checkpointer = null
-  private var compactor: Compactor = null
+  val checkpointer = new Checkpointer (this)
 
   drives = drives.withDefault (id => throw new IllegalArgumentException (s"Drive $id does not exist"))
 
@@ -171,7 +172,7 @@ private class DriveGroup (
       } yield {
 
         for (drive <- attaches)
-          drive.launch (ledger, Set.empty, 0L)
+          drive.launch (Set.empty, 0L)
         for (drive <- detaches)
           drive.close()
         for (drive <- drains)
@@ -195,21 +196,20 @@ private class DriveGroup (
       }}
 
   def launch (
-    ledger: SegmentLedger,
     writers: Map [Int, Long],
-    checkpointer: Checkpointer,
-    compactor: Compactor
+    checkpoints: Checkpoints,
+    compactors: Compactors
   ): Unit =
     fiber.execute {
       state = Open
-      this.ledger = ledger
-      this.checkpointer = checkpointer
-      this.compactor = compactor
+
+      checkpointer.launch (checkpoints)
+      compactor.launch (compactors)
 
       val docket = ledger.docket
       val claimed = docket.claimed
       for (drive <- drives.values)
-        drive.launch (ledger, claimed (drive.id), writers.getOrElse (drive.id, 0L))
+        drive.launch (claimed (drive.id), writers.getOrElse (drive.id, 0L))
 
       val drains = drives.values.filter (_.draining)
       for (drive <- drains)
@@ -273,7 +273,7 @@ private class DriveGroup (
       path, file, geom, logdsp, logdtch, alloc, logbuf, logsegs, logseg.base, logseg.limit, logseg.base, logseg.base)
 
     val pagdtch = new Detacher (false)
-    val pagwrtr = new PageWriter (id, path, file, geom, pagdsp, pagdtch, alloc)
+    val pagwrtr = new PageWriter (id, path, file, geom, pagdsp, pagdtch, alloc, ledger)
 
     new Drive (file, geom, alloc, logwrtr, pagwrtr, false, id, path)
   }

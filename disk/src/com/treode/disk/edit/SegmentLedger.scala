@@ -22,21 +22,22 @@ import com.treode.disk.{Compaction, Disk, GenerationDocket, ObjectId, PageDescri
 
 /** Mediates access to the global `AllocationDocket`, and logs and checkpoints it on disk. */
 private class SegmentLedger (
-  system: Disk,
+  private var system: Disk,
   private var gen: Long,
   private var mem: AllocationDocket
 ) (implicit
   scheduler: Scheduler
 ) {
 
-  def this (system: Disk) (implicit scheduler: Scheduler) =
-    this (system, 0, new AllocationDocket)
-
   /** List of requests to write. */
   private var writes = List.empty [Callback [Unit]]
 
   /** Is a write currently in flight? */
   private var writing = false
+
+  /** Switch from the BootstrapDisk to the final DiskAgent. */
+  def booted (system: Disk): Unit =
+    this.system = system
 
   /** Remove unclaimed generations; launch invokes this to clean up after a crash. */
   def claim (claims: GenerationDocket) {

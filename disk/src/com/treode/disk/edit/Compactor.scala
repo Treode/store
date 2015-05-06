@@ -22,21 +22,19 @@ import com.treode.async.{Async, AsyncQueue, Fiber, Scheduler}, Async.supply
 import com.treode.disk.{Compaction, DiskEvents, GenerationDocket, ObjectId, TypeId},
   GenerationDocket.DocketId
 
-private class Compactor (
-  compactors: HashMap [TypeId, Compaction => Async [Unit]]
-) (implicit
-  scheduler: Scheduler,
-  events: DiskEvents
-) {
+private class Compactor (implicit scheduler: Scheduler, events: DiskEvents) {
 
   private val fiber = new Fiber
   private val queue = new AsyncQueue (fiber) (reengage _)
   private val docket = new GenerationDocket
   private val arrival = new ArrayDeque [DocketId]
+  private var compactors: Compactors = null
 
   queue.launch()
 
   private def reengage() {
+    if (compactors == null)
+      return
     if (!arrival.isEmpty)
       _compact()
     else
@@ -59,6 +57,12 @@ private class Compactor (
       arrival.add (id)
     docket.add (id, gens)
   }
+
+  def launch (compactors: Compactors): Unit =
+    fiber.execute {
+      this.compactors = compactors
+      queue.engage()
+    }
 
   def compact (typ: TypeId, obj: ObjectId): Unit =
     fiber.execute {

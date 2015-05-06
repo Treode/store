@@ -16,26 +16,22 @@
 
 package com.treode.disk.edit
 
-import java.util.ArrayList
-
 import com.treode.async.{Async, AsyncQueue, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 
-private class Checkpointer (
-  drives: DriveGroup,
-  checkpoints: ArrayList [Unit => Async [Unit]]
-) (implicit
-  scheduler: Scheduler
-) {
+private class Checkpointer (drives: DriveGroup) (implicit scheduler: Scheduler) {
 
   private val fiber = new Fiber
   private val queue = new AsyncQueue (fiber) (reengage _)
   private var requests = List.empty [Callback [Unit]]
   private var running = List.empty [Callback [Unit]]
+  private var checkpoints: Checkpoints = null
 
   queue.launch()
 
   private def reengage() {
+    if (checkpoints == null)
+      return
     if (!requests.isEmpty)
       _checkpoint()
   }
@@ -55,6 +51,12 @@ private class Checkpointer (
           scheduler.pass (cb, ())
         running = List.empty
       }}
+
+  def launch (checkpoints: Checkpoints): Unit =
+    fiber.execute {
+      this.checkpoints = checkpoints
+      queue.engage()
+    }
 
   def checkpoint(): Async [Unit] =
     fiber.async { cb =>

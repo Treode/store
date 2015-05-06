@@ -14,27 +14,20 @@
  * limitations under the License.
  */
 
-package com.treode.disk
-
-import java.nio.file.Path
-import java.util.{ArrayList, HashMap}
+package com.treode.disk.edit
 
 import com.treode.async.{Async, Scheduler}, Async.async
-import com.treode.buffer.PagedBuffer
+import com.treode.disk.{DiskConfig, Dispatcher, ObjectId, OversizedPageException, PageDescriptor, PickledPage, Position}
 
-package edit {
+private class PageDispatcher (implicit scheduler: Scheduler, config: DiskConfig)
+extends Dispatcher [PickledPage] {
 
-  case class ReattachFailure (path: Path, thrown: Throwable) {
-    override def toString = s"Could not reattach ${quote (path)}: $thrown"
-  }
+  import config.maximumPageBytes
 
-  class ReattachException (failures: Seq [ReattachFailure]) extends Exception {
-    override def getMessage() = failures mkString "; "
-  }}
-
-package object edit {
-
-  private [edit] type Checkpoints = ArrayList [Unit => Async [Unit]]
-
-  private [edit] type Compactors = HashMap [TypeId, Compaction => Async [Unit]]
-}
+  def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
+    async { cb =>
+      val p = PickledPage (desc, obj, gen, page, cb)
+      if (p.byteSize > maximumPageBytes)
+        throw new OversizedPageException (maximumPageBytes, p.byteSize)
+      send (p)
+    }}

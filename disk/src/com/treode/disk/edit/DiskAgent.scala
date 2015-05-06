@@ -18,11 +18,11 @@ package com.treode.disk.edit
 
 import java.nio.file.Path
 
-import com.treode.async.Async, Async.async
+import com.treode.async.{Async, Scheduler}, Async.async
 import com.treode.async.misc.EpochReleaser
-import com.treode.disk.{Disk, DiskConfig, DiskController, DiskSystemDigest, DriveAttachment,
-  DriveChange, DriveDigest, DriveGeometry, ObjectId, OversizedPageException,
-  OversizedRecordException, PageDescriptor, PickledPage, Position, RecordDescriptor}
+import com.treode.disk.{Disk, DiskConfig, DiskController, DiskEvents, DiskSystemDigest,
+  DriveAttachment, DriveChange, DriveDigest, DriveGeometry, ObjectId, PageDescriptor, PickledPage,
+  Position, RecordDescriptor}
 import com.treode.notify.Notification
 
 /** The live Disk system. Implements the user and admin traits, Disk and DiskController, by
@@ -31,41 +31,25 @@ import com.treode.notify.Notification
 private class DiskAgent (
   logdsp: LogDispatcher,
   pagdsp: PageDispatcher,
+  compactor: Compactor,
+  releaser: EpochReleaser,
+  ledger: SegmentLedger,
   group: DriveGroup
-) (
-  implicit config: DiskConfig
 ) extends Disk with DiskController {
-
-  import config.{maximumPageBytes, maximumRecordBytes}
-
-  private val releaser = new EpochReleaser
-
-  private var ledger: SegmentLedger = null
-  private var checkpointer: Checkpointer = null
-  private var compactor: Compactor = null
 
   implicit val disk = this
 
   /** Called by the LaunchAgent when launch completes. */
   def launch (
-    ledger: SegmentLedger,
     writers: Map [Int, Long],
-    checkpointer: Checkpointer,
-    compactor: Compactor
+    checkpoints: Checkpoints,
+    compactors: Compactors
   ) {
-    this.ledger = ledger
-    this.checkpointer = checkpointer
-    this.compactor = compactor
-    group.launch (ledger, writers, checkpointer, compactor)
+    group.launch (writers, checkpoints, compactors)
   }
 
   def record [R] (desc: RecordDescriptor [R], record: R): Async [Unit] =
-    async { cb =>
-      val p = PickledRecord (desc, record, cb)
-      if (p.byteSize > maximumRecordBytes)
-        throw new OversizedRecordException (maximumRecordBytes, p.byteSize)
-      logdsp.send (p)
-    }
+    logdsp.record (desc, record)
 
   def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
     for {
@@ -75,12 +59,7 @@ private class DiskAgent (
     }
 
   def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
-    async { cb =>
-      val p = PickledPage (desc, obj, gen, page, cb)
-      if (p.byteSize > maximumPageBytes)
-        throw new OversizedPageException (maximumPageBytes, p.byteSize)
-      pagdsp.send (p)
-    }
+    pagdsp.write (desc, obj, gen, page)
 
   def compact (desc: PageDescriptor[_], obj: ObjectId): Unit =
     compactor.compact (desc.id, obj)
@@ -106,11 +85,8 @@ private class DiskAgent (
   def drain (drains: Path*): Async [Notification [Unit]] =
     change (DriveChange (Seq.empty, drains))
 
-  /** Schedule a checkpoint. Normally logging thresholds trigger a checkpooint; this method allows
-    * test to explicitly trigger ones.
-    */
   def checkpoint(): Async [Unit] =
-    checkpointer.checkpoint()
+    group.checkpointer.checkpoint()
 
   def digest: Async [DiskSystemDigest] =
     for {

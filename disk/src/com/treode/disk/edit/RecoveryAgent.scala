@@ -18,10 +18,11 @@ package com.treode.disk.edit
 
 import java.nio.file.{Path, StandardOpenOption}, StandardOpenOption._
 
-import com.treode.async.{Async, AsyncQueue, BatchIterator, Callback, Fiber, Scheduler}
+import com.treode.async.{Async, AsyncQueue, BatchIterator, Callback, Fiber, Scheduler}, Async.supply
 import com.treode.async.implicits._
+import com.treode.async.misc.EpochReleaser
 import com.treode.disk.{Disk, DiskRecovery, DiskConfig, DiskEvents, DiskLaunch, FileSystem,
-  RecordDescriptor, RecordRegistry}
+  GenerationDocket, RecordDescriptor, RecordRegistry}
 
 /** The first phase of building the live Disk system. Implements the user trait Recovery.
   *
@@ -62,14 +63,8 @@ private class RecoveryAgent (implicit
   /** The record registry we are building before beginning replay. */
   private val records = new RecordRegistry
 
-  /** The replayer for this recovery. */
-  private val replayer = new LogReplayer
-
-  /** The LogDispatcher for the final system. */
-  private val logdsp = new LogDispatcher
-
-  /** The PageDispatcher for the final system. */
-  private val pagdsp = new PageDispatcher
+  /** The collector for this recovery. */
+  private val collector = new LogCollector
 
   private val ledger = new SegmentLedgerMedic (this)
 
@@ -110,7 +105,7 @@ private class RecoveryAgent (implicit
       val file = files.open (path, READ, WRITE)
       SuperBlock.read (file)
       .map { superb =>
-        val reader = new LogReader (path, file, superb, records, replayer, logdsp, pagdsp)
+        val reader = new LogReader (path, file, superb, records, collector)
         _reattach (path, superb.common, reader)
       }
       .recover { case thrown =>
@@ -125,16 +120,17 @@ private class RecoveryAgent (implicit
     if (failures.isEmpty) {
       events.reattachingDisks (reattached)
       (for {
-        _ <- BatchIterator.merge (readers) .batch (replayer.replay _)
-        launch = {
-          logdsp.batch = replayer.batch
-          val drives = new DriveGroup (logdsp, pagdsp, replayer.drives, common.gen, common.dno)
-          val agent = new DiskAgent (logdsp, pagdsp, drives)
-          new LaunchAgent () (scheduler, drives, events, agent)
-        }
-        (ledger, writers) <- this.ledger.close () (launch)
+        // Merge the entries from all readers (drives), sorted by batch number.
+        _ <- BatchIterator.merge (readers) .batch (RecoveryAgent.replay _)
+        // The collector aggregated results from all readers. Now make the bootstrap system.
+        boot = collector.result (common)
+        // Use the bootstrap system to recover the SegmentLedger.
+        (ledger, writers) <- this.ledger.close () (boot)
       } yield {
-        launch.recover (ledger, writers)
+        // Use the SegmentLedger to construct the full disk system.
+        val launch = boot.result (ledger, writers)
+        // Replace the bootstrap system with the full one in the SegmentLedger.
+        ledger.booted (launch.disk)
         launch
       }) .run (cb on scheduler)
     } else {
@@ -157,3 +153,12 @@ private class RecoveryAgent (implicit
       recovery = Some (cb)
       queue.engage()
     }}
+
+private object RecoveryAgent {
+
+  def replay (xss: Iterable [LogEntries]): Async [Unit] =
+    supply {
+      for (xs <- xss) {
+        for (x <- xs.entries)
+          x (())
+      }}}

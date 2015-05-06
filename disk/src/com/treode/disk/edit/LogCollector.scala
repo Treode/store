@@ -17,36 +17,25 @@
 package com.treode.disk.edit
 
 import com.treode.async.{Async, Scheduler}, Async.supply
-import com.treode.disk.{DiskEvents, FileSystem}
+import com.treode.disk.{DiskConfig, DiskEvents, FileSystem}
 
-private class LogReplayer (implicit
+private class LogCollector (implicit
   files: FileSystem,
   scheduler: Scheduler,
+  config: DiskConfig,
   events: DiskEvents
 ) {
 
-  private var _batch = 0L
-  private var _drives = Map.empty [Int, Drive]
+  private var batch = 0L
+  private var drives = Map.empty [Int, BootstrapDrive]
 
-  def batch: Long =
-    synchronized (_batch)
-
-  def drives: Map [Int, Drive] =
-    synchronized (_drives)
-
-  def raise (batch: Long): Unit =
+  def reattach (batch: Long, drive: BootstrapDrive): Unit =
     synchronized {
-      if (_batch < batch)
-        _batch = batch
+      if (this.batch < batch) this.batch = batch
+      drives += drive.id -> drive
     }
 
-  def reattach (drive: Drive): Unit =
-    synchronized (_drives += drive.id -> drive)
-
-  def replay (xss: Iterable [LogEntries]): Async [Unit] =
-    supply {
-      for (xs <- xss) {
-        raise (xs.batch)
-        for (x <- xs.entries)
-          x (())
-      }}}
+  def result (common: SuperBlock.Common): BootstrapLaunch = {
+    implicit val disk = new BootstrapDisk (common, batch, drives)
+    new BootstrapLaunch
+  }}

@@ -36,9 +36,7 @@ private class LogReader (
   file: File,
   superb: SuperBlock,
   records: RecordRegistry,
-  replayer: LogReplayer,
-  logdsp: LogDispatcher,
-  pagdsp: PageDispatcher
+  collector: LogCollector
 ) (implicit
   scheduler: Scheduler,
   config: DiskConfig
@@ -161,17 +159,9 @@ private class LogReader (
     }
 
     private def _close() {
-
-      val logdtch = new Detacher (superb.draining)
-      val logwrtr =
-        new LogWriter (path, file, geom, logdsp, logdtch, alloc, buf, segs, pos, seg.limit, logHead, flushed)
-
-      val pagdtch = new Detacher (superb.draining)
-      val pagwrtr = new PageWriter (id, path, file, geom, pagdsp, pagdtch, alloc)
-
-      val drive = new Drive (file, geom, alloc, logwrtr, pagwrtr, draining, id, path)
-      replayer.reattach (drive)
-
+      val drive =
+        new BootstrapDrive (id, path, file, geom, draining, alloc, buf, segs, pos, seg.limit, logHead, flushed)
+      collector.reattach (batch, drive)
       val cb = this.cb
       this.cb = null
       cb.pass (())
