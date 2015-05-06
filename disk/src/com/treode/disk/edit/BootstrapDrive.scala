@@ -51,10 +51,14 @@ private class BootstrapDrive (
         buf
       }}
 
-  def result (logdsp: LogDispatcher, pagdsp: PageDispatcher, ledger: SegmentLedger): Drive = {
+  def result (
+    logdsp: LogDispatcher,
+    pagdsp: PageDispatcher,
+    ledger: SegmentLedger,
+    checkpointer: Checkpointer
+  ): Drive = {
     val logdtch = new Detacher (draining)
-    val logwrtr =
-      new LogWriter (path, file, geom, logdsp, logdtch, alloc, logBuf, logSegs, logPos, logLimit, logHead, flushed)
+    val logwrtr = new LogWriter (path, file, geom, logdsp, logdtch, alloc, checkpointer, logBuf, logSegs, logPos, logLimit, logHead, flushed)
     val pagdtch = new Detacher (draining)
     val pagwrtr = new PageWriter (id, path, file, geom, pagdsp, pagdtch, alloc, ledger)
     new Drive (file, geom, alloc, logwrtr, pagwrtr, draining, id, path)

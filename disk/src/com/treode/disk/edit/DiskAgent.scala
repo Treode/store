@@ -85,6 +85,7 @@ private class DiskAgent (
   def drain (drains: Path*): Async [Notification [Unit]] =
     change (DriveChange (Seq.empty, drains))
 
+  /** Force a checkpoint; for testing. */
   def checkpoint(): Async [Unit] =
     group.checkpointer.checkpoint()
 

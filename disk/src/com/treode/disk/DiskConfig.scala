@@ -94,8 +94,8 @@ case class DiskConfig (
     Integer.SIZE - Integer.numberOfLeadingZeros (bytes - 1) + 1
   }
 
-  def checkpoint (bytes: Int, entries: Int): Boolean =
-    bytes > checkpointBytes || entries > checkpointEntries
+  def checkpoint (bytes: Long, entries: Long): Boolean =
+    bytes > checkpointBytes.toLong || entries > checkpointEntries.toLong
 
   def clean (segments: Int): Boolean =
     segments >= cleaningFrequency

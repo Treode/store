@@ -18,8 +18,20 @@ package com.treode.disk.edit
 
 import com.treode.async.{Async, AsyncQueue, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
+import com.treode.disk.DiskConfig
 
-private class Checkpointer (drives: DriveGroup) (implicit scheduler: Scheduler) {
+private class Checkpointer (
+  drives: DriveGroup,
+
+  // The total bytes of records since our last checkpoint.
+  private var bytes: Long,
+
+  // The count of records since our last checkpoint.
+  private var entries: Long
+) (implicit
+  scheduler: Scheduler,
+  config: DiskConfig
+) {
 
   private val fiber = new Fiber
   private val queue = new AsyncQueue (fiber) (reengage _)
@@ -32,7 +44,7 @@ private class Checkpointer (drives: DriveGroup) (implicit scheduler: Scheduler) 
   private def reengage() {
     if (checkpoints == null)
       return
-    if (!requests.isEmpty)
+    if (config.checkpoint (bytes, entries) || !requests.isEmpty)
       _checkpoint()
   }
 
@@ -41,12 +53,13 @@ private class Checkpointer (drives: DriveGroup) (implicit scheduler: Scheduler) 
       assert (running.isEmpty)
       running = requests
       requests = List.empty
+      bytes = 0L
+      entries = 0L
       for {
         _ <- drives.startCheckpoint()
         _ <- checkpoints.latch (_(()))
         _ <- drives.finishCheckpoint()
       } yield {
-        assert (!running.isEmpty)
         for (cb <- running)
           scheduler.pass (cb, ())
         running = List.empty
@@ -58,6 +71,15 @@ private class Checkpointer (drives: DriveGroup) (implicit scheduler: Scheduler) 
       queue.engage()
     }
 
+  /** Tally counts for records recently logged; maybe trigger a checkpoint. */
+  def tally (bytes: Long, entries: Long): Unit =
+    fiber.execute {
+      this.bytes += bytes
+      this.entries += entries
+      queue.engage()
+    }
+
+  /** Force a checkpoint; for testing. */
   def checkpoint(): Async [Unit] =
     fiber.async { cb =>
       requests ::= cb

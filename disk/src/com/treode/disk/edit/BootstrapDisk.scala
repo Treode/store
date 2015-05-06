@@ -25,8 +25,10 @@ import com.treode.disk.{Disk, DiskConfig, DiskEvents, FileSystem, GenerationDock
 
 private class BootstrapDisk (
   common: SuperBlock.Common,
+  drives: Map [Int, BootstrapDrive],
   logBatch: Long,
-  drives: Map [Int, BootstrapDrive]
+  logBytes: Long,
+  logEntries: Long
 ) (implicit
   files: FileSystem,
   scheduler: Scheduler,
@@ -66,8 +68,7 @@ private class BootstrapDisk (
     releaser.join (task)
 
   def result (ledger: SegmentLedger): (DriveGroup, DiskAgent) = {
-    val drives = for ((id, boot) <- this.drives) yield (id, boot.result (logdsp, pagdsp, ledger))
-    val group = new DriveGroup (logdsp, pagdsp, compactor, ledger, drives, common.gen, common.dno)
+    val group = new DriveGroup (logdsp, pagdsp, compactor, ledger, drives, common, logBytes, logEntries)
     val agent = new DiskAgent (logdsp, pagdsp, compactor, releaser, ledger, group)
     (group, agent)
   }}

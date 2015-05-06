@@ -58,9 +58,10 @@ private class DriveGroup (
   pagdsp: PageDispatcher,
   compactor: Compactor,
   ledger: SegmentLedger,
-  private var drives: Map [Int, Drive],
-  private var gen: Int,
-  private var dno: Int
+  boot: Map [Int, BootstrapDrive],
+  common: SuperBlock.Common,
+  logBytes: Long,
+  logEntries: Long
 ) (implicit
   files: FileSystem,
   scheduler: Scheduler,
@@ -72,6 +73,12 @@ private class DriveGroup (
   private val queue = new AsyncQueue (fiber) (reengage _)
 
   private var state: State = Opening
+
+  /** The generation number of the superblock. */
+  private var gen = common.gen
+
+  /** The disk number of the next new drive. */
+  private var dno = common.dno
 
   /** New drives that are queued to attach. */
   private var attaches = List.empty [Drive]
@@ -91,9 +98,14 @@ private class DriveGroup (
   /** Callbacks for when the files are closed. */
   private var closing = List.empty [Callback [Unit]]
 
-  val checkpointer = new Checkpointer (this)
+  val checkpointer = new Checkpointer (this, logBytes, logEntries)
 
-  drives = drives.withDefault (id => throw new IllegalArgumentException (s"Drive $id does not exist"))
+  var drives =
+    boot.map { case (id, drive) =>
+      (id, drive.result (logdsp, pagdsp, ledger, checkpointer))
+    } .withDefault { id =>
+      throw new IllegalArgumentException (s"Drive $id does not exist")
+    }
 
   queue.launch()
 
@@ -270,7 +282,7 @@ private class DriveGroup (
 
     val logdtch = new Detacher (false)
     val logwrtr = new LogWriter (
-      path, file, geom, logdsp, logdtch, alloc, logbuf, logsegs, logseg.base, logseg.limit, logseg.base, logseg.base)
+      path, file, geom, logdsp, logdtch, alloc, checkpointer, logbuf, logsegs, logseg.base, logseg.limit, logseg.base, logseg.base)
 
     val pagdtch = new Detacher (false)
     val pagwrtr = new PageWriter (id, path, file, geom, pagdsp, pagdtch, alloc, ledger)

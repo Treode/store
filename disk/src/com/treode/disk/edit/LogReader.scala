@@ -47,14 +47,44 @@ private class LogReader (
 
   class Batch (f: Iterable [LogEntries] => Async [Unit], var cb: Callback [Unit]) {
 
+    /** The allocator for the drive; needed now to track reallocation of log segments. */
     private val alloc = new SegmentAllocator (geom)
+
+    /** The buffer for this log; passed to the final LogWriter so that it can start appending
+      * just after the point where this reader finishes replaying.
+      */
     private val buf = PagedBuffer (blockBits)
+
+    /** The segments allocated to this log; passed to the final LogWriter so that it knows which
+      * segments to release after completing a checkpoint.
+      */
     private val segs = new ArrayDeque [Int]
+
+    /** The segment that we are currently reading. */
     private var seg = SegmentBounds (geom.segmentNum (logHead), geom, config)
+
+    /** The position at which we currently know the log has been flushed. */
     private var flushed = logHead
+
+    /** The position at which we are currenlty reading. */
     private var pos = logHead
+
+    /** The number of the last batch replayed by this reader; fed to the collector so that it can
+      * compute the greatest batch number replayed by all reader.
+      */
     private var batch = 0L
 
+    /** The total count of bytes replayed by this reader; fed to the collector so that it can
+      * compute the total bytes replayed by all readers.
+      */
+    private var bytes = 0L
+
+    /** The total count of entries replayed by this reader; fed to the collector so that it can
+      * compute the total entries replayed by all readers.
+      */
+    private var entries = 0L
+
+    /** We have already recorded the allocation of this segment. Now start reading it. */
     private def readSegmentTag(): Async [Option [LogEntries]] =
       for {
         _ <- file.fill (buf, pos, SegmentTagSpace, blockBits)
@@ -62,14 +92,19 @@ private class LogReader (
         flushed = pos
         val tag = buf.readLong()
         if (tag == SegmentTag) {
+          // The segment is off to a good start. Continue reading.
           pos += SegmentTagSpace
           Some (LogEntries.empty)
         } else {
+          // We just happen to crash after writing the last block of the previous segment, which
+          // included the AllocTag, but before writing the first block of this segment. In other
+          // words, we've reached the end of the log, and we start appending at this point.
           buf.clear()
           buf.writeLong (SegmentTag)
           None
         }}
 
+    /** We need to record the allocation of this segment, then start reading it. */
     private def readSegmentTag (num: Int): Async [Option [LogEntries]] = {
       seg = alloc.alloc (num)
       pos = seg.base
@@ -100,11 +135,17 @@ private class LogReader (
             _ <- file.fill (buf, pos + LogEntriesSpace, length, blockBits)
           } yield {
             if (this.batch < batch) {
+              // This is a valid batch. We must replay the entries.
               this.batch = batch
+              bytes += length
+              entries += count
               flushed = pos
               pos += length + LogEntriesSpace
               Some (LogEntries (batch, readRecords (length, count)))
             } else {
+              // This looks like a batch, but it slips back in time. We actually reached the end
+              // of the log. It just happened to occur immediately before a batch that was long
+              // ago checkpointed and tossed.
               val end = buf.readPos - LogEntriesSpace
               buf.readPos = blockAlignDown (end)
               buf.writePos = end
@@ -129,10 +170,12 @@ private class LogReader (
           supply (None)
 
         case _ =>
+          // The log is corrupt.
           val tagPos = pos + buf.readPos - LogTagSize
-          throw new AssertionError (f"Unrecognized tag $tag%X at $tagPos of $path")
+          throw new AssertionError (f"The log is corrupt at $tagPos of $path")
       }
 
+    /** The buffer has been filled upto a block boundary. Now expect a batch. */
     private def readBatch(): Async [Option [LogEntries]] =
       for {
         _ <- file.fill (buf, pos, LogTagSize, blockBits)
@@ -141,6 +184,7 @@ private class LogReader (
         batch
       }
 
+    /** The buffer is unfilled. Align the first read to a block boundary, then expect a batch. */
     private def readFirstBatch(): Async [Option [LogEntries]] = {
       val start = blockAlignDown (pos)
       val rpos = (pos - start).toInt
@@ -161,7 +205,7 @@ private class LogReader (
     private def _close() {
       val drive =
         new BootstrapDrive (id, path, file, geom, draining, alloc, buf, segs, pos, seg.limit, logHead, flushed)
-      collector.reattach (batch, drive)
+      collector.reattach (drive, batch, bytes, entries)
       val cb = this.cb
       this.cb = null
       cb.pass (())

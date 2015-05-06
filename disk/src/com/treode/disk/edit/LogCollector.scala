@@ -19,6 +19,7 @@ package com.treode.disk.edit
 import com.treode.async.{Async, Scheduler}, Async.supply
 import com.treode.disk.{DiskConfig, DiskEvents, FileSystem}
 
+/** Aggregates results from LogReaders of individual disks. */
 private class LogCollector (implicit
   files: FileSystem,
   scheduler: Scheduler,
@@ -26,16 +27,34 @@ private class LogCollector (implicit
   events: DiskEvents
 ) {
 
-  private var batch = 0L
+  /** All the drives collected. */
   private var drives = Map.empty [Int, BootstrapDrive]
 
-  def reattach (batch: Long, drive: BootstrapDrive): Unit =
+  /** The largest batch number seen. */
+  private var batch = 0L
+
+  /** The total bytes of log entries replayed. */
+  private var bytes = 0L
+
+  /** The total count of log entries replayed. */
+  private var entries = 0L
+
+  /** Close replay of a drive.
+    *
+    * @param drive The drive, with its LogWriter ready to append where reading finished.
+    * @param batch The last batch replayed from the log this drive.
+    * @param bytes The count of bytes replayed from the log on this drive.
+    * @param entries The count of entries replayed from the log on this drive.
+    */
+  def reattach (drive: BootstrapDrive, batch: Long, bytes: Long, entries: Long): Unit =
     synchronized {
-      if (this.batch < batch) this.batch = batch
       drives += drive.id -> drive
+      this.batch = math.max (this.batch, batch)
+      this.bytes += bytes
+      this.entries += entries
     }
 
   def result (common: SuperBlock.Common): BootstrapLaunch = {
-    implicit val disk = new BootstrapDisk (common, batch, drives)
+    implicit val disk = new BootstrapDisk (common, drives, batch, bytes, entries)
     new BootstrapLaunch
   }}

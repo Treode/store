@@ -38,6 +38,7 @@ private class LogWriter (
   dispatcher: LogDispatcher,
   detacher: Detacher,
   alloc: SegmentAllocator,
+  checkpointer: Checkpointer,
 
   // We pickle records into this buffer. We discard it page by page as we flush it to disk. The
   // first page retains the data from the previous flush so that the next flush can remain aligned
@@ -190,6 +191,8 @@ private class LogWriter (
               buf.writePos = end
               pos += buf.discard (next)
           }
+
+          checkpointer.tally (length, callbacks.size)
 
           // Acknowledge the writes.
           for (cb <- callbacks)
