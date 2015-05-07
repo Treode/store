@@ -1,0 +1,21 @@
+{
+  "engines": {
+    "node": ">= 0.10.0"
+  },
+  "devDependencies": {
+    "grunt": "^0.4.5",
+    "grunt-contrib-jshint": "~0.10.0",
+    "grunt-contrib-nodeunit": "~0.4.1",
+    "grunt-contrib-watch": "~0.6.1",
+    "karma-nodeunit": "^0.2.0",
+    "karma-requirejs": "^0.2.2",
+    "mocha": "^2.2.4",
+    "qunitjs": "^1.18.0",
+    "requirejs": "^2.1.17",
+    "should": "^6.0.1",
+    "supertest": "^0.15.0"
+  },
+  "dependencies": {
+    "doubly-linked-list-js": "^0.1.6"
+  }
+}
