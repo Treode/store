@@ -21,13 +21,23 @@ import com.fasterxml.jackson.core.JsonGenerator
 import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.treode.notify.Notification
+import com.treode.notify.Message
 
 object NotificationSerializer extends StdSerializer [Notification [_]] (classOf [Notification [_]]) {
   def serialize (value: Notification [_], jgen: JsonGenerator, provider: SerializerProvider) {
     val codec = jgen.getCodec
-    jgen.writeArrayFieldStart("notifications")
+    jgen.writeStartArray()
     for (m <- value.messages)
       codec.writeValue (jgen, m)
     jgen.writeEndArray()
+  }
+}
+
+object MessageSerializer extends StdSerializer [Message] (classOf [Message]) {
+  def serialize (value: Message, jgen: JsonGenerator, provider: SerializerProvider) {
+    val codec = jgen.getCodec
+    jgen.writeStartObject()
+    jgen.writeObjectField("message", value.en)
+    jgen.writeEndObject()
   }
 }
