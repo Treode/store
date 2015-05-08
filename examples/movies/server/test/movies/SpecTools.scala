@@ -33,13 +33,13 @@ import com.twitter.finagle.http.filter.ExceptionFilter
 import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}
 import org.joda.time.{DateTime, DateTimeZone, Instant}
 import org.scalatest.Assertions
+import java.nio.file.{Path, Paths}
 
 import movies.{DisplayModel => DM, PhysicalModel => PM}
 import DateTimeZone.UTC
 
 trait SpecTools {
   this: Assertions =>
-
   val t0 = TxClock.MinValue
 
   val sep_25_1951 = new DateTime (1951, 9, 25, 0, 0, 0, UTC)

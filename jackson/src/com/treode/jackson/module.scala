@@ -25,6 +25,8 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.treode.cluster.HostId
 import com.treode.disk.{DriveAttachment, DriveGeometry}
 import com.treode.store.Cohort
+import com.treode.notify.Notification
+import com.treode.notify.Message
 
 import Cohort.{Empty, Issuing, Moving, Settled}
 
@@ -44,7 +46,9 @@ class TreodeModule extends SimpleModule (
          EmptySerializer,
          HostIdSerializer,
          IssuingSerializer,
+         MessageSerializer,
          MovingSerializer,
+         NotificationSerializer,
          PathSerializer,
          PreferenceSerializer,
          SettledSerializer,
