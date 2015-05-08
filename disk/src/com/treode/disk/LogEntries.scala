@@ -16,20 +16,18 @@
 
 package com.treode.disk
 
-import java.nio.file.{OpenOption, Path}
+import com.treode.async.Async, Async.supply
 
-import com.treode.async.Scheduler
-import com.treode.async.io.File
+case class LogEntries (batch: Long, entries: Seq [Unit => Any]) extends Ordered [LogEntries] {
 
-/** Something that we can stub for testing. */
-private class FileSystem {
-
-  /** See `File.open`. */
-  def open (path: Path, opts: OpenOption*) (implicit scheduler: Scheduler): File =
-    File.open (path, opts: _*)
+  def compare (that: LogEntries): Int  =
+    this.batch compare that.batch
 }
 
-private object FileSystem {
+object LogEntries extends Ordering [LogEntries] {
 
-  val default = new FileSystem
+  val empty = LogEntries (0, Seq.empty)
+
+  def compare (x: LogEntries, y: LogEntries): Int =
+    x compare y
 }

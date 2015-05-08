@@ -16,20 +16,17 @@
 
 package com.treode.disk
 
-import java.nio.file.{OpenOption, Path}
+import com.treode.async.{Async, Scheduler}, Async.async
 
-import com.treode.async.Scheduler
-import com.treode.async.io.File
+private class PageDispatcher (implicit scheduler: Scheduler, config: DiskConfig)
+extends Dispatcher [PickledPage] {
 
-/** Something that we can stub for testing. */
-private class FileSystem {
+  import config.maximumPageBytes
 
-  /** See `File.open`. */
-  def open (path: Path, opts: OpenOption*) (implicit scheduler: Scheduler): File =
-    File.open (path, opts: _*)
-}
-
-private object FileSystem {
-
-  val default = new FileSystem
-}
+  def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
+    async { cb =>
+      val p = PickledPage (desc, obj, gen, page, cb)
+      if (p.byteSize > maximumPageBytes)
+        throw new OversizedPageException (maximumPageBytes, p.byteSize)
+      send (p)
+    }}

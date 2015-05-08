@@ -16,166 +16,63 @@
 
 package com.treode.disk
 
-import scala.collection.immutable.Queue
-import scala.util.{Failure, Success}
+import java.util.{ArrayDeque, HashMap}
 
-import com.treode.async.{Async, Callback, Fiber, Scheduler}
-import com.treode.async.implicits._
+import com.treode.async.{Async, AsyncQueue, Fiber, Scheduler}, Async.supply
 
-import Async.{async, guard}
-import Callback.ignore
-import PageLedger.Groups
+import GenerationDocket.DocketId
 
-private class Compactor (kit: DiskKit) {
-  import kit.{config, drives, releaser, scheduler}
+private class Compactor (implicit scheduler: Scheduler, events: DiskEvents) {
 
-  type DrainReq = Iterable [SegmentPointer]
+  private val fiber = new Fiber
+  private val queue = new AsyncQueue (fiber) (reengage _)
+  private val docket = new GenerationDocket
+  private val arrival = new ArrayDeque [DocketId]
+  private var compactors: Compactors = null
 
-  val fiber = new Fiber
-  var pages: PageRegistry = null
-  var cleanq = Set.empty [(TypeId, ObjectId)]
-  var compactq = Set.empty [(TypeId, ObjectId)]
-  var drainq = Set.empty [(TypeId, ObjectId)]
-  var book = Map.empty [(TypeId, ObjectId), (Set [Long], List [Callback [Unit]])]
-  var segments = 0
-  var cleanreq = false
-  var drainreq = Queue.empty [DrainReq]
-  var closed = false
-  var engaged = true
+  queue.launch()
 
   private def reengage() {
-    if (closed) {
-      ()
-    } else if (cleanreq) {
-      cleanreq = false
-      probeForClean()
-    } else if (!drainreq.isEmpty) {
-      val (first, rest) = drainreq.dequeue
-      drainreq = rest
-      probeForDrain (first)
-    } else if (!cleanq.isEmpty) {
-      compactObject (cleanq.head)
-    } else if (!compactq.isEmpty) {
-      compactObject (compactq.head)
-    } else if (!drainq.isEmpty) {
-      compactObject (drainq.head)
-    } else {
-      book = Map.empty
-      engaged = false
+    if (compactors == null)
+      return
+    if (!arrival.isEmpty)
+      _compact()
+    else
+      assert (docket.isEmpty)
+  }
+
+  private def _compact() {
+    queue.begin {
+      val id = arrival.remove()
+      val gens = docket.remove (id)
+      val cmpctr = compactors.get (id.typ)
+      if (cmpctr == null)
+        supply (events.noCompactorFor (id.typ))
+      else
+        cmpctr (Compaction (id.obj, gens))
     }}
 
-  private def compacted (latches: Seq [Callback [Unit]]): Callback [Unit] = {
-    case Success (v) =>
-      val cb = Callback.fanout (latches)
-      fiber.execute (reengage())
-      cb.pass (v)
-    case Failure (t) =>
-      throw t
+  private def add (id: DocketId, gens: Set [Long]) {
+    if (!(docket contains id))
+      arrival.add (id)
+    docket.add (id, gens)
   }
 
-  private def compactObject (id: (TypeId, ObjectId)) {
-    val (typ, obj) = id
-    val (groups, latches) = book (typ, obj)
-    cleanq -= id
-    compactq -= id
-    drainq -= id
-    book -= id
-    engaged = true
-    pages.compact (typ, obj, groups) .run (compacted  (latches))
-  }
-
-  private def probed: Callback [Unit] = {
-    case Success (v) =>
-      fiber.execute (reengage())
-    case Failure (t) =>
-      throw t
-  }
-
-  private def probeForClean(): Unit =
-    guard {
-      segments = 0
-      engaged = true
-      for {
-        iter <- drives.cleanable()
-        (segs, groups) <- pages.probeByUtil (iter, 9000)
-      } yield compact (groups, segs, true)
-    } run (probed)
-
-  private def probeForDrain (iter: Iterable [SegmentPointer]): Unit =
-    guard {
-      engaged = true
-      for (groups <- pages.probeForDrain (iter))
-        yield compact (groups, iter.toSeq, false)
-    } run (probed)
-
-  private def compact (id: (TypeId, ObjectId), gens: Set [Long]): Async [Unit] =
-    async { cb =>
-      book.get (id) match {
-        case Some ((gens0, cbs0)) =>
-          book += id -> ((gens0 ++ gens, cb :: cbs0))
-        case None =>
-          book += id -> ((gens, cb :: Nil))
-      }}
-
-  private def compact (groups: Groups, segments: Seq [SegmentPointer], cleaning: Boolean): Unit =
+  def launch (compactors: Compactors): Unit =
     fiber.execute {
-      for ((disk, segs) <- segments groupBy (_.disk))
-        disk.compacting (segs)
-      (for ((id, gs) <- groups.latch) {
-        if (cleaning)
-          cleanq += id
-        else
-          drainq += id
-        compact (id, gs)
-      })
-      .map (_ => releaser.release (segments foreach (_.free())))
-      .run (ignore)
-    }
-
-  def launch (pages: PageRegistry): Async [Unit] =
-    fiber.supply {
-      this.pages = pages
-      reengage()
-    }
-
-  def tally (segments: Int): Unit =
-    fiber.execute {
-      this.segments += segments
-      if (config.clean (this.segments))
-        if (!engaged)
-          probeForClean()
-        else
-          cleanreq = true
+      this.compactors = compactors
+      queue.engage()
     }
 
   def compact (typ: TypeId, obj: ObjectId): Unit =
     fiber.execute {
-      val id = (typ, obj)
-      compactq += id
-      compact (id, Set.empty [Long]) run (ignore)
-      if (!engaged)
-        reengage()
+      add (DocketId (typ, obj), Set.empty)
+      queue.engage()
     }
 
-  def clean(): Unit =
+  def compact (drains: GenerationDocket): Unit =
     fiber.execute {
-      if (!engaged)
-        probeForClean()
-      else
-        cleanreq = true
-    }
-
-  def drain (iter: Iterable [SegmentPointer]): Unit =
-    fiber.execute {
-      if (!engaged)
-        probeForDrain (iter)
-      else
-        drainreq = drainreq.enqueue (iter)
-    }
-
-  def close(): Async [Unit] =
-    for {
-      _ <- fiber.supply (closed = true)
-      _ <- pages.close()
-    } yield ()
-}
+      for ((id, gens) <- drains)
+        add (id, gens)
+      queue.engage()
+    }}

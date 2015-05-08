@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package com.treode.disk.edit
+package com.treode.disk
 
 import scala.collection.JavaConversions._
 
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{DiskTestConfig, DriveGeometry}
 import org.scalatest.FlatSpec
 
 import SegmentAllocator.{bitmapOf, bitmapRange}

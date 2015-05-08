@@ -14,19 +14,19 @@
  * limitations under the License.
  */
 
-package com.treode.disk.edit
+package com.treode.disk
 
 import java.util.ArrayList
 
 import com.treode.async.{Async, Callback}, Async.async
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{Compaction, DiskConfig, DiskController, DiskLaunch, DiskTestTools,
-  DriveGeometry, ObjectId, PageDescriptor, StubFileSystem}, DiskTestTools._
 import com.treode.disk.stubs.StubDiskEvents
 import com.treode.notify.Notification
 import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec
+
+import DiskTestTools._
 
 class CompactorSpec extends FlatSpec {
 

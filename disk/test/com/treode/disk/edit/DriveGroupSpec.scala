@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.treode.disk.edit
+package com.treode.disk
 
 import java.nio.file.{Path, Paths}
 import scala.util.Random
@@ -22,15 +22,14 @@ import scala.util.Random
 import com.treode.async.{Async, Scheduler}, Async.supply
 import com.treode.async.stubs.StubScheduler
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{DiskController, DiskLaunch, DiskTestConfig, DriveAttachment, DriveChange,
-  DriveGeometry, StubFileSystem}
-import com.treode.disk.DiskTestTools._
 import com.treode.disk.stubs.StubDiskEvents
 import com.treode.notify.Notification
 import com.treode.disk.messages._
 import com.treode.pickle.Picklers
 import com.treode.tags.Periodic
 import org.scalatest.FlatSpec
+
+import DiskTestTools._
 
 class DriveGroupSpec extends FlatSpec with DiskChecks {
 

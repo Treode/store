@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package com.treode.disk.edit
+package com.treode.disk
 
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}, Async.supply
-import com.treode.disk.{Disk, DiskLaunch, DiskRecovery, ObjectId, TypeId}
 import com.treode.disk.stubs.{StubDisk, StubDiskChecks}
 import com.treode.tags.{Intensive, Periodic}
 import org.scalatest.FreeSpec

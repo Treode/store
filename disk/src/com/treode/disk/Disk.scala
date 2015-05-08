@@ -17,7 +17,7 @@
 package com.treode.disk
 
 import java.nio.file.Path
-import com.treode.async.{Async, Callback, Scheduler}
+import com.treode.async.{Async, Scheduler}
 
 /** ==The Disk System==
   *
@@ -233,7 +233,7 @@ object Disk {
       diskBytes: Long,
       paths: Path*
   ): Unit =
-    DiskDrive.init (sysid, superBlockBits, segmentBits, blockBits, diskBytes, paths)
+    ??? // DiskDrive.init (sysid, superBlockBits, segmentBits, blockBits, diskBytes, paths)
 
   /** Start recovery; create a recovery builder.
     *
@@ -241,5 +241,5 @@ object Disk {
     * initialization.
     */
   def recover () (implicit scheduler: Scheduler, config: DiskConfig): DiskRecovery =
-    new RecoveryAgent
+    new RecoveryAgent () (FileSystem.default, scheduler, config, DiskEvents.default)
 }

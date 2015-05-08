@@ -16,50 +16,64 @@
 
 package com.treode.disk
 
-import com.treode.async.Async
+import java.nio.file.Path
+
+import com.treode.async.Async, Async.guard
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
 
-import Async.guard
+import SuperBlock.Common
 
+/** The preamble on every disk. */
 private case class SuperBlock (
-    id: Int,
-    boot: BootBlock,
-    geometry: DriveGeometry,
-    draining: Boolean,
-    free: IntSet,
-    logHead: Long)
+  id: Int,
+  geom: DriveGeometry,
+  draining: Boolean,
+  logHead: Long,
+  common: Common
+)
 
 private object SuperBlock {
 
-  val pickler = {
-    import DiskPicklers._
-    // Tagged for forwards compatibility.
-    tagged [SuperBlock] (
-        0x0024811306495C5FL ->
-            wrap (uint, boot, geometry, boolean, intSet, ulong)
-            .build ((SuperBlock.apply _).tupled)
-            .inspect (v => (
-                v.id, v.boot, v.geometry, v.draining, v.free, v.logHead)))
+  /** The common portion of the superblock; every disk holds the same values. */
+  case class Common (gen: Int, dno: Int, paths: Set [Path])
+
+  object Common {
+
+    val empty = Common (0, 0, Set.empty)
+
+    val pickler = {
+      import DiskPicklers._
+      wrap (int, int, set (path))
+      .build ((Common.apply _).tupled)
+      .inspect (v => (v.gen, v.dno, v.paths))
+    }
   }
 
-  def position (gen: Int) (implicit config: DiskConfig): Long =
-    if ((gen & 0x1) == 0) 0L else config.superBlockBytes
+  val pickler = {
+    import DiskPicklers._
+    val common = Common.pickler
+    wrap (int, driveGeometry, boolean, long, common)
+    .build ((SuperBlock.apply _).tupled)
+    .inspect (v => (v.id, v.geom, v.draining, v.logHead, v.common))
+  }
 
-  def clear (gen: Int, file: File) (implicit config: DiskConfig): Async [Unit] =
+  /** Read and unpickle the superblock. */
+  def read (file: File) (implicit config: DiskConfig): Async [SuperBlock] =
     guard {
-      val buf = PagedBuffer (config.superBlockBits)
-      while (buf.writePos < config.superBlockBytes)
-        buf.writeInt (0)
-      file.flush (buf, position (gen))
-    }
+      val buf = PagedBuffer (12)
+      for {
+        _ <- file.fill (buf, 0, config.superBlockBytes)
+      } yield {
+        pickler.unpickle (buf)
+      }}
 
-  def write (superb: SuperBlock, file: File) (implicit config: DiskConfig): Async [Unit] =
+  /** Pickle and write the superblock. */
+  def write (file: File, sb: SuperBlock) (implicit config: DiskConfig): Async [Unit] =
     guard {
-      val buf = PagedBuffer (config.superBlockBits)
-      pickler.pickle (superb, buf)
-      if (buf.writePos > config.superBlockBytes)
-        throw new SuperblockOverflowException
-      buf.writePos = config.superBlockBytes
-      file.flush (buf, position (superb.boot.gen))
+      val buf = PagedBuffer (12)
+      pickler.pickle (sb, buf)
+      assert (buf.writePos <= config.superBlockBytes)
+      buf.writePos = sb.geom.blockAlignUp (buf.writePos)
+      file.flush (buf, 0)
     }}

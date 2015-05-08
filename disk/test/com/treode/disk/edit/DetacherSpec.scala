@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.treode.disk.edit
+package com.treode.disk
 
 import java.util.ArrayList
 

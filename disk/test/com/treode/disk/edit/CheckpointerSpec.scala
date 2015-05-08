@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package com.treode.disk.edit
+package com.treode.disk
 
 import com.treode.async.Async, Async.supply
 import com.treode.async.stubs.{AsyncCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{DiskConfig, DiskController, DiskTestTools, DriveGeometry, FileSystem,
-  RecordDescriptor, StubFileSystem}, DiskTestTools._
 import com.treode.disk.stubs.StubDiskEvents
 import com.treode.notify.Notification
 import com.treode.pickle.Picklers
 import org.scalatest.FlatSpec
+
+import DiskTestTools._
 
 class CheckpointerSpec extends FlatSpec {
 

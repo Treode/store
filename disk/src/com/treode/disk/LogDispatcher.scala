@@ -16,20 +16,17 @@
 
 package com.treode.disk
 
-import java.nio.file.{OpenOption, Path}
+import com.treode.async.{Async, Scheduler}, Async.async
 
-import com.treode.async.Scheduler
-import com.treode.async.io.File
+private class LogDispatcher (implicit scheduler: Scheduler, config: DiskConfig)
+extends Dispatcher [PickledRecord] {
 
-/** Something that we can stub for testing. */
-private class FileSystem {
+  import config.maximumRecordBytes
 
-  /** See `File.open`. */
-  def open (path: Path, opts: OpenOption*) (implicit scheduler: Scheduler): File =
-    File.open (path, opts: _*)
-}
-
-private object FileSystem {
-
-  val default = new FileSystem
-}
+  def record [R] (desc: RecordDescriptor [R], record: R): Async [Unit] =
+    async { cb =>
+      val p = PickledRecord (desc, record, cb)
+      if (p.byteSize > maximumRecordBytes)
+        throw new OversizedRecordException (maximumRecordBytes, p.byteSize)
+      send (p)
+    }}

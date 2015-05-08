@@ -51,5 +51,5 @@ trait DiskLaunch {
   def launch()
 
   /** Deprecated. */
-  def handle (desc: PageDescriptor [_], handler: PageHandler)
+  def handle (desc: PageDescriptor [_], handler: PageHandler) = ()
 }

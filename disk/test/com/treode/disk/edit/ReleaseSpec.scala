@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-package com.treode.disk.edit
+package com.treode.disk
 
 import java.nio.file.{Path, Paths}
 import scala.util.Random
 
 import com.treode.async.{Async, Scheduler}, Async.supply
-import com.treode.disk.{Compaction, Disk, DiskConfig, DiskLaunch, DiskTestConfig, DriveGeometry,
-  ObjectId, PageDescriptor, Position, Stuff}
 import com.treode.disk.stubs.Counter
 import com.treode.pickle.Picklers
 import com.treode.tags.Periodic

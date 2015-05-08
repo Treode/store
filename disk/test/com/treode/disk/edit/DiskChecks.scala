@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.treode.disk.edit
+package com.treode.disk
 
 import java.nio.file.{Path, Paths}
 import scala.util.Random
@@ -23,7 +23,6 @@ import com.treode.async.{Async, Scheduler}, Async.supply
 import com.treode.async.implicits._
 import com.treode.async.stubs.{AsyncChecks, CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{Disk, DiskConfig, DiskLaunch, DriveGeometry, StubFileSystem}
 import com.treode.disk.stubs.{Counter, StubDiskEvents}
 import org.scalatest.{Informing, Suite}
 
@@ -47,7 +46,7 @@ trait DiskChecks extends AsyncChecks {
     * This tracking and verification is performed for every component to ensure that the component
     * does not foul up the basic attach, drain and detach feature.
     */
-  private [edit] class DrivesTracker (implicit files: StubFileSystem, config: DiskConfig) {
+  private [disk] class DrivesTracker (implicit files: StubFileSystem, config: DiskConfig) {
 
     /** Drives that are currenlty attached for certain. */
     private var _attached = Set.empty [Path]
@@ -144,7 +143,7 @@ trait DiskChecks extends AsyncChecks {
     * consistency of their components across simulated restarts, and they may hook into verify
     * to check consistency after all phases.
     */
-  private [edit] trait Tracker {
+  private [disk] trait Tracker {
 
     /** Invoked on each recovery of the system under test. */
     def recover () (implicit
@@ -174,7 +173,7 @@ trait DiskChecks extends AsyncChecks {
     * to run during a scenario. DiskChecks introduces effects for checkpointing, adding disks and
     * draining them. Component tests add effects for loading the component.
     */
-  private [edit] abstract class Effect [-T] {
+  private [disk] abstract class Effect [-T] {
 
     def start (
       tracker: T
@@ -186,7 +185,7 @@ trait DiskChecks extends AsyncChecks {
     ): Async [Unit]
   }
 
-  private [edit] case object Checkpoint extends Effect [Any] {
+  private [disk] case object Checkpoint extends Effect [Any] {
 
     def start (
       tracker: Any
@@ -201,7 +200,7 @@ trait DiskChecks extends AsyncChecks {
     override def toString = "chkpt"
   }
 
-  private [edit] case class AddDisks (name: String, paths: Path*) (implicit geom: DriveGeometry)
+  private [disk] case class AddDisks (name: String, paths: Path*) (implicit geom: DriveGeometry)
   extends Effect [Any] {
 
     def start (
@@ -219,7 +218,7 @@ trait DiskChecks extends AsyncChecks {
     override def toString = name
   }
 
-  private [edit] case class RemoveDisks (name: String, paths: Path*) extends Effect [Any] {
+  private [disk] case class RemoveDisks (name: String, paths: Path*) extends Effect [Any] {
 
     def start (
       tracker: Any
@@ -301,7 +300,7 @@ trait DiskChecks extends AsyncChecks {
     * starts the effect, runs the scheduler a given number of steps, and then starts the next
     * effect.
     */
-  private [edit] def onePhase [T <: Tracker] (
+  private [disk] def onePhase [T <: Tracker] (
     tracker: T,
     seed: Long
   ) (
@@ -333,7 +332,7 @@ trait DiskChecks extends AsyncChecks {
     * effect. It uses that count to simulate a crash, and it updates the counter for later
     * scenarios to augment.
     */
-  private [edit] def onePhase [T <: Tracker] (
+  private [disk] def onePhase [T <: Tracker] (
     setup: => T,
     seed: Long,
     counter: Counter [Effect [T]]
@@ -355,7 +354,7 @@ trait DiskChecks extends AsyncChecks {
     * starts the effect, runs the scheduler a given number of steps, and then starts the next
     * effect.
     */
-  private [edit] def twoPhases [T <: Tracker] (
+  private [disk] def twoPhases [T <: Tracker] (
     tracker: T,
     seed: Long
   ) (
@@ -388,7 +387,7 @@ trait DiskChecks extends AsyncChecks {
     *
     * See the notes for [[#onePhase]] on counting steps between effects, then double the problem.
     */
-  private [edit] def twoPhases [T <: Tracker] (
+  private [disk] def twoPhases [T <: Tracker] (
     setup: => T,
     seed: Long,
     counter: Counter [Effect [T]]
@@ -441,7 +440,7 @@ trait DiskChecks extends AsyncChecks {
   val chkpt = Checkpoint
 
   /** Run one phase scenarios with a given PRNG seed. */
-  private [edit] def onePhaseScenarios [T <: Tracker] (
+  private [disk] def onePhaseScenarios [T <: Tracker] (
     setup: => T,
     seed: Long,
     phs1: Effect [T]
@@ -467,7 +466,7 @@ trait DiskChecks extends AsyncChecks {
     }}
 
   /** Run one phase scenarios with many PRNG seeds. */
-  private [edit] def onePhaseScenarios [T <: Tracker] (
+  private [disk] def onePhaseScenarios [T <: Tracker] (
     setup: => T,
     phs1: Effect [T]
   ) (implicit
@@ -477,7 +476,7 @@ trait DiskChecks extends AsyncChecks {
     forAllSeeds (someScenarios (setup, _, phs1))
 
   /** Run some scenarios with a given PRNG seed. */
-  private [edit] def someScenarios [T <: Tracker] (
+  private [disk] def someScenarios [T <: Tracker] (
     setup: => T,
     seed: Long,
     phs1: Effect [T]
@@ -510,7 +509,7 @@ trait DiskChecks extends AsyncChecks {
     }}
 
   /** Run some scenarios with many PRNG seeds. */
-  private [edit] def someScenarios [T <: Tracker] (
+  private [disk] def someScenarios [T <: Tracker] (
     setup: => T,
     phs1: Effect [T]
   ) (implicit
@@ -520,7 +519,7 @@ trait DiskChecks extends AsyncChecks {
     forAllSeeds (someScenarios (setup, _, phs1))
 
   /** Run many scenarios with a given PRNG seed. */
-  private [edit] def manyScenarios [T <: Tracker] (
+  private [disk] def manyScenarios [T <: Tracker] (
     setup: => T,
     seed: Long,
     phs1: Effect [T]
@@ -573,7 +572,7 @@ trait DiskChecks extends AsyncChecks {
     }}
 
   /** Run many scenarios with many PRNG seeds. */
-  private [edit] def manyScenarios [T <: Tracker] (
+  private [disk] def manyScenarios [T <: Tracker] (
     setup: => T,
     phs1: Effect [T]
   ) (implicit

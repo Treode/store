@@ -22,15 +22,15 @@ class DriveGeometrySpec extends FlatSpec {
 
   implicit val config = DiskTestConfig (superBlockBits=12)
 
-  val block = 1<<12
-  val seg = 1<<16
+  val block = 1 << 12
+  val seg = 1 << 16
 
   def assertBounds (id: Int, pos: Long, limit: Long) (actual: SegmentBounds): Unit =
     assertResult (SegmentBounds (id, pos, limit)) (actual)
 
   "DriveGeometry" should "compute the segment count" in {
-    val disk1 = 1<<20
-    val disk2 = 1<<21
+    val disk1 = 1 << 20
+    val disk2 = 1 << 21
     def c (diskBytes: Long) = DriveGeometry (16, 12, diskBytes).segmentCount
     assertResult (16) (c (disk1))
     assertResult (17) (c (disk1 + 4*block))
@@ -42,7 +42,7 @@ class DriveGeometrySpec extends FlatSpec {
   }
 
   it should "align block length" in {
-    val c = DriveGeometry (16, 12, 1<<20)
+    val c = DriveGeometry (16, 12, 1 << 20)
 
     assertResult (0) (c.blockAlignUp (0))
     assertResult (block) (c.blockAlignUp (1))
@@ -58,7 +58,7 @@ class DriveGeometrySpec extends FlatSpec {
   }
 
   it should "compute the segment bounds" in {
-    val c = DriveGeometry (16, 12, (1<<20) + 6*block)
+    val c = DriveGeometry (16, 12, (1 << 20) + 6*block)
     assertBounds (0, config.diskLeadBytes, seg) (c.segmentBounds (0))
     assertBounds (1, seg, 2*seg) (c.segmentBounds (1))
     assertBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))

@@ -16,45 +16,92 @@
 
 package com.treode.disk
 
-import java.util.concurrent.atomic.AtomicLong
-import com.treode.async.Async
+import java.nio.file.Path
 
-import Async.{async, guard}
+import com.treode.async.{Async, Scheduler}, Async.async
+import com.treode.async.misc.EpochReleaser
+import com.treode.notify.Notification
 
-private class DiskAgent (val kit: DiskKit) extends Disk {
-  import kit.{compactor, logd, paged, releaser}
-  import kit.config.{maximumPageBytes, maximumRecordBytes}
+/** The live Disk system. Implements the user and admin traits, Disk and DiskController, by
+  * delegating to the appropriate components.
+  */
+private class DiskAgent (
+  logdsp: LogDispatcher,
+  pagdsp: PageDispatcher,
+  compactor: Compactor,
+  releaser: EpochReleaser,
+  ledger: SegmentLedger,
+  group: DriveGroup,
+  cache: PageCache
+) extends Disk with DiskController {
 
-  val cache = new PageCache (kit)
+  implicit val disk = this
 
-  def record [R] (desc: RecordDescriptor [R], entry: R): Async [Unit] =
-    async { cb =>
-      val _entry = PickledRecord (desc, entry, cb)
-      if (_entry.byteSize > maximumRecordBytes)
-        throw new OversizedRecordException (maximumRecordBytes, _entry.byteSize)
-      logd.send (_entry)
-    }
+  /** Called by the LaunchAgent when launch completes. */
+  def launch (
+    writers: Map [Int, Long],
+    checkpoints: Checkpoints,
+    compactors: Compactors
+  ) {
+    group.launch (writers, checkpoints, compactors)
+  }
+
+  def record [R] (desc: RecordDescriptor [R], record: R): Async [Unit] =
+    logdsp.record (desc, record)
 
   def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
     cache.read (desc, pos)
 
   def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
-    async [Position] { cb =>
-      val _page = PickledPage (desc, obj, gen, page, cb)
-      if (_page.byteSize > maximumPageBytes)
-        throw new OversizedPageException (maximumPageBytes, _page.byteSize)
-      paged.send (_page)
-    } .map { pos =>
+    for {
+      pos <- pagdsp.write (desc, obj, gen, page)
+    } yield {
       cache.write (pos, page)
       pos
     }
 
-  def compact (desc: PageDescriptor [_], obj: ObjectId): Unit =
+  def compact (desc: PageDescriptor[_], obj: ObjectId): Unit =
     compactor.compact (desc.id, obj)
 
-  def join [A] (task: Async [A]): Async [A] =
+  def release (desc: PageDescriptor[_], obj: ObjectId, gens: Set [Long]): Unit = {
+    val docket = ledger.free (desc.id, obj, gens)
+    docket.remove (group.protect)
+    releaser.release (group.release (docket))
+  }
+
+  def join [A] (task:  Async[A]): Async[A] =
     releaser.join (task)
 
-  // The new disk system uses this; the old one can ignore it.
-  def release (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit = ()
+  def change (change: DriveChange): Async [Notification [Unit]] =
+    group.change (change)
+
+  def attach (attaches: DriveAttachment*): Async [Notification [Unit]] =
+    change (DriveChange (attaches, Seq.empty))
+
+  def attach (path: Path, geom: DriveGeometry): Async [Notification [Unit]] =
+    attach (DriveAttachment (path, geom))
+
+  def drain (drains: Path*): Async [Notification [Unit]] =
+    change (DriveChange (Seq.empty, drains))
+
+  /** Bypass cache; for testing. */
+  def fetch [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
+    group.fetch (desc, pos)
+
+  /** Force a checkpoint; for testing. */
+  def checkpoint(): Async [Unit] =
+    group.checkpointer.checkpoint()
+
+  def digest: Async [DiskSystemDigest] =
+    for {
+      driveDigests <- group.digests
+    } yield {
+      new DiskSystemDigest (driveDigests)
+    }
+
+  def shutdown(): Async [Unit] =
+    group.close()
+
+  // TODO
+  def drives: Async [Seq [DriveDigest]] = ???
 }

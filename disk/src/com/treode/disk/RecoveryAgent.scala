@@ -16,123 +16,147 @@
 
 package com.treode.disk
 
-import java.nio.file.Path
+import java.nio.file.{Path, StandardOpenOption}, StandardOpenOption._
 
-import com.treode.async.{Async, Scheduler}
+import com.treode.async.{Async, AsyncQueue, BatchIterator, Callback, Fiber, Scheduler}, Async.supply
 import com.treode.async.implicits._
-import com.treode.async.io.File
+import com.treode.async.misc.EpochReleaser
 
-import Async.guard
-import SuperBlocks.{chooseSuperBlock, verifyReattachment}
+/** The first phase of building the live Disk system. Implements the user trait Recovery.
+  *
+  * When opening a drive, we may discover new drives to open. This queues paths that need to be
+  * opened.
+  */
+private class RecoveryAgent (implicit
+  files: FileSystem,
+  scheduler: Scheduler,
+  config: DiskConfig,
+  events: DiskEvents
+) extends DiskRecovery {
 
-private class RecoveryAgent (implicit scheduler: Scheduler, config: DiskConfig)
-extends DiskRecovery {
+  private val fiber = new Fiber
+  private val queue = new AsyncQueue (fiber) (reengage _)
 
+  /** The paths queued to be opened; we need to read their superblocks. */
+  private var reattachments = Set.empty [Path]
+
+  /** The paths being opened; we are awaiting their superblocks and drives. */
+  private var reattaching = Set.empty [Path]
+
+  /** The paths we have opened; we have their superblocks and drives. */
+  private var reattached = Set.empty [Path]
+
+  /** Failures encountered while trying to open any paths. */
+  private var failures = Seq.empty [ReattachFailure]
+
+  /** Readers that we have successfully opened. */
+  private var readers = Seq.empty [LogReader]
+
+  /** The latest superblock we've read from a drive so far. */
+  private var common = SuperBlock.Common.empty
+
+  /** The callback for when recovery completes. */
+  private var recovery = Option.empty [Callback [DiskLaunch]]
+
+  /** The record registry we are building before beginning replay. */
   private val records = new RecordRegistry
-  private var open = true
 
-  def requireOpen(): Unit =
-    require (open, "Recovery has already begun.")
+  /** The collector for this recovery. */
+  private val collector = new LogCollector
+
+  private val ledger = new SegmentLedgerMedic (this)
+
+  queue.launch()
+
+  private def reengage() {
+    if (!reattachments.isEmpty)
+      _reattach()
+    else if (reattaching.isEmpty && !recovery.isEmpty)
+      _recover()
+  }
+
+  /** We successfully opened a path, read its superblock and made a reader. */
+  private def _reattach (path: Path, common: SuperBlock.Common, reader: LogReader): Unit =
+    fiber.execute {
+      reattaching -= path
+      reattached += path
+      reattachments ++= (common.paths -- reattached)
+      readers +:= reader
+      if (this.common.gen < common.gen) this.common = common
+      queue.engage()
+    }
+
+  /** We failed to open a path and read its superblock. */
+  private def _reattach (path: Path, thrown: Throwable): Unit =
+    fiber.execute {
+      reattaching -= path
+      failures +:= ReattachFailure (path, thrown)
+      queue.engage()
+    }
+
+  /** Open the next queued path, read its superblock and make a reader. */
+  private def _reattach() {
+    val path = reattachments.head
+    reattachments = reattachments.tail
+    reattaching += path
+    queue.begin {
+      val file = files.open (path, READ, WRITE)
+      SuperBlock.read (file)
+      .map { superb =>
+        val reader = new LogReader (path, file, superb, records, collector)
+        _reattach (path, superb.common, reader)
+      }
+      .recover { case thrown =>
+        file.close()
+        _reattach (path, thrown)
+      }}}
+
+  /** Finish the recovery phase. */
+  private def _recover() {
+    val cb = recovery.get
+    recovery = null
+    if (failures.isEmpty) {
+      events.reattachingDisks (reattached)
+      (for {
+        // Merge the entries from all readers (drives), sorted by batch number.
+        _ <- BatchIterator.merge (readers) .batch (RecoveryAgent.replay _)
+        // The collector aggregated results from all readers. Now make the bootstrap system.
+        boot = collector.result (common)
+        // Use the bootstrap system to recover the SegmentLedger.
+        (ledger, writers) <- this.ledger.close () (boot)
+      } yield {
+        // Use the SegmentLedger to construct the full disk system.
+        val launch = boot.result (ledger, writers)
+        // Replace the bootstrap system with the full one in the SegmentLedger.
+        ledger.booted (launch.disk)
+        launch
+      }) .run (cb on scheduler)
+    } else {
+      scheduler.fail (cb, new ReattachException (failures))
+    }}
+
+  private def requireNotStarted (message: String): Unit =
+    require (recovery != null && recovery.isEmpty, message)
 
   def replay [R] (desc: RecordDescriptor [R]) (f: R => Any): Unit =
-    synchronized {
-      requireOpen()
+    fiber.execute {
+      requireNotStarted ("Must register replayers before starting recovery.")
       records.replay (desc) (f)
     }
 
-  def close(): Unit =
-    synchronized {
-      requireOpen()
-      open = false
-    }
-
-  def _attach (sysid: SystemId, items: (Path, File, DriveGeometry)*): Async [DiskLaunch] =
-    guard {
-
-      val attaching = items.map (_._1) .toSet
-      require (!items.isEmpty, "Must list at least one file or device to attach.")
-      require (attaching.size == items.size, "Cannot attach a path multiple times.")
-      items foreach (_._3.validForConfig())
-      close()
-
-      val kit = new DiskKit (sysid, 0)
-      val boot = BootBlock.apply (sysid, 0, items.size, attaching)
-      for {
-        drives <-
-          for (((path, file, geometry), i) <- items.indexed)
-            yield DiskDrive.init (i, path, file, geometry, boot, kit)
-        _ <- kit.drives.add (drives)
-      } yield {
-        new LaunchAgent (kit)
-      }}
-
-  def attach (sysid: SystemId, items: (Path, DriveGeometry)*): Async [DiskLaunch] =
-    guard {
-      val files =
-        for ((path, geom) <- items)
-          yield (path, openFile (path, geom), geom)
-      _attach (sysid, files: _*)
-    }
-
-  def reopen (items: Seq [(Path, File)]): Async [Seq [SuperBlocks]] =
-    for ((path, file) <- items.latch.collect)
-      yield SuperBlocks.read (path, file)
-
-  def reopen (path: Path): Async [SuperBlocks] =
-    guard {
-      val file = reopenFile (path)
-      SuperBlocks.read (path, file)
-    }
-
-  def reopen (items: Seq [Path]) (_reopen: Path => Async [SuperBlocks]): Async [Seq [SuperBlocks]] = {
-
-    var opening = items.toSet
-    var opened = Set.empty [Path]
-    var superbs = Seq.empty [SuperBlocks]
-
-    scheduler.whilst (!opening.isEmpty) {
-      for {
-        _superbs <- opening.latch.collect (_reopen)
-      } yield {
-        opened ++= _superbs map (_.path)
-        superbs ++= _superbs
-        val useGen0 = chooseSuperBlock (superbs)
-        val boot = superbs.head.superb (useGen0) .boot
-        val expecting = boot.drives.toSet
-        opening = expecting -- opened
-      }
-    } .map { _ =>
-      superbs
+  def reattach (paths: Path*): Async [DiskLaunch] =
+    fiber.async { cb =>
+      requireNotStarted ("Must reattach disks before starting recovery.")
+      reattachments ++= paths
+      recovery = Some (cb)
+      queue.engage()
     }}
 
-  def _reattach (items: (Path, File)*): Async [DiskLaunch] =
-    guard {
+private object RecoveryAgent {
 
-      val reattaching = items.map (_._1) .toSet
-      require (!items.isEmpty, "Must list at least one file or device to reaattach.")
-      require (reattaching.size == items.size, "Cannot reattach a path multiple times.")
-      close()
-
-      for {
-        superbs <- reopen (items)
-        _ = verifyReattachment (superbs)
-        kit <- LogIterator.replay (superbs, records)
-      } yield {
-        new LaunchAgent (kit)
-      }}
-
-  def _reattach (items: Seq [Path]) (_reopen: Path => Async [SuperBlocks]): Async [DiskLaunch] =
-    guard {
-      require (!items.isEmpty, "Must list at least one file or device to reaattach.")
-      close()
-      for {
-        superbs <- reopen (items) (_reopen)
-        _ = verifyReattachment (superbs)
-        kit <- LogIterator.replay (superbs, records)
-      } yield {
-        new LaunchAgent (kit)
-      }}
-
-  def reattach (items: Path*): Async [DiskLaunch] =
-    _reattach (items) (reopen _)
-}
+  def replay (xss: Iterable [LogEntries]): Async [Unit] =
+    supply {
+      for (xs <- xss) {
+        for (x <- xs.entries)
+          x (())
+      }}}

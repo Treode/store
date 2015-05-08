@@ -30,17 +30,6 @@ private class RecordRegistry {
   def read (id: TypeId, data: Array [Byte]): Unit => Any =
     records.unpickle (id.id, data)
 
-  def read (id: Long, buf: PagedBuffer, len: Int): Unit => Any =
-    records.unpickle (id, buf, len)
-
   def read (buf: PagedBuffer, len: Int, n: Int): Seq [Unit => Any] =
     records.unpickle (buf, len, n)
 }
-
-private object RecordRegistry {
-
-  def frame [R] (desc: RecordDescriptor [R], time: Long, entry: R, buf: PagedBuffer): Unit = {
-    import DiskPicklers.tuple
-    import RecordHeader.{Entry, pickler}
-    tuple (pickler, desc.prec) .frame ((Entry (time, desc.id), entry), buf)
-  }}

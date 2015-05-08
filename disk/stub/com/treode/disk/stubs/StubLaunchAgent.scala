@@ -55,9 +55,6 @@ private class StubLaunchAgent (
       compactors.add (desc) (f)
     }
 
-  // The old disk system uses this; the new one can ignore it.
-  def handle (desc: PageDescriptor [_], handler: PageHandler): Unit = ()
-
   def launch (crashed: Boolean): Unit =
     synchronized {
       require (open, "The StubDisk has already launched.")

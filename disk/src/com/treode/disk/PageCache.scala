@@ -20,18 +20,15 @@ import java.util.concurrent.Callable
 import scala.util.Success
 
 import com.google.common.cache.{CacheBuilder, CacheLoader, Cache}
-import com.treode.async.{Async, Future}
+import com.treode.async.{Async, Future}, Async.guard
 
-import Async.guard
+private class PageCache (group: DriveGroup) (implicit config: DiskConfig) {
 
-private class PageCache (kit: DiskKit) {
-  import kit.config.pageCacheEntries
-  import kit.drives
+  import config.pageCacheEntries
 
-  class Load (desc: PageDescriptor [Any], pos: Position)
-  extends Callable [Future [Any]] {
+  class Load (desc: PageDescriptor [Any], pos: Position) extends Callable [Future [Any]] {
     def call(): Future [Any] =
-      drives.fetch (desc, pos) .toFuture
+      group.fetch (desc, pos) .toFuture
   }
 
   private val pages = CacheBuilder.newBuilder

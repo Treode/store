@@ -40,7 +40,7 @@ private class StubFileSystem extends FileSystem {
     paths foreach (create (_, size, align))
 
   /** Opens the file if it exists; use [[#create]] to ensure it exists. Ignores `opts`. */
-  def open (path: Path, opts: OpenOption*) (implicit scheduler: Scheduler): File = {
+  override def open (path: Path, opts: OpenOption*) (implicit scheduler: Scheduler): File = {
     require (directory contains path, s"File $path does not exist.")
     val entry = directory (path)
     StubFile (entry.data, entry.align)

@@ -18,24 +18,16 @@ package com.treode.disk
 
 import com.treode.async.{Async, Scheduler}
 
-/** The second phase of building the live Disk system. Implements the user trait Launch. */
-private class LaunchAgent (
-  checkpoints: Checkpoints,
-  compactors: Compactors,
-  claims: GenerationDocket,
-  ledger: SegmentLedger,
-  writers: Map [Int, Long]
-) (implicit
+private class BootstrapLaunch (implicit
   scheduler: Scheduler,
-  drives: DriveGroup,
   events: DiskEvents,
-  val agent: DiskAgent
+  val disk: BootstrapDisk
 ) extends DiskLaunch {
 
+  private val checkpoints = new Checkpoints
+  private val compactors = new Compactors
+  private val claims = new GenerationDocket
   private var launching = true
-
-  implicit val disk: Disk = agent
-  implicit val controller: DiskController = agent
 
   def checkpoint (f: => Async [Unit]): Unit =
     synchronized {
@@ -57,11 +49,15 @@ private class LaunchAgent (
       compactors.put (typ, f)
     }
 
-  def launch() {
-    require (launching, "Disks already launched.")
-    launching = false
-    ledger.claim (claims)
-    agent.launch (writers, checkpoints, compactors)
+  implicit def controller: DiskController =
+    throw new IllegalStateException ("No DiskController during bootstrap.")
+
+  def launch(): Unit =
+    throw new IllegalStateException ("Cannot launch disks from BootstrapLauncher.")
+
+  def result (ledger: SegmentLedger, writers: Map [Int, Long]): LaunchAgent = {
+    val (group, agent) = disk.result (ledger)
+    new LaunchAgent (checkpoints, compactors, claims, ledger, writers) (scheduler, group, events, agent)
   }
 
   // TODO
