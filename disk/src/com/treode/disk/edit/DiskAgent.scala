@@ -34,7 +34,8 @@ private class DiskAgent (
   compactor: Compactor,
   releaser: EpochReleaser,
   ledger: SegmentLedger,
-  group: DriveGroup
+  group: DriveGroup,
+  cache: PageCache
 ) extends Disk with DiskController {
 
   implicit val disk = this
@@ -52,14 +53,15 @@ private class DiskAgent (
     logdsp.record (desc, record)
 
   def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
-    for {
-      buf <- group.read (pos)
-    } yield {
-      desc.ppag.unpickle (buf)
-    }
+    cache.read (desc, pos)
 
   def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
-    pagdsp.write (desc, obj, gen, page)
+    for {
+      pos <- pagdsp.write (desc, obj, gen, page)
+    } yield {
+      cache.write (pos, page)
+      pos
+    }
 
   def compact (desc: PageDescriptor[_], obj: ObjectId): Unit =
     compactor.compact (desc.id, obj)
@@ -84,6 +86,10 @@ private class DiskAgent (
 
   def drain (drains: Path*): Async [Notification [Unit]] =
     change (DriveChange (Seq.empty, drains))
+
+  /** Bypass cache; for testing. */
+  def fetch [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
+    group.fetch (desc, pos)
 
   /** Force a checkpoint; for testing. */
   def checkpoint(): Async [Unit] =

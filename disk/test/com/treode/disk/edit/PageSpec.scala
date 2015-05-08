@@ -69,7 +69,7 @@ class PageSpec extends FreeSpec with DiskChecks {
           (seed, length, pos) <- pages.async
         } {
           val expected = Stuff (seed, length)
-          for (actual <- agent.read (desc, pos)) yield
+          for (actual <- agent.fetch (desc, pos)) yield
             assert (expected == actual)
         }}
 

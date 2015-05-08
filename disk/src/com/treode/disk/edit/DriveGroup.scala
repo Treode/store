@@ -26,7 +26,7 @@ import com.treode.async.implicits._
 import com.treode.async.misc.RichOption
 import com.treode.buffer.PagedBuffer
 import com.treode.disk.{Disk, DiskConfig, DisksClosedException, DiskEvents, DriveChange, DriveDigest,
-  DriveGeometry, FileSystem, ObjectId, Position, SegmentBounds, TypeId, quote}
+  DriveGeometry, FileSystem, ObjectId, PageDescriptor, Position, SegmentBounds, TypeId, quote}
 import com.treode.notify.Notification, Notification.{Errors, NoErrors}
 import com.treode.disk.messages._
 
@@ -290,13 +290,13 @@ private class DriveGroup (
     new Drive (file, geom, alloc, logwrtr, pagwrtr, false, id, path)
   }
 
-  def read (pos: Position): Async [PagedBuffer] =
+  def fetch [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
     for {
       drives <- fiber.supply (this.drives)
       drive = drives (pos.disk)
-      buffer <- drive.read (pos.offset, pos.length)
+      page <- drive.fetch (desc, pos.offset, pos.length)
     } yield {
-      buffer
+      page
     }
 
   /** Enqueue user changes to the set of disk drives. */

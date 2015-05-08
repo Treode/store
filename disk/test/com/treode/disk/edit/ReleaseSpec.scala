@@ -84,7 +84,7 @@ class ReleaseSpec extends FreeSpec with DiskChecks {
         for {
           pos <- agent.write (desc, id, 0, expected)
           _ = agent.release (desc, id, Set (0))
-          actual <- agent.read (desc, pos)
+          actual <- agent.fetch (desc, pos)
         } yield {
           assert (expected == actual)
         }}}

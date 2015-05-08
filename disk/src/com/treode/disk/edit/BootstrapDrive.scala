@@ -22,7 +22,7 @@ import java.util.ArrayDeque
 import com.treode.async.{Async, Scheduler}, Async.guard
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.disk.{DiskConfig, DriveGeometry}
+import com.treode.disk.{DiskConfig, DriveGeometry, PageDescriptor}
 
 private class BootstrapDrive (
   val id: Int,
@@ -42,13 +42,13 @@ private class BootstrapDrive (
   config: DiskConfig
 ) {
 
-  def read (offset: Long, length: Int): Async [PagedBuffer] =
+  def fetch [P] (desc: PageDescriptor [P], offset: Long, length: Int): Async [P] =
     guard {
       val buf = PagedBuffer (12)
       for {
         _ <- file.fill (buf, offset, length)
       } yield {
-        buf
+        desc.ppag.unpickle (buf)
       }}
 
   def result (

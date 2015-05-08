@@ -49,11 +49,7 @@ private class BootstrapDisk (
     logdsp.record (desc, record)
 
   def read [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
-    for {
-      buf <- drives (pos.disk) read (pos.offset, pos.length)
-    } yield {
-      desc.ppag.unpickle (buf)
-    }
+    drives (pos.disk) fetch (desc, pos.offset, pos.length)
 
   def write [P] (desc: PageDescriptor [P], obj: ObjectId, gen: Long, page: P): Async [Position] =
     pagdsp.write (desc, obj, gen, page)
@@ -69,6 +65,7 @@ private class BootstrapDisk (
 
   def result (ledger: SegmentLedger): (DriveGroup, DiskAgent) = {
     val group = new DriveGroup (logdsp, pagdsp, compactor, ledger, drives, common, logBytes, logEntries)
-    val agent = new DiskAgent (logdsp, pagdsp, compactor, releaser, ledger, group)
+    val cache = new PageCache (group)
+    val agent = new DiskAgent (logdsp, pagdsp, compactor, releaser, ledger, group, cache)
     (group, agent)
   }}

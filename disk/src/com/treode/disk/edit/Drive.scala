@@ -21,7 +21,7 @@ import java.nio.file.Path
 import com.treode.async.Async, Async.{guard, latch, supply}
 import com.treode.async.io.File
 import com.treode.buffer.PagedBuffer
-import com.treode.disk.{DiskConfig, DriveDigest, DriveGeometry, quote}
+import com.treode.disk.{DiskConfig, DriveDigest, DriveGeometry, PageDescriptor, quote}
 
 import SuperBlock.Common
 
@@ -48,13 +48,13 @@ private class Drive (
       pagwrtr.launch (pos)
     }}
 
-  def read (offset: Long, length: Int): Async [PagedBuffer] =
+  def fetch [P] (desc: PageDescriptor [P], offset: Long, length: Int): Async [P] =
     guard {
       val buf = PagedBuffer (12)
       for {
         _ <- file.fill (buf, offset, length)
       } yield {
-        buf
+        desc.ppag.unpickle (buf)
       }}
 
   def protect: Set [Int] =
