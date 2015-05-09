@@ -33,7 +33,7 @@ cache_map.prototype = {
 	constructor: cache_map,
 
 	/**
-	*	Description: Adds an object to the head of our list
+	*	Adds an object to the head of our list
 	*	@private
 	*/
 	_add:function(node)
@@ -50,9 +50,9 @@ cache_map.prototype = {
 		return 1;
 	},
 	/**
-	* Description: Converts input params into tx_clocks, based on whether there exists
-	*			an associated list for the give key,value we either append the list or
-	*			create a brand new entry in the map. 
+	*  based on whether there exists a list for this key:value, 
+	*	either a new list is added or we append a new list object
+	*	to an existing list
 	*	@public	
 	*/
 	put:function(read_time, value_time, table, key, value)
@@ -72,9 +72,8 @@ cache_map.prototype = {
 	},
 
 	/**
-	*	Description: subroutine for creating new entry in map. Will generate
-	*			new object entry and insert into list, then place reference to 
-	*			list entry into a new list in the object map
+	*	creating new entry in map. Will generate new object entry and insert into list, 
+	*   then place reference to list entry into a new list in the object map
 	*	@private
 	*/
 	_addList:function(read_time, value_time, table, key, value)
@@ -102,11 +101,11 @@ cache_map.prototype = {
 	},
 
 	/**
-	*	Description: subroutine for appending to an existing list for a specific key
-	*			Checks for an element in our list which contains a value_time equal
-	*			to the value_time we are inserting. If so, update the cached_time to 
-	*			the later of the element's cached_time and the read_time parameter.
-	*			If updating, promote list element to mru, otherwise create a new entry
+	*	appends to an existing list for a specific key
+	*	Checks for an element in our list which contains a value_time equal
+	*	to the value_time we are inserting. If so, update the cached_time to 
+	*	the later of the element's cached_time and the read_time parameter.
+	*	If updating, promote list element to mru, otherwise create a new entry
 	*	@private
 	*/
 	_appendList:function(read_time, value_time, table, key, value)
@@ -144,7 +143,7 @@ cache_map.prototype = {
 	},
 	
 	/**
-	*	Description: wrapper function to remove the lru object from list and map
+	*	remove the lru object from list and map
 	*	@private
 	*/
 	_prune:function()
@@ -155,10 +154,10 @@ cache_map.prototype = {
 	},
 
 	/**
-	*	Description: Designed to remove the lru element from the list and then remove the 
-	*			empty entry from the map. If removal of the map element results in an empty
-	*			list then we completely remove the entry in the map. In this implementation
-	*			of the linked list, the lru entry is at the head of the list.
+	*	remove the lru element from the list and then remove the 
+	*	empty entry from the map. If removal of the map element results in an empty
+	*	list then we completely remove the entry in the map. In this implementation
+	*	of the linked list, the lru entry is at the head of the list.
 	*	@private
 	*/
 	_evictOne:function()
@@ -184,7 +183,7 @@ cache_map.prototype = {
 	},
 
 	/**
-	*	Description: dissociates the tail from dll and returns it to caller
+	*	dissociates the tail from dll and returns it to caller
 	*	@private
 	*/
 	_removeTail:function()
@@ -207,12 +206,12 @@ cache_map.prototype = {
 	
 	
 	/**
-	*	Description: retrives a tuple of value_time, cached_time, and value based
-	*			on the time we are reading for a given object associated with the
-	*			given table and key. Finding a specific element requires finding a
-	*			an element whose value was written sometime before we are reading, 
-	*			from that subset of elements we choose the maximum value_time.
-	*			Finally, the element that we find gets promoted.
+	* retrives a tuple of value_time, cached_time, and value based
+	*	on the time we are reading for a given object associated with the
+	*	given table and key. Finding a specific element requires finding a
+	*	an element whose value was written sometime before we are reading, 
+	*	from that subset of elements we choose the maximum value_time.
+	*	Finally, the element that we find gets promoted.
 	*	@public
 	*/
 	get:function(read_time, table, key)
@@ -262,8 +261,8 @@ cache_map.prototype = {
 	},
 
 	/**
-	*	Description: generates a single string for a given key and table. 
-	*			This format is used to read and write to the internal map.
+	*	generates a single string for a given key and table. 
+	*	This format is used to read and write to the internal map.
 	*	@private
 	*/
 	_keyGen:function(key, table)
@@ -272,12 +271,12 @@ cache_map.prototype = {
 	},
 
 	/**
-	*	Description: promotes a given list element to the front of our dll.
-	*			in this implementation of the dll, the mru object is at the tail of the
-	*			list, and the lru is at the head of the list. If the node is at the 
-	*			tail then its already the mru. If node is at the head then we set 
-	*			pointers to create a new head. If node is neither head nor tail then
-	*			rearrange pointers to _evict element from cur position and insert at tail.
+	*	promotes a given list element to the front of our dll.
+	*	in this implementation of the dll, the mru object is at the tail of the
+	*	list, and the lru is at the head of the list. If the node is at the 
+	*	tail then its already the mru. If node is at the head then we set 
+	*	pointers to create a new head. If node is neither head nor tail then
+	*	rearrange pointers to _evict element from cur position and insert at tail.
 	*	@private
 	*/
 	_promote:function(node)

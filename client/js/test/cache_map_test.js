@@ -26,7 +26,7 @@ describe('cache_map.put()',function(){
 
 	//most basic test, should accept 3 puts and all elements should be in the cache map
 	//does not validate values, that is done in 'get' tests
-	it('should place 3 objects with different keys in the cache ', function(done){
+	it('should place 3 objects with different keys in the cache ', function(){
 		var cache_size = 3;
 		var pass_condition = false;
 		var c = new cache_map(cache_size);
@@ -43,14 +43,12 @@ describe('cache_map.put()',function(){
 		
 		test.value(count).isEqualTo(cache_size);
 		test.value(c._size).isEqualTo(cache_size);
-		done();
-		
 	});
 
 	//maps same key:table with varying value_times and values, 
 	//there should be 3 distinct elements in a single list entry
 
-	it('should place 3 objects with same keys and different values in the cache ', function(done){
+	it('should place 3 objects with same keys and different values in the cache ', function(){
 		var cache_size = 3;
 		var pass_condition = false;
 		var c = new cache_map(cache_size);
@@ -70,14 +68,11 @@ describe('cache_map.put()',function(){
 		
 		test.value(count_keys).isEqualTo(1);
 		test.value(count_len).isEqualTo(cache_size);
-		done();
-		
-		
 	});
 
 	//cache should run out of space and evict the first 3 items to make room for new puts
 
-	it('should evict the first three items placed in cache p1', function(done){
+	it('should evict the first three items placed in cache p1', function(){
 		var cache_size = 3;
 		var pass_condition_1 = true;
 		var pass_condition_2 = true;
@@ -113,13 +108,11 @@ describe('cache_map.put()',function(){
 		
 		test.value(count_elements).isEqualTo(cache_size);
 		test.value(count_keys).isEqualTo(cache_size);
-		done();
-		
 	});
 
 	//similar test except this checks if eviction works when there exists only 1 key for multiple values
 
-	it('should evict the first three items placed in cache p2', function(done){
+	it('should evict the first three items placed in cache p2', function(){
 		var cache_size = 3;
 		var pass_condition_1 = true;
 		var pass_condition_2 = true;
@@ -152,14 +145,11 @@ describe('cache_map.put()',function(){
 		}
 		
 		test.value(count_keys).isEqualTo(cache_size);
-		done();
-	
-		
 	});
 	
 	//tests that updating the cached_time of an object makes it mru and doesn't add new entry
 
-	it('should evict the first 2 items placed in cache and update cache_time p1', function(done){
+	it('should evict the first 2 items placed in cache and update cache_time p1', function(){
 		var cache_size = 3;
 		var pass_condition_1 = true;
 		var pass_condition_2 = true;
@@ -190,13 +180,11 @@ describe('cache_map.put()',function(){
 			}
 		}
 		test.value(count_keys).isEqualTo(cache_size);
-		done();
-		
 	});
 
 	//tests that updating works similarly when we have multiple elements in the map[key] list
 
-	it('should evict 2 items from cache and update cache_time for the first element', function(done){
+	it('should evict 2 items from cache and update cache_time for the first element', function(){
 		var cache_size = 3;
 		var pass_condition_1 = true;
 		var pass_condition_2 = true;
@@ -228,7 +216,6 @@ describe('cache_map.put()',function(){
 			}
 		}
 		test.value(count_keys).isEqualTo(cache_size);
-		done();
 		
 	});
 
@@ -240,7 +227,7 @@ describe('cache_map.get()',function(){
 
 	//basic test to ensure all elements made it into the cache
 
-	it('should retrive all elements in cache p1', function(done){
+	it('should retrive all elements in cache p1', function(){
 		var late_time = 100;				
 		var cache_size = 3;
 		var c = new cache_map(cache_size);
@@ -256,12 +243,11 @@ describe('cache_map.get()',function(){
 		test.value(appleGet).isEqualTo("a");
 		test.value(bananaGet).isEqualTo("b");
 		test.value(tennisGet).isEqualTo("c");
-		done();
 	});
 
 	//similar test but instead mapping elements to the same key with different value_times
 
-	it('should retrive all elements in cache p2', function(done){
+	it('should retrive all elements in cache p2', function(){
 		var late_time = 100;
 		var cache_size = 3;
 		var c = new cache_map(cache_size);
@@ -278,13 +264,11 @@ describe('cache_map.get()',function(){
 		test.value(getEarly).isEqualTo("a");
 		test.value(getMid).isEqualTo("b");
 		test.value(getLate).isEqualTo("c");
-
-		done();
 	});
 
 	//check if reading at earlier time prevents reading values written at a later time
 
-	it('should miss certain elements due to early read times p1', function(done){
+	it('should miss certain elements due to early read times p1', function(){
 		var late_time  = 100;
 		var early_time = 1;
 		var cache_size = 3;
@@ -307,11 +291,9 @@ describe('cache_map.get()',function(){
 		test.value(getTennisEarly).isEqualTo(-1);
 		test.value(getBananaEarly).isEqualTo(-1);
 
-		done();
-
 	});
 
-	it('should miss certain elements due to early read times p2', function(done){
+	it('should miss certain elements due to early read times p2', function(){
 		var late_time = 100;
 		var med_time = 1;
 		var early_time = 0;
@@ -330,13 +312,11 @@ describe('cache_map.get()',function(){
 		test.value(late).isEqualTo("a");
 		test.value(mid).isEqualTo("c");
 		test.value(early).isEqualTo(-1);
-
-		done();
 	});
 
 	//should ensure getting an element promotes that element to mru
 	//also checks that invalid 'get' doesn't mistakenly update another value
-	it('should promote a get request to most recently used', function(done){
+	it('should promote a get request to most recently used', function(){
 		var late_time  = 100;
 		var early_time = 1
 		var cache_size = 3;
@@ -362,13 +342,11 @@ describe('cache_map.get()',function(){
 		test.value(getPhone).isEqualTo("cell");
 		test.value(getChicago).isEqualTo("park");
 		test.value(getBanana).isEqualTo(-1);
-	
-		done();
 	});
 	
 	//should ensure we dont have access to things outside of cachelimits
 
-	it('should miss on entries outside of cache and non existent entries', function(done){
+	it('should miss on entries outside of cache and non existent entries', function(){
 	
 		var late_time = 100;
 		var early_time = 1;
@@ -393,9 +371,6 @@ describe('cache_map.get()',function(){
 		test.value(getMidOne).isEqualTo("v0");
 		test.value(getMidTwo).isEqualTo("v0");
 		test.value(getInvalid).isEqualTo(-1);
-
-		done();
-
 	});
 
 });
