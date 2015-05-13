@@ -38,8 +38,6 @@ private class Checkpointer (
   private var running = List.empty [Callback [Unit]]
   private var checkpoints: Checkpoints = null
 
-  queue.launch()
-
   private def reengage() {
     if (checkpoints == null)
       return

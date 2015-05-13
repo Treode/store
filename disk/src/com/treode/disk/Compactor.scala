@@ -30,8 +30,6 @@ private class Compactor (implicit scheduler: Scheduler, events: DiskEvents) {
   private val arrival = new ArrayDeque [DocketId]
   private var compactors: Compactors = null
 
-  queue.launch()
-
   private def reengage() {
     if (compactors == null)
       return

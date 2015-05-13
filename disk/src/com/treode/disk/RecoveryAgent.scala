@@ -66,8 +66,6 @@ private class RecoveryAgent (implicit
 
   private val ledger = new SegmentLedgerMedic (this)
 
-  queue.launch()
-
   private def reengage() {
     if (!reattachments.isEmpty)
       _reattach()

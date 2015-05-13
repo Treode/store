@@ -34,8 +34,6 @@ private class StubCheckpointer (
   private var requests = List.empty [Callback [Unit]]
   private var running = List.empty [Callback [Unit]]
 
-  queue.launch()
-
   private def reengage() {
     if (checkpointers == null)
       ()

@@ -31,8 +31,6 @@ private class StubCompactor (implicit scheduler: Scheduler) {
   private val docket = new GenerationDocket
   private var arrival = new Queue [DocketId]
 
-  queue.launch()
-
   private def reengage() {
     if (compactors == null)
       ()

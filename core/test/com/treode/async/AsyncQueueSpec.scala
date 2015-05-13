@@ -36,8 +36,6 @@ class AsyncQueueSpec extends FlatSpec {
     var callbacks = new ArrayDeque [Callback [Unit]]
     var captor = AsyncCaptor [Unit]
 
-    queue.launch()
-
     def reengage(): Unit =
       if (!callbacks.isEmpty)
         queue.run (callbacks.remove()) (captor.start())

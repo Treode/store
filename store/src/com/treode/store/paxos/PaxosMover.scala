@@ -41,8 +41,6 @@ private class PaxosMover (kit: PaxosKit) {
   private val tracker = new Tracker
   private var callbacks = List.empty [Callback [Unit]]
 
-  queue.launch()
-
   def split (start: Point.Middle, limit: Point, targets: Targets): Async [(Batch, Point)] =
     disk.join {
 

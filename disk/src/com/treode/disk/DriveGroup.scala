@@ -105,8 +105,6 @@ private class DriveGroup (
       throw new IllegalArgumentException (s"Drive $id does not exist")
     }
 
-  queue.launch()
-
   private val driveDrained: Callback [Drive] = {
     case Success (drive) => detach (drive)
     case Failure (t) => throw t

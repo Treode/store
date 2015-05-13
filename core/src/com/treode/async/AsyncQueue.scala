@@ -31,7 +31,7 @@ package com.treode.async
   */
 class AsyncQueue (fiber: Fiber) (reengage: () => Any) {
 
-  private [this] var _engaged = true
+  private [this] var _engaged = false
 
   private def disengage(): Unit =
     fiber.execute {
@@ -62,10 +62,6 @@ class AsyncQueue (fiber: Fiber) (reengage: () => Any) {
 
   /** To be removed. */
   def engaged = _engaged
-
-  /** To be removed. */
-  def launch(): Unit =
-    disengage()
 
   /** To be removed. */
   def execute (f: => Any): Unit =
