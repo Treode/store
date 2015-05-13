@@ -39,12 +39,14 @@ private abstract class TierIterator (
     // A stack of the index pages descended into, and the current entry for each page.
     private var stack = List.empty [(IndexPage, Int)]
 
-    val _push = cb.continue { p: TierPage =>
-      push (p)
+    val _push: Callback [TierPage] = {
+      case Success (p) => push (p)
+      case Failure (t) => cb.fail (t)
     }
 
-    val _next = cb.continue { _: Unit =>
-      next()
+    val _next: Callback [Unit] = {
+      case Success (_) => next()
+      case Failure (t) => cb.fail (t)
     }
 
     // Descend to the first leaf page by following the first entry of each index page.
@@ -59,7 +61,7 @@ private abstract class TierIterator (
           pager.read (e.pos) .run (loop)
 
         case Success (p: CellPage) =>
-          cb.callback (body (p, 0))
+          body (p, 0)
 
         case Success (p) =>
           cb.fail (new MatchError (p))
@@ -80,7 +82,7 @@ private abstract class TierIterator (
           val i = p.ceiling (start)
           if (i == p.size) {
             // The start key is beyond the last entry of this tier.
-            cb.pass (None)
+            cb.pass (())
           } else {
             // Push this index page onto the stack, and descend into the next page.
             val e = p.get (i)
@@ -91,9 +93,9 @@ private abstract class TierIterator (
         case Success (p: CellPage) =>
           val i = p.ceiling (start)
           if (i == p.size)
-            cb.pass (None)
+            cb.pass (())
           else
-            cb.callback (body (p, i))
+            body (p, i)
 
         case Success (p) =>
           cb.fail (new MatchError (p))
@@ -105,23 +107,20 @@ private abstract class TierIterator (
       pager.read (root) .run (loop)
     }
 
-    def push (p: TierPage): Option [Unit] = {
+    def push (p: TierPage): Unit =
       p match {
         case p: IndexPage =>
           val e = p.get (0)
           stack ::= (p, 0)
           pager.read (e.pos) .run (_push)
-          None
         case p: CellPage =>
           body (p, 0)
-      }}
+      }
 
-    def body (page: CellPage, index: Int): Option [Unit] = {
+    def body (page: CellPage, index: Int): Unit =
       f (page.entries.drop (index)) run (_next)
-      None
-    }
 
-    def next(): Option [Unit] = {
+    def next(): Unit =
       if (!stack.isEmpty) {
         // Pop the recent index page off the stack.
         var b = stack.head._1
@@ -138,13 +137,12 @@ private abstract class TierIterator (
         if (i < b.size) {
           stack ::= (b, i)
           pager.read (b.get (i) .pos) .run (_push)
-          None
         } else {
-          Some (())
+          cb.pass (())
         }
       } else {
-        Some (())
-      }}}}
+        cb.pass (())
+      }}}
 
 private object TierIterator {
 

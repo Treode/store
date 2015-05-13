@@ -35,32 +35,6 @@ package object implicits {
     /** Invoke this callback with [[$Failure Failure]]. */
     def fail (t: Throwable) = cb (Failure (t))
 
-    /** Invoke `f` immediately, and then invoke this callback if `f` throws an exception. */
-    def defer (f: => Any) {
-      try {
-        f
-      } catch {
-        case t: Throwable => cb (Failure (t))
-      }}
-
-    /** Invoke `f` immediately, and then invoke this callback if `f` throws an exception or
-      * returns [[$Some Some]].
-      */
-    def callback (f: => Option [A]) {
-      Try (f) match {
-        case Success (Some (v)) => cb (Success (v))
-        case Success (None) => ()
-        case Failure (t) => cb (Failure (t))
-      }}
-
-    /** Create a callback that will invoke `f` on [[$Success Success]], and then invoke this
-      * callback if `f` throws an exception or returns [[$Some Some]].
-      */
-    def continue [B] (f: B => Option [A]): Callback [B] = {
-      case Success (b) => callback (f (b))
-      case Failure (t) => cb (Failure (t))
-    }
-
     /** Experimental. */
     def timeout (fiber: Fiber, backoff: Backoff) (rouse: => Any) (implicit random: Random):
         TimeoutCallback [A] =
