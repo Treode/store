@@ -58,35 +58,4 @@ class AsyncQueue (fiber: Fiber) (reengage: () => Any) {
     require (_engaged == false)
     _engaged = true
     Async.guard (task) ensure (disengage()) run (Callback.ignore)
-  }
-
-  /** To be removed. */
-  def engaged = _engaged
-
-  /** To be removed. */
-  def execute (f: => Any): Unit =
-    fiber.execute {
-      f
-      engage()
-    }
-
-  /** To be removed. */
-  def async [A] (f: Callback [A] => Any): Async [A] =
-    fiber.async  { cb =>
-      f (cb)
-      engage()
-    }
-
-  /** To be removed. */
-  def run [A] (cb: Callback [A]) (task: => Async [A]) {
-    require (_engaged == false)
-    _engaged = true
-    Async.guard (task) ensure (disengage()) run (cb)
   }}
-
-object AsyncQueue {
-
-  /** To be removed. */
-  def apply (fiber: Fiber) (reengage: => Any) (implicit scheduler: Scheduler): AsyncQueue =
-    new AsyncQueue (fiber) (() => reengage)
-}

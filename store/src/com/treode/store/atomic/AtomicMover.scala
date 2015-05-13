@@ -152,9 +152,10 @@ private class AtomicMover (kit: AtomicKit) {
     }
 
   def rebalance (targets: Targets): Async [Unit] =
-    queue.async { cb =>
+    fiber.async { cb =>
       callbacks ::= cb
       tracker.start (targets)
+      queue.engage()
     }}
 
 private object AtomicMover {
