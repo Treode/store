@@ -183,7 +183,7 @@ private class AllocationDocket private (
 
   override def clone = new AllocationDocket (pages)
 
-  override def toString = s"AllocationDocket(${pages mkString ","})"
+  override def toString = s"AllocationDocket(\n    ${this mkString ",\n    "})"
 }
 
 private object AllocationDocket {

@@ -44,7 +44,7 @@ extends Iterable [(TallyId, Long)] with Traversable [(TallyId, Long)] {
 
   override def foreach [U] (f: ((TallyId, Long)) => U) = pages.foreach (f)
 
-  override def toString = s"Tally(${pages mkString ","})"
+  override def toString = s"PageTally(\n    ${this mkString ",\n    "})"
 }
 
 private object PageTally {

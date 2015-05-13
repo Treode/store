@@ -61,7 +61,7 @@ extends Iterable [(Int, Set [Int])] with Traversable [(Int, Set [Int])] {
 
   override def foreach [U] (f: ((Int, Set [Int])) => U) = segs.foreach (f)
 
-  override def toString = s"SegmentDocket(${segs mkString ","})"
+  override def toString = s"SegmentDocket(\n    ${this mkString ",\n    "})"
 }
 
 private object SegmentDocket {

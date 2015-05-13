@@ -398,27 +398,134 @@ trait DiskChecks extends AsyncChecks {
   ) (implicit
     config: DiskConfig
   ): Int = {
-    val last1 = first.last
     val cs1 = counter.get (first)
+    val last1 = first.last
     val init2 = second.init
     val last2 = second.last
 
     { // no crash first phase
-      val cs2 = counter.get (first, init2, false)
+      val cs2 = counter.get (first, false, init2)
       val ds1 = cs1.init :+ last1 -> Int.MaxValue
       val t = twoPhases (setup, seed) (ds1 : _*) (cs2 :+ last2 -> Int.MaxValue : _*) // no crash second phase
       val ds2 = cs2 :+ last2 -> t
-      counter.add (first, second, false, ds1, ds2)
+      counter.add (first, false, second, ds2)
       twoPhases (setup, seed) (ds1 : _*) (ds2 : _*) // crash second phase
     }
 
     { // crash first phase
       val ds1 = cs1
-      val cs2 = counter.get (first, init2, true)
+      val cs2 = counter.get (first, true, init2)
       val t = twoPhases (setup, seed) (ds1 : _*) (cs2 :+ last2 -> Int.MaxValue : _*) // no crash second phase
       val ds2 = cs2 :+ last2 -> t
-      counter.add (first, second, true, ds1, ds2)
+      counter.add (first, true, second, ds2)
       twoPhases (setup, seed) (ds1 : _*) (ds2 : _*) // crash second phase
+    }}
+
+  /** Run a three phase scenario---four phases if you count the verify phase. For each effect, this
+    * starts the effect, runs the scheduler a given number of steps, and then starts the next
+    * effect.
+    */
+  private [disk] def threePhases [T <: Tracker] (
+    tracker: T,
+    seed: Long
+  ) (
+    first: (Effect [T], Int)*
+  ) (
+    second: (Effect [T], Int)*
+  ) (
+    third: (Effect [T], Int)*
+  ) (implicit
+    config: DiskConfig
+  ): Int =
+    try {
+      implicit val random = new Random (seed)
+      implicit val files = new StubFileSystem
+      implicit val drives = new DrivesTracker
+      val (count1, crashed1) = phase (tracker, first)
+      if (!drives.attached.isEmpty) {
+        val (count2, crashed2) = phase (tracker, second)
+        val (count3, crashed3) = phase (tracker, third)
+        verify (tracker, drives, crashed1 || crashed2 || crashed3)
+        if (count3 > 0) random.nextInt (count3) else 0
+      } else {
+        0
+      }
+
+    } catch {
+      case t: Throwable =>
+        info (f"threePhases ($tracker, 0x$seed%XL) (${first mkString ", "}) (${second mkString ", "}) (${third mkString ", "})")
+        throw t
+    }
+
+  /** Run a three phase scenario---four phases if you count the verify phase.
+    *
+    * See the notes for [[#onePhase]] on counting steps between effects, then triple the problem.
+    */
+  private [disk] def threePhases [T <: Tracker] (
+    setup: => T,
+    seed: Long,
+    counter: Counter [Effect [T]]
+  ) (
+    first: Effect [T]*
+  ) (
+    second: Effect [T]*
+  ) (
+    third: Effect [T]*
+  ) (implicit
+    config: DiskConfig
+  ): Int = {
+    val cs1 = counter.get (first)
+    val last1 = first.last
+    val last2 = second.last
+    val init3 = third.init
+    val last3 = third.last
+
+    { // no crash first or second phase
+      val cs2 = counter.get (first, false, second)
+      val cs3 = counter.get (first, false, second, false, init3)
+      val ds1 = cs1.init :+ last1 -> Int.MaxValue
+      val ds2 = cs2.init :+ last2 -> Int.MaxValue
+
+      val t = threePhases (setup, seed) (ds1 : _*) (ds2 : _*) (cs3 :+ last3 -> Int.MaxValue : _*) // no crash third phase
+      val ds3 = cs3 :+ last3 -> t
+      counter.add (first, false, second, false, third, ds3)
+      threePhases (setup, seed) (ds1 : _*) (ds2 : _*) (ds3: _*)// crash second phase
+    }
+
+    { // crash first phase, not second
+      val cs2 = counter.get (first, true, second)
+      val cs3 = counter.get (first, true, second, false, init3)
+      val ds1 = cs1
+      val ds2 = cs2.init :+ last2 -> Int.MaxValue
+
+      val t = threePhases (setup, seed) (ds1 : _*) (ds2 : _*) (cs3 :+ last3 -> Int.MaxValue : _*) // no crash third phase
+      val ds3 = cs3 :+ last3 -> t
+      counter.add (first, true, second, false, third, ds3)
+      threePhases (setup, seed) (ds1 : _*) (ds2 : _*) (ds3: _*)// crash second phase
+    }
+
+    { // crash second phase, not first
+      val cs2 = counter.get (first, false, second)
+      val cs3 = counter.get (first, false, second, true, init3)
+      val ds1 = cs1.init :+ last1 -> Int.MaxValue
+      val ds2 = cs2
+
+      val t = threePhases (setup, seed) (ds1 : _*) (ds2 : _*) (cs3 :+ last3 -> Int.MaxValue : _*) // no crash third phase
+      val ds3 = cs3 :+ last3 -> t
+      counter.add (first, false, second, true, third, ds3)
+      threePhases (setup, seed) (ds1 : _*) (ds2 : _*) (ds3: _*)// crash second phase
+    }
+
+    { // crash first and second phase
+      val cs2 = counter.get (first, true, second)
+      val cs3 = counter.get (first, true, second, true, init3)
+      val ds1 = cs1
+      val ds2 = cs2
+
+      val t = threePhases (setup, seed) (ds1 : _*) (ds2 : _*) (cs3 :+ last3 -> Int.MaxValue : _*) // no crash third phase
+      val ds3 = cs3 :+ last3 -> t
+      counter.add (first, true, second, true, third, ds3)
+      threePhases (setup, seed) (ds1 : _*) (ds2 : _*) (ds3: _*) // crash third phase
     }}
 
   val Seq (da1, da2, da3) = Seq ("da1", "da2", "da3") map (Paths.get (_))
@@ -473,7 +580,7 @@ trait DiskChecks extends AsyncChecks {
     config: DiskConfig,
     geom: DriveGeometry
   ): Unit =
-    forAllSeeds (someScenarios (setup, _, phs1))
+    forAllSeeds (onePhaseScenarios (setup, _, phs1))
 
   /** Run some scenarios with a given PRNG seed. */
   private [disk] def someScenarios [T <: Tracker] (
@@ -556,6 +663,7 @@ trait DiskChecks extends AsyncChecks {
       twoPhases (setup, seed, counter) (addA1) (phs1)
       twoPhases (setup, seed, counter) (addA1, phs1) (phs1)
       twoPhases (setup, seed, counter) (addA1, phs1, chkpt) (phs1)
+      twoPhases (setup, seed, counter) (addA1, phs1, chkpt) (phs1, chkpt)
       twoPhases (setup, seed, counter) (addA1, phs1, addB1) (phs1)
       twoPhases (setup, seed, counter) (addA1, phs1, addB1, drnA1) (phs1)
       twoPhases (setup, seed, counter) (addA1, phs1, addB1) (phs1, drnA1)
@@ -564,6 +672,9 @@ trait DiskChecks extends AsyncChecks {
       twoPhases (setup, seed, counter) (addA2) (phs1)
       twoPhases (setup, seed, counter) (addA2, phs1, drnA1) (phs1)
       twoPhases (setup, seed, counter) (addA2, phs1) (phs1, drnA1)
+
+      threePhases (setup, seed, counter) (addA1, phs1, chkpt) (phs1, chkpt) (phs1)
+      threePhases (setup, seed, counter) (addA1, phs1, chkpt) (phs1, chkpt) (phs1, chkpt)
     } catch {
       case t: Throwable =>
         info (f"implicit val config = $config")

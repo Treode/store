@@ -63,7 +63,7 @@ extends Iterable [(DocketId, Set [Long])] with Traversable [(DocketId, Set [Long
 
   override def foreach [U] (f: ((DocketId, Set [Long])) => U) = pages.foreach (f)
 
-  override def toString = s"GenerationDocket(${pages mkString ","})"
+  override def toString = s"GenerationDocket(\n    ${this mkString ",\n    "})"
 }
 
 private object GenerationDocket {

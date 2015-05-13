@@ -24,6 +24,16 @@ private [disk] class Counter [E] {
   /** A scenario. */
   type Effects = Seq [E]
 
+  case class Phase (effects: Effects, crashed: Boolean) {
+
+    assert (!effects.isEmpty)
+
+    override def toString: String =
+      s"(${effects mkString ", "}${if (crashed) ", CRASH" else ""})"
+  }
+
+  type Phases = Seq [Phase]
+
   /** The count of steps used for each effect in the scenario. */
   type Counts = Seq [(E, Int)]
 
@@ -39,58 +49,90 @@ private [disk] class Counter [E] {
     * 4. run effect 3 for 3 steps in phase 2
     * 5. run effect 4 for 4 steps in phase 2
     */
-  private var counts = Map.empty [(Effects, Effects, Boolean), (Counts, Counts)]
+  private var counts = Map.empty [Phases, Counts]
+  counts += Seq.empty -> Seq.empty
 
-  counts += (Seq.empty, Seq.empty, false) -> (Seq.empty, Seq.empty)
+  private def _get (ps: Phases): Counts =
+    counts get (ps) match {
+      case Some (cs) => cs
+      case None => fail (s"Need to test ${ps mkString ", "}")
+    }
+
+  private def _add (ps: Phases, cs: Counts) {
+    if (counts contains ps)
+      fail (s"Already tested (${ps mkString ", "})")
+    counts += ps -> cs
+  }
+
+  /** The name of a one phase scenario. */
+  private def _phases (es: Effects): Seq [Phase] =
+    Seq (Phase (es, false))
+
+  /** The name of a two phase scenario. */
+  private def _phases (es1: Effects, c1: Boolean, es2: Effects): Seq [Phase] =
+    Seq (Phase (es1, c1), Phase (es2, false))
+
+  /** The name of a three phase scenario. */
+  private def _phases (es1: Effects, c1: Boolean, es2: Effects, c2: Boolean, es3: Effects): Seq [Phase] =
+    Seq (Phase (es1, c1), Phase (es2, c2), Phase (es3, false))
 
   /** Get the counts for a one phase scenario.
     * @param es The effects of the scenario, which we use as a name for the scenario.
     */
-  def get (es: Effects): Counts = {
-    counts get ((es, Seq.empty, false)) match {
-      case Some (cs) => cs._1
-      case None => fail (s"Need to test (${es mkString ","})")
-    }}
-
-  /** Get the counts for a two phase scenario. We use `(es1, es2, crashed)` as a name for the
-    * scenario.
-    * @param es1 The effects of the first phase of the scenario.
-    * @param es2 The effects of the second phase of the scenario.
-    * @param crashed Wether or not phase one crashed in this scenario.
-    */
-  def get (es1: Effects, es2: Effects, crashed: Boolean): Counts = {
-    counts get ((es1, es2, crashed)) match {
-      case Some (cs) => cs._2
-      case None => fail (s"Need to test (${es1 mkString ","}):crashed (${es2 mkString ","})")
-    }}
-
-  def contains (es: Effects): Boolean =
-    counts.contains ((es, Seq.empty, false))
-
-  def contains (es1: Effects, es2: Effects, crashed: Boolean): Boolean =
-    counts.contains ((es1, es2, crashed))
+  def get (es: Effects): Counts =
+    if (es.isEmpty)
+      Seq.empty
+    else
+      _get (_phases (es))
 
   /** Add the counts for a one phase scenario.
     * @param es The effects of the scenario, which we use as a name for the scenario.
     * @param cs The counts for each effect of the scenario.
     */
-  def add (es: Effects, cs: Counts) {
-    if (counts contains (es, Seq.empty, false))
-      fail (s"Already tested (${es mkString ","})")
-    counts += (es, Seq.empty, false) -> (cs, Seq.empty)
-    counts += (es, Seq.empty, true) -> (cs, Seq.empty)
-  }
+  def add (es: Effects, cs: Counts): Unit =
+    _add (_phases (es), cs)
 
-  /** Get the counts for a one phase scenario. We use `(es1, es2, crashed)` as a name for the
-    * scenario.
+  /** Get the counts for a two phase scenario.
     * @param es1 The effects of the first phase of the scenario.
+    * @param c1 Wether or not phase one crashed in this scenario.
     * @param es2 The effects of the second phase of the scenario.
-    * @param crashed Wether or not phase one crashed in this scenario.
-    * @param cs1 The counts for each effect of phase one of the scenario.
+    */
+  def get (es1: Effects, c1: Boolean, es2: Effects): Counts =
+    if (es2.isEmpty)
+      Seq.empty
+    else
+      _get (_phases (es1, c1, es2))
+
+  /** Add the counts for a two phase scenario.
+    * @param es1 The effects of the first phase of the scenario.
+    * @param c1 Wether or not phase one crashed in this scenario.
+    * @param es2 The effects of the second phase of the scenario.
     * @param cs2 The counts for each effect of phase two of the scenario.
     */
-  def add (es1: Effects, es2: Effects, crashed: Boolean, cs1: Counts, cs2: Counts) {
-    if (counts contains (es1, es2, crashed))
-      fail (s"Already tested (${es1 mkString ","}):$crashed (${es2 mkString ","})")
-    counts += (es1, es2, crashed) -> (cs1, cs2)
-  }}
+  def add (es1: Effects, c1: Boolean, es2: Effects, cs2: Counts): Unit =
+    _add (_phases (es1, c1, es2), cs2)
+
+  /** Get the counts for a three phase scenario.
+    * @param es1 The effects of the first phase of the scenario.
+    * @param c1 Wether or not phase one crashed in this scenario.
+    * @param es2 The effects of the second phase of the scenario.
+    * @param c2 Wether or not phase two crashed in this scenario.
+    * @param es3 The effects of the third phase of the scenario.
+    */
+  def get (es1: Effects, c1: Boolean, es2: Effects, c2: Boolean, es3: Effects): Counts =
+    if (es3.isEmpty)
+      Seq.empty
+    else
+      _get (_phases (es1, c1, es2, c2, es3))
+
+  /** Add the counts for a three phase scenario.
+    * @param es1 The effects of the first phase of the scenario.
+    * @param c1 Wether or not phase one crashed in this scenario.
+    * @param es2 The effects of the second phase of the scenario.
+    * @param c2 Wether or not phase two crashed in this scenario.
+    * @param es3 The effects of the third phase of the scenario.
+    * @param cs3 The counts for each effect of phase two of the scenario.
+    */
+  def add (es1: Effects, c1: Boolean, es2: Effects, c2: Boolean, es3: Effects, cs3: Counts): Unit =
+    _add (_phases (es1, c1, es2, c2, es3), cs3)
+}

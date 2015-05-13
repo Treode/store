@@ -23,24 +23,16 @@ import com.treode.async.{Async, Scheduler}, Async.supply
   */
 private class SegmentLedgerMedic (recovery: DiskRecovery) (implicit scheduler: Scheduler) {
 
-  /** The latest generation that we've seen. */
-  private var gen = 0L
+  /** Allocations that we've seen. */
+  private var dockets = Map.empty [Long, AllocationDocket]
 
   /** The generation for the latest write that we've seen. */
-  private var dgen = 0L
+  private var gen = -1L
 
   /** This position of the latest write that we've seen. */
   private var pos = Position.Null
 
-  /** Replay of allocations for the latest generation that we've seen. */
-  private var primary = new AllocationDocket
-
-  /** Replay of allocations for the second to latest generation that we've seen; emtpy if the
-    * write on disk is the second to latest generation.
-    */
-  private var secondary = new AllocationDocket
-
-  /** The write heads of each disk's `PageWriter`. */
+  /** The lwrite head of each disk's `PageWriter` that we last saw. */
   private var writers = Map.empty [Int, Long]
 
   /** True if we've closed this medic. */
@@ -49,39 +41,32 @@ private class SegmentLedgerMedic (recovery: DiskRecovery) (implicit scheduler: S
   recovery.replay (SegmentLedger.alloc) ((alloc _).tupled)
   recovery.replay (SegmentLedger.checkpoint) ((checkpoint _).tupled)
 
-  /** Replay an allocation record. */
+  /** Get or make the docket for the generation. */
+  private def docket (gen: Long): AllocationDocket =
+    if (dockets contains gen) {
+      dockets (gen)
+    } else {
+      val d = new AllocationDocket
+      dockets += gen -> d
+      d
+    }
+
+  /** Replay an allocation record, if it's newer than the checkpoint. */
   def alloc (gen: Long, disk: Int, seg: Int, pos: Long, tally: PageTally): Unit =
     synchronized {
       require (!closed)
-      if (this.gen == gen) {
-        // This applies to the latest generation.
-        primary.alloc (disk, seg, tally)
-      } else if (this.gen < gen) {
-        // This applies to a new generation.
-        this.gen = gen
-        secondary.alloc (primary)
-        primary = new AllocationDocket
-        primary.alloc (disk, seg, tally)
-      }
+      docket (gen) .alloc (disk, seg, tally)
       writers += disk -> pos
     }
 
-  /** Replay a checkpoint record. */
+  /** Replay a checkpoint record, if it's newer than the last checkpoint. */
   def checkpoint (gen: Long, pos: Position): Unit =
     synchronized {
       require (!closed)
-      if (this.gen == gen + 1) {
-        // This checkpoint is for the second to latest generation.
+      if (this.gen < gen) {
+        this.gen = gen
         this.pos = pos
-        this.dgen = gen
-        secondary = new AllocationDocket
-      } else if (this.gen < gen + 1) {
-        // This checkpoint is for a newer generation.
-        this.gen = gen + 1
-        this.dgen = gen
-        this.pos = pos
-        primary = new AllocationDocket
-        secondary = new AllocationDocket
+        dockets = dockets filterKeys (gen < _)
       }}
 
   /** Read the generation from disk, if any. */
@@ -95,19 +80,21 @@ private class SegmentLedgerMedic (recovery: DiskRecovery) (implicit scheduler: S
     * recovered write heads for each disk's `PageWriter`.
     */
   def close () (implicit launch: DiskLaunch): Async [(SegmentLedger, Map [Int, Long])] = {
-    val (gen, pos, primary, secondary) = synchronized {
+    val (gen, pos, dockets) = synchronized {
       require (!closed)
       closed = true
-      (this.gen, this.pos, this.primary, this.secondary)
+      (this.gen, this.pos, this.dockets)
     }
     for {
-      dtier <- readDiskTier (launch.disk, pos)
+      result <- readDiskTier (launch.disk, pos)
     } yield {
-      primary.alloc (secondary)
-      primary.alloc (dtier)
-      val ledger = new SegmentLedger (launch.disk, gen, primary)
+      // Add allocations not included in the checkpoint.
+      for ((gen, docket) <- dockets; if this.gen < gen)
+        result.alloc (docket)
+      val maxgen = math.max (gen + 1, if (dockets.isEmpty) 0 else dockets.keys.max)
+      val ledger = new SegmentLedger (launch.disk, maxgen, result)
       launch.checkpoint (ledger.checkpoint())
-      launch.claim (SegmentLedger.pager, 0, Set (dgen))
+      launch.claim (SegmentLedger.pager, 0, Set (gen))
       launch.compact (SegmentLedger.pager) (ledger.compact _)
       (ledger, writers)
     }}}

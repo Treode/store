@@ -72,7 +72,7 @@ class StubDiskDrive (implicit random: Random) {
           if (crashed)
             pages -= pos
           else
-            fail ("Disk leak detected.")
+            fail (s"Disk leak detected: ${page.typ}, ${page.obj}, gen:${page.gen}")
     }
 
   private [stubs] def mark(): Int =
