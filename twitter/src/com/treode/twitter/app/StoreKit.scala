@@ -128,7 +128,7 @@ trait StoreKit {
       else
         toPublic (peerAddr)
 
-    implicit val diskConfig = DiskConfig.suggested.copy (superBlockBits = superBlockBits())
+    implicit val diskConfig = DiskConfig.suggested (superBlockBits = superBlockBits())
     implicit val clusterConfig = ClusterConfig.suggested
     implicit val storeConfig = StoreConfig.xdcr
 

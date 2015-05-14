@@ -24,12 +24,6 @@ package com.treode.disk
   * @param  checkpointEntries
   * Begin a checkpoint after this many entries have been logged.
   *
-  * @param cleaningFrequency
-  * Probe and compact after this many segments have been allocated.
-  *
-  * @param cleaningLoad
-  * Compact this many segments at a time.
-  *
   * @param maximumRecordBytes
   * Reject log records larger than this limit.
   *
@@ -45,8 +39,6 @@ package com.treode.disk
 case class DiskConfig (
     checkpointBytes: Int,
     checkpointEntries: Int,
-    cleaningFrequency: Int,
-    cleaningLoad: Int,
     maximumRecordBytes: Int,
     maximumPageBytes: Int,
     pageCacheEntries: Int,
@@ -60,14 +52,6 @@ case class DiskConfig (
   require (
       checkpointEntries > 0,
       "The checkpoint interval must be more than 0 entries.")
-
-  require (
-      cleaningFrequency > 0,
-      "The cleaning interval must be more than 0 segments.")
-
-  require (
-      cleaningLoad > 0,
-      "The cleaning load must be more than 0 segemnts.")
 
   require (
       maximumRecordBytes > 0,
@@ -96,20 +80,23 @@ case class DiskConfig (
 
   def checkpoint (bytes: Long, entries: Long): Boolean =
     bytes > checkpointBytes.toLong || entries > checkpointEntries.toLong
-
-  def clean (segments: Int): Boolean =
-    segments >= cleaningFrequency
 }
 
 object DiskConfig {
 
-  val suggested = DiskConfig (
-      checkpointBytes = 1 << 24,
-      checkpointEntries = 10000,
-      cleaningFrequency = 7,
-      cleaningLoad = 1,
-      maximumRecordBytes = 1 << 24,
-      maximumPageBytes = 1 << 24,
-      pageCacheEntries = 10000,
-      superBlockBits = 14)
+  def suggested (
+    checkpointBytes: Int = 1 << 24,
+    checkpointEntries: Int = 10000,
+    maximumRecordBytes: Int = 1 << 24,
+    maximumPageBytes: Int = 1 << 24,
+    pageCacheEntries: Int = 10000,
+    superBlockBits: Int = 14
+  ): DiskConfig =
+    new DiskConfig (
+      checkpointBytes,
+      checkpointEntries,
+      maximumRecordBytes,
+      maximumPageBytes,
+      pageCacheEntries,
+      superBlockBits)
 }

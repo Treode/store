@@ -28,7 +28,7 @@ import DiskTestTools._
 
 class CheckpointerSpec extends FlatSpec {
 
-  implicit val config = DiskConfig.suggested.copy (checkpointBytes = 128)
+  implicit val config = DiskTestConfig (checkpointBytes = 128)
   implicit val events = new StubDiskEvents
   val geom = DriveGeometry (8, 6, 1 << 18)
 

@@ -29,7 +29,7 @@ import DiskTestTools._
 
 class PageCacheSpec extends FlatSpec {
 
-  implicit val config = DiskConfig.suggested.copy (checkpointBytes = 128)
+  implicit val config = DiskTestConfig()
   implicit val events = new StubDiskEvents
   val geom = DriveGeometry (8, 6, 1 << 18)
   val desc = Stuff.pager

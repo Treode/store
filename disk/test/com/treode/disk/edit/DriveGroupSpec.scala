@@ -33,6 +33,10 @@ import DiskTestTools._
 
 class DriveGroupSpec extends FlatSpec with DiskChecks {
 
+  implicit val config = DiskTestConfig()
+  implicit val events = new StubDiskEvents
+  implicit val geom = DriveGeometry (8, 6, 1 << 14)
+
   /** The DriveGroup testing strategy is a no-op because the DrivesTracker in DiskChecks
     * already verifies everything we need. This no-op strategy assures us that the DriveGroup
     * works sans interference from other components.
@@ -125,10 +129,6 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     launch.launch()
     launch.controller
   }
-
-  implicit val config = DiskTestConfig()
-  implicit val events = new StubDiskEvents
-  implicit val geom = DriveGeometry (8, 6, 1 << 14)
 
   "DriveGroup.change" should "reject nonexistant files" in {
     implicit val scheduler = StubScheduler.random()

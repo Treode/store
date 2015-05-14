@@ -20,7 +20,7 @@ import org.scalatest.FlatSpec
 
 class DriveGeometrySpec extends FlatSpec {
 
-  implicit val config = DiskTestConfig (superBlockBits=12)
+  implicit val config = DiskTestConfig (superBlockBits = 12)
 
   val block = 1 << 12
   val seg = 1 << 16

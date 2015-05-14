@@ -30,7 +30,7 @@ import DiskTestTools._
 
 class CompactorSpec extends FlatSpec {
 
-  implicit val config = DiskConfig.suggested
+  implicit val config = DiskTestConfig()
   implicit val events = new StubDiskEvents
   val geom = DriveGeometry (8, 6, 1 << 18)
   val desc = PageDescriptor (0x27, Picklers.unit)

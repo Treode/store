@@ -152,8 +152,6 @@ class LogSpec extends FreeSpec with DiskChecks {
       nwrites <- Seq (1, 2, 3)
       if (nbatches != 0 && nwrites != 0 || nbatches == nwrites)
     } s"for $nbatches batches of $nwrites writes" taggedAs (Periodic) in {
-      implicit val config = DiskTestConfig()
-      implicit val geom = DriveGeometry (8, 6, 1 << 18)
       manyScenarios (new LogTracker, LogBatch (nbatches, nwrites))
     }
 
