@@ -40,7 +40,7 @@ class PageCacheSpec extends FlatSpec {
     val launch = recovery.reattach().expectPass()
     launch.launch()
     val agent = launch.controller.asInstanceOf [DiskAgent]
-    agent.attach ("d1", geom) .expectPass (Notification.unit)
+    agent.attach (geom, "d1") .expectPass (Notification.unit)
     agent
   }
 

@@ -27,8 +27,6 @@ package disk {
 
   case class Compaction (obj: ObjectId, gens: Set [Long])
 
-  case class DiskSystemDigest (drives: Seq [DriveDigest])
-
   case class DriveDigest (path: Path, geometry: DriveGeometry, allocated: Int, draining: Boolean)
 
   case class ReattachFailure (path: Path, thrown: Throwable) {

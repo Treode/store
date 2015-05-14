@@ -17,14 +17,12 @@
 package com.treode.store
 
 import java.net.SocketAddress
-import java.nio.file.Path
 
 import com.treode.async.Async
 import com.treode.cluster.{CellId, HostId, Peer, RumorDescriptor}
-import com.treode.disk.{DriveAttachment, DriveDigest}
-import com.treode.notify.Notification
+import com.treode.disk.DiskController
 
-trait StoreController {
+trait StoreController extends DiskController {
 
   implicit def store: Store
 
@@ -51,12 +49,6 @@ trait StoreController {
   def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any)
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit]
-
-  def drives: Async [Seq [DriveDigest]]
-
-  def attach (items: DriveAttachment*): Async [Notification [Unit]]
-
-  def drain (paths: Path*): Async [Notification [Unit]]
 
   def cellId: CellId
 

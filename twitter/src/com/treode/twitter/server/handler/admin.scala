@@ -18,7 +18,7 @@ package com.treode.twitter.server.handler
 
 import java.nio.file.Path
 
-import com.treode.disk.DriveAttachment
+import com.treode.disk.{DriveAttachment, DriveChange}
 import com.treode.store.{Cohort, Store, StoreController}
 import com.treode.twitter.finagle.http.{RichRequest, mapper}
 import com.treode.twitter.util._
@@ -48,8 +48,8 @@ class DrivesHandler (controller: StoreController) extends Service [Request, Resp
     req.method match {
 
       case Method.Get =>
-        controller.drives
-          .map (drives => respond.json (req, drives))
+        controller.digest
+          .map (digest => respond.json (req, digest.drives))
           .toTwitterFuture
 
       case _ =>
@@ -63,7 +63,8 @@ class DrivesAttachHandler (controller: StoreController) extends Service [Request
 
       case Method.Post =>
         val drives = req.readJson [Seq [DriveAttachment]]
-        controller.attach (drives: _*)
+        val change = DriveChange (drives, Seq.empty)
+        controller.change (change)
           .map (respond (req, _))
           .toTwitterFuture
 

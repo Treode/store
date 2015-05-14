@@ -18,6 +18,7 @@ package com.treode.twitter.server.handler
 
 import com.jayway.restassured.RestAssured.given
 import com.treode.async.Async, Async.supply
+import com.treode.disk.DriveChange
 import com.treode.disk.messages._
 import com.treode.notify.Notification
 import com.treode.store.{Store, StoreController}
@@ -30,7 +31,7 @@ class DrivesAttachHandlerSpec extends FlatSpec with SpecTools {
 
   "The DrivesAttachHandler" should "handle POST" in
     served { case (port, controller) =>
-      (controller.attach _) .expects (Seq.empty) .returning (supply (Notification.unit))
+      (controller.change _) .expects (DriveChange.empty) .returning (supply (Notification.unit))
       given
         .port (port)
         .body ("[]")
@@ -53,7 +54,7 @@ class DrivesAttachHandlerSpec extends FlatSpec with SpecTools {
   it should "handle errors by returning a JSON array" in
     served { case (port, controller) =>
       val note = Notification.errors (AlreadyAttached ("f1"), AlreadyAttached ("f2"))
-      (controller.attach _) .expects (Seq.empty) .returning (supply (note))
+      (controller.change _) .expects (DriveChange.empty) .returning (supply (note))
       given
         .port (port)
         .body ("[]")

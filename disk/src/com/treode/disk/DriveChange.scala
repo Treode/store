@@ -21,9 +21,18 @@ import java.nio.file.Path
 import com.treode.jackson.JsonReader
 import com.treode.notify.Notification
 
+/** Change the disk drives (or files) that are attached to the system.
+  *
+  * @param attaches The drives to attach. They must not be attached already.
+  * @param drains The drives to drain. They must be attached currently. The disk system will
+  * begin draining them, that is copying their live data to other disks, and then it will
+  * eventually detach them.
+  */
 case class DriveChange (attaches: Seq [DriveAttachment], drains: Seq [Path])
 
 object DriveChange {
+
+  val empty = DriveChange (Seq.empty, Seq.empty)
 
   def fromJson (node: JsonReader): Notification [DriveChange] =
     for {

@@ -17,20 +17,18 @@
 package com.treode.store
 
 import java.net.SocketAddress
-import java.nio.file.Path
 
 import com.treode.async.Async
 import com.treode.cluster.{CellId, Cluster, HostId, Peer, RumorDescriptor}
-import com.treode.disk.{DiskController, DriveAttachment, DriveDigest}
-import com.treode.notify.Notification
+import com.treode.disk.DiskController
 
 import Async.guard
 
 private class ExtendedController (
-    disk: DiskController,
-    cluster: Cluster,
-    controller: StoreController
-) extends StoreController {
+  cluster: Cluster,
+  protected val _disk: DiskController,
+  controller: StoreController
+) extends StoreController with DiskController.Proxy {
 
   implicit val store: Store = controller.store
 
@@ -51,15 +49,6 @@ private class ExtendedController (
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit] =
     controller.issue (desc) (version, cat)
-
-  def drives: Async [Seq [DriveDigest]] =
-    disk.drives
-
-  def attach (items: DriveAttachment*): Async [Notification [Unit]] =
-    disk.attach (items:_*)
-
-  def drain (paths: Path*): Async [Notification [Unit]] =
-    disk.drain (paths: _*)
 
   def cellId: CellId =
     cluster.cellId
@@ -83,6 +72,6 @@ private class ExtendedController (
     guard [Unit] {
       for {
         _ <- cluster.shutdown()
-        _ <- disk.shutdown()
+        _ <- _disk.shutdown()
       } yield ()
     }}

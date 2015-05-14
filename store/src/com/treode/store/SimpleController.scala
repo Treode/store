@@ -29,12 +29,12 @@ import com.treode.store.catalog.Catalogs
 
 private class SimpleController (
     cluster: Cluster,
-    disk: DiskController,
+    protected val _disk: DiskController,
     library: Library,
     librarian: Librarian,
     catalogs: Catalogs,
     atomic: Atomic
-) extends StoreController {
+) extends StoreController with DiskController.Proxy {
 
   private val peers =
     new PeersScuttlebutt (cluster, library.atlas)
@@ -59,15 +59,6 @@ private class SimpleController (
 
   def issue [C] (desc: CatalogDescriptor [C]) (version: Int, cat: C): Async [Unit] =
     catalogs.issue (desc) (version, cat)
-
-  def drives: Async [Seq [DriveDigest]] =
-    disk.drives
-
-  def attach (items: DriveAttachment*): Async [Notification [Unit]] =
-    disk.attach (items: _*)
-
-  def drain (paths: Path*): Async [Notification [Unit]] =
-    disk.drain (paths: _*)
 
   def cellId: CellId =
     cluster.cellId

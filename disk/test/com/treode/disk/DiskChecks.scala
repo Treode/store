@@ -212,7 +212,7 @@ trait DiskChecks extends AsyncChecks {
       drives: DrivesTracker
     ): Async [Unit] = {
       drives.startingAttach (paths, geom)
-      paths.latch (agent.attach (_, geom)) .map (_ => drives.finishedAttach (paths))
+      agent.attach (geom, paths: _*) .map (_ => drives.finishedAttach (paths))
     }
 
     override def toString = name

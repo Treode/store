@@ -21,6 +21,11 @@ import java.nio.file.Path
 import com.treode.jackson.JsonReader
 import com.treode.notify.Notification
 
+/** Attach a disk drive (or file) to the system.
+  *
+  * @param path The path to the raw device (or file).
+  * @param geometry The physical properties of the drive.
+  */
 case class DriveAttachment (path: Path, geometry: DriveGeometry)
 
 object DriveAttachment {

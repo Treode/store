@@ -171,6 +171,6 @@ object Store {
       } yield {
         launch.launch()
         cluster.startup()
-        (new ExtendedController (launch.controller, cluster, store)): StoreController
+        (new ExtendedController (cluster, launch.controller, store)): StoreController
       }
     }}}

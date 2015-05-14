@@ -30,22 +30,64 @@ trait DiskController {
   /** This disk system. */
   implicit def disk: Disk
 
-  /** Summary information of the drives attached to this disk system. */
-  def drives: Async [Seq [DriveDigest]]
+  /** Change the disk drives (or files) that are attached to the system.
+    *
+    * When this method returns, The newly attached drives will be an active part of the disk
+    * system, and the newly draining drives will have begun draining. Draining drives will
+    * eventually be detached.
+    *
+    * @param change The change to apply.
+    */
+  def change (change: DriveChange): Async [Notification [Unit]]
+
+  /** Summary information. */
+  def digest: Async [DiskSystemDigest]
+
+  def shutdown(): Async [Unit]
 
   /** Attach new drives.
     *
     * When this method returns, the drives are a part of the disk system.
+    *
+    * @param attaches The drives to attach.
     */
-  def attach (items: DriveAttachment*): Async [Notification [Unit]]
+  def attach (attaches: Seq [DriveAttachment]): Async [Notification [Unit]] =
+    change (DriveChange (attaches, Seq.empty))
 
-  /** Drain attached drives.
+  /** Attach new drives.
+    *
+    * When this method returns, the drives are a part of the disk system.
+    *
+    * @param geometry The physical properties of the drives. The same geometry is used for every path.
+    * @param paths The path to attach.
+    */
+  def attach (geometry: DriveGeometry, paths: Path*): Async [Notification [Unit]] =
+    attach (paths map (DriveAttachment (_, geometry)))
+
+  /** Drain drives that are attached.
     *
     * The disk system drains drives by copying all live data on them to someplace else. When this
-    * method returns, the drain has begun, but it may not complete until later. When they have
-    * drained, the disk system will detach the drives and log a message.
+    * method returns, the drain has begun, but it may not complete until later. When the drives
+    * have been drained, the disk system will detach them.
+    *
+    * @param paths The drives to drain.
     */
-  def drain (items: Path*): Async [Notification [Unit]]
-
-  def shutdown(): Async [Unit]
+  def drain (drains: Path*): Async [Notification [Unit]] =
+    change (DriveChange (Seq.empty, drains))
 }
+
+object DiskController {
+
+  trait Proxy extends DiskController {
+
+    protected def _disk: DiskController
+
+    implicit def disk: Disk =
+      _disk.disk
+
+    def digest: Async [DiskSystemDigest] =
+      _disk.digest
+
+    def change (change: DriveChange): Async [Notification [Unit]] =
+      _disk.change (change)
+  }}

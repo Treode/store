@@ -75,15 +75,6 @@ private class DiskAgent (
   def change (change: DriveChange): Async [Notification [Unit]] =
     group.change (change)
 
-  def attach (attaches: DriveAttachment*): Async [Notification [Unit]] =
-    change (DriveChange (attaches, Seq.empty))
-
-  def attach (path: Path, geom: DriveGeometry): Async [Notification [Unit]] =
-    attach (DriveAttachment (path, geom))
-
-  def drain (drains: Path*): Async [Notification [Unit]] =
-    change (DriveChange (Seq.empty, drains))
-
   /** Bypass cache; for testing. */
   def fetch [P] (desc: PageDescriptor [P], pos: Position): Async [P] =
     group.fetch (desc, pos)
@@ -101,7 +92,4 @@ private class DiskAgent (
 
   def shutdown(): Async [Unit] =
     group.close()
-
-  // TODO
-  def drives: Async [Seq [DriveDigest]] = ???
 }

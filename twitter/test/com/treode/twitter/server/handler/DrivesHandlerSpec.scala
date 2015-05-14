@@ -18,6 +18,7 @@ package com.treode.twitter.server.handler
 
 import com.jayway.restassured.RestAssured.given
 import com.treode.async.Async, Async.supply
+import com.treode.disk.DiskSystemDigest
 import com.treode.store.{Store, StoreController}
 import org.scalatest.FlatSpec
 
@@ -28,7 +29,7 @@ class DrivesHandlerSpec extends FlatSpec with SpecTools {
 
   "The DrivesHandler" should "handle GET" in
     served { case (port, controller) =>
-      (controller.drives _) .expects() .returning (supply (Seq.empty))
+      (controller.digest _) .expects() .returning (supply (DiskSystemDigest.empty))
       given
         .port (port)
       .expect
