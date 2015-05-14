@@ -89,8 +89,6 @@ private [store] trait TierTable {
     */
   def receive (cells: Seq [Cell]): (Long, Seq [Cell])
 
-  def probe (gens: Set [Long]): Async [Set [Long]]
-
   /** Schedule the table for compaction. */
   def compact()
 

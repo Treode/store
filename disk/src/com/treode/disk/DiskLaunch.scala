@@ -49,7 +49,4 @@ trait DiskLaunch {
     * This method closes this launch builder.
     */
   def launch()
-
-  /** Deprecated. */
-  def handle (desc: PageDescriptor [_], handler: PageHandler) = ()
 }

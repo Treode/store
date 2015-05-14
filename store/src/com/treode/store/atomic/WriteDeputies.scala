@@ -61,8 +61,6 @@ private class WriteDeputies (kit: AtomicKit) {
 
     launch.checkpoint (checkpoint())
 
-    TimedStore.table.handle (tstore)
-
     TimedStore.table.compact (c => tstore.compact (c.obj, c.gens))
 
     prepare.listen { case ((version, xid, ct, ops), from) =>

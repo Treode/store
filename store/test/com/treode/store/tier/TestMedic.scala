@@ -55,6 +55,5 @@ private class TestMedic (
     val table = new TestTable (id, medic.close())
     launch.checkpoint (table.checkpoint())
     launch.compact (descriptor.pager) (c => table.compact (c.obj, c.gens))
-    descriptor.handle (table)
     table
   }}

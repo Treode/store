@@ -18,14 +18,13 @@ package com.treode.store.tier
 
 import com.treode.async.{Async, BatchIterator}
 import com.treode.async.stubs.StubScheduler
-import com.treode.disk.{Disk, DiskLaunch, ObjectId, PageHandler, RecordDescriptor}
+import com.treode.disk.{Disk, DiskLaunch, ObjectId, RecordDescriptor}
 import com.treode.store.{Bytes, Residents, StorePicklers, TableId, TxClock}
 
 import Async.{guard, when}
 
 /** Wrap the production `SynthTable` with something that's easier to handle in testing. */
-private class TestTable (id: TableId, table: SynthTable) (implicit disk: Disk)
-extends PageHandler {
+private class TestTable (id: TableId, table: SynthTable) (implicit disk: Disk) {
 
   def get (key: Int): Async [Option [Int]] = guard {
     for (cell <- table.get (Bytes (key), TxClock.MaxValue))
@@ -51,10 +50,6 @@ extends PageHandler {
   def delete (key: Int): Async [Unit] = guard {
     val gen = table.delete (Bytes (key), TxClock.MinValue)
     TestTable.delete.record (gen, key)
-  }
-
-  def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] = guard {
-    table.probe (gens)
   }
 
   def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] = guard {

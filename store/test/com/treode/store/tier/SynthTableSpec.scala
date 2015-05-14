@@ -25,7 +25,7 @@ import com.treode.async.io.File
 import com.treode.async.io.stubs.StubFile
 import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.async.stubs.implicits._
-import com.treode.disk.{ObjectId, PageHandler}
+import com.treode.disk.ObjectId
 import com.treode.disk.stubs.{StubDisk, StubDiskDrive}
 import com.treode.store.{Fruits, Residents, StoreTestConfig}
 import com.treode.pickle.Picklers
@@ -40,24 +40,6 @@ class SynthTableSpec extends FreeSpec {
 
   val tier = TierDescriptor (0x56) ((_, _, _) => true)
 
-  class TierHandler (table: SynthTable) extends PageHandler {
-
-    def probe (obj: ObjectId, gens: Set [Long]): Async [Set [Long]] = guard {
-      table.probe (gens)
-    }
-
-    def compact (obj: ObjectId, gens: Set [Long]): Async [Unit] = guard {
-      for {
-        _ <- table.compact (gens, Residents.all)
-      } yield ()
-    }
-
-    def checkpoint(): Async [Unit] = guard {
-      for {
-        _ <- table.checkpoint (Residents.all)
-      } yield ()
-    }}
-
   private def mkTable (diskDrive: StubDiskDrive) (
       implicit random: Random, scheduler: StubScheduler): SynthTable = {
     val config = StoreTestConfig (checkpointProbability = 0.0, compactionProbability = 0.0)
@@ -67,7 +49,6 @@ class SynthTableSpec extends FreeSpec {
     import launch.disk
     val table = SynthTable (tier, 0x62)
     launch.compact (tier.pager) (c => table.compact (c.gens, Residents.all) .unit)
-    tier.handle (new TierHandler (table))
     launch.launch()
     table
   }

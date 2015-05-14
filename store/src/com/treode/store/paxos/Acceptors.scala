@@ -25,7 +25,7 @@ import com.treode.store.tier.{TierDescriptor, TierTable}
 
 import Async.{guard, latch, supply, when}
 
-private class Acceptors (kit: PaxosKit) extends PageHandler {
+private class Acceptors (kit: PaxosKit) {
   import kit.{archive, cluster, disk, library}
   import kit.library.atlas
 
@@ -49,11 +49,6 @@ private class Acceptors (kit: PaxosKit) extends PageHandler {
 
   def remove (key: Bytes, time: TxClock, a: Acceptor): Unit =
     acceptors.remove ((key, time), a)
-
-  def probe (obj: ObjectId, groups: Set [Long]): Async [Set [Long]] =
-    guard {
-      archive.probe (groups)
-    }
 
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
@@ -81,8 +76,6 @@ private class Acceptors (kit: PaxosKit) extends PageHandler {
     launch.checkpoint (checkpoint())
 
     Acceptors.archive.compact (c => compact (c.obj, c.gens))
-
-    Acceptors.archive.handle (this)
 
     ask.listen { case ((version, key, time, ballot, default), c) =>
       if (atlas.version - 1 <= version && version <= atlas.version + 1)

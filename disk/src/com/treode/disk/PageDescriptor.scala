@@ -44,10 +44,6 @@ class PageDescriptor [P] private (
   def compact (obj: ObjectId) (implicit disk: Disk): Unit =
     disk.compact (this, obj)
 
-  /** Deprecated. */
-  def handle (handler: PageHandler) (implicit launch: DiskLaunch): Unit =
-    launch.handle (this, handler)
-
   override def toString = s"PageDescriptor($id)"
 }
 

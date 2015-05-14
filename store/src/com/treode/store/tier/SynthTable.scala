@@ -193,17 +193,6 @@ private class SynthTable (
       readLock.unlock()
     }}
 
-  def probe (gens: Set [Long]): Async [Set [Long]] = async { cb =>
-    writeLock.lock()
-    try {
-      if (!secondary.isEmpty)
-        queue ::= toRunnable (probe (gens), cb)
-      else
-        cb.on (scheduler) .pass (tiers.active)
-    } finally {
-      writeLock.unlock()
-    }}
-
   def compact(): Unit =
     pager.compact (id.id)
 
