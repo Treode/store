@@ -16,6 +16,10 @@
 
 package com.treode.disk
 
+import com.treode.disk.messages._
+import com.treode.jackson.JsonReader
+import com.treode.notify.Notification
+
 class DriveGeometry private (
     val segmentBits: Int,
     val blockBits: Int,
@@ -115,15 +119,19 @@ object DriveGeometry {
         diskBytes)
   }
 
-  def standard (
-      segmentBits: Int = 30,
-      blockBits: Int = 13,
-      diskBytes: Long = -1
-  ): DriveGeometry =
-     DriveGeometry (
-         segmentBits,
-         blockBits,
-         diskBytes)
+  def fromJson (node: JsonReader): Notification [DriveGeometry] =
+    for {
+      obj <- node.requireObject
+      (segmentBits, blockBits, diskBytes) <- Notification.latch (
+        node.getInt ("segmentBits", 1, Int.MaxValue),
+        node.getInt ("blockBits", 1, Int.MaxValue),
+        node.getLong ("diskBytes", 1L, Long.MaxValue))
+      _ <- Notification.latch (
+        node.require (segmentBits - blockBits >= 4, SegmentNeeds16Blocks),
+        node.require (diskBytes >> segmentBits >= 16, DriveNeeds16Segments))
+    } yield {
+      new DriveGeometry (segmentBits, blockBits, diskBytes)
+    }
 
   val pickler = {
     import DiskPicklers._

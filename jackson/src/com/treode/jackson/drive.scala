@@ -91,7 +91,7 @@ extends StdDeserializer [DriveAttachment] (classOf [DriveAttachment]) {
     val _geom = node.get ("geometry") .asInstanceOf [JsonNode]
     val geom =
       if (_geom == null)
-        DriveGeometry.standard (0)
+        DriveGeometry (30, 13, 1 << 40) // dummy
       else
         codec.treeToValue (_geom, classOf [DriveGeometry])
     DriveAttachment (path, geom)

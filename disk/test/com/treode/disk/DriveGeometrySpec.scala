@@ -16,6 +16,10 @@
 
 package com.treode.disk
 
+import com.treode.disk.messages._
+import com.treode.jackson.JsonReader
+import com.treode.jackson.messages._
+import com.treode.notify.{Message, Notification}
 import org.scalatest.FlatSpec
 
 class DriveGeometrySpec extends FlatSpec {
@@ -27,6 +31,12 @@ class DriveGeometrySpec extends FlatSpec {
 
   def assertBounds (id: Int, pos: Long, limit: Long) (actual: SegmentBounds): Unit =
     assertResult (SegmentBounds (id, pos, limit)) (actual)
+
+  def assertFromJson (g: DriveGeometry) (s: String): Unit =
+    assertResult (Notification.result (g)) (DriveGeometry.fromJson (JsonReader (s)))
+
+  def assertFromJsonErrors (ms: Message*) (s: String): Unit =
+    assertResult (Notification.Errors (ms)) (DriveGeometry.fromJson (JsonReader (s)))
 
   "DriveGeometry" should "compute the segment count" in {
     val disk1 = 1 << 20
@@ -64,4 +74,54 @@ class DriveGeometrySpec extends FlatSpec {
     assertBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))
     assertBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))
     assertBounds (16, 16*seg, 16*seg + 6*block) (c.segmentBounds (16))
+  }
+
+  "fromJson" should "parse a valid JSON object" in {
+    assertFromJson (DriveGeometry (30, 13, 1L << 40)) {
+      """{"segmentBits": 30, "blockBits": 13, "diskBytes": 1099511627776}"""
+    }}
+
+  it should "expect valid values" in {
+    assertFromJsonErrors (SegmentNeeds16Blocks ("")) {
+      """{"segmentBits": 13, "blockBits": 13, "diskBytes": 1099511627776}"""
+    }
+    assertFromJsonErrors (DriveNeeds16Segments ("")) {
+      """{"segmentBits": 30, "blockBits": 13, "diskBytes": 1073741824}"""
+    }}
+
+  it should "expect a JSON object" in {
+    val error = ExpectedObject ("")
+    assertFromJsonErrors (error) ("1")
+    assertFromJsonErrors (error) ("\"s\"")
+    assertFromJsonErrors (error) ("[]")
+  }
+
+  it should "expect segmentBits to be a positive int" in {
+    val error = ExpectedNumber ("segmentBits", 1, Int.MaxValue)
+    assertFromJsonErrors (error) ("""{"blockBits": 1, "diskBytes": 1}""")
+    assertFromJsonErrors (error) ("""{"segmentBits": "", "blockBits": 1, "diskBytes": 1}""")
+    assertFromJsonErrors (error) ("""{"segmentBits": {}, "blockBits": 1, "diskBytes": 1}""")
+    assertFromJsonErrors (error) ("""{"segmentBits": [], "blockBits": 1, "diskBytes": 1}""")
+    assertFromJsonErrors (error) ("""{"segmentBits": -1, "blockBits": 1, "diskBytes": 1}""")
+    assertFromJsonErrors (error) ("""{"segmentBits": 2147483649, "blockBits": 1, "diskBytes": 1}""")
+  }
+
+  it should "expect blockBits to be a positive int" in {
+     val error = ExpectedNumber ("blockBits", 1, Int.MaxValue)
+    assertFromJsonErrors (error) ("""{"segmentBits": 1, "diskBytes": 1}""")
+    assertFromJsonErrors (error) ("""{"blockBits": "", "segmentBits": 1, "diskBytes": 1}""")
+    assertFromJsonErrors (error) ("""{"blockBits": {}, "segmentBits": 1, "diskBytes": 1}""")
+    assertFromJsonErrors (error) ("""{"blockBits": [], "segmentBits": 1, "diskBytes": 1}""")
+    assertFromJsonErrors (error) ("""{"blockBits": -1, "segmentBits": 1, "diskBytes": 1}""")
+    assertFromJsonErrors (error) ("""{"blockBits": 2147483649, "segmentBits": 1, "diskBytes": 1}""")
+  }
+
+  it should "expect diskBytes to be a positive int" in {
+    val error = ExpectedNumber ("diskBytes", 1, Long.MaxValue)
+    assertFromJsonErrors (error) ("""{"segmentBits": 1, "blockBits": 1}""")
+    assertFromJsonErrors (error) ("""{"diskBytes": "", "segmentBits": 1, "blockBits": 1}""")
+    assertFromJsonErrors (error) ("""{"diskBytes": {}, "segmentBits": 1, "blockBits": 1}""")
+    assertFromJsonErrors (error) ("""{"diskBytes": [], "segmentBits": 1, "blockBits": 1}""")
+    assertFromJsonErrors (error) ("""{"diskBytes": -1, "segmentBits": 1, "blockBits": 1}""")
+    assertFromJsonErrors (error) ("""{"diskBytes": 9223372036854775809, "segmentBits": 1, "blockBits": 1}""")
   }}

@@ -18,9 +18,9 @@ package com.treode.disk
 
 import java.nio.file.Path
 
+import com.treode.jackson.JsonPath
 import com.treode.notify.Message
 
-/** Error messages that are specific to the Disk package. */
 package messages {
 
   case class AlreadyAttached (path: Path) extends Message {
@@ -37,4 +37,12 @@ package messages {
 
   case class AlreadyDraining (drive: Path) extends Message {
     def en = s"Already draining: ${quote (drive)}"
+  }
+
+  case class SegmentNeeds16Blocks (path: JsonPath) extends Message {
+    def en = s"A segment must have at least 16 blocks at $path"
+  }
+
+  case class DriveNeeds16Segments (path: JsonPath) extends Message {
+    def en = s"A drive must have at least 16 segments at $path"
   }}
