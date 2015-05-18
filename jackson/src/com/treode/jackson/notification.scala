@@ -28,8 +28,8 @@ object NotificationSerializer extends StdSerializer [Notification [_]] (classOf 
   def serialize (value: Notification [_], jgen: JsonGenerator, provider: SerializerProvider) {
     val codec = jgen.getCodec
     jgen.writeStartArray()
-    for (m <- value.messages)
-      codec.writeValue (jgen, m)
+    for (e <- value.errors)
+      codec.writeValue (jgen, e)
     jgen.writeEndArray()
   }
 }

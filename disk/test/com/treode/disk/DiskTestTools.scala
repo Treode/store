@@ -35,7 +35,7 @@ private object DiskTestTools {
   val sysid = SystemId (0, 0)
 
   def assertEqNotification (expected: Message*) (actual: Notification [Unit]) {
-    assert (expected == actual.messages)
+    assert (expected == actual.errors)
   }
 
   implicit def stringToPath (path: String): Path =

@@ -30,7 +30,7 @@ class DrivesDrainHandlerSpec extends FlatSpec with SpecTools {
 
   "The DrivesDrainHandler" should "handle POST" in
     served { case (port, controller) =>
-      (controller.drain _) .expects (Seq.empty) .returning (supply (Notification.empty))
+      (controller.drain _) .expects (Seq.empty) .returning (supply (Notification.unit))
       given
         .port (port)
         .body ("[]")
@@ -52,8 +52,8 @@ class DrivesDrainHandlerSpec extends FlatSpec with SpecTools {
 
   it should "handle errors by returning a JSON array" in
     served { case (port, controller) =>
-      val notification = Notification(NotAttached("f1"), AlreadyDraining("f2"))
-      (controller.drain _) .expects (Seq.empty) .returning (supply (notification))
+      val note = Notification.errors (NotAttached ("f1"), AlreadyDraining ("f2"))
+      (controller.drain _) .expects (Seq.empty) .returning (supply (note))
       given
         .port (port)
         .body ("[]")

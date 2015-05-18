@@ -67,6 +67,8 @@ object TreodeBuild extends Build {
 
     libraryDependencies ++= Seq (
       "com.codahale.metrics" % "metrics-core" % "3.0.2",
+      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.4",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.4",
       "com.google.code.findbugs" % "jsr305" % "3.0.0",
       "com.google.guava" % "guava" % "18.0",
       "com.googlecode.javaewah" % "JavaEWAH" % "1.0.0",
@@ -112,8 +114,8 @@ object TreodeBuild extends Build {
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
-      "org.scalacheck" %% "scalacheck" % "1.12.2" % "test",
       "com.storm-enroute" %% "scalameter" % "0.6" % "perf",
+      "org.scalacheck" %% "scalacheck" % "1.12.2" % "test",
       "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % "test",
       "org.scalatest" %% "scalatest" % "2.2.4" % "test"))
 
@@ -172,8 +174,8 @@ object TreodeBuild extends Build {
       (baseDirectory ((base: File) => Seq (base / "test"))),
 
     libraryDependencies ++= Seq (
-      "org.scalacheck" %% "scalacheck" % "1.12.2" % "stub->default",
       "com.storm-enroute" %% "scalameter" % "0.6" % "stub->default",
+      "org.scalacheck" %% "scalacheck" % "1.12.2" % "stub->default",
       "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % "stub->default",
       "org.scalatest" %% "scalatest" % "2.2.4" % "stub->default"))
 
@@ -217,11 +219,6 @@ object TreodeBuild extends Build {
     .configs (IntensiveTest, PeriodicTest, Perf)
     .dependsOn (store)
     .settings (standardSettings: _*)
-    .settings (
-
-        libraryDependencies ++= Seq (
-          "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.4",
-          "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.4"))
 
   // Separated because not everyone wants it and its dependencies.
   lazy val twitter = Project ("twitter", file ("twitter"))

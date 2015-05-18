@@ -30,7 +30,7 @@ class DrivesAttachHandlerSpec extends FlatSpec with SpecTools {
 
   "The DrivesAttachHandler" should "handle POST" in
     served { case (port, controller) =>
-      (controller.attach _) .expects (Seq.empty) .returning (supply (Notification.empty))
+      (controller.attach _) .expects (Seq.empty) .returning (supply (Notification.unit))
       given
         .port (port)
         .body ("[]")
@@ -52,8 +52,8 @@ class DrivesAttachHandlerSpec extends FlatSpec with SpecTools {
 
   it should "handle errors by returning a JSON array" in
     served { case (port, controller) =>
-      val notification = Notification(AlreadyAttached("f1"), AlreadyAttached("f2"))
-      (controller.attach _) .expects (Seq.empty) .returning (supply (notification))
+      val note = Notification.errors (AlreadyAttached ("f1"), AlreadyAttached ("f2"))
+      (controller.attach _) .expects (Seq.empty) .returning (supply (note))
       given
         .port (port)
         .body ("[]")

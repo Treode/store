@@ -26,7 +26,7 @@ import com.treode.async.implicits._
 import com.treode.async.misc.RichOption
 import com.treode.buffer.PagedBuffer
 import com.treode.disk.messages._
-import com.treode.notify.Notification, Notification.{Errors, NoErrors}
+import com.treode.notify.Notification, Notification.{Errors, Result}
 
 import DriveGroup._
 import LogControl._
@@ -186,7 +186,7 @@ private class DriveGroup (
         for (drive <- drains)
           drive.awaitDrained() run (driveDrained)
         for (cb <- changers)
-          scheduler.pass (cb, Notification.empty)
+          scheduler.pass (cb, Notification.unit)
         for (cb <- checkpoint)
           scheduler.pass (cb, ())
 
@@ -355,20 +355,17 @@ private class DriveGroup (
             errors.add (NotAttached (d))
         }}
 
-      // If there are attachment errors, close all opened files and pass errors.
-      errors.result match {
-        case list @ Errors (_) =>
-          for (drive <- newAttaches) {
-            drive.close()
-          }
-          scheduler.pass (cb, list)
-        case NoErrors (_) =>
-          // Otherwise, we can merge our new changes into the queued changes.
-          this.dno = dno
-          attaches :::= newAttaches
-          drains :::= newDrains
-          changers ::= cb
-          queue.engage()
+      if (errors.hasErrors) {
+        // Close all opened files and pass errors
+        newAttaches foreach (_.close())
+        scheduler.pass (cb, errors.result)
+      } else {
+        // We can merge our new changes into the queued changes.
+        this.dno = dno
+        attaches :::= newAttaches
+        drains :::= newDrains
+        changers ::= cb
+        queue.engage()
       }}
 
   /** Enqueue internal changes to the set of disk drives. */

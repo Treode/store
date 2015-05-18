@@ -1,7 +1,6 @@
 package com.treode.server
+
 import scala.util.{Success, Failure}
-import scala.util.parsing.combinator.lexical._
-import scala.util.parsing.combinator.token._
 import scala.util.parsing.input.CharArrayReader.EofCh
 import scala.collection.mutable.Queue
 import scala.collection.mutable.ArrayBuffer

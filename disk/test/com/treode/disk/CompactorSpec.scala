@@ -70,7 +70,7 @@ class CompactorSpec extends FlatSpec {
     captor.register (launch)
     launch.launch()
     val agent = launch.controller.asInstanceOf [DiskAgent]
-    agent.attach ("d1", geom) .expectPass (Notification.empty)
+    agent.attach ("d1", geom) .expectPass (Notification.unit)
     (agent, captor)
   }
 
