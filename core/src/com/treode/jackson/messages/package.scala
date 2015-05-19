@@ -20,6 +20,10 @@ import com.treode.notify.Message
 
 package messages {
 
+  case class ExpectedArray (path: JsonPath) extends Message {
+    def en = s"Expected JSON array at $path"
+  }
+
   case class ExpectedObject (path: JsonPath) extends Message {
     def en = s"Expected JSON object at $path"
   }

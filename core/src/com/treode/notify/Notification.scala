@@ -88,6 +88,12 @@ object Notification {
     def add (message: Message): Unit =
       list ::= message
 
+    /** Add messages.
+      * @param messages The messages to add.
+      */
+    def add (messages: Seq [Message]): Unit =
+      list :::= messages.toList
+
     /** Are there any errors?
       * @return True if there are errors.
       */
@@ -99,7 +105,7 @@ object Notification {
       * @throws IllegalArgumentException If there are no errors.
       */
     def result [A]: Notification [A] =
-      Errors (list)
+      Errors (list.reverse)
 
     /** Get the appropriate notification.
       * @param v The result value, if no errors were found.

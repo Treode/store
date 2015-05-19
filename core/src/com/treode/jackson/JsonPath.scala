@@ -19,10 +19,10 @@ package com.treode.jackson
 import scala.language.implicitConversions
 
 /** A simple path; used to report errors. */
-class JsonPath private (private val path: List [Any]) {
+class JsonPath private (private val path: List [String]) {
 
   def + (index: Int): JsonPath =
-    new JsonPath (index :: path)
+    new JsonPath (index.toString :: path)
 
   def + (field: String): JsonPath =
     new JsonPath (field :: path)

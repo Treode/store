@@ -29,8 +29,6 @@ package disk {
 
   case class DiskSystemDigest (drives: Seq [DriveDigest])
 
-  case class DriveChange (attaches: Seq [DriveAttachment], drains: Seq [Path])
-
   case class DriveDigest (path: Path, geometry: DriveGeometry, allocated: Int, draining: Boolean)
 
   case class ReattachFailure (path: Path, thrown: Throwable) {
