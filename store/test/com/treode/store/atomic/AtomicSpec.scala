@@ -33,7 +33,7 @@ import SpanSugar._
 
 class AtomicSpec extends FreeSpec with StoreBehaviors with AsyncChecks with TimeLimitedTests {
 
-  override val timeLimit = 15 minutes
+  override val timeLimit = 30 minutes
 
   private def newStore () (implicit r: Random, s: StubScheduler, n: StubNetwork): Store = {
     val hs = Seq.fill (3) (StubAtomicHost.install() .expectPass())

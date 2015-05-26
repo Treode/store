@@ -63,7 +63,7 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
   private def defaultCond: Seq [Host] => Boolean =
     _ => false
 
-  override val timeLimit = 15 minutes
+  override val timeLimit = 30 minutes
 
   val H1 = 0x44L
   val H2 = 0x75L
