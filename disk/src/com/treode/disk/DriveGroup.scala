@@ -205,8 +205,8 @@ private class DriveGroup (
 
   def launch (
     writers: Map [Int, Long],
-    checkpoints: Checkpoints,
-    compactors: Compactors
+    checkpoints: CheckpointerRegistry,
+    compactors: CompactorRegistry
   ): Unit =
     fiber.execute {
       state = Open

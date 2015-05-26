@@ -39,7 +39,7 @@ private class CompactorRegistry (
 private object CompactorRegistry {
 
   /** Collect compactor methods to build a registry; not thread safe. */
-  class Builder (implicit events: DiskEvents) {
+  class Builder private [CompactorRegistry] (implicit events: DiskEvents) {
 
     private val compactors = new HashMap [Long, Compaction => Async [Unit]]
 
@@ -51,4 +51,8 @@ private object CompactorRegistry {
 
     def result: CompactorRegistry =
       new CompactorRegistry (compactors)
-  }}
+  }
+
+  def newBuilder (implicit events: DiskEvents): Builder =
+    new Builder
+}

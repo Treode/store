@@ -20,8 +20,8 @@ import com.treode.async.{Async, Scheduler}
 
 /** The second phase of building the live Disk system. Implements the user trait Launch. */
 private class LaunchAgent (
-  checkpoints: Checkpoints,
-  compactors: Compactors,
+  checkpoints: CheckpointerRegistry.Builder,
+  compactors: CompactorRegistry.Builder,
   claims: GenerationDocket,
   ledger: SegmentLedger,
   writers: Map [Int, Long]
@@ -40,7 +40,7 @@ private class LaunchAgent (
   def checkpoint (f: => Async [Unit]): Unit =
     synchronized {
       require (launching, "Must add checkpoint before launching.")
-      checkpoints.add (_ => f)
+      checkpoints.add (f)
     }
 
   def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit =
@@ -53,15 +53,14 @@ private class LaunchAgent (
     synchronized {
       val typ = desc.id
       require (launching, "Must add checkpoint before launching.")
-      require (!(compactors containsKey typ), s"Compactor already registered for $typ")
-      compactors.put (typ, f)
+      compactors.add (desc) (f)
     }
 
   def launch() {
     require (launching, "Disks already launched.")
     launching = false
     ledger.claim (claims)
-    agent.launch (writers, checkpoints, compactors)
+    agent.launch (writers, checkpoints.result, compactors.result)
   }
 
   // TODO

@@ -40,8 +40,8 @@ private class DiskAgent (
   /** Called by the LaunchAgent when launch completes. */
   def launch (
     writers: Map [Int, Long],
-    checkpoints: Checkpoints,
-    compactors: Compactors
+    checkpoints: CheckpointerRegistry,
+    compactors: CompactorRegistry
   ) {
     group.launch (writers, checkpoints, compactors)
   }

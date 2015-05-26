@@ -55,10 +55,6 @@ package disk {
 
 package object disk {
 
-  private [disk] type Checkpoints = ArrayList [Unit => Async [Unit]]
-
-  private [disk] type Compactors = HashMap [TypeId, Compaction => Async [Unit]]
-
   private [disk] def quote (path: Path): String =
     "\"" + escapeJava (path.toString) + "\""
 

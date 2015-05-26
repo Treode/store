@@ -17,7 +17,6 @@
 package com.treode.disk
 
 import com.treode.async.{Async, AsyncQueue, Callback, Fiber, Scheduler}
-import com.treode.async.implicits._
 
 private class Checkpointer (
   drives: DriveGroup,
@@ -36,7 +35,7 @@ private class Checkpointer (
   private val queue = new AsyncQueue (fiber) (reengage _)
   private var requests = List.empty [Callback [Unit]]
   private var running = List.empty [Callback [Unit]]
-  private var checkpoints: Checkpoints = null
+  private var checkpoints: CheckpointerRegistry = null
 
   private def reengage() {
     if (checkpoints == null)
@@ -54,7 +53,7 @@ private class Checkpointer (
       entries = 0L
       for {
         _ <- drives.startCheckpoint()
-        _ <- checkpoints.latch (_(()))
+        _ <- checkpoints.checkpoint()
         _ <- drives.finishCheckpoint()
       } yield {
         for (cb <- running)
@@ -62,7 +61,7 @@ private class Checkpointer (
         running = List.empty
       }}
 
-  def launch (checkpoints: Checkpoints): Unit =
+  def launch (checkpoints: CheckpointerRegistry): Unit =
     fiber.execute {
       this.checkpoints = checkpoints
       queue.engage()

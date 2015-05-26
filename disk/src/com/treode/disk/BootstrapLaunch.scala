@@ -24,15 +24,15 @@ private class BootstrapLaunch (implicit
   val disk: BootstrapDisk
 ) extends DiskLaunch {
 
-  private val checkpoints = new Checkpoints
-  private val compactors = new Compactors
+  private val checkpoints = CheckpointerRegistry.newBuilder
+  private val compactors = CompactorRegistry.newBuilder
   private val claims = new GenerationDocket
   private var launching = true
 
   def checkpoint (f: => Async [Unit]): Unit =
     synchronized {
       require (launching, "Must add checkpoint before launching.")
-      checkpoints.add (_ => f)
+      checkpoints.add (f)
     }
 
   def claim (desc: PageDescriptor [_], obj: ObjectId, gens: Set [Long]): Unit =
@@ -45,8 +45,7 @@ private class BootstrapLaunch (implicit
     synchronized {
       val typ = desc.id
       require (launching, "Must add checkpoint before launching.")
-      require (!(compactors containsKey typ), s"Compactor already registered for $typ")
-      compactors.put (typ, f)
+      compactors.add (desc) (f)
     }
 
   implicit def controller: DiskController =

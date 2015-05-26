@@ -33,7 +33,7 @@ private class CheckpointerRegistry (checkpointers: ArrayList [Unit => Async [Uni
 private object CheckpointerRegistry {
 
   /** Collect checkpoint methods to build a registry; not thread safe. */
-  class Builder {
+  class Builder private [CheckpointerRegistry] {
 
     private val checkpointers = new ArrayList [Unit => Async [Unit]]
 
@@ -42,4 +42,8 @@ private object CheckpointerRegistry {
 
     def result: CheckpointerRegistry =
       new CheckpointerRegistry (checkpointers)
-  }}
+  }
+
+  def newBuilder: Builder =
+    new Builder
+}

@@ -28,7 +28,7 @@ private class Compactor (implicit scheduler: Scheduler, events: DiskEvents) {
   private val queue = new AsyncQueue (fiber) (reengage _)
   private val docket = new GenerationDocket
   private val arrival = new ArrayDeque [DocketId]
-  private var compactors: Compactors = null
+  private var compactors: CompactorRegistry = null
 
   private def reengage() {
     if (compactors == null)
@@ -43,11 +43,7 @@ private class Compactor (implicit scheduler: Scheduler, events: DiskEvents) {
     queue.begin {
       val id = arrival.remove()
       val gens = docket.remove (id)
-      val cmpctr = compactors.get (id.typ)
-      if (cmpctr == null)
-        supply (events.noCompactorFor (id.typ))
-      else
-        cmpctr (Compaction (id.obj, gens))
+      compactors.compact (id.typ, id.obj, gens)
     }}
 
   private def add (id: DocketId, gens: Set [Long]) {
@@ -56,7 +52,7 @@ private class Compactor (implicit scheduler: Scheduler, events: DiskEvents) {
     docket.add (id, gens)
   }
 
-  def launch (compactors: Compactors): Unit =
+  def launch (compactors: CompactorRegistry): Unit =
     fiber.execute {
       this.compactors = compactors
       queue.engage()

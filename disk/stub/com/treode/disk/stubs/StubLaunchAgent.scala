@@ -32,8 +32,8 @@ private class StubLaunchAgent (
   events: DiskEvents
 ) extends DiskLaunch {
 
-  private val checkpointers = new CheckpointerRegistry.Builder
-  private val compactors = new CompactorRegistry.Builder
+  private val checkpointers = CheckpointerRegistry.newBuilder
+  private val compactors = CompactorRegistry.newBuilder
   private val claims = new GenerationDocket
   private var open = true
 
