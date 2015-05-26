@@ -25,7 +25,7 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.BatchIterator
 import com.treode.async.misc.{RichOption, parseInt}
 import com.treode.cluster.HostId
-import com.treode.jackson.DefaultTreodeModule
+import com.treode.jackson.{DefaultTreodeModule, JsonReader}
 import com.treode.store.{Slice, TxClock, TxId, Window}
 import com.treode.twitter.util.RichTwitterFuture
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
@@ -160,7 +160,7 @@ package object http {
         TxClock.parse (value) .getOrThrow (new BadRequestException (s"Bad time for $name: $value"))
       }
 
-    def conditionTxClock(default: TxClock): TxClock =
+    def conditionTxClock (default: TxClock): TxClock =
       optTxClockHeader ("Condition-TxClock") getOrElse (default)
 
     def readTxClock: TxClock =
@@ -210,6 +210,11 @@ package object http {
           TxId.random (host)
       }
 
+    /** Read the content as JSON, and use the implicit mapper to convert it. */
     def readJson [A: Manifest] (implicit mapper: ScalaObjectMapper): A =
       request.withReader (mapper.readValue [A] (_))
+
+    /** Read the content as JSON, and yield a JsonReader. */
+    def jsonReader: JsonReader =
+      request.withReader (JsonReader (_))
   }}

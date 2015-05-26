@@ -16,6 +16,7 @@
 
 package com.treode.jackson
 
+import java.io.Reader
 import java.nio.file.{InvalidPathException, Path, Paths}
 import scala.collection.JavaConversions._
 
@@ -151,4 +152,7 @@ object JsonReader {
 
   def apply (s: String): JsonReader =
     new JsonReader (JsonPath.empty, mapper.readValue (s, classOf [JsonNode]))
+
+  def apply (r: Reader): JsonReader =
+    new JsonReader (JsonPath.empty, mapper.readValue (r, classOf [JsonNode]))
 }

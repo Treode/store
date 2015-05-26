@@ -38,7 +38,5 @@ trait TreodeAdmin {
   premain {
     add ("/admin/treode/atlas",         new AtlasHandler (controller))
     add ("/admin/treode/drives",        new DrivesHandler (controller))
-    add ("/admin/treode/drives/attach", new DrivesAttachHandler (controller))
-    add ("/admin/treode/drives/drain",  new DrivesDrainHandler (controller))
     add ("/admin/treode/tables",        new TablesHandler (controller))
   }}

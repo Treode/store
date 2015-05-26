@@ -18,7 +18,7 @@ package com.treode.twitter.server.handler
 
 import java.nio.file.Path
 
-import com.treode.disk.{DriveAttachment, DriveChange}
+import com.treode.disk.DriveChange
 import com.treode.store.{Cohort, Store, StoreController}
 import com.treode.twitter.finagle.http.{RichRequest, mapper}
 import com.treode.twitter.util._
@@ -52,36 +52,14 @@ class DrivesHandler (controller: StoreController) extends Service [Request, Resp
           .map (digest => respond.json (req, digest.drives))
           .toTwitterFuture
 
-      case _ =>
-        Future.value (respond (req, Status.MethodNotAllowed))
-    }}}
-
-class DrivesAttachHandler (controller: StoreController) extends Service [Request, Response] {
-
-  def apply (req: Request): Future [Response] = {
-    req.method match {
-
       case Method.Post =>
-        val drives = req.readJson [Seq [DriveAttachment]]
-        val change = DriveChange (drives, Seq.empty)
-        controller.change (change)
-          .map (respond (req, _))
-          .toTwitterFuture
-
-      case _ =>
-        Future.value (respond (req, Status.MethodNotAllowed))
-    }}}
-
-class DrivesDrainHandler (controller: StoreController) extends Service [Request, Response] {
-
-  def apply (req: Request): Future [Response] = {
-    req.method match {
-
-      case Method.Post =>
-        val paths = req.readJson [Seq [Path]]
-        controller.drain (paths: _*)
-          .map (respond (req, _))
-          .toTwitterFuture
+        val change = DriveChange.fromJson (req.jsonReader)
+        if (change.hasErrors)
+          Future.value (respond (req, change))
+        else
+          controller.change (change.get)
+            .map (respond (req, _))
+            .toTwitterFuture
 
       case _ =>
         Future.value (respond (req, Status.MethodNotAllowed))

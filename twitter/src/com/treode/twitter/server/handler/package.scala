@@ -31,11 +31,11 @@ package object handler {
       rsp
     }
 
-    def apply (req: Request, note: Notification [Unit]): Response = {
+    def apply [A] (req: Request, note: Notification [A]): Response = {
       val rsp = req.response
       note match {
         case errors @ Errors (_) =>
-          rsp.write(mapper.writeValueAsString (note))
+          rsp.write (mapper.writeValueAsString (note))
           rsp.status = Status.BadRequest
         case Result (_) =>
           rsp.status = Status.Ok

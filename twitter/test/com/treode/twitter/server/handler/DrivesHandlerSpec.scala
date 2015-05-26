@@ -18,7 +18,9 @@ package com.treode.twitter.server.handler
 
 import com.jayway.restassured.RestAssured.given
 import com.treode.async.Async, Async.supply
-import com.treode.disk.DiskSystemDigest
+import com.treode.disk.{DiskSystemDigest, DriveChange}
+import com.treode.disk.messages.AlreadyAttached
+import com.treode.notify.Notification
 import com.treode.store.{Store, StoreController}
 import org.scalatest.FlatSpec
 
@@ -39,12 +41,41 @@ class DrivesHandlerSpec extends FlatSpec with SpecTools {
         .get ("/")
     }
 
+  it should "handle POST" in
+    served { case (port, controller) =>
+      (controller.change _) .expects (DriveChange.empty) .returning (supply (Notification.unit))
+      given
+        .port (port)
+        .body ("{}")
+      .expect
+        .statusCode (200)
+      .when
+        .post ("/")
+    }
+
   it should "reject other methods" in
     served { case (port, controller) =>
       given
         .port (port)
       .expect
         .statusCode (405)
+      .when
+        .put ("/")
+    }
+
+  it should "handle errors by returning a JSON array" in
+    served { case (port, controller) =>
+      val note = Notification.errors (AlreadyAttached ("f1"), AlreadyAttached ("f2"))
+      (controller.change _) .expects (DriveChange.empty) .returning (supply (note))
+      given
+        .port (port)
+        .body ("{}")
+      .expect
+        .statusCode (400)
+        .body (matchesJson (""" [
+            { "message": "Already attached: \"f1\"" },
+            { "message": "Already attached: \"f2\"" }
+          ] """))
       .when
         .post ("/")
     }}
