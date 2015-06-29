@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-import sbtassembly.Plugin.AssemblyKeys
-import sbtassembly.Plugin.assemblySettings
 import com.atlassian.labs.gitstamp.GitStampPlugin._
 
 import sbt._
-import sbtassembly.Plugin._
-import AssemblyKeys._
+import sbtassembly.AssemblyPlugin.autoImport._
 import Keys._
 
 object MoviesBuild extends Build {
@@ -54,13 +51,12 @@ object MoviesBuild extends Build {
       name := "movies-common",
 
       libraryDependencies ++= Seq (
-        "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.4.2" % "provided"))
+        "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.5.3" % "provided"))
 
   // The respository server.
   lazy val server =
     Project ("server", file ("server"))
     .dependsOn (common)
-    .settings (assemblySettings: _*)
     .settings (gitStampSettings: _*)
     .settings (commonSettings: _*)
     .settings (
@@ -68,12 +64,12 @@ object MoviesBuild extends Build {
       name := "movies-server",
 
       libraryDependencies ++= Seq (
-        "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
-        "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.4.4",
+        "com.jayway.restassured" % "rest-assured" % "2.4.1" % "test",
+        "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.5.3",
         "com.treode" %% "jackson" % versionString,
         "com.treode" %% "store" % versionString % "compile;test->stub",
         "com.treode" %% "twitter" % versionString,
-        "org.scalatest" %% "scalatest" % "2.2.4" % "test"),
+        "org.scalatest" %% "scalatest" % "2.2.5" % "test"),
 
       jarName in assembly := "movies-server.jar",
 
@@ -86,7 +82,6 @@ object MoviesBuild extends Build {
   lazy val spark =
     Project ("spark", file ("spark"))
     .dependsOn (common)
-    .settings (assemblySettings: _*)
     .settings (gitStampSettings: _*)
     .settings (commonSettings: _*)
     .settings (
@@ -99,7 +94,7 @@ object MoviesBuild extends Build {
         // Use Jackson 2.3.1 because spark-core does.
         "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.3.1",
         "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.1",
-        "org.scalatest" %% "scalatest" % "2.2.4" % "test"),
+        "org.scalatest" %% "scalatest" % "2.2.5" % "test"),
 
       jarName in assembly := "movies-spark.jar",
 

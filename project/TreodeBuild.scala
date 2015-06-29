@@ -15,13 +15,12 @@
  */
 
 import com.typesafe.sbteclipse.plugin.EclipsePlugin.EclipseKeys
-import sbtassembly.Plugin.AssemblyKeys
-import sbtassembly.Plugin.assemblySettings
 import sbtunidoc.Plugin.{ScalaUnidoc, UnidocKeys, unidocSettings}
 
 import sbt._
-import AssemblyKeys._
+import sbtassembly.AssemblyPlugin.autoImport._
 import Keys._
+import TestFrameworks.ScalaTest
 import UnidocKeys._
 
 object TreodeBuild extends Build {
@@ -41,8 +40,8 @@ object TreodeBuild extends Build {
 
     organization := "com.treode",
     version := versionString,
-    scalaVersion := "2.11.6",
-    crossScalaVersions := Seq ("2.10.5", "2.11.6"),
+    scalaVersion := "2.11.7",
+    crossScalaVersions := Seq ("2.10.5", "2.11.7"),
 
     // Use a local Scala installation if SCALA_HOME is set. Otherwise, download the Scala tools
     // per scalaVersion.
@@ -60,24 +59,24 @@ object TreodeBuild extends Build {
 
     scalacOptions <++= scalaVersion map {
       case "2.10.5" => Seq.empty
-      case "2.11.6" => Seq ("-Ywarn-unused-import")
+      case "2.11.7" => Seq ("-Ywarn-unused-import")
     },
 
     libraryDependencies <+= scalaVersion ("org.scala-lang" % "scala-reflect" % _),
 
     libraryDependencies ++= Seq (
       "com.codahale.metrics" % "metrics-core" % "3.0.2",
-      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.4.4",
-      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.4",
+      "com.fasterxml.jackson.dataformat" % "jackson-dataformat-smile" % "2.5.3",
+      "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.5.3",
       "com.google.code.findbugs" % "jsr305" % "3.0.0",
       "com.google.guava" % "guava" % "18.0",
-      "com.googlecode.javaewah" % "JavaEWAH" % "1.0.0",
+      "com.googlecode.javaewah" % "JavaEWAH" % "1.0.2",
       "com.nothome" % "javaxdelta" % "2.0.1",
-      "org.apache.commons" % "commons-lang3" % "3.3.2",
-      "joda-time" % "joda-time" % "2.7",
+      "org.apache.commons" % "commons-lang3" % "3.4",
+      "joda-time" % "joda-time" % "2.8.1",
       "org.joda" % "joda-convert" % "1.7",
-      "org.slf4j" % "slf4j-api" % "1.7.10",
-      "org.slf4j" % "slf4j-simple" % "1.7.10"),
+      "org.slf4j" % "slf4j-api" % "1.7.12",
+      "org.slf4j" % "slf4j-simple" % "1.7.12"),
 
     publishArtifact in (Compile, packageDoc) := false,
 
@@ -95,13 +94,13 @@ object TreodeBuild extends Build {
       Set (Compile, Test, Perf),
 
     testOptions in Test := Seq (
-      Tests.Argument ("-l", "com.treode.tags.Intensive", "-oDF")),
+      Tests.Argument (ScalaTest, "-l", "com.treode.tags.Intensive", "-oDF")),
 
     testOptions in IntensiveTest := Seq (
-      Tests.Argument ("-n", "com.treode.tags.Intensive", "-oDF")),
+      Tests.Argument (ScalaTest, "-n", "com.treode.tags.Intensive", "-oDF")),
 
     testOptions in PeriodicTest := Seq (
-      Tests.Argument ("-n", "com.treode.tags.Periodic", "-oDF")),
+      Tests.Argument (ScalaTest, "-n", "com.treode.tags.Periodic", "-oDF")),
 
     testFrameworks in Perf := Seq (
       new TestFramework ("org.scalameter.ScalaMeterFramework")),
@@ -115,9 +114,9 @@ object TreodeBuild extends Build {
 
     libraryDependencies ++= Seq (
       "com.storm-enroute" %% "scalameter" % "0.6" % "perf",
-      "org.scalacheck" %% "scalacheck" % "1.12.2" % "test",
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % "test",
-      "org.scalatest" %% "scalatest" % "2.2.4" % "test"))
+      "org.scalacheck" %% "scalacheck" % "1.12.4" % "test",
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
+      "org.scalatest" %% "scalatest" % "2.2.5" % "test"))
 
   // Settings for projects without stubs.
   lazy val standardSettings =
@@ -150,13 +149,13 @@ object TreodeBuild extends Build {
       Set (Compile, Stub, TestWithStub, PerfWithStub),
 
     testOptions in TestWithStub := Seq (
-      Tests.Argument ("-l", "com.treode.tags.Intensive", "-oDF")),
+      Tests.Argument (ScalaTest, "-l", "com.treode.tags.Intensive", "-oDF")),
 
     testOptions in IntensiveTestWithStub := Seq (
-      Tests.Argument ("-n", "com.treode.tags.Intensive", "-oDF")),
+      Tests.Argument (ScalaTest, "-n", "com.treode.tags.Intensive", "-oDF")),
 
     testOptions in PeriodicTestWithStub := Seq (
-      Tests.Argument ("-n", "com.treode.tags.Periodic", "-oDF")),
+      Tests.Argument (ScalaTest, "-n", "com.treode.tags.Periodic", "-oDF")),
 
     testFrameworks in PerfWithStub := Seq (
       new TestFramework ("org.scalameter.ScalaMeterFramework")),
@@ -175,9 +174,9 @@ object TreodeBuild extends Build {
 
     libraryDependencies ++= Seq (
       "com.storm-enroute" %% "scalameter" % "0.6" % "stub->default",
-      "org.scalacheck" %% "scalacheck" % "1.12.2" % "stub->default",
-      "org.scalamock" %% "scalamock-scalatest-support" % "3.2.1" % "stub->default",
-      "org.scalatest" %% "scalatest" % "2.2.4" % "stub->default"))
+      "org.scalacheck" %% "scalacheck" % "1.12.4" % "stub->default",
+      "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "stub->default",
+      "org.scalatest" %% "scalatest" % "2.2.5" % "stub->default"))
 
   // Settings for projects with stubs.
   lazy val stubSettings =
@@ -230,15 +229,14 @@ object TreodeBuild extends Build {
         resolvers += "Twitter" at "http://maven.twttr.com",
 
         libraryDependencies ++= Seq (
-          "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
-          "com.twitter" %% "twitter-server" % "1.9.0"))
+          "com.jayway.restassured" % "rest-assured" % "2.4.1" % "test",
+          "com.twitter" %% "twitter-server" % "1.11.0"))
 
   // The main server that this build provides.
   lazy val server = Project ("server", file ("server"))
     .configs (IntensiveTest, PeriodicTest, Perf)
     .dependsOn (store % "compile;test->stub", twitter)
     .settings (standardSettings: _*)
-    .settings (assemblySettings: _*)
     .settings (
 
       name := "server",
@@ -251,7 +249,7 @@ object TreodeBuild extends Build {
       publish := {},
 
       libraryDependencies ++= Seq (
-          "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test"))
+          "com.jayway.restassured" % "rest-assured" % "2.4.1" % "test"))
 
   // A standalone server for system tests.  Separated to keep system testing components out of
   // production code (these components are in the default config in this project).
@@ -259,7 +257,6 @@ object TreodeBuild extends Build {
     .configs (IntensiveTest, PeriodicTest, Perf)
     .dependsOn (store)
     .settings (standardSettings: _*)
-    .settings (assemblySettings: _*)
     .settings (
 
       name := "systest",

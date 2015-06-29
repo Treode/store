@@ -1,7 +1,4 @@
-import AssemblyKeys._
 import com.atlassian.labs.gitstamp.GitStampPlugin._
-
-assemblySettings
 
 gitStampSettings
 
@@ -9,15 +6,15 @@ organization := "com.treode"
 
 version := "0.3.0-SNAPSHOT"
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
 
 libraryDependencies ++= Seq (
-  "com.jayway.restassured" % "rest-assured" % "2.4.0" % "test",
+  "com.jayway.restassured" % "rest-assured" % "2.4.1" % "test",
   "com.treode" %% "jackson" % "0.3.0-SNAPSHOT",
   "com.treode" %% "store" % "0.3.0-SNAPSHOT" % "compile;test->stub",
   "com.treode" %% "twitter" % "0.3.0-SNAPSHOT",
-  "net.databinder" %% "unfiltered-netty-server" % "0.8.3",
-  "org.scalatest" %% "scalatest" % "2.2.4" % "test")
+  "net.databinder" %% "unfiltered-netty-server" % "0.8.4",
+  "org.scalatest" %% "scalatest" % "2.2.5" % "test")
 
 resolvers += "Twitter" at "http://maven.twttr.com"
 

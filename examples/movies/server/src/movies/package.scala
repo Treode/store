@@ -61,8 +61,6 @@ package object movies {
   binaryJson.registerModule (new DefaultScalaModule)
   binaryJson.registerModule (new JodaModule)
 
-  val prettyJson = textJson.writerWithDefaultPrettyPrinter
-
   object respond {
 
     def apply (req: Request, status: HttpResponseStatus = Status.Ok): Response = {
@@ -94,7 +92,6 @@ package object movies {
     }
 
     def json (req: Request, value: Any): Response  = {
-      implicit val mapper = if (req.pretty) prettyJson else textJson
       val rsp = req.response
       rsp.status = Status.Ok
       rsp.json = value
@@ -102,7 +99,6 @@ package object movies {
     }
 
     def json (req: Request, time: TxClock, value: Any): Response  = {
-      implicit val mapper = if (req.pretty) prettyJson else textJson
       val rsp = req.response
       rsp.status = Status.Ok
       rsp.date = req.readTxClock
@@ -115,7 +111,6 @@ package object movies {
     }
 
     def json [A] (req: Request, iter: BatchIterator [A]): Response  = {
-      implicit val mapper = if (req.pretty) prettyJson else textJson
       val rsp = req.response
       rsp.status = Status.Ok
       rsp.json = iter
@@ -167,13 +162,6 @@ package object movies {
 
     def id (prefix: String): String =
       request.path.substring (prefix.length)
-
-    def pretty: Boolean =
-      // If the accept header lacks "application/json", then pretty print the response.
-      request.headerMap.get ("Accept") match {
-        case Some (accept) => !(accept contains MediaType.Json)
-        case None => true
-      }
 
     def query: String =
       request.params

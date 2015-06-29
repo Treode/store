@@ -19,7 +19,7 @@ package com.treode.twitter.finagle
 import java.lang.Long.highestOneBit
 import scala.util.{Failure, Success}
 
-import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.{ObjectMapper, ObjectWriter}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.BatchIterator
@@ -65,7 +65,7 @@ package object http {
     def json_= [A] (iter: BatchIterator [A]) (implicit mapper: ObjectMapper) {
       rsp.mediaType = MediaType.Json
       rsp.setChunked (true)
-      val writer = mapper.writer()
+      val writer = mapper.writer [ObjectWriter] ()
       var first = true
       iter.batch { vs =>
         val buffer = ChannelBuffers.dynamicBuffer()
