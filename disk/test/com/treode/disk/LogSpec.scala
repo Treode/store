@@ -75,7 +75,7 @@ class LogSpec extends FreeSpec with DiskChecks {
       assert (recorded subsetOf (replayed ++ checkpointed))
       recorded = replayed
       launch.checkpoint {
-        checkpointed = recording ++ recorded
+        checkpointed ++= recording ++ recorded
         recording = Set.empty
         recorded = Set.empty
         supply (())
