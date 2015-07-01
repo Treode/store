@@ -12,7 +12,7 @@ Caches and Transactions mediate between client operations and HTTP requests. The
 
 ## Background
 
-**Alert**: There are multiple caches and multiple timestamps. This is done to ensure that laypeople don't fiddle with our code. We clarify the multiplicities here.
+**Alert**: There are multiple caches and multiple timestamps. We clarify the multiplicities here.
 
 ### HTTP Caches vs Client Caches
 
@@ -48,7 +48,7 @@ TreodeDB and the caches keep multiple timestamps for an item: the time that the 
 
 Also, a request is made as of a *read timestamp*. The term *age* refers to duration between the read time of a cached value, and the read time of a request accessing that value.
 
-Conceptually, a cache is a table such as the prototypical one here. Operationally, the client maintains the cache using a hash table or skiplist. A cached item represents an assertion that the key *does have* that value from the value time to read time, inclusive.
+Conceptually, a cache is a table such as the prototypical one here. Operationally, the client maintains the cache using a hash table or skiplist. A cached item represents an assertion that the key has that value from the value time to read time, inclusive.
 
 <table>
 <tr>
@@ -67,11 +67,11 @@ Conceptually, a cache is a table such as the prototypical one here. Operationall
 
 ### Conditional Write Batches
 
-The standard HTTP protocol permits updating one value per request; fortunately the HTTP specification leaves room for extensions. To implement transactions, we must have the ability to update multiple values as an atomic unit, that is all or nothing. TreodeDB supports multiple mechanisms for bundling updates into a batch.
+The standard HTTP protocol permits updating one value per request; fortunately the HTTP specification leaves room for extensions. To implement transactions, we must have the ability to update multiple values as an atomic unit, that is all or nothing. TreodeDB supports two mechanisms for bundling updates into a batch.
 
-- **POST to /batch-write**: The client may issue a single request to POST the updates. All objects are contained in a JSON array.
+- **POST to /batch-write** *(currently supported)*: The client may issue a single request to POST the updates. All objects are contained in a JSON array.
 
-- **Request Pipelining**: The client may issue multiple POST, PUT and DELETE requests without awaiting responses. The client ties the requests together using the `Transaction` header.
+- **Request Pipelining** *(future feature)*: The client may issue multiple POST, PUT and DELETE requests without awaiting responses. The client ties the requests together using the `Transaction` header.
 
 ### Other References
 
@@ -104,19 +104,19 @@ In a GET request header, this specifies that the DB should send the value only i
 
 In a POST, PUT or DELETE request header, this specifies that the DB should apply the update only if the values have not been updated since that time. If the none of the values have changed, the server will apply the updates and respond `200 OK`. If one or more of the values has changed, the server will respond `412 Precondition Failed`.
 
-POST, PUT and DELETE requests may be part of a write batch. POST requests to “/multi” will contain a write batch inside. All entries included in the write batch must be unchanged since the Condition-TxClock timestamp.
+POST, PUT and DELETE requests may be part of a write batch. POST requests to “/batch-write” will contain a write batch inside. All entries included in the write batch must be unchanged since the `Condition-TxClock` timestamp.
 
 ### Custom Header: Transaction
 
-- Directive **id**: An arbitrary identifier represented in base64, hexadecimal, decimal or octal.
+- Directive **id** *(currently supported)*: An arbitrary identifier represented in base64, hexadecimal, decimal or octal.
 
-- Directive **item**: An item number and total count, e.g. `2/3`.
+- Directive **item** *(future feature)*: An item number and total count, e.g. `2/3`.
 
 The transaction ID must be globally unique, and the application is responsible for ensuring that.
 
-The `id` and `item` directives support [pipelined](#pipelining) batch writes.  The `id` directive represents the Transaction the message is a component of, and the `item` directive specifies the position of the message contents in the entire batch write. The directives are required for pipelining batch writes.
+The `id` and `item` directives support [pipelined](#pipelining) batch writes *(future feature)*.  The `id` directive represents the Transaction the message is a component of, and the `item` directive specifies the position of the message contents in the entire batch write. The directives are required for pipelining batch writes.
 
-The header and directives are optional if using other mechanisms to batch writes. However, the client can benefit from choosing a transaction ID. In this case, the client would included the header with `id` directive, but omit the `item` directive. If the client chooses an ID, and it looses its connection during a batch write, then the client can reconnect to any server in the cell and use that ID to ask for the status.
+The header and directives are optional when issuing a POST request to `/batch-write` *(currently supported)*. The client can omit the transaction ID, and the server will choose one for it. However, the client can benefit from choosing the transaction ID itself. In this case, the client would include the header with `id` directive, but omit the `item` directive. If the client chooses an ID, and it looses its connection during a batch write, then the client can reconnect to any server in the cell and use that ID to ask for the status.
 
 ### Standard Header: Date
 
@@ -136,18 +136,18 @@ This is the HTTP companion to Condition-TxClock in a POST, PUT or DELETE request
 
 ### Standard Header: Cache-Control
 
-- Directive **max-age**: The max number of seconds between now and an entry’s read timestamp.
+- Directive **max-age**: The max number of seconds between now and an entry’s cached timestamp.
 
   The directive indicates that the user will accept a value from an intermediate cache if that value was read from the DB server fewer than `max-age` seconds ago. An intermediate HTTP cache computes the age as the duration between the request’s time and the entry’s Date header. The max-age directive controls intermediate caches only; the DB ignores it. The DB server gives back the most recent value w.r.t. the read timestamp, regardless of the `max-age` requirement.
 
-- Directive **no-cache**: Forces cache to send a request to the DB server to retrieve the requested value.
+- Directive **no-cache**: Forces the cache to send a request to the DB server to retrieve the requested value.
 
 The `Cache-Control` header is optional. If a client does include the header, it will use only one of the `max-age` or `no-cache` directives.
 
 An example of usage is below:
 
     GET /[table_id_string]/[key_string] HTTP/1.1
-    Cache-Control: max-age=3, no-cache
+    Cache-Control: max-age=300
 
 ## Requests
 
@@ -155,11 +155,11 @@ We give examples of HTTP requests below.
 
 ### Read Requests
 
-The request to the DB includes the table ID, the desired key, and headers restricting the timestamps of the value.
+The request to the DB includes the table name, the desired key, and headers restricting the timestamps of the value.
 
 HTTP read requests should follow this format:
 
-    GET /[table_id_string]/[key_string] HTTP/1.1
+    GET /[table]/[key] HTTP/1.1
     If-Modified-Since: [http date]
     Cache-Control: max-age=[duration, seconds]
     Read-TxClock: [timestamp, microseconds, 64 bits]
@@ -175,22 +175,24 @@ The `If-Modified-Since `, `Cache-Control`, `Read-TxClock` and `Condition-TxClock
 
 The client is requesting the value of key "star-wars" in the table "movie".  Since this key's value may have changed over time, the client gives a time range for the value, and tolerances for the age of items from intermediate HTTP caches. Specifically, the client wants a value that was written on or before time 1421236153024853 &micro;s. The client already has a value that was written on 1338735183450735 &micro;s, so it only needs a new value if it was written since then.
 
-The client will accept a value from an intermediate cache, only if that cache read the DB less than 300 seconds before the request. Otherwise, the client wants the value directly from the DB server. Finally, the client could have used  the `no-cache` directive to **force** the cache to forward the request to the DB server, even if the cache already has a value satisfying the other requirements.
+The client will accept a value from an intermediate cache, only if that cache has read the DB less than 300 seconds before the request. Otherwise, the client wants the value directly from the DB server. Finally, the client could have used  the `no-cache` directive to force the cache to forward the request to the DB server, even if the cache already has a value satisfying the other requirements.
 
 ### Write Requests
 
-The client message to the DB includes the table ID and a list of operations to perform on the table. The operations should be sent to the DB server as a conditional batch write.
+#### PUT or DELETE a Single Row
+
+The client message to the DB includes the table name and operation to perform on the table.
 
 The HTTP request for write should be similar to the following:
 
-    PUT /[table_id_string]/[key_string] HTTP/1.1
+    PUT /[table]/[key] HTTP/1.1
     If-Unmodified-Since: [http date]
     Transaction: id=[identifier, globally unique]
     Condition-TxClock: [timestamp, microseconds, 64 bits]
 
     [JSON]
 
-The `If-Unmodified-Since` and `Transaction`, `Condition-TxClock` headers are optional. Note, that if included, the `Transaction` header needs only the `id` directive. The `item` directive is necessary only for pipelined batch writes.
+The `If-Unmodified-Since` and `Transaction`, `Condition-TxClock` headers are optional. If included, the `Transaction` header needs only the `id` directive. The `item` directive is necessary only for pipelined batch writes.
 
 Here is an example of the HTTP write request of one item:
 
@@ -222,16 +224,16 @@ The items of the batch may be wrapped into a JSON array and POSTed to `/batch-wr
       { "op": [op2], "table": [table2], "key": [key1], value=[JSON value2] },
       … ]
 
-The `If-Unmodified-Since` and `Transaction`, `Condition-TxClock` headers are optional. Note, that if included, the `Transaction` header needs only the `id` directive. The `item` directive is necessary only for pipelined batch writes.
+The `If-Unmodified-Since` and `Transaction`, `Condition-TxClock` headers are optional. If included, the `Transaction` header needs only the `id` directive. The `item` directive is necessary only for pipelined batch writes.
 
-TreodeDB writes the given JSON contents to their respective keys in their respective tables, provided that the current values for those rows has remained unchanged since the condition time.
+TreodeDB writes the given JSON contents to their respective keys in their respective tables, provided that the current values for all of those rows has remained unchanged since the condition time.
 
 The operations may be `create`, `hold` and `update`, `delete`. Only the `create` and `update` operations require a value; the `hold` and `delete` operations may omit the value.
 
 <a name="pipelining"></a>
-#### Request Pipelining
+#### Request Pipelining (Future Feature)
 
-The client may send each item in the batch write as a separate HTTP request. The client sends the requests one after the other without awaiting responses; then it  waits for all the responses after sending the last request of the batch. The client uses the `item` directive to indicate that the requests are part of a batch write. For example,
+The client may send each item in the batch write as a separate HTTP request. The client sends the requests one after the other without awaiting responses; then itwaits for all the responses after sending the last request of the batch. The client uses the `item` directive to indicate that the requests are part of a batch write. For example,
 
     PUT /movie/star-wars HTTP/1.1
     If-Unmodified-Since: Fri, 10 May 2013 02:07:43 GMT
@@ -255,7 +257,7 @@ As with the Requests section, please see more information in [OMVCC and Caching]
 
 The DB will respond to read requests with a message containing the desired value or an indication the value does not exist in the table.
 
-When the item is in the database, HTTP response will resemble the following:
+When the item is in the database, the HTTP response will resemble the following:
 
     HTTP/1.1 200 Ok
     Date: Wed, 14 Jan 2015 11:49:13 GMT
@@ -273,7 +275,7 @@ There are several cases in which the HTTP response does not include the JSON val
 
 - **HTTP/1.1 304 Not Modified**: The item has not changed since the time indicated by the `Condition-TxClock` header. This status can occur only if the request includes that header.
 
-  Note this response is still valuable to the cache, as it allows the cache to update the read timestamp (rt) for this entry to the read timestamp of this request&mdash;the client has just learned that the value has not changed between when the value was last read and this read read.
+  This response is still valuable to the cache, as it allows the cache to update the cached timestamp for this entry to the read timestamp of this request&mdash;the client has just learned that the value has not changed between when the value was last read and this read.
 
 - **HTTP/1.1 404 Not Found**: The requested value is not in the table.
 
@@ -283,7 +285,7 @@ There are several cases in which the HTTP response does not include the JSON val
 
 The DB will respond with either a success or rejection indicator.  If the DB rejects it, the write method should throw a StaleException, to indicate that caller should retry the operation using fresher data from the DB.
 
-The HTTP response for a successful PUT to an individual item, or a POST to `/batch-write` will look like:
+The HTTP response for a successful PUT or DELETE to an individual item, or a POST to `/batch-write` will look like:
 
     HTTP/1.1 200 Ok
     Value-TxClock: 1421236393816753
@@ -294,7 +296,7 @@ However, it is also possible the DB server will reject the write because another
 
 The the client should retry the transaction with a smaller value for the max-age header (e.g., min-age=0) to ensure the values it receives from the client cache and intermediate caches are not stale.
 
-When the client pipelines requests, the server provides the response multiple times, once for each request.
+When the client pipelines requests (future feature), the server provides the response multiple times, once for each request.
 
 
 <a name="cache"></a>
@@ -344,7 +346,7 @@ We propose two possible designs for implementing the cache; the preferable of th
 
 The cache may be a doubly-linked list of entries, plus a hash table of arrays (or lists) of those entries.
 
-In Python, the hashtable is a standard Python dictionary. The `table:key` keys are composed by concatenating the table name and key.  Each `table:key` maps to an array of references to nodes in the LRU list. Each node of the LRU list contains the table, key, value, its timestamps and the LRU’s previous and next pointers. Note that the value may be None to indicate that there is no value for duration.
+In Python, the hashtable is a standard Python dictionary. The `table:key` keys are composed by concatenating the table name and key.  Each `table:key` maps to an array of references to nodes in the LRU list. Each node of the LRU list contains the table, key, value, its timestamps and the LRU’s previous and next pointers. The value may be None to indicate that there is no value for duration.
 
 To `get` an item as of a given `read_time`, we lookup the array for `table:key`, and then we search that list for the *most recent* `value_time` on or before the given `read_time`. We return the tuple `(value_time, cached_time, JSON value)`
 
@@ -356,7 +358,7 @@ If the arrays (or lists) are unsorted, then `add` is *O*(1), and `find` (floor),
 
 ![Client and proxy caches.](img/skiplist.png)
 
-If a skiplist that supports floor and ceiling operations is available, then the cache can be implemented using it. Each `(table, key, reverse_time)` maps to a node in the LRU list. Each node of the LRU list contains the table, key, value, its timestamps and the LRU’s previous and next pointers. The skiplist is effectively sorted in reverse chronological order. Note that the value may be None to indicate that there is no value for duration.
+If a skiplist that supports floor and ceiling operations is available, then the cache can be implemented using it. Each `(table, key, reverse_time)` maps to a node in the LRU list. Each node of the LRU list contains the table, key, value, its timestamps and the LRU’s previous and next pointers. The skiplist is effectively sorted in reverse chronological order. The value may be None to indicate that there is no value for duration.
 
 To `get` an item as of a given `read_time`, we lookup the *ceiling* entry for `(table, key, (Long.Max - read_time))`, and then we return the tuple `(value_time, cached_time, JSON value)`.
 
