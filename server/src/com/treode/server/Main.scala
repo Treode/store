@@ -37,8 +37,6 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
 
   def main() {
 
-    val schema = Schema.empty
-
     val httpAddr =
       parseHosts (httpAddrFlag()) .head
 
@@ -50,8 +48,12 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
 
     controller.announce (Some (shareHttpAddr), None)
 
+    val librarian = new LiveLibrarian (controller)
+
+    addAdminHandler ("/admin/treode/schema", new SchemaHandler (librarian))
+
     val resource =
-      new ResourceHandler (controller.hostId, controller.store, schema)
+      new ResourceHandler (controller.hostId, controller.store, librarian)
 
     val server = Http.serve (
       httpAddr,

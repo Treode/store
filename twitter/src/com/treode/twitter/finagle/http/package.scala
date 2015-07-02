@@ -132,6 +132,10 @@ package object http {
     def vary_= (vary: String): Unit =
       rsp.headerMap.add ("Vary", vary)
 
+    /** Do not use; necessary for Scala style setter. */
+    def plain: String =
+      throw new UnsupportedOperationException
+
     def plain_= (value: String) {
       rsp.mediaType = "text/plain"
       rsp.write (value)

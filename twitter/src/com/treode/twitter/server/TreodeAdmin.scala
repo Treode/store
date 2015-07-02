@@ -27,7 +27,7 @@ import com.twitter.finagle.http.filter.ExceptionFilter
 trait TreodeAdmin {
   this: App with StoreKit =>
 
-  private def add (pattern: String, service: Service [Request, Response]): Unit =
+  def addAdminHandler (pattern: String, service: Service [Request, Response]): Unit =
     HttpMuxer.addHandler (
       pattern,
       NettyToFinagle andThen
@@ -36,7 +36,7 @@ trait TreodeAdmin {
       service)
 
   premain {
-    add ("/admin/treode/atlas",         new AtlasHandler (controller))
-    add ("/admin/treode/drives",        new DrivesHandler (controller))
-    add ("/admin/treode/tables",        new TablesHandler (controller))
+    addAdminHandler ("/admin/treode/atlas",  new AtlasHandler (controller))
+    addAdminHandler ("/admin/treode/drives", new DrivesHandler (controller))
+    addAdminHandler ("/admin/treode/tables", new TablesHandler (controller))
   }}

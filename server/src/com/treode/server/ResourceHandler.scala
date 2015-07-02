@@ -28,8 +28,10 @@ import com.twitter.util.Future
 
 import ResourceHandler.{Batch, Row, Table, Unmatched, route}
 
-class ResourceHandler (host: HostId, store: Store, schema: Schema)
+class ResourceHandler (host: HostId, store: Store, librarian: Librarian)
 extends Service [Request, Response] {
+
+  import librarian.schema
 
   def read (req: Request, tab: TableId, key: String): Async [Response] = {
     val rt = req.readTxClock

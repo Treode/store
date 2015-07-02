@@ -22,7 +22,7 @@ object SchemaParser extends RegexParsers {
   sealed abstract class Message {
     def message: String
     def position: Position
-    override def toString = message + " at line " + position.line + "\n" + position.longString
+    override def toString = s"$message at line ${position.line}\n${position.longString}\n\n"
   }
 
 	case class ParseError (message: String, position: Position) extends Message
@@ -190,7 +190,7 @@ object SchemaParser extends RegexParsers {
       case ParserSuccess (clauses) => {
         semanticAnalysis (clauses) match {
           case SemanticAnalysisSuccess (map) => {
-            CompilerSuccess (Schema (map))
+            CompilerSuccess (Schema (map, input))
           }
           case SemanticAnalysisFailure (errors) => {
             CompilerFailure (errors)

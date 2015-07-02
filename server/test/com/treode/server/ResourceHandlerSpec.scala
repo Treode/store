@@ -49,13 +49,14 @@ class ResourceHandlerSpec extends FreeSpec {
   def served (test: (Int, StubSchematicStore) => Any) {
     val store = StubStore()
     val stub = new StubSchematicStore (store, schema)
+    val librarian = new StubLibrarian (schema)
     val port = Random.nextInt (65535 - 49152) + 49152
     val server = Http.serve (
       s":$port",
       NettyToFinagle andThen
       BadRequestFilter andThen
       JsonExceptionFilter andThen
-      new ResourceHandler (0, store, schema))
+      new ResourceHandler (0, store, librarian))
     try {
       test (port, stub)
     } finally {

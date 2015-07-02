@@ -48,6 +48,14 @@ package object server {
       rsp
     }
 
+    def apply (req: Request, errors: Seq [SchemaParser.Message]): Response = {
+      val rsp = req.response
+      for (e <- errors)
+        rsp.write (e.toString)
+      rsp.status = Status.BadRequest
+      rsp
+    }
+
     def ok (req: Request, time: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.Ok
@@ -85,6 +93,13 @@ package object server {
       val rsp = req.response
       rsp.status = Status.Ok
       rsp.json = iter
+      rsp
+    }
+
+    def plain (req: Request, value: String): Response  = {
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.plain = value
       rsp
     }}
 

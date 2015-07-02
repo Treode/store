@@ -1,13 +1,18 @@
  package com.treode.server
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.HashSet
+import scala.collection.mutable.{HashSet, StringBuilder}
 
 import com.fasterxml.jackson.databind.JsonNode
-import com.treode.store.{Bytes, TableId, WriteOp}
+import com.treode.pickle.Picklers
+import com.treode.store.{Bytes, CatalogDescriptor, TableId, WriteOp}
 import com.treode.twitter.finagle.http.BadRequestException
 
-class Schema private (private val tables: Map [String, TableId]) {
+class Schema private (
+  val tables: Map [String, TableId],
+  val version: Int,
+  val source: String
+) {
 
   def getTableId (s: String): Option [TableId] =
     tables.get (s)
@@ -52,6 +57,9 @@ class Schema private (private val tables: Map [String, TableId]) {
       ops
   }
 
+  def copy (version: Int = version): Schema =
+    new Schema (tables, version, source)
+
   override def hashCode: Int =
     tables.hashCode
 
@@ -60,13 +68,28 @@ class Schema private (private val tables: Map [String, TableId]) {
       case that: Schema => tables == that.tables
       case _ => false
     }
+
+  override def toString: String =
+    source
 }
 
 object Schema {
 
-  val empty: Schema =
-    new Schema (Map.empty)
-
   def apply (tables: Map [String, TableId]): Schema =
-    new Schema (tables)
+    new Schema (tables, 0, "<no source>")
+
+  def apply (tables: Map [String, TableId], source: String): Schema =
+    new Schema (tables, 0, source)
+
+  val empty: Schema =
+    new Schema (Map.empty, 0, "")
+
+  val pickler = {
+    import Picklers._
+    wrap (map (string, TableId.pickler), uint, string)
+    .build (v => new Schema (v._1, v._2, v._3))
+    .inspect (v => (v.tables, v.version, v.source))
+  }
+
+  val catalog = CatalogDescriptor (0x48FA40B90BA03D25L, pickler)
 }
