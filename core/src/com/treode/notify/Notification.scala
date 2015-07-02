@@ -116,17 +116,6 @@ object Notification {
         Result (v)
       else
         Errors (list.reverse)
-
-    /** Get the appropriate notification.
-      * @param v The result value, if no errors were found.
-      * @param close The method to close the resource that the value acquired.
-      * @return `Errors` if this builder accumulated any, otherwise `Result`.
-      */
-    def result [A] (v: A, close: A => Unit): Notification [A] =
-      if (!hasErrors)
-        result (v, close)
-      else
-        Errors (list.reverse)
   }
 
   def newBuilder: Builder = new Builder

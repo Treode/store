@@ -53,7 +53,7 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
     controller.announce (Some (shareHttpAddr), None)
 
     val resource =
-      new Resource (controller.hostId, new SchematicStore (controller.store, schema))
+      new ResourceHandler (controller.hostId, controller.store, schema)
 
     val server = Http.serve (
       httpAddr,

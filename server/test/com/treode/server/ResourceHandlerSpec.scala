@@ -31,10 +31,9 @@ import com.twitter.finagle.Http
 import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}, Matchers._
 import org.scalatest.FreeSpec
 
+import ResourceHandler.{Batch, Row, Table, Unmatched, route}
 
-import Resource.{Batch, Row, Table, Unmatched, route}
-
-class ResourceSpec extends FreeSpec {
+class ResourceHandlerSpec extends FreeSpec {
 
   val v1 = "\"v1\""
   val v2 = "\"v2\""
@@ -47,18 +46,18 @@ class ResourceSpec extends FreeSpec {
     table table4 { id : 0x4; };
   """)
 
-  def served (test: (Int, SchematicStubStore) => Any) {
-    val store = StubStore ()
+  def served (test: (Int, StubSchematicStore) => Any) {
+    val store = StubStore()
+    val stub = new StubSchematicStore (store, schema)
     val port = Random.nextInt (65535 - 49152) + 49152
-    val schematicStore = new SchematicStubStore (store, schema)
     val server = Http.serve (
       s":$port",
       NettyToFinagle andThen
       BadRequestFilter andThen
       JsonExceptionFilter andThen
-      new Resource (0, schematicStore))
+      new ResourceHandler (0, store, schema))
     try {
-      test (port, schematicStore)
+      test (port, stub)
     } finally {
       server.close()
     }}
@@ -93,15 +92,6 @@ class ResourceSpec extends FreeSpec {
 
   def matchesJson (expected: String): Matcher [String] =
     new JsonMatcher (expected)
-
-  def update (store: SchematicStubStore, ct: TxClock, key: String, value: String, tab: String = "table1"): TxClock =
-    store.update (
-      store.getTableId (tab) .get,
-      key,
-      value.fromJson [JsonNode],
-      TxId (Bytes (Random.nextInt), 0),
-      ct
-    ) .await
 
   "Resource.route" - {
     "should route properly" in {
@@ -155,11 +145,8 @@ class ResourceSpec extends FreeSpec {
 
   "When the database has an entry" - {
 
-    val entity = "\"you found me\""
-    val entity2 = "\"i have been stored\""
-
-    def addData (store: SchematicStubStore): TxClock =
-      update (store, TxClock.MinValue, "abc", entity)
+    def addData (store: StubSchematicStore): TxClock =
+      store.update (TxClock.MinValue, "table1", "abc", v1) .await
 
     "GET /table1/abc should respond Ok" in
       served { case (port, store) =>
@@ -168,7 +155,7 @@ class ResourceSpec extends FreeSpec {
           .port (port)
         .expect
           .statusCode (200)
-          .body (equalTo (entity))
+          .body (equalTo (v1))
         .when
           .get ("/table1/abc")
       }
@@ -181,7 +168,7 @@ class ResourceSpec extends FreeSpec {
           .header ("Condition-TxClock", "0")
         .expect
           .statusCode (200)
-          .body (equalTo (entity))
+          .body (equalTo (v1))
         .when
           .get ("/table1/abc")
       }
@@ -218,7 +205,7 @@ class ResourceSpec extends FreeSpec {
           .header ("Read-TxClock", "1")
         .expect
           .statusCode (200)
-          .body (equalTo (entity))
+          .body (equalTo (v1))
         .when
           .get ("/table1/abc")
       }
@@ -228,13 +215,13 @@ class ResourceSpec extends FreeSpec {
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .body (entity2)
+          .body (v2)
         .expect
           .statusCode (200)
         .when
           .put ("/table1/abc")
         val ts2 = rsp.valueTxClock
-        assertSeq (cell ("abc", ts2, entity2), cell ("abc", ts1, entity)) (store.scan ("table1"))
+        assertSeq (cell ("abc", ts2, v2), cell ("abc", ts1, v1)) (store.scan ("table1"))
       }
 
     "PUT /table1/abc with If-Unmodified-Since:1 should respond Ok with a valueTxClock" in
@@ -243,13 +230,13 @@ class ResourceSpec extends FreeSpec {
         val rsp = given
           .port (port)
           .header ("Condition-TxClock", "1")
-          .body (entity2)
+          .body (v2)
         .expect
           .statusCode (200)
         .when
           .put ("/table1/abc")
         val ts2 = rsp.valueTxClock
-        assertSeq (cell ("abc", ts2, entity2), cell ("abc", ts1, entity)) (store.scan ("table1"))
+        assertSeq (cell ("abc", ts2, v2), cell ("abc", ts1, v1)) (store.scan ("table1"))
       }
 
     "PUT /table1/abc with If-Unmodified-Since:0 should respond Precondition Failed" in
@@ -258,13 +245,13 @@ class ResourceSpec extends FreeSpec {
         val rsp = given
           .port (port)
           .header ("Condition-TxClock", "0")
-          .body (entity2)
+          .body (v2)
         .expect
           .statusCode (412)
           .header ("Value-TxClock", ts1.toString)
         .when
           .put ("/table1/abc")
-        assertSeq (cell ("abc", ts1, entity)) (store.scan ("table1"))
+        assertSeq (cell ("abc", ts1, v1)) (store.scan ("table1"))
       }
 
     "DELETE /table1/abc should respond Ok with a valueTxClock" in
@@ -277,7 +264,7 @@ class ResourceSpec extends FreeSpec {
         .when
           .delete ("/table1/abc")
         val ts2 = rsp.valueTxClock
-        assertSeq (cell ("abc", ts2), cell ("abc", ts1, entity)) (store.scan ("table1"))
+        assertSeq (cell ("abc", ts2), cell ("abc", ts1, v1)) (store.scan ("table1"))
       }
 
     "DELETE /table1/abc with If-Unmodified-Since:1 should respond Ok with a valueTxClock" in
@@ -291,7 +278,7 @@ class ResourceSpec extends FreeSpec {
         .when
           .delete ("/table1/abc")
         val ts2 = rsp.valueTxClock
-        assertSeq (cell ("abc", ts2), cell ("abc", ts1, entity)) (store.scan ("table1"))
+        assertSeq (cell ("abc", ts2), cell ("abc", ts1, v1)) (store.scan ("table1"))
       }
 
     "DELETE /table1/abc with If-Unmodified-Since:0 should respond Precondition Failed" in
@@ -305,18 +292,19 @@ class ResourceSpec extends FreeSpec {
           .header ("Value-TxClock", ts1.toString)
         .when
           .delete ("/table1/abc")
-        assertSeq (cell ("abc", ts1, entity)) (store.scan ("table1"))
+        assertSeq (cell ("abc", ts1, v1)) (store.scan ("table1"))
       }}
 
   "When the database has entries and history" - {
 
-    def addData (store: SchematicStubStore) {
-      var t = update (store, TxClock.MinValue, "a", "\"a1\"")
-      t = update (store, t, "a", "\"a2\"")
-      t = update (store, t, "b", "\"b1\"")
-      t = update (store, t, "b", "\"b2\"")
-      t = update (store, t, "c", "\"c1\"")
-      t = update (store, t, "c", "\"c2\"")
+    def addData (store: StubSchematicStore) {
+      var t = TxClock.MinValue
+      t = store.update (t, "table1", "a", "\"a1\"") .await
+      t = store.update (t, "table1", "a", "\"a2\"") .await
+      t = store.update (t, "table1", "b", "\"b1\"") .await
+      t = store.update (t, "table1", "b", "\"b2\"") .await
+      t = store.update (t, "table1", "c", "\"c1\"") .await
+      t = store.update (t, "table1", "c", "\"c2\"") .await
     }
 
     "GET /table1 should work" in {
@@ -482,11 +470,11 @@ class ResourceSpec extends FreeSpec {
 
   "When post request contains batch-writes" - {
 
-    def addData (table: String, store: SchematicStubStore, key: String, value: String): TxClock =
-      update (store, TxClock.MinValue, key, value, table)
+    def addData (store: StubSchematicStore, table: String, key: String, value: String): TxClock =
+      store.update (TxClock.MinValue, table, key, value) .await
 
-    def updateData (table: String, store: SchematicStubStore, key: String, value: String): TxClock =
-      update (store, TxClock.now, key, value, table)
+    def updateData (store: StubSchematicStore, ct: TxClock, table: String, key: String, value: String): TxClock =
+      store.update (ct, table, key, value) .await
 
     "and has proper JSON" - {
 
@@ -506,7 +494,7 @@ class ResourceSpec extends FreeSpec {
 
       "POST /batch-write with one UPDATE should yield Ok" in {
         served { case (port, store) =>
-          val ts1 = addData ("table1", store, "abc", v1)
+          val ts1 = addData (store, "table1", "abc", v1)
           val rsp = given
             .port (port)
             .contentType ("application/json")
@@ -521,6 +509,7 @@ class ResourceSpec extends FreeSpec {
 
       "POST /batch-write with one DELETE should yield Ok" in {
         served { case (port, store) =>
+          val ts1 = addData (store, "table1", "abc", v1)
           val rsp = given
             .port (port)
             .contentType ("application/json")
@@ -530,7 +519,7 @@ class ResourceSpec extends FreeSpec {
           .when
             .post ("/batch-write")
           val valueTxClock = rsp.valueTxClock
-          assertSeq (cell ("abc", valueTxClock)) (store.scan ("table1"))
+          assertSeq (cell ("abc", valueTxClock), cell ("abc", ts1, v1)) (store.scan ("table1"))
         }}
 
       "POST /batch-write with mixed case operations should yield Ok" in {
@@ -549,9 +538,9 @@ class ResourceSpec extends FreeSpec {
 
       "POST /batch-write with multiple operations should yeild Ok" in {
         served { case (port, store) =>
-          val ts1 = addData ("table2", store, "abc2", v1)
-          val ts3 = addData ("table3", store, "abc3", v1)
-          val ts4 = updateData ("table3", store, "abc3", v1)
+          val ts1 = addData (store, "table2", "abc2", v1)
+          val ts3 = addData (store, "table3", "abc3", v1)
+          val ts4 = updateData (store, ts3, "table3", "abc3", v2)
           val rsp = given
             .port (port)
             .contentType ("application/json")
@@ -568,13 +557,14 @@ class ResourceSpec extends FreeSpec {
           val ts2 = rsp.valueTxClock
           assertSeq (cell ("abc", ts2, v1)) (store.scan ("table1"))
           assertSeq (cell ("abc2", ts2, v3), cell ("abc2", ts1, v1)) (store.scan ("table2"))
+          assertSeq (cell ("abc3", ts4, v2), cell ("abc3", ts3, v1)) (store.scan ("table3"))
           assertSeq (cell ("abc4", ts2)) (store.scan ("table4"))
       }}
 
       "POST /batch-write requesting HOLD after another client's write should yield Precondition Failed" in {
         served { case (port, store) =>
-          val ts1 = addData ("table1", store, "abc", """{"v":"v1"}""")
-          val ts2 = updateData ("table1", store, "abc", """{"v":"v2"}""")
+          val ts1 = addData (store, "table1", "abc", """{"v":"v1"}""")
+          val ts2 = updateData (store, ts1, "table1", "abc", """{"v":"v2"}""")
           val rsp = given
             .port (port)
             .contentType ("application/json")

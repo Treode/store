@@ -24,19 +24,17 @@ import com.treode.twitter.finagle.http.RichRequest
 import com.treode.twitter.util._
 import com.twitter.finagle.Service
 import com.twitter.finagle.http.{Method, Request, Response, Status}
-import com.twitter.finagle.http.path._
 import com.twitter.util.Future
 
-import Resource.{Batch, Row, Table, Unmatched, route}
+import ResourceHandler.{Batch, Row, Table, Unmatched, route}
 
-class Resource (host: HostId, store: SchematicStore) extends Service [Request, Response] {
-
-  object KeyParam extends ParamMatcher ("key")
+class ResourceHandler (host: HostId, store: Store, schema: Schema)
+extends Service [Request, Response] {
 
   def read (req: Request, tab: TableId, key: String): Async [Response] = {
     val rt = req.readTxClock
     val ct = req.conditionTxClock (TxClock.MinValue)
-    store.read (tab, key, rt) .map { vs =>
+    store.read (rt, ReadOp (tab, Bytes (key))) .map { vs =>
       val v = vs.head
       v.value match {
         case Some (value) if ct < v.time =>
@@ -62,7 +60,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
     val tx = req.transactionId (host)
     val ct = req.conditionTxClock (TxClock.now)
     val value = req.readJson [JsonNode]
-    store.update (tab, key, value, tx, ct)
+    store.write (tx, ct, WriteOp.Update (tab, Bytes (key), value.toBytes))
     .map [Response] { vt =>
       respond.ok (req, vt)
     }
@@ -74,7 +72,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
   def delete (req: Request, tab: TableId, key: String): Async [Response] = {
     val tx = req.transactionId (host)
     val ct = req.conditionTxClock (TxClock.now)
-    store.delete (tab, key, tx, ct)
+    store.write (tx, ct, WriteOp.Delete (tab, Bytes (key)))
     .map [Response] { vt =>
       respond.ok (req, vt)
     }
@@ -86,11 +84,13 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
   def batch (req: Request): Async [Response] = {
     val tx = req.transactionId (host)
     val ct = req.conditionTxClock (TxClock.now)
-    val node = textJson.readTree (req.getContentString)
-    store.batch (tx, ct, node)
+    val json = textJson.readTree (req.getContentString)
+    val ops = schema.parseBatchWrite (json)
+    store.write (tx, ct, ops:_*)
     .map [Response] { vt =>
       respond.ok (req, vt)
-    } .recover {
+    }
+    .recover {
       case exn: StaleException =>
         respond.stale (req, exn.time)
     }}
@@ -99,7 +99,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
     route (req.path) match {
 
       case Row (name, key) =>
-        store.getTableId (name) match {
+        schema.getTableId (name) match {
           case Some (id) =>
             req.method match {
               case Method.Get =>
@@ -116,7 +116,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
         }
 
       case Table (name) =>
-        store.getTableId (name) match {
+        schema.getTableId (name) match {
           case Some (id) =>
             req.method match {
               case Method.Get =>
@@ -140,7 +140,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
         Future.value (respond (req, Status.NotFound))
     }}}
 
-object Resource {
+object ResourceHandler {
 
   private val _route = """/([\p{Graph}&&[^/]]+)(/([\p{Graph}&&[^/]]+)?)?""".r
 
