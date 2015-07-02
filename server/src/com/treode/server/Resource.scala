@@ -27,6 +27,8 @@ import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.finagle.http.path._
 import com.twitter.util.Future
 
+import Resource.{Batch, Row, Table, Unmatched, route}
+
 class Resource (host: HostId, store: SchematicStore) extends Service [Request, Response] {
 
   object KeyParam extends ParamMatcher ("key")
@@ -94,10 +96,9 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
     }}
 
   def apply (req: Request): Future [Response] = {
+    route (req.path) match {
 
-    Path (req.path) :? req.params match {
-
-      case Root / "table" / tab :? KeyParam (key) =>
+      case Row (tab, key) =>
         req.method match {
           case Method.Get =>
             read (req, tab, key) .toTwitterFuture
@@ -109,7 +110,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
             Future.value (respond (req, Status.MethodNotAllowed))
         }
 
-      case Root / "table" / tab :? _ =>
+      case Table (tab) =>
         req.method match {
           case Method.Get =>
             scan (req, tab) .toTwitterFuture
@@ -117,7 +118,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
             Future.value (respond (req, Status.MethodNotAllowed))
         }
 
-      case Root / "batch-write" :? _ =>
+      case Batch =>
         req.method match {
           case Method.Post =>
             batch (req) .toTwitterFuture
@@ -125,6 +126,28 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
             Future.value (respond (req, Status.MethodNotAllowed))
         }
 
-      case _ =>
+      case Unmatched =>
         Future.value (respond (req, Status.NotFound))
     }}}
+
+object Resource {
+
+  private val _route = """/([\p{Graph}&&[^/]]+)(/([\p{Graph}&&[^/]]+)?)?""".r
+
+  sealed abstract class Route
+  case class Table (table: String) extends Route
+  case class Row (table: String, key: String) extends Route
+  case object Batch extends Route
+  case object Unmatched extends Route
+
+  def route (path: String): Route =
+    path match {
+      case _route ("batch-write", _, null) =>
+        Batch
+      case _route (tab, _, null) =>
+        Table (tab)
+      case _route (tab, _, key) =>
+        Row (tab, key)
+      case _ =>
+        Unmatched
+    }}

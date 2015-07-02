@@ -1,8 +1,9 @@
  package com.treode.server
 
+import scala.collection.mutable.HashMap
+
 import com.treode.store._
 import com.treode.twitter.finagle.http.BadRequestException
-import scala.collection.mutable.HashMap
 
 case class Schema (map: HashMap [String, Long]) {
 

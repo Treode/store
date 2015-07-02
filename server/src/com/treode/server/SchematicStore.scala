@@ -29,6 +29,7 @@ class SchematicStore (store: Store, schema: Schema) {
   }
 
   def batch (tx: TxId, ct: TxClock, node: JsonNode): Async [TxClock] = {
+    var writes = false
     var ops = Seq.empty [WriteOp]
     val pairs = new HashSet [(String, String)]
     for (row <- node.iterator) {
@@ -36,23 +37,28 @@ class SchematicStore (store: Store, schema: Schema) {
       val key = row.getAttribute ("key") .textValue
       val op = row.getAttribute ("op") .textValue
       if (pairs.contains ((table, key))) {
-        throw new BadRequestException ("Multiple (Table, key) pairs found")
+        throw new BadRequestException (s"""Multiple rows found for "$table:$key".""")
       } else {
         pairs += ((table, key))
         op.toLowerCase match {
           case "create" =>
             val obj = row.getAttribute ("obj")
             ops = ops :+ WriteOp.Create (schema.getTableId (table), Bytes (key), obj.toBytes)
+            writes = true
           case "hold" =>
             ops = ops :+ WriteOp.Hold (schema.getTableId (table), Bytes (key))
           case "update" =>
             val obj = row.getAttribute ("obj")
             ops = ops :+ WriteOp.Update (schema.getTableId (table), Bytes (key), obj.toBytes)
+            writes = true
           case "delete" =>
             ops = ops :+ WriteOp.Delete (schema.getTableId (table), Bytes (key))
+            writes = true
           case _ =>
-            throw new BadRequestException (s"Unsupported operation: $op")
+            throw new BadRequestException (s"""Unsupported operation: "$op".""")
         }}}
+      if (!writes)
+        throw new BadRequestException ("Batch must have some writes.")
     store.write (tx, ct, ops:_*)
   }
 

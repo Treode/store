@@ -17,7 +17,8 @@
 package com.treode.server
 
 import scala.util.Random
-import SchemaParser._
+import scala.collection.mutable.HashMap
+
 import com.fasterxml.jackson.databind.JsonNode
 import com.jayway.restassured.RestAssured.given
 import com.jayway.restassured.response.{Response => RestAssuredResponse}
@@ -29,19 +30,27 @@ import com.treode.twitter.finagle.http.filter._
 import com.twitter.finagle.Http
 import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}, Matchers._
 import org.scalatest.FreeSpec
-import scala.collection.mutable.HashMap
+
+
+import Resource.{Batch, Row, Table, Unmatched, route}
 
 class ResourceSpec extends FreeSpec {
+
+  val v1 = "\"v1\""
+  val v2 = "\"v2\""
+  val v3 = "\"v3\""
+
+  val SchemaParser.CompilerSuccess (schema) = SchemaParser.parse ("""
+    table table1 { id : 0x1; };
+    table table2 { id : 0x2; };
+    table table3 { id : 0x3; };
+    table table4 { id : 0x4; };
+  """)
 
   def served (test: (Int, SchematicStubStore) => Any) {
     val store = StubStore ()
     val port = Random.nextInt (65535 - 49152) + 49152
-    val compilerResult = parse ("table table1 { id : 0x1; }; table table2 { id : 0x2; }; table table3 { id : 0x3; }; table table4 { id : 0x4; };") 
-    val newSchema = compilerResult match {
-      case CompilerSuccess (schema) => schema
-      case CompilerFailure (errors) => Schema (new HashMap [String, Long])
-    }
-    val schematicStore = new SchematicStubStore (store, newSchema)
+    val schematicStore = new SchematicStubStore (store, schema)
     val server = Http.serve (
       s":$port",
       NettyToFinagle andThen
@@ -94,19 +103,29 @@ class ResourceSpec extends FreeSpec {
       ct
     ) .await
 
+  "Resource.route" - {
+    "should route properly" in {
+      assertResult (Table ("tab")) (route ("/tab"))
+      assertResult (Table ("tab")) (route ("/tab/"))
+      assertResult (Row ("tab", "key")) (route ("/tab/key"))
+      assertResult (Batch) (route ("/batch-write"))
+      assertResult (Unmatched) (route ("/"))
+      assertResult (Unmatched) (route ("/tab/key/"))
+    }}
+
   "When the database is empty" - {
 
-    "GET /table/table1?key=abc should respond Not Found" in
+    "GET /table1/abc should respond Not Found" in
       served { case (port, store) =>
         given
           .port (port)
         .expect
           .statusCode (404)
         .when
-          .get ("/table/table1?key=abc")
+          .get ("/table1/abc")
       }
 
-    "PUT /table/table1?key=abc should respond Ok with a valueTxClock" in
+    "PUT /table1/abc should respond Ok with a valueTxClock" in
       served { case (port, store) =>
         val body = "\"i have been stored\""
         val rsp = given
@@ -115,12 +134,12 @@ class ResourceSpec extends FreeSpec {
         .expect
           .statusCode (200)
         .when
-          .put ("/table/table1?key=abc")
+          .put ("/table1/abc")
         val valueTxClock = rsp.valueTxClock
         assertSeq (cell ("abc", valueTxClock, body)) (store.scan ("table1"))
       }
 
-    "DELETE /table/table1?key=abc should respond Ok with a valueTxClock" in
+    "DELETE /table1/abc should respond Ok with a valueTxClock" in
       served { case (port, store) =>
         val body = "\"i have been stored\""
         val rsp = given
@@ -129,7 +148,7 @@ class ResourceSpec extends FreeSpec {
         .expect
           .statusCode (200)
         .when
-          .delete ("/table/table1?key=abc")
+          .delete ("/table1/abc")
         val valueTxClock = rsp.valueTxClock
         assertSeq (cell ("abc", valueTxClock)) (store.scan ("table1"))
       }}
@@ -142,7 +161,7 @@ class ResourceSpec extends FreeSpec {
     def addData (store: SchematicStubStore): TxClock =
       update (store, TxClock.MinValue, "abc", entity)
 
-    "GET /table/table1?key=abc should respond Ok" in
+    "GET /table1/abc should respond Ok" in
       served { case (port, store) =>
         val ts = addData (store)
         given
@@ -151,10 +170,10 @@ class ResourceSpec extends FreeSpec {
           .statusCode (200)
           .body (equalTo (entity))
         .when
-          .get ("/table/table1?key=abc")
+          .get ("/table1/abc")
       }
 
-    "GET /table/table1?key=abc with Condition-TxClock:0 should respond Ok" in
+    "GET /table1/abc with Condition-TxClock:0 should respond Ok" in
       served { case (port, store) =>
         val ts = addData (store)
         given
@@ -164,10 +183,10 @@ class ResourceSpec extends FreeSpec {
           .statusCode (200)
           .body (equalTo (entity))
         .when
-          .get ("/table/table1?key=abc")
+          .get ("/table1/abc")
       }
 
-    "GET /table/table1?key=abc with Condition-TxClock:1 should respond Not Modified" in
+    "GET /table1/abc with Condition-TxClock:1 should respond Not Modified" in
       served { case (port, store) =>
         val ts = addData (store)
         given
@@ -176,10 +195,10 @@ class ResourceSpec extends FreeSpec {
         .expect
           .statusCode (304)
         .when
-          .get ("/table/table1?key=abc")
+          .get ("/table1/abc")
       }
 
-    "GET /table/table1?key=abc with Read-TxClock:0 should respond Not Found" in
+    "GET /table1/abc with Read-TxClock:0 should respond Not Found" in
       served { case (port, store) =>
         val ts = addData (store)
         given
@@ -188,10 +207,10 @@ class ResourceSpec extends FreeSpec {
         .expect
           .statusCode (404)
         .when
-          .get ("/table/table1?key=abc")
+          .get ("/table1/abc")
       }
 
-    "GET /table/table1?key=abc with Read-TxClock:1 should respond Ok" in
+    "GET /table1/abc with Read-TxClock:1 should respond Ok" in
       served { case (port, store) =>
         val ts = addData (store)
         given
@@ -201,10 +220,10 @@ class ResourceSpec extends FreeSpec {
           .statusCode (200)
           .body (equalTo (entity))
         .when
-          .get ("/table/table1?key=abc")
+          .get ("/table1/abc")
       }
 
-    "PUT /table/table1?key=abc should respond Ok with a valueTxClock" in
+    "PUT /table1/abc should respond Ok with a valueTxClock" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -213,12 +232,12 @@ class ResourceSpec extends FreeSpec {
         .expect
           .statusCode (200)
         .when
-          .put ("/table/table1?key=abc")
+          .put ("/table1/abc")
         val ts2 = rsp.valueTxClock
         assertSeq (cell ("abc", ts2, entity2), cell ("abc", ts1, entity)) (store.scan ("table1"))
       }
 
-    "PUT /table/table1?key=abc with If-Unmodified-Since:1 should respond Ok with a valueTxClock" in
+    "PUT /table1/abc with If-Unmodified-Since:1 should respond Ok with a valueTxClock" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -228,12 +247,12 @@ class ResourceSpec extends FreeSpec {
         .expect
           .statusCode (200)
         .when
-          .put ("/table/table1?key=abc")
+          .put ("/table1/abc")
         val ts2 = rsp.valueTxClock
         assertSeq (cell ("abc", ts2, entity2), cell ("abc", ts1, entity)) (store.scan ("table1"))
       }
 
-    "PUT /table/table1?key=abc with If-Unmodified-Since:0 should respond Precondition Failed" in
+    "PUT /table1/abc with If-Unmodified-Since:0 should respond Precondition Failed" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -244,11 +263,11 @@ class ResourceSpec extends FreeSpec {
           .statusCode (412)
           .header ("Value-TxClock", ts1.toString)
         .when
-          .put ("/table/table1?key=abc")
+          .put ("/table1/abc")
         assertSeq (cell ("abc", ts1, entity)) (store.scan ("table1"))
       }
 
-    "DELETE /table/table1?key=abc should respond Ok with a valueTxClock" in
+    "DELETE /table1/abc should respond Ok with a valueTxClock" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -256,12 +275,12 @@ class ResourceSpec extends FreeSpec {
         .expect
           .statusCode (200)
         .when
-          .delete ("/table/table1?key=abc")
+          .delete ("/table1/abc")
         val ts2 = rsp.valueTxClock
         assertSeq (cell ("abc", ts2), cell ("abc", ts1, entity)) (store.scan ("table1"))
       }
 
-    "DELETE /table/table1?key=abc with If-Unmodified-Since:1 should respond Ok with a valueTxClock" in
+    "DELETE /table1/abc with If-Unmodified-Since:1 should respond Ok with a valueTxClock" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -270,12 +289,12 @@ class ResourceSpec extends FreeSpec {
         .expect
           .statusCode (200)
         .when
-          .delete ("/table/table1?key=abc")
+          .delete ("/table1/abc")
         val ts2 = rsp.valueTxClock
         assertSeq (cell ("abc", ts2), cell ("abc", ts1, entity)) (store.scan ("table1"))
       }
 
-    "DELETE /table/table1?key=abc with If-Unmodified-Since:0 should respond Precondition Failed" in
+    "DELETE /table1/abc with If-Unmodified-Since:0 should respond Precondition Failed" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -285,7 +304,7 @@ class ResourceSpec extends FreeSpec {
           .statusCode (412)
           .header ("Value-TxClock", ts1.toString)
         .when
-          .delete ("/table/table1?key=abc")
+          .delete ("/table1/abc")
         assertSeq (cell ("abc", ts1, entity)) (store.scan ("table1"))
       }}
 
@@ -300,7 +319,7 @@ class ResourceSpec extends FreeSpec {
       t = update (store, t, "c", "\"c2\"")
     }
 
-    "GET /table/table1 should work" in {
+    "GET /table1 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -313,10 +332,10 @@ class ResourceSpec extends FreeSpec {
             {"key": "c", "time": 6, "value": "c2"}
           ]"""))
         .when
-          .get ("/table/table1")
+          .get ("/table1")
       }}
 
-    "GET /table/table1?until=4 should work" in {
+    "GET /table1?until=4 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -329,10 +348,10 @@ class ResourceSpec extends FreeSpec {
             {"key": "b", "time": 4, "value": "b2"}
           ]"""))
         .when
-          .get ("/table/table1")
+          .get ("/table1")
       }}
 
-    "GET /table/table1?slice=0&nslices=2 should work" in {
+    "GET /table1?slice=0&nslices=2 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -345,56 +364,46 @@ class ResourceSpec extends FreeSpec {
             {"key": "a", "time": 2, "value": "a2"}
           ]"""))
         .when
-          .get ("/table/table1")
+          .get ("/table1")
       }}}
 
   "When the user is cantankerous" - {
 
     "and gives bad URIs" - {
 
-      "GET /table should yield Not Found" in {
+      "GET /non-table should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
           .expect
-            .statusCode (404)
+            .statusCode (400)
           .when
-            .get ("/table")
+            .get ("/non-table")
         }}
 
-      "GET /history should yield Not Found" in {
-        served { case (port, store) =>
-          val rsp = given
-            .port (port)
-          .expect
-            .statusCode (404)
-          .when
-            .get ("/history")
-        }}
-
-      "PUT /table/table1 should yield Method Not Allowed" in {
+      "PUT /table1 should yield Method Not Allowed" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
           .expect
             .statusCode (405)
           .when
-            .put ("/table/table1")
+            .put ("/table1")
         }}
 
-      "DELETE /table/table1 should yield Method Not Allowed" in {
+      "DELETE /table1 should yield Method Not Allowed" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
           .expect
             .statusCode (405)
           .when
-            .delete ("/table/table1")
+            .delete ("/table1")
         }}}
 
     "and gives bad clock values" - {
 
-      "GET /table/table1 with Read-TxClock:abc should yield Bad Request" in {
+      "GET /table1 with Read-TxClock:abc should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -403,10 +412,10 @@ class ResourceSpec extends FreeSpec {
             .statusCode (400)
             .body (equalTo ("Bad time for Read-TxClock: abc"))
           .when
-            .get ("/table/table1")
+            .get ("/table1")
         }}
 
-      "GET /table/table1 with Condition-TxClock:abc should yield Bad Request" in {
+      "GET /table1 with Condition-TxClock:abc should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -415,25 +424,36 @@ class ResourceSpec extends FreeSpec {
             .statusCode (400)
             .body (equalTo ("Bad time for Condition-TxClock: abc"))
           .when
-            .get ("/table/table1")
+            .get ("/table1")
         }}
 
-      "DELETE /table/table1?key=abc with If-Unmodified-Since:abc should yield Bad Request" in {
+      "PUT /table1/abc with If-Unmodified-Since:abc should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
-            .param ("key", "abc")
             .header ("Condition-TxClock", "abc")
           .expect
             .statusCode (400)
             .body (equalTo ("Bad time for Condition-TxClock: abc"))
           .when
-            .delete ("/table/table1")
+            .put ("/table1/abc")
+        }}
+
+      "DELETE /table1/abc with If-Unmodified-Since:abc should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .header ("Condition-TxClock", "abc")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("Bad time for Condition-TxClock: abc"))
+          .when
+            .delete ("/table1/abc")
         }}}
 
     "and gives a bad slice" - {
 
-      "GET /table/table1?slice=abc&nslices=2 should yield Bad Request" in {
+      "GET /table1?slice=abc&nslices=2 should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -443,12 +463,12 @@ class ResourceSpec extends FreeSpec {
             .statusCode (400)
             .body (equalTo ("Bad integer for slice: abc"))
           .when
-            .get ("/table/table1")
+            .get ("/table1")
         }}}
 
     "and gives a bad window" - {
 
-      "GET /table/123?pick=foobar should yield Bad Request" in {
+      "GET /table1?pick=foobar should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -457,7 +477,7 @@ class ResourceSpec extends FreeSpec {
             .statusCode (400)
             .body (equalTo ("Pick must be latest, between or through."))
           .when
-            .get ("/table/123")
+            .get ("/table1")
         }}}}
 
   "When post request contains batch-writes" - {
@@ -468,11 +488,7 @@ class ResourceSpec extends FreeSpec {
     def updateData (table: String, store: SchematicStubStore, key: String, value: String): TxClock =
       update (store, TxClock.now, key, value, table)
 
-    "and has proper uris" - {
-
-      val v1 = "\"v1\""
-      val v2 = "\"v2\""
-      val v3 = "\"v3\""
+    "and has proper JSON" - {
 
       "POST /batch-write with one CREATE should yield Ok" in {
         served { case (port, store) =>
@@ -503,22 +519,7 @@ class ResourceSpec extends FreeSpec {
           assertSeq (cell ("abc", ts2, v2), cell ("abc", ts1, v1)) (store.scan ("table1"))
         }}
 
-      "POST /batch-write with one HOLD should yield Ok" in {
-        served { case (port, store) =>
-          val ts1 = addData ("table1", store, "abc", v1)
-          val ts2 = updateData ("table1", store, "abc", v2)
-          val rsp = given
-            .port (port)
-            .contentType ("application/json")
-            .header ("Condition-TxClock", ts2 .toString)
-            .body ("""[{"op": "HOLD", "table": "table1", "key": "abc"}]""")
-          .expect
-            .statusCode (200)
-          .when
-            .post ("/batch-write")
-        }}
-
-      "POST /batch-write with one delete should yield Ok" in {
+      "POST /batch-write with one DELETE should yield Ok" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -554,7 +555,7 @@ class ResourceSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .header ("Condition-TxClock", ts4 .toString)
+            .header ("Condition-TxClock", ts4.toString)
             .body ("""
                 [ {"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"},
                   {"op": "UPDATE", "table": "table2", "key": "abc2", "obj": "v3"},
@@ -568,28 +569,87 @@ class ResourceSpec extends FreeSpec {
           assertSeq (cell ("abc", ts2, v1)) (store.scan ("table1"))
           assertSeq (cell ("abc2", ts2, v3), cell ("abc2", ts1, v1)) (store.scan ("table2"))
           assertSeq (cell ("abc4", ts2)) (store.scan ("table4"))
+      }}
+
+      "POST /batch-write requesting HOLD after another client's write should yield Precondition Failed" in {
+        served { case (port, store) =>
+          val ts1 = addData ("table1", store, "abc", """{"v":"v1"}""")
+          val ts2 = updateData ("table1", store, "abc", """{"v":"v2"}""")
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .header ("Condition-TxClock", ts1.toString)
+            .body ("""
+                [ {"op": "HOLD", "table": "table1", "key": "abc"},
+                  {"op": "UPDATE", "table": "table1", "key": "abc2", "obj": "v1"} ]""")
+          .expect
+            .statusCode (412)
+            .header ("Value-TxClock", ts2.toString)
+            .body (equalTo (""))
+          .when
+            .post ("/batch-write")
       }}}
 
-    "and has improper/failing uris" - {
+    "and has improper JSON" - {
 
-      "POST /batch-write with bad json format body should yield Bad Request" in {
+      "POST /batch-write with bad JSON should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""["op": "CREATE", "tble": "table1", "key": "abc", "obj": "v1"}]""")
+            .body ("""[}""")
           .expect
             .statusCode (400)
+            .body (containsString ("Unexpected close marker '}'"))
           .when
             .post ("/batch-write")
         }}
 
-      "POST /batch-write with necessary fields missing should yield Bad Request" in {
+      "POST /batch-write with an empty array should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"op": "CREATE", "tble": "table1", "key":"abc", "obj": "v1"}]""")
+            .body ("""[]""")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("Batch must have some writes."))
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write with one HOLD should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "HOLD", "table": "table1", "key": "abc"}]""")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("Batch must have some writes."))
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write with a missing op should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"table": "table1", "key": "abc", "obj": "v1"}]""")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("There is no attribute called 'op'"))
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write with a missing table should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "CREATE", "key": "abc", "obj": "v1"}]""")
           .expect
             .statusCode (400)
             .body (equalTo ("There is no attribute called 'table'"))
@@ -597,15 +657,41 @@ class ResourceSpec extends FreeSpec {
             .post ("/batch-write")
         }}
 
-      "POST /batch-write with undefined operation should yield Bad Request" in {
+      "POST /batch-write with a missing key should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"op": "SCAN", "table": "table1", "key": "abc", "obj": "v1"}]""")
+            .body ("""[{"op": "CREATE", "table": "table1", "obj": "v1"}]""")
           .expect
             .statusCode (400)
-            .body (equalTo ("Unsupported operation: SCAN"))
+            .body (equalTo ("There is no attribute called 'key'"))
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write with a missing object should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "CREATE", "table": "table1", "key": "abc"}]""")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("There is no attribute called 'obj'"))
+          .when
+            .post ("/batch-write")
+        }}
+
+      "POST /batch-write with an undefined operation should yield Bad Request" in {
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "BAD", "table": "table1", "key": "abc", "obj": "v1"}]""")
+          .expect
+            .statusCode (400)
+            .body (equalTo ("""Unsupported operation: "BAD"."""))
           .when
             .post ("/batch-write")
         }}
@@ -622,7 +708,7 @@ class ResourceSpec extends FreeSpec {
             .put ("/batch-write")
         }}
 
-      "POST /batch-write with unspecified table name should yield Bad Request" in {
+      "POST /batch-write with non-existent table name should yield Bad Request" in {
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -635,34 +721,18 @@ class ResourceSpec extends FreeSpec {
             .post ("/batch-write")
         }}
 
-      "POST /batch-write requesting HOLD after another client's write should yield Precondition Failed" in {
-        served { case (port, store) =>
-          val ts1 = addData ("table1", store, "abc", """{"v":"ant"}""")
-          val ts2 = updateData ("table1", store, "abc", """{"v":"ant2"}""")
-          val rsp = given
-            .port (port)
-            .contentType ("application/json")
-            .header ("Condition-TxClock", ts1 .toString)
-            .body ("""[{"op": "HOLD", "table": "table1", "key": "abc"}]""")
-          .expect
-            .statusCode (412)
-            .header ("Value-TxClock", ts2.toString)
-          .when
-            .post ("/batch-write")
-        }}
-
       "POST /batch-write has 2 operations on the same table and key should yield Bad Request" in {
         served { case (port, store) =>
           val body = """{"v":"ant2"}"""
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body (
-              """[{"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"},""" +
-              """{"op": "UPDATE", "table": "table1", "key": "abc", "obj": "v2"}]""")
+            .body ("""
+                [ {"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"},
+                  {"op": "UPDATE", "table": "table1", "key": "abc", "obj": "v2"} ]""")
           .expect
             .statusCode (400)
-            .body (equalTo ("Multiple (Table, key) pairs found"))
+            .body (equalTo ("""Multiple rows found for "table1:abc"."""))
           .when
             .post ("/batch-write")
     }}}}}
