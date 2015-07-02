@@ -1,16 +1,16 @@
  package com.treode.server
 
 import scala.collection.JavaConversions._
-import scala.collection.mutable.{HashMap, HashSet}
+import scala.collection.mutable.HashSet
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.treode.store.{Bytes, TableId, WriteOp}
 import com.treode.twitter.finagle.http.BadRequestException
 
-case class Schema (map: HashMap [String, Long]) {
+class Schema private (private val tables: Map [String, TableId]) {
 
   def getTableId (s: String): Option [TableId] =
-    map.get (s) .map (TableId (_))
+    tables.get (s)
 
   private def requireTableId (name: String): TableId =
     getTableId (name) match {
@@ -51,4 +51,22 @@ case class Schema (map: HashMap [String, Long]) {
         throw new BadRequestException ("Batch must have some writes.")
       ops
   }
+
+  override def hashCode: Int =
+    tables.hashCode
+
+  override def equals (other: Any): Boolean =
+    other match {
+      case that: Schema => tables == that.tables
+      case _ => false
+    }
+}
+
+object Schema {
+
+  val empty: Schema =
+    new Schema (Map.empty)
+
+  def apply (tables: Map [String, TableId]): Schema =
+    new Schema (tables)
 }

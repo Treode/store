@@ -1,33 +1,33 @@
 package com.treode.server
 
-import org.scalatest._
-import scala.collection.mutable.{HashMap}
 import scala.util.parsing.input.OffsetPosition
+
+import com.treode.store.TableId
+import org.scalatest.FreeSpec
+
 import SchemaParser._
 
-class SchemaParserSpec extends FreeSpec with Matchers {
+class SchemaParserSpec extends FreeSpec {
 
-  def assertSuccess (s: String, expected: Schema): Unit = {
-    assertResult (CompilerSuccess (expected)) { parse (s) }
-  }
+  def assertSuccess (s: String, expected: Schema): Unit =
+    assertResult (CompilerSuccess (expected)) (parse (s))
 
-  def assertFailure (s: String, expected: List [Message]): Unit = {
-    assertResult (CompilerFailure (expected)) { parse (s) }
-  }
+  def assertFailure (s: String, expected: List [Message]): Unit =
+    assertResult (CompilerFailure (expected)) (parse (s))
 
   "When inputs are correct" - {
 
     "The parse should parse table names successfully" in {
-      var map = new HashMap [String, Long]
-      map += ("table_1v" -> 1)
+      var map = Map.empty [String, TableId]
+      map += "table_1v" -> 1
       assertSuccess ("table table_1v { id : \t 1 \n; };", Schema (map))
     }
 
     "The parse should parse octal, hexadecimal and decimal id successfully" in {
-      var map = new HashMap [String, Long]
-      map += ("table1" -> 1)
-      map += ("table2" -> 31)
-      map += ("table3" -> 25)
+      var map = Map.empty [String, TableId]
+      map += "table1" -> 1
+      map += "table2" -> 31
+      map += "table3" -> 25
       assertSuccess ("table table1 { id : \t 1 \n ;} ; table table2 {id : 0x1F;} ;\n table table3 {id : 031;} ;\t ", Schema (map))
     }}
 

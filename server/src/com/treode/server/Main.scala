@@ -37,9 +37,7 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
 
   def main() {
 
-    val map = new HashMap [String, Long] ()
-
-    val schema = new Schema (map)
+    val schema = Schema.empty
 
     val httpAddr =
       parseHosts (httpAddrFlag()) .head

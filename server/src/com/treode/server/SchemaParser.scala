@@ -6,11 +6,10 @@ import scala.collection.mutable.Queue
 import scala.collection.mutable.ArrayBuffer
 import scala.util.parsing.input.Position
 import scala.collection.Iterator
-import scala.collection.mutable.{HashMap, MutableList}
 import scala.util.parsing.combinator._
 import scala.collection.mutable.Builder
 import scala.util.parsing.input.Positional
-import com.treode.async.misc.parseUnsignedLong
+import com.treode.store.TableId
 
 object SchemaParser extends RegexParsers {
 
@@ -136,13 +135,13 @@ object SchemaParser extends RegexParsers {
 
   trait SemanticAnalysisResult
 
-  case class SemanticAnalysisSuccess (map: HashMap [String, Long]) extends SemanticAnalysisResult
+  case class SemanticAnalysisSuccess (map: Map [String, TableId]) extends SemanticAnalysisResult
 
   case class SemanticAnalysisFailure (errors: List [Message]) extends SemanticAnalysisResult
 
   def semanticAnalysis (clauses: List [TopClause]): SemanticAnalysisResult = {
     val builder = List.newBuilder [Message]
-    val map = HashMap [String, Long] ()
+    var map = Map [String, TableId] ()
     for (clause <- clauses) {
       clause match {
         case Table (tableName, directives) => {
@@ -161,7 +160,7 @@ object SchemaParser extends RegexParsers {
                   case Number (Some (nu)) => nu
                   case _ => ""
                 })
-                parseUnsignedLong (id) match {
+                TableId.parse (id) match {
                   case Some (v) => {
                     val dupId = map.exists (_._2 == v)
                     if (dupId) {
