@@ -33,7 +33,7 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
 
   object KeyParam extends ParamMatcher ("key")
 
-  def read (req: Request, tab: String, key: String): Async [Response] = {
+  def read (req: Request, tab: TableId, key: String): Async [Response] = {
     val rt = req.readTxClock
     val ct = req.conditionTxClock (TxClock.MinValue)
     store.read (tab, key, rt) .map { vs =>
@@ -47,22 +47,22 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
           respond (req, Status.NotFound)
       }}}
 
-  def scan (req: Request, table: String): Async [Response] = {
+  def scan (req: Request, tab: TableId): Async [Response] = {
     val rt = req.readTxClock
     val ct = req.conditionTxClock (TxClock.MinValue)
     val window = req.window
     val slice = req.slice
     val iter = store
-        .scan (table, Bound.firstKey, window, slice)
+        .scan (tab, Bound.firstKey, window, slice)
         .filter (_.value.isDefined)
     supply (respond.json (req, iter))
   }
 
-  def put (req: Request, table: String, key: String): Async [Response] = {
+  def put (req: Request, tab: TableId, key: String): Async [Response] = {
     val tx = req.transactionId (host)
     val ct = req.conditionTxClock (TxClock.now)
     val value = req.readJson [JsonNode]
-    store.update (table, key, value, tx, ct)
+    store.update (tab, key, value, tx, ct)
     .map [Response] { vt =>
       respond.ok (req, vt)
     }
@@ -71,10 +71,10 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
         respond.stale (req, exn.time)
     }}
 
-  def delete (req: Request, table: String, key: String): Async [Response] = {
+  def delete (req: Request, tab: TableId, key: String): Async [Response] = {
     val tx = req.transactionId (host)
     val ct = req.conditionTxClock (TxClock.now)
-    store.delete (table, key, tx, ct)
+    store.delete (tab, key, tx, ct)
     .map [Response] { vt =>
       respond.ok (req, vt)
     }
@@ -98,24 +98,34 @@ class Resource (host: HostId, store: SchematicStore) extends Service [Request, R
   def apply (req: Request): Future [Response] = {
     route (req.path) match {
 
-      case Row (tab, key) =>
-        req.method match {
-          case Method.Get =>
-            read (req, tab, key) .toTwitterFuture
-          case Method.Put =>
-            put (req, tab, key) .toTwitterFuture
-          case Method.Delete =>
-            delete (req, tab, key) .toTwitterFuture
-          case _ =>
-            Future.value (respond (req, Status.MethodNotAllowed))
+      case Row (name, key) =>
+        store.getTableId (name) match {
+          case Some (id) =>
+            req.method match {
+              case Method.Get =>
+                read (req, id, key) .toTwitterFuture
+              case Method.Put =>
+                put (req, id, key) .toTwitterFuture
+              case Method.Delete =>
+                delete (req, id, key) .toTwitterFuture
+              case _ =>
+                Future.value (respond (req, Status.MethodNotAllowed))
+            }
+          case None =>
+            Future.value (respond (req, Status.NotFound))
         }
 
-      case Table (tab) =>
-        req.method match {
-          case Method.Get =>
-            scan (req, tab) .toTwitterFuture
-          case _ =>
-            Future.value (respond (req, Status.MethodNotAllowed))
+      case Table (name) =>
+        store.getTableId (name) match {
+          case Some (id) =>
+            req.method match {
+              case Method.Get =>
+                scan (req, id) .toTwitterFuture
+              case _ =>
+                Future.value (respond (req, Status.MethodNotAllowed))
+            }
+          case None =>
+            Future.value (respond (req, Status.NotFound))
         }
 
       case Batch =>

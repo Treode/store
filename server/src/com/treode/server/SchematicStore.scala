@@ -13,20 +13,29 @@ import com.twitter.util.Future
 
 class SchematicStore (store: Store, schema: Schema) {
 
-  def read (name: String, key: String, rt: TxClock): Async [Seq [Value]] = {
-    val ops = Seq (ReadOp (schema.getTableId  (name), Bytes (key)))
+  def getTableId (name: String): Option [TableId] =
+    schema.getTableId (name)
+
+  def read (tab: TableId, key: String, rt: TxClock): Async [Seq [Value]] = {
+    val ops = Seq (ReadOp (tab, Bytes (key)))
       store.read (rt, ops:_*)
   }
 
-  def update (name: String, key: String, value: JsonNode, tx: TxId, ct: TxClock): Async [TxClock] = {
-    val ops = Seq (WriteOp.Update (schema.getTableId (name), Bytes (key), value.toBytes))
+  def update (tab: TableId, key: String, value: JsonNode, tx: TxId, ct: TxClock): Async [TxClock] = {
+    val ops = Seq (WriteOp.Update (tab, Bytes (key), value.toBytes))
     store.write (tx, ct, ops:_*)
   }
 
-  def delete (name: String, key: String, tx: TxId, ct: TxClock): Async [TxClock] = {
-    val ops = Seq (WriteOp.Delete (schema.getTableId (name), Bytes (key)))
+  def delete (tab: TableId, key: String, tx: TxId, ct: TxClock): Async [TxClock] = {
+    val ops = Seq (WriteOp.Delete (tab, Bytes (key)))
     store.write (tx, ct, ops:_*)
   }
+
+  private def requireTableId (name: String): TableId =
+    schema.getTableId (name) match {
+      case Some (id) => id
+      case None => throw new BadRequestException (s"Bad table ID: $name")
+    }
 
   def batch (tx: TxId, ct: TxClock, node: JsonNode): Async [TxClock] = {
     var writes = false
@@ -43,16 +52,16 @@ class SchematicStore (store: Store, schema: Schema) {
         op.toLowerCase match {
           case "create" =>
             val obj = row.getAttribute ("obj")
-            ops = ops :+ WriteOp.Create (schema.getTableId (table), Bytes (key), obj.toBytes)
+            ops = ops :+ WriteOp.Create (requireTableId (table), Bytes (key), obj.toBytes)
             writes = true
           case "hold" =>
-            ops = ops :+ WriteOp.Hold (schema.getTableId (table), Bytes (key))
+            ops = ops :+ WriteOp.Hold (requireTableId (table), Bytes (key))
           case "update" =>
             val obj = row.getAttribute ("obj")
-            ops = ops :+ WriteOp.Update (schema.getTableId (table), Bytes (key), obj.toBytes)
+            ops = ops :+ WriteOp.Update (requireTableId (table), Bytes (key), obj.toBytes)
             writes = true
           case "delete" =>
-            ops = ops :+ WriteOp.Delete (schema.getTableId (table), Bytes (key))
+            ops = ops :+ WriteOp.Delete (requireTableId (table), Bytes (key))
             writes = true
           case _ =>
             throw new BadRequestException (s"""Unsupported operation: "$op".""")
@@ -63,11 +72,11 @@ class SchematicStore (store: Store, schema: Schema) {
   }
 
   def scan (
-      name: String,
+      tab: TableId,
       key: Bound [Key] = Bound.firstKey,
       window: Window = Window.all,
       slice: Slice = Slice.all,
       batch: Batch = Batch.suggested
   ): BatchIterator [Cell] = {
-    store.scan (schema.getTableId (name), key, window, slice, batch)
+    store.scan (tab, key, window, slice, batch)
   }}

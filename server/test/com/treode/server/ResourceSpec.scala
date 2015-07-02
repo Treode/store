@@ -94,9 +94,9 @@ class ResourceSpec extends FreeSpec {
   def matchesJson (expected: String): Matcher [String] =
     new JsonMatcher (expected)
 
-  def update (store: SchematicStubStore, ct: TxClock, key: String, value: String, table: String = "table1"): TxClock =
+  def update (store: SchematicStubStore, ct: TxClock, key: String, value: String, tab: String = "table1"): TxClock =
     store.update (
-      table,
+      store.getTableId (tab) .get,
       key,
       value.fromJson [JsonNode],
       TxId (Bytes (Random.nextInt), 0),
@@ -376,7 +376,7 @@ class ResourceSpec extends FreeSpec {
           val rsp = given
             .port (port)
           .expect
-            .statusCode (400)
+            .statusCode (404)
           .when
             .get ("/non-table")
         }}
