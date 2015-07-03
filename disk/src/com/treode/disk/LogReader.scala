@@ -82,13 +82,19 @@ private class LogReader (
       */
     private var entries = 0L
 
+    private def maybeFill (pos: Long, len: Int): Async [Unit] =
+        file.fill (buf, pos, len, blockBits)
+        .rescue {
+          case t: Exception => Success (())
+        }
+
     /** We have already recorded the allocation of this segment. Now start reading it. */
     private def readSegmentTag(): Async [Option [LogEntries]] =
       for {
-        _ <- file.fill (buf, pos, SegmentTagSpace, blockBits)
+        _ <- maybeFill (pos, SegmentTagSpace)
       } yield {
         flushed = pos
-        val tag = buf.readLong()
+        val tag = if (buf.readableBytes < 8) 0 else buf.readLong()
         if (tag == SegmentTag) {
           // The segment is off to a good start. Continue reading.
           pos += SegmentTagSpace
@@ -126,11 +132,11 @@ private class LogReader (
 
         case EntriesTag =>
           for {
-            _ <- file.fill (buf, pos + LogTagSize, LogEntriesSpace - LogTagSize, blockBits)
-            batch = buf.readLong()
-            length = buf.readInt()
-            count = buf.readInt()
-            _ <- file.fill (buf, pos + LogEntriesSpace, length, blockBits)
+            _ <- maybeFill (pos + LogTagSize, LogEntriesSpace - LogTagSize)
+            batch = if (buf.readableBytes < 8) 0 else buf.readLong()
+            length = if (buf.readableBytes < 4) 0 else buf.readInt()
+            count = if (buf.readableBytes < 4) 0 else buf.readInt()
+            _ <- maybeFill (pos + LogEntriesSpace, length)
           } yield {
             if (this.batch < batch) {
               // This is a valid batch. We must replay the entries.
@@ -154,8 +160,9 @@ private class LogReader (
 
         case AllocTag =>
           for {
-            _ <- file.fill (buf, pos + LogTagSize, LogAllocSpace - LogTagSize, blockBits)
-            more <- readSegmentTag (buf.readInt())
+            _ <- maybeFill (pos + LogTagSize, LogAllocSpace - LogTagSize)
+            num = if (buf.readableBytes < 4) 0 else buf.readInt()
+            more <- readSegmentTag (num)
           } yield {
             more
           }
@@ -176,8 +183,9 @@ private class LogReader (
     /** The buffer has been filled upto a block boundary. Now expect a batch. */
     private def readBatch(): Async [Option [LogEntries]] =
       for {
-        _ <- file.fill (buf, pos, LogTagSize, blockBits)
-        batch <- readLogControl (buf.readLong())
+        _ <- maybeFill (pos, LogTagSize)
+        tag = if (buf.readableBytes < 8) EndTag else buf.readLong()
+        batch <- readLogControl (tag)
       } yield {
         batch
       }
@@ -187,9 +195,10 @@ private class LogReader (
       val start = blockAlignDown (pos)
       val rpos = (pos - start).toInt
       for {
-        _ <- file.fill (buf, start, rpos + LogTagSize, blockBits)
+        _ <- maybeFill (start, rpos + LogTagSize)
         _ = buf.readPos = rpos
-        batch <- readLogControl (buf.readLong())
+        tag = if (buf.readableBytes < 8) EndTag else buf.readLong()
+        batch <- readLogControl (tag)
       } yield {
         batch
       }}
