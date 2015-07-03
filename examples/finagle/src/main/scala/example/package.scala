@@ -56,14 +56,14 @@ package object example {
     def ok (req: Request, time: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp.valueTxClock = time
       rsp
     }
 
     def stale (req: Request, time: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.PreconditionFailed
-      rsp.headerMap.add ("Value-TxClock", time.toString)
+      rsp.valueTxClock = time
       rsp
     }
 

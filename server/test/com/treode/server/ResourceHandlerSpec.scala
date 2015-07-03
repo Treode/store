@@ -22,7 +22,7 @@ import scala.collection.mutable.HashMap
 import com.fasterxml.jackson.databind.JsonNode
 import com.jayway.restassured.RestAssured.given
 import com.jayway.restassured.response.{Response => RestAssuredResponse}
-import com.jayway.restassured.specification.ResponseSpecification
+import com.jayway.restassured.specification.{RequestSpecification, ResponseSpecification}
 import com.treode.async.stubs.{StubGlobals, StubScheduler}, StubGlobals.scheduler
 import com.treode.store.{Bytes, Cell, TxClock, WriteOp, StaleException, TxId, Key}
 import com.treode.store.stubs.StubStore
@@ -82,6 +82,21 @@ class ResourceHandlerSpec extends FreeSpec {
       parse.get
     }}
 
+  implicit class RichRequestSpec (req: RequestSpecification) {
+
+    def conditionTxClock (time: TxClock): RequestSpecification =
+      req.header ("Condition-TxClock", time.time.toString)
+
+    def readTxClock (time: TxClock): RequestSpecification =
+      req.header ("Read-TxClock", time.time.toString)
+  }
+
+  implicit class RichResponseSpec (rsp: ResponseSpecification) {
+
+    def valueTxClock (time: TxClock): ResponseSpecification =
+      rsp.header ("Value-TxClock", time.time.toString)
+  }
+
   class JsonMatcher (expected: String) extends TypeSafeMatcher [String] {
 
     def matchesSafely (actual: String): Boolean =
@@ -116,7 +131,7 @@ class ResourceHandlerSpec extends FreeSpec {
           .get ("/table1/abc")
       }
 
-    "PUT /table1/abc should respond Ok with a valueTxClock" in
+    "PUT /table1/abc should respond Ok" in
       served { case (port, store) =>
         val body = "\"i have been stored\""
         val rsp = given
@@ -126,11 +141,11 @@ class ResourceHandlerSpec extends FreeSpec {
           .statusCode (200)
         .when
           .put ("/table1/abc")
-        val valueTxClock = rsp.valueTxClock
-        assertSeq (cell ("abc", valueTxClock, body)) (store.scan ("table1"))
+        val time = rsp.valueTxClock
+        assertSeq (cell ("abc", time, body)) (store.scan ("table1"))
       }
 
-    "DELETE /table1/abc should respond Ok with a valueTxClock" in
+    "DELETE /table1/abc should respond Ok" in
       served { case (port, store) =>
         val body = "\"i have been stored\""
         val rsp = given
@@ -140,8 +155,8 @@ class ResourceHandlerSpec extends FreeSpec {
           .statusCode (200)
         .when
           .delete ("/table1/abc")
-        val valueTxClock = rsp.valueTxClock
-        assertSeq (cell ("abc", valueTxClock)) (store.scan ("table1"))
+        val time = rsp.valueTxClock
+        assertSeq (cell ("abc", time)) (store.scan ("table1"))
       }}
 
   "When the database has an entry" - {
@@ -166,7 +181,7 @@ class ResourceHandlerSpec extends FreeSpec {
         val ts = addData (store)
         given
           .port (port)
-          .header ("Condition-TxClock", "0")
+          .conditionTxClock (ts - 1)
         .expect
           .statusCode (200)
           .body (equalTo (v1))
@@ -179,7 +194,7 @@ class ResourceHandlerSpec extends FreeSpec {
         val ts = addData (store)
         given
           .port (port)
-          .header ("Condition-TxClock", "1")
+          .conditionTxClock (ts)
         .expect
           .statusCode (304)
         .when
@@ -191,7 +206,7 @@ class ResourceHandlerSpec extends FreeSpec {
         val ts = addData (store)
         given
           .port (port)
-          .header ("Read-TxClock", "0")
+          .readTxClock (ts - 1)
         .expect
           .statusCode (404)
         .when
@@ -203,7 +218,7 @@ class ResourceHandlerSpec extends FreeSpec {
         val ts = addData (store)
         given
           .port (port)
-          .header ("Read-TxClock", "1")
+          .readTxClock (ts)
         .expect
           .statusCode (200)
           .body (equalTo (v1))
@@ -211,7 +226,7 @@ class ResourceHandlerSpec extends FreeSpec {
           .get ("/table1/abc")
       }
 
-    "PUT /table1/abc should respond Ok with a valueTxClock" in
+    "PUT /table1/abc should respond Ok" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -225,12 +240,12 @@ class ResourceHandlerSpec extends FreeSpec {
         assertSeq (cell ("abc", ts2, v2), cell ("abc", ts1, v1)) (store.scan ("table1"))
       }
 
-    "PUT /table1/abc with If-Unmodified-Since:1 should respond Ok with a valueTxClock" in
+    "PUT /table1/abc with If-Unmodified-Since:1 should respond Ok" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Condition-TxClock", "1")
+          .conditionTxClock (ts1)
           .body (v2)
         .expect
           .statusCode (200)
@@ -245,17 +260,17 @@ class ResourceHandlerSpec extends FreeSpec {
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Condition-TxClock", "0")
+          .conditionTxClock (ts1 - 1)
           .body (v2)
         .expect
           .statusCode (412)
-          .header ("Value-TxClock", ts1.toString)
+          .valueTxClock (ts1)
         .when
           .put ("/table1/abc")
         assertSeq (cell ("abc", ts1, v1)) (store.scan ("table1"))
       }
 
-    "DELETE /table1/abc should respond Ok with a valueTxClock" in
+    "DELETE /table1/abc should respond Ok" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -268,12 +283,12 @@ class ResourceHandlerSpec extends FreeSpec {
         assertSeq (cell ("abc", ts2), cell ("abc", ts1, v1)) (store.scan ("table1"))
       }
 
-    "DELETE /table1/abc with If-Unmodified-Since:1 should respond Ok with a valueTxClock" in
+    "DELETE /table1/abc with If-Unmodified-Since:1 should respond Ok" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Condition-TxClock", "1")
+          .conditionTxClock (ts1)
         .expect
           .statusCode (200)
         .when
@@ -287,10 +302,10 @@ class ResourceHandlerSpec extends FreeSpec {
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Condition-TxClock", "0")
+          .conditionTxClock (ts1 - 1)
         .expect
           .statusCode (412)
-          .header ("Value-TxClock", ts1.toString)
+          .valueTxClock (ts1)
         .when
           .delete ("/table1/abc")
         assertSeq (cell ("abc", ts1, v1)) (store.scan ("table1"))
@@ -489,8 +504,8 @@ class ResourceHandlerSpec extends FreeSpec {
             .statusCode (200)
           .when
             .post ("/batch-write")
-          val valueTxClock = rsp.valueTxClock
-          assertSeq (cell ("abc", valueTxClock, v1)) (store.scan ("table1"))
+          val time = rsp.valueTxClock
+          assertSeq (cell ("abc", time, v1)) (store.scan ("table1"))
         }}
 
       "POST /batch-write with one UPDATE should yield Ok" in {
@@ -519,8 +534,8 @@ class ResourceHandlerSpec extends FreeSpec {
             .statusCode (200)
           .when
             .post ("/batch-write")
-          val valueTxClock = rsp.valueTxClock
-          assertSeq (cell ("abc", valueTxClock), cell ("abc", ts1, v1)) (store.scan ("table1"))
+          val time = rsp.valueTxClock
+          assertSeq (cell ("abc", time), cell ("abc", ts1, v1)) (store.scan ("table1"))
         }}
 
       "POST /batch-write with mixed case operations should yield Ok" in {
@@ -533,8 +548,8 @@ class ResourceHandlerSpec extends FreeSpec {
             .statusCode (200)
           .when
             .post ("/batch-write")
-          val valueTxClock = rsp.valueTxClock
-          assertSeq (cell ("abc", valueTxClock, v1)) (store.scan ("table1"))
+          val time = rsp.valueTxClock
+          assertSeq (cell ("abc", time, v1)) (store.scan ("table1"))
         }}
 
       "POST /batch-write with multiple operations should yeild Ok" in {
@@ -545,7 +560,7 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .header ("Condition-TxClock", ts4.toString)
+            .conditionTxClock (ts4)
             .body ("""
                 [ {"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"},
                   {"op": "UPDATE", "table": "table2", "key": "abc2", "obj": "v3"},
@@ -569,13 +584,13 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .header ("Condition-TxClock", ts1.toString)
+            .conditionTxClock (ts1)
             .body ("""
                 [ {"op": "HOLD", "table": "table1", "key": "abc"},
                   {"op": "UPDATE", "table": "table1", "key": "abc2", "obj": "v1"} ]""")
           .expect
             .statusCode (412)
-            .header ("Value-TxClock", ts2.toString)
+            .valueTxClock (ts2)
             .body (equalTo (""))
           .when
             .post ("/batch-write")

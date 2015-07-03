@@ -21,7 +21,7 @@ import scala.util.Random
 import com.fasterxml.jackson.databind.JsonNode
 import com.jayway.restassured.RestAssured.given
 import com.jayway.restassured.response.{Response => RestAssuredResponse}
-import com.jayway.restassured.specification.ResponseSpecification
+import com.jayway.restassured.specification.{RequestSpecification, ResponseSpecification}
 import com.treode.async.stubs.{StubGlobals, StubScheduler}, StubGlobals.scheduler
 import com.treode.store.{Bytes, Cell, TxClock, TxId, WriteOp}, WriteOp._
 import com.treode.store.stubs.StubStore
@@ -58,7 +58,7 @@ class ResourceSpec extends FreeSpec {
   def assertSeq [T] (xs: T*) (actual: Seq [T]): Unit =
     assertResult (xs) (actual)
 
-  implicit class RichResposne (rsp: RestAssuredResponse) {
+  implicit class RichResponse (rsp: RestAssuredResponse) {
 
 	  def valueTxClock: TxClock = {
       val string = rsp.getHeader ("Value-TxClock")
@@ -67,6 +67,21 @@ class ResourceSpec extends FreeSpec {
       assert (parse.isDefined, s"""Could not parse Value-TxClock "$string" as a TxClock""")
       parse.get
     }}
+
+  implicit class RichRequestSpec (req: RequestSpecification) {
+
+    def conditionTxClock (time: TxClock): RequestSpecification =
+      req.header ("Condition-TxClock", time.time.toString)
+
+    def readTxClock (time: TxClock): RequestSpecification =
+      req.header ("Read-TxClock", time.time.toString)
+  }
+
+  implicit class RichResponseSpec (rsp: ResponseSpecification) {
+
+    def valueTxClock (time: TxClock): ResponseSpecification =
+      rsp.header ("Value-TxClock", time.time.toString)
+  }
 
   class JsonMatcher (expected: String) extends TypeSafeMatcher [String] {
 
@@ -115,7 +130,7 @@ class ResourceSpec extends FreeSpec {
           .get ("/123/abc")
       }
 
-    "PUT /123/abc should respond Ok with a valueTxClock" in
+    "PUT /123/abc should respond Ok" in
       served { case (port, store) =>
         val body = "\"i have been stored\""
         val rsp = given
@@ -125,11 +140,11 @@ class ResourceSpec extends FreeSpec {
           .statusCode (200)
         .when
           .put ("/123/abc")
-        val valueTxClock = rsp.valueTxClock
-        assertSeq (cell ("abc", valueTxClock, body)) (store.scan (123))
+        val ts = rsp.valueTxClock
+        assertSeq (cell ("abc", ts, body)) (store.scan (123))
       }
 
-    "DELETE /123/abc should respond Ok with a valueTxClock" in
+    "DELETE /123/abc should respond Ok" in
       served { case (port, store) =>
         val body = "\"i have been stored\""
         val rsp = given
@@ -139,8 +154,8 @@ class ResourceSpec extends FreeSpec {
           .statusCode (200)
         .when
           .delete ("/123/abc")
-        val valueTxClock = rsp.valueTxClock
-        assertSeq (cell ("abc", valueTxClock)) (store.scan (123))
+        val ts = rsp.valueTxClock
+        assertSeq (cell ("abc", ts)) (store.scan (123))
       }}
 
   "When the database has an entry" - {
@@ -168,7 +183,7 @@ class ResourceSpec extends FreeSpec {
         val ts = addData (store)
         given
           .port (port)
-          .header ("Condition-TxClock", "0")
+          .conditionTxClock (ts - 1)
         .expect
           .statusCode (200)
           .body (equalTo (entity))
@@ -181,7 +196,7 @@ class ResourceSpec extends FreeSpec {
         val ts = addData (store)
         given
           .port (port)
-          .header ("Condition-TxClock", "1")
+          .conditionTxClock (ts)
         .expect
           .statusCode (304)
         .when
@@ -193,7 +208,7 @@ class ResourceSpec extends FreeSpec {
         val ts = addData (store)
         given
           .port (port)
-          .header ("Read-TxClock", "0")
+          .readTxClock (ts - 1)
         .expect
           .statusCode (404)
         .when
@@ -205,7 +220,7 @@ class ResourceSpec extends FreeSpec {
         val ts = addData (store)
         given
           .port (port)
-          .header ("Read-TxClock", "1")
+          .readTxClock (ts)
         .expect
           .statusCode (200)
           .body (equalTo (entity))
@@ -213,7 +228,7 @@ class ResourceSpec extends FreeSpec {
           .get ("/123/abc")
       }
 
-    "PUT /123/abc should respond Ok with a valueTxClock" in
+    "PUT /123/abc should respond Ok" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -227,12 +242,12 @@ class ResourceSpec extends FreeSpec {
         assertSeq (cell ("abc", ts2, entity2), cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "PUT /123/abc with Condition-TxClock:1 should respond Ok with a valueTxClock" in
+    "PUT /123/abc with Condition-TxClock:1 should respond Ok" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Condition-TxClock", "1")
+          .conditionTxClock (ts1)
           .body (entity2)
         .expect
           .statusCode (200)
@@ -247,17 +262,17 @@ class ResourceSpec extends FreeSpec {
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Condition-TxClock", "0")
+          .conditionTxClock (ts1 - 1)
           .body (entity2)
         .expect
           .statusCode (412)
-          .header ("Value-TxClock", ts1.toString)
+          .valueTxClock (ts1)
         .when
           .put ("/123/abc")
         assertSeq (cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "DELETE /123/abc should respond Ok with a valueTxClock" in
+    "DELETE /123/abc should respond Ok" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
@@ -270,12 +285,12 @@ class ResourceSpec extends FreeSpec {
         assertSeq (cell ("abc", ts2), cell ("abc", ts1, entity)) (store.scan (123))
       }
 
-    "DELETE /123/abc with Condition-TxClock:1 should respond Ok with a valueTxClock" in
+    "DELETE /123/abc with Condition-TxClock:1 should respond Ok" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Condition-TxClock", "1")
+          .conditionTxClock (ts1)
         .expect
           .statusCode (200)
         .when
@@ -289,10 +304,10 @@ class ResourceSpec extends FreeSpec {
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .header ("Condition-TxClock", "0")
+          .conditionTxClock (ts1 - 1)
         .expect
           .statusCode (412)
-          .header ("Value-TxClock", ts1.toString)
+          .valueTxClock (ts1)
         .when
           .delete ("/123/abc")
         assertSeq (cell ("abc", ts1, entity)) (store.scan (123))
