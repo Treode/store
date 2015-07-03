@@ -16,6 +16,7 @@
 
 package com.treode.server
 
+import com.treode.async.Callback, Callback.ignore
 import com.treode.store.StoreController
 
 trait Librarian {
@@ -35,5 +36,5 @@ class LiveLibrarian (controller: StoreController) extends Librarian {
 
   def schema_= (s1: Schema) {
     val s2 = s1.copy (version = _schema.version + 1)
-    controller.issue (Schema.catalog) (_schema.version, schema)
+    controller.issue (Schema.catalog) (s2.version, s2) .run (ignore)
   }}

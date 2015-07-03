@@ -94,6 +94,12 @@ echo-do ${SBT} test intensive:test
 # Ivy artifacts.
 echo-do ${SBT} +publish
 
+# Server.
+STAGE_JARS=stage/jars/${version}
+echo-do ${SBT} server/assembly
+echo-do mkdir -p ${STAGE_JARS}
+echo-do cp server/target/scala-2.11/server.jar  ${STAGE_JARS}/server-${version}.jar
+
 # Finagle example.
 STAGE_FINAGLE=stage/examples/finagle/${version}
 (cd examples/finagle; echo-do ${SBT} assembly); expect-status 0
