@@ -148,6 +148,14 @@ private class RecoveryAgent (implicit
       reattachments ++= paths
       recovery = Some (cb)
       queue.engage()
+    }
+
+  def init (sysid: SystemId): Async [DiskLaunch] =
+    fiber.async { cb =>
+      requireNotStarted ("Must init disks without starting recovery.")
+      common = common.copy (sysid = sysid)
+      recovery = Some (cb)
+      queue.engage()
     }}
 
 private object RecoveryAgent {

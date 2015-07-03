@@ -29,6 +29,8 @@ case class SystemId (id1: Long, id2: Long) {
 
 object SystemId {
 
+  val zero = SystemId (0, 0)
+
   val pickler = {
     import Picklers._
     wrap (fixedLong, fixedLong)

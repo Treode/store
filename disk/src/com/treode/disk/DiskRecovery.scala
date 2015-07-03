@@ -38,4 +38,11 @@ trait DiskRecovery {
     * Call `reattach` after registering all replayers. This method closes the recovery builder.
     */
   def reattach (items: Path*): Async [DiskLaunch]
+
+  /** Initialize the system without any disk drives.
+    *
+    * Since there are no logs to replay, there's no need to attach replayers. This method closes
+    * the recovery builder.
+    */
+  def init (sysid: SystemId): Async [DiskLaunch]
 }

@@ -39,7 +39,8 @@ class DiskEvents {
     logger.log (WARNING, s"No compactor for $id.")
 
   def reattachingDisks (paths: Set [Path]): Unit =
-    logger.log (INFO, s"Reattaching disks: ${paths map (quote _) mkString ", "}")
+    if (!paths.isEmpty)
+      logger.log (INFO, s"Reattaching disks: ${paths map (quote _) mkString ", "}")
 }
 
 private object DiskEvents {

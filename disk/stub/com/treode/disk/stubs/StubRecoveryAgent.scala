@@ -22,7 +22,7 @@ import scala.util.Random
 import com.treode.async.{Async, Callback, Scheduler}, Async.{guard, supply}, Callback.ignore
 import com.treode.async.io.File
 import com.treode.async.misc.EpochReleaser
-import com.treode.disk.{DiskEvents, DiskLaunch, RecordDescriptor, RecordRegistry}
+import com.treode.disk.{DiskEvents, DiskLaunch, RecordDescriptor, RecordRegistry, SystemId}
 
 private class StubRecoveryAgent (implicit
   random: Random,
@@ -56,5 +56,8 @@ private class StubRecoveryAgent (implicit
       }}
 
   def reattach (items: Path*): Async [DiskLaunch] =
+    guard (throw new UnsupportedOperationException ("The StubDisk does not use files."))
+
+  def init (sysid: SystemId): Async [DiskLaunch] =
     guard (throw new UnsupportedOperationException ("The StubDisk does not use files."))
 }

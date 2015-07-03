@@ -30,6 +30,7 @@ private trait DiskPicklers extends Picklers {
   def pageTally = PageTally.pickler
   def position = Position.pickler
   def typeId = TypeId.pickler
+  def systemId = SystemId.pickler
 }
 
 private object DiskPicklers extends DiskPicklers

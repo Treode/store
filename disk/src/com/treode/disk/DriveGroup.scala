@@ -96,6 +96,9 @@ private class DriveGroup (
   /** Callbacks for when the files are closed. */
   private var closing = List.empty [Callback [Unit]]
 
+  /** This system's ID. */
+  val sysid = common.sysid
+
   val checkpointer = new Checkpointer (this, logBytes, logEntries)
 
   var drives =
@@ -172,7 +175,7 @@ private class DriveGroup (
       gen += 1
 
       val paths = (for (drive <- drives.values) yield drive.path).toSet
-      val common = SuperBlock.Common (gen, dno, paths)
+      val common = SuperBlock.Common (sysid, gen, dno, paths)
 
       for {
         _ <- drains.latch (_.startDraining())
@@ -265,7 +268,7 @@ private class DriveGroup (
 
   private def _openDrive (id: Int, path: Path, geom: DriveGeometry): Drive = {
 
-    val file = files.open (path, READ, WRITE)
+    val file = files.open (path, CREATE, READ, WRITE)
 
     val alloc = new SegmentAllocator (geom)
 

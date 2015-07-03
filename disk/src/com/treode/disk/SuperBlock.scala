@@ -36,17 +36,17 @@ private case class SuperBlock (
 private object SuperBlock {
 
   /** The common portion of the superblock; every disk holds the same values. */
-  case class Common (gen: Int, dno: Int, paths: Set [Path])
+  case class Common (sysid: SystemId, gen: Int, dno: Int, paths: Set [Path])
 
   object Common {
 
-    val empty = Common (0, 0, Set.empty)
+    val empty = Common (SystemId.zero, 0, 0, Set.empty)
 
     val pickler = {
       import DiskPicklers._
-      wrap (int, int, set (path))
+      wrap (systemId, int, int, set (path))
       .build ((Common.apply _).tupled)
-      .inspect (v => (v.gen, v.dno, v.paths))
+      .inspect (v => (v.sysid, v.gen, v.dno, v.paths))
     }
   }
 

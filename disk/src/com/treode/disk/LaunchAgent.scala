@@ -63,6 +63,6 @@ private class LaunchAgent (
     agent.launch (writers, checkpoints.result, compactors.result)
   }
 
-  // TODO
-  def sysid: SystemId  = ???
+  def sysid: SystemId =
+    drives.sysid
 }

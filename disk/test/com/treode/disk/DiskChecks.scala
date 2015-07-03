@@ -35,6 +35,8 @@ import org.scalatest.{Informing, Suite}
 trait DiskChecks extends AsyncChecks {
   this: Suite with Informing =>
 
+  private val ID = SystemId (0x3FCD9CC55677DEBBL, 0x991B601464471ACCL)
+
   /** Do a and b overlap? */
   def intersects (a: Set [Path], b: Iterable [Path]): Boolean =
     b exists (a contains _)
@@ -99,8 +101,14 @@ trait DiskChecks extends AsyncChecks {
       new RecoveryAgent
 
     /** Finish recovery using the files that we are certain were attached. */
-    def reattach () (implicit recovery: RecoveryAgent): Async [LaunchAgent] =
-      recovery.reattach (_attached.toSeq: _*) .map (_.asInstanceOf [LaunchAgent])
+    def reattach () (implicit recovery: RecoveryAgent): Async [LaunchAgent] = {
+      val agent =
+        if (_attached.isEmpty)
+          recovery.init (ID)
+        else
+          recovery.reattach (_attached.toSeq: _*)
+      agent.map (_.asInstanceOf [LaunchAgent])
+    }
 
     def startingAttach (paths: Seq [Path], geom: DriveGeometry) {
       files.create (paths, geom.diskBytes.toInt, geom.blockBits)
@@ -253,6 +261,7 @@ trait DiskChecks extends AsyncChecks {
     implicit val recovery = drives.newRecovery
     tracker.recover()
     implicit val launch = drives.reattach().expectPass()
+    assertResult (ID) (launch.sysid)
     import launch.agent
     tracker.launch()
     launch.launch()

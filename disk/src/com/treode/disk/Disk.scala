@@ -17,6 +17,7 @@
 package com.treode.disk
 
 import java.nio.file.Path
+import java.util.concurrent.Executors
 import com.treode.async.{Async, Scheduler}
 
 /** ==The Disk System==
@@ -211,6 +212,14 @@ object Disk {
   @deprecated ("Use DiskRecovery", "0.3.0")
   type Recovery = DiskRecovery
 
+  /** Start recovery; create a recovery builder.
+    *
+    * The `superBlockBits` in the [[Disk.Config]] must match the `superBlockBits` given to
+    * initialization.
+    */
+  def recover () (implicit scheduler: Scheduler, config: DiskConfig): DiskRecovery =
+    new RecoveryAgent () (FileSystem.default, scheduler, config, DiskEvents.default)
+
   /** Initialize the disk system.
     *
     * Setup the disk system with one or more disks; all disks get the same geometry. This does
@@ -232,14 +241,19 @@ object Disk {
       blockBits: Int,
       diskBytes: Long,
       paths: Path*
-  ): Unit =
-    ??? // DiskDrive.init (sysid, superBlockBits, segmentBits, blockBits, diskBytes, paths)
-
-  /** Start recovery; create a recovery builder.
-    *
-    * The `superBlockBits` in the [[Disk.Config]] must match the `superBlockBits` given to
-    * initialization.
-    */
-  def recover () (implicit scheduler: Scheduler, config: DiskConfig): DiskRecovery =
-    new RecoveryAgent () (FileSystem.default, scheduler, config, DiskEvents.default)
+  ) {
+    val executor = Executors.newSingleThreadScheduledExecutor()
+    try {
+      implicit val scheduler = Scheduler (executor)
+      implicit val config = DiskConfig.suggested (superBlockBits = superBlockBits)
+      val recovery = recover()
+      val launch = recovery.init (sysid).await()
+      launch.launch()
+      import launch.controller
+      val geometry = DriveGeometry (segmentBits, blockBits, diskBytes)
+      controller.attach (geometry, paths:_*) .await()
+      controller.shutdown()
+    } finally {
+      executor.shutdown()
+    }}
 }
