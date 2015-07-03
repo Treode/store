@@ -22,7 +22,6 @@ import com.treode.store.tier.TierMedic
 
 private class Medic (
     val key: Bytes,
-    val time: TxClock,
     var default: Option [Bytes],
     var ballot: BallotNumber,
     var proposal: Proposal,
@@ -58,11 +57,11 @@ private class Medic (
 
   def closed (chosen: Bytes, gen: Long): Unit = synchronized {
     this.chosen = Some (chosen)
-    archive.put (gen, key, time, chosen)
+    archive.put (gen, key, TxClock.MaxValue, chosen)
   }
 
   def close (kit: PaxosKit): Unit = synchronized {
-    val a = new Acceptor (key, time, kit)
+    val a = new Acceptor (key, kit)
     if (chosen.isDefined)
       a.choose (chosen.get)
     else if (default.isDefined)
@@ -70,15 +69,15 @@ private class Medic (
     else if (proposal.isDefined)
       a.recover (proposal.get._2, ballot, proposal)
     else
-      assert (false, s"Failed to recover paxos instance $key:$time")
-    kit.acceptors.recover (key, time, a)
+      assert (false, s"Failed to recover paxos instance $key")
+    kit.acceptors.recover (key, a)
   }
 
-  override def toString = s"Acceptor.Medic($key, $time, $default, $ballot, $proposal, $chosen)"
+  override def toString = s"Acceptor.Medic($key, $default, $ballot, $proposal, $chosen)"
 }
 
 private object Medic {
 
-  def apply (key: Bytes, time: TxClock, default: Option [Bytes], kit: RecoveryKit): Medic =
-    new Medic (key, time, default, BallotNumber.zero, Option.empty, None, kit)
+  def apply (key: Bytes, default: Option [Bytes], kit: RecoveryKit): Medic =
+    new Medic (key, default, BallotNumber.zero, Option.empty, None, kit)
 }

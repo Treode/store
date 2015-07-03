@@ -30,7 +30,6 @@ import com.treode.store.tier.TierTable
 import org.scalatest.Assertions
 
 import Async.{guard, supply}
-import StoreTestTools._
 
 private class StubPaxosHost (
     val localId: HostId
@@ -80,10 +79,10 @@ private class StubPaxosHost (
     paxos.archive.iterator (Residents.all)
 
   def lead (key: Long, value: Int): Async [Int] =
-    paxos.lead (Bytes (key), 0, Bytes (value)) .map (_.int)
+    paxos.lead (Bytes (key), Bytes (value)) .map (_.int)
 
   def propose (key: Long, value: Int): Async [Int] =
-    paxos.propose (Bytes (key), 0, Bytes (value)) .map (_.int)
+    paxos.propose (Bytes (key), Bytes (value)) .map (_.int)
 }
 
 private object StubPaxosHost extends StoreClusterChecks.Package [StubPaxosHost] {

@@ -31,7 +31,7 @@ class AcceptorSpec extends FreeSpec {
   private implicit class RicStubPeer (peer: StubPeer) {
 
     def ask (key: Long, ballot: Long, default: Int, from: MessageCaptor): Unit =
-      from.send (Acceptor.ask, peer) (1, key, 0, ballot, default)
+      from.send (Acceptor.ask, peer) (1, key, ballot, default)
   }
 
   private case class Grant (key: Long, ballot: Long, proposed: Option [(Long, Int)])
@@ -39,7 +39,7 @@ class AcceptorSpec extends FreeSpec {
   private implicit class RichMessageCaptor (c: MessageCaptor) {
 
     def expectGrant (peer: StubPeer) (implicit s: StubScheduler): Grant = {
-      val ((key, _, b1, proposed), from) = c.expect (Proposer.grant)
+      val ((key, b1, proposed), from) = c.expect (Proposer.grant)
       assertResult (peer.localId) (from.id)
       proposed match {
         case Some ((b2, value)) => Grant (key.long, b1, Some (b2.number, value.int))

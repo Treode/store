@@ -83,7 +83,7 @@ private trait StoreTestTools {
     new TxClock (v)
 
   implicit def longToTxId (v: Long): TxId =
-    TxId (Bytes (v), 0)
+    TxId (Bytes (v))
 
   implicit def stringToPath (path: String): Path =
     Paths.get (path)
@@ -120,7 +120,7 @@ private trait StoreTestTools {
   implicit class RichRandom (random: Random) {
 
     def nextTxId: TxId =
-      TxId (Bytes (fixedLongLong, (random.nextLong, random.nextLong)), 0)
+      TxId (Bytes (fixedLongLong, (random.nextLong, random.nextLong)))
   }
 
   implicit class RichStore (store: Store) {

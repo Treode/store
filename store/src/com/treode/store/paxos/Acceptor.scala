@@ -26,7 +26,7 @@ import com.treode.store.{BallotNumber, Bytes, Cell, TimeoutException, TxClock}
 import Async.supply
 import Callback.ignore
 
-private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
+private class Acceptor (val key: Bytes, kit: PaxosKit) {
   import Acceptor.{NoPost, Post}
   import kit.{acceptors, archive, cluster, disk, scheduler}
   import kit.config.{closedLifetime, deliberatingTimeout}
@@ -76,7 +76,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     def checkpoint(): Async [Unit] =
       supply (())
 
-    override def toString = s"Acceptor.Opening($key, $time)"
+    override def toString = s"Acceptor.Opening($key)"
   }
 
   class Restoring (default: Bytes) extends State {
@@ -97,7 +97,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
         if (state == Restoring.this) {
           state = chosen match {
             case Some (value) =>
-              Proposer.chosen (key, time, value) (proposers)
+              Proposer.chosen (key, value) (proposers)
               new Closed (value, 0)
             case None =>
               val s = new Deliberating (default, ballot, proposal, proposers)
@@ -106,8 +106,8 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
           }}}
 
     def restore() {
-      archive.get (key, time) run {
-        case Success (Cell (_, found, chosen)) if found == time => restore (chosen)
+      archive.get (key, TxClock.MaxValue) run {
+        case Success (Cell (_, _, chosen)) => restore (chosen)
         case Success (_) => restore (None)
         case Failure (t) => panic (Restoring.this, t)
       }}
@@ -130,16 +130,16 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
       }}
 
     def choose (chosen: Bytes) {
-      val gen  = archive.put (key, time, chosen)
+      val gen  = archive.put (key, TxClock.MaxValue, chosen)
       state = new Closed (chosen, gen)
-      Acceptor.close.record (key, time, chosen, gen) .run (Callback.ignore)
-      Proposer.chosen (key, time, chosen) (proposers)
+      Acceptor.close.record (key, chosen, gen) .run (Callback.ignore)
+      Proposer.chosen (key, chosen) (proposers)
     }
 
     def checkpoint(): Async [Unit] =
       supply (())
 
-    override def toString = s"Acceptor.Restoring($key, $time)"
+    override def toString = s"Acceptor.Restoring($key)"
   }
 
   class Deliberating (
@@ -177,7 +177,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
     def timeout() {
       if (state == Deliberating.this)
-        kit.propose (key, time, default) .run {
+        kit.propose (key, default) .run {
           case Success (v) => Acceptor.this.choose (v)
           case Failure (_: TimeoutException) => timeout()
           case Failure (t) => panic (Deliberating.this, t)
@@ -185,33 +185,33 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
     def open (ballot: Long, default: Bytes, proposer: Peer): Unit =
       post (new Post {
-        def record = Acceptor.open.record (key, time, default) .run (posted)
-        def reply() = Proposer.grant (key, time, ballot, None) (proposer)
+        def record = Acceptor.open.record (key, default) .run (posted)
+        def reply() = Proposer.grant (key, ballot, None) (proposer)
       })
 
     def grant (ballot: BallotNumber, proposal: Proposal, proposer: Peer): Unit =
       post (new Post {
-        def record = Acceptor.grant.record (key, time, ballot) .run (posted)
-        def reply() = Proposer.grant (key, time, ballot.number, proposal) (proposer)
+        def record = Acceptor.grant.record (key, ballot) .run (posted)
+        def reply() = Proposer.grant (key, ballot.number, proposal) (proposer)
       })
 
     def accept (ballot: BallotNumber, value: Bytes, proposer: Peer): Unit =
       post (new Post {
-        def record() = Acceptor.accept.record (key, time, ballot, value) .run (posted)
-        def reply() = Proposer.accept (key, time, ballot.number) (proposer)
+        def record() = Acceptor.accept.record (key, ballot, value) .run (posted)
+        def reply() = Proposer.accept (key, ballot.number) (proposer)
       })
 
     def reaccept (ballot: BallotNumber, proposer: Peer): Unit =
       post (new Post {
-        def record() = Acceptor.reaccept.record (key, time, ballot) .run (posted)
-        def reply() = Proposer.accept (key, time, ballot.number) (proposer)
+        def record() = Acceptor.reaccept.record (key, ballot) .run (posted)
+        def reply() = Proposer.accept (key, ballot.number) (proposer)
       })
 
     def ask (proposer: Peer, _ballot: Long, default: Bytes) {
       proposers += proposer
       val ballot = BallotNumber (_ballot, proposer.id)
       if (ballot < this.ballot) {
-        Proposer.refuse (key, time, this.ballot.number) (proposer)
+        Proposer.refuse (key, this.ballot.number) (proposer)
       } else {
         grant (ballot, proposal, proposer)
         this.ballot = ballot
@@ -221,7 +221,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
       proposers += proposer
       val ballot = BallotNumber (_ballot, proposer.id)
       if (ballot < this.ballot) {
-        Proposer.refuse (key, time, this.ballot.number) (proposer)
+        Proposer.refuse (key, this.ballot.number) (proposer)
       } else {
         if (proposal.isDefined && value == proposal.get._2)
           reaccept (ballot, proposer)
@@ -232,30 +232,30 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
       }}
 
     def choose (chosen: Bytes) {
-      val gen  = archive.put (key, time, chosen)
+      val gen  = archive.put (key, TxClock.MaxValue, chosen)
       state = new Closed (chosen, gen)
-      Acceptor.close.record (key, time, chosen, gen) .run (ignore)
+      Acceptor.close.record (key, chosen, gen) .run (ignore)
     }
 
     def checkpoint(): Async [Unit] = {
       proposal match {
-        case Some ((ballot, value)) => Acceptor.accept.record (key, time, ballot, value)
-        case None => Acceptor.open.record (key, time, default)
+        case Some ((ballot, value)) => Acceptor.accept.record (key, ballot, value)
+        case None => Acceptor.open.record (key, default)
       }}
 
-    override def toString = s"Acceptor.Deliberating($key, $time, $default, $ballot, $proposal)"
+    override def toString = s"Acceptor.Deliberating($key, $default, $ballot, $proposal)"
   }
 
   class Closed (val chosen: Bytes, gen: Long) extends State {
 
     releaser.leave (epoch)
-    scheduler.delay (closedLifetime) (acceptors.remove (key, time, Acceptor.this))
+    scheduler.delay (closedLifetime) (acceptors.remove (key, Acceptor.this))
 
     def ask (proposer: Peer, ballot: Long, default: Bytes): Unit =
-      Proposer.chosen (key, time, chosen) (proposer)
+      Proposer.chosen (key, chosen) (proposer)
 
     def propose (proposer: Peer, ballot: Long, value: Bytes): Unit =
-      Proposer.chosen (key, time, chosen) (proposer)
+      Proposer.chosen (key, chosen) (proposer)
 
     def choose (chosen: Bytes): Unit =
       require (chosen == this.chosen, "Paxos disagreement")
@@ -263,13 +263,13 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
     def checkpoint(): Async [Unit] =
       supply (())
 
-    override def toString = s"Acceptor.Closed($key, $time, $chosen)"
+    override def toString = s"Acceptor.Closed($key, $chosen)"
   }
 
   class Panicked (s: State, thrown: Throwable) extends State {
 
     releaser.leave (epoch)
-    scheduler.delay ( closedLifetime) (acceptors.remove (key, time, Acceptor.this))
+    scheduler.delay ( closedLifetime) (acceptors.remove (key, Acceptor.this))
 
     def ask (proposer: Peer, ballot: Long, default: Bytes): Unit = ()
 
@@ -279,7 +279,7 @@ private class Acceptor (val key: Bytes, val time: TxClock, kit: PaxosKit) {
 
     def checkpoint(): Async [Unit] = supply (())
 
-    override def toString = s"Acceptor.Panicked($key, $time, $thrown)"
+    override def toString = s"Acceptor.Panicked($key, $thrown)"
   }
 
   def recover (default: Bytes, ballot: BallotNumber, proposal: Proposal): Unit =
@@ -307,42 +307,42 @@ private object Acceptor {
 
   val ask = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF14D4F00908FB59L, tuple (uint, bytes, txClock, ulong, bytes))
+    MessageDescriptor (0xFF14D4F00908FB59L, tuple (uint, bytes, ulong, bytes))
   }
 
   val propose = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF09AFD4F9B688D9L, tuple (uint, bytes, txClock, ulong, bytes))
+    MessageDescriptor (0xFF09AFD4F9B688D9L, tuple (uint, bytes, ulong, bytes))
   }
 
   val choose = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF761FFCDF5DEC8BL, tuple (bytes, txClock, bytes))
+    MessageDescriptor (0xFF761FFCDF5DEC8BL, tuple (bytes, bytes))
   }
 
   val open = {
     import PaxosPicklers._
-    RecordDescriptor (0x77784AB1, tuple (bytes, txClock, bytes))
+    RecordDescriptor (0x77784AB1, tuple (bytes, bytes))
   }
 
   val grant = {
     import PaxosPicklers._
-    RecordDescriptor (0x32A1544B, tuple (bytes, txClock, ballotNumber))
+    RecordDescriptor (0x32A1544B, tuple (bytes, ballotNumber))
   }
 
   val accept = {
     import PaxosPicklers._
-    RecordDescriptor (0xD6CCC0BE, tuple (bytes, txClock, ballotNumber, bytes))
+    RecordDescriptor (0xD6CCC0BE, tuple (bytes, ballotNumber, bytes))
   }
 
   val reaccept = {
     import PaxosPicklers._
-    RecordDescriptor (0x52720640, tuple (bytes, txClock, ballotNumber))
+    RecordDescriptor (0x52720640, tuple (bytes, ballotNumber))
   }
 
   val close = {
     import PaxosPicklers._
-    RecordDescriptor (0xAE980885, tuple (bytes, txClock, bytes, long))
+    RecordDescriptor (0xAE980885, tuple (bytes, bytes, long))
   }
 
   trait Post {

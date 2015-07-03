@@ -24,7 +24,7 @@ import com.treode.async.misc.RichInt
 import com.treode.cluster.{MessageDescriptor, Peer, ReplyTracker}
 import com.treode.store.{Atlas, BallotNumber, Bytes, TimeoutException, TxClock}
 
-private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
+private class Proposer (key: Bytes, kit: PaxosKit) {
   import kit.{cluster, library, random, scheduler}
   import kit.config.{closedLifetime, proposingBackoff}
   import kit.proposers.remove
@@ -68,7 +68,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
   }
 
   private def closeWithTimeout() {
-    remove (key, time, Proposer.this)
+    remove (key, Proposer.this)
     learners foreach (scheduler.fail (_, new TimeoutException))
     learners = List.empty
     state = new ClosedWithTimeout
@@ -106,16 +106,16 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     var refused = ballot
     var proposed = Option.empty [(BallotNumber, Bytes)]
     var atlas = library.atlas
-    var granted = track (atlas, key, time)
+    var granted = track (atlas, key)
 
-    Acceptor.ask (atlas.version, key, time, ballot, value) (granted)
+    Acceptor.ask (atlas.version, key, ballot, value) (granted)
 
     def learn (k: Learner) =
       learners ::= k
 
     def refuse (from: Peer, ballot: Long) = {
       refused = math.max (refused, ballot)
-      granted = track (atlas, key, time)
+      granted = track (atlas, key)
     }
 
     def grant (from: Peer, ballot: Long, proposal: Proposal) {
@@ -134,10 +134,10 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
     def timeout() {
       if (backoff.hasNext) {
         atlas = library.atlas
-        granted = track (atlas, key, time)
+        granted = track (atlas, key)
         ballot = refused + random.nextInt (17) + 1
         refused = ballot
-        Acceptor.ask (atlas.version, key, time, ballot, value) (granted)
+        Acceptor.ask (atlas.version, key, ballot, value) (granted)
         fiber.delay (backoff.next) (state.timeout())
       } else {
         closeWithTimeout()
@@ -150,9 +150,9 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
     var refused = ballot
     var proposed = Option.empty [(BallotNumber, Bytes)]
-    var accepted = track (atlas, key, time)
+    var accepted = track (atlas, key)
 
-    Acceptor.propose (atlas.version, key, time, ballot, value) (accepted)
+    Acceptor.propose (atlas.version, key, ballot, value) (accepted)
 
     val backoff = proposingBackoff.iterator
 
@@ -161,7 +161,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
     def refuse (from: Peer, ballot: Long) = {
       refused = math.max (refused, ballot)
-      accepted = track (atlas, key, time)
+      accepted = track (atlas, key)
     }
 
     def grant (from: Peer, ballot: Long, proposal: Proposal): Unit = ()
@@ -171,7 +171,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
         accepted += from
         if (accepted.quorum) {
           val v = agreement (proposed, value)
-          Acceptor.choose (key, time, v) (track (atlas, key, time))
+          Acceptor.choose (key, v) (track (atlas, key))
           closeWithSuccess (v)
         }}}
 
@@ -191,7 +191,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
   class ClosedWithSuccess (value: Bytes) extends State {
 
-    fiber.delay (closedLifetime) (remove (key, time, Proposer.this))
+    fiber.delay (closedLifetime) (remove (key, Proposer.this))
 
     def learn (k: Learner) =
       scheduler.pass (k, value)
@@ -212,7 +212,7 @@ private class Proposer (key: Bytes, time: TxClock, kit: PaxosKit) {
 
   class ClosedWithTimeout extends State {
 
-    fiber.delay (closedLifetime) (remove (key, time, Proposer.this))
+    fiber.delay (closedLifetime) (remove (key, Proposer.this))
 
     def learn (k: Learner) =
       scheduler.fail (k, new TimeoutException)
@@ -286,20 +286,20 @@ private object Proposer {
 
   val refuse = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF3725D9448D98D0L, tuple (bytes, txClock, ulong))
+    MessageDescriptor (0xFF3725D9448D98D0L, tuple (bytes, ulong))
   }
 
   val grant = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF52232E0CCEE1D2L, tuple (bytes, txClock, ulong, proposal))
+    MessageDescriptor (0xFF52232E0CCEE1D2L, tuple (bytes, ulong, proposal))
   }
 
   val accept = {
     import PaxosPicklers._
-    MessageDescriptor (0xFFB799D0E495804BL, tuple (bytes, txClock, ulong))
+    MessageDescriptor (0xFFB799D0E495804BL, tuple (bytes, ulong))
   }
 
   val chosen = {
     import PaxosPicklers._
-    MessageDescriptor (0xFF3D8DDECF0F6CBEL, tuple (bytes, txClock, bytes))
+    MessageDescriptor (0xFF3D8DDECF0F6CBEL, tuple (bytes, bytes))
   }}

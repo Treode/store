@@ -59,7 +59,7 @@ private class PaxosMover (kit: PaxosKit) {
         bytes < moveBatchBytes &&
         Point.Middle (cell.key, cell.time) < limit
       } { cell =>
-        val num = place (atlas, cell.key, cell.time)
+        val num = place (atlas, cell.key)
         if (targets contains num) {
           batch.get (num) match {
             case Some (cs) => batch += num -> (cell::cs)

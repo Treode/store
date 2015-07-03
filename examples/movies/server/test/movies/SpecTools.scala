@@ -107,7 +107,7 @@ trait SpecTools {
   implicit class RichRandom (r: Random) {
 
     def nextXid: TxId =
-      new TxId (Bytes (Random.nextLong), new Instant (0))
+      new TxId (Bytes (Random.nextLong))
   }
 
   implicit class RichResponseSpecification (rsp: ResponseSpecification) {

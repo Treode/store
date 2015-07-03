@@ -10,7 +10,7 @@ import com.treode.store.{Bytes, Cell, TableId, TxClock, TxId, WriteOp}
 class StubSchematicStore (store: StubStore, schema: Schema) {
 
   private def randomTx: TxId =
-    TxId (Bytes (Random.nextInt), 0)
+    TxId (Bytes (Random.nextInt))
 
   private def requireTableId (name: String): TableId = {
     val id = schema.getTableId (name)

@@ -42,11 +42,11 @@ private class PaxosKit (
   val proposers = new Proposers (this)
   val mover = new PaxosMover (this)
 
-  def lead (key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
-    proposers.propose (0, key, time, value)
+  def lead (key: Bytes, value: Bytes): Async [Bytes] =
+    proposers.propose (0, key, value)
 
-  def propose (key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
-    proposers.propose (random.nextInt (17) + 1, key, time, value)
+  def propose (key: Bytes, value: Bytes): Async [Bytes] =
+    proposers.propose (random.nextInt (17) + 1, key, value)
 
   def rebalance (atlas: Atlas): Async [Unit] = {
     val targets = Targets (atlas)

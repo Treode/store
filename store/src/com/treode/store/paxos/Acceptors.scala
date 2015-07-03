@@ -31,12 +31,12 @@ private class Acceptors (kit: PaxosKit) {
 
   val acceptors = newAcceptorsMap
 
-  def get (key: Bytes, time: TxClock): Acceptor = {
-    var a0 = acceptors.get ((key, time))
+  def get (key: Bytes): Acceptor = {
+    var a0 = acceptors.get (key)
     if (a0 != null)
       return a0
-    val a1 = new Acceptor (key, time, kit)
-    a0 = acceptors.putIfAbsent ((key, time), a1)
+    val a1 = new Acceptor (key, kit)
+    a0 = acceptors.putIfAbsent (key, a1)
     if (a0 != null) {
       a1.dispose()
       return a0
@@ -44,11 +44,11 @@ private class Acceptors (kit: PaxosKit) {
     a1
   }
 
-  def recover (key: Bytes, time: TxClock, a: Acceptor): Unit =
-    acceptors.put ((key, time), a)
+  def recover (key: Bytes, a: Acceptor): Unit =
+    acceptors.put (key, a)
 
-  def remove (key: Bytes, time: TxClock, a: Acceptor): Unit =
-    acceptors.remove ((key, time), a)
+  def remove (key: Bytes, a: Acceptor): Unit =
+    acceptors.remove (key, a)
 
   def compact (obj: ObjectId, groups: Set [Long]): Async [Unit] =
     guard {
@@ -77,18 +77,18 @@ private class Acceptors (kit: PaxosKit) {
 
     Acceptors.archive.compact (c => compact (c.obj, c.gens))
 
-    ask.listen { case ((version, key, time, ballot, default), c) =>
+    ask.listen { case ((version, key, ballot, default), c) =>
       if (atlas.version - 1 <= version && version <= atlas.version + 1)
-        get (key, time) ask (c, ballot, default)
+        get (key) ask (c, ballot, default)
     }
 
-    propose.listen { case ((version, key, time, ballot, value), c) =>
+    propose.listen { case ((version, key, ballot, value), c) =>
       if (atlas.version - 1 <= version && version <= atlas.version + 1)
-        get (key, time) propose (c, ballot, value)
+        get (key) propose (c, ballot, value)
     }
 
-    choose.listen { case ((key, time, chosen), c) =>
-      get (key, time) choose (chosen)
+    choose.listen { case ((key, chosen), c) =>
+      get (key) choose (chosen)
     }}}
 
 private object Acceptors {
@@ -109,5 +109,5 @@ private object Acceptors {
   }
 
   val archive = TierDescriptor (0x9F59C4262C8190E8L) { (residents, _, cell) =>
-    resident (residents, cell.key, cell.time)
+    resident (residents, cell.key)
   }}

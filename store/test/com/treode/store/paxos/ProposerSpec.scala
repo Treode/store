@@ -32,21 +32,21 @@ class ProposerSpec extends FreeSpec {
   private implicit class RichPeer (p: Peer) {
 
     def refuse (key: Long, ballot: Long): Unit =
-      Proposer.refuse ((Bytes (key), 0, ballot)) (p)
+      Proposer.refuse ((Bytes (key), ballot)) (p)
 
     def grant (key: Long, ballot: Long): Unit =
-      Proposer.grant ((Bytes (key), 0, ballot, None)) (p)
+      Proposer.grant ((Bytes (key), ballot, None)) (p)
 
     def grant (key: Long, proposedBallot: Long, acceptedBallot: Int, acceptedValue: Int) {
       val proposal = (BallotNumber (acceptedBallot, 0), Bytes (acceptedValue))
-      Proposer.grant ((Bytes (key), 0, proposedBallot, Some (proposal))) (p)
+      Proposer.grant ((Bytes (key), proposedBallot, Some (proposal))) (p)
     }
 
     def accept (key: Long, ballot: Long): Unit =
-      Proposer.accept ((Bytes (key), 0, ballot)) (p)
+      Proposer.accept ((Bytes (key), ballot)) (p)
 
     def chosen (key: Long, value: Int): Unit =
-      Proposer.chosen (key, 0, value) (p)
+      Proposer.chosen (key, value) (p)
   }
 
   private trait Request {
@@ -80,7 +80,7 @@ class ProposerSpec extends FreeSpec {
   private implicit class RichMessageCaptor (c: MessageCaptor) {
 
     def expectAsk() (implicit s: StubScheduler): Ask = {
-      val ((_, key, _, ballot, default), from) = c.expect (Acceptor.ask)
+      val ((_, key, ballot, default), from) = c.expect (Acceptor.ask)
       Ask (key.long, ballot, default.int, from)
     }
 
@@ -90,7 +90,7 @@ class ProposerSpec extends FreeSpec {
     }
 
     def expectPropose () (implicit s: StubScheduler): Propose = {
-      val ((_, key, _, ballot, value), from) = c.expect (Acceptor.propose)
+      val ((_, key, ballot, value), from) = c.expect (Acceptor.propose)
       Propose (key.long, ballot, value.int, from)
     }
 
@@ -101,7 +101,7 @@ class ProposerSpec extends FreeSpec {
     }
 
     def expectChoose () (implicit s: StubScheduler): Choose = {
-      val ((key, _, value), from) = c.expect (Acceptor.choose)
+      val ((key, value), from) = c.expect (Acceptor.choose)
       Choose (key.long, value.int, from)
     }
 

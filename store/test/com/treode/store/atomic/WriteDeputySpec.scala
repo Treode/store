@@ -100,9 +100,9 @@ class WriteDeputySpec extends FreeSpec {
       assert (isAborted (xid))
   }
 
-  val xid1 = TxId (0x5778D6B9EA991FC9L, 0)
-  val xid2 = TxId (0x3DBE3E2426306B4AL, 0)
-  val xid3 = TxId (0xE1FFF05DCF0A31EAL, 0)
+  val xid1 = TxId (0x5778D6B9EA991FC9L)
+  val xid2 = TxId (0x3DBE3E2426306B4AL)
+  val xid3 = TxId (0xE1FFF05DCF0A31EAL)
   val h1 = 0x14181214A2030C7EL
   val t1 = 0xF5D1800B92307763L
   val k1 = 0x46795104EEF340F0L

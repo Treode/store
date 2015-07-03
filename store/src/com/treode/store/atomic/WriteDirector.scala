@@ -153,7 +153,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
     _commit()
 
     def _commit() {
-      deliberate.lead (xid.id, xid.time, Committed (wt)) run {
+      deliberate.lead (xid.id, Committed (wt)) run {
 
         case Success (status) => fiber.execute {
           status match {
@@ -225,7 +225,7 @@ private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [Writ
     fiber.delay (backoff.next) (state.timeout())
 
     def _abort() {
-      deliberate.lead (xid.id, xid.time, TxStatus.Aborted) run {
+      deliberate.lead (xid.id, TxStatus.Aborted) run {
         case Success (_) => ()
         case Failure (_) => _abort()
       }}

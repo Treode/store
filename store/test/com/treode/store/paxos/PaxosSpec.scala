@@ -143,18 +143,18 @@ class PaxosSpec extends FreeSpec with StubDiskChecks {
 
   "The paxos implementation should recover from a crash with" - {
 
+    implicit val config = StoreTestConfig.storeConfig()
+
     for {
       nbatches <- Seq (0, 1, 2, 3)
       nputs <- Seq (0, 1, 2, 3)
       if (nbatches != 0 && nputs != 0 || nbatches == nputs)
     } s"for $nbatches batches of $nputs puts" taggedAs (Intensive, Periodic) in {
-      implicit val config = StoreTestConfig.storeConfig()
       manyScenarios (new PaxosTracker (0x12), new PaxosPhase (nbatches, nputs))
     }
 
     for {
       (nbatches, nputs) <- Seq ((7, 7))
     } s"for $nbatches batches of $nputs puts" taggedAs (Intensive, Periodic) in {
-      implicit val config = StoreTestConfig.storeConfig()
       manyScenarios (new PaxosTracker (0x12), new PaxosPhase (nbatches, nputs))
     }}}

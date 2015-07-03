@@ -20,7 +20,6 @@ import java.math.BigInteger
 import scala.util.Random
 
 import com.treode.cluster.HostId
-import org.joda.time.Instant
 
 /** A transaction identifier; an arbitrary array of bytes and a time.
   *
@@ -30,21 +29,18 @@ import org.joda.time.Instant
   * your sake, not for correctness of the transaction mechanism.  When a transaction ages past
   * `retention` in [[Store.Config]], the database will remove the status record.
   */
-case class TxId (id: Bytes, time: Instant) extends Ordered [TxId] {
+case class TxId (id: Bytes) extends Ordered [TxId] {
 
-  def compare (that: TxId): Int = {
-    val r = id compare that.id
-    if (r != 0) return r
-    time.getMillis compare that.time.getMillis
-  }
+  def compare (that: TxId): Int =
+    id compare that.id
 
   /** The TxId hashed to two hex digits. */
   def toShortString: String =
     f"${hashCode & 0xFF}%02X"
 
-  /** The TxId as `<hex>:<ISO-8601>`. */
+  /** The TxId as hexadecimal. */
   override def toString: String =
-    s"${id.toHexString}:${time.toString}"
+    id.toHexString
 }
 
 object TxId extends Ordering [TxId] {
@@ -54,29 +50,21 @@ object TxId extends Ordering [TxId] {
     tuple (hostId, fixedLong)
   }
 
-  val MinValue = TxId (Bytes.MinValue, 0)
-
-  def apply (id: Bytes, time: Long): TxId =
-    TxId (id, new Instant (time))
+  val MinValue = TxId (Bytes.MinValue)
 
   def random (host: HostId): TxId =
-    TxId (Bytes (_random, (host, Random.nextLong)), Instant.now)
+    TxId (Bytes (_random, (host, Random.nextLong)))
 
-  /** Parses `<hex>:<ISO-8601>`. */
-  def parse (s: String): Option [TxId] = {
-    s.split (':') match {
-      case Array (_id, _time) =>
-        Some (new TxId (Bytes.fromHexString (_id), Instant.parse (_time)))
-      case _ =>
-        None
-    }}
+  /** Parses hexadecimal. */
+  def parse (s: String): Option [TxId] =
+    Some (new TxId (Bytes.fromHexString (s)))
 
   def compare (x: TxId, y: TxId): Int =
     x compare y
 
   val pickler = {
     import StorePicklers._
-    wrap (bytes, instant)
-    .build (v => new TxId (v._1, v._2))
-    .inspect (v => (v.id, v.time))
+    wrap (bytes)
+    .build (new TxId (_))
+    .inspect (_.id)
   }}

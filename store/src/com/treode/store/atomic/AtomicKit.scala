@@ -57,7 +57,7 @@ private class AtomicKit (implicit
     write (xid, ct, TxClock.now, ops: _*)
 
   def status (xid: TxId): Async [TxStatus] =
-    deliberate.propose (xid.id, xid.time, TxStatus.Aborted)
+    deliberate.propose (xid.id, TxStatus.Aborted)
 
   def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice, batch: Batch): CellIterator =
     ScanDirector.scan (table, start, window, slice, batch, this)

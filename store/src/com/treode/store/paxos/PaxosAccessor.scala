@@ -18,14 +18,14 @@ package com.treode.store.paxos
 
 import com.treode.async.{Async, Callback}
 import com.treode.pickle.Pickler
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.Bytes
 
 import Async.guard
 
 private [store] trait PaxosAccessor [K, V] {
 
-  def lead (key: K, time: TxClock, value: V) (implicit paxos: Paxos): Async [V]
-  def propose (key: K, time: TxClock, value: V) (implicit paxos: Paxos): Async [V]
+  def lead (key: K, value: V) (implicit paxos: Paxos): Async [V]
+  def propose (key: K, value: V) (implicit paxos: Paxos): Async [V]
 }
 
 private [store] object PaxosAccessor {
@@ -33,48 +33,48 @@ private [store] object PaxosAccessor {
   def apply [K, V] (pk: Pickler [K], pv: Pickler [V]): PaxosAccessor [K, V] =
     new PaxosAccessor [K, V] {
 
-      def lead (key: K, time: TxClock, value: V) (implicit paxos: Paxos): Async [V] =
+      def lead (key: K, value: V) (implicit paxos: Paxos): Async [V] =
         guard {
-          paxos.lead (Bytes (pk, key), time, Bytes (pv, value)) .map (_.unpickle (pv))
+          paxos.lead (Bytes (pk, key), Bytes (pv, value)) .map (_.unpickle (pv))
         }
 
-      def propose (key: K, time: TxClock, value: V) (implicit paxos: Paxos): Async [V] =
+      def propose (key: K, value: V) (implicit paxos: Paxos): Async [V] =
         guard {
-          paxos.propose (Bytes (pk, key), time, Bytes (pv, value)) .map (_.unpickle (pv))
+          paxos.propose (Bytes (pk, key), Bytes (pv, value)) .map (_.unpickle (pv))
         }}
 
   def apply(): PaxosAccessor [Bytes, Bytes] =
     new PaxosAccessor [Bytes, Bytes] {
 
-      def lead (key: Bytes, time: TxClock, value: Bytes) (implicit paxos: Paxos): Async [Bytes] =
-        paxos.lead (key, time, value)
+      def lead (key: Bytes, value: Bytes) (implicit paxos: Paxos): Async [Bytes] =
+        paxos.lead (key, value)
 
-      def propose (key: Bytes, time: TxClock, value: Bytes) (implicit paxos: Paxos): Async [Bytes] =
-        paxos.propose (key, time, value)
+      def propose (key: Bytes, value: Bytes) (implicit paxos: Paxos): Async [Bytes] =
+        paxos.propose (key, value)
   }
 
   def key [K] (pk: Pickler [K]): PaxosAccessor [K, Bytes] =
     new PaxosAccessor [K, Bytes] {
 
-      def lead (key: K, time: TxClock, value: Bytes) (implicit paxos: Paxos): Async [Bytes] =
+      def lead (key: K, value: Bytes) (implicit paxos: Paxos): Async [Bytes] =
         guard {
-          paxos.lead (Bytes (pk, key), time, value)
+          paxos.lead (Bytes (pk, key), value)
         }
 
-      def propose (key: K, time: TxClock, value: Bytes) (implicit paxos: Paxos): Async [Bytes] =
+      def propose (key: K, value: Bytes) (implicit paxos: Paxos): Async [Bytes] =
         guard {
-          paxos.propose (Bytes (pk, key), time, value)
+          paxos.propose (Bytes (pk, key), value)
         }}
 
   def value [V] (pv: Pickler [V]): PaxosAccessor [Bytes, V] =
     new PaxosAccessor [Bytes, V] {
 
-      def lead (key: Bytes, time: TxClock, value: V) (implicit paxos: Paxos): Async [V] =
+      def lead (key: Bytes, value: V) (implicit paxos: Paxos): Async [V] =
         guard {
-          paxos.lead (key, time, Bytes (pv, value)) .map (_.unpickle (pv))
+          paxos.lead (key, Bytes (pv, value)) .map (_.unpickle (pv))
         }
 
-      def propose (key: Bytes, time: TxClock, value: V) (implicit paxos: Paxos): Async [V] =
+      def propose (key: Bytes, value: V) (implicit paxos: Paxos): Async [V] =
         guard {
-          paxos.propose (key, time, Bytes (pv, value)) .map (_.unpickle (pv))
+          paxos.propose (key, Bytes (pv, value)) .map (_.unpickle (pv))
         }}}

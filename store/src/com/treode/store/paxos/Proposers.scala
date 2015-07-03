@@ -28,40 +28,40 @@ private class Proposers (kit: PaxosKit) {
 
   val proposers = newProposersMap
 
-  def get (key: Bytes, time: TxClock): Proposer = {
-    var p0 = proposers.get ((key, time))
+  def get (key: Bytes): Proposer = {
+    var p0 = proposers.get (key)
     if (p0 != null) return p0
-    val p1 = new Proposer (key, time, kit)
-    p0 = proposers.putIfAbsent ((key, time), p1)
+    val p1 = new Proposer (key, kit)
+    p0 = proposers.putIfAbsent (key, p1)
     if (p0 != null) return p0
     p1
   }
 
-  def remove (key: Bytes, time: TxClock, p: Proposer): Unit =
-    proposers.remove ((key, time), p)
+  def remove (key: Bytes, p: Proposer): Unit =
+    proposers.remove (key, p)
 
-  def propose (ballot: Long, key: Bytes, time: TxClock, value: Bytes): Async [Bytes] =
+  def propose (ballot: Long, key: Bytes, value: Bytes): Async [Bytes] =
     releaser.join {
       async { cb =>
-        val p = get (key, time)
+        val p = get (key)
         p.open (ballot, value)
         p.learn (cb)
       }}
 
   def attach() {
 
-    refuse.listen { case ((key, time, ballot), c) =>
-      get (key, time) refuse (c, ballot)
+    refuse.listen { case ((key, ballot), c) =>
+      get (key) refuse (c, ballot)
     }
 
-    grant.listen { case ((key, time, ballot, proposal), c) =>
-      get (key, time) grant (c, ballot, proposal)
+    grant.listen { case ((key, ballot, proposal), c) =>
+      get (key) grant (c, ballot, proposal)
     }
 
-    accept.listen { case ((key, time, ballot), c) =>
-      get (key, time) accept (c, ballot)
+    accept.listen { case ((key, ballot), c) =>
+      get (key) accept (c, ballot)
     }
 
-    chosen.listen { case ((key, time, v), _) =>
-      get (key, time) chosen (v)
+    chosen.listen { case ((key, v), _) =>
+      get (key) chosen (v)
     }}}

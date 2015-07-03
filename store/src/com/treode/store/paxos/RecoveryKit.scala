@@ -42,33 +42,33 @@ private class RecoveryKit (implicit
   val archive = TierMedic (Acceptors.archive, 0)
   val medics = newMedicsMap
 
-  def get (key: Bytes, time: TxClock, default: Option [Bytes]): Medic = {
-    var m0 = medics.get ((key, time))
+  def get (key: Bytes, default: Option [Bytes]): Medic = {
+    var m0 = medics.get (key)
     if (m0 != null) return m0
-    val m1 = Medic (key, time, default, this)
-    m0 = medics.putIfAbsent ((key, time), m1)
+    val m1 = Medic (key, default, this)
+    m0 = medics.putIfAbsent (key, m1)
     if (m0 != null) return m0
     return m1
   }
 
-  open.replay { case (key, time, default) =>
-    get (key, time, Some (default)) opened (default)
+  open.replay { case (key, default) =>
+    get (key, Some (default)) opened (default)
   }
 
-  grant.replay { case (key, time, ballot) =>
-    get (key, time, None) granted (ballot)
+  grant.replay { case (key, ballot) =>
+    get (key, None) granted (ballot)
   }
 
-  accept.replay { case (key, time, ballot, value) =>
-    get (key, time, Some (value)) accepted (ballot, value)
+  accept.replay { case (key, ballot, value) =>
+    get (key, Some (value)) accepted (ballot, value)
   }
 
-  reaccept.replay { case (key, time, ballot) =>
-    get (key, time, None) reaccepted (ballot)
+  reaccept.replay { case (key, ballot) =>
+    get (key, None) reaccepted (ballot)
   }
 
-  close.replay { case (key, time, chosen, gen) =>
-    get (key, time, Some (chosen)) closed (chosen, gen)
+  close.replay { case (key, chosen, gen) =>
+    get (key, Some (chosen)) closed (chosen, gen)
   }
 
   receive.replay { case (gen, novel) =>

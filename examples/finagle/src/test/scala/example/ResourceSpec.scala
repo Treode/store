@@ -82,7 +82,7 @@ class ResourceSpec extends FreeSpec {
 
   def update (store: StubStore, ct: TxClock, key: String, value: String): TxClock =
     store.write (
-      TxId (Bytes (Random.nextInt), 0),
+      TxId (Bytes (Random.nextInt)),
       ct,
       Update (123, Bytes (key), value.fromJson [JsonNode] .toBytes)
     ) .await
