@@ -55,18 +55,13 @@ class DriveGeometry private (
   private [disk] def segmentNum (pos: Long): Int =
     (pos >> segmentBits) .toInt
 
-  private [disk] def segmentBounds (num: Int) (implicit config: DiskConfig): SegmentBounds = {
-    require (0 <= num && num < segmentCount)
-    val pos = if (num == 0) config.diskLeadBytes else num.toLong << segmentBits
-    val end = (num.toLong + 1) << segmentBits
-    val limit = if (end > diskBytes) diskBytes else end
-    SegmentBounds (num, pos, limit)
-  }
-
   private [disk] def validForConfig() (implicit config: DiskConfig) {
     require (
         blockBits <= config.superBlockBits,
         "A superblock must be at least one disk block.")
+    require (
+        diskBytes >= config.diskLeadBytes,
+        "A disk must be larger than two superblocks.")
     require (
         segmentBits >= config.minimumSegmentBits,
         "A segment must be larger than the largest record or page.")

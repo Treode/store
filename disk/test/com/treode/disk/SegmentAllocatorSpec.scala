@@ -60,10 +60,10 @@ class SegmentAllocatorSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     val alloc = new SegmentAllocator (geom)
     assert (alloc.allocated == 0)
-    val seg = alloc.alloc (1)
-    assert (seg.num == 1)
+    val seg = alloc.alloc (2)
+    assert (seg.num == 2)
     assert (alloc.allocated == 1)
-    alloc.free (1)
+    alloc.free (2)
     assert (alloc.allocated == 0)
   }
 
@@ -71,9 +71,9 @@ class SegmentAllocatorSpec extends FlatSpec {
     implicit val scheduler = StubScheduler.random()
     val alloc = new SegmentAllocator (geom)
     assert (alloc.allocated == 0)
-    alloc.alloc (Set (1, 2, 3))
+    alloc.alloc (Set (2, 3, 4))
     assert (alloc.allocated == 3)
-    alloc.free (Set (2, 3, 4))
+    alloc.free (Set (3, 4, 5))
     assert (alloc.allocated == 1)
   }
 
@@ -86,14 +86,14 @@ class SegmentAllocatorSpec extends FlatSpec {
   it should "invoke the drainer later when the final segment becomes free" in {
     implicit val scheduler = StubScheduler.random()
     val alloc = new SegmentAllocator (geom)
-    alloc.alloc (Set (1, 2))
+    alloc.alloc (Set (2, 3))
     val cb = alloc.awaitDrained().capture()
     scheduler.run()
     cb.assertNotInvoked()
-    alloc.free (1)
+    alloc.free (2)
     scheduler.run()
     cb.assertNotInvoked()
-    alloc.free (2)
+    alloc.free (3)
     scheduler.run()
     cb.assertInvoked()
   }
@@ -101,14 +101,14 @@ class SegmentAllocatorSpec extends FlatSpec {
   it should "invoke the drainer later when the final set of segments becomes free" in {
     implicit val scheduler = StubScheduler.random()
     val alloc = new SegmentAllocator (geom)
-    alloc.alloc (Set (1, 2, 3, 4))
+    alloc.alloc (Set (2, 3, 4, 5))
     val cb = alloc.awaitDrained().capture()
     scheduler.run()
     cb.assertNotInvoked()
-    alloc.free (Set (1, 2))
+    alloc.free (Set (2, 3))
     scheduler.run()
     cb.assertNotInvoked()
-    alloc.free (Set (3, 4))
+    alloc.free (Set (4, 5))
     scheduler.run()
     cb.assertInvoked()
   }}

@@ -69,11 +69,12 @@ private object SuperBlock {
       }}
 
   /** Pickle and write the superblock. */
-  def write (file: File, sb: SuperBlock) (implicit config: DiskConfig): Async [Unit] =
+  def write (file: File, sb: SuperBlock) (implicit config: DiskConfig): Async [Unit] = {
     guard {
+      assert (sb.draining || sb.logHead >= config.diskLeadBytes)
       val buf = PagedBuffer (12)
       pickler.pickle (sb, buf)
       assert (buf.writePos <= config.superBlockBytes)
-      buf.writePos = sb.geom.blockAlignUp (buf.writePos)
+      buf.writePos = config.diskLeadBytes
       file.flush (buf, 0)
-    }}
+    }}}

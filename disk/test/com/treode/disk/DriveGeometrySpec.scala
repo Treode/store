@@ -67,15 +67,6 @@ class DriveGeometrySpec extends FlatSpec {
     assertResult (block) (c.blockAlignDown (4097))
   }
 
-  it should "compute the segment bounds" in {
-    val c = DriveGeometry (16, 12, (1 << 20) + 6*block)
-    assertBounds (0, config.diskLeadBytes, seg) (c.segmentBounds (0))
-    assertBounds (1, seg, 2*seg) (c.segmentBounds (1))
-    assertBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))
-    assertBounds (2, 2*seg, 3*seg) (c.segmentBounds (2))
-    assertBounds (16, 16*seg, 16*seg + 6*block) (c.segmentBounds (16))
-  }
-
   "fromJson" should "parse a valid JSON object" in {
     assertFromJson (DriveGeometry (30, 13, 1L << 40)) {
       """{"segmentBits": 30, "blockBits": 13, "diskBytes": 1099511627776}"""

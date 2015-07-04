@@ -25,11 +25,10 @@ private case class SegmentBounds (num: Int, base: Long, limit: Long) {
 private object SegmentBounds {
 
   def apply (num: Int, geom: DriveGeometry, config: DiskConfig): SegmentBounds = {
-    require (0 <= num && num < geom.segmentCount)
     val start = num.toLong << geom.segmentBits
     val end = (num.toLong + 1) << geom.segmentBits
-    val pos = if (start < geom.blockBytes) geom.blockBytes else start
+    val pos = if (start < config.diskLeadBytes) config.diskLeadBytes else start
     val limit = if (end > geom.diskBytes) geom.diskBytes else end
-    assert (pos < limit)
+    assert (num == 0 || pos < limit)
     SegmentBounds (num, pos, limit)
   }}

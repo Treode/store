@@ -31,7 +31,7 @@ private class SegmentAllocator (
 
   import geom.{segmentBits, segmentCount}
 
-  private val segmentMin = config.superBlockBytes >> segmentBits
+  private val segmentMin = config.diskLeadBytes >> segmentBits
   private val segmentsUseable = segmentCount - segmentMin
 
   private var _free: Bitmap = bitmapRange (segmentMin, segmentCount)
@@ -39,6 +39,9 @@ private class SegmentAllocator (
 
   private def isDrained: Boolean =
     _free.cardinality == segmentsUseable
+
+  private def validSegment (n: Int): Boolean =
+    n >= segmentMin && n < segmentCount
 
   def allocated: Int = {
     val nfree = synchronized (_free.cardinality)
@@ -53,18 +56,20 @@ private class SegmentAllocator (
       _free = _free andNot (bitmapOf (n))
       n
     }
+    assert (validSegment (n))
     SegmentBounds (n, geom, config)
   }
 
   def alloc (n: Int): SegmentBounds = {
+    require (validSegment (n))
     synchronized (_free = _free andNot (bitmapOf (n)))
     SegmentBounds (n, geom, config)
   }
 
-  def alloc (ns: Set [Int]): Unit =
-    synchronized {
-      _free = _free andNot (bitmapOf (ns))
-    }
+  def alloc (ns: Set [Int]) {
+    require (ns forall (validSegment _))
+    synchronized (_free = _free andNot (bitmapOf (ns)))
+  }
 
   private def _drain() {
     if (!drains.isEmpty && isDrained) {
@@ -72,17 +77,19 @@ private class SegmentAllocator (
       drains = List.empty
     }}
 
-  def free (n: Int): Unit =
+  def free (n: Int) {
+    require (validSegment (n))
     synchronized {
       _free = _free or (bitmapOf (n))
       _drain()
-    }
+    }}
 
-  def free (ns: Set [Int]): Unit =
+  def free (ns: Set [Int]) {
+    require (ns forall (validSegment _))
     synchronized {
       _free = _free or (bitmapOf (ns))
       _drain()
-    }
+    }}
 
   def awaitDrained(): Async [Unit] =
     async { cb =>
