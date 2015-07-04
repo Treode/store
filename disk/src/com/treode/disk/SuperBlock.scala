@@ -52,10 +52,15 @@ private object SuperBlock {
 
   val pickler = {
     import DiskPicklers._
+
     val common = Common.pickler
-    wrap (int, driveGeometry, boolean, long, common)
-    .build ((SuperBlock.apply _).tupled)
-    .inspect (v => (v.id, v.geom, v.draining, v.logHead, v.common))
+
+    val v1 =
+        wrap (int, driveGeometry, boolean, long, common)
+        .build ((SuperBlock.apply _).tupled)
+        .inspect (v => (v.id, v.geom, v.draining, v.logHead, v.common))
+
+    tagged [SuperBlock] (0x0071D42B09FDACE1L -> v1)
   }
 
   /** Read and unpickle the superblock. */
