@@ -1,6 +1,6 @@
 # TreodeDB ![Build Status][build-status]
 
-TreodeDB is a distributed database that provides multirow atomic writes, and it's designed for RESTful services. It is packaged as a library for building storage servers.
+TreodeDB is a distributed database that provides multirow atomic writes, and it&#700;s designed for RESTful services.
 
 TreodeDB
 
@@ -11,39 +11,19 @@ TreodeDB
 - tracks versioned data to [extend transactions through a CDN or cache][omvcc]
 - can feed an [Apache Spark][apache-spark]&trade; RDD or an [Apache Hadoop][apache-hadoop]&trade; InputFormat for analytics
 - can feed an [Apache Spark][apache-spark]&trade; DStream for streaming analytics
-- provides an embedded API, which is very flexible
-
-TreodeDB is a library for building a peer in a storage network.  It offers a Scala API for read, write and scan; you add layers for data-modeling, client protocol and security.
 
 ![Architecture][arch]
-
-
-## User Setup
-
-The libraries for TreodeDB are available Scala 2.10 and 2.11. Notice the uncommon notation for the dependency; this gives you stubs for testing.
-
-
-```
-resolvers += Resolver.url (
-    "treode-oss",
-    new URL ("https://oss.treode.com/ivy")) (Resolver.ivyStylePatterns)
-
-libraryDependencies +=
-    "com.treode" %% "store" % "0.2.0" % "compile;test->stubs"
-```
 
 
 ## Documentation
 
 - [User Docs][user-docs]
-- [API Docs][api-docs]
 - Presentation: [slides][presentation-slides], [video][presentation-video]
 
 
 ## Getting in Touch
 
 - [Online Forum][forum] on Discourse
-- [Chat Room][online-chat] on HipChat
 - \#treode on StackOverflow:
   [Browse questions asked][stackoverflow-read] or [post a new one][stackoverflow-ask]
 - [Email](mailto:questions@treode.com)
@@ -85,8 +65,6 @@ See the [Contributor Category][forum-contributor] of the [Online Forum][forum] f
 
 [apache-spark]: https://spark.apache.org "Apache Spark&trade;"
 
-[api-docs]: http://oss.treode.com/docs/scala/store/0.2.0 "API Docs"
-
 [arch]: architecture.png "Architecture"
 
 [cla-individual]: https://treode.github.io/store/cla-individual.html
@@ -104,8 +82,6 @@ See the [Contributor Category][forum-contributor] of the [Online Forum][forum] f
 [merge-harmful]: http://blog.spreedly.com/2014/06/24/merge-pull-request-considered-harmful "&rquo;Merge pull request&lquo; Considered Harmful"
 
 [omvcc]: https://forum.treode.com/t/eventual-consistency-and-transactions-working-together/36 "Eventual Consistency and Transactions Working Together"
-
-[online-chat]: http://www.hipchat.com/giwb5oIkz "Chat Room for Treode Users and Developers"
 
 [presentation-slides]: http://goo.gl/le0rjT "Slides, SF Bay Chapter of the ACM, Mar 18 2015"
 
