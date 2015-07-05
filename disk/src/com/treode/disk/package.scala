@@ -28,10 +28,7 @@ package disk {
   case class Compaction (obj: ObjectId, gens: Set [Long])
 
   case class DriveDigest (path: Path, geometry: DriveGeometry, allocated: Int, draining: Boolean)
-
-  case class ReattachFailure (path: Path, thrown: Throwable) {
-    override def toString = s"Could not reattach ${quote (path)}: $thrown"
-  }}
+}
 
 package object disk {
 

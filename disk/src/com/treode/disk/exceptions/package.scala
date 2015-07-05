@@ -26,14 +26,14 @@ package exceptions {
     override def getMessage = "Disk full."
   }
 
-  class OversizedPageException (maximum: Int, found: Int) extends IllegalArgumentException {
+  case class OversizedPageException (maximum: Int, found: Int) extends IllegalArgumentException {
     override def getMessage = s"The page of $found bytes exceeds the limit of $maximum bytes."
   }
 
-  class OversizedRecordException (maximum: Int, found: Int) extends IllegalArgumentException {
+  case class OversizedRecordException (maximum: Int, found: Int) extends IllegalArgumentException {
     override def getMessage = s"The record of $found bytes exceeds the limit of $maximum bytes."
   }
 
-  class ReattachException (failures: Seq [ReattachFailure]) extends Exception {
-    override def getMessage() = failures mkString "; "
+  class ReattachException (failures: Seq [Throwable]) extends Exception {
+    override def getMessage() = failures.map (_.getMessage) .mkString ("\n")
   }}

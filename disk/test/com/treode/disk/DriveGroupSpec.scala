@@ -16,6 +16,7 @@
 
 package com.treode.disk
 
+import java.io.IOException
 import java.nio.file.{Path, Paths}
 import scala.util.Random
 
@@ -113,8 +114,8 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
   "DriveGroup.change" should "reject nonexistant files" in {
     implicit val scheduler = StubScheduler.random()
     val controller = setup ("f1", "f2", "f3")
-    val e = controller.attach (geom, "a") .expectFail [IllegalArgumentException]
-    assertResult ("requirement failed: File a does not exist.") (e.getMessage)
+    val e = controller.attach (geom, "a") .expectFail [IOException]
+    assertResult ("""File "a" does not exist.""") (e.getMessage)
   }
 
   it should "reject duplicate filenames (same operation)" in {

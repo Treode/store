@@ -30,7 +30,7 @@ import com.treode.pickle.{InvalidTagException, Picklers}
 import LogControl._
 
 private class LogReader (
-  path: Path,
+  val path: Path,
   file: File,
   superb: SuperBlock,
   records: RecordRegistry,
@@ -257,4 +257,7 @@ private class LogReader (
 
   def batch (f: Iterable [LogEntries] => Async [Unit]): Async [Unit] =
     async (new Batch (f, _) .start())
+
+  def close(): Unit =
+    file.close()
 }

@@ -16,6 +16,7 @@
 
 package com.treode.disk
 
+import java.io.IOException
 import java.nio.file.{Path, StandardOpenOption}, StandardOpenOption._
 
 import com.treode.async.{Async, AsyncQueue, BatchIterator, Callback, Fiber, Scheduler}, Async.supply
@@ -42,13 +43,13 @@ private class RecoveryAgent (implicit
   private var reattachments = Set.empty [Path]
 
   /** The paths being opened; we are awaiting their superblocks and drives. */
-  private var reattaching = Set.empty [Path]
+  private var opening = Set.empty [Path]
 
   /** The paths we have opened; we have their superblocks and drives. */
-  private var reattached = Set.empty [Path]
+  private var opened = Set.empty [Path]
 
   /** Failures encountered while trying to open any paths. */
-  private var failures = Seq.empty [ReattachFailure]
+  private var failures = Seq.empty [Throwable]
 
   /** Readers that we have successfully opened. */
   private var readers = Seq.empty [LogReader]
@@ -70,16 +71,16 @@ private class RecoveryAgent (implicit
   private def reengage() {
     if (!reattachments.isEmpty)
       _reattach()
-    else if (reattaching.isEmpty && !recovery.isEmpty)
+    else if (opening.isEmpty && !recovery.isEmpty)
       _recover()
   }
 
   /** We successfully opened a path, read its superblock and made a reader. */
   private def _reattach (path: Path, common: SuperBlock.Common, reader: LogReader): Unit =
     fiber.execute {
-      reattaching -= path
-      reattached += path
-      reattachments ++= (common.paths -- reattached)
+      opening -= path
+      opened += path
+      reattachments ++= (common.paths -- opened)
       readers +:= reader
       if (this.common.gen < common.gen) this.common = common
       queue.engage()
@@ -88,8 +89,8 @@ private class RecoveryAgent (implicit
   /** We failed to open a path and read its superblock. */
   private def _reattach (path: Path, thrown: Throwable): Unit =
     fiber.execute {
-      reattaching -= path
-      failures +:= ReattachFailure (path, thrown)
+      opening -= path
+      failures +:= thrown
       queue.engage()
     }
 
@@ -97,17 +98,23 @@ private class RecoveryAgent (implicit
   private def _reattach() {
     val path = reattachments.head
     reattachments = reattachments.tail
-    reattaching += path
+    opening += path
     queue.begin {
-      val file = files.open (path, READ, WRITE)
-      SuperBlock.read (file)
-      .map { superb =>
-        val reader = new LogReader (path, file, superb, records, collector)
-        _reattach (path, superb.common, reader)
-      }
-      .recover { case thrown =>
-        file.close()
-        _reattach (path, thrown)
+      try {
+        val file = files.open (path, READ, WRITE)
+        SuperBlock.read (file)
+        .map { superb =>
+          val reader = new LogReader (path, file, superb, records, collector)
+          _reattach (path, superb.common, reader)
+        }
+        .recover { case thrown =>
+          file.close()
+          _reattach (path, thrown)
+        }
+      } catch {
+        case thrown: IOException =>
+          _reattach (path, thrown)
+          supply (())
       }}}
 
   /** Finish the recovery phase. */
@@ -115,10 +122,15 @@ private class RecoveryAgent (implicit
     val cb = recovery.get
     recovery = null
     if (failures.isEmpty) {
-      events.reattachingDisks (reattached)
+      val (attached, detached) = readers.partition (r => common.paths contains r.path)
+      events.reattachingDisks (
+        reattaching = attached.map (_.path) .toSet,
+        detached = detached.map (_.path) .toSet)
+      for (r <- detached)
+        r.close()
       (for {
         // Merge the entries from all readers (drives), sorted by batch number.
-        _ <- BatchIterator.merge (readers) .batch (RecoveryAgent.replay _)
+        _ <- BatchIterator.merge (attached) .batch (RecoveryAgent.replay _)
         // The collector aggregated results from all readers. Now make the bootstrap system.
         boot = collector.result (common)
         // Use the bootstrap system to recover the SegmentLedger.
@@ -131,6 +143,8 @@ private class RecoveryAgent (implicit
         launch
       }) .run (cb on scheduler)
     } else {
+      for (r <- readers)
+        r.close()
       scheduler.fail (cb, new ReattachException (failures))
     }}
 

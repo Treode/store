@@ -77,9 +77,10 @@ trait DiskChecks extends AsyncChecks {
     /** Intercept logging messages. */
     private implicit val events = new StubDiskEvents {
 
-      override def reattachingDisks (paths: Set [Path]) {
-        assert (_attached subsetOf paths)
-        _attached = paths
+      override def reattachingDisks (reattaching: Set [Path], detached: Set [Path]) {
+        assert (_attached subsetOf reattaching)
+        assert (detached subsetOf _loggedDraining)
+        _attached = reattaching
       }
 
       override def changedDisks (attached: Set [Path], detached: Set [Path], draining: Set [Path]) {

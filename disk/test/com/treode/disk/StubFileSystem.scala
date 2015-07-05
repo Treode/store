@@ -16,6 +16,7 @@
 
 package com.treode.disk
 
+import java.io.IOException
 import java.nio.file.{OpenOption, Path}
 
 import com.treode.async.Scheduler
@@ -29,7 +30,8 @@ private class StubFileSystem extends FileSystem {
 
   /** Create a stub file; invoke before [[#open]]. */
   def create (path: Path, size: Int, align: Int) {
-    require (!(directory contains path), s"File $path already exists.")
+    if (directory contains path)
+      throw new IOException (s"""File "$path" already exists.""")
     directory += path -> (Data (size, align))
   }
 
@@ -37,8 +39,12 @@ private class StubFileSystem extends FileSystem {
   def create (paths: Seq [Path], size: Int, align: Int): Unit =
     paths foreach (create (_, size, align))
 
+  def remove (path: Path): Unit =
+    directory -= path
+
   /** Opens the file if it exists; use [[#create]] to ensure it exists. Ignores `opts`. */
   override def open (path: Path, opts: OpenOption*) (implicit scheduler: Scheduler): File = {
-    require (directory contains path, s"File $path does not exist.")
+    if (!(directory contains path))
+      throw new IOException (s"""File "$path" does not exist.""")
     StubFile (directory (path))
   }}

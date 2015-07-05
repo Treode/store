@@ -27,5 +27,5 @@ class StubDiskEvents extends DiskEvents {
   override def noCompactorFor (id: TypeId): Unit =
     throw new IllegalArgumentException (s"No compactor for $id.")
 
-  override def reattachingDisks (paths: Set [Path]) = ()
+  override def reattachingDisks (reattaching: Set [Path], detached: Set [Path]) = ()
 }
