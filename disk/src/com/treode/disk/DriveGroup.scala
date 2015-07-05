@@ -25,6 +25,7 @@ import com.treode.async.{Async, AsyncQueue, Callback, Fiber, Scheduler}, Async.g
 import com.treode.async.implicits._
 import com.treode.async.misc.RichOption
 import com.treode.buffer.PagedBuffer
+import com.treode.disk.exceptions.DisksClosedException
 import com.treode.disk.messages._
 import com.treode.notify.Notification, Notification.{Errors, Result}
 

@@ -17,6 +17,7 @@
 package com.treode.disk
 
 import com.treode.async.{Async, Scheduler}, Async.async
+import com.treode.disk.exceptions.OversizedRecordException
 
 private class LogDispatcher (implicit scheduler: Scheduler, config: DiskConfig)
 extends Dispatcher [PickledRecord] {

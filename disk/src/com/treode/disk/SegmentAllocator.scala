@@ -18,6 +18,7 @@ package com.treode.disk
 
 import com.googlecode.javaewah.{EWAHCompressedBitmap => Bitmap}
 import com.treode.async.{Async, Callback, Scheduler}, Async.async
+import com.treode.disk.exceptions.DiskFullException
 
 import SegmentAllocator.{bitmapOf, bitmapRange}
 

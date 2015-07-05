@@ -17,6 +17,7 @@
 package com.treode.disk
 
 import com.treode.async.{Async, Scheduler}, Async.async
+import com.treode.disk.exceptions.OversizedPageException
 
 private class PageDispatcher (implicit scheduler: Scheduler, config: DiskConfig)
 extends Dispatcher [PickledPage] {

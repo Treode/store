@@ -21,6 +21,7 @@ import java.nio.file.{Path, StandardOpenOption}, StandardOpenOption._
 import com.treode.async.{Async, AsyncQueue, BatchIterator, Callback, Fiber, Scheduler}, Async.supply
 import com.treode.async.implicits._
 import com.treode.async.misc.EpochReleaser
+import com.treode.disk.exceptions.ReattachException
 
 /** The first phase of building the live Disk system. Implements the user trait Recovery.
   *
