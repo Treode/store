@@ -124,7 +124,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
   def setup (paths: String*) (implicit scheduler: StubScheduler): RichDiskController = {
     implicit val files = new StubFileSystem
     implicit val recovery = new RecoveryAgent
-    files.create(paths map (Paths.get (_)), 0, 1 << 14)
+    files.create (paths map (Paths.get (_)), 0, geom.blockBits)
     val launch = recovery.reattach().expectPass()
     launch.launch()
     launch.controller

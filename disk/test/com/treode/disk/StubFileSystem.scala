@@ -20,19 +20,17 @@ import java.nio.file.{OpenOption, Path}
 
 import com.treode.async.Scheduler
 import com.treode.async.io.File
-import com.treode.async.io.stubs.StubFile
+import com.treode.async.io.stubs.StubFile, StubFile.Data
 
 /** A FileSystem that uses StubFiles. */
 private class StubFileSystem extends FileSystem {
 
-  private case class Entry (data: Array [Byte], align: Int)
-
-  private var directory = Map.empty [Path, Entry]
+  private var directory = Map.empty [Path, Data]
 
   /** Create a stub file; invoke before [[#open]]. */
   def create (path: Path, size: Int, align: Int) {
     require (!(directory contains path), s"File $path already exists.")
-    directory += path -> (new Entry (new Array (size), align))
+    directory += path -> (Data (size, align))
   }
 
   /** Create stub files; invoke before [[#open]]. */
@@ -42,6 +40,5 @@ private class StubFileSystem extends FileSystem {
   /** Opens the file if it exists; use [[#create]] to ensure it exists. Ignores `opts`. */
   override def open (path: Path, opts: OpenOption*) (implicit scheduler: Scheduler): File = {
     require (directory contains path, s"File $path does not exist.")
-    val entry = directory (path)
-    StubFile (entry.data, entry.align)
+    StubFile (directory (path))
   }}

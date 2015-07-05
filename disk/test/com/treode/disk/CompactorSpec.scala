@@ -64,7 +64,7 @@ class CompactorSpec extends FlatSpec {
   private def setup () (implicit scheduler: StubScheduler): (DiskAgent, CompactionCaptor) = {
     implicit val files = new StubFileSystem
     implicit val recovery = new RecoveryAgent
-    files.create ("d1", 0, 1 << 14)
+    files.create ("d1", 0, geom.blockBits)
     val launch = recovery.reattach().expectPass()
     val captor = new CompactionCaptor
     captor.register (launch)

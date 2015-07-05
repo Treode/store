@@ -111,7 +111,7 @@ trait DiskChecks extends AsyncChecks {
     }
 
     def startingAttach (paths: Seq [Path], geom: DriveGeometry) {
-      files.create (paths, geom.diskBytes.toInt, geom.blockBits)
+      files.create (paths, 0, geom.blockBits)
       _startingAttach ++= paths
     }
 

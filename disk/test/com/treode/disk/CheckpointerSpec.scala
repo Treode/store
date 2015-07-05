@@ -107,7 +107,7 @@ class CheckpointerSpec extends FlatSpec {
 
   it should "be triggered by writing the threshold of bytes" in {
     implicit val files = new StubFileSystem
-    files.create ("d1", 0, 1 << 14)
+    files.create ("d1", 0, geom.blockBits)
     implicit val scheduler = StubScheduler.random()
 
     val captor = AsyncCaptor [Unit]
