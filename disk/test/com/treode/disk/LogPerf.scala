@@ -30,7 +30,6 @@ import StandardOpenOption._
 class LogPerf extends PerformanceTest.Quickbenchmark {
 
   val path = Paths.get ("test-8EF661F2")
-  val sysid = SystemId (0, 0)
 
   val record = RecordDescriptor (0x52, Picklers.string)
 
@@ -62,7 +61,7 @@ class LogPerf extends PerformanceTest.Quickbenchmark {
         implicit val scheduler = Scheduler (executor)
         implicit val config = DiskTestConfig()
 
-        Disk.init (sysid, 13, 20, 13, 1 << 30, path)
+        Disk.init (SystemId.zero, 13, 20, 13, 1 << 30, path)
         val launch = Disk .recover() .reattach (path) .await
         implicit val disk = launch.disk
         launch.launch()

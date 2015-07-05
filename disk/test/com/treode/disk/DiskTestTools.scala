@@ -17,26 +17,16 @@
 package com.treode.disk
 
 import java.nio.file.{Path, Paths}
-import scala.collection.mutable.UnrolledBuffer
 import scala.language.implicitConversions
-import scala.reflect.ClassTag
-import scala.util.Random
 
 import com.treode.async.Async
-import com.treode.async.io.stubs.StubFile
-import com.treode.async.stubs.{CallbackCaptor, StubScheduler}
 import com.treode.notify.{Message, Notification}
-import org.scalatest.Assertions
-
-import Assertions.assertResult
+import org.scalatest.Assertions, Assertions._
 
 private object DiskTestTools {
 
-  val sysid = SystemId (0, 0)
-
-  def assertEqNotification (expected: Message*) (actual: Notification [Unit]) {
-    assert (expected == actual.errors)
-  }
+  def assertEqNotification (expected: Message*) (actual: Notification [Unit]): Unit =
+    assertResult (expected) (actual.errors)
 
   implicit def stringToPath (path: String): Path =
     Paths.get (path)
