@@ -732,4 +732,37 @@ trait DiskChecks extends AsyncChecks {
     geom: DriveGeometry
   ): Unit =
     forAllSeeds (manyScenarios (setup, _, phs1))
+
+  /** Run scenarios that start the effect before launch with a given PRNG seed. */
+  private [disk] def prelaunchScenarios [T <: Tracker] (
+    setup: => T,
+    seed: Long,
+    phs1: Effect [T]
+  ) (implicit
+    config: DiskConfig,
+    geom: DriveGeometry
+  ) {
+    try {
+      val counter = new Counter [Effect [T]]
+
+      onePhase (setup, seed, counter) (launch)
+      onePhase (setup, seed, counter) (launch, addA1)
+
+      twoPhases (setup, seed, counter) (launch, addA1) (phs1)
+      twoPhases (setup, seed, counter) (launch, addA1) (phs1, launch)
+    } catch {
+      case t: Throwable =>
+        info (f"implicit val geom = $geom")
+        throw t
+    }}
+
+  /** Run scenarios that start the effect before launch with many PRNG seeds. */
+  private [disk] def prelaunchScenarios [T <: Tracker] (
+    setup: => T,
+    phs1: Effect [T]
+  ) (implicit
+    config: DiskConfig,
+    geom: DriveGeometry
+  ): Unit =
+    forAllSeeds (prelaunchScenarios (setup, _, phs1))
 }

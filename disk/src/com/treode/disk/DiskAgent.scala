@@ -37,14 +37,13 @@ private class DiskAgent (
 
   implicit val disk = this
 
+  /** Called by the LaunchAgent when log replay completes. */
+  def recover (writers: Map [Int, Long]): Unit =
+    group.recover (writers)
+
   /** Called by the LaunchAgent when launch completes. */
-  def launch (
-    writers: Map [Int, Long],
-    checkpoints: CheckpointerRegistry,
-    compactors: CompactorRegistry
-  ) {
-    group.launch (writers, checkpoints, compactors)
-  }
+  def launch (checkpoints: CheckpointerRegistry, compactors: CompactorRegistry): Unit =
+    group.launch (checkpoints, compactors)
 
   def record [R] (desc: RecordDescriptor [R], record: R): Async [Unit] =
     logdsp.record (desc, record)

@@ -174,6 +174,14 @@ class PageSpec extends FreeSpec with DiskChecks {
     }
 
     for {
+      nbatches <- Seq (0, 1, 2, 3)
+      nwrites <- Seq (0, 1, 2, 3)
+      if (nbatches != 0 && nwrites != 0 || nbatches == nwrites)
+    } s"for $nbatches batches of $nwrites writes prelaunch" taggedAs (Periodic) in {
+      prelaunchScenarios (new PageTracker (3, 7, 7), PageBatch (nbatches, nwrites))
+    }
+
+    for {
       (nbatches, nwrites, nobjects) <- Seq ((7, 7, 7), (16, 16, 20))
     } s"for $nbatches batches of $nwrites writes" taggedAs (Periodic) in {
       manyScenarios (new PageTracker (nobjects, 7, 7), PageBatch (nbatches, nwrites))

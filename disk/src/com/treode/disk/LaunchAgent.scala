@@ -23,8 +23,7 @@ private class LaunchAgent (
   checkpoints: CheckpointerRegistry.Builder,
   compactors: CompactorRegistry.Builder,
   claims: GenerationDocket,
-  ledger: SegmentLedger,
-  writers: Map [Int, Long]
+  ledger: SegmentLedger
 ) (implicit
   scheduler: Scheduler,
   drives: DriveGroup,
@@ -60,7 +59,7 @@ private class LaunchAgent (
     require (launching, "Disks already launched.")
     launching = false
     ledger.claim (claims)
-    agent.launch (writers, checkpoints.result, compactors.result)
+    agent.launch (checkpoints.result, compactors.result)
   }
 
   def sysid: SystemId =

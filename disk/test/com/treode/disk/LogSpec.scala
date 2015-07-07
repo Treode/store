@@ -158,6 +158,14 @@ class LogSpec extends FreeSpec with DiskChecks {
     }
 
     for {
+      nbatches <- Seq (0, 1, 2, 3)
+      nwrites <- Seq (0, 1, 2, 3)
+      if (nbatches != 0 && nwrites != 0 || nbatches == nwrites)
+    } s"for $nbatches batches of $nwrites writes prelaunch" taggedAs (Periodic) in {
+      prelaunchScenarios (new LogTracker, LogBatch (nbatches, nwrites))
+    }
+
+    for {
       (nbatches, nwrites) <- Seq ((7, 7), (16, 16))
     } s"for $nbatches batches of $nwrites writes" taggedAs (Periodic) in {
       manyScenarios (new LogTracker, LogBatch (nbatches, nwrites))

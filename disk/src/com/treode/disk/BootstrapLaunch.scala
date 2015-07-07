@@ -56,7 +56,8 @@ private class BootstrapLaunch (implicit
 
   def result (ledger: SegmentLedger, writers: Map [Int, Long]): LaunchAgent = {
     val (group, agent) = disk.result (ledger)
-    new LaunchAgent (checkpoints, compactors, claims, ledger, writers) (scheduler, group, events, agent)
+    group.recover (writers)
+    new LaunchAgent (checkpoints, compactors, claims, ledger) (scheduler, group, events, agent)
   }
 
   // TODO

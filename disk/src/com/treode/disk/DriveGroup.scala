@@ -207,26 +207,25 @@ private class DriveGroup (
             draining = SortedSet.empty [Path] ++ drains.map (_.path))
       }}
 
-  def launch (
-    writers: Map [Int, Long],
-    checkpoints: CheckpointerRegistry,
-    compactors: CompactorRegistry
-  ): Unit =
+  def recover (writers: Map [Int, Long]): Unit =
+    fiber.execute {
+      val claimed = ledger.docket.claimed
+      for (drive <- drives.values)
+        drive.launch (claimed (drive.id), writers.getOrElse (drive.id, 0L))
+    }
+
+  def launch (checkpoints: CheckpointerRegistry, compactors: CompactorRegistry): Unit =
     fiber.execute {
       state = Open
 
       checkpointer.launch (checkpoints)
       compactor.launch (compactors)
 
-      val docket = ledger.docket
-      val claimed = docket.claimed
-      for (drive <- drives.values)
-        drive.launch (claimed (drive.id), writers.getOrElse (drive.id, 0L))
-
       val drains = drives.values.filter (_.draining)
       for (drive <- drains)
         drive.awaitDrained() run (driveDrained)
       if (!drains.isEmpty) {
+        val docket = ledger.docket
         val ids = drains.map (_.id) .toSet
         checkpointer.checkpoint() run (ignore)
         compactor.compact (docket.drain (ids))
