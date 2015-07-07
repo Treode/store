@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
- package example
+package com.treode.server
 
 import com.treode.twitter.app.StoreKit
-import com.treode.twitter.server.AdminableServer
-import com.twitter.app.App
-import com.twitter.server.TwitterServer
-import unfiltered.netty.Server
+import com.treode.twitter.server.{AdminableServer, StoreAdmin}
 
-class Serve extends App with StoreKit with AdminableServer {
+trait SchemaAdmin extends StoreAdmin {
+  this: StoreKit with AdminableServer =>
 
-  def main() {
-    val resource = new Resource (controller.hostId, controller.store)
-    Server.http (8080) .plan (resource) .run()
+  lazy val librarian = new LiveLibrarian (controller)
+
+  premain {
+    addAdminHandler ("/admin/treode/schema", "Schema", new SchemaHandler (librarian))
   }}
-
-object Main extends StoreKit.Main [Serve]

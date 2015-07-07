@@ -20,14 +20,14 @@ import scala.collection.mutable.HashMap
 
 import com.treode.twitter.app.StoreKit
 import com.treode.twitter.finagle.http.filter._
-import com.treode.twitter.server.TreodeAdmin
+import com.treode.twitter.server.AdminableServer
+import com.twitter.app.App
 import com.twitter.finagle.Http
 import com.twitter.finagle.http.filter.ExceptionFilter
 import com.twitter.finagle.util.InetSocketAddressUtil.{parseHosts, toPublic}
-import com.twitter.server.TwitterServer
 import com.twitter.util.Await
 
-class Serve extends TwitterServer with StoreKit with TreodeAdmin {
+class Serve extends App with StoreKit with SchemaAdmin with AdminableServer {
 
   val httpAddrFlag =
     flag [String] ("httpAddr", ":7070", "Address for listening (example, 0.0.0.0:7070).")
@@ -47,10 +47,6 @@ class Serve extends TwitterServer with StoreKit with TreodeAdmin {
         toPublic (httpAddr)
 
     controller.announce (Some (shareHttpAddr), None)
-
-    val librarian = new LiveLibrarian (controller)
-
-    addAdminHandler ("/admin/treode/schema", new SchemaHandler (librarian))
 
     val resource =
       new ResourceHandler (controller.hostId, controller.store, librarian)
