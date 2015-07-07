@@ -129,9 +129,9 @@ trait DiskChecks extends AsyncChecks {
       _startedDraining ++= paths
     }
 
-    def verify (crashed: Boolean) (implicit scheduler: Scheduler, agent: DiskAgent): Async [Unit] =
+    def verify (crashed: Boolean) (implicit scheduler: Scheduler, launch: LaunchAgent): Async [Unit] =
       for {
-        digest <- agent.digest
+        digest <- launch.agent.digest
       } yield {
         assert (_attached subsetOf _startingAttach)
         if (crashed) {
@@ -174,7 +174,7 @@ trait DiskChecks extends AsyncChecks {
       crashed: Boolean
     ) (implicit
       scheduler: Scheduler,
-      agent: DiskAgent
+      launch: LaunchAgent
     ): Async [Unit]
   }
 
@@ -189,9 +189,26 @@ trait DiskChecks extends AsyncChecks {
     ) (implicit
       random: Random,
       scheduler: Scheduler,
-      agent: DiskAgent,
+      launch: LaunchAgent,
       drives: DrivesTracker
     ): Async [Unit]
+  }
+
+  private [disk] case object LaunchDisks extends Effect [Any] {
+
+    def start (
+      tracker: Any
+    ) (implicit
+      random: Random,
+      scheduler: Scheduler,
+      launch: LaunchAgent,
+      drives: DrivesTracker
+    ): Async [Unit] =
+      supply {
+        launch.launch()
+      }
+
+    override def toString = "launch"
   }
 
   private [disk] case object Checkpoint extends Effect [Any] {
@@ -201,10 +218,10 @@ trait DiskChecks extends AsyncChecks {
     ) (implicit
       random: Random,
       scheduler: Scheduler,
-      agent: DiskAgent,
+      launch: LaunchAgent,
       drives: DrivesTracker
     ): Async [Unit] =
-      agent.checkpoint()
+      launch.agent.checkpoint()
 
     override def toString = "chkpt"
   }
@@ -217,11 +234,11 @@ trait DiskChecks extends AsyncChecks {
     ) (implicit
       random: Random,
       scheduler: Scheduler,
-      agent: DiskAgent,
+      launch: LaunchAgent,
       drives: DrivesTracker
     ): Async [Unit] = {
       drives.startingAttach (paths, geom)
-      agent.attach (geom, paths: _*) .map (_ => drives.finishedAttach (paths))
+      launch.agent.attach (geom, paths: _*) .map (_ => drives.finishedAttach (paths))
     }
 
     override def toString = name
@@ -234,7 +251,7 @@ trait DiskChecks extends AsyncChecks {
     ) (implicit
       random: Random,
       scheduler: Scheduler,
-      agent: DiskAgent,
+      launch: LaunchAgent,
       drives: DrivesTracker
     ): Async [Unit] = {
       val drainable = drives.attached
@@ -243,13 +260,13 @@ trait DiskChecks extends AsyncChecks {
         supply (())
       } else {
         drives.startingDraining (drains)
-        drains.latch (agent.drain (_)) .map (_ => drives.startedDraining (drains))
+        drains.latch (launch.agent.drain (_)) .map (_ => drives.startedDraining (drains))
       }}
 
     override def toString = name
   }
 
-  /** A recover and launch phase of the system under test. */
+  /** A recover and launch phase of the system under test, with all effects after launch. */
   private def phase [T <: Tracker] (
     tracker: T,
     effects: Seq [(Effect [T], Int)]
@@ -263,9 +280,7 @@ trait DiskChecks extends AsyncChecks {
     tracker.recover()
     implicit val launch = drives.reattach().expectPass()
     assertResult (ID) (launch.sysid)
-    import launch.agent
     tracker.launch()
-    launch.launch()
     var cbs = Seq.empty [CallbackCaptor [Unit]]
     var count = 0
     var crashed = true
@@ -298,7 +313,6 @@ trait DiskChecks extends AsyncChecks {
     implicit val recovery = drives.newRecovery
     tracker.recover()
     implicit val launch = drives.reattach().expectPass()
-    import launch.agent
     tracker.launch()
     launch.launch()
     scheduler.run()
@@ -554,6 +568,7 @@ trait DiskChecks extends AsyncChecks {
   val drnA1 = RemoveDisks ("drnA1", da1)
   val drnA2 = RemoveDisks ("drnA2", da1, da2)
   val drnA3 = RemoveDisks ("drnA3", da1, da2, da3)
+  val launch = LaunchDisks
   val chkpt = Checkpoint
 
   /** Run one phase scenarios with a given PRNG seed. */
@@ -568,14 +583,15 @@ trait DiskChecks extends AsyncChecks {
     try {
       val counter = new Counter [Effect [T]]
 
-      onePhase (setup, seed, counter) (addA1)
-      onePhase (setup, seed, counter) (addA1, phs1)
-      onePhase (setup, seed, counter) (addA1, phs1, chkpt)
-      onePhase (setup, seed, counter) (addA1, phs1, chkpt, addB1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, chkpt)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, drnA1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, addC1)
+      onePhase (setup, seed, counter) (launch)
+      onePhase (setup, seed, counter) (launch, addA1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, chkpt)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, chkpt, addB1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1, chkpt)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1, drnA1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1, addC1)
     } catch {
       case t: Throwable =>
         info (f"implicit val geom = $geom")
@@ -604,21 +620,27 @@ trait DiskChecks extends AsyncChecks {
     try {
       val counter = new Counter [Effect [T]]
 
-      onePhase (setup, seed, counter) (addA1)
-      onePhase (setup, seed, counter) (addA1, phs1)
-      onePhase (setup, seed, counter) (addA1, phs1, chkpt)
-      onePhase (setup, seed, counter) (addA1, phs1, chkpt, addB1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, chkpt)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, drnA1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, addC1)
+      onePhase (setup, seed, counter) (launch)
+      onePhase (setup, seed, counter) (launch, addA1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, chkpt)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, chkpt, addB1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1, chkpt)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1, drnA1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1, addC1)
 
-      twoPhases (setup, seed, counter) (addA1) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1, chkpt) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1, addB1) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1, addB1, drnA1) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1, addB1) (phs1, drnA1)
+      twoPhases (setup, seed, counter) (launch, addA1) (launch)
+      twoPhases (setup, seed, counter) (launch, addA1) (launch, phs1)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1) (launch)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1) (launch, phs1)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, chkpt) (launch)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, chkpt) (launch, phs1)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, addB1) (launch)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, addB1) (launch, phs1)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, addB1) (launch, phs1, drnA1)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, addB1, drnA1) (launch)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, addB1, drnA1) (launch, phs1)
     } catch {
       case t: Throwable =>
         info (f"implicit val geom = $geom")
@@ -647,44 +669,53 @@ trait DiskChecks extends AsyncChecks {
     try {
       val counter = new Counter [Effect [T]]
 
-      onePhase (setup, seed, counter) (addA1)
-      onePhase (setup, seed, counter) (addA1, phs1)
-      onePhase (setup, seed, counter) (addA1, phs1, chkpt)
-      onePhase (setup, seed, counter) (addA1, phs1, chkpt, addB1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, chkpt)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, drnA1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB1, addC1)
-      onePhase (setup, seed, counter) (addA1, phs1, addB2)
-      onePhase (setup, seed, counter) (addA1, phs1, addB3)
+      onePhase (setup, seed, counter) (launch)
+      onePhase (setup, seed, counter) (launch, addA1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, chkpt)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, chkpt, addB1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1, chkpt)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1, drnA1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB1, addC1)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB2)
+      onePhase (setup, seed, counter) (launch, addA1, phs1, addB3)
 
-      onePhase (setup, seed, counter) (addA2)
-      onePhase (setup, seed, counter) (addA2, phs1)
-      onePhase (setup, seed, counter) (addA2, phs1, addB1)
-      onePhase (setup, seed, counter) (addA2, phs1, addB1, drnA1)
-      onePhase (setup, seed, counter) (addA2, phs1, drnA1)
-      onePhase (setup, seed, counter) (addA2, phs1, drnA1, addB1)
+      onePhase (setup, seed, counter) (launch, addA2)
+      onePhase (setup, seed, counter) (launch, addA2, phs1)
+      onePhase (setup, seed, counter) (launch, addA2, phs1, addB1)
+      onePhase (setup, seed, counter) (launch, addA2, phs1, addB1, drnA1)
+      onePhase (setup, seed, counter) (launch, addA2, phs1, drnA1)
+      onePhase (setup, seed, counter) (launch, addA2, phs1, drnA1, addB1)
 
-      onePhase (setup, seed, counter) (addA3)
-      onePhase (setup, seed, counter) (addA3, phs1)
-      onePhase (setup, seed, counter) (addA3, phs1, drnA1)
-      onePhase (setup, seed, counter) (addA3, phs1, drnA2)
+      onePhase (setup, seed, counter) (launch, addA3)
+      onePhase (setup, seed, counter) (launch, addA3, phs1)
+      onePhase (setup, seed, counter) (launch, addA3, phs1, drnA1)
+      onePhase (setup, seed, counter) (launch, addA3, phs1, drnA2)
 
-      twoPhases (setup, seed, counter) (addA1) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1, chkpt) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1, chkpt) (phs1, chkpt)
-      twoPhases (setup, seed, counter) (addA1, phs1, addB1) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1, addB1, drnA1) (phs1)
-      twoPhases (setup, seed, counter) (addA1, phs1, addB1) (phs1, drnA1)
+      twoPhases (setup, seed, counter) (launch, addA1) (launch)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1) (launch)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1) (launch, phs1)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, chkpt) (launch)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, chkpt) (launch, phs1)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, chkpt) (launch, phs1, chkpt)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, addB1) (launch)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, addB1) (launch, phs1)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, addB1) (launch, phs1, drnA1)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, addB1, drnA1) (launch)
+      twoPhases (setup, seed, counter) (launch, addA1, phs1, addB1, drnA1) (launch, phs1)
 
-      twoPhases (setup, seed, counter) (addA2, phs1) (phs1)
-      twoPhases (setup, seed, counter) (addA2) (phs1)
-      twoPhases (setup, seed, counter) (addA2, phs1, drnA1) (phs1)
-      twoPhases (setup, seed, counter) (addA2, phs1) (phs1, drnA1)
+      twoPhases (setup, seed, counter) (launch, addA2) (launch)
+      twoPhases (setup, seed, counter) (launch, addA2) (launch, phs1)
+      twoPhases (setup, seed, counter) (launch, addA2, phs1) (launch)
+      twoPhases (setup, seed, counter) (launch, addA2, phs1) (launch, phs1)
+      twoPhases (setup, seed, counter) (launch, addA2, phs1) (launch, phs1, drnA1)
+      twoPhases (setup, seed, counter) (launch, addA2, phs1, drnA1) (launch)
+      twoPhases (setup, seed, counter) (launch, addA2, phs1, drnA1) (launch, phs1)
 
-      threePhases (setup, seed, counter) (addA1, phs1, chkpt) (phs1, chkpt) (phs1)
-      threePhases (setup, seed, counter) (addA1, phs1, chkpt) (phs1, chkpt) (phs1, chkpt)
+      threePhases (setup, seed, counter) (launch, addA1, phs1, chkpt) (launch, phs1, chkpt) (launch)
+      threePhases (setup, seed, counter) (launch, addA1, phs1, chkpt) (launch, phs1, chkpt) (launch, phs1)
+      threePhases (setup, seed, counter) (launch, addA1, phs1, chkpt) (launch, phs1, chkpt) (launch, phs1, chkpt)
     } catch {
       case t: Throwable =>
         info (f"implicit val config = $config")

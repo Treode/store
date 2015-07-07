@@ -118,7 +118,7 @@ class LogSpec extends FreeSpec with DiskChecks {
       crashed: Boolean
     ) (implicit
       scheduler: Scheduler,
-      agent: DiskAgent
+      launch: LaunchAgent
     ): Async [Unit] =
       supply {
         // Assertions made in launch.
@@ -134,10 +134,12 @@ class LogSpec extends FreeSpec with DiskChecks {
     ) (implicit
       random: Random,
       scheduler: Scheduler,
-      agent: DiskAgent,
+      launch: LaunchAgent,
       drives: DrivesTracker
-    ): Async [Unit] =
+    ): Async [Unit] = {
+      import launch.agent
       tracker.record (nbatches, nwrites)
+    }
 
     override def toString = s"LogBatch ($nbatches, $nwrites)"
   }

@@ -56,7 +56,7 @@ class ReleaseSpec extends FreeSpec with DiskChecks {
       crashed: Boolean
     ) (implicit
       scheduler: Scheduler,
-      agent: DiskAgent
+      launch: LaunchAgent
     ): Async [Unit] =
       supply {
         // noop
@@ -92,9 +92,10 @@ class ReleaseSpec extends FreeSpec with DiskChecks {
     ) (implicit
       random: Random,
       scheduler: Scheduler,
-      agent: DiskAgent,
+      launch: LaunchAgent,
       drives: DrivesTracker
     ): Async [Unit] = {
+      import launch.agent
       var i = 0
       scheduler.whilst (i < nbatches) {
         i += 1

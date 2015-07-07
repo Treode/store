@@ -133,10 +133,12 @@ class PageSpec extends FreeSpec with DiskChecks {
       crashed: Boolean
     ) (implicit
       scheduler: Scheduler,
-      agent: DiskAgent
-    ): Async [Unit] =
+      launch: LaunchAgent
+    ): Async [Unit] = {
+      import launch.agent
       for (obj <- objects.values.async)
         obj.verify()
+    }
 
     override def toString = s"new PageTracker ($nobjects, $npages, $nitems)"
   }
@@ -148,10 +150,12 @@ class PageSpec extends FreeSpec with DiskChecks {
     ) (implicit
       random: Random,
       scheduler: Scheduler,
-      agent: DiskAgent,
+      launch: LaunchAgent,
       drives: DrivesTracker
-    ): Async [Unit] =
+    ): Async [Unit] = {
+      import launch.agent
       tracker.write (nbatches, nwrites)
+    }
 
     override def toString = s"PageBatch ($nbatches, $nwrites)"
   }

@@ -63,7 +63,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
       crashed: Boolean
     ) (implicit
       scheduler: Scheduler,
-      agent: DiskAgent
+      launch: LaunchAgent
     ): Async [Unit] =
       supply {
         // no-op
@@ -83,7 +83,7 @@ class DriveGroupSpec extends FlatSpec with DiskChecks {
     ) (implicit
       random: Random,
       scheduler: Scheduler,
-      agent: DiskAgent,
+      launch: LaunchAgent,
       drives: DrivesTracker
     ): Async [Unit] =
       supply {
