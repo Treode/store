@@ -20,7 +20,6 @@ import scala.collection.JavaConversions
 import scala.util.Random
 
 import com.treode.async.{Async, Callback, Scheduler}
-import com.treode.async.implicits._
 import com.treode.async.misc.materialize
 import com.treode.cluster.Cluster
 import com.treode.disk.{DiskLaunch, DiskRecovery}
@@ -48,22 +47,26 @@ private class RecoveryKit (implicit
   def get (xid: TxId): Medic = {
     var m0 = writers.get (xid)
     if (m0 != null) return m0
-    val m1 = new Medic (xid, this)
+    val m1 = new Medic (xid)
     m0 = writers.putIfAbsent (xid, m1)
     if (m0 != null) return m0
     m1
   }
 
-  preparing.replay { case (xid, ct, ops) =>
-    get (xid) .preparing (ct, ops)
+  deliberating.replay { case (xid, ct, ops, rsp) =>
+    get (xid) .deliberating (ct, ops, rsp)
   }
 
-  preparedV0.replay { case (xid, ops) =>
-    get (xid) .prepared (TxClock.MinValue, ops)
+  deliberatingV0.replay { case (xid, ct, ops) =>
+    get (xid) .deliberating (ct, ops, WriteResponse.Failed)
   }
 
-  prepared.replay { case (xid, ct, ops) =>
-    get (xid) .prepared (ct, ops)
+  deliberatingV1.replay { case (xid, ops) =>
+    get (xid) .deliberating (TxClock.MinValue, ops, WriteResponse.Failed)
+  }
+
+  deliberatingV2.replay { case (xid, ct, ops) =>
+    get (xid) .deliberating (ct, ops, WriteResponse.Failed)
   }
 
   committed.replay { case (xid, gens, wt) =>
@@ -86,17 +89,16 @@ private class RecoveryKit (implicit
     tstore.checkpoint (tab, meta)
   }
 
-  def launch (implicit launch: DiskLaunch, cluster: Cluster, paxos: Paxos): Async [Atomic] = {
-    import launch.disk
-    val kit = new AtomicKit()
-    kit.tstore.recover (tstore.close())
-    val medics = writers.values
-    for {
-      _ <- medics.filter (_.isCommitted) .latch (_.close (kit))
-    } yield {
-      medics.filter (_.isPrepared) .foreach (_.close (kit) .run (ignore))
+  def launch (implicit launch: DiskLaunch, cluster: Cluster, paxos: Paxos): Async [Atomic] =
+    supply {
+      import launch.disk
+      val medics = writers.values
+      medics.foreach (_.closeCommitted (this))
+      val kit = new AtomicKit()
+      kit.tstore.recover (tstore.close())
+      medics.foreach (_.closeDeliberating (kit))
       kit.reader.attach()
       kit.writers.attach()
       kit.scanner.attach()
       kit
-    }}}
+    }}

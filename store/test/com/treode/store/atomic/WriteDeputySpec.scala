@@ -70,7 +70,10 @@ class WriteDeputySpec extends FreeSpec {
       assert (isRecording (xid))
 
     def isPrepared (xid: TxId): Boolean =
-      deputy (xid) .state.isInstanceOf [WriteDeputy#Prepared]
+      deputy (xid) .state match {
+        case state: WriteDeputy#Deliberating => state.isPrepared
+        case _ => false
+      }
 
     def assertPrepared (xid: TxId): Unit =
       assert (isPrepared (xid))

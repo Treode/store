@@ -16,82 +16,50 @@
 
 package com.treode.store.atomic
 
-import com.treode.async.{Async, Callback}
 import com.treode.store.{TxClock, TxId, WriteOp}
 
-import Async.supply
-import Callback.ignore
 import Medic._
 
-private class Medic (val xid: TxId, kit: RecoveryKit)  {
+private class Medic (val xid: TxId)  {
 
-  var _state: State = Open
-  var _committed = Option.empty [TxClock]
+  var _deliberating = Option.empty [Deliberating]
+  var _committed = Option.empty [Committed]
   var _aborted = false
 
-  def preparing (ct: TxClock, ops: Seq [WriteOp]): Unit = synchronized {
-    _state match {
-      case Open => _state = Preparing (ct, ops)
-      case _    => ()
-    }}
-
-  def prepared (ct: TxClock, ops: Seq [WriteOp]): Unit = synchronized {
-    _state match {
-      case Open => _state = Prepared (ct, ops)
-      case Preparing (_, _) => _state = Prepared (ct, ops)
-      case _ => ()
-    }}
+  def deliberating (ct: TxClock, ops: Seq [WriteOp], rsp: WriteResponse): Unit = synchronized {
+    _deliberating = Some (Deliberating (ct, ops, rsp))
+  }
 
   def committed (gens: Seq [Long], wt: TxClock): Unit = synchronized {
-    _committed = Some (wt)
+    _committed = Some (Committed (gens, wt))
   }
 
   def aborted(): Unit = synchronized {
     _aborted = true
   }
 
-  def isPrepared: Boolean =
-    _state match {
-      case Prepared (_, _) => _committed.isEmpty
-      case _ => false
-   }
+  def closeCommitted (kit: RecoveryKit): Unit = synchronized {
+    assert (_committed.isEmpty || !_aborted)
+    if (_deliberating.isDefined && _committed.isDefined) {
+      val Committed (gens, wt) = _committed.get
+      val Deliberating (ct, ops, rsp) = _deliberating.get
+      kit.tstore.commit (gens, wt, ops)
+    }}
 
-  def isCommitted: Boolean =
-    _state match {
-      case Open => false
-      case _ => _committed.isDefined
-   }
-
-  def prepare (w: WriteDeputy): Async [Unit] =
-    _state match {
-      case Open =>
-        supply (())
-      case Prepared (ct, ops) =>
-        w.prepare (ct, ops) .unit
-      case Preparing (ct, ops) =>
-        w.prepare (ct, ops) .unit
-    }
-
-  def close (kit: AtomicKit): Async [Unit] = {
-    val w = new WriteDeputy (xid, kit)
-    if (_committed.isDefined)
-      w.commit (_committed.get) .run (ignore)
-    if (_aborted)
-      w.abort() .run (ignore)
-    for {
-      _ <- prepare (w)
-    } yield {
+  def closeDeliberating (kit: AtomicKit): Unit = synchronized {
+    if (_deliberating.isDefined && _committed.isEmpty && !_aborted) {
+      val w = new WriteDeputy (xid, kit)
+      val Deliberating (ct, ops, rsp) = _deliberating.get
+      w.recover (ct, ops, rsp)
       kit.writers.recover (xid, w)
     }}
 
   override def toString =
-    s"WriteDeputy.Medic(${xid.toShortString}, ${_state}, ${_committed}, ${_aborted})"
+    s"WriteDeputy.Medic(${xid.toShortString}, ${_deliberating}, ${_committed}, ${_aborted})"
 }
 
 private object Medic {
 
-  sealed abstract class State
-  case object Open extends State
-  case class Preparing (ct: TxClock, ops: Seq [WriteOp]) extends State
-  case class Prepared (ct: TxClock, ops: Seq [WriteOp]) extends State
+  case class Deliberating (ct: TxClock, ops: Seq [WriteOp], rsp: WriteResponse)
+  case class Committed (gens: Seq [Long], wt: TxClock)
 }
