@@ -45,6 +45,7 @@ package object server {
     def apply (req: Request, status: HttpResponseStatus): Response = {
       val rsp = req.response
       rsp.status = status
+      rsp.serverTxClock = TxClock.now
       rsp
     }
 
@@ -53,12 +54,14 @@ package object server {
       for (e <- errors)
         rsp.write (e.toString)
       rsp.status = Status.BadRequest
+      rsp.serverTxClock = TxClock.now
       rsp
     }
 
     def conflict (req: Request, message: String): Response = {
       val rsp = req.response
       rsp.status = Status.Conflict
+      rsp.serverTxClock = TxClock.now
       rsp.plain = message
       rsp
     }
@@ -67,6 +70,7 @@ package object server {
       val rsp = req.response
       rsp.status = Status.Ok
       rsp.valueTxClock = time
+      rsp.serverTxClock = TxClock.now
       rsp
     }
 
@@ -74,6 +78,7 @@ package object server {
       val rsp = req.response
       rsp.status = Status.PreconditionFailed
       rsp.valueTxClock = time
+      rsp.serverTxClock = TxClock.now
       rsp
     }
 
@@ -91,6 +96,7 @@ package object server {
       rsp.lastModified = time
       rsp.readTxClock = req.readTxClock
       rsp.valueTxClock = time
+      rsp.serverTxClock = TxClock.now
       rsp.vary = "Read-TxClock"
       rsp.json = value
       rsp
@@ -99,6 +105,7 @@ package object server {
     def json [A] (req: Request, iter: BatchIterator [A]): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok
+      rsp.serverTxClock = TxClock.now
       rsp.json = iter
       rsp
     }
@@ -106,6 +113,7 @@ package object server {
     def plain (req: Request, value: String): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok
+      rsp.serverTxClock = TxClock.now
       rsp.plain = value
       rsp
     }}

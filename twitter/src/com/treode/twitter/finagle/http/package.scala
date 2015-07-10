@@ -119,6 +119,13 @@ package object http {
       rsp.headerMap.add ("Read-TxClock", time.time.toString)
 
     /** Do not use; necessary for Scala style setter. */
+    def serverTxClock: TxClock =
+      throw new UnsupportedOperationException
+
+    def serverTxClock_= (time: TxClock): Unit =
+      rsp.headerMap.add ("Server-TxClock", time.time.toString)
+
+    /** Do not use; necessary for Scala style setter. */
     def valueTxClock: TxClock =
       throw new UnsupportedOperationException
 
