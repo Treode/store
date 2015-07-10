@@ -52,9 +52,10 @@ extends Service [Request, Response] {
     val ct = req.conditionTxClock (TxClock.MinValue)
     val window = req.window
     val slice = req.slice
-    val iter = store
+    var iter = store
         .scan (tab, Bound.firstKey, window, slice)
-        .filter (_.value.isDefined)
+    if (window.isInstanceOf [Window.Latest])
+        iter = iter.filter (_.value.isDefined)
     supply (respond.json (req, iter))
   }
 

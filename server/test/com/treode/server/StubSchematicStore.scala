@@ -24,6 +24,12 @@ class StubSchematicStore (store: StubStore, schema: Schema) {
   def update (ct: TxClock, tab: String, key: String, value: String): Async [TxClock] =
     update (randomTx, ct, requireTableId (tab), key, value.fromJson [JsonNode])
 
+  def delete (tx: TxId, ct: TxClock, tab: TableId, key: String): Async [TxClock] =
+    store.write (tx, ct, WriteOp.Delete (tab, Bytes (key)))
+
+  def delete (ct: TxClock, tab: String, key: String): Async [TxClock] =
+    delete (randomTx, ct, requireTableId (tab), key)
+
   def scan (name: String): Seq [Cell] = {
     store.scan (schema.getTableId (name) .get)
   }}

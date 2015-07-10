@@ -318,6 +318,7 @@ class ResourceHandlerSpec extends FreeSpec {
       t = store.update (t, "table1", "a", "\"a1\"") .await
       t = store.update (t, "table1", "a", "\"a2\"") .await
       t = store.update (t, "table1", "b", "\"b1\"") .await
+      t = store.delete (t, "table1", "b") .await
       t = store.update (t, "table1", "b", "\"b2\"") .await
       t = store.update (t, "table1", "c", "\"c1\"") .await
       t = store.update (t, "table1", "c", "\"c2\"") .await
@@ -332,24 +333,44 @@ class ResourceHandlerSpec extends FreeSpec {
           .statusCode (200)
           .body (matchesJson ("""[
             {"key": "a", "time": 2, "value": "a2"},
-            {"key": "b", "time": 4, "value": "b2"},
-            {"key": "c", "time": 6, "value": "c2"}
+            {"key": "b", "time": 5, "value": "b2"},
+            {"key": "c", "time": 7, "value": "c2"}
           ]"""))
         .when
           .get ("/table1")
       }}
 
-    "GET /table1?until=4 should work" in {
+    "GET /table1?until=5 should work" in {
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .param ("until", "4")
+          .param ("until", "5")
         .expect
           .statusCode (200)
           .body (matchesJson ("""[
             {"key": "a", "time": 2, "value": "a2"},
-            {"key": "b", "time": 4, "value": "b2"}
+            {"key": "b", "time": 5, "value": "b2"}
+          ]"""))
+        .when
+          .get ("/table1")
+      }}
+
+    "GET /table1?until=5&pick=between should work" in {
+      served { case (port, store) =>
+        val ts1 = addData (store)
+        val rsp = given
+          .port (port)
+          .param ("until", "5")
+          .param ("pick", "between")
+        .expect
+          .statusCode (200)
+          .body (matchesJson ("""[
+            {"key": "a", "time": 2, "value": "a2"},
+            {"key": "a", "time": 1, "value": "a1"},
+            {"key": "b", "time": 5, "value": "b2"},
+            {"key": "b", "time": 4, "value": null},
+            {"key": "b", "time": 3, "value": "b1"}
           ]"""))
         .when
           .get ("/table1")
