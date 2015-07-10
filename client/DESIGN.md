@@ -283,18 +283,23 @@ There are several cases in which the HTTP response does not include the JSON val
 
 ### Write Responses
 
-The DB will respond with either a success or rejection indicator.  If the DB rejects it, the write method should throw a StaleException, to indicate that caller should retry the operation using fresher data from the DB.
-
-The HTTP response for a successful PUT or DELETE to an individual item, or a POST to `/batch-write` will look like:
+The DB will respond with either a success or rejection indicator. The HTTP response for a successful PUT or DELETE to an individual item, or a POST to `/batch-write` will look like:
 
     HTTP/1.1 200 Ok
     Value-TxClock: 1421236393816753
 
-However, it is also possible the DB server will reject the write because another client has written some of the values in the meantime.  In this case, the HTTP write response will be:
+However, it is possible the DB server will reject the write because another client has written some of the values in the meantime.  In this case, the HTTP write response will be:
 
     HTTP/1.1 412 Precondition Failed
+    Value-TxClock: 1421236393816753
 
-The the client should retry the transaction with a smaller value for the max-age header (e.g., min-age=0) to ensure the values it receives from the client cache and intermediate caches are not stale.
+The `Value-TxClock` included in the response is the maximum of the timestamps on the rows identified in the write batch. The write should throw a StaleException, and the the client should retry the operation with a smaller value for the max-age header (e.g., min-age=0) to ensure the values it receives from the client cache and intermediate caches are not stale.
+
+Also, it is possible the DB server will reject the write because it attempts to create rows which already exist. The HTTP response will be:
+
+    HTTP/1.1 409 Conflict
+
+In this case the write should throw a CollisionException, and the client should retry the operation using different keys for the new rows.
 
 When the client pipelines requests (future feature), the server provides the response multiple times, once for each request.
 
@@ -312,14 +317,17 @@ We provide an overview of the Cache class, including its internal data structure
 
 - Public Methods:
     1. read (read\_time: TxClock, table: String, key: String, max\_age: int, no\_cache: bool): JSON value
-    2. write (condition\_time: TxClock, op\_list: TxView): TxClock, throws StaleException
+    2. put (condition\_time: TxClock, table: String, key: String, value: JSON): TxClock<br>&nbsp;&nbsp;&nbsp;&nbsp;throws StaleException
+    3. delete (condition\_time: TxClock, table: String, key: String, value: JSON): TxClock<br>&nbsp;&nbsp;&nbsp;&nbsp;throws StaleException
+    4. write (condition\_time: TxClock, op\_list: TxView): TxClock<br>&nbsp;&nbsp;&nbsp;&nbsp;throws StaleException, CollisionException
 
 - Internal Objects:
     1. HTTP connection to server
     2. Map for maintaining the cache
 
 - Exceptions:
-    1. StaleException (read\_time: TxClock, value\_time: TxClock)
+    1. StaleException (condition\_time: TxClock, value\_time: TxClock)
+    2. CollisionException
 
 ## Cache Structure
 
@@ -388,14 +396,42 @@ The max\_age, and no\_cache parameters can be specified by the user in four sepa
 
 These max\_age and no\_cache values also appear in cache read method, though users do not directly provide those values. Users provide max\_age and no\_cache to the transaction constructor and transaction read method, and then the transaction read method in turn provides restricted values to the cache read method.
 
+### put
+
+    put (
+        condition_time: TxClock, 
+        table: String,
+        value: JSON
+    ): TxClock
+        throws StaleException
+
+The put method sends the value to the DB server as a conditional PUT. If the server accepts the PUT, the put method also updates the cache to reflect the newly written value. Otherwise, the put method throws a stale exception, including the value timestamp from the rejection.
+
+This method exists for a client that wishes to skip the Transaction abstraction and PUT directly to the database.
+
+### delete
+
+    delete (
+        condition_time: TxClock, 
+        table: String
+    ): TxClock
+        throws StaleException
+
+The delete method sends the request to the DB server as a conditional DELETE. If the server accepts the DELETE, the delete method also updates the cache to reflect the newly removed value. Otherwise, the delete method throws a stale exception, including the value timestamp from the rejection.
+
+This method exists for a client that wishes to skip the Transaction abstraction and DELETE directly on the database.
+
 ### write
 
     write (
         condition_time: TxClock,
         tx_view: (table, key) -> (op, value)
-    ): TxClock, throws StaleException
+    ): TxClock
+        throws StaleException, CollisionException
 
-The write method sends the [transaction’s view](#tx-view) to the DB server as a conditional batch write. If the server accepts the batch write, the write method also updates the cache to reflect the newly written values. Otherwise, the write method throws a stale exception, including the value timestamp in the DB that caused the write reject if it is available.
+The write method sends the [transaction’s view](#tx-view) to the DB server as a conditional batch write. If the server accepts the batch write, the write method also updates the cache to reflect the newly written values. Otherwise, the write method throws a stale exception or a collision exception as appropriate.
+
+This method exists to support the commit method in the Transaction abstraction.
 
 
 <a name="transaction"></a>
@@ -410,10 +446,11 @@ The write method sends the [transaction’s view](#tx-view) to the DB server as 
 
 - Public Methods:
 
-    1. read (table: string, key: string, max\_age=None, no\_cache=False): JSON, throws StaleException
-    2. write (table: string, key: string, value: JSON)
+    1. create (table: String, key: String, value: JSON)<br>&nbsp;&nbsp;&nbsp;&nbsp;throws CollisionException
+    1. read (table: string, key: string, max\_age=None, no\_cache=False): JSON<br>&nbsp;&nbsp;&nbsp;&nbsp;throws StaleException
+    2. update (table: string, key: string, value: JSON)
     3. delete (table: string, key: string)
-    4. commit(): TxClock, throws StaleException
+    4. commit(): TxClock<br>&nbsp;&nbsp;&nbsp;&nbsp;throws StaleException, CollisionException
 
 - Internal Objects:
 
@@ -431,7 +468,8 @@ The write method sends the [transaction’s view](#tx-view) to the DB server as 
 
 - Exceptions:
 
-    1. StaleException (read\_time: int, value\_time: int)
+    1. StaleException (condition\_time: int, value\_time: int)
+    2. CollisionException
 
 ## Transaction Structure
 
@@ -468,7 +506,7 @@ The possible ops in the map are the following
 
 - **create**
 
-  Add a new entry to the DB with *key* and *value*, if an entry for *key* does not already exist.
+  Add a new entry to the DB with *key* and *value*, if an entry for *key* does not already exist, or if the current entry for *key* is *delete*.
 
 - **hold**
 
@@ -483,8 +521,19 @@ The possible ops in the map are the following
 - **delete**
 
   Remove the *key* from the database.  The *delete* operation does not require a value.
+  
+Create and update differ slightly in their semantics. Create sets the key to the value if the row does not exist, or if the latest write to the row was a delete, regardless of the timestamp on the delete. Update on the other hand, sets the key to the value if the latest write to the row satisfies the condition time, regardless of whether the row existence (a non-existent row is implicitly a delete at time 0).
 
 ## Transaction Methods
+
+### create
+
+    create (table: string, key: string, value: JSON)
+        throws CollisionException
+
+Create adds a new entry to the view, or changes the existing entry. When adding a new entry, it sets the operation to *create*, and sets the new value. If an entry already exists in the view, and its operation is not *delete*, then create throws a collision exception.  When changing an existing entry that currently has *delete* as its operation, create changes the value, and it changes the operation to *update*.
+
+Like update and delete, create never immediately fails, because a write is only reflected in the view until the transaction commits.
 
 ### read
 
@@ -493,7 +542,8 @@ The possible ops in the map are the following
         key: string,
         max_age: int (default None),
         no_cache: bool (default False)
-    ): JSON, throws StaleException
+    ): JSON
+        throws StaleException
 
 The read method first attempts to read the specified key from the view, then from cache, and finally from the DB server.  If read finds the requested value, it stores it in the view; otherwise, it also stores if the key had no value (None in Python) for that read\_time.
 
@@ -501,13 +551,13 @@ If read finds a value time greater than any previous read time (value\_time > mi
 
 Unlike the cache read method, all transaction reads use the same read\_time, which is specified in the constructor.
 
-### write
+### update
 
-    write (table: string, key: string, value: JSON)
+    update (table: string, key: string, value: JSON)
 
-Write adds a new entry to the view, or updates the existing entry. When adding a new entry, it sets the operation to *create*, and sets the new value. When updating an existing entry, write updates the value, and it may update the operation. If the existing operation is *create* or *update*, then write does not change the operation. If the existing operation is *hold* or *delete*, then write changes the operation to *update*.
+Update adds a new entry to the view, or changes the existing entry. When adding a new entry, it sets the operation to *update*, and sets the new value. When changing an existing entry, update changes the value, and it may change the operation. If the existing operation is *create* or *update*, then update does not change the operation. If the existing operation is *hold* or *delete*, then update changes the operation to *update*.
 
-Writes never immediately fail, because writes are only reflected in the view until the transaction commits.
+Like create and delete, update never immediately fails, because a write is only reflected in the view until the transaction commits.
 
 ### delete
 
@@ -515,11 +565,12 @@ Writes never immediately fail, because writes are only reflected in the view unt
 
 Delete adds a new entry to the view, or updates the existing entry. In either case, it sets the operation to *delete* and the value to None.
 
-Like writes, deletes are only reflected in the view until commit, and never immediately fail.
+Like create and update, delete never immediately fails, because a write is only reflected in the view until the transaction commits.
 
 ### commit
 
-    commit() throws StaleException(Rt, Vt)
+    commit()
+        throws StaleException, CollisionException
 
 Commit passes the map to the cache’s write method, which iterates through the map entries and constructs a batch write, and then sends the batch write to the DB server.
 
