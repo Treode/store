@@ -598,10 +598,25 @@ class ResourceHandlerSpec extends FreeSpec {
           assertSeq (cell ("abc4", ts2)) (store.scan ("table4"))
       }}
 
+      "POST /batch-write requesting CREATE of an existing key should yield Bad Request" in {
+        served { case (port, store) =>
+          val ts1 = addData (store, "table1", "abc", v1)
+          val rsp = given
+            .port (port)
+            .contentType ("application/json")
+            .body ("""[{"op": "CREATE", "table": "table1", "key": "abc", "obj": "v2"}]""")
+          .expect
+            .statusCode (409)
+            .body (equalTo ("A row marked CREATE already exists."))
+          .when
+            .post ("/batch-write")
+          assertSeq (cell ("abc", ts1, v1)) (store.scan ("table1"))
+        }}
+
       "POST /batch-write requesting HOLD after another client's write should yield Precondition Failed" in {
         served { case (port, store) =>
-          val ts1 = addData (store, "table1", "abc", """{"v":"v1"}""")
-          val ts2 = updateData (store, ts1, "table1", "abc", """{"v":"v2"}""")
+          val ts1 = addData (store, "table1", "abc", v1)
+          val ts2 = updateData (store, ts1, "table1", "abc", v2)
           val rsp = given
             .port (port)
             .contentType ("application/json")

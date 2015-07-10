@@ -94,6 +94,8 @@ extends Service [Request, Response] {
       respond.ok (req, vt)
     }
     .recover {
+      case exn: CollisionException =>
+        respond.conflict (req, "A row marked CREATE already exists.")
       case exn: StaleException =>
         respond.stale (req, exn.time)
     }}
