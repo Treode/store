@@ -37,14 +37,14 @@ class Schema private (
         pairs += ((table, key))
         op.toLowerCase match {
           case "create" =>
-            val obj = row.getAttribute ("obj")
-            ops = ops :+ WriteOp.Create (requireTableId (table), Bytes (key), obj.toBytes)
+            val value = row.getAttribute ("value")
+            ops = ops :+ WriteOp.Create (requireTableId (table), Bytes (key), value.toBytes)
             writes = true
           case "hold" =>
             ops = ops :+ WriteOp.Hold (requireTableId (table), Bytes (key))
           case "update" =>
-            val obj = row.getAttribute ("obj")
-            ops = ops :+ WriteOp.Update (requireTableId (table), Bytes (key), obj.toBytes)
+            val value = row.getAttribute ("value")
+            ops = ops :+ WriteOp.Update (requireTableId (table), Bytes (key), value.toBytes)
             writes = true
           case "delete" =>
             ops = ops :+ WriteOp.Delete (requireTableId (table), Bytes (key))

@@ -61,7 +61,7 @@ Conceptually, a cache is a table such as the prototypical one here. Operationall
 <td>/movie/star-wars</td>
 <td>1368151663681367</td>
 <td>1421236153024853</td>
-<td>(JSON Object)</td>
+<td>JSON (primitive, array or object)</td>
 </tr>
 </table>
 
@@ -69,7 +69,7 @@ Conceptually, a cache is a table such as the prototypical one here. Operationall
 
 The standard HTTP protocol permits updating one value per request; fortunately the HTTP specification leaves room for extensions. To implement transactions, we must have the ability to update multiple values as an atomic unit, that is all or nothing. TreodeDB supports two mechanisms for bundling updates into a batch.
 
-- **POST to /batch-write** *(currently supported)*: The client may issue a single request to POST the updates. All objects are contained in a JSON array.
+- **POST to /batch-write** *(currently supported)*: The client may issue a single request to POST a batch of updates, which are contained in a JSON array.
 
 - **Request Pipelining** *(future feature)*: The client may issue multiple POST, PUT and DELETE requests without awaiting responses. The client ties the requests together using the `Transaction` header.
 
@@ -220,13 +220,13 @@ The items of the batch may be wrapped into a JSON array and POSTed to `/batch-wr
     Transaction: id=[identifier, globally unique]
     Condition-TxClock: [timestamp, microseconds, 64 bits]
 
-    [ { "op": [op1], "table": [table1], "key": [key1], value=[JSON value1] },
-      { "op": [op2], "table": [table2], "key": [key1], value=[JSON value2] },
+    [ { "op": [op1], "table": [table1], "key": [key1], value: [json1] },
+      { "op": [op2], "table": [table2], "key": [key1], value: [json2] },
       … ]
 
 The `If-Unmodified-Since` and `Transaction`, `Condition-TxClock` headers are optional. If included, the `Transaction` header needs only the `id` directive. The `item` directive is necessary only for pipelined batch writes.
 
-TreodeDB writes the given JSON contents to their respective keys in their respective tables, provided that the current values for all of those rows has remained unchanged since the condition time.
+TreodeDB writes the given JSON contents (primitives, arrays or objects) to their respective keys in their respective tables, provided that the current values for all of those rows has remained unchanged since the condition time.
 
 The operations may be `create`, `hold` and `update`, `delete`. Only the `create` and `update` operations require a value; the `hold` and `delete` operations may omit the value.
 
@@ -279,7 +279,7 @@ There are several cases in which the HTTP response does not include the JSON val
 
 - **HTTP/1.1 404 Not Found**: The requested value is not in the table.
 
-  This response is also valuable to the cache, as the it can store that the key had no value as of that read time. In Python for example, we may store None instead of a JSON object. Then future requests can see that without going to the DB server.
+  This response is also valuable to the cache, as the it can store that the key had no value as of that read time. In Python for example, we may store None instead of JSON. Then future requests can see that without going to the DB server.
 
 ### Write Responses
 

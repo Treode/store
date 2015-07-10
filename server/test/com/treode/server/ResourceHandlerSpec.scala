@@ -520,7 +520,7 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"}]""")
+            .body ("""[{"op": "CREATE", "table": "table1", "key": "abc", "value": "v1"}]""")
           .expect
             .statusCode (200)
           .when
@@ -535,7 +535,7 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"op": "UPDATE", "table": "table1", "key": "abc", "obj": "v2"}]""")
+            .body ("""[{"op": "UPDATE", "table": "table1", "key": "abc", "value": "v2"}]""")
           .expect
             .statusCode (200)
           .when
@@ -564,7 +564,7 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"op": "CrEaTe", "table": "table1", "key": "abc", "obj": "v1"}]""")
+            .body ("""[{"op": "CrEaTe", "table": "table1", "key": "abc", "value": "v1"}]""")
           .expect
             .statusCode (200)
           .when
@@ -583,8 +583,8 @@ class ResourceHandlerSpec extends FreeSpec {
             .contentType ("application/json")
             .conditionTxClock (ts4)
             .body ("""
-                [ {"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"},
-                  {"op": "UPDATE", "table": "table2", "key": "abc2", "obj": "v3"},
+                [ {"op": "CREATE", "table": "table1", "key": "abc", "value": "v1"},
+                  {"op": "UPDATE", "table": "table2", "key": "abc2", "value": "v3"},
                   {"op": "HOLD", "table": "table3", "key": "abc3"},
                   {"op": "DELETE", "table": "table4", "key": "abc4"} ]""")
           .expect
@@ -604,7 +604,7 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"op": "CREATE", "table": "table1", "key": "abc", "obj": "v2"}]""")
+            .body ("""[{"op": "CREATE", "table": "table1", "key": "abc", "value": "v2"}]""")
           .expect
             .statusCode (409)
             .body (equalTo ("A row marked CREATE already exists."))
@@ -623,7 +623,7 @@ class ResourceHandlerSpec extends FreeSpec {
             .conditionTxClock (ts1)
             .body ("""
                 [ {"op": "HOLD", "table": "table1", "key": "abc"},
-                  {"op": "UPDATE", "table": "table1", "key": "abc2", "obj": "v1"} ]""")
+                  {"op": "UPDATE", "table": "table1", "key": "abc2", "value": "v1"} ]""")
           .expect
             .statusCode (412)
             .valueTxClock (ts2)
@@ -678,7 +678,7 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"table": "table1", "key": "abc", "obj": "v1"}]""")
+            .body ("""[{"table": "table1", "key": "abc", "value": "v1"}]""")
           .expect
             .statusCode (400)
             .body (equalTo ("There is no attribute called 'op'"))
@@ -691,7 +691,7 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"op": "CREATE", "key": "abc", "obj": "v1"}]""")
+            .body ("""[{"op": "CREATE", "key": "abc", "value": "v1"}]""")
           .expect
             .statusCode (400)
             .body (equalTo ("There is no attribute called 'table'"))
@@ -704,7 +704,7 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"op": "CREATE", "table": "table1", "obj": "v1"}]""")
+            .body ("""[{"op": "CREATE", "table": "table1", "value": "v1"}]""")
           .expect
             .statusCode (400)
             .body (equalTo ("There is no attribute called 'key'"))
@@ -720,7 +720,7 @@ class ResourceHandlerSpec extends FreeSpec {
             .body ("""[{"op": "CREATE", "table": "table1", "key": "abc"}]""")
           .expect
             .statusCode (400)
-            .body (equalTo ("There is no attribute called 'obj'"))
+            .body (equalTo ("There is no attribute called 'value'"))
           .when
             .post ("/batch-write")
         }}
@@ -730,7 +730,7 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"op": "BAD", "table": "table1", "key": "abc", "obj": "v1"}]""")
+            .body ("""[{"op": "BAD", "table": "table1", "key": "abc", "value": "v1"}]""")
           .expect
             .statusCode (400)
             .body (equalTo ("""Unsupported operation: "BAD"."""))
@@ -743,7 +743,7 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"}]""")
+            .body ("""[{"op": "CREATE", "table": "table1", "key": "abc", "value": "v1"}]""")
           .expect
             .statusCode (405)
           .when
@@ -755,7 +755,7 @@ class ResourceHandlerSpec extends FreeSpec {
           val rsp = given
             .port (port)
             .contentType ("application/json")
-            .body ("""[{"op": "CREATE", "table": "table5", "key": "abc", "obj": "v1"}]""")
+            .body ("""[{"op": "CREATE", "table": "table5", "key": "abc", "value": "v1"}]""")
           .expect
             .statusCode (400)
             .body (equalTo ("Bad table ID: table5"))
@@ -770,8 +770,8 @@ class ResourceHandlerSpec extends FreeSpec {
             .port (port)
             .contentType ("application/json")
             .body ("""
-                [ {"op": "CREATE", "table": "table1", "key": "abc", "obj": "v1"},
-                  {"op": "UPDATE", "table": "table1", "key": "abc", "obj": "v2"} ]""")
+                [ {"op": "CREATE", "table": "table1", "key": "abc", "value": "v1"},
+                  {"op": "UPDATE", "table": "table1", "key": "abc", "value": "v2"} ]""")
           .expect
             .statusCode (400)
             .body (equalTo ("""Multiple rows found for "table1:abc"."""))
