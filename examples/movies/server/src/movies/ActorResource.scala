@@ -18,7 +18,7 @@ package movies
 
 import com.treode.async.Async, Async.supply
 import com.treode.cluster.HostId
-import com.treode.store.{StaleException, TxClock}
+import com.treode.store.{CollisionException, StaleException, TxClock}
 import com.twitter.finagle.http.{Method, Request, Response, Status}
 
 import movies.{DisplayModel => DM}
@@ -53,26 +53,32 @@ object ActorResource {
 
     def post (request: Request): Async [Response] = {
       val xid = request.transactionId (host)
-      val ct = request.conditionTxClock (TxClock.now)
+      val rt = request.readTxClock
+      val ct = request.conditionTxClock (rt)
       val actor = request.readJson [DM.Actor]
       (for {
-        (id, vt) <- movies.create (xid, ct, actor)
+        (id, vt) <- movies.create (xid, rt, ct, actor)
       } yield {
         respond.created (request, vt, s"/actor/$id")
       }) .recover {
+        case exn: CollisionException =>
+          respond.conflict (request)
         case exn: StaleException =>
           respond.stale (request, exn.time)
       }}
 
     def put (request: Request, id: String): Async [Response] = {
       val xid = request.transactionId (host)
-      val ct = request.conditionTxClock (TxClock.now)
+      val rt = request.readTxClock
+      val ct = request.conditionTxClock (rt)
       val actor = request.readJson [DM.Actor]
       (for {
-        vt <- movies.update (xid, ct, id, actor)
+        vt <- movies.update (xid, rt, ct, id, actor)
       } yield {
         respond.ok (request, vt)
       }) .recover {
+        case exn: CollisionException =>
+          respond.conflict (request)
         case exn: StaleException =>
           respond.stale (request, exn.time)
       }}

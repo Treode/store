@@ -69,6 +69,12 @@ package object movies {
       rsp
     }
 
+    def conflict (req: Request): Response = {
+      val rsp = req.response
+      rsp.status = Status.Conflict
+      rsp
+    }
+
     def stale (req: Request, time: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.PreconditionFailed

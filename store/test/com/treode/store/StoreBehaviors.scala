@@ -333,6 +333,31 @@ trait StoreBehaviors {
           "find 0::None for Apple##ts1-1" in {
             implicit val (random, scheduler, s, ts1, _) = setup()
             s.read (ts1-1, Get (T1, Apple)) .expectSeq (0::None)
+          }}}
+
+      "the table has Apple##ts2::none Apple##ts::1" - {
+
+        def setup() = {
+          implicit val (random, scheduler, network) = newKit()
+          val s = newStore (random, scheduler, network)
+          val ts1 = s.write (random.nextTxId, 0, Create (T1, Apple, 1)) .expectPass()
+          val ts2 = s.write (random.nextTxId, ts1, Delete (T1, Apple)) .expectPass()
+          (random, scheduler, s, ts1, ts2)
+        }
+
+        "reading should" -  {
+
+          "find ts2::None for Apple##ts2" in {
+            implicit val (random, scheduler, s, ts1, ts2) = setup()
+            s.read (ts2, Get (T1, Apple)) .expectSeq (ts2::None)
+          }}
+
+        "writing should" - {
+
+          "allow create Apple##0" in {
+            implicit val (random, scheduler, s, ts1, ts2) = setup()
+            val ts3 = s.write (random.nextTxId, TxClock.MinValue, Create (T1, Apple, 2)) .expectPass()
+            s.expectCells (T1) (Apple##ts3::2, Apple##ts2, Apple##ts1::1)
           }}}}}}
 
 object StoreBehaviors {

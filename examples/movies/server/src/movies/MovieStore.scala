@@ -53,23 +53,23 @@ class MovieStore (implicit random: Random, store: Store) {
       (tx.vt, movie)
     }}
 
-  def create (xid: TxId, ct: TxClock, movie: DM.Movie): Async [(String, TxClock)] = guard {
-    val tx = new Transaction (ct)
+  def create (xid: TxId, rt: TxClock, ct: TxClock, movie: DM.Movie): Async [(String, TxClock)] = guard {
+    val tx = new Transaction (rt)
     val movieId = random.nextId()
     for {
       _ <- PM.Movie.fetchForSave (tx, movieId, movie)
       _ = PM.Movie.create (tx, movieId, movie)
-      wt <- tx.execute (xid)
+      wt <- tx.execute (xid, ct)
     } yield {
       (movieId, wt)
     }}
 
-  def update (xid: TxId, ct: TxClock, movieId: String, movie: DM.Movie): Async [TxClock] = guard {
-    val tx = new Transaction (ct)
+  def update (xid: TxId, rt: TxClock, ct: TxClock, movieId: String, movie: DM.Movie): Async [TxClock] = guard {
+    val tx = new Transaction (rt)
     for {
       _ <- PM.Movie.fetchForSave (tx, movieId, movie)
       _ = PM.Movie.save (tx, movieId, movie)
-      wt <- tx.execute (xid)
+      wt <- tx.execute (xid, ct)
     } yield {
       wt
     }}
@@ -85,23 +85,23 @@ class MovieStore (implicit random: Random, store: Store) {
       (tx.vt, actor)
     }}
 
-  def create (xid: TxId, ct: TxClock, actor: DM.Actor): Async [(String, TxClock)] = guard {
-    val tx = new Transaction (ct)
+  def create (xid: TxId, rt: TxClock, ct: TxClock, actor: DM.Actor): Async [(String, TxClock)] = guard {
+    val tx = new Transaction (rt)
     val actorId = random.nextId()
     for {
       _ <- PM.Actor.fetchForSave (tx, actorId, actor)
       _ = PM.Actor.create (tx, actorId, actor)
-      wt <- tx.execute (xid)
+      wt <- tx.execute (xid, ct)
     } yield {
       (actorId, wt)
     }}
 
-  def update (xid: TxId, ct: TxClock, actorId: String, actor: DM.Actor): Async [TxClock] = guard {
-    val tx = new Transaction (ct)
+  def update (xid: TxId, rt: TxClock, ct: TxClock, actorId: String, actor: DM.Actor): Async [TxClock] = guard {
+    val tx = new Transaction (rt)
     for {
       _ <- PM.Actor.fetchForSave (tx, actorId, actor)
       _ = PM.Actor.save (tx, actorId, actor)
-      wt <- tx.execute (xid)
+      wt <- tx.execute (xid, ct)
     } yield {
       wt
     }}

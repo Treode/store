@@ -27,14 +27,14 @@ class AnalyticsResourceSpec extends FreeSpec with SpecTools {
 
   def addMovieAndActor (movies: MovieStore) = {
 
-    val t1 = movies.update (Random.nextXid, t0, "1", """{
+    val t1 = movies.update (Random.nextXid, t0, t0, "1", """{
       "id": "1",
       "title": "Star Wars",
       "released": null,
       "cast": []
     }""" .fromJson [DM.Movie]) .await()
 
-    val t2 = movies.update (Random.nextXid, t1, "1", """{
+    val t2 = movies.update (Random.nextXid, t1, t1, "1", """{
     "id": "1",
       "name": "Mark Hamill",
       "born": null,

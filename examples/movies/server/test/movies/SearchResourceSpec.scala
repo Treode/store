@@ -29,12 +29,12 @@ class SearchResourceSpec extends FreeSpec with SpecTools {
 
   def addTitle (ct: TxClock, title: String) (implicit movies: MovieStore): (String, TxClock) =
     movies
-      .create (Random.nextXid, t0, DM.Movie ("", title, null, null))
+      .create (Random.nextXid, ct, ct, DM.Movie ("", title, null, null))
       .await()
 
   def addName (ct: TxClock, name: String) (implicit movies: MovieStore): (String, TxClock) =
     movies
-      .create (Random.nextXid, t0, DM.Actor ("", name, null, null))
+      .create (Random.nextXid, ct, ct, DM.Actor ("", name, null, null))
       .await()
 
   "When the database is empty" - {

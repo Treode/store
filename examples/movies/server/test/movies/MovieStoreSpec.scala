@@ -42,13 +42,13 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   def addTitle (ct: TxClock, title: String) (
       implicit random: Random, scheduler: StubScheduler, movies: MovieStore): (String, TxClock) =
     movies
-      .create (random.nextXid, t0, DM.Movie ("", title, null, null))
+      .create (random.nextXid, ct, ct, DM.Movie ("", title, null, null))
       .expectPass()
 
   def addName (ct: TxClock, name: String) (
       implicit random: Random, scheduler: StubScheduler, movies: MovieStore): (String, TxClock) =
     movies
-      .create (random.nextXid, t0, DM.Actor ("", name, null, null))
+      .create (random.nextXid, ct, ct, DM.Actor ("", name, null, null))
       .expectPass()
 
   def expectReadResult [A] (
@@ -67,7 +67,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   "The MovieStore" should "create a movie with no cast" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val (id, t1) = movies.create (random.nextXid, t0, """ {
+    val (id, t1) = movies.create (random.nextXid, t0, t0, """ {
         "title": "Star Wars"
     } """ .fromJson [DM.Movie]) .expectPass()
 
@@ -90,7 +90,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update a non-existent movie with no cast" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", """ {
+    val t1 = movies.update (random.nextXid, t0, t0, "1", """ {
         "title": "Star Wars"
     } """ .fromJson [DM.Movie]) .expectPass()
 
@@ -113,7 +113,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "create a movie with an empty cast" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val (id, t1) = movies.create (random.nextXid, t0, """ {
+    val (id, t1) = movies.create (random.nextXid, t0, t0, """ {
         "title": "Star Wars",
         "cast": []
     } """ .fromJson [DM.Movie]) .expectPass()
@@ -137,7 +137,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update a non-existent movie with an empty cast" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", """ {
+    val t1 = movies.update (random.nextXid, t0, t0, "1", """ {
         "title": "Star Wars",
         "cast": []
     } """ .fromJson [DM.Movie]) .expectPass()
@@ -161,7 +161,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "reject a movie with no title" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val exn = movies.create (random.nextXid, t0, """ {
+    val exn = movies.create (random.nextXid, t0, t0, """ {
         "cast": []
     } """ .fromJson [DM.Movie]) .expectFail [BadRequestException]
     println (exn)
@@ -176,7 +176,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "reject a cast member with no actorId" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    movies.create (random.nextXid, t0, """ {
+    movies.create (random.nextXid, t0, t0, """ {
         "title": "Star Wars",
         "cast": [ { "actor": "Mark Hamill" } ]
     } """ .fromJson [DM.Movie]) .expectFail [BadRequestException]
@@ -191,7 +191,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "reject a cast member for an actor that does not exist" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    movies.create (random.nextXid, t0, """ {
+    movies.create (random.nextXid, t0, t0, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": "1" } ]
     } """ .fromJson [DM.Movie]) .expectFail [BadRequestException]
@@ -206,9 +206,9 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "create a movie with one cast member" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.markHamill) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
@@ -236,11 +236,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "create a movie with three cast members" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, "2", DO.harrisonFord) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, "3", DO.carrieFisher) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.markHamill) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, t0, "2", DO.harrisonFord) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, t0, "3", DO.carrieFisher) .expectPass()
 
-    val (id, t4) = movies.create (random.nextXid, t3, """ {
+    val (id, t4) = movies.create (random.nextXid, t3, t3, """ {
         "title": "Star Wars",
         "cast": [
             { "actorId": "1", "role": "Luke Skywalker" },
@@ -287,11 +287,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update the movie's title" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val (id, t1) = movies.create (random.nextXid, t0, """ {
+    val (id, t1) = movies.create (random.nextXid, t0, t0, """ {
         "title": "Star Wars"
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t2 = movies.update (random.nextXid, t1, id, """ {
+    val t2 = movies.update (random.nextXid, t1, t1, id, """ {
         "title": "Star Wars: A New Hope"
     } """ .fromJson [DM.Movie]) .expectPass()
 
@@ -323,12 +323,12 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update the movie's release date" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val (id, t1) = movies.create (random.nextXid, t0, """ {
+    val (id, t1) = movies.create (random.nextXid, t0, t0, """ {
         "title": "Star Wars",
         "released": "1980-06-20"
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t2 = movies.update (random.nextXid, t1, id, """ {
+    val t2 = movies.update (random.nextXid, t1, t1, id, """ {
         "released": "1977-05-25"
     } """ .fromJson [DM.Movie]) .expectPass()
 
@@ -361,14 +361,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update a cast member" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.markHamill) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": "1", "role": "Luke Skywriter" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t3 = movies.update (random.nextXid, t2, id, """ {
+    val t3 = movies.update (random.nextXid, t2, t2, id, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
@@ -404,11 +404,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "add a cast member" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, "2", DO.harrisonFord) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, "3", DO.carrieFisher) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.markHamill) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, t0, "2", DO.harrisonFord) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, t0, "3", DO.carrieFisher) .expectPass()
 
-    val (id, t4) = movies.create (random.nextXid, t3, """ {
+    val (id, t4) = movies.create (random.nextXid, t3, t3, """ {
         "title": "Star Wars",
         "cast": [
             { "actorId": "1", "role": "Luke Skywalker" },
@@ -416,7 +416,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t5 = movies.update (random.nextXid, t4, id, """ {
+    val t5 = movies.update (random.nextXid, t4, t4, id, """ {
         "title": "Star Wars",
         "cast": [
             { "actorId": "1", "role": "Luke Skywalker" },
@@ -475,11 +475,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "remove a cast member" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, "2", DO.harrisonFord) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, "3", DO.carrieFisher) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.markHamill) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, t0, "2", DO.harrisonFord) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, t0, "3", DO.carrieFisher) .expectPass()
 
-    val (id, t4) = movies.create (random.nextXid, t3, """ {
+    val (id, t4) = movies.create (random.nextXid, t3, t3, """ {
         "title": "Star Wars",
         "cast": [
             { "actorId": "1", "role": "Luke Skywalker" },
@@ -488,7 +488,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t5 = movies.update (random.nextXid, t4, id, """ {
+    val t5 = movies.update (random.nextXid, t4, t4, id, """ {
         "title": "Star Wars",
         "cast": [
             { "actorId": "1", "role": "Luke Skywalker"},
@@ -547,11 +547,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "replace a cast member" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, "2", DO.harrisonFord) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, "3", DO.carrieFisher) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.markHamill) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, t0, "2", DO.harrisonFord) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, t0, "3", DO.carrieFisher) .expectPass()
 
-    val (id, t4) = movies.create (random.nextXid, t3, """ {
+    val (id, t4) = movies.create (random.nextXid, t3, t3, """ {
         "title": "Star Wars",
         "cast": [
             { "actorId": "1", "role": "Luke Skywalker" },
@@ -559,7 +559,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t5 = movies.update (random.nextXid, t4, id, """ {
+    val t5 = movies.update (random.nextXid, t4, t4, id, """ {
         "title": "Star Wars",
         "cast": [
             { "actorId": "1", "role": "Luke Skywalker" },
@@ -616,14 +616,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "ignore a movie update with no effect" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.markHamill) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t3 = movies.update (random.nextXid, t2, id, """ {
+    val t3 = movies.update (random.nextXid, t2, t2, id, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
@@ -657,14 +657,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "leave the title unchanged when a movie update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.markHamill) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t3 = movies.update (random.nextXid, t2, id, """ {
+    val t3 = movies.update (random.nextXid, t2, t2, id, """ {
         "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
@@ -691,14 +691,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "leave the cast unchanged when a movie update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.markHamill) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t3 = movies.update (random.nextXid, t2, id, """ {
+    val t3 = movies.update (random.nextXid, t2, t2, id, """ {
         "title": "Star Wars"
     } """ .fromJson [DM.Movie]) .expectPass()
 
@@ -725,14 +725,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "leave the role name unchanged when a movie update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.markHamill) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.markHamill) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t3 = movies.update (random.nextXid, t2, id, """ {
+    val t3 = movies.update (random.nextXid, t2, t2, id, """ {
         "title": "Star Wars",
         "cast": [ { "actorId": "1" } ]
     } """ .fromJson [DM.Movie]) .expectPass()
@@ -760,11 +760,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "create two movies with the same title" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", """ {
+    val t1 = movies.update (random.nextXid, t0, t0, "1", """ {
         "title": "The Piano"
     } """ .fromJson [DM.Movie]) .expectPass()
 
-    val t2 = movies.update (random.nextXid, t1, "2", """ {
+    val t2 = movies.update (random.nextXid, t1, t1, "2", """ {
         "title": "The Piano"
     } """ .fromJson [DM.Movie]) .expectPass()
 
@@ -784,7 +784,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "create an actor with no roles" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val (id, t1) = movies.create (random.nextXid, t0, """ {
+    val (id, t1) = movies.create (random.nextXid, t0, t0, """ {
         "name": "Mark Hamill"
     } """ .fromJson [DM.Actor]) .expectPass()
 
@@ -807,7 +807,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update a non-existent actor with no roles" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", """ {
+    val t1 = movies.update (random.nextXid, t0, t0, "1", """ {
         "name": "Mark Hamill"
     } """ .fromJson [DM.Actor]) .expectPass()
 
@@ -830,7 +830,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "create an actor with empty roles" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val (id, t1) = movies.create (random.nextXid, t0, """ {
+    val (id, t1) = movies.create (random.nextXid, t0, t0, """ {
         "name": "Mark Hamill",
         "roles": []
     } """ .fromJson [DM.Actor]) .expectPass()
@@ -854,7 +854,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update a non-existent actor with empty roles" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", """ {
+    val t1 = movies.update (random.nextXid, t0, t0, "1", """ {
         "name": "Mark Hamill",
         "roles": []
     } """ .fromJson [DM.Actor]) .expectPass()
@@ -878,7 +878,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "reject a role with no movieId" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    movies.create (random.nextXid, t0, """ {
+    movies.create (random.nextXid, t0, t0, """ {
         "name": "Mark Hamill",
         "roles": [ { "title": "Star Wars" } ]
     } """ .fromJson [DM.Actor]) .expectFail [BadRequestException]
@@ -893,7 +893,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "reject a role for a movie that does not exist" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    movies.create (random.nextXid, t0, """ {
+    movies.create (random.nextXid, t0, t0, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": "1" } ]
     } """ .fromJson [DM.Actor]) .expectFail [BadRequestException]
@@ -908,9 +908,9 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "create an actor with one role" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.starWars) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
@@ -938,11 +938,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "create an actor with three roles" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, "2", DO.empireStrikesBack) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, "3", DO.returnOfTheJedi) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.starWars) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, t0, "2", DO.empireStrikesBack) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, t0, "3", DO.returnOfTheJedi) .expectPass()
 
-    val (id, t4) = movies.create (random.nextXid, t3, """ {
+    val (id, t4) = movies.create (random.nextXid, t3, t3, """ {
         "name": "Mark Hamill",
         "roles": [
             { "movieId": "1", "role": "Luke Skywalker" },
@@ -989,11 +989,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update the actor's name" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val (id, t1) = movies.create (random.nextXid, t0, """ {
+    val (id, t1) = movies.create (random.nextXid, t0, t0, """ {
         "name": "Mark Hammer"
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t2 = movies.update (random.nextXid, t1, id, """ {
+    val t2 = movies.update (random.nextXid, t1, t1, id, """ {
         "name": "Mark Hamill"
     } """ .fromJson [DM.Actor]) .expectPass()
 
@@ -1025,12 +1025,12 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update the actor's birth date" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val (id, t1) = movies.create (random.nextXid, t0, """ {
+    val (id, t1) = movies.create (random.nextXid, t0, t0, """ {
         "name": "Mark Hamill",
         "born": "1977-05-25"
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t2 = movies.update (random.nextXid, t1, id, """ {
+    val t2 = movies.update (random.nextXid, t1, t1, id, """ {
         "born": "1951-09-25"
     } """ .fromJson [DM.Actor]) .expectPass()
 
@@ -1062,14 +1062,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "update a role" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.starWars) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": "1", "role": "Luke Skywriter" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t3 = movies.update (random.nextXid, t2, id, """ {
+    val t3 = movies.update (random.nextXid, t2, t2, id, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
@@ -1105,11 +1105,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "add a role" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, "2", DO.empireStrikesBack) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, "3", DO.returnOfTheJedi) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.starWars) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, t0, "2", DO.empireStrikesBack) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, t0, "3", DO.returnOfTheJedi) .expectPass()
 
-    val (id, t4) = movies.create (random.nextXid, t3, """ {
+    val (id, t4) = movies.create (random.nextXid, t3, t3, """ {
         "name": "Mark Hamill",
         "roles": [
             { "movieId": "1", "role": "Luke Skywalker" },
@@ -1117,7 +1117,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t5 = movies.update (random.nextXid, t4, id, """ {
+    val t5 = movies.update (random.nextXid, t4, t4, id, """ {
         "name": "Mark Hamill",
         "roles": [
             { "movieId": "1", "role": "Luke Skywalker" },
@@ -1176,11 +1176,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "remove a role" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, "2", DO.empireStrikesBack) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, "3", DO.returnOfTheJedi) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.starWars) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, t0, "2", DO.empireStrikesBack) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, t0, "3", DO.returnOfTheJedi) .expectPass()
 
-    val (id, t4) = movies.create (random.nextXid, t3, """ {
+    val (id, t4) = movies.create (random.nextXid, t3, t3, """ {
         "name": "Mark Hamill",
         "roles": [
             { "movieId": "1", "role": "Luke Skywalker" },
@@ -1189,7 +1189,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t5 = movies.update (random.nextXid, t4, id, """ {
+    val t5 = movies.update (random.nextXid, t4, t4, id, """ {
         "name": "Mark Hamill",
         "roles": [
             { "movieId": "1", "role": "Luke Skywalker" },
@@ -1248,11 +1248,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "replace a role" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
-    val t2 = movies.update (random.nextXid, t0, "2", DO.empireStrikesBack) .expectPass()
-    val t3 = movies.update (random.nextXid, t0, "3", DO.returnOfTheJedi) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.starWars) .expectPass()
+    val t2 = movies.update (random.nextXid, t0, t0, "2", DO.empireStrikesBack) .expectPass()
+    val t3 = movies.update (random.nextXid, t0, t0, "3", DO.returnOfTheJedi) .expectPass()
 
-    val (id, t4) = movies.create (random.nextXid, t3, """ {
+    val (id, t4) = movies.create (random.nextXid, t3, t3, """ {
         "name": "Mark Hamill",
         "roles": [
             { "movieId": "1", "role": "Luke Skywalker" },
@@ -1260,7 +1260,7 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
         ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t5 = movies.update (random.nextXid, t4, id, """ {
+    val t5 = movies.update (random.nextXid, t4, t4, id, """ {
         "name": "Mark Hamill",
         "roles": [
             { "movieId": "1", "role": "Luke Skywalker" },
@@ -1317,14 +1317,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "ignore an actor update with no effect" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.starWars) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t3 = movies.update (random.nextXid, t2, id, """ {
+    val t3 = movies.update (random.nextXid, t2, t2, id, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
@@ -1358,14 +1358,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "leave the name unchanged when an actor update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.starWars) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t3 = movies.update (random.nextXid, t2, id, """ {
+    val t3 = movies.update (random.nextXid, t2, t2, id, """ {
         "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
@@ -1392,14 +1392,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "leave the roles unchanged when an actor update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.starWars) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t3 = movies.update (random.nextXid, t2, id, """ {
+    val t3 = movies.update (random.nextXid, t2, t2, id, """ {
         "name": "Mark Hamill"
     } """ .fromJson [DM.Actor]) .expectPass()
 
@@ -1426,14 +1426,14 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "leave the role name unchanged when an actor update is missing it" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", DO.starWars) .expectPass()
+    val t1 = movies.update (random.nextXid, t0, t0, "1", DO.starWars) .expectPass()
 
-    val (id, t2) = movies.create (random.nextXid, t1, """ {
+    val (id, t2) = movies.create (random.nextXid, t1, t1, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": "1", "role": "Luke Skywalker" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t3 = movies.update (random.nextXid, t2, id, """ {
+    val t3 = movies.update (random.nextXid, t2, t2, id, """ {
         "name": "Mark Hamill",
         "roles": [ { "movieId": "1" } ]
     } """ .fromJson [DM.Actor]) .expectPass()
@@ -1461,11 +1461,11 @@ class MovieStoreSpec extends FlatSpec with SpecTools {
   it should "create two actors with the same name" in {
     implicit val (random, scheduler, store, movies) = setup()
 
-    val t1 = movies.update (random.nextXid, t0, "1", """ {
+    val t1 = movies.update (random.nextXid, t0, t0, "1", """ {
         "name": "Harrison Ford"
     } """ .fromJson [DM.Actor]) .expectPass()
 
-    val t2 = movies.update (random.nextXid, t1, "2", """ {
+    val t2 = movies.update (random.nextXid, t1, t1, "2", """ {
         "name": "Harrison Ford"
     } """ .fromJson [DM.Actor]) .expectPass()
 

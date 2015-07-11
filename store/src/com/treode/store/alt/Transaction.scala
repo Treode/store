@@ -132,7 +132,7 @@ class Transaction (rt: TxClock) (implicit store: Store) {
   def delete [K] (d: TableDescriptor [K, _]) (k: K): Unit =
     delete (d.id, d.key.freeze (k))
 
-  def execute (xid: TxId): Async [TxClock] = {
+  def execute (xid: TxId, ct: TxClock = rt): Async [TxClock] = {
     val ops = _cache.toSeq map {
       case (k, NotFound)    => Hold (k.table, k.key)
       case (k, Found (v))   => Hold (k.table, k.key)
@@ -140,7 +140,7 @@ class Transaction (rt: TxClock) (implicit store: Store) {
       case (k, Updated (v)) => Update (k.table, k.key, v)
       case (k, Deleted)     => Delete (k.table, k.key)
     }
-    store.write (xid, rt, ops: _*)
+    store.write (xid, ct, ops: _*)
   }}
 
 object Transaction {

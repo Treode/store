@@ -66,11 +66,15 @@ private class TimedStore (kit: AtomicKit) {
     }
   }
 
-  private def collided (ops: Seq [WriteOp], cells: Seq [Cell]): Seq [Int] =
+  /** Returns `(collided, stale, forecast)`. */
+  private def prepare (ct: TxClock, op: WriteOp): Async [(Boolean, Boolean, TxClock)] = {
     for {
-      ((op, cell), i) <- ops.zip (cells) .zipWithIndex
-      if op.isInstanceOf [WriteOp.Create] && cell.value.isDefined
-    } yield i
+      value <- getTable (op.table) .get (op.key, TxClock.MaxValue)
+    } yield {
+      op match {
+        case _: WriteOp.Create => (value.value.isDefined, false, value.time)
+        case _ => (false, ct < value.time, value.time)
+      }}}
 
   def prepare (ct: TxClock, ops: Seq [WriteOp]): Async [PrepareResult] = {
     import PrepareResult._
@@ -78,20 +82,19 @@ private class TimedStore (kit: AtomicKit) {
     val ids = ops map (op => (op.table, op.key).hashCode)
     for {
       locks <- space.write (ct, ids)
-      cells <-
-        for ((op, i) <- ops.indexed)
-          yield getTable (op.table) .get (op.key, TxClock.MaxValue)
+      results <- for ((op, i) <- ops.indexed) yield prepare (ct, op)
     } yield {
-      val vt = cells.map (_.time) .fold (TxClock.MinValue) (TxClock.max _)
-      val collisions = collided (ops, cells)
+      val stale = results.exists (_._2)
+      val collisions = for (((c, s, t), i) <- results.zipWithIndex; if c) yield i
+      val ft = results.map (_._3) .fold (TxClock.MinValue) (TxClock.max _)
       if (!collisions.isEmpty) {
         locks.release()
         Collided (collisions)
-      } else if (ct < vt) {
+      } else if (stale) {
         locks.release()
-        Stale (vt)
+        Stale (ft)
       } else {
-        Prepared (TxClock.max (vt, locks.ft), locks)
+        Prepared (TxClock.max (ft, locks.ft), locks)
       }}}
 
   def commit (wt: TxClock, ops: Seq [WriteOp]): Seq [Long] = {

@@ -62,13 +62,13 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
   private def delete (table: TableId, key: Bytes, time: TxClock): Unit =
     data.put (StubKey (table, key, time), None)
 
-  private def collided (op: WriteOp, value: Value): Boolean =
-    op.isInstanceOf [WriteOp.Create] && value.value.isDefined
-
-  private def prepare (ct: TxClock, op: WriteOp): (Boolean, TxClock) = {
+  /** Returns `(collided, stale, forecast)`. */
+  private def prepare (ct: TxClock, op: WriteOp): (Boolean, Boolean, TxClock) = {
     val value = get (op.table, op.key, TxClock.MaxValue)
-    (collided (op, value), value.time)
-  }
+    op match {
+      case _: WriteOp.Create => (value.value.isDefined, false, value.time)
+      case _ => (false, ct < value.time, value.time)
+    }}
 
   private def commit (wt: TxClock, ops: Seq [WriteOp]) {
     import WriteOp._
@@ -88,13 +88,14 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
       } yield {
         try {
           val results = ops.map (op => prepare (ct, op))
-          val collisions = for (((c, t), i) <- results.zipWithIndex; if c) yield i
-          val vt = results.filterNot (_._1) .map (_._2) .fold (TxClock.MinValue) (TxClock.max _)
-          val wt = TxClock.max (vt, locks.ft) + 1
-          if (ct < vt)
-            throw new StaleException (vt)
+          val stale = results.exists (_._2)
+          val collisions = for (((c, s, t), i) <- results.zipWithIndex; if c) yield i
+          val ft = results.map (_._3) .fold (TxClock.MinValue) (TxClock.max _)
+          val wt = TxClock.max (ft, locks.ft) + 1
           if (!collisions.isEmpty)
             throw new CollisionException (collisions)
+          if (stale)
+            throw new StaleException (ft)
           if (xacts.putIfAbsent (xid, TxStatus.Committed (wt)) != null)
             throw new TimeoutException
           commit (wt, ops)
