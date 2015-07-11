@@ -57,11 +57,12 @@ private [store] class LockSpace (implicit config: StoreConfig) {
     * @param rt The timestamp to read as-of.
     * @param ids The locks to acquire.
     */
-  def read (rt: TxClock, ids: Seq [Int]): Async [Unit] =
+  def read (rt: TxClock, ids: Seq [Int]): Async [Unit] = {
+    require (rt < TxClock.now + TxClock.MaxSkew)
     async { cb =>
       val _ids = ids map (_ & mask) toSet;
       new LockReader (rt, cb) .init (this, _ids)
-    }
+    }}
 
   /** Acquire the locks for write. Returns when the locks are acquired. The writer must respect
     * the lower bound for the write timestamp, and must release the locks.
@@ -70,17 +71,19 @@ private [store] class LockSpace (implicit config: StoreConfig) {
     * @return A LockSet with a lower bound for the write timestamp, and a method to release the
     * locks.
     */
-  def write (ft: TxClock, ids: Seq [Int]): Async [LockSet] =
+  def write (ft: TxClock, ids: Seq [Int]): Async [LockSet] = {
+    require (ft < TxClock.now + TxClock.MaxSkew)
     async { cb =>
       val _ids = SortedSet (ids map (_ & mask): _*)
       new LockWriter (this, ft, _ids, cb) .init()
-    }
+    }}
 
   /** Acquire the locks for scan. Returns when the all locks are acquired. Read locks do not need
     * to be released.
     * @param rt The timestamp to read as-of.
     */
-  def scan (rt: TxClock): Async [Unit] =
+  def scan (rt: TxClock): Async [Unit] = {
+    require (rt < TxClock.now + TxClock.MaxSkew)
     async { cb =>
       new LockReader (rt, cb) .init (this, all)
-    }}
+    }}}

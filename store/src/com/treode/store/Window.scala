@@ -118,7 +118,7 @@ object Window {
       Through (Bound (later, linc), earlier)
   }
 
-  val all = Between (TxClock.MaxValue, true, TxClock.MinValue, true)
+  val all = Between (TxClock.now, true, TxClock.MinValue, true)
 
   val pickler = {
     import StorePicklers._

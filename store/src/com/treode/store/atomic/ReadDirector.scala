@@ -28,7 +28,7 @@ import com.treode.store.{ReadOp, TimeoutException, TxClock, Value}
 
 import Async.async
 
-private class ReadDirector (
+private class ReadDirector private (
     rt: TxClock,
     ops: Seq [ReadOp],
     kit: AtomicKit,
@@ -75,6 +75,7 @@ private class ReadDirector (
 
 private object ReadDirector {
 
-  def read (rt: TxClock, ops: Seq [ReadOp], kit: AtomicKit): Async [Seq [Value]] =
+  def read (rt: TxClock, ops: Seq [ReadOp], kit: AtomicKit): Async [Seq [Value]] = {
+    require (rt < TxClock.now + TxClock.MaxSkew)
     async (new ReadDirector (rt, ops, kit, _))
-}
+  }}

@@ -61,6 +61,8 @@ object TxClock extends Ordering [TxClock] {
 
   val MaxValue = new TxClock (-1)
 
+  val MaxSkew = 5 * 60 * 1000 * 1000 // 5 minutes in microseconds.
+
   def now = new TxClock (System.currentTimeMillis * 1000)
 
   implicit def apply (time: Instant): TxClock =

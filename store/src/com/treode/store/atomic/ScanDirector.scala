@@ -26,7 +26,7 @@ import com.treode.store._
 import ScanDeputy.scan
 import ScanDirector.Element
 
-private class ScanDirector (
+private class ScanDirector private (
     table: TableId,
     start: Bound [Key],
     window: Window,
@@ -197,6 +197,7 @@ private object ScanDirector {
       slice: Slice,
       batch: Batch,
       kit: AtomicKit
-  ): CellIterator =
+  ): CellIterator = {
+    require (window.later.bound < TxClock.now + TxClock.MaxSkew)
     (new ScanDirector (table, start, window, slice, batch, kit)) .window (window)
-}
+  }}

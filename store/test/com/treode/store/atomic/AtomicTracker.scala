@@ -130,7 +130,7 @@ class AtomicTracker {
 
   def read (host: StubAtomicHost, table: Long, key: Long): Async [Int] =
     for {
-      found <- host.read (TxClock.MaxValue, ReadOp (TableId (table), Bytes (key)))
+      found <- host.read (TxClock.now, ReadOp (TableId (table), Bytes (key)))
     } yield {
       found.head.value.map (_.int) .getOrElse (-1)
     }

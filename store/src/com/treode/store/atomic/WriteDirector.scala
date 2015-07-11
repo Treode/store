@@ -30,7 +30,14 @@ import com.treode.store.paxos.PaxosAccessor
 import Async.async
 import WriteDirector.deliberate
 
-private class WriteDirector (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [WriteOp], kit: AtomicKit) {
+private class WriteDirector private (
+    xid: TxId,
+    ct: TxClock,
+    pt: TxClock,
+    ops: Seq [WriteOp],
+    kit: AtomicKit
+) {
+
   import kit.{cluster, library, paxos, random, scheduler}
   import kit.config.prepareBackoff
 
@@ -284,6 +291,8 @@ private object WriteDirector {
     PaxosAccessor.value (txStatus)
   }
 
-  def write (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [WriteOp], kit: AtomicKit): Async [TxClock] =
+  def write (xid: TxId, ct: TxClock, pt: TxClock, ops: Seq [WriteOp], kit: AtomicKit): Async [TxClock] = {
+    val limit = TxClock.now + TxClock.MaxSkew
+    require (ct < limit && pt < limit)
     async (cb => new WriteDirector (xid, ct, pt, ops, kit) .open (cb))
-}
+  }}
