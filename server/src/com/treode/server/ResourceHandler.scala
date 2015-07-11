@@ -59,7 +59,22 @@ extends Service [Request, Response] {
     supply (respond.json (req, iter))
   }
 
-  def put (req: Request, tab: TableId, key: String): Async [Response] = {
+  def create (req: Request, tab: TableId, key: String): Async [Response] = {
+    val tx = req.transactionId (host)
+    val ct = req.conditionTxClock (TxClock.now)
+    val value = req.readJson [JsonNode]
+    store.write (tx, ct, WriteOp.Create (tab, Bytes (key), value.toBytes))
+    .map [Response] { vt =>
+      respond.ok (req, vt)
+    }
+    .recover {
+      case exn: CollisionException =>
+        respond.conflict (req)
+      case exn: StaleException =>
+        respond.stale (req, exn.time)
+    }}
+
+  def update (req: Request, tab: TableId, key: String): Async [Response] = {
     val tx = req.transactionId (host)
     val ct = req.conditionTxClock (TxClock.now)
     val value = req.readJson [JsonNode]
@@ -95,7 +110,7 @@ extends Service [Request, Response] {
     }
     .recover {
       case exn: CollisionException =>
-        respond.conflict (req, "A row marked CREATE already exists.")
+        respond.conflict (req)
       case exn: StaleException =>
         respond.stale (req, exn.time)
     }}
@@ -107,10 +122,12 @@ extends Service [Request, Response] {
         schema.getTableId (name) match {
           case Some (id) =>
             req.method match {
+              case Method.Post =>
+                create (req, id, key) .toTwitterFuture
               case Method.Get =>
                 read (req, id, key) .toTwitterFuture
               case Method.Put =>
-                put (req, id, key) .toTwitterFuture
+                update (req, id, key) .toTwitterFuture
               case Method.Delete =>
                 delete (req, id, key) .toTwitterFuture
               case _ =>

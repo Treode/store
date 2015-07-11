@@ -58,11 +58,10 @@ package object server {
       rsp
     }
 
-    def conflict (req: Request, message: String): Response = {
+    def conflict (req: Request): Response = {
       val rsp = req.response
       rsp.status = Status.Conflict
       rsp.serverTxClock = TxClock.now
-      rsp.plain = message
       rsp
     }
 
