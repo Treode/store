@@ -70,9 +70,6 @@ echo-do ${SBT} +test:compile +publish-local
 (cd demos/movies/webui; echo-do ${NPM} install --save); expect-status 0
 (cd demos/movies/webui; echo-do ${GRUNT} dist); expect-status 0
 
-# The documentation.
-echo-do ${SBT} doc/unidoc
-
 #
 # Test
 #
@@ -84,9 +81,6 @@ echo-do ${SBT} test intensive:test
 #
 # Stage release.
 #
-
-# Ivy artifacts.
-echo-do ${SBT} +publish
 
 # Server.
 STAGE_JARS=stage/jars/${version}
@@ -101,10 +95,6 @@ echo-do mkdir -p ${STAGE_MOVIES}
 echo-do tar cz -f ${STAGE_MOVIES}/movies-ui-${version}.tgz -C demos/movies/webui/dist/ .
 echo-do cp demos/movies/server/target/scala-2.11/movies-server.jar ${STAGE_MOVIES}/movies-server-${version}.jar
 echo-do cp demos/movies/spark/target/scala-2.11/movies-spark.jar ${STAGE_MOVIES}/movies-spark-${version}.jar
-
-# Documentation.
-echo-do mkdir -p stage/docs/scala/store
-echo-do mv doc/target/scala-2.11/unidoc stage/docs/scala/store/${version}
 
 #
 # Packaging
