@@ -31,7 +31,7 @@ import com.twitter.finagle.Http
 import org.hamcrest.{Description, Matcher, Matchers, TypeSafeMatcher}, Matchers._
 import org.scalatest.FreeSpec
 
-import ResourceHandler.{Batch, Row, Table, Unmatched, route}
+import ResourceHandler._
 
 class ResourceHandlerSpec extends FreeSpec {
 
@@ -89,6 +89,9 @@ class ResourceHandlerSpec extends FreeSpec {
 
     def readTxClock (time: TxClock): RequestSpecification =
       req.header ("Read-TxClock", time.time.toString)
+
+    def tx (id: Int): RequestSpecification =
+      req.header ("Transaction-Id", id.toString)
   }
 
   implicit class RichResponseSpec (rsp: ResponseSpecification) {
@@ -115,6 +118,7 @@ class ResourceHandlerSpec extends FreeSpec {
       assertResult (Table ("tab")) (route ("/tab/"))
       assertResult (Row ("tab", "key")) (route ("/tab/key"))
       assertResult (Batch) (route ("/batch-write"))
+      assertResult (Status) (route ("/tx-status"))
       assertResult (Unmatched) (route ("/"))
       assertResult (Unmatched) (route ("/tab/key/"))
     }}
@@ -131,10 +135,12 @@ class ResourceHandlerSpec extends FreeSpec {
           .get ("/table1/abc")
       }
 
-    "POST /table1/abc should respond Ok" in
+    "POST /table1/abc should respond Ok and keep the status" in
       served { case (port, store) =>
+
         val rsp = given
           .port (port)
+          .tx (1)
           .body (v1)
         .expect
           .statusCode (200)
@@ -142,6 +148,15 @@ class ResourceHandlerSpec extends FreeSpec {
           .post ("/table1/abc")
         val time = rsp.valueTxClock
         assertSeq (cell ("abc", time, v1)) (store.scan ("table1"))
+
+        val status = given
+          .port (port)
+          .tx (1)
+        .expect
+          .statusCode (200)
+        .when
+          .get ("/tx-status")
+        assertResult (time) (rsp.valueTxClock)
       }
 
     "PUT /table1/abc should respond Ok" in
@@ -238,17 +253,28 @@ class ResourceHandlerSpec extends FreeSpec {
           .get ("/table1/abc")
       }
 
-    "POST /table1/abc should respond Conflict" in
+    "POST /table1/abc should respond Conflict and keep the status" in
       served { case (port, store) =>
+
         val ts1 = addData (store)
+
         val rsp = given
           .port (port)
+          .tx (1)
           .body (v2)
         .expect
           .statusCode (409)
         .when
           .post ("/table1/abc")
         assertSeq (cell ("abc", ts1, v1)) (store.scan ("table1"))
+
+        given
+          .port (port)
+          .tx (1)
+        .expect
+          .statusCode (400)
+        .when
+          .get ("/tx-status")
       }
 
     "POST /table1/abc with If-Unmodified-Since:1 should respond Conflict" in

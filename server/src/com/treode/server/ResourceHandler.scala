@@ -19,14 +19,14 @@ package com.treode.server
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.treode.async.Async, Async.supply
 import com.treode.cluster.HostId
-import com.treode.store._
+import com.treode.store._, TxStatus._
 import com.treode.twitter.finagle.http.RichRequest
 import com.treode.twitter.util._
 import com.twitter.finagle.Service
 import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.util.Future
 
-import ResourceHandler.{Batch, Row, Table, Unmatched, route}
+import ResourceHandler.route
 
 class ResourceHandler (host: HostId, store: Store, librarian: Librarian)
 extends Service [Request, Response] {
@@ -112,11 +112,21 @@ extends Service [Request, Response] {
         respond.stale (req, exn.time)
     }}
 
+  def status (req: Request): Async [Response] = {
+    val tx = req.transactionId (host)
+    store.status (tx)
+    .map [Response] {
+      case Aborted =>
+        respond.aborted (req)
+      case Committed (vt) =>
+        respond.ok (req, vt)
+    }}
+
   def apply (req: Request): Future [Response] = {
     val rt = req.readTxClock
     route (req.path) match {
 
-      case Row (name, key) =>
+      case ResourceHandler.Row (name, key) =>
         schema.getTableId (name) match {
           case Some (id) =>
             req.method match {
@@ -135,7 +145,7 @@ extends Service [Request, Response] {
             Future.value (respond.notFound (req, rt))
         }
 
-      case Table (name) =>
+      case ResourceHandler.Table (name) =>
         schema.getTableId (name) match {
           case Some (id) =>
             req.method match {
@@ -148,7 +158,15 @@ extends Service [Request, Response] {
             Future.value (respond.notFound (req, rt))
         }
 
-      case Batch =>
+      case ResourceHandler.Status =>
+        req.method match {
+          case Method.Get =>
+            status (req) .toTwitterFuture
+          case _ =>
+            Future.value (respond.notAllowed (req, rt))
+        }
+
+      case ResourceHandler.Batch =>
         req.method match {
           case Method.Post =>
             batch (req) .toTwitterFuture
@@ -156,7 +174,7 @@ extends Service [Request, Response] {
             Future.value (respond.notAllowed (req, rt))
         }
 
-      case Unmatched =>
+      case ResourceHandler.Unmatched =>
         Future.value (respond.notFound (req, rt))
     }}}
 
@@ -168,12 +186,15 @@ object ResourceHandler {
   case class Table (table: String) extends Route
   case class Row (table: String, key: String) extends Route
   case object Batch extends Route
+  case object Status extends Route
   case object Unmatched extends Route
 
   def route (path: String): Route =
     path match {
       case _route ("batch-write", _, null) =>
         Batch
+      case _route ("tx-status", _, null) =>
+        Status
       case _route (tab, _, null) =>
         Table (tab)
       case _route (tab, _, key) =>

@@ -123,6 +123,14 @@ package object server {
       rsp
     }
 
+    def aborted (req: Request): Response = {
+      val rsp = req.response
+      rsp.status = Status.BadRequest
+      rsp.serverTxClock = TxClock.now
+      rsp.plain = "The transaction was aborted."
+      rsp
+    }
+
     def notAllowed (req: Request, rt: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.MethodNotAllowed
