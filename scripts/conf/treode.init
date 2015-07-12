@@ -29,11 +29,11 @@
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
 
 JAVA_HOME=$(readlink -f /usr/bin/java | sed "s:/bin/java::")
-DESC=treode            
-NAME=treode            
+DESC=treode
+NAME=treode
 DAEMON="$JAVA_HOME/bin/java"
 TREODEKV_DB=/opt/treode/db/store.3kv
-TREODEJAR=/opt/treode/lib/finagle-server-#TREODEPKGVERSION#.jar
+TREODEJAR=/opt/treode/lib/server-#TREODEPKGVERSION#.jar
 DAEMON_ARGS="-jar $TREODEJAR serve -solo -log.output=/opt/treode/db/treode.log $TREODEKV_DB"
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
@@ -92,7 +92,7 @@ do_stop()
     #   1 if daemon was already stopped
     #   2 if daemon could not be stopped
     #   other if a failure occurred
-    start-stop-daemon --stop -v --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name java 
+    start-stop-daemon --stop -v --retry=TERM/30/KILL/5 --pidfile $PIDFILE --name java
     RETVAL="$?"
     [ "$RETVAL" = 2 ] && return 2
     # Wait for children to finish too if this is a daemon that forks

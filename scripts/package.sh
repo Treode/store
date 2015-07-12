@@ -14,20 +14,22 @@
 # limitations under the License.
 
 create_debian_package () {
-    $PKGVER=$1
-    $WGETFILE=$2
-    $JARFILE=$3
-    $TREODE_STAGEDIR=$4
+    PKGVER=$1
+    WGETFILE=$2
+    JARFILE=$3
+    OUTDIR=$4
 
-    STAGEDIR0=/var/tmp/treode.$$
-    STAGEDIR=${STAGEDIR0}/treode-${PKGVER}
+    echo "vars $PKGVER $WGETFILE $JARFILE $OUTDIR"
+
+    TMPDIR=/var/tmp/treode.$$
+    STAGEDIR=${TMPDIR}/treode-${PKGVER}
     mkdir -p ${STAGEDIR}
 
     sed -e "s/#TREODEPKGVERSION#/${PKGVER}/" ${SCRIPT_DIR}/conf/treode.init >  ${STAGEDIR}/treode.init
     cd ${STAGEDIR}
 
     if [[ $WGETFILE == 1 ]]; then
-        wget https://oss.treode.com/examples/finagle/${PKGVER}/finagle-server-${PKGVER}.jar
+        wget https://oss.treode.com/jars/${PKGVER}/server-${PKGVER}.jar
     else
         echo COPY $JARFILE to `pwd`
         cp $JARFILE .
@@ -53,9 +55,9 @@ create_debian_package () {
 
     # If successful, copy .deb to $SCRIPT_DIR/o
     if [ -e ${STAGEDIR}/../*.deb ]; then
-        mv ${STAGEDIR}/../*.deb ${TREODE_STAGEDIR}
-        echo "Removing stagedir ${STAGEDIR0}"
-        rm -rf ${STAGEDIR0}
+        mv ${STAGEDIR}/../*.deb ${OUTDIR}
+        echo "Removing stagedir ${TMPDIR}"
+        rm -rf ${TMPDIR}
     else
         echo "THERE WAS AN ERROR CREATING .DEB PACKAGE"
         echo "STAGE DIR ${STAGEDIR}"
@@ -64,15 +66,15 @@ create_debian_package () {
 }
 
 print_usage() {
-    cat << EOF 
+    cat << EOF
 Usage: $0 [-t <packagetype>][-V <packageversion>][-o <stagedir>][-j <jarfile to package>]
 
 Examples:
-Package finagle example in debian pkg format after building finagle-server-0.3.0-SNAPSHOT.jar
-$0 -t debian -V 0.3.0-SNAPSHOT -j stagedir/finagle-server-0.3.0-SNAPSHOT.jar -o stagedir
+Package 0.3.0 server in debian format after building the assembly jar.
+$0 -t debian -V 0.3.0 -j stagedir/server-0.3.0-SNAPSHOT.jar -o stagedir
 
 Package 0.2.0 release finagle example in debian pkg format from Ivy OSS.
-$0 -t debian -V 0.2.0 
+$0 -t debian -V 0.2.0
 
 EOF
 }
@@ -80,7 +82,7 @@ EOF
 PKGTYPE=
 PKGVER=
 JARFILE=
-TREODE_STAGEDIR=
+OUTDIR=
 WGETFILE=0
 while getopts "t:V:j:o:" OPTION
 do
@@ -95,7 +97,7 @@ do
             JARFILE=`readlink -f $OPTARG`
             ;;
         o)
-            TREODE_STAGEDIR=`readlink -f $OPTARG`
+            OUTDIR=`readlink -f $OPTARG`
             ;;
         *)
             print_usage
@@ -111,25 +113,24 @@ if [[ -z $PKGTYPE ]] || [[ -z $PKGVER ]]; then
     exit 1
 fi
 
+if [[ -z $OUTDIR ]] ; then
+    echo "Please provide output directory using -o option"
+    exit 1
+fi
+
 if [[ -z $JARFILE ]] ; then
     WGETFILE=1
-    JARFILE="https://oss.treode.com/examples/finagle/${PKGVER}/finagle-server-${PKGVER}.jar"
+    JARFILE="https://oss.treode.com/jars/${PKGVER}/server-${PKGVER}.jar"
     echo "Using $JARFILE"
-    TREODE_STAGEDIR=$SCRIPT_DIR
-else
-    if [[ -z $TREODE_STAGEDIR ]] ; then
-        echo "Please provide build stagedir using -o option"
-    fi
 fi
 
 case $PKGTYPE in
     debian)
         echo "PACKAGING TREODE FOR Debian..."
-        create_debian_package $PKGVER $WGETFILE $JARFILE $TREODE_STAGEDIR
+        create_debian_package $PKGVER $WGETFILE $JARFILE $OUTDIR
         ;;
     ?)
         echo "PACKAGING TREODE FOR $PKGTYPE is not implemented"
         exit 1
         ;;
 esac
-

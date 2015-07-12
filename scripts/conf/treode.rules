@@ -3,8 +3,7 @@ install:
 	mkdir -p $(DESTDIR)/opt/treode/logs
 	mkdir -p $(DESTDIR)/opt/treode/www
 	mkdir -p $(DESTDIR)/opt/treode/db
-	install ./finagle-server-$(PKGVER).jar $(DESTDIR)/opt/treode/lib
+	install ./server-$(PKGVER).jar $(DESTDIR)/opt/treode/lib
 
 override_dh_gencontrol:
 	dh_gencontrol -- -DArchitecture=all -Vtreode:Depends=openjdk-7-jre-headless
-
