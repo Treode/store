@@ -517,7 +517,7 @@ class ResourceHandlerSpec extends FreeSpec {
 
     "and gives bad clock values" - {
 
-      "GET /table1 with Read-TxClock:abc should yield Bad Request" in
+      "GET /table1/abc with Read-TxClock:abc should yield Bad Request" in
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -526,10 +526,10 @@ class ResourceHandlerSpec extends FreeSpec {
             .statusCode (400)
             .body (equalTo ("Bad time for Read-TxClock: abc"))
           .when
-            .get ("/table1")
+            .get ("/table1/abc")
         }
 
-      "GET /table1 with Condition-TxClock:abc should yield Bad Request" in
+      "GET /table1/abc with Condition-TxClock:abc should yield Bad Request" in
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -538,7 +538,7 @@ class ResourceHandlerSpec extends FreeSpec {
             .statusCode (400)
             .body (equalTo ("Bad time for Condition-TxClock: abc"))
           .when
-            .get ("/table1")
+            .get ("/table1/abc")
         }
 
       "PUT /table1/abc with If-Unmodified-Since:abc should yield Bad Request" in

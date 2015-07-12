@@ -42,59 +42,50 @@ package object server {
 
   object respond {
 
+    //
+    // Responses with no TxClock headers.
+    //
+
     def apply (req: Request, status: HttpResponseStatus): Response = {
       val rsp = req.response
       rsp.status = status
-      rsp.serverTxClock = TxClock.now
       rsp
     }
 
     def apply (req: Request, errors: Seq [SchemaParser.Message]): Response = {
       val rsp = req.response
+      rsp.status = Status.BadRequest
       for (e <- errors)
         rsp.write (e.toString)
-      rsp.status = Status.BadRequest
-      rsp.serverTxClock = TxClock.now
       rsp
     }
 
-    def conflict (req: Request): Response = {
-      val rsp = req.response
-      rsp.status = Status.Conflict
-      rsp.serverTxClock = TxClock.now
-      rsp
-    }
-
-    def ok (req: Request, time: TxClock): Response = {
+    def plain (req: Request, value: String): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.valueTxClock = time
+      rsp.plain = value
+      rsp
+    }
+
+    //
+    // Responses with TxClock headers.
+    //
+
+    def ok (req: Request, vt: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.valueTxClock = vt
       rsp.serverTxClock = TxClock.now
       rsp
     }
 
-    def stale (req: Request, time: TxClock): Response = {
-      val rsp = req.response
-      rsp.status = Status.PreconditionFailed
-      rsp.valueTxClock = time
-      rsp.serverTxClock = TxClock.now
-      rsp
-    }
-
-    def json (req: Request, value: Any): Response  = {
+    def json (req: Request, rt: TxClock, vt: TxClock, value: Any): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok
-      rsp.json = value
-      rsp
-    }
-
-    def json (req: Request, time: TxClock, value: Any): Response  = {
-      val rsp = req.response
-      rsp.status = Status.Ok
-      rsp.date = req.readTxClock
-      rsp.lastModified = time
-      rsp.readTxClock = req.readTxClock
-      rsp.valueTxClock = time
+      rsp.date = rt
+      rsp.lastModified = vt
+      rsp.readTxClock = rt
+      rsp.valueTxClock = vt
       rsp.serverTxClock = TxClock.now
       rsp.vary = "Read-TxClock"
       rsp.json = value
@@ -109,11 +100,42 @@ package object server {
       rsp
     }
 
-    def plain (req: Request, value: String): Response  = {
+    def unmodified (req: Request, rt: TxClock): Response = {
       val rsp = req.response
-      rsp.status = Status.Ok
+      rsp.status = Status.NotModified
+      rsp.readTxClock = rt
       rsp.serverTxClock = TxClock.now
-      rsp.plain = value
+      rsp
+    }
+
+    def stale (req: Request, vt: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.PreconditionFailed
+      rsp.valueTxClock = vt
+      rsp.serverTxClock = TxClock.now
+      rsp
+    }
+
+    def conflict (req: Request): Response = {
+      val rsp = req.response
+      rsp.status = Status.Conflict
+      rsp.serverTxClock = TxClock.now
+      rsp
+    }
+
+    def notAllowed (req: Request, rt: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.MethodNotAllowed
+      rsp.readTxClock = rt
+      rsp.serverTxClock = TxClock.now
+      rsp
+    }
+
+    def notFound (req: Request, rt: TxClock): Response = {
+      val rsp = req.response
+      rsp.status = Status.NotFound
+      rsp.readTxClock = rt
+      rsp.serverTxClock = TxClock.now
       rsp
     }}
 

@@ -33,23 +33,20 @@ extends Service [Request, Response] {
 
   import librarian.schema
 
-  def read (req: Request, tab: TableId, key: String): Async [Response] = {
-    val rt = req.readTxClock
+  def read (req: Request, rt: TxClock, tab: TableId, key: String): Async [Response] = {
     val ct = req.conditionTxClock (TxClock.MinValue)
     store.read (rt, ReadOp (tab, Bytes (key))) .map { vs =>
       val v = vs.head
       v.value match {
         case Some (value) if ct < v.time =>
-          respond.json (req, v.time, value)
+          respond.json (req, rt, v.time, value)
         case Some (_) =>
-          respond (req, Status.NotModified)
+          respond.unmodified (req, rt)
         case None =>
-          respond (req, Status.NotFound)
+          respond.notFound (req, rt)
       }}}
 
   def scan (req: Request, tab: TableId): Async [Response] = {
-    val rt = req.readTxClock
-    val ct = req.conditionTxClock (TxClock.MinValue)
     val window = req.window
     val slice = req.slice
     var iter = store
@@ -116,6 +113,7 @@ extends Service [Request, Response] {
     }}
 
   def apply (req: Request): Future [Response] = {
+    val rt = req.readTxClock
     route (req.path) match {
 
       case Row (name, key) =>
@@ -125,16 +123,16 @@ extends Service [Request, Response] {
               case Method.Post =>
                 create (req, id, key) .toTwitterFuture
               case Method.Get =>
-                read (req, id, key) .toTwitterFuture
+                read (req, rt, id, key) .toTwitterFuture
               case Method.Put =>
                 update (req, id, key) .toTwitterFuture
               case Method.Delete =>
                 delete (req, id, key) .toTwitterFuture
               case _ =>
-                Future.value (respond (req, Status.MethodNotAllowed))
+                Future.value (respond.notAllowed (req, rt))
             }
           case None =>
-            Future.value (respond (req, Status.NotFound))
+            Future.value (respond.notFound (req, rt))
         }
 
       case Table (name) =>
@@ -144,10 +142,10 @@ extends Service [Request, Response] {
               case Method.Get =>
                 scan (req, id) .toTwitterFuture
               case _ =>
-                Future.value (respond (req, Status.MethodNotAllowed))
+                Future.value (respond.notAllowed (req, rt))
             }
           case None =>
-            Future.value (respond (req, Status.NotFound))
+            Future.value (respond.notFound (req, rt))
         }
 
       case Batch =>
@@ -155,11 +153,11 @@ extends Service [Request, Response] {
           case Method.Post =>
             batch (req) .toTwitterFuture
           case _ =>
-            Future.value (respond (req, Status.MethodNotAllowed))
+            Future.value (respond.notAllowed (req, rt))
         }
 
       case Unmatched =>
-        Future.value (respond (req, Status.NotFound))
+        Future.value (respond.notFound (req, rt))
     }}}
 
 object ResourceHandler {
