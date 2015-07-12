@@ -41,7 +41,7 @@ object TreodeBuild extends Build {
     organization := "com.treode",
     version := versionString,
     scalaVersion := "2.11.7",
-    crossScalaVersions := Seq ("2.10.5", "2.11.7"),
+    crossScalaVersions := Seq ("2.11.7"),
 
     // Use a local Scala installation if SCALA_HOME is set. Otherwise, download the Scala tools
     // per scalaVersion.
@@ -55,12 +55,8 @@ object TreodeBuild extends Build {
     unmanagedSourceDirectories in Compile <<=
       (baseDirectory ((base: File) => Seq (base / "src"))),
 
-    scalacOptions ++= Seq ("-deprecation", "-feature", "-optimize", "-unchecked"),
-
-    scalacOptions <++= scalaVersion map {
-      case "2.10.5" => Seq.empty
-      case "2.11.7" => Seq ("-Ywarn-unused-import")
-    },
+    scalacOptions ++=
+      Seq ("-deprecation", "-feature", "-optimize", "-unchecked", "-Ywarn-unused-import"),
 
     libraryDependencies <+= scalaVersion ("org.scala-lang" % "scala-reflect" % _),
 
