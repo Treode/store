@@ -41,7 +41,7 @@ clean
 # Check that every version number is in sync across all build files.
 version=`scripts/version-number \
   project/TreodeBuild.scala \
-  examples/movies/project/MoviesBuild.scala`
+  demos/movies/project/MoviesBuild.scala`
 expect-status 0
 
 # If not a snapshot, check that this release is new.
@@ -62,17 +62,13 @@ log "Building $version"
 # Compile.
 #
 
-# Compile, and also publish locally for the examples below.
+# Compile, and also publish locally for the demos below.
 echo-do ${SBT} +test:compile +publish-local
 
-# Skeleton examples.
-(cd examples/finagle; echo-do ${SBT} test:compile); expect-status 0
-(cd examples/unfiltered; echo-do ${SBT} test:compile); expect-status 0
-
-# Movies example; it has multiple components.
-(cd examples/movies; echo-do ${SBT} test:compile); expect-status 0
-(cd examples/movies/webui; echo-do ${NPM} install --save); expect-status 0
-(cd examples/movies/webui; echo-do ${GRUNT} dist); expect-status 0
+# Movies demo; it has multiple components.
+(cd demos/movies; echo-do ${SBT} test:compile); expect-status 0
+(cd demos/movies/webui; echo-do ${NPM} install --save); expect-status 0
+(cd demos/movies/webui; echo-do ${GRUNT} dist); expect-status 0
 
 # The documentation.
 echo-do ${SBT} doc/unidoc
@@ -83,9 +79,7 @@ echo-do ${SBT} doc/unidoc
 
 echo-do ${SBT} test intensive:test
 
-(cd examples/finagle; echo-do ${SBT} test); expect-status 0
-(cd examples/unfiltered; echo-do ${SBT} test); expect-status 0
-(cd examples/movies; echo-do ${SBT} test); expect-status 0
+(cd demos/movies; echo-do ${SBT} test); expect-status 0
 
 #
 # Stage release.
@@ -100,25 +94,13 @@ echo-do ${SBT} server/assembly
 echo-do mkdir -p ${STAGE_JARS}
 echo-do cp server/target/scala-2.11/server.jar  ${STAGE_JARS}/server-${version}.jar
 
-# Finagle example.
-STAGE_FINAGLE=stage/examples/finagle/${version}
-(cd examples/finagle; echo-do ${SBT} assembly); expect-status 0
-echo-do mkdir -p ${STAGE_FINAGLE}
-echo-do cp examples/finagle/target/scala-2.11/finagle-server.jar ${STAGE_FINAGLE}/finagle-server-${version}.jar
-
-# Unfiltered example.
-STAGE_UNFILTERED=stage/examples/unfiltered/${version}
-(cd examples/unfiltered; echo-do ${SBT} assembly); expect-status 0
-echo-do mkdir -p ${STAGE_UNFILTERED}
-echo-do cp examples/unfiltered/target/scala-2.11/unfiltered-server.jar ${STAGE_UNFILTERED}/unfiltered-server-${version}.jar
-
-# Movies example.
-STAGE_MOVIES=stage/examples/movies/${version}
-(cd examples/movies; echo-do ${SBT} assembly); expect-status 0
+# Movies demo.
+STAGE_MOVIES=stage/demos/movies/${version}
+(cd demos/movies; echo-do ${SBT} assembly); expect-status 0
 echo-do mkdir -p ${STAGE_MOVIES}
-echo-do tar cz -f ${STAGE_MOVIES}/movies-ui-${version}.tgz -C examples/movies/webui/dist/ .
-echo-do cp examples/movies/server/target/scala-2.11/movies-server.jar ${STAGE_MOVIES}/movies-server-${version}.jar
-echo-do cp examples/movies/spark/target/scala-2.11/movies-spark.jar ${STAGE_MOVIES}/movies-spark-${version}.jar
+echo-do tar cz -f ${STAGE_MOVIES}/movies-ui-${version}.tgz -C demos/movies/webui/dist/ .
+echo-do cp demos/movies/server/target/scala-2.11/movies-server.jar ${STAGE_MOVIES}/movies-server-${version}.jar
+echo-do cp demos/movies/spark/target/scala-2.11/movies-spark.jar ${STAGE_MOVIES}/movies-spark-${version}.jar
 
 # Documentation.
 echo-do mkdir -p stage/docs/scala/store
@@ -134,7 +116,7 @@ echo-do mkdir -p ${STAGE_DEB}
 echo-do ${DIR}/scripts/package.sh -t debian -V ${version} -j ${STAGE_JARS}/server-${version}.jar -o ${STAGE_DEB}
 
 # Docker image.
-echo-do docker build --rm -t treode/examples-movies:${version} examples/movies
+echo-do docker build --rm -t treode/demos-movies:${version} demos/movies
 
 #
 # Done

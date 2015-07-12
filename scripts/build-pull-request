@@ -37,17 +37,13 @@ clean
 # Compile.
 #
 
-# Compile, and also publish locally for the examples below.
+# Compile, and also publish locally for the demos below.
 echo-do ${SBT} +test:compile +publish-local
 
-# Skeleton examples.
-(cd examples/finagle; echo-do ${SBT} test:compile); expect-status 0
-(cd examples/unfiltered; echo-do ${SBT} test:compile); expect-status 0
-
-# Movies example; it has multiple components.
-(cd examples/movies; echo-do ${SBT} test:compile); expect-status 0
-(cd examples/movies/webui; echo-do ${NPM} install --save); expect-status 0
-(cd examples/movies/webui; echo-do ${GRUNT} dist); expect-status 0
+# Movies demo; it has multiple components.
+(cd demos/movies; echo-do ${SBT} test:compile); expect-status 0
+(cd demos/movies/webui; echo-do ${NPM} install --save); expect-status 0
+(cd demos/movies/webui; echo-do ${GRUNT} dist); expect-status 0
 
 #
 # Test
@@ -55,9 +51,7 @@ echo-do ${SBT} +test:compile +publish-local
 
 echo-do ${SBT} test intensive:test
 
-(cd examples/finagle; echo-do ${SBT} test); expect-status 0
-(cd examples/unfiltered; echo-do ${SBT} test); expect-status 0
-(cd examples/movies; echo-do ${SBT} test); expect-status 0
+(cd demos/movies; echo-do ${SBT} test); expect-status 0
 
 #
 # Done.
