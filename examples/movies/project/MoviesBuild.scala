@@ -28,7 +28,7 @@ object MoviesBuild extends Build {
 
       version := versionString,
 
-      scalaVersion := "2.10.5",
+      scalaVersion := "2.11.7",
 
       unmanagedSourceDirectories in Compile <<=
         (baseDirectory ((base: File) => Seq (base / "src"))),
@@ -89,11 +89,11 @@ object MoviesBuild extends Build {
       name := "movies-spark",
 
       libraryDependencies ++= Seq (
-        "org.apache.spark" %% "spark-core" % "1.2.0" % "provided",
-        "org.apache.spark" %% "spark-streaming" % "1.2.0" % "provided",
-        // Use Jackson 2.3.1 because spark-core does.
-        "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.3.1",
-        "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.3.1",
+        "org.apache.spark" %% "spark-core" % "1.4.0" % "provided",
+        "org.apache.spark" %% "spark-streaming" % "1.4.0" % "provided",
+        // Use Jackson 2.4.4 because spark-core does.
+        "com.fasterxml.jackson.datatype" % "jackson-datatype-joda" % "2.4.4",
+        "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.4.4",
         "org.scalatest" %% "scalatest" % "2.2.5" % "test"),
 
       jarName in assembly := "movies-spark.jar",

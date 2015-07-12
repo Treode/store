@@ -17,7 +17,7 @@ RUN mkdir -p \
   /var/lib/treode/www \
   /var/lib/spark
 
-COPY server/target/scala-2.10/movies-server.jar /var/lib/treode/lib/movies-server.jar
+COPY server/target/scala-2.11/movies-server.jar /var/lib/treode/lib/movies-server.jar
 COPY webui/dist /var/lib/treode/www
 
 COPY config/nginx /etc/nginx/sites-available/movies

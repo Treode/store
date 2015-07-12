@@ -117,8 +117,8 @@ STAGE_MOVIES=stage/examples/movies/${version}
 (cd examples/movies; echo-do ${SBT} assembly); expect-status 0
 echo-do mkdir -p ${STAGE_MOVIES}
 echo-do tar cz -f ${STAGE_MOVIES}/movies-ui-${version}.tgz -C examples/movies/webui/dist/ .
-echo-do cp examples/movies/server/target/scala-2.10/movies-server.jar ${STAGE_MOVIES}/movies-server-${version}.jar
-echo-do cp examples/movies/spark/target/scala-2.10/movies-spark.jar ${STAGE_MOVIES}/movies-spark-${version}.jar
+echo-do cp examples/movies/server/target/scala-2.11/movies-server.jar ${STAGE_MOVIES}/movies-server-${version}.jar
+echo-do cp examples/movies/spark/target/scala-2.11/movies-spark.jar ${STAGE_MOVIES}/movies-spark-${version}.jar
 
 # Documentation.
 echo-do mkdir -p stage/docs/scala/store
