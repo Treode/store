@@ -20,6 +20,7 @@ import scala.util.Random
 
 import com.treode.async.{Async, BatchIterator, Scheduler}
 import com.treode.async.io.stubs.StubFile
+import com.treode.async.stubs.ChildScheduler
 import com.treode.cluster.{Cluster, HostId}
 import com.treode.cluster.stubs.{StubCluster, StubNetwork}
 import com.treode.disk.Disk

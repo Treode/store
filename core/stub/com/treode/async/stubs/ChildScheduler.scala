@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.treode.store
+package com.treode.async.stubs
 
 import com.treode.async.Scheduler
 
 class ChildScheduler (parent: Scheduler) extends Scheduler {
 
-  private var running = true
+  @volatile private var running = true
 
   private def check (task: Runnable): Runnable =
     new Runnable {

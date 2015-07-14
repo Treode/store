@@ -19,10 +19,11 @@ package com.treode.store.paxos
 import scala.util.Random
 
 import com.treode.async.Async
+import com.treode.async.stubs.ChildScheduler
 import com.treode.cluster.HostId
 import com.treode.cluster.stubs.{StubCluster, StubNetwork}
 import com.treode.disk.{DiskLaunch, DiskRecovery}
-import com.treode.store.{ChildScheduler, Library, StoreConfig}
+import com.treode.store.{Library, StoreConfig}
 import com.treode.store.catalog.Catalogs
 
 private class StubPaxosMedic (
