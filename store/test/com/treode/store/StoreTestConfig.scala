@@ -87,8 +87,6 @@ object StoreTestConfig {
         targetPageBytes = targetPageBytes)
 
   def apply (
-      checkpointProbability: Double = 0.1,
-      compactionProbability: Double = 0.1,
       closedLifetime: Int = 2 seconds,
       deliberatingTimeout: Int = 2 seconds,
       exodusThreshold: Double = 0.2D,

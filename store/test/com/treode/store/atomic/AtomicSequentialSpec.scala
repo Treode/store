@@ -26,39 +26,6 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
 
   "The atomic implementation should" - {
 
-    "recover from a crash when" - {
-
-      for { (name, checkpoint) <- Seq (
-          "not checkpointed at all"   -> 0.0,
-          "checkpointed occasionally" -> 0.01,
-          "checkpointed frequently"   -> 0.1)
-      } s"$name and" - {
-
-        for { (name, compaction) <- Seq (
-            "not compacted at all"   -> 0.0,
-            "compacted occasionally" -> 0.01,
-            "compacted frequently"   -> 0.1)
-            if checkpoint >= compaction
-      } s"$name with" - {
-
-        implicit val config = StoreTestConfig (
-            checkpointProbability = checkpoint,
-            compactionProbability = compaction)
-
-        for { (name, (ntables, nkeys)) <- Seq (
-            "few tables and keys"   -> (3, 10),
-            "many tables and keys"  -> (30, 100))
-        } s"$name with" - {
-
-          for { (name, (nbatches, nwrites, nops)) <- Seq (
-              "batches with few ops" -> (3, 3, 3),
-              "batches with many ops" -> (3, 3, 20))
-          } name - {
-
-            forAgentWithDeputyBouncing { implicit random =>
-              issueAtomicWrites (nbatches, ntables, nkeys, nwrites, nops)
-            }}}}}}
-
     "issue atomic writes with" - {
 
       implicit val config = StoreTestConfig()
@@ -67,6 +34,7 @@ class AtomicSequentialSpec extends FreeSpec with AtomicBehaviors {
         issueAtomicWrites (3, 3, 100, 3, 3)
       }
 
+      forAgentWithDeputyBouncing (init)
       forVariousClusters (init)
     }
 
