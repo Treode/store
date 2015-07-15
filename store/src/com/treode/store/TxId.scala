@@ -47,13 +47,14 @@ object TxId extends Ordering [TxId] {
 
   private val _random = {
     import StorePicklers._
-    tuple (hostId, fixedLong)
+    tuple (fixedLong, fixedLong, fixedInt)
   }
 
   val MinValue = TxId (Bytes.MinValue)
 
-  def random (host: HostId): TxId =
-    TxId (Bytes (_random, (host, Random.nextLong)))
+  /** Random 160 bit value. */
+  def random: TxId =
+    TxId (Bytes (_random, (Random.nextLong, Random.nextLong, Random.nextInt)))
 
   /** Parses hexadecimal. */
   def parse (s: String): Option [TxId] =

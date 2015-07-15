@@ -49,7 +49,7 @@ class Serve extends App with StoreKit with SchemaAdmin with AdminableServer {
     controller.announce (Some (shareHttpAddr), None)
 
     val resource =
-      new ResourceHandler (controller.hostId, controller.store, librarian)
+      new ResourceHandler (controller.store, librarian)
 
     val server = Http.serve (
       httpAddr,

@@ -28,7 +28,7 @@ import com.twitter.util.Future
 
 import ResourceHandler.route
 
-class ResourceHandler (host: HostId, store: Store, librarian: Librarian)
+class ResourceHandler (store: Store, librarian: Librarian)
 extends Service [Request, Response] {
 
   import librarian.schema
@@ -57,7 +57,7 @@ extends Service [Request, Response] {
   }
 
   def create (req: Request, tab: TableId, key: String): Async [Response] = {
-    val tx = req.transactionId (host)
+    val tx = req.transactionId
     val ct = req.conditionTxClock (TxClock.now)
     val value = req.readJson [JsonNode]
     store.write (tx, ct, WriteOp.Create (tab, Bytes (key), value.toBytes))
@@ -72,7 +72,7 @@ extends Service [Request, Response] {
     }}
 
   def update (req: Request, tab: TableId, key: String): Async [Response] = {
-    val tx = req.transactionId (host)
+    val tx = req.transactionId
     val ct = req.conditionTxClock (TxClock.now)
     val value = req.readJson [JsonNode]
     store.write (tx, ct, WriteOp.Update (tab, Bytes (key), value.toBytes))
@@ -85,7 +85,7 @@ extends Service [Request, Response] {
     }}
 
   def delete (req: Request, tab: TableId, key: String): Async [Response] = {
-    val tx = req.transactionId (host)
+    val tx = req.transactionId
     val ct = req.conditionTxClock (TxClock.now)
     store.write (tx, ct, WriteOp.Delete (tab, Bytes (key)))
     .map [Response] { vt =>
@@ -97,7 +97,7 @@ extends Service [Request, Response] {
     }}
 
   def batch (req: Request): Async [Response] = {
-    val tx = req.transactionId (host)
+    val tx = req.transactionId
     val ct = req.conditionTxClock (TxClock.now)
     val json = textJson.readTree (req.getContentString)
     val ops = schema.parseBatchWrite (json)
@@ -113,7 +113,7 @@ extends Service [Request, Response] {
     }}
 
   def status (req: Request): Async [Response] = {
-    val tx = req.transactionId (host)
+    val tx = req.transactionId
     store.status (tx)
     .map [Response] {
       case Aborted =>

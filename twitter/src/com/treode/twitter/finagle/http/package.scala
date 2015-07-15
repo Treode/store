@@ -211,14 +211,14 @@ package object http {
         case _ => throw new BadRequestException ("Pick must be latest, between or through.")
       }}
 
-    def transactionId (host: HostId): TxId =
+    def transactionId: TxId =
       request.headerMap.get ("Transaction-ID") match {
         case Some (tx) =>
           TxId
             .parse (tx)
             .getOrElse (throw new BadRequestException (s"Bad Transaction-ID: $tx"))
         case None =>
-          TxId.random (host)
+          TxId.random
       }
 
     /** Read the content as JSON, and use the implicit mapper to convert it. */

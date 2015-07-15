@@ -52,7 +52,7 @@ object MovieResource {
       }}
 
     def post (request: Request): Async [Response] = {
-      val xid = request.transactionId (host)
+      val xid = request.transactionId
       val rt = request.readTxClock
       val ct = request.conditionTxClock (rt)
       val movie = request.readJson [DM.Movie]
@@ -68,7 +68,7 @@ object MovieResource {
       }}
 
     def put (request: Request, id: String): Async [Response] = {
-      val xid = request.transactionId (host)
+      val xid = request.transactionId
       val rt = request.readTxClock
       val ct = request.conditionTxClock (rt)
       val movie = request.readJson [DM.Movie]

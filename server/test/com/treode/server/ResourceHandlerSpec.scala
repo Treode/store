@@ -56,7 +56,7 @@ class ResourceHandlerSpec extends FreeSpec {
       NettyToFinagle andThen
       BadRequestFilter andThen
       JsonExceptionFilter andThen
-      new ResourceHandler (0, store, librarian))
+      new ResourceHandler (store, librarian))
     try {
       test (port, stub)
     } finally {
