@@ -18,12 +18,8 @@ package com.treode.store
 
 import com.treode.pickle.Pickler
 
-/** Inclusive and exclusive bounds.  Case classes are nested in the [[Bound$ companion object]]. */
-sealed abstract class Bound [A] {
-
-  def bound: A
-
-  def inclusive: Boolean
+/** Minimum and maximum bounds.  Case classes are nested in the [[Bound$ companion object]]. */
+sealed abstract class InfiniteBound [A] {
 
   /** Less than accounting for inclusive/exclusive. */
   def <* (v: A) (implicit ordering: Ordering [A]): Boolean
@@ -31,10 +27,44 @@ sealed abstract class Bound [A] {
   /** Greater than accounting for inclusive/exclusive. */
   def >* (v: A) (implicit ordering: Ordering [A]): Boolean
 
+  def map [B] (f: A => B): InfiniteBound [B]
+}
+
+/** Inclusive and exclusive bounds.  Case classes are nested in the [[Bound$ companion object]]. */
+sealed abstract class Bound [A] extends InfiniteBound [A] {
+
+  def bound: A
+
+  def inclusive: Boolean
+
   def map [B] (f: A => B): Bound [B]
 }
 
 object Bound {
+
+  case class Minimum [A] () extends InfiniteBound [A] {
+
+    def <* (other: A) (implicit ordering: Ordering [A]) =
+      true
+
+    def >*  (other: A) (implicit ordering: Ordering [A]) =
+      false
+
+    def map [B] (f: A => B): InfiniteBound [B] =
+      Minimum()
+  }
+
+  case class Maximum [A] () extends InfiniteBound [A] {
+
+    def <* (other: A) (implicit ordering: Ordering [A]) =
+      false
+
+    def >*  (other: A) (implicit ordering: Ordering [A]) =
+      true
+
+    def map [B] (f: A => B): InfiniteBound [B] =
+      Maximum()
+  }
 
   case class Inclusive [A] (bound: A) extends Bound [A] {
 

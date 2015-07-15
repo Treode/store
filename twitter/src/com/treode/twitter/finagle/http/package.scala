@@ -22,11 +22,12 @@ import scala.util.{Failure, Success}
 import com.fasterxml.jackson.databind.{ObjectMapper, ObjectWriter}
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
-import com.treode.async.BatchIterator
+import com.treode.async.{Async, BatchIterator}, Async.async
+import com.treode.async.implicits._
 import com.treode.async.misc.{RichOption, parseInt}
 import com.treode.cluster.HostId
 import com.treode.jackson.{DefaultTreodeModule, JsonReader}
-import com.treode.store.{Slice, TxClock, TxId, Window}
+import com.treode.store.{Bound, Bytes, Cell, InfiniteBound, Key, Slice, TxClock, TxId, Window}
 import com.treode.twitter.util.RichTwitterFuture
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
 import com.twitter.finagle.netty3.ChannelBufferBuf
@@ -70,15 +71,12 @@ package object http {
       iter.batch { vs =>
         val buffer = ChannelBuffers.dynamicBuffer()
         val stream = new ChannelBufferOutputStream (buffer)
-        for (v <- vs) {
-          if (first) {
-            first = false
-            stream.writeByte ('[')
-          } else {
-            stream.writeByte (',')
-          }
-          writer.writeValue (stream, v)
+        if (first) {
+          first = false
+          stream.writeByte ('[')
         }
+        for (v <- vs)
+          writer.writeValue (stream, v)
         stream.flush()
         rsp.writer.write (ChannelBufferBuf.Owned (buffer)) .toAsync
       } .flatMap { _ =>
@@ -90,6 +88,78 @@ package object http {
         stream.flush()
         rsp.writer.write (ChannelBufferBuf.Owned (buffer)) .toAsync
       } .run {
+        case Success (_) =>
+          rsp.close()
+        case Failure (t) =>
+          rsp.close()
+          throw t
+      }}
+
+    def json_= [A] (
+      batch: (BatchIterator [A], InfiniteBound [A])
+    ) (
+      implicit ordering: Ordering [A],
+      mapper: ObjectMapper
+    ) {
+      val (biter, end) = batch
+      rsp.mediaType = MediaType.Json
+      rsp.setChunked (true)
+      val writer = mapper.writer [ObjectWriter] ()
+
+      // open an async to access a callback for closing iteration early
+      var first = true
+      var last = false
+      async [Unit] { close =>
+
+        biter.batch { vs =>
+
+          // open an async to access a callback for continuing the next batch
+          async { next =>
+
+            // Write elements while <* end
+            val buffer = ChannelBuffers.dynamicBuffer()
+            val stream = new ChannelBufferOutputStream (buffer)
+            val viter = vs.iterator
+            while (viter.hasNext && !last) {
+              val v = viter.next
+              if (end <* v) {
+                last = true
+              } else if (first) {
+                first = false
+                stream.writeByte ('[')
+                writer.writeValue (stream, v)
+              } else {
+                stream.writeByte (',')
+                writer.writeValue (stream, v)
+              }
+            }
+
+            // Write the current elements, then stop (close) or continue (next) iterating.
+            stream.flush()
+            val cb = if (last) close else next
+            rsp.writer.write (ChannelBufferBuf.Owned (buffer)) .toAsync.run (cb)
+          }
+
+        } .run {
+          // If we get here, every element of every batch was <* end.
+          case Success (_) =>
+            close.pass (())
+          case Failure (t) =>
+            close.fail (t)
+        }
+      } .flatMap { _ =>
+
+        val buffer = ChannelBuffers.dynamicBuffer()
+        val stream = new ChannelBufferOutputStream (buffer)
+        if (first)
+          stream.writeByte ('[')
+        stream.writeByte (']')
+        stream.flush()
+
+        // Write the closing square bracket, then wait for the write to finish.
+        rsp.writer.write (ChannelBufferBuf.Owned (buffer)) .toAsync
+      } .run {
+        // When we get here, all the elements have been written.
         case Success (_) =>
           rsp.close()
         case Failure (t) =>
@@ -176,6 +246,27 @@ package object http {
 
     def readTxClock: TxClock =
       optTxClockHeader ("Read-TxClock") getOrElse (TxClock.now)
+
+    def start: Bound [Key] = {
+      val start = request.params.get ("start") match {
+        case Some (start) => Bytes (start)
+        case None => Bytes.MinValue
+      }
+      val time = optTxClockParam ("time") match {
+        case Some (time) => time
+        case None => TxClock.MaxValue
+      }
+      Bound.Inclusive (Key (start, time))
+    }
+
+    def end: InfiniteBound [Cell] =
+      request.params.get ("end") match {
+        case Some (end) => Bound.Inclusive (Cell (Bytes (end), TxClock.MinValue, None))
+        case None => Bound.Maximum [Cell] ()
+      }
+
+    def limit: Option [Int] =
+      optIntParam ("limit")
 
     /** Get slice from `slice` and `nslices` query parameters. If the query contains no slice
       * parameters, the default will be `Slice.all`.

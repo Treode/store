@@ -16,6 +16,7 @@
 
 package com.treode.server
 
+import java.net.InetSocketAddress
 import scala.util.Random
 import scala.collection.mutable.HashMap
 
@@ -34,6 +35,8 @@ import org.scalatest.FreeSpec
 import ResourceHandler._
 
 class ResourceHandlerSpec extends FreeSpec {
+
+  val addr = new InetSocketAddress ("testhost", 80)
 
   val v1 = "\"v1\""
   val v2 = "\"v2\""
@@ -56,7 +59,7 @@ class ResourceHandlerSpec extends FreeSpec {
       NettyToFinagle andThen
       BadRequestFilter andThen
       JsonExceptionFilter andThen
-      new ResourceHandler (store, librarian))
+      new ResourceHandler (addr, store, librarian))
     try {
       test (port, stub)
     } finally {
@@ -72,7 +75,7 @@ class ResourceHandlerSpec extends FreeSpec {
   def assertSeq [T] (xs: T*) (actual: Seq [T]): Unit =
     assertResult (xs) (actual)
 
-  implicit class RichResposne (rsp: RestAssuredResponse) {
+  implicit class RichResponse (rsp: RestAssuredResponse) {
 
 	  def valueTxClock: TxClock = {
       val string = rsp.getHeader ("Value-TxClock")
@@ -95,6 +98,9 @@ class ResourceHandlerSpec extends FreeSpec {
   }
 
   implicit class RichResponseSpec (rsp: ResponseSpecification) {
+
+    def link (s: String): ResponseSpecification =
+      rsp.header ("Link", s)
 
     def valueTxClock (time: TxClock): ResponseSpecification =
       rsp.header ("Value-TxClock", time.time.toString)
@@ -457,6 +463,98 @@ class ResourceHandlerSpec extends FreeSpec {
           .get ("/table1")
       }
 
+    "GET /table1?start=b should work" in
+      served { case (port, store) =>
+        val ts1 = addData (store)
+        val rsp = given
+          .port (port)
+          .param ("start", "b")
+        .expect
+          .statusCode (200)
+          .body (matchesJson ("""[
+            {"key": "c", "time":5, "value": "c1"}
+          ]"""))
+        .when
+          .get ("/table1")
+      }
+
+    "GET /table1?start=c&time=5 should work" in
+      served { case (port, store) =>
+        val ts1 = addData (store)
+        val rsp = given
+          .port (port)
+          .param ("start", "c")
+          .param ("time", "5")
+        .expect
+          .statusCode (200)
+          .body (matchesJson ("""[
+            {"key": "c", "time":5, "value": "c1"}
+          ]"""))
+        .when
+          .get ("/table1")
+      }
+
+    "GET /table1?end=b should work" in
+      served { case (port, store) =>
+        val ts1 = addData (store)
+        val rsp = given
+          .port (port)
+          .param ("end", "b")
+        .expect
+          .statusCode (200)
+          .body (matchesJson ("""[
+            {"key": "a", "time": 2, "value": "a2"}
+          ]"""))
+        .when
+          .get ("/table1")
+      }
+
+    "GET /table1?end=a should work" in
+      served { case (port, store) =>
+        val ts1 = addData (store)
+        val rsp = given
+          .port (port)
+          .param ("end", "b")
+        .expect
+          .statusCode (200)
+          .body (matchesJson ("""[
+            {"key": "a", "time": 2, "value": "a2"}
+          ]"""))
+        .when
+          .get ("/table1")
+      }
+
+    "GET /table1?limit=1 should work" in
+      served { case (port, store) =>
+        val ts1 = addData (store)
+        val rsp = given
+          .port (port)
+          .param ("limit", "1")
+        .expect
+          .statusCode (200)
+          .link ("<http://testhost/table1?start=c&time=5&limit=1>; rel=\"next\"")
+          .body (matchesJson ("""[
+            {"key": "a", "time": 2, "value": "a2"}
+          ]"""))
+        .when
+          .get ("/table1")
+      }
+
+    "GET /table1?since=4 should work" in
+      served { case (port, store) =>
+        val ts1 = addData (store)
+        val rsp = given
+          .port (port)
+          .param ("since", "4")
+        .expect
+          .statusCode (200)
+          .body (matchesJson ("""[
+            {"key": "c", "time":5, "value": "c1"}
+          ]"""))
+        .when
+          .get ("/table1")
+      }
+
     "GET /table1?until=4 should work" in
       served { case (port, store) =>
         val ts1 = addData (store)
@@ -472,12 +570,11 @@ class ResourceHandlerSpec extends FreeSpec {
           .get ("/table1")
       }
 
-    "GET /table1?until=4&pick=between should work" in
+    "GET /table1?pick=between should work" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .param ("until", "4")
           .param ("pick", "between")
         .expect
           .statusCode (200)
@@ -485,7 +582,8 @@ class ResourceHandlerSpec extends FreeSpec {
             {"key": "a", "time": 2, "value": "a2"},
             {"key": "a", "time": 1, "value": "a1"},
             {"key": "b", "time": 4, "value": null},
-            {"key": "b", "time": 3, "value": "b1"}
+            {"key": "b", "time": 3, "value": "b1"},
+            {"key": "c", "time": 5, "value": "c1"}
           ]"""))
         .when
           .get ("/table1")

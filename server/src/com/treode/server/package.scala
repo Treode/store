@@ -23,12 +23,12 @@ import com.fasterxml.jackson.module.scala.experimental.ScalaObjectMapper
 import com.treode.async.BatchIterator
 import com.treode.async.misc.RichOption
 import com.treode.jackson.DefaultTreodeModule
-import com.treode.store.{Bytes, TableId, TxClock}
+import com.treode.store.{Bound, Bytes, Cell, InfiniteBound, Key, TableId, TxClock}
 import com.treode.twitter.finagle.http.{RichResponse, BadRequestException, RichRequest}
 import com.twitter.finagle.http.{Request, Response, Status}
-import org.jboss.netty.handler.codec.http.HttpResponseStatus
 import com.twitter.finagle.http.filter.{CommonLogFormatter, LoggingFilter}
 import com.twitter.logging.Logger
+import org.jboss.netty.handler.codec.http.HttpResponseStatus
 
 package object server {
 
@@ -97,6 +97,37 @@ package object server {
       rsp.status = Status.Ok
       rsp.serverTxClock = TxClock.now
       rsp.json = iter
+      rsp
+    }
+
+    def json [A] (
+      req: Request,
+      iter: BatchIterator [A],
+      end: InfiniteBound [A]
+    ) (implicit
+      ordering: Ordering [A]
+    ): Response  = {
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.serverTxClock = TxClock.now
+      rsp.json = (iter, end)
+      rsp
+    }
+
+    def json [A] (req: Request, vs: Seq [A]): Response  = {
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.serverTxClock = TxClock.now
+      rsp.json = vs
+      rsp
+    }
+
+    def json [A] (req: Request, link: String, vs: Seq [A]): Response  = {
+      val rsp = req.response
+      rsp.status = Status.Ok
+      rsp.serverTxClock = TxClock.now
+      rsp.headers.add ("Link", link)
+      rsp.json = vs
       rsp
     }
 

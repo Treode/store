@@ -16,6 +16,8 @@
 
 package com.treode.server
 
+import java.net.InetSocketAddress
+
 import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.treode.async.Async, Async.supply
 import com.treode.cluster.HostId
@@ -28,10 +30,16 @@ import com.twitter.util.Future
 
 import ResourceHandler.route
 
-class ResourceHandler (store: Store, librarian: Librarian)
+class ResourceHandler (hostAddr: InetSocketAddress, store: Store, librarian: Librarian)
 extends Service [Request, Response] {
 
   import librarian.schema
+
+  private val hostString =
+    if (hostAddr.getPort == 80)
+      hostAddr.getHostString
+    else
+      s"${hostAddr.getHostString}:${hostAddr.getPort}"
 
   def read (req: Request, rt: TxClock, tab: TableId, key: String): Async [Response] = {
     val ct = req.conditionTxClock (TxClock.MinValue)
@@ -46,14 +54,34 @@ extends Service [Request, Response] {
           respond.notFound (req, rt)
       }}}
 
-  def scan (req: Request, tab: TableId): Async [Response] = {
+  def scan (req: Request, id: TableId, name: String): Async [Response] = {
+    val start = req.start
+    val end = req.end
+    val limit = req.limit
     val window = req.window
     val slice = req.slice
     var iter = store
-        .scan (tab, Bound.firstKey, window, slice)
+        .scan (id, start, window, slice)
     if (window.isInstanceOf [Window.Latest])
         iter = iter.filter (_.value.isDefined)
-    supply (respond.json (req, iter))
+    limit match {
+      case Some (limit) =>
+        var count = limit
+        iter.toSeqWhile { cell =>
+          count -= 1
+          count >= 0 && end >* cell
+        } .map {
+          case (vs, Some (next)) =>
+            val start = next.key.string
+            val time = next.time.time
+            val link = s"""<http://$hostString/$name?start=$start&time=$time&limit=$limit>; rel=\"next\" """
+            respond.json (req, link, vs)
+          case (vs, None) =>
+            respond.json (req, vs)
+        }
+      case None =>
+        supply (respond.json (req, iter, end))
+    }
   }
 
   def create (req: Request, tab: TableId, key: String): Async [Response] = {
@@ -150,7 +178,7 @@ extends Service [Request, Response] {
           case Some (id) =>
             req.method match {
               case Method.Get =>
-                scan (req, id) .toTwitterFuture
+                scan (req, id, name) .toTwitterFuture
               case _ =>
                 Future.value (respond.notAllowed (req, rt))
             }

@@ -16,6 +16,7 @@
 
 package com.treode.server
 
+import java.net.InetSocketAddress
 import scala.collection.mutable.HashMap
 
 import com.treode.twitter.app.StoreKit
@@ -44,12 +45,12 @@ class Serve extends App with StoreKit with SchemaAdmin with AdminableServer {
       if (shareHttpAddrFlag.isDefined)
         parseHosts (shareHttpAddrFlag()) .head
       else
-        toPublic (httpAddr)
+        toPublic (httpAddr) .asInstanceOf [InetSocketAddress]
 
     controller.announce (Some (shareHttpAddr), None)
 
     val resource =
-      new ResourceHandler (controller.store, librarian)
+      new ResourceHandler (shareHttpAddr, controller.store, librarian)
 
     val server = Http.serve (
       httpAddr,

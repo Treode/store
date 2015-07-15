@@ -29,7 +29,7 @@ import com.treode.async.BatchIterator
 import com.treode.async.misc
 import com.treode.cluster.HostId
 import com.treode.jackson.DefaultTreodeModule
-import com.treode.store.{Bytes, TxClock}
+import com.treode.store.{Bound, Bytes, Cell, TxClock}
 import com.treode.store.alt.Froster
 import com.treode.twitter.finagle.http, http.{BadRequestException, RichResponse}
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
