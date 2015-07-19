@@ -48,10 +48,10 @@ extends Service [Request, Response] {
       v.value match {
         case Some (value) if ct < v.time =>
           respond.json (req, rt, v.time, value)
-        case Some (_) =>
-          respond.unmodified (req, rt)
+        case Some (value) =>
+          respond.unmodified (req, rt, v.time)
         case None =>
-          respond.notFound (req, rt)
+          respond.notFound (req, rt, v.time)
       }}}
 
   def scan (req: Request, id: TableId, name: String): Async [Response] = {
@@ -167,10 +167,10 @@ extends Service [Request, Response] {
               case Method.Delete =>
                 delete (req, id, key) .toTwitterFuture
               case _ =>
-                Future.value (respond.notAllowed (req, rt))
+                Future.value (respond.notAllowed (req))
             }
           case None =>
-            Future.value (respond.notFound (req, rt))
+            Future.value (respond.notFound (req, rt, TxClock.MinValue))
         }
 
       case ResourceHandler.Table (name) =>
@@ -180,10 +180,10 @@ extends Service [Request, Response] {
               case Method.Get =>
                 scan (req, id, name) .toTwitterFuture
               case _ =>
-                Future.value (respond.notAllowed (req, rt))
+                Future.value (respond.notAllowed (req))
             }
           case None =>
-            Future.value (respond.notFound (req, rt))
+            Future.value (respond.notFound (req, rt, TxClock.MinValue))
         }
 
       case ResourceHandler.Status =>
@@ -191,7 +191,7 @@ extends Service [Request, Response] {
           case Method.Get =>
             status (req) .toTwitterFuture
           case _ =>
-            Future.value (respond.notAllowed (req, rt))
+            Future.value (respond.notAllowed (req))
         }
 
       case ResourceHandler.Batch =>
@@ -199,11 +199,11 @@ extends Service [Request, Response] {
           case Method.Post =>
             batch (req) .toTwitterFuture
           case _ =>
-            Future.value (respond.notAllowed (req, rt))
+            Future.value (respond.notAllowed (req))
         }
 
       case ResourceHandler.Unmatched =>
-        Future.value (respond.notFound (req, rt))
+        Future.value (respond.notFound (req, rt, TxClock.MinValue))
     }}}
 
 object ResourceHandler {

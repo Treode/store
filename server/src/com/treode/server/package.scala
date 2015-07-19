@@ -131,10 +131,11 @@ package object server {
       rsp
     }
 
-    def unmodified (req: Request, rt: TxClock): Response = {
+    def unmodified (req: Request, rt: TxClock, vt: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.NotModified
       rsp.readTxClock = rt
+      rsp.valueTxClock = vt
       rsp.serverTxClock = TxClock.now
       rsp
     }
@@ -162,18 +163,18 @@ package object server {
       rsp
     }
 
-    def notAllowed (req: Request, rt: TxClock): Response = {
+    def notAllowed (req: Request): Response = {
       val rsp = req.response
       rsp.status = Status.MethodNotAllowed
-      rsp.readTxClock = rt
       rsp.serverTxClock = TxClock.now
       rsp
     }
 
-    def notFound (req: Request, rt: TxClock): Response = {
+    def notFound (req: Request, rt: TxClock, vt: TxClock): Response = {
       val rsp = req.response
       rsp.status = Status.NotFound
       rsp.readTxClock = rt
+      rsp.valueTxClock = vt
       rsp.serverTxClock = TxClock.now
       rsp
     }}
