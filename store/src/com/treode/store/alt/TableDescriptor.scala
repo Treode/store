@@ -39,8 +39,10 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
       batch: Batch = Batch.suggested
   ) (implicit
       store: Store
-  ): BatchIterator [Cell] =
-    store.scan (id, Bound.firstKey, window, slice, batch) .map (Cell.apply (_))
+  ): BatchIterator [Cell] = {
+    val params = ScanParams (id, Bound.firstKey, window, slice, batch)
+    store.scan (params) .map (Cell.apply (_))
+  }
 
   def from (
       start: Bound [(K, TxClock)],
@@ -52,7 +54,8 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
   ): BatchIterator [Cell] = {
     val (key, time) = start.bound
     val _start = Bound (Key (this.key.freeze (key), time) , start.inclusive)
-    store.scan (id, _start, window, slice, batch) .map (Cell.apply (_))
+    val params = ScanParams (id, _start, window, slice, batch)
+    store.scan (params) .map (Cell.apply (_))
   }}
 
 object TableDescriptor {

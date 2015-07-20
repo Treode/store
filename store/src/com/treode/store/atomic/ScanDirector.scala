@@ -26,14 +26,7 @@ import com.treode.store._
 import ScanDeputy.scan
 import ScanDirector.Element
 
-private class ScanDirector private (
-    table: TableId,
-    start: Bound [Key],
-    window: Window,
-    slice: Slice,
-    batch: Batch,
-    kit: AtomicKit
-) extends CellIterator {
+private class ScanDirector private (params: ScanParams, kit: AtomicKit) extends CellIterator {
 
   import kit.{cluster, library, random, scheduler}
   import kit.config.scanBatchBackoff
@@ -57,9 +50,9 @@ private class ScanDirector private (
     // batch and then close this iterator.
     var done = Set.empty [HostId]
 
-    // The point we last supplied to the client. On a timeout, this we rouse the deputies using
-    // this start point. On receiving data, we filter incoming cells less than this point.
-    var last = start
+    // The point we last supplied to the client. On a timeout, we rouse the deputies using this as
+    // the start point. On receiving data, we filter incoming cells less than this point.
+    var last = params.start
 
     // The client body is ready for more data.
     var ready = true
@@ -71,7 +64,7 @@ private class ScanDirector private (
         ()
     }
 
-    _rouse (start, scanBatchBackoff.iterator)
+    _rouse (params.start, scanBatchBackoff.iterator)
 
     // Wake up and maybe resend; must be run inside fiber.
     private def _rouse (mark: Bound [Key], backoff: Iterator [Int]) {
@@ -79,7 +72,7 @@ private class ScanDirector private (
         // The iterator is closed or the timeout is old, so ignore it.
       } else if (backoff.hasNext) {
         val need = atlas.awaiting (have) .map (cluster.peer _)
-        scan (table, mark, window, slice, batch) (need, port)
+        scan (params.copy (start = mark)) (need, port)
         fiber.delay (backoff.next) (_rouse (mark, backoff))
       } else {
         pq = null
@@ -106,7 +99,7 @@ private class ScanDirector private (
         if (e.xs.hasNext) {
           pq.enqueue (e.copy (x = e.xs.next))
         } else if (!e.end) {
-          scan (table, last, window, slice, batch) (e.from, port)
+          scan (params.copy (start = last)) (e.from, port)
           have -= e.from.id
           q = atlas.quorum (have)
         } else {
@@ -173,7 +166,7 @@ private class ScanDirector private (
         done += from.id
         _next (false)
       } else {
-        scan (table, last, window, slice, batch) (from, port)
+        scan (params.copy (start = last)) (from, port)
       }}}
 
   def batch (f: Iterable [Cell] => Async [Unit]): Async [Unit] =
@@ -190,14 +183,7 @@ private object ScanDirector {
       Cell.compare (that.x, x)
   }
 
-  def scan (
-      table: TableId,
-      start: Bound [Key],
-      window: Window,
-      slice: Slice,
-      batch: Batch,
-      kit: AtomicKit
-  ): CellIterator = {
-    require (window.later.bound < TxClock.now + TxClock.MaxSkew)
-    (new ScanDirector (table, start, window, slice, batch, kit)) .window (window)
+  def scan (params: ScanParams, kit: AtomicKit): CellIterator = {
+    require (params.window.later.bound < TxClock.now + TxClock.MaxSkew)
+    (new ScanDirector (params, kit)) .window (params.window)
   }}

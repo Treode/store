@@ -39,11 +39,11 @@ class ScanDirectorSpec extends FreeSpec with AsyncChecks {
     /** Scan the fruits table, yield only the keys. */
     def scanFruits () (implicit s: StubScheduler): Seq [Bytes] =
       host
-        .scan (fruitsId, 0, Bound.firstKey, Window.all, Slice.all, Batch.suggested)
+        .scan (ScanParams (fruitsId))
         .map (_.key)
         .toSeq
         .expectPass()
-  }
+    }
 
   "The ScanDirector should" - {
 

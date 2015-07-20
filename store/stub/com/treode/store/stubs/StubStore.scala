@@ -114,8 +114,9 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
         cb.pass (st)
     } .on (scheduler)
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice, batch: Batch): BatchIterator [Cell] =
+  def scan (params: ScanParams): BatchIterator [Cell] =
     BatchIterator.make {
+      import params.{batch, slice, start, table, window}
       for {
         _ <- space.scan (window.later.bound)
       } yield {

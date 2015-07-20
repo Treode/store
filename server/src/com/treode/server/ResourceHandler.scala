@@ -55,14 +55,11 @@ extends Service [Request, Response] {
       }}}
 
   def scan (req: Request, id: TableId, name: String): Async [Response] = {
-    val start = req.start
+    val params = req.scanParams (id)
     val end = req.end
     val limit = req.limit
-    val window = req.window
-    val slice = req.slice
-    var iter = store
-        .scan (id, start, window, slice)
-    if (window.isInstanceOf [Window.Latest])
+    var iter = store.scan (params)
+    if (params.window.isInstanceOf [Window.Latest])
         iter = iter.filter (_.value.isDefined)
     limit match {
       case Some (limit) =>

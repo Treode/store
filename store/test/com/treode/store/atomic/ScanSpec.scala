@@ -56,50 +56,50 @@ class ScanSpec extends FlatSpec {
   "Scan" should "handle an empty table" in {
     implicit val (random, scheduler, network, host) = setup (false)
     assertCells () {
-      host.scan (EMPTY, 0, Bound.firstKey, Window.all, Slice.all, Batch.suggested)
+      host.scan (ScanParams (table = EMPTY))
     }}
 
   it should "handle a non-empty table" in {
     implicit val (random, scheduler, network, host) = setup (false)
     assertCells (Apple##1::1, Banana##1::1, Grape##1::1) {
-      host.scan (SHORT, 0, Bound.firstKey, Window.all, Slice.all, Batch.suggested)
+      host.scan (ScanParams (table = SHORT))
     }}
 
   it should "handle an inclusive start position" in {
     implicit val (random, scheduler, network, host) = setup (false)
     assertCells (Banana##1::1, Grape##1::1) {
-      host.scan (SHORT, 0, Inclusive (Key (Banana, 1)), Window.all, Slice.all, Batch.suggested)
+      host.scan (ScanParams (table = SHORT, start = Inclusive (Key (Banana, 1))))
     }}
 
   it should "handle an exclusive start position" in {
     implicit val (random, scheduler, network, host) = setup (false)
     assertCells (Banana##1::1, Grape##1::1) {
-      host.scan (SHORT, 0, Exclusive (Key (Apple, 1)), Window.all, Slice.all, Batch.suggested)
+      host.scan (ScanParams (table = SHORT, start = Exclusive (Key (Apple, 1))))
     }}
 
   it should "handle a filter" in {
     implicit val (random, scheduler, network, host) = setup (false)
     assertCells (Apple##1::1, Grape##1::1) {
-      host.scan (LONG, 0, Bound.firstKey, Latest (1, true), Slice.all, Batch.suggested)
+      host.scan (ScanParams (table = LONG, window = Latest (1, true)))
     }
     assertCells (Apple##2::2, Grape##2::2) {
-      host.scan (LONG, 0, Bound.firstKey, Latest (2, true), Slice.all, Batch.suggested)
+      host.scan (ScanParams (table = LONG, window = Latest (2, true)))
     }
     assertCells (Apple##3::3, Grape##3::3) {
-      host.scan (LONG, 0, Bound.firstKey, Latest (3, true), Slice.all, Batch.suggested)
+      host.scan (ScanParams (table = LONG, window = Latest (3, true)))
     }}
 
   it should "return only a slice" in {
     implicit val (random, scheduler, network, host) = setup (false)
     assertCells () {
-      host.scan (LONG, 0, Bound.firstKey, Window.all, Slice (0, 4), Batch.suggested)
+      host.scan (ScanParams (table = LONG, slice = Slice (0, 4)))
     }
     assertCells (Grape##3::3, Grape##2::2, Grape##1::1) {
-      host.scan (LONG, 0, Bound.firstKey, Window.all, Slice (1, 4), Batch.suggested)
+      host.scan (ScanParams (table = LONG, slice = Slice (1, 4)))
     }
     assertCells () {
-      host.scan (LONG, 0, Bound.firstKey, Window.all, Slice (2, 4), Batch.suggested)
+      host.scan (ScanParams (table = LONG, slice = Slice (2, 4)))
     }
     assertCells (Apple##3::3, Apple##2::2, Apple##1::1) {
-      host.scan (LONG, 0, Bound.firstKey, Window.all, Slice (3, 4), Batch.suggested)
+      host.scan (ScanParams (table = LONG, slice = Slice (3, 4)))
     }}}

@@ -126,7 +126,7 @@ private trait StoreTestTools {
   implicit class RichStore (store: Store) {
 
     def scan (table: TableId): CellIterator =
-      store.scan (table, Bound.firstKey, Window.all, Slice.all)
+      store.scan (ScanParams (table, Bound.firstKey, Window.all, Slice.all))
 
     def expectCells (table: TableId) (expected: Cell*) (implicit scheduler: StubScheduler) =
       assertCells (expected: _*) (store.scan (table))

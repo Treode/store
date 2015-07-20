@@ -53,7 +53,8 @@ private class StubScanDeputy (
   val tables: Map [TableId, StubTable] =
     Map (fruitsId -> fruitsMap) .withDefaultValue (SortedMap.empty)
 
-  ScanDeputy.scan.listen { case ((table, start, window, slice, batch), from) =>
+  ScanDeputy.scan.listen { case (params, from) =>
+    import params.{start, table}
     tables (table)
     .from (start.bound)
     .filter (start <* _._1)

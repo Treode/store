@@ -37,7 +37,8 @@ trait AtomicBehaviors extends StoreClusterChecks {
         for {
           id <- (0L until ntables) .async
           slice <- (0 until nslices) .async
-          c <- host.scan (id, 0, Bound.firstKey, Window.all, Slice (slice, nslices), Batch.suggested)
+          params = ScanParams (table = id, slice = Slice (slice, nslices))
+          c <- host.scan (params)
         } supply {
           val tk = (id, c.key.long)
           cells += tk -> (cells (tk) + ((c.time, c.value.get.int)))

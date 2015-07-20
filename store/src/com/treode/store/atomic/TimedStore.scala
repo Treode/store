@@ -108,12 +108,12 @@ private class TimedStore (kit: AtomicKit) {
         case op: Delete => t.delete (op.key, wt)
       }}}
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice): CellIterator =
+  def scan (params: ScanParams): CellIterator =
     BatchIterator.make {
       for {
-        _ <- space.scan (window.later.bound)
+        _ <- space.scan (params.window.later.bound)
       } yield {
-        getTable (table) .iterator (start, window, slice, library.residents)
+        getTable (params.table) .iterator (params, library.residents)
       }}
 
   def receive (table: TableId, cells: Seq [Cell]): Async [Unit] = {

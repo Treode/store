@@ -164,7 +164,8 @@ private class SynthTable (
         .clean (desc, id, residents)
   }
 
-  def iterator (start: Bound [Key], window: Window, slice: Slice, residents: Residents): CellIterator = {
+  def iterator (params: ScanParams, residents: Residents): CellIterator = {
+    import params.{slice, start, window}
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)

@@ -27,7 +27,7 @@ import com.treode.async.implicits._
 import com.treode.async.misc.{RichOption, parseInt}
 import com.treode.cluster.HostId
 import com.treode.jackson.{DefaultTreodeModule, JsonReader}
-import com.treode.store.{Bound, Bytes, Cell, InfiniteBound, Key, Slice, TxClock, TxId, Window}
+import com.treode.store._
 import com.treode.twitter.util.RichTwitterFuture
 import com.twitter.finagle.http.{MediaType, Request, Response, Status}
 import com.twitter.finagle.netty3.ChannelBufferBuf
@@ -301,6 +301,9 @@ package object http {
         case "through" => Window.Through (until, true, since)
         case _ => throw new BadRequestException ("Pick must be latest, between or through.")
       }}
+
+    def scanParams (id: TableId): ScanParams =
+      ScanParams (id, start, window, slice)
 
     def transactionId: TxId =
       request.headerMap.get ("Transaction-ID") match {

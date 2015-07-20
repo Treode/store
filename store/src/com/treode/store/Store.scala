@@ -86,27 +86,13 @@ trait Store {
 
   /** Scan the rows of a table.
     *
-    * @param table The table to scan.
-    * @param start The key at which to begin the scan; use `whilst` of
-    *   [[com.treode.async.AsyncIterator AsyncIterator]] to control when it ends.
-    * @param window Specify which versions of the row to include in the scan.  A scan can iterate
-    *   only the most recent update or all updates over some period.  See [[Window$ Window]] for
-    *   details.
-    * @param slice A slice of the rows to scan, where that slice respects replica placement; see
-    *   [[Slice]] for details.
-    * @param batch A hint how to chop the scan into batches; see [[Batch]] for details.
-    * @return An [[com.treode.async.AsyncIterator AsyncIterator]] to iterate the rows.  Multiple
+    * @param params The parameters for the scan; see [[ScanParams]].
+    * @return An [[com.treode.async.BatchIterator BatchIterator]] to iterate the rows.  Multiple
     *   updates for a row will be iterated in reverse chronological order.
     * @throws TimeoutException If the scanner could not obtain a quorum of replicas for every
     *   cohort.  This may mean hosts are unreachable.
     */
-  def scan (
-    table: TableId,
-    start: Bound [Key] = Bound.firstKey,
-    window: Window = Window.all,
-    slice: Slice = Slice.all,
-    batch: Batch = Batch.suggested
-  ): BatchIterator [Cell]
+  def scan (params: ScanParams): BatchIterator [Cell]
 }
 
 object Store {

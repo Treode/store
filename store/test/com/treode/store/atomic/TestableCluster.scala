@@ -43,6 +43,6 @@ private class TestableCluster (
   def status (xid: TxId): Async [TxStatus] =
     randomHost.status (xid)
 
-  def scan (table: TableId, start: Bound [Key], window: Window, slice: Slice, batch: Batch): CellIterator =
-    randomHost.scan (table, 0, start, window, slice, batch)
+  def scan (params: ScanParams): CellIterator =
+    randomHost.scan (params)
 }
