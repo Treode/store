@@ -54,10 +54,8 @@ private class StubScanDeputy (
     Map (fruitsId -> fruitsMap) .withDefaultValue (SortedMap.empty)
 
   ScanDeputy.scan.listen { case (params, from) =>
-    import params.{start, table}
-    tables (table)
-    .from (start.bound)
-    .filter (start <* _._1)
+    tables (params.table)
+    .from (Key (params.key, params.time))
     .map {case (key, value) => Cell (key.key, key.time, value)}
     .batch
     .rebatch (params.end, Batch (random.nextInt (9), Int.MaxValue))

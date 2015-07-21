@@ -210,7 +210,7 @@ private object PaxosMover {
 
     case class Middle (key: Bytes, time: TxClock) extends Point {
 
-      def start: Bound [Key] = Bound.Inclusive (Key (key, time))
+      def start = Key (key, time)
 
       def compare (other: Middle): Int = {
         val r = key compare other.key

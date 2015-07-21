@@ -26,15 +26,13 @@ private class CellPage (val entries: Array [Cell]) extends TierPage {
   def get (i: Int): Cell =
     entries (i)
 
-  def ceiling (start: Bound [Key]): Int = {
-    val target = Cell (start.bound.key, start.bound.time, None)
+  def ceiling (key: Bytes, time: TxClock): Int = {
+    val target = Cell (key, time, None)
     val i = Arrays.binarySearch (entries, target, Cell)
     if (i < 0)
       -i-1
-    else if (start.inclusive && i < entries.length)
-      i
     else
-      i+1
+      i
   }
 
   def size: Int = entries.size

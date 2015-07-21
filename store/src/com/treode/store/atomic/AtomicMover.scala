@@ -222,7 +222,7 @@ private object AtomicMover {
 
     case class Middle (table: TableId, key: Bytes, time: TxClock) extends Point {
 
-      def start: Bound [Key] = Bound.Inclusive (Key (key, time))
+      def start = Key (key, time)
 
       def compare (other: Middle): Int = {
         var r = table compare other.table

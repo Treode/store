@@ -120,13 +120,13 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
       for {
         _ <- space.scan (window.later.bound)
       } yield {
-        val start = StubKey (table, params.start.bound.key, params.start.bound.time)
+        val start = StubKey (table, params.key, params.time)
         val end = params.end match {
           case Some (end) => StubKey (table.id, end, TxClock.MaxValue)
           case None => StubKey (table.id + 1, Bytes.empty, TxClock.MaxValue)
         }
         data
-            .subMap (start, params.start.inclusive, end, false)
+            .subMap (start, true, end, false)
             .entrySet
             .batch
             .map (e => Cell (e.getKey.key, e.getKey.time, e.getValue))

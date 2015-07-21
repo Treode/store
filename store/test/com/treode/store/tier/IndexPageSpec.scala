@@ -25,12 +25,6 @@ import TierTestTools._
 
 class IndexPageSpec extends WordSpec {
 
-  implicit class RichIndexPage (page: IndexPage) {
-
-    def ceil (key: Bytes, time: TxClock, inclusive: Boolean): Int =
-      page.ceiling (Bound (Key (key, time), inclusive))
-  }
-
   private def entry (key: Bytes): IndexEntry =
     new IndexEntry (key, 0, 0, 0, 0)
 
@@ -62,8 +56,7 @@ class IndexPageSpec extends WordSpec {
       val page = newPage ()
 
       "find nothing" in {
-        assertResult (0) (page.ceil (Apple, 0, true))
-        assertResult (0) (page.ceil (Apple, 0, false))
+        assertResult (0) (page.ceiling (Apple, 0))
       }
 
       "pickle and unpickle to the same value" in {
@@ -75,18 +68,15 @@ class IndexPageSpec extends WordSpec {
       val page = newPage (entry (Kiwi))
 
       "find apple before kiwi" in {
-        assertResult (0) (page.ceil (Apple, 0, true))
-        assertResult (0) (page.ceil (Apple, 0, false))
+        assertResult (0) (page.ceiling (Apple, 0))
       }
 
       "find kiwi using kiwi" in {
-        assertResult (0) (page.ceil (Kiwi, 0, true))
-        assertResult (1) (page.ceil (Kiwi, 0, false))
+        assertResult (0) (page.ceiling (Kiwi, 0))
       }
 
       "find orange after kiwi" in {
-        assertResult (1) (page.ceil (Orange, 0, true))
-        assertResult (1) (page.ceil (Orange, 0, false))
+        assertResult (1) (page.ceiling (Orange, 0))
       }
 
       "pickle and unpickle to the same value" in {
@@ -101,28 +91,23 @@ class IndexPageSpec extends WordSpec {
           entry (Orange))
 
       "find apple using apple" in {
-        assertResult (0) (page.ceil (Apple, 0, true))
-        assertResult (1) (page.ceil (Apple, 0, false))
+        assertResult (0) (page.ceiling (Apple, 0))
       }
 
       "find kiwi using banana" in {
-        assertResult (1) (page.ceil (Banana, 0, true))
-        assertResult (1) (page.ceil (Banana, 0, false))
+        assertResult (1) (page.ceiling (Banana, 0))
       }
 
       "find kiwi using kiwi" in {
-        assertResult (1) (page.ceil (Kiwi, 0, true))
-        assertResult (2) (page.ceil (Kiwi, 0, false))
+        assertResult (1) (page.ceiling (Kiwi, 0))
       }
 
       "find orange using kumquat" in {
-        assertResult (2) (page.ceil (Kumquat, 0, true))
-        assertResult (2) (page.ceil (Kumquat, 0, false))
+        assertResult (2) (page.ceiling (Kumquat, 0))
       }
 
       "find orange using orange" in {
-        assertResult (2) (page.ceil (Orange, 0, true))
-        assertResult (3) (page.ceil (Orange, 0, false))
+        assertResult (2) (page.ceiling (Orange, 0))
       }
 
       "pickle and unpickle to the same value" in {

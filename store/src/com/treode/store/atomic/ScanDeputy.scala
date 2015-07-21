@@ -25,7 +25,7 @@ import com.treode.store._
 private class ScanDeputy (kit: AtomicKit) {
   import kit.{cluster, disk, tstore}
 
-  def scan (params: ScanParams): Async [(Seq [Cell], Boolean)] =
+  def scan (params: ScanParams): Async [(Seq [Cell], Option [Key])] =
     disk.join {
       tstore
       .scan (params)
@@ -42,5 +42,5 @@ private object ScanDeputy {
 
   val scan = {
     import AtomicPicklers._
-    RequestDescriptor (0x709C4497F017AA86L, scanParams, tuple (seq (cell), boolean))
+    RequestDescriptor (0x709C4497F017AA86L, scanParams, tuple (seq (cell), option (key)))
   }}

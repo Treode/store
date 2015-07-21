@@ -45,7 +45,8 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
   }
 
   def from (
-      start: Bound [(K, TxClock)],
+      key: K,
+      time: TxClock = TxClock.MaxValue,
       end: Option [K] = None,
       window: Window = Window.all,
       slice: Slice = Slice.all,
@@ -53,9 +54,9 @@ class TableDescriptor [K, V] (val id: TableId, val key: Froster [K], val value: 
   ) (implicit
       store: Store
   ): BatchIterator [Cell] = {
-    val _start = start.map (v => Key (this.key.freeze (v._1), v._2))
+    val _key = this.key.freeze (key)
     val _end = end.map (this.key.freeze (_))
-    val params = ScanParams (id, _start, _end, window, slice, batch)
+    val params = ScanParams (id, _key, time, _end, window, slice, batch)
     store.scan (params) .map (Cell.apply (_))
   }}
 

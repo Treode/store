@@ -42,12 +42,10 @@ private case class Tier (
 
       import desc.pager
 
-      val target = Bound.Inclusive (Key (key, time))
-
       val loop = Callback.fix [TierPage] { loop => {
 
         case Success (p: IndexPage) =>
-          val i = p.ceiling (target)
+          val i = p.ceiling (key, time)
           if (i == p.size) {
             cb.pass (None)
           } else {
@@ -56,7 +54,7 @@ private case class Tier (
           }
 
         case Success (p: CellPage) =>
-          val i = p.ceiling (target)
+          val i = p.ceiling (key, time)
           if (i == p.size)
             cb.pass (None)
           else

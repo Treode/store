@@ -73,15 +73,15 @@ private abstract class TierIterator (
       pager.read (root) .run (loop)
     }
 
-    // Descend to the leaf which holds the start key by looking up the key at each index page.
-    def start (start: Bound [Key]) {
+    // Descend to the leaf which holds the starting ping by looking up the key at each index page.
+    def start (key: Bytes, time: TxClock) {
 
       val loop = Callback.fix [TierPage] { loop => {
 
         case Success (p: IndexPage) =>
-          val i = p.ceiling (start)
+          val i = p.ceiling (key, time)
           if (i == p.size) {
-            // The start key is beyond the last entry of this tier.
+            // The starting point is beyond the last entry of this tier.
             cb.pass (())
           } else {
             // Push this index page onto the stack, and descend into the next page.
@@ -91,7 +91,7 @@ private abstract class TierIterator (
           }
 
         case Success (p: CellPage) =>
-          val i = p.ceiling (start)
+          val i = p.ceiling (key, time)
           if (i == p.size)
             cb.pass (())
           else
@@ -160,13 +160,14 @@ private object TierIterator {
   class FromKey (
       desc: TierDescriptor,
       root: Position,
-      start: Bound [Key]
+      key: Bytes,
+      time: TxClock
   ) (implicit
       disk: Disk
   ) extends TierIterator (desc, root) {
 
     def batch (f: Iterable [Cell] => Async [Unit]): Async [Unit] =
-      async (new Batch (f, _) .start (start))
+      async (new Batch (f, _) .start (key, time))
   }
 
   def apply (
@@ -181,18 +182,19 @@ private object TierIterator {
   def apply (
       desc: TierDescriptor,
       root: Position,
-      start: Bound [Key]
+      key: Bytes,
+      time: TxClock
   ) (implicit
       disk: Disk,
       scheduler: Scheduler
   ): CellIterator =
-    (new FromKey (desc, root, start))
+    (new FromKey (desc, root, key, time))
 
   def adapt (tier: MemTier) (implicit scheduler: Scheduler): CellIterator =
     tier.entrySet.batch.map (memTierEntryToCell _)
 
-  def adapt (tier: MemTier, start: Bound [Key]) (implicit scheduler: Scheduler): CellIterator =
-    adapt (tier.tailMap (start.bound, start.inclusive))
+  def adapt (tier: MemTier, key: Bytes, time: TxClock) (implicit scheduler: Scheduler): CellIterator =
+    adapt (tier.tailMap (Key (key, time), true))
 
   def merge (
       desc: TierDescriptor,
@@ -230,7 +232,8 @@ private object TierIterator {
 
   def merge (
       desc: TierDescriptor,
-      start: Bound [Key],
+      key: Bytes,
+      time: TxClock,
       primary: MemTier,
       secondary: MemTier,
       tiers: Tiers
@@ -240,10 +243,10 @@ private object TierIterator {
   ): CellIterator = {
 
     val allTiers = new Array [CellIterator] (tiers.size + 2)
-    allTiers (0) = adapt (primary, start)
-    allTiers (1) = adapt (secondary, start)
+    allTiers (0) = adapt (primary, key, time)
+    allTiers (1) = adapt (secondary, key, time)
     for (i <- 0 until tiers.size; tier = tiers (i))
-      allTiers (i + 2) = TierIterator (desc, tier.root, start)
+      allTiers (i + 2) = TierIterator (desc, tier.root, key, time)
 
     BatchIterator.merge (allTiers)
   }}

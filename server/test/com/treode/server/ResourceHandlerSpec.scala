@@ -463,12 +463,12 @@ class ResourceHandlerSpec extends FreeSpec {
           .get ("/table1")
       }
 
-    "GET /table1?start=b should work" in
+    "GET /table1?key=b should work" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .param ("start", "b")
+          .param ("key", "b")
         .expect
           .statusCode (200)
           .body (matchesJson ("""[
@@ -478,12 +478,12 @@ class ResourceHandlerSpec extends FreeSpec {
           .get ("/table1")
       }
 
-    "GET /table1?start=c&time=5 should work" in
+    "GET /table1?key=c&time=5 should work" in
       served { case (port, store) =>
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .param ("start", "c")
+          .param ("key", "c")
           .param ("time", "5")
         .expect
           .statusCode (200)
@@ -532,7 +532,7 @@ class ResourceHandlerSpec extends FreeSpec {
           .param ("limit", "1")
         .expect
           .statusCode (200)
-          .link ("<http://testhost/table1?start=c&time=5&limit=1>; rel=\"next\"")
+          .link ("<http://testhost/table1?key=c&time=5&limit=1>; rel=\"next\"")
           .body (matchesJson ("""[
             {"key": "a", "time": 2, "value": "a2"}
           ]"""))

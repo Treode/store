@@ -30,7 +30,8 @@ package com.treode.store
  */
 class ScanParams (
   val table: TableId,
-  val start: Bound [Key],
+  val key: Bytes,
+  val time: TxClock,
   val end: Option [Bytes],
   val window: Window,
   val slice: Slice,
@@ -38,30 +39,32 @@ class ScanParams (
 ) {
 
   def copy (
-    start: Bound [Key] = start,
-    end: Option [Bytes] = end,
+    key: Bytes = Bytes.empty,
+    time: TxClock = TxClock.MaxValue,
+    end: Option [Bytes] = None,
     window: Window = window,
     slice: Slice = slice,
     batch: Batch = batch
   ): ScanParams =
-    new ScanParams (table, start, end, window, slice, batch)
+    new ScanParams (table, key, time, end, window, slice, batch)
 }
 
 object ScanParams {
 
   def apply (
     table: TableId,
-    start: Bound [Key] = Bound.firstKey,
+    key: Bytes = Bytes.empty,
+    time: TxClock = TxClock.MaxValue,
     end: Option [Bytes] = None,
     window: Window = Window.all,
     slice: Slice = Slice.all,
     batch: Batch = Batch.suggested
   ): ScanParams =
-    new ScanParams (table, start, end, window, slice, batch)
+    new ScanParams (table, key, time, end, window, slice, batch)
 
   val pickler = {
     import StorePicklers._
-    wrap (tableId, bound (key), option (bytes), window, slice, batch)
-    .build (v => new ScanParams (v._1, v._2, v._3, v._4, v._5, v._6))
-    .inspect (v => (v.table, v.start, v.end, v.window, v.slice, v.batch))
+    wrap (tableId, bytes, txClock, option (bytes), window, slice, batch)
+    .build (v => new ScanParams (v._1, v._2, v._3, v._4, v._5, v._6, v._7))
+    .inspect (v => (v.table, v.key, v.time, v.end, v.window, v.slice, v.batch))
   }}

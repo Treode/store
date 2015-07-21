@@ -186,17 +186,17 @@ package object http {
     def readTxClock: TxClock =
       optTxClockHeader ("Read-TxClock") getOrElse (TxClock.now)
 
-    def start: Bound [Key] = {
-      val start = request.params.get ("start") match {
-        case Some (start) => Bytes (start)
+    def key: Bytes =
+      request.params.get ("key") match {
+        case Some (key) => Bytes (key)
         case None => Bytes.MinValue
       }
-      val time = optTxClockParam ("time") match {
+
+    def time: TxClock =
+      optTxClockParam ("time") match {
         case Some (time) => time
         case None => TxClock.MaxValue
       }
-      Bound.Inclusive (Key (start, time))
-    }
 
     def end: Option [Bytes] =
       request.params.get ("end") map (Bytes (_))
@@ -239,7 +239,7 @@ package object http {
       }}
 
     def scanParams (id: TableId): ScanParams =
-      ScanParams (id, start, end, window, slice)
+      ScanParams (id, key, time, end, window, slice)
 
     def transactionId: TxId =
       request.headerMap.get ("Transaction-ID") match {

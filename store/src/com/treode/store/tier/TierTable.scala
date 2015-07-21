@@ -62,7 +62,7 @@ private [store] trait TierTable {
 
   def iterator (residents: Residents): CellIterator
 
-  def iterator (start: Bound [Key], residents: Residents): CellIterator
+  def iterator (start: Key, residents: Residents): CellIterator
 
   def iterator (params: ScanParams, residents: Residents): CellIterator
 

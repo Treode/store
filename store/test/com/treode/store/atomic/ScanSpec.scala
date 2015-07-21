@@ -65,16 +65,10 @@ class ScanSpec extends FlatSpec {
       host.scan (ScanParams (table = SHORT))
     }}
 
-  it should "handle an inclusive start position" in {
+  it should "handle an a start key and time" in {
     implicit val (random, scheduler, network, host) = setup (false)
     assertCells (Banana##1::1, Grape##1::1) {
-      host.scan (ScanParams (table = SHORT, start = Inclusive (Key (Banana, 1))))
-    }}
-
-  it should "handle an exclusive start position" in {
-    implicit val (random, scheduler, network, host) = setup (false)
-    assertCells (Banana##1::1, Grape##1::1) {
-      host.scan (ScanParams (table = SHORT, start = Exclusive (Key (Apple, 1))))
+      host.scan (ScanParams (table = SHORT, key = Banana, time = 1))
     }}
 
   it should "handle a filter" in {

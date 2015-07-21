@@ -68,9 +68,9 @@ extends Service [Request, Response] {
           count >= 0
         } .map {
           case (vs, Some (next)) =>
-            val start = next.key.string
+            val key = next.key.string
             val time = next.time.time
-            val link = s"""<http://$hostString/$name?start=$start&time=$time&limit=$limit>; rel=\"next\" """
+            val link = s"""<http://$hostString/$name?key=$key&time=$time&limit=$limit>; rel=\"next\" """
             respond.json (req, link, vs)
           case (vs, None) =>
             respond.json (req, vs)

@@ -529,7 +529,7 @@ private object PhysicalModel {
     ): Async [IndexEntry] = {
       var count = 10
       Index.from (
-          start = Bound ((key, TxClock.MaxValue), true),
+          key = key,
           window = tx.latest,
           batch = Batch (count, 1 << 16))
       .filter (_.value.isDefined)

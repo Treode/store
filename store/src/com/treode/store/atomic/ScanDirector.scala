@@ -52,27 +52,29 @@ private class ScanDirector private (params: ScanParams, kit: AtomicKit) extends 
 
     // The point we last supplied to the client. On a timeout, we rouse the deputies using this as
     // the start point. On receiving data, we filter incoming cells less than this point.
-    var last = params.start
+    var last =
+      Key (params.key, if (params.time == TxClock.MaxValue) TxClock.MaxValue else params.time + 1)
 
     // The client body is ready for more data.
     var ready = true
 
     val port = scan.open {
-      case (Success ((cells, end)), from) =>
-        got (cells, end, from)
+      case (Success ((cells, next)), from) =>
+        got (cells, next, from)
       case _ =>
         ()
     }
 
-    _rouse (params.start, scanBatchBackoff.iterator)
+    _rouse (last, scanBatchBackoff.iterator)
 
     // Wake up and maybe resend; must be run inside fiber.
-    private def _rouse (mark: Bound [Key], backoff: Iterator [Int]) {
+    private def _rouse (mark: Key, backoff: Iterator [Int]) {
       if (pq == null || mark != last) {
         // The iterator is closed or the timeout is old, so ignore it.
       } else if (backoff.hasNext) {
+        val start = params.copy (key = mark.key, time = mark.time)
         val need = atlas.awaiting (have) .map (cluster.peer _)
-        scan (params.copy (start = mark)) (need, port)
+        scan (start) (need, port)
         fiber.delay (backoff.next) (_rouse (mark, backoff))
       } else {
         pq = null
@@ -88,18 +90,20 @@ private class ScanDirector private (params: ScanParams, kit: AtomicKit) extends 
         val e = pq.dequeue()
         var x = e.x
         var k = x.timedKey
-        while (last >* k && e.xs.hasNext) {
+        while (last > k && e.xs.hasNext) {
           x = e.xs.next
           k = x.timedKey
         }
-        if (last <* k) {
+        if (last < k) {
           b += e.x
-          last = Bound (k, false)
+          last = k
         }
         if (e.xs.hasNext) {
           pq.enqueue (e.copy (x = e.xs.next))
-        } else if (!e.end) {
-          scan (params.copy (start = last)) (e.from, port)
+        } else if (e.next.isDefined) {
+          val next = e.next.get
+          val start = params.copy (key = next.key, time = next.time)
+          scan (start) (e.from, port)
           have -= e.from.id
           q = atlas.quorum (have)
         } else {
@@ -153,20 +157,21 @@ private class ScanDirector private (params: ScanParams, kit: AtomicKit) extends 
       }}
 
     // We got values from a peer.
-    def got (cells: Seq [Cell], end: Boolean, from: Peer): Unit = fiber.execute {
+    def got (cells: Seq [Cell], next: Option [Key], from: Peer): Unit = fiber.execute {
       if (pq == null) {
         // Closed; there's nothing to do.
       } else if (!cells.isEmpty) {
         val iter = cells.iterator
-        pq.enqueue (Element (iter.next, iter, end, from))
+        pq.enqueue (Element (iter.next, iter, next, from))
         have += from.id
         _next (false)
-      } else if (end) {
+      } else if (next.isEmpty) {
         have += from.id
         done += from.id
         _next (false)
       } else {
-        scan (params.copy (start = last)) (from, port)
+        val start = params.copy (key = next.get.key, time = next.get.time)
+        scan (start) (from, port)
       }}}
 
   def batch (f: Iterable [Cell] => Async [Unit]): Async [Unit] =
@@ -175,7 +180,7 @@ private class ScanDirector private (params: ScanParams, kit: AtomicKit) extends 
 
 private object ScanDirector {
 
-  case class Element (x: Cell, xs: Iterator [Cell], end: Boolean, from: Peer)
+  case class Element (x: Cell, xs: Iterator [Cell], next: Option [Key], from: Peer)
   extends Ordered [Element] {
 
     // Reverse the sort for the PriorityQueue.

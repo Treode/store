@@ -99,7 +99,7 @@ class TierSpec extends WordSpec {
   /** Build a sequence of the cells in the tier by using the TierIterator. */
   private def iterateTier (tier: Tier, key: Bytes, time: TxClock, inclusive: Boolean) (
       implicit scheduler: StubScheduler, disk: Disk): Seq [Cell] =
-    TierIterator (descriptor, tier.root, Bound (Key (key, time), inclusive)) .toSeq.expectPass()
+    TierIterator (descriptor, tier.root, key, time) .toSeq.expectPass()
 
   private def toSeq (builder: Builder [Cell, _], pos: Position) (
       implicit scheduler: StubScheduler, disk: Disk) {
@@ -228,7 +228,7 @@ class TierSpec extends WordSpec {
           checkIterator (1 << 16)
         }}}
 
-    "starting from the middle inclusive" should {
+    "starting from the middle" should {
 
       "iterate all remaining keys" when {
 
@@ -257,39 +257,7 @@ class TierSpec extends WordSpec {
 
         "the pages are limited to 64K" in {
           checkIterator (1 << 16)
-        }}}
-
-    "starting from the middle exclusive" should {
-
-      "iterate all remaining keys" when {
-
-        def checkIterator (pageBytes: Int) {
-          implicit val (scheduler, disk, config) = setup (pageBytes)
-          val tier = buildTier()
-          for (start <- AllFruits) {
-            val expected = AllFruits.dropWhile (_ <= start) .toSeq
-            val actual = iterateTier (tier, start, 1, false) map (_.key)
-            assertResult (expected) (actual)
-          }}
-
-        "the tier is empty" in {
-          implicit val (scheduler, disk, config) = setup (1)
-          val tier = buildEmptyTier()
-          assertResult (Seq.empty) (iterateTier (tier, Apple, TxClock.MaxValue, false) map (_.key))
-        }
-
-        "the pages are limited to one byte" in {
-          checkIterator (1)
-        }
-
-        "the pages are limited to 256 bytes" in {
-          checkIterator (1 << 8)
-        }
-
-        "the pages are limited to 64K" in {
-          checkIterator (1 << 16)
-        }}}
-  }
+        }}}}
 
   "The Tier" should {
 

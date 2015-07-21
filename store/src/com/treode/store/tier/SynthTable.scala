@@ -152,7 +152,7 @@ private class SynthTable (
         .clean (desc, id, residents)
   }
 
-  def iterator (start: Bound [Key], residents: Residents): CellIterator = {
+  def iterator (start: Key, residents: Residents): CellIterator = {
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -160,12 +160,12 @@ private class SynthTable (
       readLock.unlock()
     }
     TierIterator
-        .merge (desc, start, primary, secondary, tiers)
+        .merge (desc, start.key, start.time, primary, secondary, tiers)
         .clean (desc, id, residents)
   }
 
   def iterator (params: ScanParams, residents: Residents): CellIterator = {
-    import params.{slice, start, window}
+    import params.{key, slice, time, window}
     readLock.lock()
     val (primary, secondary, tiers) = try {
       (this.primary, this.secondary, this.tiers)
@@ -173,7 +173,7 @@ private class SynthTable (
       readLock.unlock()
     }
     TierIterator
-        .merge (desc, start, primary, secondary, tiers.overlaps (window))
+        .merge (desc, key, time, primary, secondary, tiers.overlaps (window))
         .clean (desc, id, residents)
         .slice (id, slice)
         .window (window)

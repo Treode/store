@@ -66,7 +66,7 @@ package object store {
 
   private [store] implicit class RichCellIterator (iter: CellIterator) {
 
-    def rebatch (end: Option [Bytes], batch: Batch): Async [(Seq [Cell], Boolean)] = {
+    def rebatch (end: Option [Bytes], batch: Batch): Async [(Seq [Cell], Option [Key])] = {
       var entries = batch.entries
       var bytes = batch.bytes
       iter.toSeqWhile { cell =>
@@ -75,7 +75,10 @@ package object store {
         entries -= 1
         r && (end.isEmpty || cell.key < end.get)
       } .map { case (cells, last) =>
-        (cells, last.isEmpty || (end.isDefined && end.get <= last.get.key))
+        if (last.isDefined && (end.isEmpty || last.get.key < end.get))
+          (cells, Some (last.get.timedKey))
+        else
+          (cells, None)
       }}
 
     def dedupe: CellIterator =
