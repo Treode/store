@@ -514,12 +514,10 @@ class ResourceHandlerSpec extends FreeSpec {
         val ts1 = addData (store)
         val rsp = given
           .port (port)
-          .param ("end", "b")
+          .param ("end", "a")
         .expect
           .statusCode (200)
-          .body (matchesJson ("""[
-            {"key": "a", "time": 2, "value": "a2"}
-          ]"""))
+          .body (matchesJson ("[]"))
         .when
           .get ("/table1")
       }

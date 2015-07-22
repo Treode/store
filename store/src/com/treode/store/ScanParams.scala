@@ -41,7 +41,7 @@ class ScanParams (
   def copy (
     key: Bytes = Bytes.empty,
     time: TxClock = TxClock.MaxValue,
-    end: Option [Bytes] = None,
+    end: Option [Bytes] = end,
     window: Window = window,
     slice: Slice = slice,
     batch: Batch = batch
