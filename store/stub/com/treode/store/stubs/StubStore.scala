@@ -116,13 +116,17 @@ class StubStore (implicit scheduler: Scheduler) extends Store {
 
   def scan (params: ScanParams): BatchIterator [Cell] =
     BatchIterator.make {
-      import params.{batch, slice, start, table, window}
+      import params.{batch, slice, table, window}
       for {
         _ <- space.scan (window.later.bound)
       } yield {
+        val start = StubKey (table, params.start.bound.key, params.start.bound.time)
+        val end = params.end match {
+          case Some (end) => StubKey (table.id, end, TxClock.MaxValue)
+          case None => StubKey (table.id + 1, Bytes.empty, TxClock.MaxValue)
+        }
         data
-            .tailMap (StubKey (table, start.bound.key, start.bound.time), start.inclusive)
-            .headMap (StubKey (table.id + 1, Bytes.empty, TxClock.MaxValue))
+            .subMap (start, params.start.inclusive, end, false)
             .entrySet
             .batch
             .map (e => Cell (e.getKey.key, e.getKey.time, e.getValue))

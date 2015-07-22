@@ -100,20 +100,6 @@ package object server {
       rsp
     }
 
-    def json [A] (
-      req: Request,
-      iter: BatchIterator [A],
-      end: InfiniteBound [A]
-    ) (implicit
-      ordering: Ordering [A]
-    ): Response  = {
-      val rsp = req.response
-      rsp.status = Status.Ok
-      rsp.serverTxClock = TxClock.now
-      rsp.json = (iter, end)
-      rsp
-    }
-
     def json [A] (req: Request, vs: Seq [A]): Response  = {
       val rsp = req.response
       rsp.status = Status.Ok

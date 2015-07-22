@@ -56,7 +56,6 @@ extends Service [Request, Response] {
 
   def scan (req: Request, id: TableId, name: String): Async [Response] = {
     val params = req.scanParams (id)
-    val end = req.end
     val limit = req.limit
     var iter = store.scan (params)
     if (params.window.isInstanceOf [Window.Latest])
@@ -66,7 +65,7 @@ extends Service [Request, Response] {
         var count = limit
         iter.toSeqWhile { cell =>
           count -= 1
-          count >= 0 && end >* cell
+          count >= 0
         } .map {
           case (vs, Some (next)) =>
             val start = next.key.string
@@ -77,9 +76,8 @@ extends Service [Request, Response] {
             respond.json (req, vs)
         }
       case None =>
-        supply (respond.json (req, iter, end))
-    }
-  }
+        supply (respond.json (req, iter))
+    }}
 
   def create (req: Request, tab: TableId, key: String): Async [Response] = {
     val tx = req.transactionId

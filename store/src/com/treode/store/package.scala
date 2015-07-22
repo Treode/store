@@ -66,14 +66,16 @@ package object store {
 
   private [store] implicit class RichCellIterator (iter: CellIterator) {
 
-    def rebatch (batch: Batch): Async [(Seq [Cell], Option [Cell])] = {
-      @volatile var entries = batch.entries
-      @volatile var bytes = batch.bytes
+    def rebatch (end: Option [Bytes], batch: Batch): Async [(Seq [Cell], Boolean)] = {
+      var entries = batch.entries
+      var bytes = batch.bytes
       iter.toSeqWhile { cell =>
         bytes -= cell.byteSize
         val r = entries > 0 && (bytes > 0 || entries == batch.entries)
         entries -= 1
-        r
+        r && (end.isEmpty || cell.key < end.get)
+      } .map { case (cells, last) =>
+        (cells, last.isEmpty || (end.isDefined && end.get <= last.get.key))
       }}
 
     def dedupe: CellIterator =

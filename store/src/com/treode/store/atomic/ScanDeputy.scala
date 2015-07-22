@@ -25,18 +25,17 @@ import com.treode.store._
 private class ScanDeputy (kit: AtomicKit) {
   import kit.{cluster, disk, tstore}
 
-  def scan (params: ScanParams): Async [(Seq [Cell], Option [Cell])] =
+  def scan (params: ScanParams): Async [(Seq [Cell], Boolean)] =
     disk.join {
       tstore
       .scan (params)
-      .rebatch (params.batch)
+      .rebatch (params.end, params.batch)
     }
 
   def attach() {
 
     ScanDeputy.scan.listen { case (params, from) =>
       scan (params)
-      .map {case (cells, last) => (cells, last.isEmpty)}
     }}}
 
 private object ScanDeputy {

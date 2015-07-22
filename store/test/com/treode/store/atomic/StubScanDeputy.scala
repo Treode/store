@@ -60,8 +60,7 @@ private class StubScanDeputy (
     .filter (start <* _._1)
     .map {case (key, value) => Cell (key.key, key.time, value)}
     .batch
-    .rebatch (Batch (random.nextInt (9), Int.MaxValue))
-    .map {case (cells, last) => (cells, last.isEmpty)}
+    .rebatch (params.end, Batch (random.nextInt (9), Int.MaxValue))
   }
 
   cluster.startup()

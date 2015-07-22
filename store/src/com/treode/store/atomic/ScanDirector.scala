@@ -155,7 +155,7 @@ private class ScanDirector private (params: ScanParams, kit: AtomicKit) extends 
     // We got values from a peer.
     def got (cells: Seq [Cell], end: Boolean, from: Peer): Unit = fiber.execute {
       if (pq == null) {
-        // Closed; there's to do.
+        // Closed; there's nothing to do.
       } else if (!cells.isEmpty) {
         val iter = cells.iterator
         pq.enqueue (Element (iter.next, iter, end, from))
