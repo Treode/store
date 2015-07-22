@@ -178,7 +178,7 @@ extends Service [Request, Response] {
                 Future.value (respond.notAllowed (req))
             }
           case None =>
-            Future.value (respond.notFound (req, rt, TxClock.MinValue))
+            Future.value (respond.tableNotFound (req))
         }
 
       case ResourceHandler.Status =>
@@ -198,7 +198,7 @@ extends Service [Request, Response] {
         }
 
       case ResourceHandler.Unmatched =>
-        Future.value (respond.notFound (req, rt, TxClock.MinValue))
+        Future.value (respond.tableNotFound (req))
     }}}
 
 object ResourceHandler {

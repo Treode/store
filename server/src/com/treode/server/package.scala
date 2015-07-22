@@ -40,6 +40,8 @@ package object server {
   val binaryJson = new ObjectMapper (new SmileFactory) with ScalaObjectMapper
   binaryJson.registerModule (DefaultScalaModule)
 
+  val TableNotFound = new HttpResponseStatus (434, "Table Not Found")
+
   object respond {
 
     //
@@ -161,6 +163,13 @@ package object server {
       rsp.status = Status.NotFound
       rsp.readTxClock = rt
       rsp.valueTxClock = vt
+      rsp.serverTxClock = TxClock.now
+      rsp
+    }
+
+    def tableNotFound (req: Request): Response = {
+      val rsp = req.response
+      rsp.status = TableNotFound
       rsp.serverTxClock = TxClock.now
       rsp
     }}

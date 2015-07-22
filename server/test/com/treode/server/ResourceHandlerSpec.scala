@@ -607,12 +607,12 @@ class ResourceHandlerSpec extends FreeSpec {
 
     "and gives bad URIs" - {
 
-      "GET /non-table should yield Bad Request" in
+      "GET /non-table should yield Not Found" in
         served { case (port, store) =>
           val rsp = given
             .port (port)
           .expect
-            .statusCode (404)
+            .statusCode (434)
           .when
             .get ("/non-table")
         }
