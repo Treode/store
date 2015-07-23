@@ -607,7 +607,7 @@ class ResourceHandlerSpec extends FreeSpec {
 
     "and gives bad URIs" - {
 
-      "GET /non-table should yield Not Found" in
+      "GET /non-table should yield Table Not Found" in
         served { case (port, store) =>
           val rsp = given
             .port (port)
@@ -615,6 +615,16 @@ class ResourceHandlerSpec extends FreeSpec {
             .statusCode (434)
           .when
             .get ("/non-table")
+        }
+
+      "GET /non-table/some-key should yield Table Not Found" in
+        served { case (port, store) =>
+          val rsp = given
+            .port (port)
+          .expect
+            .statusCode (434)
+          .when
+            .get ("/non-table/some-key")
         }
 
       "PUT /table1 should yield Method Not Allowed" in
