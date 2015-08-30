@@ -1,4 +1,4 @@
-# TreodeDB ![Build Status][build-status]
+# TreodeDB
 
 TreodeDB is a distributed database that provides multirow atomic writes, and it&#700;s designed for RESTful services.
 
